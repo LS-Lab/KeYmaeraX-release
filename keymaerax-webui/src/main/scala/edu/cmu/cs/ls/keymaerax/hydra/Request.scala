@@ -638,7 +638,7 @@ class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Rea
 class LicensesRequest() extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/license/tools_licenses")
-    val lines = Source.fromInputStream(reader).mkString.lines.toList
+    val lines = (Source.fromInputStream(reader).mkString: StringOps).lines.toList
     val header = lines.head
     val licenseStartPos = header.indexOf("License")
     val licenses = lines.tail.tail.map(l => l.splitAt(licenseStartPos)).map({case (tool, license) =>

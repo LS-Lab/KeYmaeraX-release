@@ -228,6 +228,10 @@ object Context {
     }
   }
 
+  def theorem(con: Context): Formula = {
+    ???
+  }
+
   def add(con: Context, x: Ident, fml: Formula): Context = {
     +:(con, Assume(x, fml))
   }

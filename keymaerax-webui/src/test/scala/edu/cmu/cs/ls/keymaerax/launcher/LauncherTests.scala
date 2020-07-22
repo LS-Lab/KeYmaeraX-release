@@ -152,7 +152,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 254 //@note -2 since one entry disproved
-    val proofStatOutputs = output.lines.toList.takeRight(4)
+    val proofStatOutputs = (output: StringOps).lines.toList.takeRight(4)
     proofStatOutputs(0) should startWith ("PROVED")
     proofStatOutputs(1) should startWith ("UNFINISHED")
     proofStatOutputs(2) should startWith ("DISPROVED")
@@ -190,7 +190,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "have usage information, formatted to 80 characters width" in {
     val usage = KeYmaeraX.usage
-    usage.lines.foreach(l => withClue(l) { l.length should be <= 80 })
+    (usage: StringOps).lines.foreach(l => withClue(l) { l.length should be <= 80 })
   }
 
   it should "report a parsable model with exit value 0" in {

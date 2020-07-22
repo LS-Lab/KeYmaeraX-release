@@ -1,10 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
-import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.{PBEKeySpec}
-import javax.xml.bind.DatatypeConverter
+import java.util.Base64
 
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 /**
   * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
   * @see www.owasp.org
@@ -30,7 +30,7 @@ object Password {
    * case by base-64 encoding them. Since base-conversions preserve entropy, this *shouldn't* damage the quality of
    * our passwords.*/
   def sanitize(s:Array[Byte]): String = {
-    DatatypeConverter.printBase64Binary(s)
+    Base64.getEncoder.encode(s).toString
   }
 
   def hash(password: Array[Char], salt: Array[Byte], iterations: Int): String = {

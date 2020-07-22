@@ -31,7 +31,7 @@ object ParserCommon {
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))
   def literal[_: P]: P[String] = "\"" ~ CharPred(c => c != '\"').rep(1).! ~ "\""
-  def ident[_: P]: P[Ident] = identString.map(Variable(_))
+  def ident[_: P]: P[Ident] = identString.map(c => if (c.endsWith("'")) DifferentialSymbol(BaseVariable(c.dropRight(1))) else BaseVariable(c))
   def number[_: P]: P[Number] = {
     import NoWhitespace._
     ("-".!.? ~  (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
