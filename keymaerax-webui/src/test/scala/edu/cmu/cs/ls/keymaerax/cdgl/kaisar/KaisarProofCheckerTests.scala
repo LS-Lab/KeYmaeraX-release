@@ -23,7 +23,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   "Proof checker" should "check assignments" in {
     val pfStr = "x:=1; ++ x:=2; ++ x:=3;"
     val pf = p(pfStr, pp.statement(_))
-    val res = ProofChecker(Context.empty, pf)
-    Context.theorem(res) shouldBe "[x:=1; ++ x:=2; ++ x:=3;]true".asFormula
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[x:=1; ++ x:=2; ++ x:=3;]true".asFormula
   }
 }

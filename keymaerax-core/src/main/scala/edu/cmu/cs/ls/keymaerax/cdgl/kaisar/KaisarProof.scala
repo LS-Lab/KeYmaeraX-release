@@ -125,7 +125,8 @@ case class VarPat(x: Variable, p: Option[Ident] = None) extends AsgnPat
 case class TuplePat(pats: List[AsgnPat]) extends AsgnPat
 
 /* Language of structured proofs. Statements are block-structu  red, so entire proofs are single statements */
-sealed trait Statement extends ASTNode
+sealed trait Statement extends ASTNode {
+}
 // Proves nothing
 case class Triv() extends Statement
 // x is a formula pattern in assume and assert
@@ -146,7 +147,7 @@ case class Label(st: TimeIdent) extends Statement
 // In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
 // elaboration for performance reasons
 // @TODO: x should be Expression for pattern fun
-case class Note(x: Ident, proof: ProofTerm, var conclusion: Option[Formula] = None) extends Statement
+case class Note(x: Ident, proof: ProofTerm, var annotation: Option[Formula] = None) extends Statement
 // Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
 // definition site of the function. Scope is lexical and functions must not be recursive for soundness.
@@ -228,9 +229,7 @@ object Context {
     }
   }
 
-  def theorem(con: Context): Formula = {
-    ???
-  }
+  //def theorem(con: Context): Formula = con.conclusion
 
   def add(con: Context, x: Ident, fml: Formula): Context = {
     +:(con, Assume(x, fml))

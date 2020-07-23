@@ -90,29 +90,62 @@ object ProofChecker {
     }
   }
 
-  def apply(con: Context, ds: DiffStatement, dc: DomainStatement): ProveODE = {
+  def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
     ???
   }
 
-  // Result is elaborated s but not con
-  def apply(con: Context, s: Statement): Context = {
+  private def asBox(f: Formula): Box = {
+    f match {
+      case b: Box => b
+      case _ => Box(Test(True), f)
+    }
+  }
+  private def asDiamond(f: Formula): Diamond = {
+    f match {
+      case b: Diamond => b
+      case _ => Diamond(Test(True), f)
+    }
+  }
+
+  private def unifyFml(p: Formula, q: Formula): Option[Formula] = {
+    if (p == q) Some(p) else None
+  }
+  private def unifyFmls(ps: Seq[Formula]): Option[Formula] = {
+    ps match {
+      case Nil => None
+      case p :: Nil => Some(p)
+      case p :: ps => unifyFmls(ps) match {
+        case None => None
+        case Some(q) => unifyFml(p, q)
+      }
+    }
+  }
+
+  // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
+  // by that elaborated program
+  def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
       case Assert(_ , f, m) =>
         apply(con, f, m)
-        s
+        (s, f)
       case Note(x , pt,  conclusion) =>
         val res = apply(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
           throw ProofCheckException(s"Note $x expected conclusion ${conclusion.get}, got $res")
         }
-        s
+        (Note(x, pt, Some(res)), res)
       case Block(ss) =>
-        ss.foldLeft[Context](Context.empty){case (acc, s) =>
+        // @TODO
+        (ss.foldLeft[Context](Context.empty){case (acc, s) =>
           apply(Context.+:(con, acc), s)
           Context.+:(acc, s)
-        }
+        }, ???)
       case BoxChoice(left: Statement, right: Statement) =>
-        BoxChoice(apply(con, left), apply(con, right))
+        val ((sl, fl), (sr, fr)) = (apply(con, left), apply(con, right))
+        val (Box(a, p1), Box(b, p2)) = (asBox(fl), asBox(fr))
+        val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
+        val ss = BoxChoice(sl, sr)
+        (ss, Box(Choice(a,b), p))
       case Switch(pats: List[(Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
         // @TODO: Formula names
@@ -120,40 +153,57 @@ object ProofChecker {
         if (!exhaustive(conds)) {
           throw ProofCheckException("Inexhaustive match in switch statement")
         }
-        val cons = pats.map(cb => apply(Context.add(con, ???, cb._1.asInstanceOf[Formula]), cb._2))
-        Switch(conds.zip(cons))
+        val (cons, fmls) = pats.map(cb => apply(Context.add(con, ???, cb._1.asInstanceOf[Formula]), cb._2)).unzip
+        val (as, ps) = fmls.map(asDiamond).map{case Diamond(a,p) => (a,p)}.unzip
+        val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
+        (Switch(conds.zip(cons)), Diamond(as.reduceRight(Choice), p))
       case While(x , j, s) =>
         val kc = Context.+:(con, Assume(x, j))
-        While(x, j, apply(kc, s))
+        val (sa, fa) = apply(kc, s)
+        val ss = While(x, j, sa)
+        val Diamond(a, p) = asDiamond(fa)
+        val fml = Diamond(Loop(a), p)
+        (ss, fml)
       case BoxLoop(s: Statement) =>
         Context.lastFact(con) match {
           case None => throw ProofCheckException(s"No invariant found in $con")
           case Some(kFml) =>
-            val res = BoxLoop(apply(con, s))
+            val (ss, f) = apply(con, s)
+            val Box(a,p) = asBox(f)
+            val res = BoxLoop(ss)
+            val ff = Box(Loop(a), p)
             Context.lastFact(res) match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
               case Some(kFml2) if kFml != kFml2 => throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
-              case Some(kFml2) => BoxLoop(res)
+              case Some(kFml2) => (res, ff)
             }
         }
       case ProveODE(ds: DiffStatement, dc: DomainStatement) => apply(con, ds, dc)
       // @TODO: LetFun and Match should be checked in earlier passes?
-      case lf: LetFun => admitLetFun(con, lf); lf
+      case lf: LetFun => admitLetFun(con, lf); (lf, True)
       case Match(pat, e) =>
         try {
           UnificationMatch(pat, e);
-          Match(pat, e)
+          (Match(pat, e), True)
         } catch {
           case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify")
         }
-      case Ghost(s) => Ghost(apply(con, s))
-      case InverseGhost(s: Statement) => InverseGhost(apply(con, s))
-      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); Context.+:(con, s)
+      case Ghost(s) =>
+        // @TODO: Check scope on f
+        val (ss, f) = apply(con, s)
+        (Ghost(ss), True)
+      case InverseGhost(s: Statement) =>
+        val (ss, f) = apply(con, s)
+        (InverseGhost(ss), True)
+      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.+:(con, s), True)
       case Was(now, was) =>
-        val res = apply(con, now)
-        Was(res, was)
+        val (ss, f) = apply(con, now)
+        (Was(ss, was), f)
       // Proofs that succeed unconditionally
-      case _: Modify | _: Triv | _: Label | _: Assume => s
+      case Modify(VarPat(x, _), Left(f)) => (s, Box(Assign(x,f), True))
+      case Modify(VarPat(x, _), Right(_)) => (s, Box(AssignAny(x), True))
+      case Assume(pat, f) => (s, Box(Test(f), True))
+      case _: Triv | _: Label => (s, True)
     }
   }
 }
