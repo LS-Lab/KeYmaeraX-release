@@ -40,4 +40,18 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=*; y:=x^2; {?y>=0;}^@]true".asFormula
   }
+
+  it should "compose assumption" in {
+    val pfStr = "x := *; ?p:(x^2 = y & x >= 0);"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[x:=*; ?(x^2 = y & x >= 0);]true".asFormula
+  }
+
+  it should "check box loop" in {
+    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) := by auto;}*} ?xFin:(x>=0);"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[?(x>=1); {x:=x+1;{?(x>=1);}^@}*;?(x>=0);]true".asFormula
+  }
 }
