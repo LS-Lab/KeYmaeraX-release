@@ -1014,7 +1014,8 @@ object DerivationInfoRegistry extends Logging {
       (SimplifierV3.getClass, ru.typeOf[SimplifierV3.type]),
       (TactixLibrary.getClass, ru.typeOf[TactixLibrary.type]),
       (ToolTactics.getClass, ru.typeOf[ToolTactics.type]),
-      (Transitivity.getClass, ru.typeOf[Transitivity.type])
+      (Transitivity.getClass, ru.typeOf[Transitivity.type]),
+      (UnifyUSCalculus.getClass, ru.typeOf[UnifyUSCalculus.type])
     )
     objects.foreach({case (cl, ct) => initClass(cl, ct)})
     /* Check that the list of annotated tactics we processed matches the list of named BelleExprs which have been
