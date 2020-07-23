@@ -655,12 +655,10 @@ object TacticFactory {
         }
       }
 
-    /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
-     */
+    /** Creates a BuiltInTactic from a function turning provables into new provables. */
     def by(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
-          requireOneSubgoal(provable, name)
           t(provable)
         }
       }
