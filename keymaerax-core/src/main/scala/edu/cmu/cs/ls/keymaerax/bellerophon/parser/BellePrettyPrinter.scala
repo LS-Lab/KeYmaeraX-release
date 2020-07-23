@@ -52,14 +52,13 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case BranchTactic(ts) => op(e).terminal.img +
           "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
         case SaturateTactic(t) => sanitizeUnary(wrapLeft(e, t, indent), op(e).terminal.img)
-        case it: StringInputTactic if it.inputs.nonEmpty =>
-          val eargs = BelleExpr.persistable(it.inputs).map(input => argPrinter(Left(input))).mkString(", ")
-          it.name + "(" + eargs + ")"
-        case it: StringInputTactic if it.inputs.isEmpty => it.name
-        case BuiltInTactic(name) if name != "ANON" => name
-        case BuiltInTactic(name) if name == "ANON" => ""
-        case BuiltInPositionTactic(name) if name != "ANON" => name
-        case BuiltInPositionTactic(name) if name == "ANON" => ""
+        case it: StringInputTactic =>
+          if (it.inputs.nonEmpty) {
+            val eargs = BelleExpr.persistable(it.inputs).flatMap(input => argPrinter(Left(input))).mkString(", ")
+            it.name + "(" + eargs + ")"
+          } else it.name
+        case BuiltInTactic(name) => if (name != "ANON") name else ""
+        case BuiltInPositionTactic(name) => if (name != "ANON") name else ""
         case b: CoreLeftTactic => b.name
         case b: CoreRightTactic => b.name
         case b: BuiltInLeftTactic => b.name
@@ -71,24 +70,27 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           (abbr, value) match {
             case (a: Term, v: Term) => Equal(a, v)
             case (a: Formula, v: Formula) => edu.cmu.cs.ls.keymaerax.core.Equiv(a, v)
-          })) + ") " + IN.img + " (" +
+          })).getOrElse("") + ") " + IN.img + " (" +
           newline(indent+1) + pp(inner, indent+1) + newline(indent) + ")"
-        case DependentPositionTactic(name) if name == "ANON" => throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
-        case DependentPositionTactic(name) => name // name of a DependentPositionTactic is the codeName
+        case DependentPositionTactic(name) =>
+          if (name != "ANON") name  // name of a DependentPositionTactic is the codeName
+          else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case adp: AppliedDependentPositionTactic => adp.pt match {
           case e: DependentPositionWithAppliedInputTactic =>
             val ins = BelleExpr.persistable(e.inputs)
-            val eargs = ins.map(input => argPrinter(Left(input))).mkString(", ")
+            val eargs = ins.flatMap(input => argPrinter(Left(input))).mkString(", ")
             val sep = if (ins.isEmpty) "" else ", "
-            e.name + "(" + eargs + sep + argPrinter(Right(adp.locator)) + ")"
-          case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
+            e.name + "(" + eargs + sep + argPrinter(Right(adp.locator)).getOrElse("") + ")"
+          case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)).getOrElse("") + ")" //@todo not sure about this.
         }
         case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
         case it : InputTactic =>
-          val eargs = BelleExpr.persistable(it.inputs).map(input => argPrinter(Left(input))).filter(_.nonEmpty).mkString(", ")
+          val eargs = BelleExpr.persistable(it.inputs).flatMap(input => argPrinter(Left(input))).mkString(", ")
           it.name + "(" + eargs + ")"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
-        case NamedTactic(name, _) if name != "ANON" => name
+        case NamedTactic(name, _) =>
+          if (name != "ANON") name
+          else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case dot: BelleDot => "_@" + dot.hashCode()
         case l: LabelBranch => l.prettyString
         case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
@@ -99,21 +101,19 @@ object BellePrettyPrinter extends (BelleExpr => String) {
 
   private def argListPrinter(args: List[BelleParser.TacticArg]) = {
     // Some arguments (Generators) will be automatically instantiated by the interpreter and so should not be persisted explicitly
-    val persistentArgs = args.filter{case (Left(_: GeneratorArg)) => false case _ => true}
-    "(" + persistentArgs.map(argPrinter).reduce(_ + ", " + _) + ")"
+    "(" + BelleExpr.persistable(args).flatMap(argPrinter).reduce(_ + ", " + _) + ")"
   }
 
   // @TODO: Print substitution as subst.subsDefsInput.map(p => p.what.prettyString + "~>" + p.repl.prettyString)
-  private def argPrinter(arg: BelleParser.TacticArg): String = {
+  private def argPrinter(arg: BelleParser.TacticArg): Option[String] = {
     arg match {
-      case Left(x :: xs) => (x :: xs).map(c => argPrinter(Left(c))).mkString(",")
-      case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-      case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-      case Left(Some(expr)) => "\"" + expr + "\""
-      case Left(pie: PosInExpr) => "\"" + pie + "\""
-      case Left(expr) => "\"" + expr + "\""
-      case Left(None) => ""
-      case Right(loc) => loc.prettyString
+      case Left(None) => None
+      case Left(x :: xs) => Some((x :: xs).flatMap(c => argPrinter(Left(c))).mkString(","))
+      case Left(expr: Expression) => Some("\"" + KeYmaeraXPrettyPrinter(expr) + "\"")
+      case Left(pie: PosInExpr) => Some("\"" + pie.pos.mkString(".") + "\"")
+      case Left(Some(expr)) => argPrinter(Left(expr))
+      case Left(expr) => Some("\"" + expr + "\"")
+      case Right(loc) => Some(loc.prettyString)
     }
   }
 
