@@ -811,12 +811,12 @@ object TactixLibrary extends HilbertCalculus
     * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
   @Tactic("trafo", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
-  def transform(Q: Expression): DependentPositionWithAppliedInputTactic = ToolTactics.transform(Q)
+  def transform(Q: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.transform(Q)(pos) }
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
   @Tactic("edit")
-  def edit(to: Expression): DependentPositionWithAppliedInputTactic = ToolTactics.edit(to)
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.edit(to)(pos) }
 
   //
   /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */

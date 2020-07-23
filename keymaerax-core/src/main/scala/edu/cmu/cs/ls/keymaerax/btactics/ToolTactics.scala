@@ -278,7 +278,7 @@ private object ToolTactics {
   })
 
   /** @see [[TactixLibrary.transform()]] */
-  def transform(to: Expression): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) => {
+  def transform(to: Expression): DependentPositionTactic = inputanon {(pos: Position, sequent: Sequent) => {
     require(sequent.sub(pos) match {
       case Some(fml: Formula) => fml.isFOL && to.kind == fml.kind
       case Some(t: Term) => to.kind == t.kind

@@ -342,7 +342,7 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.loop]] */
-  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = inputanon { (pos: Position, sequent: Sequent) => {
     //@Tactic see [[HybridProgramCalculus.loop]]
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
 
@@ -389,7 +389,7 @@ private object DLBySubst {
           }}})(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
-  })
+  }}
 
   /** Analyzes a loop for counterexamples. */
   def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
