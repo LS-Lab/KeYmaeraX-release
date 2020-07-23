@@ -325,8 +325,17 @@ object Context {
       case Note(x, _, Some(g)) =>  if (f(x, g)) Some((x, g)) else None
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
       case Block(ss) =>
-        val search: PartialFunction[Statement, (Ident, Formula)] = {case s => find(s, f).get}
-        ss.reverse.collectFirst(search)
+         def search(ss: List[Statement]): Option[(Ident, Formula)] = {
+           ss match {
+             case Nil => None
+             case s :: ss =>
+               find(s, f) match {
+                 case Some(y) => Some(y)
+                 case None => search(ss)
+               }
+           }
+         }
+        search(ss.reverse)
       case BoxChoice(l, r) =>
         val and: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {case ((k1, v1), (k2, v2)) =>
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
@@ -406,13 +415,15 @@ object Context {
   // Extend context with a named assumption
   //def add(ident: String, f: Formula): Context = Context(proofVars.+((ident, f)))
 
+  // @TODO: implement freshProgramVar too
+
   // A proof variable name which is not bound in the context.
-  def fresh(con: Context): Ident = {
+  def fresh(con: Context, ident: String = ghostVar): Ident = {
     var i = 0
-    while(contains(con, Variable(ghostVar + i))) {
+    while(contains(con, Variable(ident + i))) {
       i = i + 1
     }
-    Variable(ghostVar + i)
+    Variable(ident + i)
   }
 
   // Define the next gHost variable to be f

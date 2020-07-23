@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object ProofChecker {
+  val SSA: Boolean = false
   // @TODO: Implement builtin forward proof rules
   val nullaryBuiltin: Map[String, Formula] = Map()
   val unaryBuiltin: Map[String, Expression => Formula] = Map()
@@ -214,8 +215,24 @@ object ProofChecker {
         val (ss, f) = apply(con, now)
         (Was(ss, was), f)
       // Proofs that succeed unconditionally
-      case Modify(VarPat(x, _), Left(f)) => (s, Box(Assign(x,f), True))
-      case Modify(VarPat(x, _), Right(_)) => (s, Box(AssignAny(x), True))
+      case Modify(VarPat(x, _), rhs) =>
+        if (SSA) {
+          val n = x.name
+          val xIdx = x.index.getOrElse(-1)
+          val freshVar = Context.fresh(con, n)
+          val yIdx = freshVar.index.getOrElse(-1)
+          if ((yIdx > xIdx)) {
+            throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
+          }
+        }
+        rhs match {
+          case Left(f) =>
+            if (SSA && StaticSemantics(f).contains(x)) {
+              throw ProofCheckException(s"Assignment to $x was not admissible")
+            }
+            (s, Box(Assign(x,f), True))
+          case Right(_) => (s, Box(AssignAny(x), True))
+        }
       case Assume(pat, f) => (s, Box(Test(f), True))
       case _: Triv | _: Label => (s, True)
     }

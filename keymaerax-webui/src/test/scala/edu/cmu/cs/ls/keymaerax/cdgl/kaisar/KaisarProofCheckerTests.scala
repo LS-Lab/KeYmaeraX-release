@@ -34,6 +34,14 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[x:=*; y:=x^2;]true".asFormula
   }
 
+  it should "check fancy assignments" in {
+    // @TODO: Tests for shadowing / admissibility / etc, what do
+    val pfStr = "x := *; x := x^2; "
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    //ff shouldBe "[x:=*; y:=x^2;]true".asFormula
+  }
+
   it should "compose assertions" in {
     val pfStr = "x := *; y := x^2; !p:(y >= 0) := by auto;"
     val pf = p(pfStr, pp.statement(_))
@@ -54,4 +62,5 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[?(x>=1); {x:=x+1;{?(x>=1);}^@}*;?(x>=0);]true".asFormula
   }
+
 }
