@@ -6,13 +6,17 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{QE, prop}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
+
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
 
@@ -25,10 +29,6 @@ import scala.collection.immutable._
 @UsualTest
 @CheckinTest
 class UnifyUSCalculusTest extends TacticTestBase {
-  import UnifyUSCalculus._
-  import SequentCalculus._
-  import TactixLibrary.{QE, prop}
-
   val randomTrials = 10
   val randomComplexity = 3
   val rand = new RandomFormula() //(-4317240407825764493L)
@@ -349,6 +349,15 @@ class UnifyUSCalculusTest extends TacticTestBase {
   it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in withMathematica { qeTool =>
     val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
     shouldReduceTo("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula, 1, PosInExpr(), "x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula, basicEquiv, C)
+  }
+
+  "US" should "uniformly substitute in a single goal" in {
+    proveBy("J(x) ==> J(x+1)".asSequent, USX("J(.) ~> .>=0".asSubstitutionPair)).subgoals.loneElement shouldBe "x>=0 ==> x+1>=0".asSequent
+  }
+
+  it should "uniformly substitute in all goals" in {
+    proveBy("J(x) ==> J(x+1) & J(x+2)".asSequent, andR(1) & USX("J(.) ~> .>=0".asSubstitutionPair)).subgoals shouldBe
+      List("x>=0 ==> x+1>=0".asSequent, "x>=0 ==> x+2>=0".asSequent)
   }
 
 }

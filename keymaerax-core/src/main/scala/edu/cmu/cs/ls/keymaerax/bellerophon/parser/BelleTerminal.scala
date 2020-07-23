@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Expression, FormulaKind, ProgramKind, TermKind, USubst}
-import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
+import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.util.matching.Regex
@@ -143,7 +142,7 @@ private case class EXPRESSION(exprString: String, delimiters: (String, String)) 
   lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2)
 
   /** Parses the `exprString` as dL expression. May throw a parse exception. */
-  lazy val expression: Either[Expression, USubst] = {
+  lazy val expression: Either[Expression, SubstitutionPair] = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
       s"EXPRESSION.regexp should ensure delimited expression begin }and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
 
@@ -153,8 +152,7 @@ private case class EXPRESSION(exprString: String, delimiters: (String, String)) 
     if (exprs.size == 1) Left(KeYmaeraXParser(exprs.head))
     else {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      val sp = undelimitedExprString.asSubstitutionPair
-      Right(RenUSubst((sp.what, sp.repl) :: Nil).usubst)
+      Right(undelimitedExprString.asSubstitutionPair)
     }
   }
 
