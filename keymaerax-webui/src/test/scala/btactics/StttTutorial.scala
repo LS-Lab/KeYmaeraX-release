@@ -4,17 +4,16 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import testHelper.KeYmaeraXTestTags.TodoTest
 import testHelper.ParserFactory._
 
 import scala.collection.immutable._
@@ -95,19 +94,24 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable with abstract loop invariant" taggedAs TodoTest ignore withMathematica { _ => withDatabase { db =>
+  it should "be provable with abstract loop invariant" in withMathematica { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop("J(v)".asFormula)('R) <(
-      skip,
-      skip,
-      chase('R) & prop & OnAll(solve('R))
-      ) &
-      US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
-      OnAll(QE)
+    val tactic = BelleParser(
+      """
+        |implyR('R);
+        |andL('L)*;
+        |loop("J(v)",'R); <(
+        |  nil,
+        |  nil,
+        |  chase('R); prop; doall(solve('R))
+        |);
+        |US("J(.) ~> .>=0");
+        |doall(QE);
+        |done
+        |""".stripMargin)
 
-    //@todo Rewrite the US tactic in terms of the Bellerophon language, not arbitrary scala code.
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -122,7 +126,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & chase('R) & normalize & OnAll(solve('R))
+    val tactic = BelleParser("implyR('R); andL('L)*; chase('R); unfold; doall(solve('R))")
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe "v>=0, A()>0, B()>0, true, x<=S(), true ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()*(t_^2/2)+v*t_+x<=S())".asSequent
@@ -215,19 +219,22 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  it should "be provable with abstract loop invariant" ignore withMathematica { _ =>
+  it should "be provable with abstract loop invariant" in withMathematica { _ =>
     val s = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.model.asInstanceOf[Formula]
 
-
-    val tactic = implyR('R) & SaturateTactic(andL('L)) &
-      loop("J(v,x,B,S)".asFormula)('R) <(
-        skip,
-        skip,
-        chase('R) & normalize & OnAll(solve('R))
-        ) &
-      US(UnificationMatch("J(v,x,B,S)".asFormula, "v >= 0 & x+v^2/(2*B) <= S".asFormula).usubst) &
-      OnAll(QE)
+    val tactic = BelleParser(
+      """implyR(1);
+        |andL('L)*;
+        |loop("J(v,x,B(),S())",1); <(
+        |  nil,
+        |  nil,
+        |  chase(1); unfold; doall(solve('R))
+        |);
+        |US("J(._0,._1,._2,._3) ~> ._0>=0 & ._1+._0^2/(2*._2) <= ._3");
+        |doall(QE);
+        |done
+        |""".stripMargin)
 
     proveBy(s, tactic) shouldBe 'proved
   }
