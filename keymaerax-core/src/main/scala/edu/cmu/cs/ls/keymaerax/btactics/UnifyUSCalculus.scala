@@ -21,7 +21,6 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.core
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
@@ -244,17 +243,16 @@ trait UnifyUSCalculus {
   def byUS(pi: ProvableInfo, inst: Subst=>Subst): BelleExpr = byUS(pi.provable, inst)
 
   private[btactics]
-  def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr =
+  def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr = {
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
-    USubstPatternTactic(
-      (SequentType(fact.conclusion),
-        (us: Subst) => {
-          val s = inst(us);
-          //@todo why not use s.toForward(fact) as in byUS(fact) instead of renaming the goal itself.
-          //@todo unsure about use of renaming
-          s.getRenamingTactic & by(fact(s.substitution.usubst))
-        }) :: Nil
-    )
+    def renameAndSubst = (us: RenUSubst) => {
+      val s = inst(us)
+      //@todo why not use s.toForward(fact) as in byUS(fact) instead of renaming the goal itself.
+      //@todo unsure about use of renaming
+      s.getRenamingTactic & by(fact(s.substitution.usubst))
+    }
+    USubstPatternTactic((SequentType(fact.conclusion), renameAndSubst) :: Nil)
+  }
 
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
@@ -418,7 +416,7 @@ trait UnifyUSCalculus {
     *           G |- D                                   g |- d
     *   where G=s(g) and D=s(d)
     * }}}
-    * @param subst the substitution s` that instantiates fact `g |- d` to the present goal `G |- D`.
+    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
     * @param fact the provable for the axiom `g |- d` to reduce the proof to (accordingly for axiomatic rules).
     * @see [[US(USubst,ProvableSig)]]
     */
@@ -687,13 +685,13 @@ trait UnifyUSCalculus {
             equivStep(leftKey=true, True, provedFact)
           }
 
-          case Equiv(DotFormula, other)    => equivStep(true, other, fact)
+          case Equiv(DotFormula, other)    => equivStep(leftKey=true, other, fact)
 
-          case Equiv(other, DotFormula)    => equivStep(false, other, fact)
+          case Equiv(other, DotFormula)    => equivStep(leftKey=false, other, fact)
 
-          case Equal(DotTerm(_, _), other) => equivStep(true, other, fact)
+          case Equal(DotTerm(_, _), other) => equivStep(leftKey=true, other, fact)
 
-          case Equal(other, DotTerm(_, _)) => equivStep(false, other, fact)
+          case Equal(other, DotTerm(_, _)) => equivStep(leftKey=false, other, fact)
 
           case Imply(other, DotFormula)    => implyStep(other)
 
@@ -701,7 +699,7 @@ trait UnifyUSCalculus {
 
           //@note all DotTerms are equal
           case Imply(prereq, remainder) =>
-            if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).isEmpty)
+            if (StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).nonEmpty)
               throw new UnsupportedTacticFeature("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             /* {{{
@@ -1214,7 +1212,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
+    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))`
     * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
   //  @Tactic(premises = "Γ |- C{Q}, Δ ;; Q↔P",
@@ -1232,7 +1230,7 @@ trait UnifyUSCalculus {
       //todo: Should this be TacticFailure or Illformed?
       // Case for Illformed: user should not be applying tactics in sequents where positions don't exist
       // Case for TacticFailure: some automation might need to do that
-      if (!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
+      if (sequent.sub(pos).isEmpty) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
         "which is <ill-positioned>\n at " + sequent)
 
       val (other, key) = {
@@ -1293,7 +1291,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
 
         //todo: See above
-        if(!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
+        if(sequent.sub(pos).isEmpty) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
           "which is <ill-positioned>\n at " +sequent)
 
         val (posctx,c) = sequent.at(pos)
@@ -1317,8 +1315,8 @@ trait UnifyUSCalculus {
           case p: SuccPosition => (p.top, ident)
           case p: AntePosition => (SuccPos(sequent.succ.length),
             fact.conclusion.succ.head match {
-              case Equal(l,r) => commuteEqual(1)
-              case Equiv(l,r) => commuteEquivR(1)
+              case _: Equal => commuteEqual(1)
+              case _: Equiv => commuteEquivR(1)
               case _ => ident
             })
         }
@@ -1390,8 +1388,8 @@ trait UnifyUSCalculus {
   )
   /** commuteEquivFR commutes the equivalence at the given position (for forward tactics). */
   def commuteEquivFR: ForwardPositionTactic = pos => pr => pr(
-    CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])(pr.conclusion).head,
-    CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])
+    CommuteEquivRight(pos.checkSucc.checkTop)(pr.conclusion).head,
+    CommuteEquivRight(pos.checkSucc.checkTop)
   )
 
   /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
@@ -1403,7 +1401,7 @@ trait UnifyUSCalculus {
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useForImpl(axiom.fact, key, defaultMatcher, inst)
   /** useFor(pi, key) use the key part of the given axiom or provable info forward for the selected position in the given Provable to conclude a new Provable
-    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomInfo.key]]
+    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomInfo.theKey]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. Defaults to no change. */
   def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useForWithImpl(pi, key, inst)
   def useFor(axiom: ProvableInfo, inst: Subst=>Subst): ForwardPositionTactic = useForImpl(axiom, inst)
@@ -1580,7 +1578,7 @@ trait UnifyUSCalculus {
               // polarity of o in (Context(Imply(e,c))(o) will be -1
               monStep(Context(Imply(e, c)), mon)
             } else {
-              Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+              Predef.assert(assertion=false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
             }
 
           case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
@@ -1601,7 +1599,7 @@ trait UnifyUSCalculus {
               // polarity of o in (Context(Imply(e,c))(o) will be -1
               monStep(Context(Imply(e, c)), mon)
             } else {
-              Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+              Predef.assert(assertion=false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
             }
 
           case Equiv(e, c) => Predef.assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
@@ -1796,7 +1794,7 @@ trait UnifyUSCalculus {
         Predef.assert(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
         Predef.assert(List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
-        /** Forward equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context
+        /** Forward equivalence rewriting step to replace occurrence of instance of key `k` by instance of other `o` in context
           * {{{
           * G |- C{subst(k)}, D
           * ---------------------
@@ -1809,7 +1807,7 @@ trait UnifyUSCalculus {
           * G, C{subst(o)} |- D
           * }}}
           *
-          * @param o
+          * @param o Replacement expression
           */
         def equivStep(o: Expression): ProvableSig = {
           //@todo chase does not work with applying axioms inverse
@@ -1988,7 +1986,7 @@ trait UnifyUSCalculus {
 
 
           case Imply(prereq, remainder) =>
-            if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty)
+            if (StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).nonEmpty)
               throw new UnsupportedTacticFeature("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
