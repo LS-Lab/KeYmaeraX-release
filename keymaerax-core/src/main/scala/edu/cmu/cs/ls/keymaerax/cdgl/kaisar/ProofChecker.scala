@@ -97,13 +97,13 @@ object ProofChecker {
   private def asBox(f: Formula): Box = {
     f match {
       case b: Box => b
-      case _ => Box(Test(True), f)
+      case _ => Box(Dual(Test(f)), True)
     }
   }
   private def asDiamond(f: Formula): Diamond = {
     f match {
       case b: Diamond => b
-      case _ => Diamond(Test(True), f)
+      case _ => Diamond(Test(f), True)
     }
   }
 
@@ -121,6 +121,18 @@ object ProofChecker {
     }
   }
 
+  private def concatBox(p: Formula, q: Formula): Formula = {
+    (p, q) match {
+      case (True, _) => q
+      case (_, True) => p
+      case (Box(a, True), Box(b, q1)) => Box(Compose(a, b), q1)
+      case (Box(a, True), q) => Box(Compose(a, Dual(Test(q))), True)
+      case (Box(a, p1), Box(b, q1)) => Box(Compose(a, Compose(Dual(Test(p1)), b)), q1)
+      case (p, Box(b, q1)) => Box(Compose(Dual(Test(p)), b), q1)
+      case (Box(a, p1), q) => Box(Compose(a,Compose(Dual(Test(p1)), Dual(Test(q)))), True)
+    }
+  }
+
   // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   // by that elaborated program
   def apply(con: Context, s: Statement): (Context, Formula) = {
@@ -135,11 +147,13 @@ object ProofChecker {
         }
         (Note(x, pt, Some(res)), res)
       case Block(ss) =>
-        // @TODO
-        (ss.foldLeft[Context](Context.empty){case (acc, s) =>
-          apply(Context.+:(con, acc), s)
-          Context.+:(acc, s)
-        }, ???)
+        val (c, fs) =
+          ss.foldLeft[(Context, List[Formula])](Context.empty, List()){case ((acc, accF), s) =>
+            val (cc, ff) = apply(Context.+:(con, acc), s)
+            (Context.+:(acc, s), accF.:+(ff))
+          }
+        val ff = fs.reduceRight(concatBox)
+        (c, ff)
       case BoxChoice(left: Statement, right: Statement) =>
         val ((sl, fl), (sr, fr)) = (apply(con, left), apply(con, right))
         val (Box(a, p1), Box(b, p2)) = (asBox(fl), asBox(fr))
