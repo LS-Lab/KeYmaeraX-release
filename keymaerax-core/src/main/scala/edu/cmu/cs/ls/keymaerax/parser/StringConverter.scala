@@ -77,9 +77,9 @@ class StringConverter(val s: String) {
     res
   }
 
-  /** Converts a string `what ~> repl` into a substitution pair. */
+  /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = {
-    val exprs = s.split("~>")
+    val exprs = s.stripPrefix("(").stripSuffix(")").split("~>")
     assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
     val repl = KeYmaeraXParser(exprs(1))
     val what =
