@@ -288,7 +288,7 @@ trait UnifyUSCalculus {
   /** Do-not-call: exclusively for internal tactic interpreter usage. */
   //@note serializes as useAt({`axiomName`},{`k`})
   @deprecated("Exclusively use for tactic interpreters")
-  @Tactic("useAt")
+  @Tactic("useAt", codeName = "useAt")
   private[btactics]
   def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
     key match {
@@ -498,7 +498,7 @@ trait UnifyUSCalculus {
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst)}
 
-  @Tactic(("US", "US"), conclusion = "|- S(P)", premises = "|- P")
+  @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
   def USX(S: SubstitutionPair): InputTactic = inputanon { TactixLibrary.uniformSubstitute(USubst(Seq(S))) }
 
 
