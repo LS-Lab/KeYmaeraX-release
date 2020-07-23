@@ -122,7 +122,7 @@ private object PropositionalTactics extends Logging {
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
-  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
+  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("ANON") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
       //@note adapted to use implyL instead of implyLOld

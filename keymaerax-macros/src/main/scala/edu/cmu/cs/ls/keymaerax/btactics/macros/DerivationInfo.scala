@@ -178,10 +178,6 @@ sealed trait DerivationInfo {
   /** Inputs which should be serialized in tactic strings. For example, Generator args are left out.*/
   val persistentInputs: List[ArgInfo] = inputs.filter{case (_: GeneratorArg) => false case _ => true}
 
-  /** Bellerophon tactic implementing the derivation. For non-input tactics this is simply a BelleExpr. For input tactics
-   * it is (curried) function which accepts the inputs and produces a BelleExpr. */
-  //def theExpr: Any
-
   /** At what level to display this axiom/rule/tactic in the user interface.
     *  - 'internal not on UI at all
     *  - 'browse only show up when searching for it in browse
@@ -216,11 +212,16 @@ trait ProvableInfo extends DerivationInfo {
   private [macros] var theProvable: Option[Any] = None
   /** Formula representing this axiom/rule, if any. */
   private [macros] var theFormula: Option[Any] = None
-  /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
-   * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
+  /** Which unifier to use. 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full
+   * For completeness, this declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */
-  //@todo replace by "def unifier: Symbol"
-  def linear: Boolean
+  def unifier: Symbol
+  /** The key at which this formula will be unified against an input formula.
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]] */
+  val theKey: ExprPos = 0 :: Nil
+  /** The list of recursors which to look for later after using this axiom in a chase.
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase]] */
+  val theRecursor: List[ExprPos] = Nil
 }
 
 /** Storable derivation info (e.g., as lemmas).
@@ -230,8 +231,11 @@ trait ProvableInfo extends DerivationInfo {
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
-  //@todo write-protect except by Ax.scala.
-  var theLemma: Any = None
+  // We would like to make theLemma writable only by [[Ax.scala]], but putting Ax.scala in the [[macros]] package
+  // might be awkward. Instead, provide a public setter for private [[theLemma]]
+  private var theLemma: Any = None
+  def getLemma: Any = theLemma
+  def setLemma(lem: Any): Unit = { theLemma = lem }
 }
 
 // axioms
@@ -239,19 +243,7 @@ trait StorableInfo extends DerivationInfo {
 /** Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   * @see [[Axiom]] */
-trait AxiomInfo extends ProvableInfo {
-  /** The valid formula that this axiom represents */
-  //def formula: Formula
-  /** The key at which this formula will be unified against an input formula.
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]] */
-  val theKey: ExprPos = 0 :: Nil
-  /** The list of recursors which to look for later after using this axiom in a chase.
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase]] */
-  val theRecursor: List[ExprPos] = Nil
-  /** The unifier to use when using theKey position of this axiom.
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]] */
-  val unifier: Symbol
-}
+trait AxiomInfo extends ProvableInfo
 
 /** Meta-Information for an axiom from the prover core
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
@@ -270,7 +262,6 @@ case class CoreAxiomInfo(  override val canonicalName:String
   extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
-  override def linear: Boolean = ('linear == unifier)
 }
 
 /** Information for a derived axiom proved from the core.
@@ -290,12 +281,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
-  //override lazy val formula: Formula =
-  //DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
-  //override lazy val provable:ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 1
-  override def linear: Boolean = ('linear == unifier)
 }
 
 // axiomatic proof rules
@@ -303,17 +289,16 @@ case class DerivedAxiomInfo(  override val canonicalName: String
 /** Information for an axiomatic proof rule
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[DerivedRuleInfo]] */
-//@todo add val theRecursor: List[Int] = Nil (so first number can have a sign) and unifier:Symbol into a joint common supertype of AxiomaticRuleInfo and DerivedRuleInfo that maybe should be called AxiomaticRuleInfo, CoreAxiomaticRuleInfo, DerivedAxiomaticRuleInfo or elide the axiomatic.
-case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, theExpr: Unit => Any, val displayLevel: Symbol = 'internal)
+case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String
+                             , override val unifier: Symbol
+                             , theExpr: Unit => Any
+                             , val displayLevel: Symbol = 'internal
+                             , override val theKey: ExprPos = 0 :: Nil
+                             , override val theRecursor: List[ExprPos] = Nil
+                            )
   extends ProvableInfo {
-  // lazy to avoid circular initializer call
-  //private[this] lazy val expr = TactixLibrary.by(provable, codeName)
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr = expr
-  //lazy val provable: ProvableSig = ProvableSig.rules(canonicalName)
   override val numPositionArgs = 0
-  //@note Presently, only nonlinear shapes in core axiomatic rules in [[edu.cmu.cs.ls.keymaerax.core.AxiomBase.loadAxiomaticRules]]
-  override val linear: Boolean = false
 }
 
 object AxiomaticRuleInfo {
@@ -328,14 +313,16 @@ object AxiomaticRuleInfo {
 /** Information for a derived rule proved from the core
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[AxiomaticRuleInfo]] */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any, val displayLevel: Symbol = 'internal)
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String
+                           , override val unifier: Symbol
+                           , val theExpr: Unit => Any
+                           , val displayLevel: Symbol = 'internal
+                           , override val theKey: ExprPos = 0 :: Nil
+                           , override val theRecursor: List[ExprPos] = Nil
+                          )
   extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr = expr()
-  //lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 0
-  //@note Presently, mostly nonlinear shapes in derived axiomatic rules
-  override val linear: Boolean = false
 }
 
 
@@ -348,7 +335,6 @@ class BuiltinInfo(  override val codeName: String
                   , override val needsGenerator: Boolean = false
                   , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
-  //def belleExpr: BelleExpr = BelleParser(codeName)
   val canonicalName: String = codeName
 }
 
@@ -361,7 +347,6 @@ class TacticInfo(  override val codeName: String
                  , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr = expr()
   val canonicalName = codeName
 }
 

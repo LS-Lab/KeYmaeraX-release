@@ -296,11 +296,13 @@ trait SequentCalculus {
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  def existsR(e: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
-  /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
-  //@todo annotation must be on def existsR(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val existsR.
-  @Tactic(premises = "Γ |- p(e), Δ",
+  @Tactic(("∃R", "existsR"),
+    inputs = "θ[θ]:term",
+    premises = "Γ |- p(θ), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
+  def existsR(e: Term)             : DependentPositionWithAppliedInputTactic =
+    inputanon{ (pos: Position, seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, Some(e))(pos) }
+  /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   // was "exists instantiate pos"

@@ -99,6 +99,6 @@ object DerivationInfoAugmentors {
   }
 
   implicit class StorableInfoAugmentor(val si: StorableInfo) {
-    def lemma: Lemma = si.theLemma.asInstanceOf[Lemma]
+    def lemma: Lemma = si.getLemma.asInstanceOf[Lemma]
   }
 }

@@ -160,7 +160,7 @@ object Ax extends Logging {
         }
         derivedAxiomDB.get(lemmaID).get
       }
-    dai.theLemma = insertedLemma
+    dai.setLemma(insertedLemma)
     dai
   }
 
@@ -195,7 +195,7 @@ object Ax extends Logging {
         }
         derivedAxiomDB.get(lemmaID).get
       }
-    dri.theLemma = insertedLemma
+    dri.setLemma(insertedLemma)
     dri
   }
 
@@ -215,9 +215,9 @@ object Ax extends Logging {
         case Some(lemma) => lemma
         case None =>
           val witness = TactixLibrary.proveBy(derived, tactic)
-          derivedRule(name, witness, codeNameOpt).theLemma
+          derivedRule(name, witness, codeNameOpt).getLemma
       }
-    dri.theLemma = lemma
+    dri.setLemma(lemma)
     dri
   }
 
@@ -256,9 +256,9 @@ object Ax extends Logging {
         case None =>
           val witness = TactixLibrary.proveBy(derived, tactic)
           assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-          derivedFact(canonicalName, witness, Some(storedName)).theLemma
+          derivedFact(canonicalName, witness, Some(storedName)).getLemma
       }
-    dai.theLemma = lemma
+    dai.setLemma(lemma)
     dai
   }
 
