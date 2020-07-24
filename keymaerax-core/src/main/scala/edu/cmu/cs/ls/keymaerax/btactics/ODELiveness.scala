@@ -521,7 +521,7 @@ object ODELiveness {
         cut(Exists(oldvar::Nil,Equal(x,oldvar))) <( existsL('Llast) & exhaustiveEqL2R('Llast), cohideR('Rlast) & QE) &
         andL(-(seq.ante.length+1)) &
         cut(Box(sys, LessEqual( Times(x,x), Plus( Times(oldvar,oldvar), Times(rootvar,rootvar)) ) )) <(
-          (hideL(-(seq.ante.length+1)) * 3) & removeODENonLin(uode,true, hideL(-(seq.ante.length+1)) & cont)(pos),
+          (hideL(-(seq.ante.length+1)) * 3) & removeODENonLin(uode,true, hideL(-(seq.ante.length+1)) & cont, LessEqual( Times(x,x), Plus( Times(oldvar,oldvar), Times(rootvar,rootvar)) ))(pos),
           // From here, we don't need any extra information
           (hideL(-1) * seq.ante.length) &
           cohideOnlyR('Rlast) & splittac
@@ -533,44 +533,106 @@ object ODELiveness {
   })
 
   //Helper to remove a nonlinear ODE
-  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+//  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+//
+//    val vdgpre = getVDGinst(ode)._1
+//    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
+//    // the concrete vdg instance
+//    val vdg = vdgpre(vdgsubst)
+//    val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+//
+//    val ddgpre = getDDGinst(ode)
+//    val ddgsubst = UnificationMatch(ddgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
+//    // the concrete ddg instance
+//    val ddg = ddgpre(ddgsubst)
+//    val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+//
+//
+//    // check for an assumption in the context
+//    val ind = seq.ante.toStream.map( f =>
+//      UnificationMatch.unifiable(vdgasm,f) match {
+//        case None => (UnificationMatch.unifiable(ddgasm, f),false)
+//        case Some(res) => (Some(res),true)
+//      }
+//    ).collectFirst { case (Some(p),b) => (p,b) }
+//
+//    ind match {
+//      case None =>
+//        if (strict) throw new TacticInapplicableFailure(
+//          "odeReduce failed to autoremove: " + ode +
+//          ". Try to add an assumption to the antecedents of either this form: " + vdgasm +
+//          " or this form: " + ddgasm)
+//        else skip
+//      case Some((unif,b)) =>
+//        val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
+//        val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
+//
+//        cutL(concl)(pos) <( cont,
+//          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & id
+//        )
+//    }
+//  })
 
+  // same as hideNonFOL but only does the antecedents
+  private def hideNonFOLLeft: DependentTactic = anon ((sequent: Sequent) =>
+    (sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+  )
+
+  //Helper to remove a nonlinear ODE
+  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr, hint: Formula) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+
+    // The hints are constrained to be exactly one of two forms
     val vdgpre = getVDGinst(ode)._1
     val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
     // the concrete vdg instance
     val vdg = vdgpre(vdgsubst)
-    val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+    val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::1::Nil)).get
 
     val ddgpre = getDDGinst(ode)
     val ddgsubst = UnificationMatch(ddgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
     // the concrete ddg instance
     val ddg = ddgpre(ddgsubst)
-    val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+    val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::1::Nil)).get
 
+//    println("hint ", hint)
+//    println("vdgasm ", vdgasm)
+//    println(UnificationMatch.unifiable(vdgasm,hint))
 
-    // check for an assumption in the context
-    val ind = seq.ante.toStream.map( f =>
-      UnificationMatch.unifiable(vdgasm,f) match {
-        case None => (UnificationMatch.unifiable(ddgasm, f),false)
-        case Some(res) => (Some(res),true)
-      }
-    ).collectFirst { case (Some(p),b) => (p,b) }
+//    println("hint ", hint)
+//    println("ddgasm ", ddgasm)
+//    println(UnificationMatch.unifiable(ddgasm,hint))
 
-    ind match {
+    val finalrwopt = UnificationMatch.unifiable(vdgasm,hint) match {
+      case Some(res) => Some(vdg(res.usubst))
       case None =>
-        if (strict) throw new TacticInapplicableFailure("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
-        else skip
-      case Some((unif,b)) =>
-        val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
-        val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
+        UnificationMatch.unifiable(ddgasm, hint) match {
+          case Some(res) => Some(ddg(res.usubst))
+          case None => {
+            if (strict) throw new TacticInapplicableFailure(
+              "odeReduce failed to autoremove: " + ode +
+                ". Try to add a hint of either this form: " + vdgasm +
+                " or this form: " + ddgasm)
+            else None
+          }
+        }
+    }
 
-        cutL(concl)(pos) <( cont,
-          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & id
+    finalrwopt match {
+      case Some(finalrw) => {
+        val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1 :: 1 :: Nil)).get.asInstanceOf[Formula]
+
+        cutL(concl)(pos) < (cont,
+          cohideOnlyR('Rlast) &
+            useAt(finalrw, PosInExpr(1 :: Nil))(1) &
+            compatCuts(1) &
+            hideNonFOLLeft & ODE(1) & done
         )
+      }
+      case None => skip
     }
   })
 
-  private def removeODEs(ls : List[DifferentialProgram], pos:Position, strict:Boolean) : BelleExpr = {
+  private def removeODEs(ls : List[DifferentialProgram], pos:Position, strict:Boolean, hints: List[Formula]) : BelleExpr = {
 
     if(ls.isEmpty) return skip
 
@@ -578,20 +640,26 @@ object ODELiveness {
       affineVDGprecond(ls.head)
     catch {
       case e : IllegalArgumentException => {
+        // The hint to use when using removeODENonLin
+        val (hint,rest) =
+          if(hints.isEmpty) (LessEqual(Number(0),Number(0)), Nil)
+          else (hints.head, hints.tail)
         // If it is a univariate ODE just remove it, otherwise fallback to nonlinear
-        return removeODEUnivariate(ls, removeODEs(ls.tail, pos, strict))(pos) | removeODENonLin(ls.head, strict, removeODEs(ls.tail, pos, strict))(pos)
+        return (removeODEUnivariate(ls, removeODEs(ls.tail, pos, strict, hints))(pos) |
+          removeODENonLin(ls.head, strict, removeODEs(ls.tail, pos, strict, rest), hint)(pos))
       }
     }
 
-    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
+    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict, hints)
   }
 
   /** Applied to a top-level position containing a succedent diamond, this tactic removes irrelevant ODEs
     *
     * @param strict whether to throw an error when it meets a nonlinear ODE that can't be reduced
+    * @param hints a list of
     * @return reduces away all irrelevant ODEs
     */
-  def odeReduce(strict: Boolean = true) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+  def odeReduce(strict: Boolean = true, hints: List[Formula]) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "odeReduce is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -637,7 +705,7 @@ object ODELiveness {
       val goal = lsr.reverse.flatMap(_.toList) ++ lsu.flatMap(_.toList)
       val sortTac = AxiomaticODESolver.selectionSort(sys.constraint, Not(post), ode, goal, AntePosition(seq.ante.length + 1))
 
-      val red = removeODEs(odeGroups.reverse, AntePosition(seq.ante.length + 1), strict)
+      val red = removeODEs(odeGroups.reverse, AntePosition(seq.ante.length + 1), strict, hints)
       //    val resode = DifferentialProduct(timeode,ode)
       //    val goal = ls.reverse.flatMap(_.toList)
       //    val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
@@ -987,7 +1055,7 @@ object ODELiveness {
       andR(pos) <(
         andR(pos) <(
         ToolTactics.hideNonFOL & QE, //G |- e() > 0
-        odeReduce(strict = false)(pos) &
+        odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
         compatCuts(pos) & dI('full)(pos)  // derivative lower bound
       )
@@ -1050,7 +1118,7 @@ object ODELiveness {
         andR(pos) <(
           andR(pos) <(
             id,
-            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
+            odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
           compatCuts(pos) &
             dR(lie,false)(pos) <(
                   cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
@@ -1127,7 +1195,7 @@ object ODELiveness {
     kDomainDiamond(oldpbound)(pos) <(
       useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
         ToolTactics.hideNonFOL & QE,
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt)) ), // existence
+        odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt)) ), // existence
       dC(inv)(pos) <(
         DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
         DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
@@ -1247,7 +1315,7 @@ object ODELiveness {
 
     starter & timetac & coefftac &
     kDomainDiamond(property.asInstanceOf[ComparisonFormula].reapply(series,Number(0)))(pos) <(
-      odeReduce(strict=false)(pos) & Idioms.?(solve(pos) & QE),
+      odeReduce(strict=false, Nil)(pos) & Idioms.?(solve(pos) & QE),
       dC(GreaterEqual(p,series))(pos) <(
         DW(pos) & G(pos) & QE // might as well have usubst here
         ,
@@ -1445,7 +1513,7 @@ object ODELiveness {
     premises="*",
     conclusion="Γ |- <x'=f(x),t'=1,&Q>t>tau(), Δ",
     displayLevel="internal")
-  def gEx : DependentPositionTactic = anon ((pos : Position,seq:Sequent) =>
-    odeReduce(strict = true)(pos) & cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done
+  def gEx(hints: List[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
+    odeReduce(strict = true, hints)(pos) & cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done
   )
 }
