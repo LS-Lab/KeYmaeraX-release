@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
@@ -12,22 +12,30 @@ import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTe
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
  * Tests the context splitting on randomly generated formulas
  * @author Andre Platzer
  */
-class RandomContextTests extends FlatSpec with Matchers {
-  KeYmaeraXTool.init(Map.empty)
-  val randomTrials = 400
-  val randomReps = 10
-  val randomComplexity = 6
-  val rand = new RandomFormula()
+class RandomContextTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+  private val randomTrials = 400
+  private val randomReps = 10
+  private val randomComplexity = 6
+  private val rand = new RandomFormula()
 
+  override def beforeAll(): Unit = {
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
 
-  def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
+  override def afterAll(): Unit = {
+    KeYmaeraXTool.shutdown()
+  }
+
+  private def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
     if (pos != PosInExpr.HereP && pos.pos.last==0 && (origin.sub(pos.parent) match {
       // exempt those positions where DotTerm() makes no sense since restricted to variables
       case Some(Assign(_,_)) => true
@@ -38,9 +46,9 @@ class RandomContextTests extends FlatSpec with Matchers {
       case Some(_) => false
     })) return true
     val (ctx,e) = try { origin.at(pos) } catch {
-      case ex: IllegalArgumentException => println("\nInput:      " + origin +
+      case _: IllegalArgumentException => println("\nInput:      " + origin +
       "\nIllposition: " + pos); (Context(DotFormula), origin)
-      case e: SubstitutionClashException => println("\nInput:      " + origin +
+      case _: SubstitutionClashException => println("\nInput:      " + origin +
         "\nIllposition: " + pos); (Context(DotFormula), origin)
     }
     println("\n" +
@@ -68,15 +76,15 @@ class RandomContextTests extends FlatSpec with Matchers {
 
 
   //@note these tests sometimes fails for too courageous DotTerm() occurrences in the wrong places caused by random positioning. For example left of assignment ...
-  "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(5,2)}
-  it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(20,8)}
-  it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(50,10)}
-  it should "consistently split formulas (slow)" taggedAs(SlowTest) in {test()}
+  "The positioning" should "consistently split formulas (checkin)" taggedAs CheckinTest in {test(5,2)}
+  it should "consistently split formulas (summary)" taggedAs SummaryTest in {test(20,8)}
+  it should "consistently split formulas (usual)" taggedAs UsualTest in {test(50,10)}
+  it should "consistently split formulas (slow)" taggedAs SlowTest in {test()}
 
-  private def test(randomTrials: Int = randomTrials, randomReps: Int = randomReps, randomComplexity: Int = randomComplexity) =
-    for (i <- 1 to randomTrials) {
+  private def test(randomTrials: Int = randomTrials, randomReps: Int = randomReps, randomComplexity: Int = randomComplexity): Unit =
+    for (_ <- 1 to randomTrials) {
       val f = rand.nextFormula(randomComplexity)
-      for (j <- 1 to randomReps) {
+      for (_ <- 1 to randomReps) {
         val pos = rand.nextPosition(randomComplexity).inExpr
         contextShouldBe(f, pos)
       }

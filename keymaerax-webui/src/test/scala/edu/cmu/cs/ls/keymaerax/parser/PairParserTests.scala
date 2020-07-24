@@ -4,15 +4,15 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable
-
 import scala.collection.immutable._
 
 /**
@@ -21,17 +21,27 @@ import scala.collection.immutable._
   * @author Andre Platzer
  */
 @SummaryTest
-class PairParserTests extends FlatSpec with Matchers {
-  val pp = KeYmaeraXPrettyPrinter
-  val parser =
+class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+  private val pp = KeYmaeraXPrettyPrinter
+  private val parser =
 //    KeYmaeraXParser
   DLParser
 
-  KeYmaeraXTool.init(Map.empty)
-  val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
+  private val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
-  def parseShouldBe(input: String, expr: Expression) = {
-    parser.setAnnotationListener((prg, fml) => {})
+  override def beforeAll(): Unit = {
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
+
+  override def afterAll(): Unit = {
+    KeYmaeraXTool.shutdown()
+  }
+
+  private def parseShouldBe(input: String, expr: Expression) = {
+    parser.setAnnotationListener((_, _) => {})
     val parse = parser(input)
     if (!(parse == expr)) {
       println("Reparsing" +
@@ -787,19 +797,19 @@ class PairParserTests extends FlatSpec with Matchers {
     pairParse(expectedParseExpression, parser)
   }
 
-  it should "term parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "term parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
     pairParse(expectedParseTerm, s => {val r=parser.termParser(s); r shouldBe a[Term]; r})
   }
 
-  it should "formula parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "formula parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
     pairParse(expectedParseFormula, s => {val r=parser.formulaParser(s); r shouldBe a[Formula]; r})
   }
 
-  it should "program parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "program parse table of string pairs as expected" taggedAs KeYmaeraXTestTags.SummaryTest in {
     pairParse(expectedParseProgram, s => {val r=parser.programParser(s); r shouldBe a[Program]; r})
   }
 
-  def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
+  def pairParse(expected: List[(String,String)], parser: String=>Expression): Unit = {
     for ((s1, s2) <- expected) {
       println("\ninput:    " + s1)
       if (s2 == unparseable) {
@@ -835,7 +845,7 @@ class PairParserTests extends FlatSpec with Matchers {
   it should "reparse -(2^(-4))" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("-4")))))}
 
 
-  private def reparse(e: Expression) = {
+  private def reparse(e: Expression): Unit = {
     val printed = pp.stringify(e)
     println("Expression: " + printed)
     val full = pp.fullPrinter(e)

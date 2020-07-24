@@ -154,7 +154,10 @@ object HyDRAInitializer extends Logging {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
-    KeYmaeraXTool.init(Map.empty)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+      KeYmaeraXTool.INTERPRETER -> ExhaustiveSequentialInterpreter.getClass.getSimpleName
+    ))
 
     //@note setup interpreter
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())

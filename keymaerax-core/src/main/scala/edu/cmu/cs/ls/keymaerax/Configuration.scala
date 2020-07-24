@@ -12,6 +12,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 
 import scala.reflect.runtime.universe._
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Map
 
 /** The KeYmaera X configuration.
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
@@ -176,6 +177,20 @@ object Configuration {
   def remove(key: String, saveToFile: Boolean = true): Unit = {
     config.clearProperty(key)
     if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
+  }
+
+  /** Executes `code` with a temporary configuration that gets reset after execution. */
+  def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {
+    val origConfig = tempConfig.keys.map(k => k -> Configuration.get[String](k))
+    try {
+      tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
+      code
+    } finally {
+      origConfig.foreach({
+        case (k, None) => Configuration.remove(k, saveToFile = false)
+        case (k, Some(v)) => Configuration.set(k, v, saveToFile = false)
+      })
+    }
   }
 
   //<editor-fold desc="Configuration access shortcuts>

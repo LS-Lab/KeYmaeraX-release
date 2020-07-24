@@ -4,23 +4,15 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
-import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, RandomFormula, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
-import org.scalatest._
-import testHelper.KeYmaeraXTestTags
-import testHelper.CustomAssertions.withSafeClue
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
 /**
@@ -31,9 +23,16 @@ import scala.collection.immutable.IndexedSeq
 @SummaryTest
 @USubstTest
 class URenameTests extends TacticTestBase {
-  KeYmaeraXTool.init(Map.empty)
 
-  "Bound renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs(AdvocatusTest) in {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
+
+  "Bound renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs AdvocatusTest in {
     /** {{{
       *                 *
       * ---------------------------------- id
@@ -84,7 +83,7 @@ class URenameTests extends TacticTestBase {
   //@todo test similar unsound conclusions from other semantic renaming
 
 
-  "Uniform renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs(AdvocatusTest) in {
+  "Uniform renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs AdvocatusTest in {
     /** {{{
       * p(||) -> \forall x p(||)
       * ------------------------ UR unsound
@@ -106,10 +105,10 @@ class URenameTests extends TacticTestBase {
       )
       // wouldBe from now on
       clash.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall x p(||)".asFormula)))
-      clash.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula)))
+      clash.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("p(||) -> \\forall y p(||)".asFormula))
       val unsound = clash(USubst(SubstitutionPair("p(||)".asFormula, "x^2>=y".asFormula) :: Nil))
       unsound.subgoals shouldBe IndexedSeq(Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall x x^2>=y".asFormula)))
-      unsound.conclusion shouldBe (Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall y x^2>=y".asFormula)))
+      unsound.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall y x^2>=y".asFormula))
       //@todo now an extra antecedent y>=0 would make the top provable but the bottom unsound
     }
   }
@@ -164,11 +163,11 @@ class URenameTests extends TacticTestBase {
     URename(Variable("x"),Variable("y"))(DotTerm().asInstanceOf[Expression]) shouldBe DotTerm()
   }
 
-  "Differential renaming" should "refuse to rename differential symbols without their respective base variable" taggedAs(AdvocatusTest) in {
+  "Differential renaming" should "refuse to rename differential symbols without their respective base variable" taggedAs AdvocatusTest in {
     a [CoreException] shouldBe thrownBy{URename(DifferentialSymbol(Variable("x")), DifferentialSymbol(Variable("z")))("(x+y)'=x'+y'".asFormula)}
   }
 
-  it should "avoid unsound renaming proofs" taggedAs(AdvocatusTest) in withMathematica { _ =>
+  it should "avoid unsound renaming proofs" taggedAs AdvocatusTest in withMathematica { _ =>
 //    val proof1 = Provable.axioms("*' derive product")(USubst(
 //      SubstitutionPair(UnitFunctional("f",AnyArg,Real), "x".asVariable) ::
 //        SubstitutionPair(UnitFunctional("g",AnyArg,Real), "y".asVariable) :: Nil))

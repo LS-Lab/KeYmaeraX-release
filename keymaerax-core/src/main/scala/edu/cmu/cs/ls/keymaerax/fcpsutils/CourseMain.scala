@@ -45,16 +45,11 @@ object CourseMain {
     println("Falling back to Z3. Not a big deal but some features won't be available.")
     val provider = new Z3ToolProvider()
     ToolProvider.setProvider(provider)
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     if(provider.tools().forall(_.isInitialized)) println("Initialized Z3!")
-
-
-    //Intialize the printer, the configuration generator, the parser, and the invariant generator.
-    KeYmaeraXTool.init(Map.empty)
-    val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixInit.invSupplier = generator
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
   }
 
   /** A command-line tool that doesn't contain any of the web UI stuff. Useful because the JAR is considerably smaller, but many features aren't available.

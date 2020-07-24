@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
@@ -69,7 +70,10 @@ class LauncherTests extends TacticTestBase {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = File.createTempFile("bouncing-ball-notac", ".kyx").getAbsolutePath
 
-    KeYmaeraXTool.init(Map.empty)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
     val sourceEntries = List.fill(3)(KeYmaeraXArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
       case (e, i) => e.copy(name = e.name + i)
     })

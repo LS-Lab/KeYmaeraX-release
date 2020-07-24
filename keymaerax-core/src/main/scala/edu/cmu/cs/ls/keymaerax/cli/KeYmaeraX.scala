@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
@@ -81,7 +82,10 @@ object KeYmaeraX {
       case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
     }
 
-    KeYmaeraXTool.init(Map.empty)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })

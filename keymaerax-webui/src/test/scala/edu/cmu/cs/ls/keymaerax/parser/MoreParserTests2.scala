@@ -1,35 +1,29 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
 /** More tests for KeYmaeraXParser
  */
-class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val x = Variable("x")
-  val y = Variable("y")
-  val z = Variable("z")
+class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+  private val x = Variable("x")
+  private val y = Variable("y")
 
-  val f0 = FuncOf(Function("f",None,Unit,Real),Nothing)
-  val g0 = FuncOf(Function("g",None,Unit,Real),Nothing)
-  val h0 = FuncOf(Function("h",None,Unit,Real),Nothing)
+  private var parser: Parser = _
+  private var pp: PrettyPrinter = _
 
-  val p0 = PredOf(Function("p",None,Unit,Bool),Nothing)
-  val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
-  val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
-
-  val p = Function("p",None,Real,Bool)
-  val q = Function("q",None,Real,Bool)
-  val r = Function("r",None,Real,Bool)
-
-  var parser: Parser = _
-  var pp: PrettyPrinter = _
+  override def beforeAll(): Unit = {
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
 
   override def beforeEach(): Unit = {
-    KeYmaeraXTool.init(Map.empty)
     parser = KeYmaeraXParser
     pp = KeYmaeraXPrettyPrinter
   }
@@ -37,6 +31,9 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach(): Unit = {
     pp = null
     parser = null
+  }
+
+  override def afterAll(): Unit = {
     KeYmaeraXTool.shutdown()
   }
 

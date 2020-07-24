@@ -130,11 +130,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   def withTactics(testcode: => Any): Unit = {
     if (!DerivationInfoRegistry.isInit) {
-      val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-      val common = Map(
-        Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
-        Configuration.Keys.QE_TOOL -> "mathematica")
-      val interp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")
       val oldProvider = ToolProvider.provider
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
@@ -142,9 +137,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      withTemporaryConfig(interp) {
-        DerivationInfoRegistry.init()
-      }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
       tool.cancel()
       tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
       mathematicaProvider.synchronized {
@@ -171,8 +167,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val common = Map(
       Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
       Configuration.Keys.QE_TOOL -> "mathematica")
-    val interp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")
-    val uninterp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
     withTemporaryConfig(common) {
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
@@ -180,9 +175,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      withTemporaryConfig(interp) {
-        DerivationInfoRegistry.init(initLibrary = initLibrary)
-      }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = (t: Thread) => {
@@ -275,18 +271,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any) {
-    val origConfig = tempConfig.keys.map(k => k -> Configuration.getOption(k))
-    try {
-      tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
-      testcode
-    } finally {
-      origConfig.foreach({
-        case (k, None) => Configuration.remove(k, saveToFile = false)
-        case (k, Some(v)) => Configuration.set(k, v, saveToFile = false)
-      })
-    }
-  }
+  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
+    Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   /** Test setup */
   override def beforeEach(): Unit = {
@@ -350,6 +336,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     }
     ToolProvider.shutdown()
     ToolProvider.setProvider(new NoneToolProvider())
+    KeYmaeraXTool.shutdown()
   }
 
   /** Registers an interpreter for cleanup after test. Returns the registered interpreter. */
