@@ -27,7 +27,7 @@ object KaisarProof {
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
   // we elaborate to the core expression syntax
   // "init" is an example label-function which can be passed for the second argument of at()
-  // In concrete proofs, the label function name is generated from the labels in the proof.
+  // In concrete proofs, the label function name is generated from; the labels in the proof.
   val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
 
@@ -110,6 +110,7 @@ case class ForwardSelector(forward: ProofTerm) extends Selector {}
 // @TODO: probably more useful to mean "all which contain e as a subexpression"
 // @TODO: Makes early elaboration passes annoying, perhaps implement this later
 case class PatternSelector(e: Expression) extends Selector {}
+case class DefaultSelector(f: Formula) extends Selector {}
 
 // Pattern language for left-hand side of assignment proofs. Expressions are used for most patterns, but assignment
 // patterns are not quite expressions because each assigned variable may introduce a proof variable.
@@ -274,6 +275,8 @@ object Context {
       case Modify(VarPat(x, Some(p)), Left(f)) =>
         // @TODO: Proper variable renaming
         Some((p, Equal(x, f)))
+      case Modify(VarPat(x, None), Left(f)) =>
+        Some((x, Equal(x, f)))
       case Modify(TuplePat(pats), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
       case Modify(VarPat(x, None), Right(())) =>

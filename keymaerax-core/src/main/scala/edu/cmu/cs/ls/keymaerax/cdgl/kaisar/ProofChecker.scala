@@ -48,6 +48,9 @@ object ProofChecker {
 
   def methodAssumptions(con: Context, m: Selector): List[Formula] = {
     m match {
+      case DefaultSelector(f) =>
+        val fv = StaticSemantics(f).fv
+        fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v).toList)
       case ForwardSelector(pt) => List(apply(con, pt))
       case PatternSelector(e) => Context.unify(con, e).toList.map(_._2)
     }
@@ -112,7 +115,8 @@ object ProofChecker {
   }
 
   def apply(con: Context, f: Formula, m: Method): Unit = {
-    val (assms, meth) = methodAssumptions(con, m)
+    val defaultMeth = Using(List(DefaultSelector(f)), m)
+    val (assms, meth) = methodAssumptions(con, defaultMeth)
     meth match {
       case  RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
       // general-purpose auto heuristic
