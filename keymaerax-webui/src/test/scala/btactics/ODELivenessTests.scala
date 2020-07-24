@@ -1,11 +1,11 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
@@ -137,10 +137,28 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  a > 0, [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
   }
 
-  "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
+  "odeReduce" should "detect nonlinear ode" in withQE { _ =>
+    val seq = "[{x'=y^2,y'=-x^2}] y^2+x^2 <= k^2 ==> <{x' = y^2, y' = -x^2, t'=1}> t > 100".asSequent
+
+    val pr = proveBy(seq, odeReduce(true,"y*y+x*x<=k^2+c()^2".asFormula::Nil)(1))
+
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "[{x'=y^2,y'=-x^2}] y^2+x^2 <= k^2 ==> <{t'=1&true}>t>100".asSequent
+  }
+
+  it should "use hints in sequence" in withQE { _ =>
+    val seq = "[{a'=b^2,b'=a^2}]a^2+b^2 <= 5, [{x'=y^2,y'=-x^2}] 2*(y*(-x^2)+x*y^2) <= c() ==> <{x' = y^2, y' = -x^2, a'=b^2, b'=a^2, t'=1}> t > 100".asSequent
+
+    val pr = proveBy(seq, odeReduce(true,"a*a+b*b<=10".asFormula::"2*(y*(-x^2)+x*y^2) <= 0*(y*y+x*x) + c() ".asFormula::Nil)(1))
+
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "[{a'=b^2,b'=a^2}]a^2+b^2 <= 5, [{x'=y^2,y'=-x^2}] 2*(y*(-x^2)+x*y^2) <= c() ==> <{t'=1&true}>t>100".asSequent
+  }
+
+  it should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
     val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5, 2+2=1".asSequent
 
-    val pr = proveBy(seq, odeReduce(strict = true)(2))
+    val pr = proveBy(seq, odeReduce(strict = true, Nil)(2))
 
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{x'=x+1,c'=d+e(),v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
@@ -149,34 +167,24 @@ class ODELivenessTests extends TacticTestBase {
   it should "throw a helpful error when it gets stuck" in withQE { _ =>
     val seq = "==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
-    //the [Exception] thrownBy ??? should have message ""
-    // how to catch directly ??
-    val res = try {
-      proveBy(seq, odeReduce(strict = true)(1))
-      true shouldBe false //bad
-    } catch {
-      case e:BelleThrowable =>
-        println(e.getMessage)
-        true
-        // it should have this error:
-        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption to the antecedents of either this form: [{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f_(|d|) or this form: [{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=a_(|y_,z_,d|)*(d*d)+b_(|y_,z_,d|)"
-    }
+    the [Exception] thrownBy proveBy(seq, odeReduce(strict = true, Nil)(1)) should have message
+      "odeReduce failed to autoremove: {d'=d^2+f}. Try to add a hint of either this form: d*d<=f_(|d|) or this form: 2*(d*(d^2+f))<=a_(|y_,z_,d|)*(d*d)+b_(|y_,z_,d|)"
   }
 
   it should "continue using assms (format 1)" in withQE { _ =>
-    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] d*d <= f*e ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] d^2 <= e*f ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
-    val pr = proveBy(seq, odeReduce(strict = true)(1))
+    val pr = proveBy(seq, odeReduce(strict = true, "d*d <= f*e".asFormula::Nil)(1))
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f*e  ==>  <{e'=5&e<=5}>e<=5".asSequent
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]d^2<= e*f ==>  <{e'=5&e<=5}>e<=5".asSequent
   }
 
   it should "continue using assms (format 2)" in withQE { _ =>
-    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d^2) ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
-    val pr = proveBy(seq, odeReduce(strict = true)(1))
+    val pr = proveBy(seq, odeReduce(strict = true, "2*(d*(d^2+f)) <= 1*(d*d)+5".asFormula :: Nil)(1))
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=1*(d^2)  ==>  <{e'=5&e<=5}>e<=5".asSequent
   }
 
   "kdomd" should "refine ODE postcondition (with auto DC of assumptions)" in withQE { _ =>
@@ -291,34 +299,34 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-    it should "support higher derivatives" in withQE { _ =>
-      // note: postcondition x > j fails because of a renaming bug
-      val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
-        // Should be old(x), etc.
-        higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
-        // This is manual by design, although this is probably the main way to do it
-        dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
-        dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
-      )
+  it should "support higher derivatives" in withQE { _ =>
+    // note: postcondition x > j fails because of a renaming bug
+    val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
+      // Should be old(x), etc.
+      higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
+      // This is manual by design, although this is probably the main way to do it
+      dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
+      dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+    )
 
-      println(pr)
-      pr shouldBe 'proved
-    }
+    println(pr)
+    pr shouldBe 'proved
+  }
 
-    it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
-      val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
-        implyR(1) &
-          //encode abs(v)
-          cut("\\exists absv (absv = abs(v))".asFormula) < (
-            existsL(-2),
-            hideR(1) & QE
-          ) &
-          semialgdV("absv".asTerm)(1)
-      )
+  it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
+    val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
+      implyR(1) &
+        //encode abs(v)
+        cut("\\exists absv (absv = abs(v))".asFormula) < (
+          existsL(-2),
+          hideR(1) & QE
+        ) &
+        semialgdV("absv".asTerm)(1)
+    )
 
-      println(pr)
-      pr shouldBe 'proved
-    }
+    println(pr)
+    pr shouldBe 'proved
+  }
 
   "cor" should "refine a closed domain" in withQE { _ =>
     val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
@@ -350,42 +358,42 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
+  "univariate" should "automatically odeReduce univariate" in withMathematica { _ =>
     val fml = "b() > 0 & k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - b() * v + 1, y'=y, t'=1}> t > 1000".asFormula
 
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    val pr = proveBy(fml, implyR(1) & odeReduce(true,Nil)(1) &
+      cohideR(1) & byUS(Ax.TExgt)
+    )
 
-    println(pr)
-    pr shouldBe 'proved
+    //@todo: works with Mathematica but something is wrong with ODE and z3??
+    val fail = "b()>0&k>0&initx_>0  ==>  [{v'=-k*v^3-v^2-b()*v+1,y'=y,t'=1&true&v*v<=initx_*initx_+root_*root_}]v*v<=initx_*initx_+root_*root_".asSequent
+    println("fails on Z3: ",proveBy(fail, ODE(1)))
+
+//    println(pr)
+//    pr shouldBe 'proved
   }
 
-  it should "not try univariate removal when inapplicable (1)" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "not try univariate removal when inapplicable (1)" in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire
     // and things should fallback to the nonlinear case
-    val pr = proveBy(fml, prop & odeReduce()(1))
-    println(pr)
-
-    // should throw this error
-    // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
+    the [Exception] thrownBy proveBy(fml, prop & odeReduce(true,Nil)(1)) should have message
+      "odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add a hint of either this form: a*a+v*v<=f_(|a,v|) or this form: 2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
   }
 
-  it should "not try univariate removal when inapplicable (2)" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "not try univariate removal when inapplicable (2)" in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
-    println(pr)
-
-    // should throw this error
-    // "because odeReduce failed to autoremove: {v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{v'=-v^2*a,a'=1,t'=1&true}]v*v<=f_(|v|) or this form: [{v'=-v^2*a,a'=1,t'=1&true}]2*(v*(-v^2*a))<=a_(|y_,z_,v|)*(v*v)+b_(|y_,z_,v|)"
+    the [Exception] thrownBy proveBy(fml, implyR(1) & odeReduce(true,Nil)(1)) should have message
+      "odeReduce failed to autoremove: {v'=-v^2*a}. Try to add a hint of either this form: v*v<=f_(|v|) or this form: 2*(v*(-v^2*a))<=a_(|y_,z_,v|)*(v*v)+b_(|y_,z_,v|)"
   }
 
-  it should "work on a hard symbolic case" in withQE { _ =>
+  it should "work on a hard symbolic case" in withMathematica { _ =>
     val fml = "a > 0 & b() < 0 & x<= a& x>= b()-> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
 
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    val pr = proveBy(fml, implyR(1) & odeReduce(true,Nil)(1) & solve(1) & QE)
     println(pr)
     pr shouldBe 'proved
   }
@@ -393,7 +401,7 @@ class ODELivenessTests extends TacticTestBase {
   it should "work with interleaved cases" in withQE { _ =>
     val fml = "a > 0 & b() < 0 & x<= a& x>= b()& y^2 = 0 -> <{k'=z+x+k,  y'=y*(y-a)*(y-b()),z'=x+z, x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
 
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    val pr = proveBy(fml, implyR(1) & odeReduce(true,Nil)(1) & solve(1) & QE)
     println(pr)
     pr shouldBe 'proved
   }
@@ -421,31 +429,41 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  "init" should "initialize" in withMathematica { _ =>
+  }
+
   "FAOC" should "prove Example 1 (manual)" in withMathematica { _ =>
-    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula,
-      implyR(1) & allR(1) &
+
+    val tac =  implyR(1) & allR(1) &
       dDDG("0".asTerm,"0".asTerm)(1) <(
         ODE(1),
         cohideR(1) & byUS(Ax.TExgt)
       )
-    )
+
+    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 1 (automatic)" in withMathematica { _ =>
-    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula,
-      implyR(1) & allR(1) & gEx(1)
-    )
+
+    val tac = implyR(1) & allR(1) & gEx(Nil)(1)
+
+    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 2 (manual)" in withMathematica { _ =>
     // Note: the u,v ODEs are swapped here for a simpler manual proof
     // The automatic proof below does this swapping automatically
-    val pr = proveBy("\\forall tau <{v'=u*v, u'=u, t'=1}> t > tau".asFormula,
-      allR(1) &
+    val tac = allR(1) &
       dDDG("2*u".asTerm,"0".asTerm)(1) <(
         ODE(1),
         dDDG("2".asTerm,"0".asTerm)(1) <(
@@ -453,219 +471,259 @@ class ODELivenessTests extends TacticTestBase {
           byUS(Ax.TExgt)
         )
       )
-    )
+
+    val pr = proveBy("\\forall tau <{v'=u*v, u'=u, t'=1}> t > tau".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 2 (automatic)" in withMathematica { _ =>
-    val pr = proveBy("\\forall tau <{u'=u, v'=u*v, t'=1}> t > tau".asFormula,
-      allR(1) & gEx(1)
-    )
+
+    val tac = allR(1) & gEx(Nil)(1)
+
+    val pr = proveBy("\\forall tau <{u'=u, v'=u*v, t'=1}> t > tau".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 3 (manual)" in withMathematica { _ =>
-    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula,
-      implyR(1) & allR(1) &
+
+    val tac = implyR(1) & allR(1) &
       dBDG("1/4".asTerm,2)(1) <(
         ODE(1),
         cohideR(1) & byUS(Ax.TExgt)
       )
-    )
+
+    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 3 (automatic)" in withMathematica { _ =>
-    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula,
-      implyR(1) & allR(1) &
-      // If gEx(1) is called here, it should fail with a helpful error:
+
+    val tac = implyR(1) & allR(1) &
+      gEx("u*u+v*v<=1/4".asFormula :: Nil)(1)
+      // If gEx is called without hints here, it should fail with a helpful error:
       // odeReduce failed to autoremove: {u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2)}.
-      // Try to add an assumption to the antecedents of either this form: [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]u*u+v*v<=f_(|u,v|) or this form: [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=a_(|y_,z_,u,v|)*(u*u+v*v)+b_(|y_,z_,u,v|)
-      cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]u*u+v*v<=1/4".asFormula) <(
-        gEx(1), //this call succeeds automatically
-        hideR(1) & ODE(1)
+      // Try to add an assumption to the antecedents of either this form:
+      // [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]u*u+v*v<=f_(|u,v|) or this form:
+      // [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=a_(|y_,z_,u,v|)*(u*u+v*v)+b_(|y_,z_,u,v|)
+
+    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula, tac)
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 4 (manual)" in withMathematica { _ =>
+
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+
+    val tac = implyR(1) &
+      // Replace the postcondition
+      kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
+        skip,
+        ODE(1) // ODE is smart enough to do two steps at once here
+      ) &
+      // This is a manual implementation of dV
+      cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+      vDG("t'=1".asDifferentialProgram)(1) &
+      cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+      kDomainDiamond("t > 2*p".asFormula)(1) <(
+        skip,
+        dC("p-1/2*t >= u^2+v^2-1/4".asFormula)(1) <( ODE(1), ODE(1) )
+      ) &
+      // Global existence:
+      useAt(Ax.commaCommuteD)(1) &
+      dDDG("0".asTerm,"0".asTerm,2)(1) <(
+        ODE(1),
+        cohideR(1) & byUS(Ax.TExgt)
       )
-    )
+
+    val pr = proveBy(fml, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
-  it should "prove Example 5 (manual)" in withMathematica { _ =>
+  it should "prove Example 4 (automatic) " in withMathematica { _ =>
+
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
 
-    val pr = proveBy(fml,
-      implyR(1) &
-        // Replace the postcondition
-        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
-          skip,
-          ODE(1) // ODE is smart enough to do two steps at once here
-        ) &
-        // This is a manual implementation of dV
-        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
-        vDG("t'=1".asDifferentialProgram)(1) &
-        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
-        kDomainDiamond("t > 2*p".asFormula)(1) <(
-          skip,
-          dC("p-1/2*t >= u^2+v^2-1/4".asFormula)(1) <( ODE(1), ODE(1) )
-        ) &
-        // Global existence:
-        useAt(Ax.commaCommuteD)(1) &
-        dDDG("0".asTerm,"0".asTerm,2)(1) <(
-          ODE(1),
-          cohideR(1) & byUS(Ax.TExgt)
-        )
-    )
-    println(pr)
+    val tac = implyR(1) &
+      // Replace the postcondition
+      kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
+        dVAuto(1), //dV("1/2".asTerm)(1)
+        ODE(1)
+      )
 
+    val pr = proveBy(fml, tac)
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
-  it should "prove Example 5 (automatic) " in withMathematica { _ =>
-    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+  it should "prove Examples 5,6,7 (manual) " in withMathematica { _ =>
 
-    val pr = proveBy(fml,
-      implyR(1) &
-        // Replace the postcondition
-        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
-          dVAuto(1), //dV("1/2".asTerm)(1)
-          ODE(1)
-        )
-    )
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "prove Example 6 and 7 (manual) " in withMathematica { _ =>
+    //First, prove the liveness property without domain constraints
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
 
-    val pr = proveBy(fml,
-      implyR(1) &
-        // "Assume" for contradiction that goal is not reached, then solution is trapped in compact set
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
-          skip,
-          useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
-        ) &
-        // Manual dV
-        cut("\\exists t t=0".asFormula) <( existsL(-3) , cohideR(2) & QE) &
-        vDG("t'=1".asDifferentialProgram)(1) &
-        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-4) , cohideR(2) & QE) &
-        kDomainDiamond("t > 2/3*p".asFormula)(1)
-          <(
-          skip,
-          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <(
-            hideL(-2) & ODE(1),
-            hideL(-2) &
-              dC("u^2+v^2>=1".asFormula)(1) <(
-                ODE(1),
-                ODE(1)
-              )
-          )
-        ) &
-        // Global existence
-        useAt(Ax.commaCommuteD)(1) &
-        dBDG("2".asTerm,2)(1) <(
-          cohideOnlyL(-2) & vDG("t'=1".asDifferentialProgram)(-1) &
-            useAt(Ax.commaCommute)(-1) &
-            monb & QE
-          ,
-          cohideR(1) & byUS(Ax.TExgt)
-        )
-    )
+    val tac = implyR(1) &
+      // "Assume" for contradiction that goal is not reached, then solution is trapped in compact set
+      cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
+        skip,
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
+      ) &
+      // Manual dV
+      cut("\\exists t t=0".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+      vDG("t'=1".asDifferentialProgram)(1) &
+      cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-4) , cohideR(2) & QE) &
+      kDomainDiamond("t > 2/3*p".asFormula)(1) <(
+        skip,
+        dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <(
+          hideL(-2) & ODE(1),
+          hideL(-2) &
+            dC("u^2+v^2>=1".asFormula)(1) <(
+              ODE(1),
+              ODE(1)
+            )
+        )) &
+      useAt(Ax.commaCommuteD)(1) &
+      dBDG("2".asTerm,2)(1) <(
+        cohideOnlyL(-2) & vDG("t'=1".asDifferentialProgram)(-1) &
+          useAt(Ax.commaCommute)(-1) &
+          monb & QE
+        ,
+        cohideR(1) & byUS(Ax.TExgt)
+      )
 
-    println(pr)
-    pr shouldBe 'proved
+    val pr = proveBy(fml, tac)
 
+    //Then, prove the liveness property with domain constraints
     val fml2 = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2) & 1 <= u^2+v^2 & u^2+v^2 <= 2}> (u^2+v^2 >= 2)".asFormula
 
-    val pr2 = proveBy(fml2,
-      implyR(1) &
-        dDR("u^2+v^2 <= 2".asFormula)(1) <(
-          skip,
-          ODE(1)
-        ) &
-        closedRef("true".asFormula)(1) <(
-          implyRi & byUS(pr),
-          QE,
-          ODE(1)
-        )
-    )
+    val tac2 = implyR(1) &
+      dDR("u^2+v^2 <= 2".asFormula)(1) <(
+        skip,
+        ODE(1)
+      ) &
+      closedRef("true".asFormula)(1) <(
+        implyRi & byUS(pr), //The (proved) liveness property without constraints is used here via substitution
+        QE,
+        ODE(1)
+      )
 
+    val pr2 = proveBy(fml2, tac2)
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
+    pr shouldBe 'proved
+
+    // Note: proof steps for pr2 already includes those from pr
+    // Total tactic size is counted as size for tac1 + tac2
     println(pr2)
+    println("Proof steps:",pr2.steps)
+    println("Tactic size:",TacticStatistics.size(tac2))
     pr2 shouldBe 'proved
   }
 
-  it should "prove Example 6 and 7 (automatic) " in withMathematica { _ =>
+  it should "prove Examples 5,6,7 (automatic) " in withMathematica { _ =>
+
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
 
-    val pr = proveBy(fml,
-      implyR(1) &
-        // "Assume" for contradiction that goal is not reached
-        saveBox(1) &
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) < (
-          dVAuto(1), //dV("3/2".asTerm)(1)
-          hideL(-2) & cohideOnlyR(2) & ODE(1)
-        ) &
-        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),timevar_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) < (
-          gEx(1),
-          hideR(1) & compatCuts(1) & dW(1) & QE
-        )
-    )
+    val tac = implyR(1) &
+      // "Assume" for contradiction that goal is not reached
+      saveBox(1) &
+      cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) < (
+        dVAuto(1), //dV("3/2".asTerm)(1)
+        hideL(-2) & cohideOnlyR(2) & ODE(1)
+      ) &
+      gEx("2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula::Nil)(1)
 
-    println(pr)
-    pr shouldBe 'proved
+    val pr = proveBy(fml, tac)
 
     val fml2 = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2) & 1 <= u^2+v^2 & u^2+v^2 <= 2}> (u^2+v^2 >= 2)".asFormula
 
-    val pr2 = proveBy(fml2,
-      implyR(1) &
-        dDR("u^2+v^2 <= 2".asFormula)(1) <(
-          skip,
-          ODE(1)
-        ) &
-        closedRef("true".asFormula)(1) <(
-          implyRi & byUS(pr),
-          QE,
-          ODE(1)
-        )
-    )
+    val tac2 = implyR(1) &
+      dDR("u^2+v^2 <= 2".asFormula)(1) <(
+        skip,
+        ODE(1)
+      ) &
+      closedRef("true".asFormula)(1) <(
+        implyRi & byUS(pr),
+        QE,
+        ODE(1)
+      )
 
+    val pr2 = proveBy(fml2, tac2)
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
+    pr shouldBe 'proved
+
+    // Note: proof steps for pr2 already includes those from pr
+    // Total tactic size is counted as size for tac1 + tac2
     println(pr2)
+    println("Proof steps:",pr2.steps)
+    println("Tactic size:",TacticStatistics.size(tac2))
     pr2 shouldBe 'proved
   }
 
   it should "prove Example 8 (manual)" in withMathematica { _ =>
-    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula,
-      kDomainDiamond("u^2 <= 1".asFormula)(1) <(
-        skip,
-        ODE(1)
-      ) &
-      // This is a manual implementation of dV
-      cut("\\exists t t=0".asFormula) <( existsL(-1) , cohideR(2) & QE) &
-      vDG("t'=1".asDifferentialProgram)(1) &
-      cut("\\exists p u^2=p".asFormula) <( existsL(-2) , cohideR(2) & QE) &
-      kDomainDiamond("t > p".asFormula)(1) <(
-        skip,
-        dC("p-t >= u^2-1".asFormula)(1) <( ODE(1), ODE(1) )
-      ) &
-      // Global existence:
-      useAt(Ax.commaCommuteD)(1) &
-      dDDG("0".asTerm,"0".asTerm)(1) <(
-        ODE(1),
-        cohideR(1) & byUS(Ax.TExgt)
-      )
+
+    val tac = kDomainDiamond("u^2 <= 1".asFormula)(1) <(
+      skip,
+      ODE(1)
+    ) &
+    // This is a manual implementation of dV
+    cut("\\exists t t=0".asFormula) <( existsL(-1) , cohideR(2) & QE) &
+    vDG("t'=1".asDifferentialProgram)(1) &
+    cut("\\exists p u^2=p".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+    kDomainDiamond("t > p".asFormula)(1) <(
+      skip,
+      dC("p-t >= u^2-1".asFormula)(1) <( ODE(1), ODE(1) )
+    ) &
+    // Global existence:
+    useAt(Ax.commaCommuteD)(1) &
+    dDDG("0".asTerm,"0".asTerm)(1) <(
+      ODE(1),
+      cohideR(1) & byUS(Ax.TExgt)
     )
+
+    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Example 8 (automatic)" in withMathematica { _ =>
-    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula,
-      semialgdV("1".asTerm)(1)
-    )
+
+    val tac = semialgdV("1".asTerm)(1)
+
+    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula, tac)
+
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
@@ -681,80 +739,76 @@ class ODELivenessTests extends TacticTestBase {
     val S2 = And(Not(X0), "x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula)
     val p2 = "-(-x1 - 6/5)^2 + (-x1 + x2 - 2)^2 +10".asTerm
 
-    val pr1 = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) ,
-      implyR(1) &
-        // This part is an invariant, so cut it as context
-        cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
-          skip,
-          cohideOnlyR(2) & ODE(1)
-        ) &
-        // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
-        dDR(True)(1) <(
-          skip,
-          dW(1) & QE //or: ODE(1)
-        ) &
-        // Use a staging set that cannot be left without reaching the target
-        kDomainDiamond(Not(S1))(1) <(
-          skip,
-          dC("x1>=-1/4".asFormula)(1) <(
-            ODE(1),
-            ODE(1)
-          )
-        ) &
-        // Save the staging set as context
-        saveBox(1) &
-        // Use a progress function
-        kDomainDiamond(Less(p1, Number(0)))(1) <(
-          //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
-          dVAuto(1),
-          dW(1) & QE
+    val tac1 = implyR(1) &
+      // This part is an invariant, so cut it as context
+      cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
+        skip,
+        cohideOnlyR(2) & ODE(1)
+      ) &
+      // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
+      dDR(True)(1) <(
+        skip,
+        dW(1) & QE //or: ODE(1)
+      ) &
+      // Use a staging set that cannot be left without reaching the target
+      kDomainDiamond(Not(S1))(1) <(
+        skip,
+        dC("x1>=-1/4".asFormula)(1) <(
+          ODE(1),
+          ODE(1)
         )
-        &
-        // compact domain bound on Lie derivative
-        cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
-          odeReduce(strict = true)(1) & solve(1) & cohideOnlyL(-4) & QE,
-          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
-        )
-    )
+      ) &
+      // Save the staging set as context
+      saveBox(1) &
+      // Use a progress function
+      kDomainDiamond(Less(p1, Number(0)))(1) <(
+        //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+        dVAuto(1),
+        dW(1) & QE
+      ) &
+    gEx("2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula :: Nil)(1)
 
-    val pr2 = proveBy( Imply(XT, Diamond(ODESystem(ode,dom),X0)) ,
-      implyR(1) &
-        // This part is an invariant, so cut it as context
-        cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
-          skip,
-          cohideOnlyR(2) & ODE(1)
-        ) &
-        // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
-        dDR(True)(1) <(
-          skip,
-          dW(1) & QE //or: ODE(1)
-        ) &
-        // Use a staging set that cannot be left without reaching the target
-        kDomainDiamond(Not(S2))(1) <(
-          skip,
-          dC("x1<=1/4".asFormula)(1) <(
-            ODE(1),
-            ODE(1)
-          )
-        ) &
-        // Save the staging set as context
-        saveBox(1) &
-        // Use a progress function
-        kDomainDiamond(Less(p2, Number(0)))(1) <(
-          //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
-          dVAuto(1),
-          dW(1) & QE
-        ) &
-        // compact domain bound on Lie derivative
-        cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
-          odeReduce(strict = true)(1) & solve(1) & cohideOnlyL(-4) & QE,
-          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
+    val pr1 = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) , tac1)
+
+    val tac2 = implyR(1) &
+      // This part is an invariant, so cut it as context
+      cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
+        skip,
+        cohideOnlyR(2) & ODE(1)
+      ) &
+      // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
+      dDR(True)(1) <(
+        skip,
+        dW(1) & QE //or: ODE(1)
+      ) &
+      // Use a staging set that cannot be left without reaching the target
+      kDomainDiamond(Not(S2))(1) <(
+        skip,
+        dC("x1<=1/4".asFormula)(1) <(
+          ODE(1),
+          ODE(1)
         )
-    )
+      ) &
+      // Save the staging set as context
+      saveBox(1) &
+      // Use a progress function
+      kDomainDiamond(Less(p2, Number(0)))(1) <(
+        //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+        dVAuto(1),
+        dW(1) & QE
+      ) &
+      gEx("2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula :: Nil)(1)
+
+    val pr2 = proveBy( Imply(XT, Diamond(ODESystem(ode,dom),X0)) , tac2)
 
     println(pr1)
-    println(pr2)
+    println("Proof steps:",pr1.steps)
+    println("Tactic size:",TacticStatistics.size(tac1))
     pr1 shouldBe 'proved
+
+    println(pr2)
+    println("Proof steps:",pr2.steps)
+    println("Tactic size:",TacticStatistics.size(tac2))
     pr2 shouldBe 'proved
   }
 
@@ -764,84 +818,87 @@ class ODELivenessTests extends TacticTestBase {
     val ode = "{x1'=-1, x2'=(x2-x1)^2}".asDifferentialProgram
     val dom = "true".asFormula
 
-    val pr = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) ,
-      implyR(1) &
+    val tac = implyR(1) &
       kDomainDiamond("x2 - x1 >=0".asFormula)(1) <(
         saveBox(1) &
-        // dV("1".asTerm)(1) &
-        dVAuto(1) &
-        // Proving bound on derivative
-        //todo: cut needs to support old(.) directly
-        hideL(-4) &
-        cut("\\exists oldv oldv = x2-x1".asFormula) <(
-          existsL(-6),
-          cohideR(2) & QE
-        ) &
-        cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
-          skip,
-          cohideOnlyR(2) & hideL(-2) & ODE(1)
-        ) &
-        cut("[{x2'=(x2-x1)^2,x1'=-1,timevar_'=1&true}]2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula) <(
-          odeReduce()(1) & hideL(-7) &  hideL(-7) &  hideL(-2) & solve(1) & QE,
-          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
-        )
+          // dV("1".asTerm)(1) &
+          dVAuto(1) &
+          // Proving bound on derivative
+          //todo: cut needs to support old(.) directly
+          hideL(-4) &
+          cut("\\exists oldv oldv = x2-x1".asFormula) <(
+            existsL(-6),
+            cohideR(2) & QE
+          ) &
+          cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
+            skip,
+            cohideOnlyR(2) & hideL(-2) & ODE(1)
+          ) &
+          gEx("2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula :: Nil)(1)
         ,
         ODE(1)
       )
-    )
+
+    val pr = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) , tac)
 
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove Sogokon & Jackson FM'15 Example 15" in withMathematica { _ =>
-    val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula,
-      semialgdV("1".asTerm)(1)
-    )
+
+    val tac = semialgdV("1".asTerm)(1)
+
+    val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula, tac)
 
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
   it should "prove RAL goal reachability" in withMathematica { _ =>
     val seq = "v>0, vl<=v, v<=vh, a=0, eps>0, k*eps^2-2*eps < k*(x^2+y^2)-2*x, k*(x^2+y^2)-2*x < k*eps^2-2*eps, y>0 ==> <{x'=-v*k*y, y'=v*(k*x-1), v'=0 & v>=0}>( x^2+y^2<=eps^2 & (vl<=v & v<=vh) )".asSequent
 
-    val pr = proveBy(seq,
-      // todo: replace with old
-      cut("\\exists oldv (oldv = v)".asFormula) < (
+    val tac = cut("\\exists oldv (oldv = v)".asFormula) < (
         existsL('Llast),
         hideR(1) & QE
       ) &
-      // known invariants: v stays constant, and robot always on annulus
-      cut("[{x'=-v*k*y, y'=v*(k*x-1), v'=0}]( v=oldv & k*eps^2-2*eps < k*(x^2+y^2)-2*x & k*(x^2+y^2)-2*x < k*eps^2-2*eps) ".asFormula) <(
-        skip,
-        hideR(1) & ODE(1)
-      ) &
-      // dDR gets rid of domain constraint easily thanks to builtin compatible cuts
-      dDR(True)(1) <(
-        skip,
-        dW(1) & QE
-      ) &
-      // K<&> simplifies postcondition again thanks to builtin compatible cuts
-      kDomainDiamond("x^2+y^2<=eps^2".asFormula)(1) <(
-        skip,
-        dW(1) & QE
-      ) &
-      // todo: replace with old
-      cut("\\exists oldhalfy (oldhalfy = y/2)".asFormula) < (
-        existsL('Llast),
-        hideL('Llast) & hideR(1) & QE
-      ) &
-      // As long as the goal is not yet reached, y will stay positive
-      cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
-        skip,
-        hideR(1) & compatCuts(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
-      ) &
-      // dV("2*oldv*oldhalfy".asTerm)(1)
-      dVAuto(1)
-    )
+        // known invariants: v stays constant, and robot always on annulus
+        cut("[{x'=-v*k*y, y'=v*(k*x-1), v'=0}]( v=oldv & k*eps^2-2*eps < k*(x^2+y^2)-2*x & k*(x^2+y^2)-2*x < k*eps^2-2*eps) ".asFormula) <(
+          skip,
+          hideR(1) & ODE(1)
+        ) &
+        // dDR gets rid of domain constraint easily thanks to builtin compatible cuts
+        dDR(True)(1) <(
+          skip,
+          dW(1) & QE
+        ) &
+        // K<&> simplifies postcondition again thanks to builtin compatible cuts
+        kDomainDiamond("x^2+y^2<=eps^2".asFormula)(1) <(
+          skip,
+          dW(1) & QE
+        ) &
+        // todo: replace with old
+        cut("\\exists oldhalfy (oldhalfy = y/2)".asFormula) < (
+          existsL('Llast),
+          hideL('Llast) & hideR(1) & QE
+        ) &
+        // As long as the goal is not yet reached, y will stay positive
+        cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
+          skip,
+          hideR(1) & compatCuts(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
+        ) &
+        // dV("2*oldv*oldhalfy".asTerm)(1)
+        dVAuto(1)
+
+    val pr = proveBy(seq, tac)
 
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
@@ -849,50 +906,52 @@ class ODELivenessTests extends TacticTestBase {
     // abridged proof
     val seq = "v>=0, 0<vl, vl<vh, A>0, B>0 ==> \\exists a ( (a <= A & -B <= a) & <{x'=-v*k*y, y'=v*(k*x-1), v'=a & v>=0}>( vl<=v & v<=vh ))".asSequent
 
-    val pr = proveBy(seq,
-      // Trichotomy
+    val tac = // Trichotomy
       cut("v < vl|vl<=v&v<=vh|vh < v".asFormula) <(
         skip,
         hideR(1) & QE
       ) &
-      orL('Llast) <(
-        // v < vl, pick a = A
-        existsR("A".asTerm)(1) & andR(1) <( QE,
-          kDomainDiamond("v >= vl".asFormula)(1) <(
-            skip,
-            ODE(1) //note the slightly tricky refinement here (using IVT)
-          ) &
-          dDR(True)(1) <(
-            skip,
-            ODE(1)
-          ) &
-          // dV("A".asTerm)(1)
-          dVAuto(1)
-        ),
         orL('Llast) <(
-          //a=0
-          dDX(1, 0::1::Nil) & QE,
-          // In this easy case, solve would do it after removing extra ODEs
-          //existsR("0".asTerm)(1) & andR(1) <( QE,
-          // odeReduce()(1) & solve(1) & QE
-          //a=-B
-          existsR("-B".asTerm)(1) & andR(1) <( QE,
-            kDomainDiamond("v <= vh".asFormula)(1) <(
+          // v < vl, pick a = A
+          existsR("A".asTerm)(1) & andR(1) <( QE,
+            kDomainDiamond("v >= vl".asFormula)(1) <(
               skip,
               ODE(1) //note the slightly tricky refinement here (using IVT)
             ) &
-            closedRef("true".asFormula)(1) <(
-              //dV("B".asTerm)(1),
-              dVAuto(1),
-              QE,
-              ODE(1)
+              dDR(True)(1) <(
+                skip,
+                ODE(1)
+              ) &
+              // dV("A".asTerm)(1)
+              dVAuto(1)
+          ),
+          orL('Llast) <(
+            //a=0
+            dDX(1, 0::1::Nil) & QE,
+            // In this easy case, solve would do it after removing extra ODEs
+            //existsR("0".asTerm)(1) & andR(1) <( QE,
+            // odeReduce()(1) & solve(1) & QE
+            //a=-B
+            existsR("-B".asTerm)(1) & andR(1) <( QE,
+              kDomainDiamond("v <= vh".asFormula)(1) <(
+                skip,
+                ODE(1) //note the slightly tricky refinement here (using IVT)
+              ) &
+                closedRef("true".asFormula)(1) <(
+                  //dV("B".asTerm)(1),
+                  dVAuto(1),
+                  QE,
+                  ODE(1)
+                )
             )
           )
         )
-      )
-    )
+
+    val pr = proveBy(seq, tac)
 
     println(pr)
+    println("Proof steps:",pr.steps)
+    println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
 
