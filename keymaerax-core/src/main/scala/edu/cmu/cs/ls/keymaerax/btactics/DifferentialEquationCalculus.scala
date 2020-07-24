@@ -195,6 +195,8 @@ trait DifferentialEquationCalculus {
         DifferentialTactics.dG(AtomicODE(l, r), P)(pos)
       case dp: DifferentialProgram =>
         DifferentialTactics.dG(dp, P)(pos)
+      case ODESystem(dp, _) =>
+        DifferentialTactics.dG(dp, P)(pos)
       case _ =>
         throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
     }
