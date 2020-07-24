@@ -53,19 +53,75 @@ object ProofChecker {
     }
   }
 
-  def methodAssumptions(con: Context, m: Method): List[Formula] = {
+  def methodAssumptions(con: Context, m: Method): (List[Formula], Method) = {
     m match {
       case Using(sels, m) =>
         val assms = sels.flatMap(methodAssumptions(con, _))
-        val assm = methodAssumptions(con, m)
-        assms ++ assm
-      case RCF() | Auto() | Prop() | _: ByProof => List()
+        val (assm, meth) = methodAssumptions(con, m)
+        (assms ++ assm, meth)
+      case RCF() | Auto() | Prop() | _: ByProof => (List(), m)
+    }
+  }
+
+  def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method): Unit = {
+    if(!f) throw new ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
+  }
+
+  def rcf(assms: Set[Formula], f: Formula): Boolean = {
+    edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(Imply(assms.foldLeft[Formula](True)(And), f))
+  }
+
+  def auto(assms: Set[Formula], f: Formula): Boolean = {
+    prop(assms, f, rcf)
+  }
+
+  val hyp: (Set[Formula], Formula) => Boolean = ((fs, f) => fs.contains(f))
+
+  def contextAlphas(fmls: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    fmls.find{case _: And => true case _: Equiv => true  case False => true case _ => false} match {
+      case Some(False) => true
+      case Some(And(l, r)) => prop(fmls.-(And(l,r)).+(l).+(r), f, leaf)
+      case Some(Equiv(l, r)) => prop(fmls.-(And(l,r)).+(l).+(r), f, leaf)
+      case _ => conclusionBeta(fmls, f, leaf)
+    }
+  }
+  def conclusionBeta(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    f match {
+      case And(l, r) => prop(assms, l, leaf) && prop(assms, r, leaf)
+      case Equiv(l, r) => prop(assms.+(l), r) && prop(assms.+(r), l)
+      case _ => contextBetas(assms, f, leaf)
+    }
+  }
+
+  def contextBetas(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    assms.find { case _: Or => true case _: Imply => true case _ => false } match {
+      case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) || prop(assms.-(Or(l,r)).+(r), f, leaf)
+      case Some(Imply(l, r)) => prop(assms.-(Imply(l,r)), l) && prop(assms.-(Imply(l,r)).+(r), f)
+      case _ => leaf(assms, f)
+    }
+  }
+  def prop(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    // Alpha introduction rules
+    f match {
+      case True => true
+      // True, False, And, Or, Imply, Equiv, Not, Box, Diamond, Forall, Cmp
+      case Imply(l, r) => prop(assms.+(l), r, leaf)
+      case Not(f) => prop(assms.+(f), False)
+      case _ => contextAlphas(assms, f, leaf)
     }
   }
 
   def apply(con: Context, f: Formula, m: Method): Unit = {
-    // @TODO: Implement prop and auto
-
+    val (assms, meth) = methodAssumptions(con, m)
+    meth match {
+      case  RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
+      // general-purpose auto heuristic
+      case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m)
+      // propositional steps
+      case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m)
+      // discharge goal with structured proof
+      case ByProof(proof: Proof) => apply(con, proof)
+    }
   }
 
   // @TODO: Extremely incomplete
@@ -134,6 +190,9 @@ object ProofChecker {
     }
   }
 
+  def apply(con: Context, p: Proof): (Context, Formula) = {
+    apply(con, Block(p.ss))
+  }
   // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   // by that elaborated program
   def apply(con: Context, s: Statement): (Context, Formula) = {

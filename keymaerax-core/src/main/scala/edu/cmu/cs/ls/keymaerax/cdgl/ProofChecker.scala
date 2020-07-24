@@ -104,7 +104,7 @@ object ProofChecker {
 
   /** @param p formula of first-order constructive arithmetic
     * @return whether formula is constructively valid */
-  private def qeValid(p: Formula): Boolean = {
+  def qeValid(p: Formula): Boolean = {
     val t: QETacticTool = ToolProvider.provider.qeTool().get
     val (pre, post) = p match {
       case Imply(p, q) => (p, q)
