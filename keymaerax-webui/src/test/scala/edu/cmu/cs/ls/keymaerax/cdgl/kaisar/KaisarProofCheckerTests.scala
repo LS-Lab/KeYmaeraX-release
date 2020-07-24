@@ -71,4 +71,34 @@ class KaisarProofCheckerTests extends TacticTestBase {
     //ff shouldBe "1>=0".asFormula
   }
 
+  it should "succeed switch" in withMathematica { _ =>
+    val pfStr = "switch { case x <= 1: !x: true := by auto; case x >= 0: !x: true := by auto;}"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{{?(x<=1); {?(true);}^@}^@ ++ {?(x>=0); {?(true);}^@}^@}^@]true".asFormula
+  }
+
+  it should "fail bad switch" in withMathematica { _ =>
+    val pfStr = "switch { case x >= 1: !x: true := by auto; case x < 0: !x: true := by auto;}"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
+  }
+
+  it should "support paramaterized switch" in withMathematica { _ =>
+    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr){ case x >= 1: !x: true := by auto; case x < 0: !x: true := by auto; case x =1 : !x: true := by auto;}"
+    val pf = p(pfStr, pp.statement(_))
+    ProofChecker(Context.empty, pf) shouldBe "[?(x>=1|x>0|x=1);{{?(x<=1); {?(true);}^@}^@ ++ {?(x>=0); {?(true);}^@}^@ }^@++{?(x=1); {?(true);}^@}^@]true".asFormula
+  }
+
+  it should "support note" in withMathematica { _ =>
+    val pfStr = "?l:(x = 1); ?r:(y = 0); note lr = andI(l, r);"
+    val pf = p(pfStr, pp.statement(_))
+    ProofChecker(Context.empty, pf) shouldBe "?x=1;?y=0;{?(x=1&y=0);^@".asFormula
+  }
+
+  it should "check admissibility and SSA" in withMathematica { _ =>
+    val pfStr = "x:=x+1;"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
+  }
 }
