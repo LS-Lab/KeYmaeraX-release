@@ -130,11 +130,20 @@ object ProofChecker {
 
   // @TODO: Extremely incomplete
   def exhaustive(es: List[Expression]): Boolean = {
-    es match {
+    val exprs = es.sortWith((l,r) => (l, r) match {
+      case (_: Greater, _: Less) => true case (_: GreaterEqual, _: Less) => true
+      case (_: Greater, _: LessEqual) => true case (_: GreaterEqual, _: LessEqual) => true
+      case _ => l.toString < r.toString
+    })
+    exprs match {
       case (Greater(l1, r1) :: Less(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
       case (GreaterEqual(l1, r1) :: Less(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
       case (Greater(l1, r1) :: LessEqual(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
       case (GreaterEqual(l1, r1) :: LessEqual(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+      case (Greater(l1, r1: Number) :: Less(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
+      case (GreaterEqual(l1, r1: Number) :: Less(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
+      case (Greater(l1, r1: Number) :: LessEqual(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
+      case (GreaterEqual(l1, r1: Number) :: LessEqual(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
       case _ => false
     }
   }
@@ -203,7 +212,7 @@ object ProofChecker {
     s match {
       case Assert(_ , f, m) =>
         apply(con, f, m)
-        (s, f)
+        (s, Box(Dual(Test(f)), True))
       case Note(x , pt,  conclusion) =>
         val res = apply(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
@@ -231,10 +240,14 @@ object ProofChecker {
         if (!exhaustive(conds)) {
           throw ProofCheckException("Inexhaustive match in switch statement")
         }
-        val (cons, fmls) = pats.map(cb => apply(Context.add(con, ???, cb._1.asInstanceOf[Formula]), cb._2)).unzip
-        val (as, ps) = fmls.map(asDiamond).map{case Diamond(a,p) => (a,p)}.unzip
+        val bogus = "caseFml"
+        val (cons, fmls) = pats.map(cb => {
+          val (c, f) = apply(Context.add(con, Variable(bogus), cb._1.asInstanceOf[Formula]), cb._2)
+          (c, concatBox(Box(Test(cb._1.asInstanceOf[Formula]), True), f))}
+          ).unzip
+        val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
-        (Switch(conds.zip(cons)), Diamond(as.reduceRight(Choice), p))
+        (Switch(conds.zip(cons)), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
         val kc = Context.+:(con, Assume(x, j))
         val (sa, fa) = apply(kc, s)
