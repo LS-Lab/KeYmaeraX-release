@@ -31,7 +31,7 @@ import org.scalatest.time.SpanSugar._
  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving.
  */
 @UsualTest
-class ODETests extends TacticTestBase {
+class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
 
   "ODE" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
@@ -47,7 +47,7 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "prove FM tutorial 4" in withQE { _ => withDatabase { db =>
+  it should "prove FM tutorial 4" in withMathematica { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved

@@ -121,7 +121,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -166,7 +166,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -191,7 +191,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("t", None) -> (None, Real, None, None, UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "[a;]x<=2".asFormula
+    entry.model shouldBe "[a{|^@|};]x<=2".asFormula
     entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -1093,7 +1093,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
@@ -1186,7 +1186,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.master()) :: Nil
+    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1391,7 +1391,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
       Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
-        TactixLibrary.useLemma("Entry 1", None))::Nil
+        TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
@@ -1468,8 +1468,8 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
-      TactixLibrary.uniformSubstitute(RenUSubst(("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil).usubst) &
-        TactixLibrary.useLemma("Entry 1", None))::Nil
+      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula)) &
+        TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
@@ -2119,9 +2119,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
       """.stripMargin
     ) should have message
       """<somewhere> All definitions and uses must match, but found the following mismatches:
-        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Symbol 'inc{|^@|};' defined as Program, but used as DifferentialProgram in {inc}
         |Found:    {inc} at <somewhere>
-        |Expected: inc;""".stripMargin
+        |Expected: inc{|^@|};""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ProgramVariables Real x; End.
@@ -2133,9 +2133,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
       """.stripMargin
     ) should have message
       """<somewhere> All definitions and uses must match, but found the following mismatches:
-        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Symbol 'inc{|^@|};' defined as Program, but used as DifferentialProgram in {inc}
         |Found:    {inc} at <somewhere>
-        |Expected: inc;""".stripMargin
+        |Expected: inc{|^@|};""".stripMargin
   }
 
   it should "report illegal name overloading" in {
