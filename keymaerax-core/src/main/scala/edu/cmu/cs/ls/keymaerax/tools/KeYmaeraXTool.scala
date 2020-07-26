@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DerivationInfoRegistry, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
@@ -36,6 +36,8 @@ object KeYmaeraXTool extends Tool {
 
   /** @inheritdoc */
   override def init(config: Map[String,String]): Unit = {
+    //@note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
+    if (initialized) shutdown()
     if (KeYmaeraXParser.LAX_MODE)
       //@note Careful, this disables contract checking in printing!
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter.pp)
@@ -68,6 +70,7 @@ object KeYmaeraXTool extends Tool {
   /** @inheritdoc */
   override def shutdown(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     initialized = false
   }
 
