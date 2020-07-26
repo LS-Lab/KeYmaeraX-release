@@ -79,7 +79,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case e: DependentPositionWithAppliedInputTactic =>
             val ins = BelleExpr.persistable(e.inputs)
             val eargs = ins.flatMap(input => argPrinter(Left(input))).mkString(", ")
-            val sep = if (ins.isEmpty) "" else ", "
+            val sep = if (eargs.isEmpty) "" else ", "
             e.name + "(" + eargs + sep + argPrinter(Right(adp.locator)).getOrElse("") + ")"
           case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)).getOrElse("") + ")" //@todo not sure about this.
         }
