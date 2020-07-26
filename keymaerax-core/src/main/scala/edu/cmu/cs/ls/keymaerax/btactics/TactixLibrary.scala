@@ -181,7 +181,8 @@ object TactixLibrary extends HilbertCalculus
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => DebuggingTactics.assertProvableSize(r.length) & BranchTactic(r.map(applyBranchRecursor))
+      case r => DebuggingTactics.assertProvableSize(r.length, new TacticInapplicableFailure(_)) &
+        BranchTactic(r.map(applyBranchRecursor))
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
@@ -665,17 +666,17 @@ object TactixLibrary extends HilbertCalculus
     resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
   }
 
+  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     (tool, timeout) match {
       case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
       case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
       case (Some(toolName), _) =>  TactixLibrary.QE(Nil, Some(toolName))
       case (_, Some(time)) => TactixLibrary.QE(Nil, None, Some(time.value.toInt))
-      case (_, _) => QE
+      case (_, _) => QE(Nil, None, None)
     }
   }
-  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
-  def QE: BelleExpr = QE()
+  lazy val QE: BelleExpr = QEX(None, None)
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -977,7 +978,7 @@ object TactixLibrary extends HilbertCalculus
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr =
-    anon {
+    anon { (_: Sequent) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
@@ -986,7 +987,7 @@ object TactixLibrary extends HilbertCalculus
     }
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon {
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Sequent) =>
     adapt match {
       case Some(t) =>
         cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
