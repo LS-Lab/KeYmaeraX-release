@@ -22,15 +22,7 @@ import scala.collection.immutable.IndexedSeq
  */
 @SummaryTest
 @USubstTest
-class URenameTests extends TacticTestBase {
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
-      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
-    ))
-  }
+class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
 
   "Bound renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs AdvocatusTest in {
     /** {{{

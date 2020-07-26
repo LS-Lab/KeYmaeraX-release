@@ -32,12 +32,7 @@ import scala.collection.immutable.Map
 @CheckinTest
 @SummaryTest
 @UsualTest
-class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    withZ3(initLibrary = true, testcode = { _ => })
-  }
+class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) {
 
   // @TODO: Change everything to ProvableInfo
   private def check(lemma: Lemma): Sequent = {

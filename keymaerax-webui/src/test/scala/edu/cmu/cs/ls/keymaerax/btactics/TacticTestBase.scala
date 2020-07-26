@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint,
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
@@ -28,9 +27,17 @@ import org.scalatest.time._
 import scala.collection.immutable._
 
 /**
- * Base class for tactic tests.
- */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
+  * Base class for tactic tests.
+  * @param registerAxTactics Whether or not to initialize the library of derived axioms and register tactics
+  *                          (needed e.g. when using the tactic parser or running tactics, but not e.g. when
+  *                          parsing formulas):
+  *                          - Some("mathematica") to initialize with Mathematica
+  *                          - Some("z3") to initialize with Z3
+  *                          - None to skip initialization (if only some tests in a suite need tactics use
+  *                            None here and withTactics/withMathematica/withZ3 on the test to register tactics for
+  *                            only those tests)
+  */
+class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
     with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
 
   /** Default signaler for failAfter in tests without tools. */
@@ -181,7 +188,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       ))
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-        implicit val signaler: Signaler = (t: Thread) => {
+        implicit val signaler: Signaler = (_: Thread) => {
           theInterpreter.kill()
           tool.cancel()
           tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
@@ -210,16 +217,16 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * */
   def withZ3(testcode: Z3 => Any, timeout: Int = -1, initLibrary: Boolean = true) {
     val common = Map(Configuration.Keys.QE_TOOL -> "z3")
-    val interp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")
-    val uninterp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
     withTemporaryConfig(common) {
       val provider = new Z3ToolProvider
       ToolProvider.setProvider(provider)
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
-      withTemporaryConfig(interp) {
-        DerivationInfoRegistry.init(initLibrary = initLibrary)
-      }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = { t: Thread =>
@@ -326,6 +333,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
       else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
       else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
+
+    registerAxTactics match {
+      case Some("mathematica") => withMathematica(initLibrary = true, testcode = { _ => })
+      case Some("z3") => withZ3(initLibrary = true, testcode = { _ => })
+      case None => KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
+    }
   }
 
   /* Test suite tear down */
