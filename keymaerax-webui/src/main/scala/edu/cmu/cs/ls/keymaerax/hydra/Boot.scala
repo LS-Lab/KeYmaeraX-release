@@ -153,20 +153,6 @@ object HyDRAInitializer extends Logging {
   def apply(args: Array[String], database: DBAbstraction): String = {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
-    //@note pretty printer setup must be first, otherwise derived axioms print wrong
-    KeYmaeraXTool.init(Map(
-      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
-      KeYmaeraXTool.INTERPRETER -> ExhaustiveSequentialInterpreter.getClass.getSimpleName
-    ))
-
-    //@note setup interpreter
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-    // connect invariant generator to tactix library
-    val generator = new ConfigurableGenerator[GenProduct]()
-    TactixInit.invSupplier = generator
-    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
     try {
