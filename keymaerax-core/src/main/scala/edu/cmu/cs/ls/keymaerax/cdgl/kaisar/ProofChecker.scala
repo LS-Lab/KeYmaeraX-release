@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 //import edu.cmu.cs.ls.keymaerax.cdgl.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object ProofChecker {
@@ -224,9 +224,32 @@ object ProofChecker {
   def apply(con: Context, p: Proof): (Context, Formula) = {
     apply(con, Block(p.ss))
   }
-  def casesMatchScrutinee(con: Context, sel: Selector, branches: List[Expression]): Boolean = {
-    //@TODO
-    true
+  // Collect disjuncts only down the right side, rather than *all* disjuncts. This allows us to support case analyses
+  // where some branches may be disjunctions
+  def disjoin(fml: Formula, k: Int): List[Formula] = {
+    (fml, k) match {
+      case (_, 1) => fml :: Nil
+      case (Or(l, r), _) =>l :: disjoin(r, k-1)
+      case (_, _) => throw ProofCheckException(s"Not enough branches in case statement, disjunct $fml unmatched")
+    }
+  }
+  def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression]): Unit = {
+    methodAssumptions(con: Context, sel: Selector) match {
+      case fml :: Nil =>
+        // TODO: Support cases with non-ground patterns. Improve error messages for case where right-handed split produces too few cases but exhaustive split gives too many
+        // Heuristic matching: split disjuncts based on number of cases.
+        // If exhaustive split gives the expected number of cases, use that. Else split down the right-hand side
+        // until we peel off the right number of cases.
+        val disj = FormulaTools.disjuncts(fml)
+        if (disj.length == branches.length && disj.toSet != branches.toSet)
+          throw ProofCheckException("Switch statement branches differ from scrutinee")
+        else if (disj.length != branches.length) {
+          val kDisj = disjoin(fml, branches.length)
+          if (kDisj.toSet != branches.toSet)
+            throw ProofCheckException(s"Switch statement with scrutinee $sel expects branches $kDisj but got $branches")
+        }
+      case fmls => throw ProofCheckException("Switch expected scrutinee to match exactly one formula, but matches: " + fmls)
+    }
   }
   // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   // by that elaborated program
@@ -261,7 +284,7 @@ object ProofChecker {
         val (patterns, conds, bodies) = unzip3(branches)
         sel match {
           case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement")
-          case Some(sel) => if (!casesMatchScrutinee(con, sel, branches.map(_._2))) throw ProofCheckException("Branches of switch statement do not match scrutinee")
+          case Some(sel) => compareCasesToScrutinee(con, sel, branches.map(_._2))
         }
         val (cons, fmls) = branches.map(cb => {
           val v = cb._1 match {case vv: Variable => vv case _ => defaultVar}
