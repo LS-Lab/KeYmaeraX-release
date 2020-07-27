@@ -4,13 +4,14 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object ProofChecker {
-  private def subst(x: Variable, f: Term, p: Formula): Formula = ???
-  private def invSubst(x: Variable, f: Term, p: Formula): Formula = ???
+  private def subst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(x, f)
+  private def invSubst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(f, x)
   val SSA: Boolean = false
-  // @TODO: Implement more builtin forward proof rules ?
+
   val nullaryBuiltin: Map[String, Formula] = Map("trueI" -> True)
   val unaryBuiltin: Map[String, (String, ForwardArg => Formula)] = Map(
     "andEL"   -> ("andEL (proof: P & Q)", {case ProvedArg(And(l, r)) => l}),
@@ -19,7 +20,6 @@ object ProofChecker {
     "equivER" -> ("equivER (proof: P <-> Q)", {case ProvedArg(Equiv(l, r)) => Imply(r, l)}),
     "notI"    -> ("notI (proof: P -> False)", {case (ProvedArg(Imply(p, False))) => Not(p)})
   )
-  // @TODO: Distinguish arguments which need proofs from arguments which don't. HUGE soundness hole.
   val binaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg) => Formula)] = Map(
     "andI" -> ("andI (proofL: P) (proofR: Q)", {case (ProvedArg(l), ProvedArg(r)) => And(l, r)}),
     "orIL" -> ("orIL (proof: P) (Q : Formula)", {case (ProvedArg(l), ExpressionArg(r: Formula)) => Or(l, r)}),
