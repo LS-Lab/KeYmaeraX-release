@@ -78,6 +78,7 @@ object ProofChecker {
     }
   }
 
+  // @TODO: Check scope and ghosting
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
@@ -398,6 +399,7 @@ object ProofChecker {
         (Was(ss, was), f)
       // Proofs that succeed unconditionally
       case Modify(VarPat(x, _), rhs) =>
+        // @TODO: Needs to check ghostery
         if (SSA) {
           val n = x.name
           val xIdx = x.index.getOrElse(-1)

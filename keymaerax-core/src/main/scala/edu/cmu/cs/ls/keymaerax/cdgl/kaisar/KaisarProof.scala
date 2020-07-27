@@ -114,12 +114,25 @@ case class DefaultSelector(f: Formula) extends Selector {}
 
 // Pattern language for left-hand side of assignment proofs. Expressions are used for most patterns, but assignment
 // patterns are not quite expressions because each assigned variable may introduce a proof variable.
-sealed trait AsgnPat extends ASTNode
-// @TODO: Ever needed? Used where patterns are optional
+sealed trait AsgnPat extends ASTNode {
+  def boundFacts: Set[Variable] = {
+    this match {
+      case VarPat(x, Some(p)) => Set(p)
+      case TuplePat(pats) => pats.map(_.boundFacts).reduce((l,r) => l.++(r))
+      case _ => Set()
+    }
+  }
+  def boundVars: Set[Variable] = {
+    this match {
+      case VarPat(x, p) => Set(x)
+      case TuplePat(pats) => pats.map(_.boundVars).reduce((l,r) => l.++(r))
+      case _ => Set()
+    }
+  }
+}
 case class NoPat() extends AsgnPat
 // Wildcard pattern for ignored assignments
 case class WildPat() extends AsgnPat
-// @TODO: make ident optional for assignments. Is backwards.
 // Assign to variable and optionally store equation in a proof variable
 case class VarPat(x: Variable, p: Option[Ident] = None) extends AsgnPat
 // Assign elements of tuple according to each component pattern
@@ -433,6 +446,52 @@ object Context {
 
   // Define the next gHost variable to be f
   def ghost(con: Context, f: Formula): Context = add(con, fresh(con), f)
+
+  case class Taboos(vars: Set[Variable], functions: Set[Ident], facts: Set[Ident]) {
+    def addVars(v: Set[Variable]): Taboos = Taboos(vars.++(v), functions, facts)
+    def addFuncs(f: Set[Ident]): Taboos = Taboos(vars, functions.++(f), facts)
+    def addFacts(p: Set[Ident]): Taboos = Taboos(vars, functions, facts.++(p))
+    def ++(other: Taboos): Taboos = Taboos(vars.++(other.vars), functions.++(other.functions), facts.++(other.facts))
+  }
+  object Taboos { val empty: Taboos = Taboos(Set(), Set(), Set())}
+
+  def taboos(con: Context, isGhost: Boolean = false, isInverseGhost: Boolean = false): Taboos = con match {
+    case Triv() | PrintGoal(_) | Label(_) => Taboos.empty
+    case Ghost(s) => taboos(con, isGhost = true, isInverseGhost = false)
+    case InverseGhost(s) => taboos(con, isGhost = false, isInverseGhost = true)
+    case Assume(pat: Term, f) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
+    case Assert(pat: Term, f, m) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
+    case Modify(pat: AsgnPat, _) => Taboos(vars = if (isGhost) pat.boundVars else Set(), functions = Set(), facts = if (isInverseGhost) pat.boundFacts else Set())
+    case Note(x, proof, ann) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) Set(x) else Set())
+    case LetFun(f, args, e) => Taboos(Set(), if (isInverseGhost) Set(f) else Set(), Set())
+    case Match(pat: Term, e) => Taboos(if (isGhost) StaticSemantics(pat).toSet else Set(), Set(), Set())
+    case Block(ss) => ss.map(taboos(_, isGhost, isInverseGhost)).reduce((l, r) => l.++(r))
+    case Switch(scrutinee, pats) =>
+      pats.map({ case (x: Term, fml, s) => {
+        val t = taboos(s, isGhost, isInverseGhost)
+        if (isInverseGhost) t.addFacts(StaticSemantics(x).toSet) else t
+      }
+      }).reduce((l, r) => l.++(r))
+    case BoxChoice(left, right) => taboos(left, isGhost, isInverseGhost).++(taboos(right, isGhost, isInverseGhost))
+    case While(x: Term, j, s) =>taboos(s, isGhost, isInverseGhost).addFacts(StaticSemantics(x).toSet)
+    case BoxLoop(s) => taboos(s, isGhost, isInverseGhost)
+    case ProveODE(ds, dc) => taboos(ds, isGhost, isInverseGhost).++(taboos(dc, isGhost, isInverseGhost))
+    case Was(now, was) => taboos(now, isGhost, isInverseGhost)
+
+  }
+  def taboos(con: DiffStatement, isGhost: Boolean, isInverseGhost: Boolean): Taboos = con match {
+    case AtomicODEStatement(dp) => Taboos(vars = if(isGhost) Set(dp.xp.x) else Set(), Set(), Set())
+    case DiffProductStatement(l, r) => taboos(l, isGhost, isInverseGhost).++(taboos(r, isGhost, isInverseGhost))
+    case DiffGhostStatement(ds) => taboos(ds, isGhost = true, isInverseGhost = false)
+    case InverseDiffGhostStatement(ds) => taboos(ds, isGhost = false, isInverseGhost = true)
+  }
+  def taboos(con: DomainStatement, isGhost: Boolean, isInverseGhost: Boolean): Taboos = con match {
+    case DomAssume(x: Term, f) => Taboos(Set(), Set(), if(isInverseGhost) StaticSemantics(x).toSet else Set())
+    case DomAssert(x: Term, f, child) => Taboos(if(isGhost) StaticSemantics(x).toSet else Set(), Set(), Set())
+    case DomWeak(dc: DomainStatement) => taboos(dc, isGhost = false, isInverseGhost = true)
+    case DomModify(x: AsgnPat, f: Term) => Taboos(if(isGhost) x.boundVars else Set(), Set(), if(isInverseGhost) x.boundFacts else Set())
+    case DomAnd(l, r) => taboos(l, isGhost, isInverseGhost).++(taboos(r, isGhost, isInverseGhost))
+  }
 }
 
 // superceded by proofs as contexts
