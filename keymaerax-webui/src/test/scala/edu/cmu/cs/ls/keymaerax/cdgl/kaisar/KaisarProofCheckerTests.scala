@@ -72,20 +72,20 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "succeed switch" in withMathematica { _ =>
-    val pfStr = "switch { case x <= 1: !x: true := by auto; case x >= 0: !x: true := by auto;}"
+    val pfStr = "switch { case xNeg:(x <= 1) => !x: true := by auto; case xPos:(x >= 0) => !x: true := by auto;}"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{{?(x<=1); {?(true);}^@}^@ ++ {?(x>=0); {?(true);}^@}^@}^@]true".asFormula
   }
 
   it should "fail bad switch" in withMathematica { _ =>
-    val pfStr = "switch { case x >= 1: !x: true := by auto; case x < 0: !x: true := by auto;}"
+    val pfStr = "switch { case xOne:(x >= 1) => !x: true := by auto; case xNeg:(x < 0) => !x: true := by auto;}"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "support paramaterized switch" in withMathematica { _ =>
-    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr){ case x >= 1: !x: true := by auto; case x < 0: !x: true := by auto; case x =1 : !x: true := by auto;}"
+    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr){ case xOne:(x >= 1) => !x: true := by auto; case xNeg:(x < 0) => !x: true := by auto; case x =1 : !x: true := by auto;}"
     val pf = p(pfStr, pp.statement(_))
     ProofChecker(Context.empty, pf) shouldBe "[?(x>=1|x>0|x=1);{{?(x<=1); {?(true);}^@}^@ ++ {?(x>=0); {?(true);}^@}^@ }^@++{?(x=1); {?(true);}^@}^@]true".asFormula
   }

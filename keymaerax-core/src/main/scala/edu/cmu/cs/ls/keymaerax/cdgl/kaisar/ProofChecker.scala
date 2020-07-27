@@ -203,6 +203,24 @@ object ProofChecker {
     }
   }
 
+  private def unzip3[T1,T2,T3](seq:List[(T1,T2,T3)]):(List[T1],List[T2],List[T3]) = {
+    seq match {
+      case Nil => (Nil, Nil, Nil)
+      case (x, y, z):: xyzs =>
+        val (xs, ys, zs) = unzip3(xyzs)
+        (xs.+:(x), ys.+:(y), zs.+:(z))
+    }
+  }
+
+  private def zip3[T1,T2,T3](xs:List[T1],ys:List[T2],zs:List[T3]):List[(T1,T2,T3)] = {
+    (xs, ys, zs) match {
+      case (Nil, Nil, Nil) => Nil
+      case (x :: xs, y :: ys, z :: zs) => (x, y, z) :: zip3(xs, ys, zs)
+      case _ => throw new Exception("Mismatched lengths in zip3")
+    }
+  }
+
+
   def apply(con: Context, p: Proof): (Context, Formula) = {
     apply(con, Block(p.ss))
   }
@@ -233,21 +251,20 @@ object ProofChecker {
         val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
         val ss = BoxChoice(sl, sr)
         (ss, Box(Choice(a,b), p))
-      case Switch(pats: List[(Expression, Statement)]) =>
+      case Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
         // @TODO: Formula names
-        val (conds, bodies) = pats.unzip
+        val (patterns, conds, bodies) = unzip3(branches)
         if (!exhaustive(conds)) {
           throw ProofCheckException("Inexhaustive match in switch statement")
         }
-        val bogus = "caseFml"
-        val (cons, fmls) = pats.map(cb => {
-          val (c, f) = apply(Context.add(con, Variable(bogus), cb._1.asInstanceOf[Formula]), cb._2)
-          (c, concatBox(Box(Test(cb._1.asInstanceOf[Formula]), True), f))}
+        val (cons, fmls) = branches.map(cb => {
+          val (c, f) = apply(Context.add(con, cb._1.asInstanceOf[Variable], cb._2.asInstanceOf[Formula]), cb._3)
+          (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}
           ).unzip
         val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
-        (Switch(conds.zip(cons)), Box(Dual(as.reduceRight(Choice)), p))
+        (Switch(sel, zip3(patterns, conds,cons)), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
         val kc = Context.+:(con, Assume(x, j))
         val (sa, fa) = apply(kc, s)

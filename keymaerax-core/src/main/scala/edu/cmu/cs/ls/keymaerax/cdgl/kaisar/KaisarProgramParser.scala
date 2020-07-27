@@ -221,13 +221,16 @@ object ProofParser {
     (Index ~ ident ~ ":" ~ !P("=")).map({case (i, id) => locate(Label(id.name), i)})
   }
 
-  def branch[_: P]: P[(Expression, Statement)] = {
-    ("case" ~ formula ~ ":" ~ statement.rep).map({case (fml: Formula, ss: Seq[Statement]) =>
-      (fml, block(ss.toList))})
+  def branch[_: P]: P[(Expression, Expression, Statement)] = {
+    ("case" ~ exPat ~ formula ~ "=>" ~ statement.rep).map({case (exp: Expression, fml: Formula, ss: Seq[Statement]) =>
+      (exp, fml, block(ss.toList))})
   }
 
   def switch[_: P]: P[Switch] = {
-    (Index ~ "switch" ~ "{" ~ branch.rep ~ "}").map({case (i, branches) => locate(Switch(branches.toList), i)})
+    (Index ~ "switch" ~ CharIn("{(").!).flatMap({
+      case (i, "{") => (branch.rep ~ "}").map(branches => locate(Switch(None, branches.toList), i))
+      case (i, "(") => (selector ~ ")" ~ "{" ~ branch.rep ~ "}").
+        map({case (sel, branches) => locate(Switch(Some(sel), branches.toList), i)})})
   }
 
 

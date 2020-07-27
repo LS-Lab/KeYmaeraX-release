@@ -33,8 +33,8 @@ object ProofTraversal {
             Was(traverse(kc, now, tf), was)
           case Block(ss) =>
             Block(ss.map(traverse(kc, _, tf)))
-          case Switch(pats) =>
-            Switch(pats.map({case (pat, s) => (pat, (traverse(kc, s, tf)))}))
+          case Switch(sel, pats) =>
+            Switch(sel, pats.map({case (v, pat, s) => (v, pat, (traverse(kc, s, tf)))}))
           case BoxChoice(left, right) =>
             BoxChoice(traverse(kc, left, tf), traverse(kc, right, tf))
           case While(x, j, ss) =>

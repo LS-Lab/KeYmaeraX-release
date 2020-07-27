@@ -159,11 +159,12 @@ case class LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement 
 case class Match(pat: Expression, e: Expression) extends Statement
 // Sequential composition of elements of [[ss]]
 case class Block(ss: Statements) extends Statement
-// @TODO: add case-analysis with arguments, add proof variable binding
 // Pattern formulas must form a constructively-exhaustive case analysis.
-// In each branch, assume the pattern holds and prove the branch statement
+// To support cases where exhaustiveness is nonobvious, an optional scrutinee can be provided, in which case the branches
+// of the switch must be the branches of the scrutinee formula.
+// In each branch, bind a variable pattern to an assumption expression and prove the branch statement
 // the conclusion is the disjunction of branches
-case class Switch(pats: List[(Expression, Statement)]) extends Statement
+case class Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) extends Statement
 // Execute either branch of a program nondeterministically, with corresponding proofs
 case class BoxChoice(left: Statement, right: Statement) extends Statement
 // x is a pattern
@@ -306,7 +307,7 @@ object Context {
       case lf: LetFun => Set(lf.asFunction)
       case Block(ss) => ss.flatMap(signature).toSet
       case BoxChoice(l, r) => signature(l) ++ signature (r)
-      case Switch(pats) => pats.map(_._2).flatMap(signature).toSet
+      case Switch(sel, pats) => pats.map(_._3).flatMap(signature).toSet
       case Ghost(s) => signature(s)
       case Was(now, was) => signature(now)
       // @TODO: These loop cases probably work, but subtle
@@ -350,12 +351,13 @@ object Context {
           case (None, Some(p)) => Some(p)
           case (Some(p), Some(q)) => Some(and(p, q))
         }
-      case Switch(pats) =>
+      // @TODO
+      case Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula)  = {case ((k1, v1), (k2,v2)) =>
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
           else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({case (e, s) => find(s, f)})
+        val fmls = pats.flatMap({case (v, e, s) => find(s, f)})
         if (fmls.isEmpty) None
         else Some(fmls.reduceRight(or))
       case Ghost(s) => find(s, f)

@@ -324,10 +324,10 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   // @TODO: Switch should allow arguments
   it should "parse switch " in {
-    p("switch { case x <= 1: !x: true := by auto; case x >= 0: !x: true := by auto;}", pp.statement(_)) shouldBe
-      Switch(List(
-        (LessEqual(Variable("x"), Number(1)), Assert(Variable("x"), True, Auto())),
-        (GreaterEqual(Variable("x"), Number(0)), Assert(Variable("x"), True, Auto()))))
+    p("switch { case xOne:(x <= 1) => !x: true := by auto; case xPos:(x >= 0) => !x: true := by auto;}", pp.statement(_)) shouldBe
+      Switch(None, List(
+        (Variable("xOne"), LessEqual(Variable("x"), Number(1)), Assert(Variable("x"), True, Auto())),
+        (Variable("xPos"), GreaterEqual(Variable("x"), Number(0)), Assert(Variable("x"), True, Auto()))))
   }
 
   it should "parse box-choice" in {

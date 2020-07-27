@@ -62,8 +62,9 @@ object KaisarKeywordParser {
   def parseBlock[_: P]: P[Statement] = ("{" ~ ws ~ statement.rep(2) ~ ws ~ "}").map(ss => block(ss.toList))
   def boxChoice[_: P]: P[BoxChoice] = ("either" ~ ws ~ statement.rep ~ ws ~ "or" ~ ws ~ statement.rep ~ ws ~ "end").
     map({case (ls, rs) => BoxChoice(block(ls.toList), block(rs.toList))})
-  def branch[_: P]: P[(Expression, Statement)] = (expression ~ ws ~ "=>" ~ ws ~ parseBlock).map({case (e, blk) => (e, blk)})
-  def patternMatch[_: P]: P[Switch] = ("cases" ~ ws ~ branch.rep ~ ws ~ "end").map(_.toList).map(Switch)
+  //@TODO update
+  def branch[_: P]: P[(Expression, Expression, Statement)] = (expression ~ ws ~ "=>" ~ ws ~ parseBlock).map({case (e, blk) => (True, e, blk)})
+  def patternMatch[_: P]: P[Switch] = ("cases" ~ ws ~ branch.rep ~ ws ~ "end").map(_.toList).map(Switch(None, _))
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ ws ~ literal).map(PrintGoal)
   def ghost[_: P]: P[Ghost] = ("ghost"~ ws ~ ident ~ ws ~ "=" ~ ws ~ term).map({case (x, f) => Ghost(Modify(VarPat(x), Left(f)))})
   def bsolve[_: P]: P[Statement] = (("solve" ~ ws ~ differentialProgram ~ ws ~
