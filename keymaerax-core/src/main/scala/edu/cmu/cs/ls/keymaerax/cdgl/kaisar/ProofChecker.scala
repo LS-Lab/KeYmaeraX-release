@@ -224,6 +224,10 @@ object ProofChecker {
   def apply(con: Context, p: Proof): (Context, Formula) = {
     apply(con, Block(p.ss))
   }
+  def casesMatchScrutinee(con: Context, sel: Selector, branches: List[Expression]): Boolean = {
+    //@TODO
+    true
+  }
   // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   // by that elaborated program
   def apply(con: Context, s: Statement): (Context, Formula) = {
@@ -253,13 +257,15 @@ object ProofChecker {
         (ss, Box(Choice(a,b), p))
       case Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
-        // @TODO: Formula names
+        val defaultVar = Variable("anon")
         val (patterns, conds, bodies) = unzip3(branches)
-        if (!exhaustive(conds)) {
-          throw ProofCheckException("Inexhaustive match in switch statement")
+        sel match {
+          case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement")
+          case Some(sel) => if (!casesMatchScrutinee(con, sel, branches.map(_._2))) throw ProofCheckException("Branches of switch statement do not match scrutinee")
         }
         val (cons, fmls) = branches.map(cb => {
-          val (c, f) = apply(Context.add(con, cb._1.asInstanceOf[Variable], cb._2.asInstanceOf[Formula]), cb._3)
+          val v = cb._1 match {case vv: Variable => vv case _ => defaultVar}
+          val (c, f) = apply(Context.add(con, v, cb._2.asInstanceOf[Formula]), cb._3)
           (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}
           ).unzip
         val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
