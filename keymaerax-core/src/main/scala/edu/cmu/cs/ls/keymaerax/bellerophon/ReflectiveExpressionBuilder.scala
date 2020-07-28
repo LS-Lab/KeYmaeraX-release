@@ -35,9 +35,7 @@ object ReflectiveExpressionBuilder extends Logging {
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
-      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe =>
-        println(s)
-        expr(s)
+      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
       case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe => expr(fml)
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
