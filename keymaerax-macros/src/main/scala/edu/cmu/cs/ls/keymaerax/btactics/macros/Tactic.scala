@@ -113,7 +113,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val displayInfo = (inputs, premisesString, conclusionString) match {
         case (Nil, "", "") => simpleDisplay
-        case (Nil, "", concl) if concl != "" => AxiomDisplayInfo(simpleDisplay, concl)
+        case (Nil, "", concl) if concl != "" => AxiomDisplayInfo.render(simpleDisplay, concl)
         case (ins, "", concl) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
         case (ins, prem, concl) if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
