@@ -269,7 +269,34 @@
     </ul>
 </script>
 <script type="text/ng-template" id="rulehelp.html">
-    <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
+    <div class="well well-compact" ng-if="rulehelp.derivationInfo.derivation.type === 'axiom'">
+        <div class="row">
+            <div class="col-sm-12" ng-if="rulehelp.derivationInfo.derivation.displayInfoParts !== null">
+                <k4-axiom-key-selector axiom="rulehelp.derivationInfo.derivation"
+                                       readonly="true"></k4-axiom-key-selector>
+            </div>
+            <div class="col-sm-12" ng-if="rulehelp.derivationInfo.derivation.displayInfoParts === null">
+                <span ng-bind-html="rulehelp.derivationInfo.derivation.formula"></span>
+            </div>
+        </div>
+    </div>
+    <div class="well well-compact"
+         ng-if="rulehelp.derivationInfo.derivation.type === 'tactic' && rulehelp.derivationInfo.derivation.formula">
+        <div class="row">
+            <div class="col-sm-12">
+                <span ng-bind-html="rulehelp.derivationInfo.derivation.formula"></span>
+            </div>
+        </div>
+    </div>
+    <div class="well well-compact" ng-if="rulehelp.derivationInfo.derivation.type === 'sequentrule'">
+        <div class="row">
+            <div class="col-sm-12">
+                <k4-sequent-rule-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                                      tactic="rulehelp.derivationInfo"></k4-sequent-rule-info>
+            </div>
+        </div>
+    </div>
+    <p ng-include="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></p>
 </script>
 <script type="text/ng-template" id="proofStepTactic.html">
     <div>

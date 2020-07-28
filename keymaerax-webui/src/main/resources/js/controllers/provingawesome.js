@@ -679,11 +679,19 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.rulehelp = {
-      codeName: undefined
+      codeName: undefined,
+      derivationInfo: undefined
     };
 
     $scope.fetchRuleHelp = function(codeName) {
-      $scope.rulehelp.codeName = codeName;
+      if ($scope.rulehelp.codeName !== codeName) {
+        $scope.rulehelp.codeName = codeName;
+        derivationInfos.byName($scope.userId, $scope.proofId, $scope.nodeId, codeName).then(function(response) {
+          if (response.data.length > 0) {
+            $scope.rulehelp.derivationInfo = response.data[0].standardDerivation;
+          }
+        });
+      }
       // return name of the ng-template in proofawesesome.html
       return 'rulehelp.html';
     }
