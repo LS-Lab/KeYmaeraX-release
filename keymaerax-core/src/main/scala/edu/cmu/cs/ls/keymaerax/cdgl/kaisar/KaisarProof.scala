@@ -382,11 +382,14 @@ object Context {
         if (fmls.isEmpty) None
         else Some(fmls.reduceRight(or))
       case Ghost(s) => search(s, f, isGhost = true)
-      case InverseGhost(s) =>
+      case InverseGhost(s) => None
+        /*val xs = Context.taboos(InverseGhost(s)).vars
         search(s, f, isGhost) match {
-          case Some(ml) => throw ProofCheckException(s"Formula $f should not be selected from statement $s which is an inverse ghost")
+          case Some(ml) =>
+            // @TODO: distinguished exception
+            throw ProofCheckException(s"Formula $f should not be selected from statement $s which is an inverse ghost")
           case None => None
-        }
+        }*/
       case po: ProveODE => find(po.dc, f) // @TODO: Needs ghost arg?
       case Was(now, was) => search(now, f, isGhost)
       case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
