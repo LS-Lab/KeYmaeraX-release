@@ -279,18 +279,21 @@ object Context {
       }
   }
 
-  def find(mod: Modify, finder: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+  def find(mod: Modify, finder: ((Ident, Formula)) => Boolean, isGhost: Boolean): Option[(Ident, Formula)] = {
     mod match {
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        find(Modify(pat, Left(l)), finder) match {
+        find(Modify(pat, Left(l)), finder, isGhost) match {
           case Some(x) => Some(x)
-          case None => find(Modify(TuplePat(pats), Left(r)), finder)
+          case None => find(Modify(TuplePat(pats), Left(r)), finder, isGhost)
         }
       case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f))) =>
         // @TODO: Proper variable renaming
         Some((p, Equal(x, f)))
       // default: proof variable name = program variable name
       case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f))) =>
+        if (isGhost) {
+          throw ProofCheckException(s"Ghost variable $x inaccessible because it would escape its scope")
+        }
         Some((x, Equal(x, f)))
       case Modify(VarPat(x, Some(_)), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
@@ -331,32 +334,39 @@ object Context {
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
   // free variable binding after reference for admissibility
-  def find(con: Context, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+  def search(con: Context, f: ((Ident, Formula)) => Boolean, isGhost: Boolean): Option[(Ident, Formula)] = {
     con match {
       case _: Triv => None
       case Assume(x, g) => matchAssume(x, g).find(f)
       case Assert(x, g, _) => matchAssume(x, g).find(f)
       case Note(x, _, Some(g)) =>  if (f(x, g)) Some((x, g)) else None
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
-      case mod: Modify => find(mod, f)
+      case mod: Modify => find(mod, f, isGhost)
       case Block(ss) =>
-         def search(ss: List[Statement]): Option[(Ident, Formula)] = {
+         def iter(ss: List[Statement]): Option[(Ident, Formula)] = {
            ss match {
              case Nil => None
              case s :: ss =>
-               find(s, f) match {
-                 case Some(y) => Some(y)
-                 case None => search(ss)
+               search(s, f, isGhost) match {
+                 case Some((yx, yf)) =>
+                   val surrounding = Block(ss.reverse)
+                   val t = Context.taboos(surrounding)
+                   val inter = t.vars.intersect(StaticSemantics(yf).fv.toSet)
+                   if (inter.nonEmpty) {
+                     throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
+                   }
+                   Some((yx, yf))
+                 case None => iter(ss)
                }
            }
          }
-        search(ss.reverse)
+        iter(ss.reverse)
       case BoxChoice(l, r) =>
         val and: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {case ((k1, v1), (k2, v2)) =>
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
           else (k1, And(v1, v2))
         }
-        (find(l, f), find(r, f)) match {
+        (search(l, f, isGhost), search(r, f, isGhost)) match {
           case (None, None) => None
           case (Some(p), None) => Some(p)
           case (None, Some(p)) => Some(p)
@@ -368,27 +378,30 @@ object Context {
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
           else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({case (v, e, s) => find(s, f)})
+        val fmls = pats.flatMap({case (v, e, s) => search(s, f, isGhost)})
         if (fmls.isEmpty) None
         else Some(fmls.reduceRight(or))
-      case Ghost(s) => find(s, f)
+      case Ghost(s) => search(s, f, isGhost = true)
       case InverseGhost(s) =>
-        find(s, f) match {
+        search(s, f, isGhost) match {
           case Some(ml) => throw ProofCheckException(s"Formula $f should not be selected from statement $s which is an inverse ghost")
           case None => None
         }
-      case po: ProveODE => find(po.dc, f)
-      case Was(now, was) => find(now, f)
+      case po: ProveODE => find(po.dc, f) // @TODO: Needs ghost arg?
+      case Was(now, was) => search(now, f, isGhost)
       case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
       // @TODO: These loop cases probably work, but subtle
-      case While(_, _, body) => find(body, f)
-      case BoxLoop(body) => find(body, f)
+      case While(_, _, body) => search(body, f, isGhost)
+      case BoxLoop(body) => search(body, f, isGhost)
     }
   }
 
+  def find(con: Context, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+    search(con, f, isGhost = false)
+  }
   def get(con: Context, id: Ident): Option[Formula] = {
     val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
-    find(con, f).map(_._2)
+    search(con, f, isGhost = false).map(_._2)
   }
 
   def lastFact(con: Context): Option[Formula] = {
@@ -422,7 +435,7 @@ object Context {
       } catch {
         case _: ProverException => false
       }}
-    find(con, f)
+    search(con, f, isGhost = false)
   }
 
   // Base name used for fresh variables generated during proof when no better variable name is available.
@@ -462,7 +475,7 @@ object Context {
     case Note(x, proof, ann) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) Set(x) else Set())
     case LetFun(f, args, e) => Taboos(Set(), if (isInverseGhost) Set(f) else Set(), Set())
     case Match(pat: Term, e) => Taboos(if (isGhost) StaticSemantics(pat).toSet else Set(), Set(), Set())
-    case Block(ss) => ss.map(taboos(_, isGhost, isInverseGhost)).reduce((l, r) => l.++(r))
+    case Block(ss) => ss.map(taboos(_, isGhost, isInverseGhost)).fold(Taboos.empty)((l, r) => l.++(r))
     case Switch(scrutinee, pats) =>
       pats.map({ case (x: Term, fml, s) => {
         val t = taboos(s, isGhost, isInverseGhost)
