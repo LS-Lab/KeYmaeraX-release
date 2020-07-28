@@ -15,16 +15,16 @@ sealed trait DisplayInfo {
 case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
 /** Render a rule with a name as a conclusion and list of premises. */
 case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
+  override def name: String = names.name
+  override def asciiName: String = names.asciiName
 }
 /** Render a sequent as a list of antecedent UI strings and a list of succedent UI strings.
  * @param isClosed true to indicate that this sequent is closed so (*) star. */
 case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean = false)
 /** Render an axiom with a name as a UI string for the formula. */
 case class AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
+  override def name: String = names.name
+  override def asciiName: String = names.asciiName
 
 }
 object AxiomDisplayInfo {
@@ -44,6 +44,6 @@ object AxiomDisplayInfo {
 
 /** Render an axiom that has a name and a UI string formula but needs a list of inputs filled in first. */
 case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
+  override def name: String = names.name
+  override def asciiName: String = names.asciiName
 }
