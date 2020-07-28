@@ -98,7 +98,7 @@ trait SequentCalculus {
   val notL    : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
   @Tactic(("¬R", "!R"), premises = "Γ, P |- Δ",
-    conclusion = ", Γ |- ¬P, Δ")
+    conclusion = "Γ |- ¬P, Δ")
   val notR    : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   @Tactic(("∧L", "&L"), premises = "Γ, P, Q |- Δ",
