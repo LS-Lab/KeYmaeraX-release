@@ -46,7 +46,8 @@ trait DifferentialEquationCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  @Tactic(premises = "Γ |- ∀t≥0 (∀0≤s≤t q(sol(s)) → [x:=sol(t)]p(x)), Δ",
+  @Tactic("[']",
+    premises = "Γ |- ∀t≥0 (∀0≤s≤t q(sol(s)) → [x:=sol(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
   lazy val solve: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)}
 
