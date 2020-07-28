@@ -279,25 +279,22 @@ object Context {
       }
   }
 
-  def find(mod: Modify, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+  def find(mod: Modify, finder: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
     mod match {
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        find(Modify(pat, Left(l)), f) match {
+        find(Modify(pat, Left(l)), finder) match {
           case Some(x) => Some(x)
-          case None => find(Modify(TuplePat(pats), Left(r)), f)
+          case None => find(Modify(TuplePat(pats), Left(r)), finder)
         }
-      case Modify(VarPat(x, Some(p)), Left(f)) =>
+      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f))) =>
         // @TODO: Proper variable renaming
         Some((p, Equal(x, f)))
-      case Modify(VarPat(x, None), Left(f)) =>
+      // default: proof variable name = program variable name
+      case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f))) =>
         Some((x, Equal(x, f)))
-      case Modify(TuplePat(pats), Right(())) =>
+      case Modify(VarPat(x, Some(_)), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
-      case Modify(VarPat(x, None), Right(())) =>
-        throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
-      case Modify(TuplePat(List()), _) => None
-      case Modify(WildPat(), _) => None
-      case Modify(NoPat(), _) => None
+      case Modify(_, _) => None
     }
   }
 
@@ -341,6 +338,7 @@ object Context {
       case Assert(x, g, _) => matchAssume(x, g).find(f)
       case Note(x, _, Some(g)) =>  if (f(x, g)) Some((x, g)) else None
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
+      case mod: Modify => find(mod, f)
       case Block(ss) =>
          def search(ss: List[Statement]): Option[(Ident, Formula)] = {
            ss match {
@@ -380,7 +378,6 @@ object Context {
           case None => None
         }
       case po: ProveODE => find(po.dc, f)
-      case mod: Modify => find(mod, f)
       case Was(now, was) => find(now, f)
       case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
       // @TODO: These loop cases probably work, but subtle

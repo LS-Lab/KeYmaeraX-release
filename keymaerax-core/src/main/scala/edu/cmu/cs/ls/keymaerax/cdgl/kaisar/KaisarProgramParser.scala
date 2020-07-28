@@ -187,7 +187,7 @@ object ProofParser {
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
   def patternSelector[_: P]: P[PatternSelector] =
     (Index ~ P("*")).map(i => locate(PatternSelector(wild), i)) |
-    (Index ~ expression).map({case (i, e)  =>locate(PatternSelector(e), i)})
+    (Index ~ expression).map({case (i, e)  => locate(PatternSelector(e), i)})
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
 
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof

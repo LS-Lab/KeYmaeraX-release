@@ -32,6 +32,8 @@ object KaisarKeywordParser {
   def differentialProgram[_: P]: P[DifferentialProgram] = expression.map(_.asInstanceOf[DifferentialProgram])
   def term[_: P]: P[Term] = expression.map(_.asInstanceOf[Term])
 
+  // @TODO: Need syntax to separate proof terms, or elaborator pass to resolve ambiguous parse.
+  // For example     (A B), C   vs   ((A B) C)
   def proofInstance[_: P]: P[ProofInstance] = expression.map(e => ProofInstance(e))
   def proofParen[_: P]: P[ProofTerm] = "(" ~  proofTerm  ~ ")"
   def proofVar[_: P]: P[ProofVar] = ident.map(ProofVar)

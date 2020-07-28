@@ -89,7 +89,8 @@ object ProofChecker {
         ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
       case ProofVar(s) =>
         Context.get(con, s) match {
-          case Some(fml) => fml
+          case Some(fml) =>
+            fml
           case None => throw ProofCheckException(s"Undefined proof variable $s")
         }
       case ProofApp(pt, ProofInstance(e)) =>
@@ -112,8 +113,10 @@ object ProofChecker {
       case DefaultSelector(f) =>
         val fv = StaticSemantics(f).fv
         fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v).toList)
-      case ForwardSelector(pt) => List(apply(con, pt))
-      case PatternSelector(e) => Context.unify(con, e).toList.map(_._2)
+      case ForwardSelector(pt) =>
+        List(apply(con, pt))
+      case PatternSelector(e) =>
+        Context.unify(con, e).toList.map(_._2)
     }
   }
 
