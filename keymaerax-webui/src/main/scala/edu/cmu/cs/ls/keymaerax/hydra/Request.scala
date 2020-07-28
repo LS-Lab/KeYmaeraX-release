@@ -1465,7 +1465,7 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     def collectLemmaNames(tactic: String): List[String] = {
-      """useLemma\("([^"]+)"""".r("lemmaName").findAllMatchIn(tactic).toList.map(m => m.group("lemmaName"))
+      """useLemma(?:At)?\("([^"]+)"""".r("lemmaName").findAllMatchIn(tactic).toList.map(m => m.group("lemmaName"))
     }
 
     /** Recursively required lemmas in the order they ought to be proved. */
