@@ -213,7 +213,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     });
     $scope.$emit('routeLoaded', {theview: 'proofs'});
   } else {
-    $http.get('models/users/' + $scope.userId + "/proofs").success(function(data) {
+    $http.get('proofs/users/' + $scope.userId).success(function(data) {
       $scope.proofs = data;
     });
     $scope.$emit('routeLoaded', {theview: 'allproofs'});

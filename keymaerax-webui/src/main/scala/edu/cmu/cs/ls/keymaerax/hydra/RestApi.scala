@@ -489,7 +489,7 @@ object RestApi extends Logging {
       }
     }}}
 
-    val proofList: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
+    val proofList: SessionToken=>Route = (t: SessionToken) => path("proofs" / "users" / Segment) { (userId) => { pathEnd {
       get {
         val request = new ProofsForUserRequest(database, userId)
         completeRequest(request, t)
