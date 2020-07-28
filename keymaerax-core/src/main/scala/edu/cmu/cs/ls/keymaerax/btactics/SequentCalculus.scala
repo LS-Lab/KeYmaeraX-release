@@ -98,11 +98,11 @@ trait SequentCalculus {
   val notL    : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
   @Tactic(("¬R", "!R"), premises = "Γ, P |- Δ",
-    conclusion = "P∧Q, Γ |- Δ")
+    conclusion = ", Γ |- ¬P, Δ")
   val notR    : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   @Tactic(("∧L", "&L"), premises = "Γ, P, Q |- Δ",
-    conclusion = "¬P, Γ |- Δ")
+    conclusion = "P∧Q, Γ |- Δ")
   val andL    : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
   /** Inverse of [[andL]].
     * {{{
@@ -159,7 +159,7 @@ trait SequentCalculus {
     conclusion = "P↔Q, Γ |- Δ")
   val equivL  : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
-  @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, P |- Δ, Q",
+  @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
     conclusion = "Γ |- P↔Q, Δ")
   val equivR  : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
@@ -269,13 +269,15 @@ trait SequentCalculus {
     *     x>0   |- \forall x x^2>=0
     * }}}
     */
-  @Tactic(premises = "Γ |- p(x), Δ",
+  @Tactic("∀R",
+    premises = "Γ |- p(x), Δ",
     conclusion = "Γ |- ∀x p(x), Δ")
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
-  @Tactic(premises = "p(e), Γ |- Δ",
+  @Tactic("∀L",
+    premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
   def allL(e: Option[Term])              : DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
   def allL(e: Term)                      : DependentPositionWithAppliedInputTactic = allL(Some(e))
@@ -290,13 +292,14 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  @Tactic(premises = "p(x), Γ |- Δ",
+  @Tactic("∃L",
+    premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
   val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  @Tactic(("∃R", "existsR"),
+  @Tactic("∃R",
     inputs = "θ[θ]:term",
     premises = "Γ |- p(θ), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
@@ -409,7 +412,7 @@ trait SequentCalculus {
   //@TODO: Currently needs to be new DependentTactic() for some crazy reason: SpoonFeedingInterpreter serializes as "closeId()"
   // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
   // Maybe the interpreter is checking type equality of anonymous classes somewhere...
-  @Tactic("Close by identity", premises = "*",
+  @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ", codeName = "id")
   val id: DependentTactic = new DependentTactic("id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -429,12 +432,14 @@ trait SequentCalculus {
     close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
   }*/
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  @Tactic(/*codeName = "closeTrue",*/ premises = "*",
+  @Tactic("⊤R",
+    premises = "*",
     conclusion = "Γ |- ⊤, Δ")
   val closeT: BelleExpr = anon { ProofRuleTactics.closeTrue('R, True) }
 //  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  @Tactic(/*codeName = "closeFalse",*/ premises = "*",
+  @Tactic("⊥L",
+    premises = "*",
     conclusion = "Γ, ⊥ |- Δ")
   val closeF: BelleExpr = anon { ProofRuleTactics.closeFalse('L, False) }
 //  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }

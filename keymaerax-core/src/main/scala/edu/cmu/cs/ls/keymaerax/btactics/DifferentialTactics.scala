@@ -763,7 +763,7 @@ private object DifferentialTactics extends Logging {
   })
 
   /** [[DifferentialEquationCalculus.dW]]. diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
-  @Tactic(names="Differential Weaken",
+  @Tactic(names="dW",
           codeName="dW", // todo: rename the tactic directly
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
           conclusion="Γ |- [x'=f(x)&Q]P, Δ",
@@ -786,7 +786,7 @@ private object DifferentialTactics extends Logging {
   })
 
   /** [[DifferentialEquationCalculus.dWPlus]]. diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
-  @Tactic(names="Initial State-Preserving Differential Weaken",
+  @Tactic(names=("dW+", "dWplus"), // Initial State-Preserving Differential Weaken
     codeName="dWplus", // todo: rename the tactic directly
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
