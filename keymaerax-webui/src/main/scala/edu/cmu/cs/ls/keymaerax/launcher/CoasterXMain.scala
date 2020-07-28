@@ -65,7 +65,7 @@ object CoasterXMain {
     if(!haveStuffed){ beforeStuff ; haveStuffed=true}
     val provider = new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
-    testcode(provider.tool())
+    testcode(provider.tool)
   }
 
   def proveComponent(name: String, doFormula:Boolean, doTactic:Boolean, willDoStats:Boolean, numRuns:Int, debugLevel:Int):Unit = {
@@ -243,10 +243,10 @@ object CoasterXMain {
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => new MathematicaToolProvider(config)
-      case "wolframengine" => new WolframEngineToolProvider(config)
-      case "wolframscript" => new WolframScriptToolProvider
-      case "z3" => new Z3ToolProvider
+      case "mathematica" => MathematicaToolProvider(config)
+      case "wolframengine" => WolframEngineToolProvider(config)
+      case "wolframscript" => WolframScriptToolProvider(config)
+      case "z3" => Z3ToolProvider()
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
     ToolProvider.setProvider(provider)

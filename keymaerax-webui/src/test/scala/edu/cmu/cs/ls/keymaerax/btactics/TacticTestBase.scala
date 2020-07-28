@@ -283,9 +283,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Test suite setup */
   override def beforeAll(): Unit = {
     mathematicaProvider =
-      if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
-      else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
-      else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
+      if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(configFileMathematicaConfig)))
+      else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(configFileWolframEngineConfig)))
+      else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(Map.empty)))
       else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   }
 

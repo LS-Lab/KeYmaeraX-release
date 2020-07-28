@@ -32,11 +32,10 @@ private object ToolTactics {
     val config = ToolConfiguration.config(name)
     name.toLowerCase match {
       case "mathematica" =>
-        ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+        ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
       case "wolframengine" =>
-        Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-        ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-      case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
+        ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
+      case "z3" => ToolProvider.setProvider(Z3ToolProvider())
       case _ => throw new BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil

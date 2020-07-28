@@ -707,10 +707,10 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
               if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-                Some(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+                Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
               } else None
             } else {
-              ToolProvider.setProvider(new Z3ToolProvider())
+              ToolProvider.setProvider(Z3ToolProvider())
               None
             }
           case "wolframengine" =>
@@ -719,14 +719,14 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
               if (Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-                Some(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+                Some(new MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
               } else None
             } else {
-              ToolProvider.setProvider(new Z3ToolProvider())
+              ToolProvider.setProvider(Z3ToolProvider())
               None
             }
-          case "wolframscript" => Some(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil))
-          case "z3" => Some(new Z3ToolProvider())
+          case "wolframscript" => Some(MultiToolProvider(new WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil))
+          case "z3" => Some(Z3ToolProvider())
           case _ => ToolProvider.setProvider(new NoneToolProvider); None
         }
         provider match {
@@ -834,12 +834,12 @@ class WolframScriptConfigStatusRequest(db: DBAbstraction) extends Request with R
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
+    //@todo switchSolver tactic switches tool without telling UI
     ToolProvider.tool(toolId) match {
       case Some(t: ToolOperationManagement) => new ToolStatusResponse(toolId, t.getAvailableWorkers) :: Nil
       case Some(_) => new ToolStatusResponse(toolId, -1) :: Nil
       case None => new ToolConfigErrorResponse(toolId, "Tool could not be started; please check KeYmaera X -> Preferences. Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
     }
-
   }
 }
 
