@@ -98,7 +98,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "support note" in withMathematica { _ =>
-    val pfStr = "?l:(x = 1); ?r:(y = 0); note lr = andI l r ;"
+    val pfStr = "?l:(x = 1); ?r:(y = 0); note lr = andI(l, r);"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[?x=1;?y=0;{?(x=1&y=0);}^@]true".asFormula
@@ -123,16 +123,14 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "x{xVal}:=1; (G y:= 2; !p:(x + y = 3) := using andI xVal y by auto; !q:(x > 0) := using andI p y by auto; G) !p:(x + 1 > 0) := using q by auto;"
+    val pfStr = "x{xVal}:=1; (G y:= 2; !p:(x + y = 3) := using andI(xVal, y) by auto; !q:(x > 0) := using andI(p, y) by auto; G) !p:(x + 1 > 0) := using q by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=1;{?(x+1>0);}^@]true".asFormula
   }
 
   it should "allow inverse ghost program variable escaping scope for tautological purposes" in withMathematica { _ =>
-    val pfStr =
-      "{G x := 0; G} " +
-      "!q:x^2 >= 0  by auto;"
+    val pfStr = "{G x := 0; G} !q:(x^2 >= 0) := by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{?(x^2 >= 0);}^@]true".asFormula

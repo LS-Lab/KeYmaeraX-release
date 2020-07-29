@@ -253,16 +253,16 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse proof application" in {
-    p("(X Y)", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X".asVariable), ProofVar("Y".asVariable))
+    p("X(Y)", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X".asVariable), ProofVar("Y".asVariable))
   }
 
   it should "parse proof instantiation" in {
-    p("(X \"1\")", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X".asVariable), ProofInstance(Number(1)))
+    p("X(\"1\")", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X".asVariable), ProofInstance(Number(1)))
   }
 
   // selector parser
   "selector parser" should "parse forward selector" in {
-    p("(and X Y)", kp.proofTerm(_)) shouldBe ProofApp(ProofApp(ProofVar("and".asVariable), ProofVar("X".asVariable)), ProofVar("Y".asVariable))
+    p("and(X, Y)", kp.proofTerm(_)) shouldBe ProofApp(ProofApp(ProofVar("and".asVariable), ProofVar("X".asVariable)), ProofVar("Y".asVariable))
   }
 
   it should "parse pattern selector" in {
@@ -306,7 +306,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse note" in {
-    p("note conj = andI X Y;", pp.statement(_)) shouldBe Note("conj".asVariable, ProofApp(ProofApp(ProofVar("andI".asVariable), ProofVar("X".asVariable)), ProofVar("Y".asVariable)))
+    p("note conj = andI(X, Y);", pp.statement(_)) shouldBe Note("conj".asVariable, ProofApp(ProofApp(ProofVar("andI".asVariable), ProofVar("X".asVariable)), ProofVar("Y".asVariable)))
   }
 
   it should "parse letfun" in {

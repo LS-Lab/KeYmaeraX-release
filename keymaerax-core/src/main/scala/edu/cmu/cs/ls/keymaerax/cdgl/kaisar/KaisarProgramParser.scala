@@ -26,7 +26,6 @@ object ParserCommon {
     import NoWhitespace._
     (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!.filter(s  => !reservedWords.contains(s))
   }
-
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z'").rep(1).!.filter(reservedWords.contains)
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))

@@ -111,13 +111,15 @@ object SSAPass {
   }
 
   private def snapshotUnion(l: Snapshot, r: Snapshot): Snapshot = {
-    val keys = l.keySet.++(r.keySet)
-    val kvs: Set[(String, Option[Int])] =
-      keys.map(k => (k,
-        (opt(l.get(k)), opt(r.get(k))) match {
-          case (Some(x),Some(y)) => Some(x.max(y))
-          case (x: Some[_], _) => x case (_, y) => y}))
-    kvs.toMap
+    val keys: Set[String] = l.keySet.++(r.keySet)
+    keys.foldLeft[Map[String, Option[Int]]](Map())((map, k) =>
+      (opt(l.get(k)), opt(r.get(k))) match {
+        case (Some(x: Int),Some(y: Int)) => map.+(k -> Some(x.max(y)))
+        case (x: Some[Int], _) => map.+(k -> x)
+        case (_, y: Some[Int]) => map.+(k -> y)
+        case _ => map
+      }
+    )
   }
 
   private def patSnap(pat: Expression, snapshot: Snapshot): Snapshot = {

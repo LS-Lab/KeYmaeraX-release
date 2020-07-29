@@ -9,7 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import fastparse._
-import NoWhitespace._
+import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
@@ -18,7 +18,13 @@ object KaisarKeywordParser {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
   "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
     "or", "print", "for")
-  def identString[_: P]: P[String] = CharIn("a-zA-Z").rep(1).!.filter(!reservedWords.contains(_))
+
+  def identString[_: P]: P[String] = {
+    // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
+    // locally import "no whitespace" so that identifiers cannot contain spaces.
+    import NoWhitespace._
+    (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!.filter(s  => !reservedWords.contains(s))
+  }
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z").rep(1).!.filter(reservedWords.contains)
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))
@@ -34,12 +40,15 @@ object KaisarKeywordParser {
 
   // @TODO: Need syntax to separate proof terms, or elaborator pass to resolve ambiguous parse.
   // For example     (A B), C   vs   ((A B) C)
+  //def proofParen[_: P]: P[ProofTerm] = "(" ~  proofTerm  ~ ")"
+  //def proofTerminal[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVar | proofParen)
+  //(proofTerminal.rep(1, ws)).map(pts => pts.reduceLeft[ProofTerm]({case (acc, pt) => ProofApp(acc, pt)}))
   def proofInstance[_: P]: P[ProofInstance] = expression.map(e => ProofInstance(e))
-  def proofParen[_: P]: P[ProofTerm] = "(" ~  proofTerm  ~ ")"
-  def proofVar[_: P]: P[ProofVar] = ident.map(ProofVar)
-  def proofTerminal[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVar | proofParen)
-  def proofTerm[_: P]: P[ProofTerm] =
-    (proofTerminal.rep(1, ws)).map(pts => pts.reduceLeft[ProofTerm]({case (acc, pt) => ProofApp(acc, pt)}))
+  def proofVarApp[_: P]: P[ProofTerm] = (ident ~ ("(" ~ proofTerm.rep(sep =",") ~ ")").?).map({
+    case (id, None) => ProofVar(id)
+    case (id, Some(args)) => args.foldLeft[ProofTerm](ProofVar(id))({case (acc, pt) => ProofApp(acc, pt)})
+  })
+  def proofTerm[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVarApp)
 
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
   def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | expression.map(PatternSelector))
