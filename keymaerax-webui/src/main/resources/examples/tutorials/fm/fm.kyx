@@ -73,7 +73,7 @@ Problem
 End.
 
 Tactic "Steps Formal Methods Tutorial Example 2"
-/* requires QE({`Mathematica`}) */
+useSolver("Mathematica");
 implyR(1); andL('L)*; loop({`x<=m`}, 1); <(
   prop; done,
   prop; done,

@@ -1063,11 +1063,11 @@ object IntervalArithmeticV2 {
   @Tactic("Interval Arithmetic Cut",
     codeName = "intervalCutTerms" /* @todo old codeName */,
     // @TODO: closed premise
-    premises = "Γ, lowerBound(trm) <= trm, trm <= upperBound(trm) |- Δ",
+    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
     displayLevel = "menu"
   )
-  def intervalCutTerm(trm: Term): InputTactic = inputanon { intervalCutTerms(Seq(trm)) }
+  def intervalCutTerm(t: Term): InputTactic = inputanon { intervalCutTerms(Seq(t)) }
 
   private def terms_of(fml: Formula) : List[Term] = fml match {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
@@ -1079,7 +1079,7 @@ object IntervalArithmeticV2 {
   }
 
   @Tactic("Interval Arithmetic Cut",
-    premises = "Γ, lowerBound(trm) <= trm, trm <= upperBound(trm) |- Δ",
+    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
     conclusion = "Γ |- Δ",
     displayLevel = "internal"
   )

@@ -1733,7 +1733,9 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val infos = axiomId match {
-      case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
+      case Some(aid) =>
+        val di = Try(DerivationInfo.ofCodeName(aid)).toOption
+        di.map(info => (info, UIIndex.comfortOf(aid).flatMap(s => Try(DerivationInfo.ofCodeName(s)).toOption))).toList
       case None => DerivationInfo.allInfo.
         filter({case (name, di) => di.displayLevel != 'internal}).
         map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList

@@ -46,13 +46,14 @@ trait DifferentialEquationCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  @Tactic(premises = "Γ |- ∀t≥0 (∀0≤s≤t q(sol(s)) → [x:=sol(t)]p(x)), Δ",
+  @Tactic("[']",
+    premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
   lazy val solve: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)}
 
   /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
-  @Tactic(premises = "Γ |- ∀t≥0 (q(sol(t)) → [x:=sol(t)]p(x)), Δ",
+  @Tactic(premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
   lazy val solveEnd: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos) }
 
@@ -94,7 +95,7 @@ trait DifferentialEquationCalculus {
     * @see[[HilbertCalculus.DC]]
     */
   def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = dC(List(R))
-  @Tactic("Differential Cut", conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
+  @Tactic(conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
     premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
     revealInternalSteps = true)
   def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
@@ -151,8 +152,7 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DI]]
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
-  //@todo 'auto or 'cex
-  @Tactic(names="Differential Invariant",
+  @Tactic(names="dI",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="all", revealInternalSteps = true, codeName = "dI")
@@ -186,7 +186,7 @@ trait DifferentialEquationCalculus {
     * }}}
     * @see [[HilbertCalculus.DG]]
     */
-  @Tactic("Differential Ghost",
+  @Tactic(
     premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
     conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E[y,x,y']:expression;; P[y]:option[formula]")
   def dG(E: Expression, P: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position) =>
@@ -195,12 +195,14 @@ trait DifferentialEquationCalculus {
         DifferentialTactics.dG(AtomicODE(l, r), P)(pos)
       case dp: DifferentialProgram =>
         DifferentialTactics.dG(dp, P)(pos)
+      case ODESystem(dp, _) =>
+        DifferentialTactics.dG(dp, P)(pos)
       case _ =>
         throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
     }
   }
 
-  @Tactic("Differential Ghost", conclusion = "Γ |- [{x′=f(x) & Q}]P, Δ",
+  @Tactic("dG", conclusion = "Γ |- [{x′=f(x) & Q}]P, Δ",
     premises = "Γ |- ∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
     inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]")
   def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic =

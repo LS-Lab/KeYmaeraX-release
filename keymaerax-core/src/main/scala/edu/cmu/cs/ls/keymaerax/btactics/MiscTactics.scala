@@ -198,10 +198,12 @@ object DebuggingTactics {
 
 
   /** @see [[TactixLibrary.done]] */
-  lazy val done: BelleExpr = done()
+  lazy val done: BelleExpr = done(None, None)
+  def done(msg: String): InputTactic = done(Some(msg), None)
+  def done(msg: String, storeLemma: Option[String]): InputTactic = done(Some(msg), storeLemma)
   @Tactic(("Done","done"), codeName = "done")
-  def doneX(msg: Option[String], lemmaName: Option[String]): InputTactic = inputanon { done(msg.getOrElse(""), lemmaName) }
-  def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+  def done(msg: Option[String], lemmaName: Option[String]): InputTactic = inputanon { doneImpl(msg.getOrElse(""), lemmaName) }
+  private def doneImpl(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
       if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
       else if (msg.nonEmpty) msg::Nil
       else Nil) {
@@ -237,14 +239,13 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  @Tactic()
   lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable}
 
   /** no-op nil */
   lazy val ident: BelleExpr = nil
 
   /** Optional tactic */
-  def ?(t: BelleExpr): BelleExpr = t | nil
+  def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
 
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)

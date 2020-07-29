@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 
@@ -31,7 +32,7 @@ import scala.collection.immutable.Map
 @CheckinTest
 @SummaryTest
 @UsualTest
-class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
+class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) {
 
   // @TODO: Change everything to ProvableInfo
   private def check(lemma: Lemma): Sequent = {

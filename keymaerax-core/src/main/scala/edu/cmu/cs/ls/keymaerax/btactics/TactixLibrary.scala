@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
@@ -182,7 +181,8 @@ object TactixLibrary extends HilbertCalculus
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => DebuggingTactics.assertProvableSize(r.length) & BranchTactic(r.map(applyBranchRecursor))
+      case r => DebuggingTactics.assertProvableSize(r.length, new TacticInapplicableFailure(_)) &
+        BranchTactic(r.map(applyBranchRecursor))
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
@@ -666,17 +666,17 @@ object TactixLibrary extends HilbertCalculus
     resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
   }
 
+  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     (tool, timeout) match {
       case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
       case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
       case (Some(toolName), _) =>  TactixLibrary.QE(Nil, Some(toolName))
       case (_, Some(time)) => TactixLibrary.QE(Nil, None, Some(time.value.toInt))
-      case (_, _) => QE
+      case (_, _) => QE(Nil, None, None)
     }
   }
-  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
-  def QE: BelleExpr = QE()
+  lazy val QE: BelleExpr = QEX(None, None)
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -709,7 +709,7 @@ object TactixLibrary extends HilbertCalculus
   // Utility Tactics
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
-  val done : BelleExpr = DebuggingTactics.done
+  val done: BelleExpr = DebuggingTactics.done
 
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term.
@@ -973,12 +973,12 @@ object TactixLibrary extends HilbertCalculus
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   @Tactic("useLemma", codeName = "useLemma")
-  def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser(_)))}
+  def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser)) }
 
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr =
-    anon { (_: Position, _: Sequent) =>
+    anon { (_: Sequent) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
@@ -987,10 +987,10 @@ object TactixLibrary extends HilbertCalculus
     }
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Position, _: Sequent) =>
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Sequent) =>
     adapt match {
       case Some(t) =>
-        cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &
+        cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
           (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1)
            else /* toFormula returns true->conclusion */ implyR(1) & hideL('Llast)) &
           (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1)

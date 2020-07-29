@@ -1,7 +1,7 @@
 <div>
   <p>
-  <kbd>solve</kbd> replaces a (solvable) differential equation <code>x'=f(x)</code> by an assignment <code>x:=sol(t)</code> to its solution <code>sol(t)</code> at time <code>t</code> along with a quantifier for time <code>t≥0</code>.
-  Evolution domain constraints <code>q(x)</code> are handled correspondingly to check that <code>q(sol(s))</code> was true at all intermediate times <code>0≤s≤t</code>.
+  <kbd>solve</kbd> replaces a (solvable) differential equation <code>x'=f(x)</code> by an assignment <code>x:=x(t)</code> to its solution <code>x(t)</code> at time <code>t</code> along with a quantifier for time <code>t≥0</code>.
+  Evolution domain constraints <code>q(x)</code> are handled correspondingly to check that <code>q(x(s))</code> was true at all intermediate times <code>0≤s≤t</code>.
 </p>
 <p>
 Invariant techniques are needed for differential equations that have no solutions in (polynomial) real arithmetic. Reasoning by invariants is also often faster.

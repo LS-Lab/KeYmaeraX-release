@@ -314,16 +314,16 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doTactic(undefined, 'closeTrue')"
-                                       uib-popover-template="fetchRuleHelp('closeTrue')"
+                                <li><a ng-click="doTactic(undefined, 'closeT')"
+                                       uib-popover-template="fetchRuleHelp('closeT')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>True</span><code class="pull-right">closeTrue</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'closeFalse')"
-                                       uib-popover-template="fetchRuleHelp('closeFalse')"
+                                    <span>True</span><code class="pull-right">closeT</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeF')"
+                                       uib-popover-template="fetchRuleHelp('closeF')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                    <span>False</span><code class="pull-right">closeF</code></a></li>
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"
                                   uib-popover-template="fetchRuleHelp('commuteEquivR')"
@@ -827,7 +827,3 @@
 </div>
 </div>
 </div>
-
-<script type="text/ng-template" id="rulehelp.html">
-    <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
-</script>

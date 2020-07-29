@@ -5,16 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Function, Number, Plus, Real, SubstitutionPair, Trafo, Tuple, USubst, USubstOne, Unit, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Number, Plus, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the archive parser.
@@ -24,8 +24,8 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
   private val parser =
-//    KeYmaeraXArchiveParser
-  DLArchiveParser
+    KeYmaeraXArchiveParser
+//  DLArchiveParser
 
   private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
     parser.parse(input)
@@ -273,9 +273,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "parse an isolated simple definition assignment" in {
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
-    DLParser.programParser("{ x:=x+1; }") shouldBe (DLParser.programParser("x:=x+1;"))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", DLArchiveParser.progDef(_)) shouldBe (("a", None), (None, Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", DLArchiveParser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))))
+    DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", DLArchiveParser.progDef(_)) shouldBe (("a", None), (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", DLArchiveParser.definitions(_)) shouldBe Declaration(Map(("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -292,7 +292,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -863,7 +863,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Duplicate symbol 'a'")
   }
 
-  it should "parse a model and tactic entry" in withQE { _ =>
+  it should "parse a model and tactic entry" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -890,7 +890,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                                     |End.""".stripMargin.trim()
   }
 
-  it should "parse a tactic without name" in withQE { _ =>
+  it should "FEATURE_REQUEST: parse a tactic without name" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -918,7 +918,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "parse a tactic with a comment in the beginning" in withQE { _ =>
+  it should "parse a tactic with a comment in the beginning" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -941,7 +941,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a pending tactic" in withQE { _ =>
+  it should "parse a pending tactic" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -964,7 +964,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a pending tactic with arguments" in withQE { _ =>
+  it should "parse a pending tactic with arguments" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -987,7 +987,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a tactic with arguments in new syntax" in withQE { _ =>
+  it should "parse a tactic with arguments in new syntax" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1010,7 +1010,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "elaborate to functions when parsing a tactic" in withQE { _ =>
+  it should "elaborate to functions when parsing a tactic" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1034,7 +1034,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "elaborate to functions in the presence of program constants" in withQE { _ =>
+  it should "elaborate to functions in the presence of program constants" in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1058,7 +1058,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "not elaborate to program constants when definitions contain duals" in withQE { _ =>
+  it should "not elaborate to program constants when definitions contain duals" in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1454,7 +1454,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """Theorem "Entry 2"
@@ -1544,7 +1544,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.master()) :: Nil
+    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator)) :: Nil
     entry.info shouldBe empty
     entry.fileContent shouldBe
       """ArchiveEntry "Replace tabs"
@@ -1667,12 +1667,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    val foo = entry2.defs.substs
-    val bar = entry2.defs.substs
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
-      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemma("Entry 1", None))::Nil
+      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
@@ -1750,7 +1748,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
       Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
-        TactixLibrary.useLemma("Entry 1", None))::Nil
+        TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
@@ -1779,7 +1777,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1") End.
         |End.""".stripMargin
     val entries = parse(input)
     entries should have size 2
@@ -1826,9 +1824,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
-      TactixLibrary.uniformSubstitute(RenUSubst(("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil).usubst) &
-        TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1")""",
+      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula)) &
+        TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
@@ -1838,7 +1836,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1") End.
         |End.""".stripMargin
   }
 

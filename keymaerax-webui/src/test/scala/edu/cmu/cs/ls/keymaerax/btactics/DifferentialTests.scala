@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
@@ -1020,6 +1021,17 @@ class DifferentialTests extends TacticTestBase {
   "DG" should "add y'=1 to [x'=2]x>0" in withTactics {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=0*y+1}".asDifferentialProgram, None)(1))
     result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
+  }
+
+  it should "add y'=1 to [x'=2]x>0 from parsed tactic" in withTactics {
+    proveBy("[{x'=2}]x>0".asFormula, BelleParser("""dG("{y'=0*y+1}", 1)""")).subgoals.
+      loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, BelleParser("""dG("y'=1", 1)""")).subgoals.
+      loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, BelleParser("""dG("{y'=1}", 1)""")).subgoals.
+      loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, BelleParser("""dG("{y'=1&true}", 1)""")).subgoals.
+      loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
   }
 
   it should "add z'=1 to [y'=2]y>0" in withTactics {

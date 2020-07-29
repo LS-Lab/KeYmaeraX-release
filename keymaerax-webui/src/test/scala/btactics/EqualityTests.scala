@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
-import edu.cmu.cs.ls.keymaerax.core.{StaticSemantics, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 
@@ -416,8 +416,14 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "1<=3 & min_0=1 | 1>3 & min_0=3 ==> (x+4)/min_0 >= x".asSequent
   }
 
-  it should "not infinite recurse" in withQE { _ =>
+  it should "not infinite recurse but report exception" in withQE { _ =>
     val f = "[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(-- (100*x^4+y*x^3-x^2+x+c))/max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c))))*dbxy_+0&c>x&max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c)))>0}]dbxy_>0".asFormula
-    proveBy(f, EqualityTactics.expandAll).subgoals.loneElement shouldBe "==> [{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(-- (100*x^4+y*x^3-x^2+x+c))/max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c))))*dbxy_+0&c>x&max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c)))>0}]dbxy_>0".asSequent
+    the [ProverException] thrownBy proveBy(f, EqualityTactics.expandAll) should have message
+      """Unable to create dependent tactic 'CMonCongruence', cause: No monotone context within programs ReplContext{{[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(--(100*x^4+y*x^3-x^2+x+c))/max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c)))*dbxy_+0&c>x&((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0)}]dbxy_>0 at .0.1.1}}
+        |in CMon.monStep(ReplContext{{[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(--(100*x^4+y*x^3-x^2+x+c))/max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c)))*dbxy_+0&c>x&((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0)}]dbxy_>0 at .0.1.1}},
+        |on ElidingProvable(Provable((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0
+        |  ==>  max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c))>0
+        |  from   (0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0
+        |  ==>  max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c))>0)))""".stripMargin
   }
 }

@@ -8,19 +8,17 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{StorableInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, StorableInfo}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
 import scala.reflect.runtime.{universe => ru}
-import scala.util.Try
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
@@ -31,8 +29,7 @@ import scala.util.Try
 @SummaryTest
 @UsualTest
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
-class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
-  KeYmaeraXTool.init(Map.empty)
+class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathematica")) {
 
   // @TODO: Change everything to ProvableInfo
   private def check(lemma: Lemma): Sequent = {

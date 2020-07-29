@@ -523,9 +523,14 @@ object ODEInvariance {
     }
     else {
       val f3 =
-        rankOneFml(ode, dom, f2) match {
-          case None => throw new TacticInapplicableFailure("Unable to re-order to recursive rank 1 form: " + f2)
-          case Some(f) => f
+        try {
+          rankOneFml(ode, dom, f2) match {
+            case None => throw new TacticInapplicableFailure("Unable to re-order to recursive rank 1 form: " + f2)
+            case Some(f) => f
+          }
+        } catch {
+          case e: IllegalArgumentException =>
+            throw new TacticInapplicableFailure("Unable to determine whether formula is rank 1 form", e)
         }
 
       val reorder = proveBy(Equiv(f2, f3), timeoutQE)

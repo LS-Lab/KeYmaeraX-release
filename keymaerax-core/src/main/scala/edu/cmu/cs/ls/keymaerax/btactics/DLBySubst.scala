@@ -60,8 +60,8 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.abstractionb]] */
   @Tactic(
-    names = "Gödel Vacuous",
-    codeName = "GV",
+    names = "GVR",
+    codeName = "GV", //@todo code name on cheat sheet is abstract
     premises =       "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     // Gödel Vacuous --------------------------------------------
     conclusion =     "Γ |- [a]P, Δ",

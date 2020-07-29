@@ -26,7 +26,7 @@ import org.scalatest.matchers.MatchResult
   * @author Nathan Fulton
   */
 @UsualTest
-class SimpleBelleParserTests extends TacticTestBase {
+class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")) {
   private object round {
     def trip(t: BelleExpr): BelleExpr = { roundTrip(t) shouldBe t; t }
     def roundTrip(t: BelleExpr): BelleExpr = BelleParser(BellePrettyPrinter(t))
@@ -67,7 +67,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
   
   it should "accept id as well as closeId" in {
-    BelleParser("closeId") shouldBe (round trip TactixLibrary.id)
+    BelleParser("closeId") shouldBe (round trip TactixLibrary.closeId)
     BelleParser("id") shouldBe (round trip TactixLibrary.id)
   }
 
@@ -394,27 +394,28 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {
-    val tactic = BelleParser("doall(closeId)")
+    val tactic = BelleParser("doall(id)")
     tactic shouldBe (round trip OnAll(TactixLibrary.id))
   }
 
   it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
-    val tactic = BelleParser("doall(closeId | closeTrue | andL(1))")
+    val tactic = BelleParser("doall(id | closeT | andL(1))")
     tactic shouldBe (round trip OnAll(TactixLibrary.id | (TactixLibrary.closeT | TactixLibrary.andL(1))))
   }
 
   "Optional combinator" should "parse ?(closeId)" in {
-    val tactic = BelleParser("?(closeId)")
+    val tactic = BelleParser("?(id)")
+    TactixLibrary.nil
     tactic shouldBe (round trip Idioms.?(TactixLibrary.id))
   }
 
   it should "bind stronger than seq. combinator" in {
-    val tactic = BelleParser("andR(1) & ?(closeId)")
+    val tactic = BelleParser("andR(1) & ?(id)")
     tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
   it should "bind stronger than alt. combinator" in {
-    val tactic = BelleParser("andR(1) | ?(closeId)")
+    val tactic = BelleParser("andR(1) | ?(id)")
     tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
@@ -425,7 +426,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "work in the beginning of a branch" in {
-    val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR(1)))")
+    val tactic = BelleParser("andR(1) & <(?(id), ?(orR(1)))")
     tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id), Idioms.?(TactixLibrary.orR(1))))
   }
 
@@ -497,7 +498,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   //region Done tactics
 
   "done tactic parser" should "parse closeId & done" in {
-    val tactic = BelleParser("closeId & done")
+    val tactic = BelleParser("id & done")
     tactic shouldBe (round trip TactixLibrary.id & TactixLibrary.done)
   }
 
@@ -522,7 +523,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse in a branch" in {
-    val tactic = BelleParser("andR(1) & <(closeId & done, done)")
+    val tactic = BelleParser("andR(1) & <(id & done, done)")
     tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
   }
 
@@ -548,8 +549,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse let as part of a larger tactic" in {
-    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; closeId")
-    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.id))
+    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; id")
+    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.nil) & TactixLibrary.id))
   }
 
   "def tactic parser" should "parse a simple example" in {
@@ -624,7 +625,7 @@ class SimpleBelleParserTests extends TacticTestBase {
       )))
     tactic match {
       case ExpandAll(defs) =>
-        defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j; ~> x:=g()+i();".asSubstitutionPair ::
+        defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j{|^@|}; ~> x:=g()+i();".asSubstitutionPair ::
           "i() ~> 1".asSubstitutionPair :: "g() ~> f()+4".asSubstitutionPair :: "f() ~> 3*2".asSubstitutionPair :: Nil)
         val hi = defs.indexOf("h() ~> g()*2".asSubstitutionPair)
         val ji = defs.indexOf("j; ~> x:=g()+i();".asSubstitutionPair)
@@ -642,7 +643,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   //region argument parser
 
   "Tactic argument parser" should "parse string arguments" in {
-    BelleParser("print({`a message`})") shouldBe (round trip DebuggingTactics.print("a message"))
+    BelleParser("print({`a message`})") shouldBe (round trip DebuggingTactics.printX("a message"))
   }
 
   it should "parse formula arguments" in {
@@ -654,8 +655,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse substitution arguments" in {
-    BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.uniformSubstitute(
-      RenUSubst(("init(.)".asFormula, ".=0".asFormula) :: Nil).usubst))
+    BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.USX(
+      SubstitutionPair("init(.)".asFormula, ".=0".asFormula)))
   }
 
   it should "parse mixed arguments" in {
@@ -762,18 +763,12 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   //region New dG syntax
 
-  "new dG syntax" should "work" in {
-    val f = "x>1 -> [{x'=-x}]x>0".asFormula
-    val t = "implyR(1) ; dG({`y'=1/2*y`}, {`x*y^2=1`}, 1) ; dI(1.0) ".asTactic
-  }
-
-  it should "round trip ghosts" in {
-    //@todo should be on tactics is meaningless (compares names, but not arguments)
-    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1}\", 1)") and (reparse fromPrint))
-    "dG({`y'=1`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
-    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=0*y+1}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1/2*y}\", 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+  "new dG syntax" should "round trip ghosts" in {
+    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asFormula, None)(1)) and (print as "dG(\"y'=1\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1}`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
+    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asFormula, None)(1)) and (print as "dG(\"y'=1/2*y\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
   }
 
   //endregion
