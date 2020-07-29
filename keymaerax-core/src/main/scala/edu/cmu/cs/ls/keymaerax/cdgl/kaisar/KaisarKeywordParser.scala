@@ -57,7 +57,7 @@ object KaisarKeywordParser {
   def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: Ident) => Modify(VarPat(x), Right(Unit))}))
   def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(ident, formula, method)})
   def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(ident, formula)})
-  def label[_: P]: P[Label] = (identString ~ ":").map(Label)
+  def label[_: P]: P[Label] = (identString ~ ":").map(Label(_))
   def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ expression ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
   def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident.rep(sep=",") ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, xs, e) => LetFun(f, xs.toList, e)})
   def note[_: P]: P[Note] = ("note" ~ ws ~ ident ~ ws ~ "=" ~ ws ~ proofTerm).map({case (id, pt) => Note(id, pt)})

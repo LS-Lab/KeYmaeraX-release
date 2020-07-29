@@ -22,6 +22,8 @@ object KaisarProof {
   // Identifiers for line labels, which are typically alphabetic
   type TimeIdent = String
   type Statements = List[Statement]
+  type Subscript = Option[Int]
+  type Snapshot = Map[String, Subscript]
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
@@ -76,6 +78,7 @@ final case class Proof(ss: List[Statement])
 
 // A proof-method expresses a single step of unstructured heuristic proof,
 // generally as justification of a single step of some structured proof.
+// @TODO: case exhaustiveness checking method
 sealed trait Method extends ASTNode
 // constructive real-closed field arithmetic
 case class RCF() extends Method {}
@@ -156,7 +159,7 @@ case class Modify(pat: AsgnPat, hp: Either[Term, Unit]) extends Statement
 // [[Label(st)]]. Labels are globally scoped with forward and backward reference, but references must be acyclic
 // for well-definedness
 // @TODO: Implement
-case class Label(st: TimeIdent) extends Statement
+case class Label(st: TimeIdent, snapshot: Option[Snapshot] = None) extends Statement
 // Note checks forward [[proof]] and stores the result in proof-variable [[x]]
 // In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
 // elaboration for performance reasons
@@ -165,7 +168,7 @@ case class Note(x: Ident, proof: ProofTerm, var annotation: Option[Formula] = No
 // Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
 // definition site of the function. Scope is lexical and functions must not be recursive for soundness.
-case class LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement {
+case class  LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement {
   val asFunction: Function = Function(f.name, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
@@ -262,6 +265,7 @@ object Context {
     }
   }
 
+  // @TODO: generalize to all expressions.
   def matchAssume(e: Expression, f: Formula): Map[Ident, Formula] = {
       e match {
         case BaseVariable(x, _, _) => Map(Variable(x) -> f)
@@ -469,7 +473,7 @@ object Context {
   object Taboos { val empty: Taboos = Taboos(Set(), Set(), Set())}
 
   def taboos(con: Context, isGhost: Boolean = false, isInverseGhost: Boolean = false): Taboos = con match {
-    case Triv() | PrintGoal(_) | Label(_) => Taboos.empty
+    case Triv() | PrintGoal(_) | Label(_, _) => Taboos.empty
     case Ghost(s) => taboos(con, isGhost = true, isInverseGhost = false)
     case InverseGhost(s) => taboos(con, isGhost = false, isInverseGhost = true)
     case Assume(pat: Term, f) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
