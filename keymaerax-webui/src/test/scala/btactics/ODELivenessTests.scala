@@ -328,6 +328,15 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "support semialgebraic dV auto (disjunctive)" in withMathematica { _ =>
+    val pr = proveBy("v!=0 -> v=0 | <{x'=v}> (x>100 | x < 100)".asFormula,
+      implyR(1) & orR(1) & semialgdVAuto(2)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "cor" should "refine a closed domain" in withQE { _ =>
     val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
 
@@ -429,10 +438,10 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "init" should "initialize" in withMathematica { _ =>
+  "FAOC" should "initialize" in withMathematica { _ =>
   }
 
-  "FAOC" should "prove Example 1 (manual)" in withMathematica { _ =>
+  it should "prove Example 1 (manual)" in withMathematica { _ =>
 
     val tac =  implyR(1) & allR(1) &
       dDDG("0".asTerm,"0".asTerm)(1) <(

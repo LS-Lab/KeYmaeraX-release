@@ -1171,8 +1171,8 @@ object ODELiveness {
 
     def mkFml(fml: Formula) : Formula = {
       fml match {
-        case Greater(p , _) => GreaterEqual(p, Plus(oldp,Times(bnd, timevar)))
-        case GreaterEqual(p , _) => GreaterEqual(p, Plus(oldp,Times(bnd, timevar)))
+        case Greater(p , _) => GreaterEqual(Minus(p,Plus(oldp,Times(bnd, timevar))), Number(0))
+        case GreaterEqual(p , _) => GreaterEqual(Minus(p, Plus(oldp,Times(bnd, timevar))), Number(0))
         case And(l,r) => And(mkFml(l),mkFml(r))
         case Or(l,r) => Or(mkFml(l),mkFml(r))
         case _ => ??? //impossible thanks to normalization
@@ -1201,6 +1201,130 @@ object ODELiveness {
         DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
       )
 
+    )
+
+  }}
+
+  // Semialgebraic dV
+  def semialgdVAuto : DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("semialgdVAuto only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val (property, propt) = SimplifierV3.semiAlgNormalize(post)
+
+    val starter = propt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(pos ++ PosInExpr(1::Nil))
+    }
+
+    //support for old
+    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+
+    val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
+
+    // Introduces the time variable in a mildly gross way so that it is set to 0 initially
+    val timetac =
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+        vDG(timer)(pos)
+
+    val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
+    val eg0 = Greater(eps,Number(0))
+
+    //Symbolic lower bound
+    val oldp = TacticHelper.freshNamedSymbol("oldp".asVariable, seq)
+
+    val oldpbound = Greater(Plus(oldp,Times(eps, timevar)), Number(0))
+
+    def mkFml(fml: Formula) : Formula = {
+      fml match {
+        case Greater(p , _) => GreaterEqual(Minus(p,Plus(oldp,Times(eps, timevar))), Number(0))
+        case GreaterEqual(p , _) => GreaterEqual(Minus(p, Plus(oldp,Times(eps, timevar))), Number(0))
+        case And(l,r) => And(mkFml(l),mkFml(r))
+        case Or(l,r) => Or(mkFml(l),mkFml(r))
+        case _ => ??? //impossible thanks to normalization
+      }
+    }
+
+    // Pre-unify to avoid Dconstify
+    val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
+    val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,eps)).usubst
+
+    val axren = exRWgt.fact(unifODE)(unify)(URename(timevar,"t".asVariable,semantic=true))
+
+    val inv = mkFml(property)
+    val sim = proveBy(
+      seq,
+      starter & timetac &
+          kDomainDiamond(oldpbound)(pos) <(
+            skip,
+            dC(inv)(pos) <(
+              skip,
+              DifferentialTactics.DconstV(pos)
+            )
+          )
+    )
+
+    val simseq = sim.subgoals.last
+    val (sysex : DifferentialProgram,domex) = simseq.sub(pos) match {
+      case Some(Box(ODESystem(s,d),_)) => (s,d)
+      case _ => (sys.ode,True) // cannot happen
+    }
+
+    val odels = DifferentialProduct.listify(sysex).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new TacticInapplicableFailure("semialgdVAuto only applicable to concrete ODEs")
+    }
+    val bvs = odels.map(_._1.x)
+
+    val invstar = fStar(ODESystem(sysex,domex),inv)._1
+
+    val liecheck = Imply(And(domex,inv),invstar)
+    val quantliecheck1 = bvs.foldRight(liecheck:Formula)( (v,f) => Forall(v::Nil,f))
+    val quantliecheck = Forall(oldp::Nil,quantliecheck1)
+    //\\exists e (e > 0 & \\forall x (dom -> p' >= e))
+    val qe = Exists(eps::Nil, And(eg0,quantliecheck))
+
+    val pr = proveBy(simseq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
+
+    if(!pr.isProved)
+      throw new TacticInapplicableFailure("semialgdVAuto failed to prove arithmetic condition: " + qe)
+
+    starter & timetac &
+      cutR(qe)(pos) <(
+        by(pr)
+        ,
+      implyR(pos) & existsL('Llast) & andL('Llast) &
+      cut(Exists(List(oldp),inv)) <(
+        existsL('Llast) & allL(-(seq.ante.length+3)),
+        cohideR('Rlast) & QE //this should be a trivial QE question
+      ) &
+      kDomainDiamond(oldpbound)(pos) <(
+          hideL(-(seq.ante.length+3)) &
+          useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
+          ToolTactics.hideNonFOL & QE,
+          odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt))), // existence
+          dC(inv)(pos) <(
+          DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
+            dC(liecheck)(pos) <(
+              hideL(-(seq.ante.length+3)) &
+                DifferentialTactics.DconstV(pos) & sAIclosed(pos),
+              // add the quantified assumption manually
+              dC(quantliecheck1)(pos) <(
+                DifferentialTactics.diffWeakenG(pos) &
+                  implyR(1) & andL(-1) & (allL('Llast)*bvs.length) &
+                  id
+                ,
+                V(pos) & id
+              )
+            )
+        )
+      )
     )
 
   }}
