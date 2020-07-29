@@ -135,12 +135,15 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 var lemmaLoader = $q.defer();
                 usedLemmas.reduce(function(result, lemma) {
                   return result.then(function(response) {
+                    spinnerService.show('tacticExecutionSpinner');
                     console.log("Opening lemma: " + lemma.name + "(" + lemma.proofId + ")");
                     return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId);
                   }).then(function(response) {
+                    spinnerService.show('tacticExecutionSpinner');
                     console.log("Proving lemma: " + lemma.name + "(" + lemma.proofId + ")");
                     return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId + '/initfromtactic')
                   }).then(function(response) {
+                    spinnerService.show('tacticExecutionSpinner');
                     return $scope.runningTask.start(lemma.proofId, '()', response.data.taskId, response.data.info,
                       function(taskResult) {
                         console.log("Done proving: " + lemma.name + "(" + lemma.proofId + ")")
@@ -151,6 +154,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                       undefined
                     );
                   }).then(function(response) {
+                    spinnerService.show('tacticExecutionSpinner');
                     console.log("Validating proof: " + lemma.name + "(" + lemma.proofId + ")");
                     return $http.get("proofs/user/" + $scope.userId + "/" + lemma.proofId + "/validatedStatus");
                   }).then(function(response) {
@@ -159,6 +163,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 }, lemmaLoader.promise).then(function(response) {
                   // finally open imported but not yet executed proof
                   console.log("Now proving theorem " + $scope.proofId);
+                  spinnerService.show('tacticExecutionSpinner');
                   $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
                     .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
                                                $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
