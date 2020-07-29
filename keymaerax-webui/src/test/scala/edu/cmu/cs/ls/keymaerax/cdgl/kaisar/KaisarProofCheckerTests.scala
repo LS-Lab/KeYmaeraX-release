@@ -130,7 +130,9 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "allow inverse ghost program variable escaping scope for tautological purposes" in withMathematica { _ =>
-    val pfStr = "{G x := 0; G} !q:(x^2 >= 0) := by auto;"
+    val pfStr =
+      "{G x := 0; G} " +
+      "!q:x^2 >= 0  by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{?(x^2 >= 0);}^@]true".asFormula
