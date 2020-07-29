@@ -66,9 +66,8 @@ class KaisarProofCheckerTests extends TacticTestBase {
 
   it should "reject invalid auto step" in withMathematica { _ =>
     val pfStr  = "!falsehood:(1 <= 0) by auto;"
-    val pf = p(pfStr, pp.statement(_))
+    val pf = p(pfStr, pp.assert(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
-    //ff shouldBe "1>=0".asFormula
   }
 
   it should "succeed switch" in withMathematica { _ =>
@@ -123,7 +122,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "x{xVal}:=1; (G y:= 2; !p:(x + y = 3) using andI(xVal, y) by auto; !q:(x > 0) using andI(p, y) by auto; G) !p:(x + 1 > 0) using q by auto;"
+    val pfStr = "?xVal:(x:=1); (G y:= 2; !p:(x + y = 3) using andI(xVal, y) by auto; !q:(x > 0) using andI(p, y) by auto; G) !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=1;{?(x+1>0);}^@]true".asFormula

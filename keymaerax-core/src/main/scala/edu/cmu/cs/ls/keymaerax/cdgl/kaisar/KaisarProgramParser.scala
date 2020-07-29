@@ -18,13 +18,17 @@ import edu.cmu.cs.ls.keymaerax.core._
 object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
     "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
-    "or", "print", "for", "while")
+    "or", "print", "for", "while", "true", "false")
 
-  def identString[_: P]: P[String] = {
+  def identOrKeyword[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
     // locally import "no whitespace" so that identifiers cannot contain spaces.
     import NoWhitespace._
-    (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!.filter(s  => !reservedWords.contains(s))
+    (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!
+  }
+
+  def identString[_: P]: P[String] = {
+    identOrKeyword.filter(s  => !reservedWords.contains(s))
   }
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z'").rep(1).!.filter(reservedWords.contains)
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
@@ -38,10 +42,16 @@ object ParserCommon {
           case (Some("-"), s) => Number(BigDecimal("-" + s))})
   }
 
-  def variable[_ : P]: P[Variable] = {
-    identString.map(s => {
-      if (s.endsWith("'")) DifferentialSymbol(BaseVariable(s.dropRight(1))) else BaseVariable(s)
-    })
+  def variableTrueFalse[_ : P]: P[Expression] = {
+    identOrKeyword.map({
+      case "true" =>
+        True
+      case "false" =>
+        False
+      case s => {
+      if (s.endsWith("'")) DifferentialSymbol(BaseVariable(s.dropRight(1))) else
+        BaseVariable(s)
+    }}).filter({case BaseVariable(x, _, _) => !reservedWords.contains(x) case _ => true})
   }
 
   // hack:  ^d is reserved for dual programs, don't allow in terms
@@ -62,6 +72,8 @@ object ExpressionParser {
     })
 
   def parenTerm[_: P]: P[Term] = (("(" ~ term ~ ")"))
+
+  def variable[_: P]: P[Variable] = variableTrueFalse.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
 
   def terminal[_: P]: P[Term] =
     ((funcOf | wild | variable | number | parenTerm) ~ P("'").!.?).
@@ -148,8 +160,9 @@ object ExpressionParser {
 
   // Note: cut *after* formula because delimiter ( is ambiguous, could be term e.g. (1) <= (2)
   def parenFormula[_: P]: P[Formula] = (("(" ~ formula ~ ")"))
-  def verum[_: P]: P[AtomicFormula] = P("true").map(_ => True)
-  def falsum[_: P]: P[AtomicFormula] = P("false").map(_ => False)
+  //def verum[_: P]: P[AtomicFormula] = P("true").map(_ => True)
+  //def falsum[_: P]: P[AtomicFormula] = P("false").map(_ => False)
+  def verumFalsum[_: P]: P[AtomicFormula] = variableTrueFalse.filter(_.isInstanceOf[AtomicFormula]).map(_.asInstanceOf[AtomicFormula])
   def not[_: P]: P[Formula] = ("!" ~ prefixTerminal).map(f => Not(f))
   def forall[_: P]: P[Formula] = ("\\forall" ~ variable  ~ prefixTerminal).map({case (x, p) => Forall(List(x), p)})
   def exists[_: P]: P[Formula] = ("\\exists" ~ variable  ~ prefixTerminal).map({case (x, p) => Exists(List(x), p)})
@@ -157,7 +170,7 @@ object ExpressionParser {
   def diamond[_: P]: P[Formula] = (("<" ~ !P("->"))  ~ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
 
   def prefixTerminal[_: P]: P[Formula] =
-    ((verum | falsum | not | forall | exists | box | diamond  | infixTerminal | parenFormula ) ~ ("'".!.?)).
+    ((verumFalsum | not | forall | exists | box | diamond  | infixTerminal | parenFormula ) ~ ("'".!.?)).
       map({case (f, None) => f case (f, Some(_)) => DifferentialFormula(f)})
 
   def and[_: P]: P[Formula] = (prefixTerminal ~ ("&"  ~ prefixTerminal).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
@@ -166,7 +179,8 @@ object ExpressionParser {
   def equiv[_: P]: P[Formula] = (imply ~ ("<->"  ~ imply).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Equiv)})
 
   def formula[_: P]: P[Formula] = equiv
-  def expression[_: P]: P[Expression] = term | program | formula
+  // Term has to be last because of postfix operators
+  def expression[_: P]: P[Expression] =  program | formula | term
 }
 
 object ProofParser {
@@ -199,14 +213,21 @@ object ProofParser {
       case _ => locate(TuplePat(ss.toList), i)
     }})
 
-  //@TODO: What is the syntax for variable assumptions on :=
-  def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
-    map({case (i, p, x) => locate(VarPat(p, x), i)})
+  //Assumptions in assignments are expressed as ?p:(x := f);
+  def varPat[_: P]: P[VarPat] = (Index ~ ident).map({case (i, p) => locate(VarPat(p, None), i)})
+  /*def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
+    map({case (i, p, x) => locate(VarPat(p, x), i)})*/
   def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
   def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
 
-  def assume[_: P]: P[Assume] = (Index ~ "?" ~  exPat ~ "(" ~ formula ~ ")" ~ ";").map({
-    case (i, pat, fml) => locate(Assume(pat, fml), i)})
+  def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
+    case (i, pat, fml: Formula) => locate(Assume(pat, fml), i)
+    case (i, pat: Variable, Assign(x, f)) => locate(Modify(VarPat(x, Some(pat)), Left(f)), i)
+    case (i, pat, Assign(x, f)) => locate(Modify(VarPat(x, None), Left(f)), i)
+    case (i, pat: Variable, AssignAny(x)) => locate(Modify(VarPat(x, Some(pat)), Right(())), i)
+    case (i, pat, AssignAny(x)) => locate(Modify(VarPat(x, None), Right(())), i)
+    case (a,b,c) => throw new Exception("Unexpected assumption syntax")
+  })
 
   def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ "(" ~ formula ~ ")" ~ method ~ ";").map({
     case (i, pat, fml, method) => locate(Assert(pat, fml, method), i)})
@@ -240,7 +261,10 @@ object ProofParser {
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
-  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
+  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_))
+           | term.map(Right(_))
+           | ("(" ~ (formula | program) ~ ")").map(Right(_))) // formulas and programs should have parens to deconfuse
+    ~ "=" ~ expression ~ ";").
     map({case (i, Left((f, xs)), e) => locate(LetFun(f, xs.toList, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
 
   def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
@@ -257,7 +281,7 @@ object ProofParser {
 
   def domAssume[_: P]: P[DomAssume] = (Index ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
   def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
-  def domModify[_: P]: P[DomModify] = (Index ~ variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
+  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "{G" ~ domainStatement ~ "G}").map({case (i, ds) => locate(DomWeak(ds), i)})
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
   def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).

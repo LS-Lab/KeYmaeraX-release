@@ -234,7 +234,6 @@ class KaisarProgramParserTests extends TacticTestBase {
   "id pattern parser" should "parse terminals" in {
     p("", pp.exPat(_)) shouldBe Nothing
     p("x", pp.idPat(_)) shouldBe VarPat("x".asVariable)
-    p("x{p}", pp.idPat(_)) shouldBe VarPat("x".asVariable, Some(Variable("p")))
     p("*", pp.idPat(_)) shouldBe WildPat()
   }
 
@@ -281,6 +280,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse by-proof" in {
+    p("true", pc.variableTrueFalse(_)) shouldBe True
     p("!(true) by auto;", pp.proof(_)) shouldBe Proof(List[Statement](Assert(Nothing, True, Auto())))
     p("proof !(true) by auto; end", pp.method(_)) shouldBe ByProof(Proof(List[Statement](Assert(Nothing, True, Auto()))))
   }
@@ -295,10 +295,11 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse assignments" in {
+    p("x := 2;", ep.expression(_)) shouldBe Assign(Variable("x"), Number(2))
     p("x := 2;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable), Left(Number(2)))
-    p("x{p} := 2;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Left(Number(2)))
+    p("?p:(x := 2;);", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Left(Number(2)))
     p("x := *;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable), Right(()))
-    p("x{p} := *;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Right(()))
+    p("?p:(x := *);", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Right(()))
   }
 
   it should "parse label" in {
