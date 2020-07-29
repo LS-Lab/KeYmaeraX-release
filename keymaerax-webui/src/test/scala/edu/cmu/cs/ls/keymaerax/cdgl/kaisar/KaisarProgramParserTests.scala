@@ -281,17 +281,17 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse by-proof" in {
-    p("! true := by auto;", pp.proof(_)) shouldBe Proof(List[Statement](Assert(Nothing, True, Auto())))
-    p("proof ! true := by auto; end", pp.method(_)) shouldBe ByProof(Proof(List[Statement](Assert(Nothing, True, Auto()))))
+    p("!(true) by auto;", pp.proof(_)) shouldBe Proof(List[Statement](Assert(Nothing, True, Auto())))
+    p("proof !(true) by auto; end", pp.method(_)) shouldBe ByProof(Proof(List[Statement](Assert(Nothing, True, Auto()))))
   }
 
   // proof-statement parser
   "proof statement parser" should "parse assumption" in {
-    p("?x:true;", pp.statement(_)) shouldBe Assume(Variable("x"), True)
+    p("?x:(true);", pp.statement(_)) shouldBe Assume(Variable("x"), True)
   }
 
   it should "parse assertion" in {
-    p("!x:true := by auto;", pp.statement(_)) shouldBe Assert(Variable("x"), True, Auto())
+    p("!x:(true) by auto;", pp.statement(_)) shouldBe Assert(Variable("x"), True, Auto())
   }
 
   it should "parse assignments" in {
@@ -319,12 +319,12 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse block" in {
-    p("{?true; ?true;}", pp.statement(_)) shouldBe Block(List(Assume(Nothing, True), Assume(Nothing, True)))
+    p("{?(true); ?(true);}", pp.statement(_)) shouldBe Block(List(Assume(Nothing, True), Assume(Nothing, True)))
   }
 
   // @TODO: Switch should allow arguments
   it should "parse switch " in {
-    p("switch { case xOne:(x <= 1) => !x: true := by auto; case xPos:(x >= 0) => !x: true := by auto;}", pp.statement(_)) shouldBe
+    p("switch { case xOne:(x <= 1) => !x: (true) by auto; case xPos:(x >= 0) => !x: (true) by auto;}", pp.statement(_)) shouldBe
       Switch(None, List(
         (Variable("xOne"), LessEqual(Variable("x"), Number(1)), Assert(Variable("x"), True, Auto())),
         (Variable("xPos"), GreaterEqual(Variable("x"), Number(0)), Assert(Variable("x"), True, Auto()))))

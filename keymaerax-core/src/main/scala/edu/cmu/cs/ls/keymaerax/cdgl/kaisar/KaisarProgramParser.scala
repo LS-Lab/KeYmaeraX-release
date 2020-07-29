@@ -205,10 +205,10 @@ object ProofParser {
   def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
   def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
 
-  def assume[_: P]: P[Assume] = (Index ~ "?" ~  exPat ~ formula ~ ";").map({
+  def assume[_: P]: P[Assume] = (Index ~ "?" ~  exPat ~ "(" ~ formula ~ ")" ~ ";").map({
     case (i, pat, fml) => locate(Assume(pat, fml), i)})
 
-  def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ formula ~ ":=" ~ method ~ ";").map({
+  def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ "(" ~ formula ~ ")" ~ method ~ ";").map({
     case (i, pat, fml, method) => locate(Assert(pat, fml, method), i)})
 
   def modify[_: P]: P[Modify] = (Index ~ idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").

@@ -44,7 +44,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "compose assertions" in withMathematica { _ =>
-    val pfStr = "x := *; y := x^2; !p:(y >= 0) := by auto;"
+    val pfStr = "x := *; y := x^2; !p:(y >= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=*; y:=x^2; {?y>=0;}^@]true".asFormula
@@ -58,41 +58,41 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "check box loop" in withMathematica { _ =>
-    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) := by auto;}*} ?xFin:(x>=0);"
+    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) by auto;}*} ?xFin:(x>=0);"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[?(x>=1); {x:=x+1;{?(x>=1);}^@}*;?(x>=0);]true".asFormula
   }
 
   it should "reject invalid auto step" in withMathematica { _ =>
-    val pfStr  = "!falsehood:(1 <= 0) := by auto;"
+    val pfStr  = "!falsehood:(1 <= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
     //ff shouldBe "1>=0".asFormula
   }
 
   it should "succeed switch" in withMathematica { _ =>
-    val pfStr = "switch { case xNeg:(x <= 1) => !x: true := by auto; case xPos:(x >= 0) => !x: true := by auto;}"
+    val pfStr = "switch { case xNeg:(x <= 1) => !x: (true) by auto; case xPos:(x >= 0) => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{{?(x<=1); {?(true);}^@}^@ ++ {?(x>=0); {?(true);}^@}^@}^@]true".asFormula
   }
 
   it should "fail bad switch" in withMathematica { _ =>
-    val pfStr = "switch { case xOne:(x >= 1) => !x: true := by auto; case xNeg:(x < 0) => !x: true := by auto;}"
+    val pfStr = "switch { case xOne:(x >= 1) => !x: (true) by auto; case xNeg:(x < 0) => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "support paramaterized switch" in withMathematica { _ =>
-    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr) { case xOne:(x >= 1) => !x: true := by auto; case xNeg:(x < 0) => !x: true := by auto; case x =1 => !x: true := by auto;}"
+    val pfStr = "?eitherOr: (x >= 1 | x < 0 | x = 1); switch (eitherOr) { case xOne:(x >= 1) => !x: (true) by auto; case xNeg:(x < 0) => !x:(true) by auto; case x =1 => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[?(x>=1|x<0|x=1);{{?(x>=1); {?(true);}^@}^@ ++ {?(x<0); {?(true);}^@}^@ ++{?(x=1); {?(true);}^@}^@}^@]true".asFormula
   }
 
   it should "reject mismatched case" in withMathematica { _ =>
-    val pfStr = "?eitherOr: (x >= 1 | x < 0); switch (eitherOr) { case xOne:(x >= 1) => !x: true := by auto; case xNeg:(x < 0) => !x: true := by auto; case x =1 => !x: true := by auto;}"
+    val pfStr = "?eitherOr: (x >= 1 | x < 0); switch (eitherOr) { case xOne:(x >= 1) => !x:(true) by auto; case xNeg:(x < 0) => !x: (true) by auto; case x=1 => !x: (true) by auto;}"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
@@ -111,26 +111,26 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "ban ghost program variable escaping scope" in withMathematica { _ =>
-    val pfStr = "x:=1; (G y:= 2; G) !p:(x + y = 3) := by auto;"
+    val pfStr = "x:=1; (G y:= 2; G) !p:(x + y = 3) by auto;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "ban inverse ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "{G ?p:(x = 0); G} !q:(x = 0) := using p by auto;"
+    val pfStr = "{G ?p:(x = 0); G} !q:(x = 0) using p by auto;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "x{xVal}:=1; (G y:= 2; !p:(x + y = 3) := using andI(xVal, y) by auto; !q:(x > 0) := using andI(p, y) by auto; G) !p:(x + 1 > 0) := using q by auto;"
+    val pfStr = "x{xVal}:=1; (G y:= 2; !p:(x + y = 3) using andI(xVal, y) by auto; !q:(x > 0) using andI(p, y) by auto; G) !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=1;{?(x+1>0);}^@]true".asFormula
   }
 
   it should "allow inverse ghost program variable escaping scope for tautological purposes" in withMathematica { _ =>
-    val pfStr = "{G x := 0; G} !q:(x^2 >= 0) := by auto;"
+    val pfStr = "{G x := 0; G} !q:(x^2 >= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{?(x^2 >= 0);}^@]true".asFormula
