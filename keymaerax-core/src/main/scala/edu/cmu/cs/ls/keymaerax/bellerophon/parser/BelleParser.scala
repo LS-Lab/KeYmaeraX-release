@@ -344,7 +344,19 @@ object BelleParser extends (String => BelleExpr) with Logging {
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
-        ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
+        //@note uses location information to distinguish file definitions from proof definitions (e.g., abstract loop invariant J(x))
+        val (modelDefs, proofDefs) = defs.decls.partition({
+          case (_, (_, _, _, UnknownLocation)) => false
+          case _ => true
+        })
+        val modelExpand = ExpandAll(Declaration(modelDefs).substs)
+        val proofsExpand = Declaration(proofDefs).substs.map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).
+          reduceRightOption[BelleExpr](_ & _)
+        val expand = proofsExpand match {
+          case Some(pe) => pe & modelExpand
+          case None => modelExpand
+        }
+        ParserState(r :+ ParsedBelleExpr(expand, loc), st.input)
       //endregion
 
       //region Stars and Repitition

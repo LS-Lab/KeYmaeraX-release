@@ -207,7 +207,7 @@
                                 </li>
                                 <li ng-repeat="d in definitions">
                                     <a ng-if="d.definition.editable">
-                                        <span ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+                                        <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
                                             {{d.definition.what}}
                                         </span>
                                         ~>
