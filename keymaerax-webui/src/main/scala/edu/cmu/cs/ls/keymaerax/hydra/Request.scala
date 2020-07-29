@@ -1914,26 +1914,39 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
     Try(what.asExpr).toEither match {
       case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage)) :: Nil
       case Right(e) =>
-        val (name: String, index: Option[Int], domain: Option[Sort], sort: Sort) = e match {
-          case FuncOf(Function(n, i, d, s, _), _) =>
-            // uninterpreted predicates parse as functions when parsed standalone
-            proofSession.defs.asNamedSymbols.find(ns => ns.name == n && ns.index == i) match {
-              case Some(ns: Function) if ns.domain == d => (n, i, Some(d), ns.sort)
-              case None => (n, i, Some(d), s)
-            }
-          case PredOf(Function(n, i, d, s, _), _) => (n, i, Some(d), s)
-          case ProgramConst(n, _) => (n, None, None, Trafo)
-        }
+        val ewhat = elaborate(e, proofSession.defs.asNamedSymbols)
 
         Try(repl.asExpr).toEither match {
           case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
-          case Right(r) if r.sort == sort =>
-            session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-              ((name, index) -> (domain, sort, Some(r), UnknownLocation))))
-            BooleanResponse(flag = true) :: Nil
-          case Right(r) if r.sort != sort =>
-            BooleanResponse(flag = false, Some("Expected a replacement of sort " + sort + ", but got " + r.sort)) :: Nil
+          case Right(r) =>
+            val erepl = elaborate(r, proofSession.defs.asNamedSymbols)
+            if (erepl.sort == ewhat.sort) {
+              val fnwhat: Function = ewhat match {
+                case FuncOf(fn: Function, _) => fn
+                case PredOf(fn: Function, _) => fn
+                case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
+              }
+              session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                ((fnwhat.name, fnwhat.index) -> (Some(fnwhat.domain), fnwhat.sort, Some(erepl), UnknownLocation))))
+              BooleanResponse(flag = true) :: Nil
+            } else BooleanResponse(flag = false, Some("Expected a replacement of sort " + ewhat.sort + ", but got " + erepl.sort)) :: Nil
         }
+    }
+  }
+
+  private def elaborate(e: Expression, elaboratables: List[NamedSymbol]): Expression = {
+    def elaborateTo(fn: Function, c: Term, to: (Function, Term) => Expression): Expression = {
+      elaboratables.find(ns => ns.name == fn.name && ns.index == fn.index) match {
+        case Some(ns: Function) =>
+          if (ns.domain == fn.domain && ns.sort != fn.sort) to(ns, c)
+          else e
+        case None => e
+      }
+    }
+    e match {
+      case FuncOf(fn: Function, c) => elaborateTo(fn, c, PredOf)
+      case PredOf(fn: Function, c) => elaborateTo(fn, c, FuncOf)
+      case _ => e
     }
   }
 }
