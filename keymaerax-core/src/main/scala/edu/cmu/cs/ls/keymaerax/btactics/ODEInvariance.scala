@@ -815,7 +815,7 @@ object ODEInvariance {
                   (if(negate) useAt(ghostLem2,PosInExpr(1::Nil))(1)
                   else useAt(ghostLem1,PosInExpr(1::Nil))(1)) &
                   andR(1) <(
-                  prop,
+                    andL('Llast) & close,
                   //Now we need a real rearrangement using Q |- p' = Gp
                   cut(Equal(lie,Times(two,dp))) <(
                     exhaustiveEqL2R('Llast) & hideL('Llast) &
