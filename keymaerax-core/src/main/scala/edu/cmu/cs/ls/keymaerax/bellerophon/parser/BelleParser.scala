@@ -350,8 +350,13 @@ object BelleParser extends (String => BelleExpr) with Logging {
           case _ => true
         })
         val modelExpand = ExpandAll(Declaration(modelDefs).substs)
-        val proofsExpand = Declaration(proofDefs).substs.map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).
-          reduceRightOption[BelleExpr](_ & _)
+        // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
+        val proofsExpand = defs.substs.filter(_.what match {
+          case FuncOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case PredOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case ns: ProgramConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case _ => false
+        }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
         val expand = proofsExpand match {
           case Some(pe) => pe & modelExpand
           case None => modelExpand
@@ -559,7 +564,6 @@ object BelleParser extends (String => BelleExpr) with Logging {
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
           assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
-          //@todo elaborate functions to predicates etc.
           val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case v => v

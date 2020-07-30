@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Region, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -657,29 +657,91 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   "Expand" should "parse a simple definition expand" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
-      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)))))
+      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, Some("3*2".asExpr), UnknownLocation)))))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Function("f", None, Unit, Real), "f() ~> 3*2".asSubstitutionPair)
+  }
+
+  it should "elaborate variables to functions" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, Some("g*2".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, Some("3*2".asExpr), UnknownLocation))
+      )
+    ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))
+    ))
+  }
+
+  it should "elaborate variables to functions per declarations" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, Some("g".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, Some("0".asExpr), UnknownLocation))
+      )
+      ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), FuncOf(Function("g", None, Unit, Real), Nothing)
+    ))
+  }
+
+  it should "elaborate functions to predicates per declarations" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Bool, Some("g".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Bool, Some("3*2>=0".asExpr), UnknownLocation))
+      )
+      ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      PredOf(Function("f", None, Unit, Bool), Nothing), PredOf(Function("g", None, Unit, Bool), Nothing)
+    ))
   }
 
   "ExpandAll" should "expand multiple definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, Some("4".asTerm), UnknownLocation))
+        //@note locations just so that parser knows the definitions are supposed to originate from a file
+        (("f", None), (Some(Unit), Real, Some("3*2".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, Some("4".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) => defs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
     }
   }
 
+  it should "expand proof definitions with US and model definitions after with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note UnknownLocation identifies proof definitions, known locations identify model definitions
+        (("f", None), (Some(Unit), Real, Some("g*2".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, Some("4".asExpr), Region(0, 0, 0, 0)))
+      )))
+    tactic shouldBe TactixLibrary.uniformSubstitute(
+      USubst(SubstitutionPair(FuncOf(Function("f", None, Unit, Real), Nothing),
+             Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))) :: Nil)) &
+        ExpandAll(SubstitutionPair(FuncOf(Function("g", None, Unit, Real), Nothing), Number(4)) :: Nil)
+  }
+
+  it should "expand and elaborate proof definitions with US and model definitions after with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note UnknownLocation identifies proof definitions, known locations identify model definitions
+        (("f", None), (Some(Real), Bool, Some("g(.)".asExpr), UnknownLocation)),
+        (("g", None), (Some(Real), Bool, Some(".>0".asExpr), Region(0, 0, 0, 0)))
+      )))
+    tactic shouldBe TactixLibrary.uniformSubstitute(USubst(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), PredOf(Function("g", None, Real, Bool), DotTerm())) :: Nil)) &
+      ExpandAll(SubstitutionPair(PredOf(Function("g", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(0))) :: Nil)
+  }
+
   it should "topologically sort definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
-        (("h", None), (Some(Unit), Real, Some("g()*2".asTerm), UnknownLocation)),
-        (("i", None), (Some(Unit), Real, Some("1".asTerm), UnknownLocation)),
-        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, Some("f()+4".asTerm), UnknownLocation)),
-        (("j", None), (Some(Unit), Trafo, Some("x:=g()+i();".asProgram), UnknownLocation))
+        (("h", None), (Some(Unit), Real, Some("g()*2".asTerm), Region(0, 0, 0, 0))),
+        (("i", None), (Some(Unit), Real, Some("1".asTerm), Region(0, 0, 0, 0))),
+        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, Some("f()+4".asTerm), Region(0, 0, 0, 0))),
+        (("j", None), (Some(Unit), Trafo, Some("x:=g()+i();".asProgram), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) =>
