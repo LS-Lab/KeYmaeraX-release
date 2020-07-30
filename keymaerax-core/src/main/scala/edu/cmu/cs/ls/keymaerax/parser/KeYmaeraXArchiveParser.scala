@@ -94,6 +94,7 @@ object KeYmaeraXArchiveParser {
     }
 
     /** Elaborates variable uses of declared functions. */
+    //@todo need to look into concrete programs that implement program constants when elaborating
     def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
 
     /** Turns a function declaration (with defined body) into a substitution pair. */
@@ -131,7 +132,15 @@ object KeYmaeraXArchiveParser {
           assert(signature._1.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature._1)
           ProgramConst(name._1)
       }
-      val repl = elaborateToFunctions(signature._3.get)
+      val repl = elaborateToFunctions(signature._3.get) match {
+        case r@FuncOf(fn: Function, c) =>
+          if (what.sort == fn.sort) r
+          else PredOf(Function(fn.name, fn.index, fn.domain, what.sort), c)
+        case p@PredOf(fn: Function, c) =>
+          if (what.sort == fn.sort) p
+          else FuncOf(Function(fn.name, fn.index, fn.domain, what.sort), c)
+        case r => r
+      }
 
       val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
       if (undeclaredDots.nonEmpty) throw ParseException(

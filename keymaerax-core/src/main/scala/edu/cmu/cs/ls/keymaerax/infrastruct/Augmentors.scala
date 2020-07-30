@@ -342,22 +342,33 @@ object Augmentors {
       SubstitutionPair(what, repl)
     }
 
-    /** Elaborates variable uses of functions in `signature`. */
+    /** Elaborates variable uses of functions listed in `signature`, elaborates [[FuncOf]] to [[PredOf]] per sort in `signature`. */
     def elaborateToFunctions(signature: Set[NamedSymbol]): Expression = {
-      val freeVars = StaticSemantics.freeVars(e)
-      if (freeVars.isInfinite) {
-        //@note program constant occurs
-        e
-      } else {
-        val elaboratables = StaticSemantics.freeVars(e).toSet[Variable].filter({
-          case BaseVariable(name, i, _) => signature.exists({
-            case Function(fn, fi, Unit, _, _) => fn == name && fi == i
-            case _ => false
-          })
+      val elaboratableVars = StaticSemantics.symbols(e).filter({
+        case BaseVariable(name, i, _) => signature.exists({
+          case Function(fn, fi, Unit, _, _) => fn == name && fi == i
           case _ => false
         })
-        elaboratables.foldLeft(e)((e, v) =>
-          e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+        case _ => false
+      }).map(_.asInstanceOf[BaseVariable])
+      val fnElaborated = elaboratableVars.foldLeft(e)((e, v) =>
+        e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+
+      val elaboratableFns = StaticSemantics.symbols(fnElaborated).flatMap({
+        case fn: Function =>
+          signature.find(ns => ns.name == fn.name && ns.index == fn.index) match {
+            case Some(ns: Function) =>
+              if (ns.domain == fn.domain && ns.sort != fn.sort) Some(ns -> fn)
+              else None
+            case _ => None
+          }
+        case _ => None
+      }).toMap
+
+      fnElaborated match {
+        case f@FuncOf(fn: Function, c) => elaboratableFns.get(fn).map(PredOf(_, c)).getOrElse(f)
+        case p@PredOf(fn: Function, c) => elaboratableFns.get(fn).map(FuncOf(_, c)).getOrElse(p)
+        case e => e
       }
     }
 
