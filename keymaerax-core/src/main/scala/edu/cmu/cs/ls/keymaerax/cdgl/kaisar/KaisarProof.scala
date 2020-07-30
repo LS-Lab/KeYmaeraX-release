@@ -241,10 +241,10 @@ object Context {
   type Context = Statement
 
   def empty: Context = Triv()
-  def +:(con: Context, s: Statement): Context = {
+  def :+(con: Context, s: Statement): Context = {
     con match {
       case _: Triv  => s
-      case Block(ss) => Block(ss.+:(s))
+      case Block(ss) => Block(ss.:+(s))
       case sl => Block(List(sl, s))
     }
   }
@@ -252,7 +252,7 @@ object Context {
   //def theorem(con: Context): Formula = con.conclusion
 
   def add(con: Context, x: Ident, fml: Formula): Context = {
-    +:(con, Assume(x, fml))
+    :+(con, Assume(x, fml))
   }
 
   def sameHead(e: Expression, f: Expression): Boolean = {
@@ -337,9 +337,10 @@ object Context {
     }
   }
 
+  // @TODO: unsound
   def getAssignments(con: Context, x: Variable): List[Formula] =
     searchAll(con,
-      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f)) if x == xx && xx == xxx && idx == idxx => true
+      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f)) if x.name == xx && xx == xxx && idx == idxx => true
         case _ => false
       }, isGhost = false).map(_._2)
 
@@ -351,8 +352,9 @@ object Context {
       case _: Triv => Nil
       case Assume(x, g) => matchAssume(x, g).filter(f).toList
       case Assert(x, g, _) => matchAssume(x, g).filter(f).toList
-      case Note(x, _, Some(g)) =>  if (f(x, g)) List((x, g)) else Nil
-      case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
+      case Note(x, _, Some(g)) => if (f(x, g)) List((x, g)) else Nil
+      case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")//if (f(x, True)) List((x, True)) else Nil
+      //throw ProofCheckException("Note in context needs formula annotation")
       case mod: Modify => findAll(mod, f, isGhost)
       case Block(ss) =>
          def iter(ss: List[Statement]): List[(Ident, Formula)] = {

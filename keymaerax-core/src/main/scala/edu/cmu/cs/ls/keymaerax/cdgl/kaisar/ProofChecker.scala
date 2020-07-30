@@ -81,7 +81,9 @@ object ProofChecker {
   // @TODO: Check scope and ghosting
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
-      case ProgramVar(x) => Context.getAssignments(con, x).reduce(And)
+      case ProgramVar(x) =>
+        val asgns = Context.getAssignments(con, x)
+        asgns.reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1))
       case ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>
@@ -90,7 +92,8 @@ object ProofChecker {
         ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
       case ProofVar(s) =>
         Context.get(con, s) match {
-          case Some(fml) => fml
+          case Some(fml) =>
+            fml
           case None => throw ProofCheckException(s"Undefined proof variable $s")
         }
       case ProofApp(pt, ProofInstance(e)) =>
@@ -120,6 +123,7 @@ object ProofChecker {
     }
   }
 
+  // @TODO: Can't find assumptions for [[ghost0]] because note formula never annotated and context in wrong order, messes up search
   def methodAssumptions(con: Context, m: Method, goal: Formula): (List[Formula], Method) = {
     m match {
       case Using(sels, m) =>
@@ -332,8 +336,8 @@ object ProofChecker {
       case Block(ss) =>
         val (c, fs) =
           ss.foldLeft[(Context, List[Formula])](Context.empty, List()){case ((acc, accF), s) =>
-            val (cc, ff) = apply(Context.+:(con, acc), s)
-            (Context.+:(acc, s), accF.:+(ff))
+            val (cc, ff) = apply(Context.:+(con, acc), s)
+            (Context.:+(acc, cc), accF.:+(ff))
           }
         val ff = fs.reduceRight(concatBox)
         (c, ff)
@@ -360,7 +364,7 @@ object ProofChecker {
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
         (Switch(sel, zip3(patterns, conds,cons)), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
-        val kc = Context.+:(con, Assume(x, j))
+        val kc = Context.:+(con, Assume(x, j))
         val (sa, fa) = apply(kc, s)
         val ss = While(x, j, sa)
         val Diamond(a, p) = asDiamond(fa)
@@ -397,7 +401,7 @@ object ProofChecker {
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con, s)
         (InverseGhost(ss), True)
-      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.+:(con, s), True)
+      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.:+(con, s), True)
       case Was(now, was) =>
         val (ss, f) = apply(con, now)
         (Was(ss, was), f)

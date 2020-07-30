@@ -36,12 +36,5 @@ class SSAPassTests extends TacticTestBase {
     ff shouldBe "[x_0:=*; x_1:=x_0^2;]true".asFormula
   }
 
-  it should "check box loop" in withMathematica { _ =>
-    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) by auto;}*} ?xFin:(x>=0);"
-    //val pf = p(pfStr, pp.statement(_))
-    val parsed = pssa(pfStr)
-    val (ss, ff) = checkSSA(pfStr)
-    ff shouldBe "[?(x>=1); x_0 := x; {x_1:=x_0+1;{?(x_1>=1);}^@ x_0:=x_1;}*;?(x_0>=0);]true".asFormula
-  }
 
 }

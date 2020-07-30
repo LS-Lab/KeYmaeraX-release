@@ -10,7 +10,12 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class EndToEndTests extends TacticTestBase {
 
-  "full proof checker" should "manage assumptions for SSA'd assignments" in {
-    //@TODO
+  val check: String => Formula = Kaisar.apply
+
+  // @TODO: After SSA, Loop cannot tell what final statement was for purposes of inductive step checking
+  "full proof checker" should "check box loop" in withMathematica { _ =>
+      val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) by auto;}*} ?xFin:(x>=0);"
+      val ff = check(pfStr)
+      ff shouldBe "[?(x>=1); x_0 := x; {x_1:=x_0+1;{?(x_1>=1);}^@ x_0:=x_1;}*;?(x_0>=0);]true".asFormula
   }
 }
