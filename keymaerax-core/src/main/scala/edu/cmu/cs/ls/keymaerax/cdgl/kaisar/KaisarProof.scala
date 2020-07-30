@@ -95,7 +95,6 @@ case class ByProof(proof: Proof) extends Method {}
 sealed trait ProofTerm extends ASTNode
 // Hypothesis rule. Identifier x can be either a proof variable in the current context or a built-in natural-deduction
 // rule from the CdGL proof calculus.
-// @TODO: Implement the built-in proof calculus rules
 case class ProofVar(x: Ident) extends ProofTerm {}
 // Term used to instantiatiate a universal quantifier. Should only ever appear on the right-hand side of an application,
 // but parsing is simpler when terms are a standalone constructor
@@ -283,39 +282,39 @@ object Context {
       }
   }
 
-  def find(mod: Modify, finder: ((Ident, Formula)) => Boolean, isGhost: Boolean): Option[(Ident, Formula)] = {
+  // find most recent element first
+  def findAll(mod: Modify, finder: ((Ident, Formula)) => Boolean, isGhost: Boolean): List[(Ident, Formula)] = {
     mod match {
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        find(Modify(pat, Left(l)), finder, isGhost) match {
-          case Some(x) => Some(x)
-          case None => find(Modify(TuplePat(pats), Left(r)), finder, isGhost)
-        }
+        val left = findAll(Modify(pat, Left(l)), finder, isGhost)
+        val right = findAll(Modify(TuplePat(pats), Left(r)), finder, isGhost)
+        left ++ right
       case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f))) =>
         // @TODO: Proper variable renaming
-        Some((p, Equal(x, f)))
+        List((p, Equal(x, f)))
       // default: proof variable name = program variable name
       case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f))) =>
         if (isGhost) {
           throw ProofCheckException(s"Ghost variable $x inaccessible because it would escape its scope")
         }
-        Some((x, Equal(x, f)))
+        List((x, Equal(x, f)))
       case Modify(VarPat(x, Some(_)), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
-      case Modify(_, _) => None
+      case Modify(_, _) => List()
     }
   }
 
-  def find(dc: DomainStatement, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+  def findAll(dc: DomainStatement, f: ((Ident, Formula)) => Boolean): List[(Ident, Formula)] = {
     dc match {
-      case DomAssume(x, fml) => matchAssume(x, fml).find(f)//collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml).find(f)//collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAnd(l, r) => find(l, f) match {case Some(l) => Some(l) case None => find(r, f)}
+      case DomAssume(x, fml) => matchAssume(x, fml).filter(f).toList//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter(f).toList//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAnd(l, r) => findAll(l, f) ++ findAll(r, f)
       case DomWeak(dc) =>
-        find(dc, f) match {
-          case Some(fml) => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
-          case None => None
+        findAll(dc, f) match {
+          case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
+          case Nil => Nil
         }
-      case DomModify(ap, term) => find(Modify(ap, Left(term)), f)
+      case DomModify(ap, term) => findAll(Modify(ap, Left(term)), f)
     }
   }
 
@@ -338,30 +337,33 @@ object Context {
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
   // free variable binding after reference for admissibility
-  def search(con: Context, f: ((Ident, Formula)) => Boolean, isGhost: Boolean): Option[(Ident, Formula)] = {
+  def searchAll(con: Context, f: ((Ident, Formula)) => Boolean, isGhost: Boolean): List[(Ident, Formula)] = {
     con match {
-      case _: Triv => None
-      case Assume(x, g) => matchAssume(x, g).find(f)
-      case Assert(x, g, _) => matchAssume(x, g).find(f)
-      case Note(x, _, Some(g)) =>  if (f(x, g)) Some((x, g)) else None
+      case _: Triv => Nil
+      case Assume(x, g) => matchAssume(x, g).filter(f).toList
+      case Assert(x, g, _) => matchAssume(x, g).filter(f).toList
+      case Note(x, _, Some(g)) =>  if (f(x, g)) List((x, g)) else Nil
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
-      case mod: Modify => find(mod, f, isGhost)
+      case mod: Modify => findAll(mod, f, isGhost)
       case Block(ss) =>
-         def iter(ss: List[Statement]): Option[(Ident, Formula)] = {
+         def iter(ss: List[Statement]): List[(Ident, Formula)] = {
            ss match {
-             case Nil => None
-             case s :: ss =>
-               search(s, f, isGhost) match {
-                 case Some((yx, yf)) =>
-                   val surrounding = Block(ss.reverse)
-                   val t = Context.taboos(surrounding)
-                   val inter = t.vars.intersect(StaticSemantics(yf).fv.toSet)
-                   if (inter.nonEmpty) {
-                     throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
-                   }
-                   Some((yx, yf))
-                 case None => iter(ss)
+             case Nil => Nil
+             case s :: ss => {
+               val left =
+                 searchAll(s, f, isGhost) match {
+                   case ((yx, yf)) :: _ =>
+                     val surrounding = Block(ss.reverse)
+                     val t = Context.taboos(surrounding)
+                     val inter = t.vars.intersect(StaticSemantics(yf).fv.toSet)
+                     if (inter.nonEmpty) {
+                       throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
+                     }
+                   List((yx, yf))
+                 case Nil => Nil
                }
+               left ++ iter(ss)
+             }
            }
          }
         iter(ss.reverse)
@@ -370,23 +372,18 @@ object Context {
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
           else (k1, And(v1, v2))
         }
-        (search(l, f, isGhost), search(r, f, isGhost)) match {
-          case (None, None) => None
-          case (Some(p), None) => Some(p)
-          case (None, Some(p)) => Some(p)
-          case (Some(p), Some(q)) => Some(and(p, q))
-        }
+        searchAll(l, f, isGhost) ++ searchAll(r, f, isGhost)
       // @TODO
       case Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula)  = {case ((k1, v1), (k2,v2)) =>
           if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
           else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({case (v, e, s) => search(s, f, isGhost)})
-        if (fmls.isEmpty) None
-        else Some(fmls.reduceRight(or))
-      case Ghost(s) => search(s, f, isGhost = true)
-      case InverseGhost(s) => None
+        val fmls = pats.flatMap({case (v, e, s) => searchAll(s, f, isGhost)})
+        if (fmls.isEmpty) Nil
+        else List(fmls.reduceRight(or))
+      case Ghost(s) => searchAll(s, f, isGhost = true)
+      case InverseGhost(s) => Nil
         /*val xs = Context.taboos(InverseGhost(s)).vars
         search(s, f, isGhost) match {
           case Some(ml) =>
@@ -394,21 +391,28 @@ object Context {
             throw ProofCheckException(s"Formula $f should not be selected from statement $s which is an inverse ghost")
           case None => None
         }*/
-      case po: ProveODE => find(po.dc, f) // @TODO: Needs ghost arg?
-      case Was(now, was) => search(now, f, isGhost)
-      case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
+      case po: ProveODE => findAll(po.dc, f) // @TODO: Needs ghost arg?
+      case Was(now, was) => searchAll(now, f, isGhost)
+      case _ : Label | _: LetFun | _: Match | _: PrintGoal => Nil
       // @TODO: These loop cases probably work, but subtle
-      case While(_, _, body) => search(body, f, isGhost)
-      case BoxLoop(body) => search(body, f, isGhost)
+      case While(_, _, body) => searchAll(body, f, isGhost)
+      case BoxLoop(body) => searchAll(body, f, isGhost)
     }
   }
 
+  def findAll(con: Context, f: ((Ident, Formula)) => Boolean): List[(Ident, Formula)] = {
+    searchAll(con, f, isGhost = false)
+  }
   def find(con: Context, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
-    search(con, f, isGhost = false)
+    findAll(con, f).headOption
+  }
+  def getAll(con: Context, id: Ident): List[Formula] = {
+    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
+    searchAll(con, f, isGhost = false).map(_._2)
   }
   def get(con: Context, id: Ident): Option[Formula] = {
     val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
-    search(con, f, isGhost = false).map(_._2)
+    searchAll(con, f, isGhost = false).map(_._2).headOption
   }
 
   def lastFact(con: Context): Option[Formula] = {
@@ -433,8 +437,7 @@ object Context {
 
   def contains(con: Context, id: Ident): Boolean = get(con, id).isDefined
 
-  // @TODO: Find all, not one
-  def unify(con: Context, pat: Expression): Option[(Ident, Formula)] = {
+  def unifyAll(con: Context, pat: Expression): List[(Ident, Formula)] = {
     val f: ((Ident, Formula)) => Boolean = {case (x: Ident, fml: Formula) =>
       try {
         UnificationMatch(pat, fml)
@@ -442,8 +445,9 @@ object Context {
       } catch {
         case _: ProverException => false
       }}
-    search(con, f, isGhost = false)
+    searchAll(con, f, isGhost = false)
   }
+  def unify(con: Context, pat: Expression): Option[(Ident, Formula)] = unifyAll(con, pat).headOption
 
   // Base name used for fresh variables generated during proof when no better variable name is available.
   val ghostVar: String = "ghost"
