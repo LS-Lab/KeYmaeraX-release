@@ -35,13 +35,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[x:=*; y:=x^2;]true".asFormula
   }
 
-  it should "check fancy assignments" in {
-    // @TODO: Tests for shadowing / admissibility / etc, what do
-    val pfStr = "x := *; x := x^2; "
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    //ff shouldBe "[x:=*; y:=x^2;]true".asFormula
-  }
 
   it should "compose assertions" in withMathematica { _ =>
     val pfStr = "x := *; y := x^2; !p:(y >= 0) by auto;"
@@ -57,12 +50,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[x:=*; ?(x^2 = y & x >= 0);]true".asFormula
   }
 
-  it should "check box loop" in withMathematica { _ =>
-    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) by auto;}*} ?xFin:(x>=0);"
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[?(x>=1); {x:=x+1;{?(x>=1);}^@}*;?(x>=0);]true".asFormula
-  }
 
   it should "reject invalid auto step" in withMathematica { _ =>
     val pfStr  = "!falsehood:(1 <= 0) by auto;"
@@ -103,7 +90,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[?x=1;?y=0;{?(x=1&y=0);}^@]true".asFormula
   }
 
-  it should "check admissibility and SSA" in withMathematica { _ =>
+  it should "check admissibility for programs which aren't SSA" in withMathematica { _ =>
     val pfStr = "x:=x+1;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
