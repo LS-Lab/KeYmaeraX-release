@@ -6,12 +6,22 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 
 object SelectorEliminationPass {
+  private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
+    pt match {
+      case ProgramVar(x) => Set(x)
+      case ProofVar(x) => StaticSemantics(Context.get(con, x).get).fv.toSet
+      case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
+      case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
+      case ProofInstance(e: Term) => StaticSemantics(e).toSet
+      case ProofApp(m, n) => freeVarsPT(con, m) ++ freeVarsPT(con, n)
+    }
+  }
+
   def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
-        // @TODO: Use different ProofVars/ProofTerms for fact assumptions vs fact assumptions
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        fv.toSet.toList.map(ProofVar)
+        fv.toSet.toList.map(ProgramVar)
       case ForwardSelector(pt) => List(pt)
       case PatternSelector(pat) =>
         Context.unify(kc, pat).map({case (x, _) => ProofVar(x)}).toList
@@ -23,7 +33,11 @@ object SelectorEliminationPass {
       case Using(use, m) =>
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
-        (useAssms ++ assms, meth)
+        val combineAssms = useAssms ++ assms
+        val allFree = combineAssms.map(freeVarsPT(kc, _)).reduce(_ ++ _)
+        val freePt = allFree.toList.map(ProgramVar)
+        val dedupAssms = freePt ++ combineAssms.filter(!_.isInstanceOf[ProgramVar])
+        (dedupAssms, meth)
       case _: ByProof | _: RCF | _: Auto | _: Prop => (List(), m)
     }
   }

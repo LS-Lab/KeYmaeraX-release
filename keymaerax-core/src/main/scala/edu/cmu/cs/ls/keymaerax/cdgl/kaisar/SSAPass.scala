@@ -64,7 +64,8 @@ object SSAPass {
   def ssa(m: Method, snapshot: Snapshot): Method = {
     m match {
       case _: RCF | _: Auto | _: Prop => m
-      case Using(sels, m) => Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
+      case Using(sels, m) =>
+        Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
       // @TODO: Should this forget local proof variable numbering?
       case ByProof(pf) => ByProof(Proof(ssa(Block(pf.ss), snapshot)._1.asInstanceOf[Block].ss))
     }
@@ -82,6 +83,8 @@ object SSAPass {
     pt match {
       // Don't rename facts, just program variables
       case ProofVar(x) => ProofVar(x)
+      // Context lookup should treat programvar as referring to alll versions of x
+      case ProgramVar(x) => ProgramVar(x)
       case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
       case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))
     }

@@ -96,6 +96,9 @@ sealed trait ProofTerm extends ASTNode
 // Hypothesis rule. Identifier x can be either a proof variable in the current context or a built-in natural-deduction
 // rule from the CdGL proof calculus.
 case class ProofVar(x: Ident) extends ProofTerm {}
+// Looks up all assumptions corresponding to program variable
+case class ProgramVar(x: Variable) extends ProofTerm {}
+
 // Term used to instantiatiate a universal quantifier. Should only ever appear on the right-hand side of an application,
 // but parsing is simpler when terms are a standalone constructor
 case class ProofInstance(e: Expression) extends ProofTerm {}
@@ -333,6 +336,12 @@ object Context {
          | _: Label | _: Match => Set()
     }
   }
+
+  def getAssignments(con: Context, x: Variable): List[Formula] =
+    searchAll(con,
+      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f)) if x == xx && xx == xxx && idx == idxx => true
+        case _ => false
+      }, isGhost = false).map(_._2)
 
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for

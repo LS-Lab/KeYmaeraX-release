@@ -81,6 +81,7 @@ object ProofChecker {
   // @TODO: Check scope and ghosting
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
+      case ProgramVar(x) => Context.getAssignments(con, x).reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1))
       case ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>
@@ -89,8 +90,7 @@ object ProofChecker {
         ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
       case ProofVar(s) =>
         Context.get(con, s) match {
-          case Some(fml) =>
-            fml
+          case Some(fml) => fml
           case None => throw ProofCheckException(s"Undefined proof variable $s")
         }
       case ProofApp(pt, ProofInstance(e)) =>
