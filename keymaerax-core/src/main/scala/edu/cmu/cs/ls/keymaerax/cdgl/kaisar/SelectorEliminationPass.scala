@@ -6,19 +6,23 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 
 object SelectorEliminationPass {
-  def collectPts(kc: Context, sel: Selector): List[ProofTerm] = {
+  def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
+        // @TODO: Use different ProofVars/ProofTerms for fact assumptions vs fact assumptions
+      case DefaultSelector =>
+        val fv = StaticSemantics(goal).fv
+        fv.toSet.toList.map(ProofVar)
       case ForwardSelector(pt) => List(pt)
       case PatternSelector(pat) =>
         Context.unify(kc, pat).map({case (x, _) => ProofVar(x)}).toList
     }
   }
 
-  def collectPts(kc: Context, m: Method): (List[ProofTerm], Method) = {
+  def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
     m match {
       case Using(use, m) =>
-        val useAssms = use.flatMap(collectPts(kc, _))
-        val (assms, meth) = collectPts(kc, m)
+        val useAssms = use.flatMap(collectPts(kc, _, goal))
+        val (assms, meth) = collectPts(kc, m, goal)
         (useAssms ++ assms, meth)
       case _: ByProof | _: RCF | _: Auto | _: Prop => (List(), m)
     }
@@ -31,7 +35,7 @@ object SelectorEliminationPass {
         val (ptsR, dsR) = collectPts(kc, r)
         (ptsL ++ ptsR, DomAnd(dsL, dsR))
       case DomAssert(x, f, m) =>
-        val (pts, meth) = collectPts(kc, m)
+        val (pts, meth) = collectPts(kc, m, f)
         val (_, notes: List[Note]) =
           pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
             // TODO: Hack: context doesnt say what conclusion is
@@ -49,7 +53,7 @@ object SelectorEliminationPass {
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
           case Assert(e, f, m) =>
-            val (pts, meth) = collectPts(kc, m)
+            val (pts, meth) = collectPts(kc, m, f)
             val (_, notes: List[Note]) =
               pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
                 // TODO: Hack: context doesnt say what conclusion is

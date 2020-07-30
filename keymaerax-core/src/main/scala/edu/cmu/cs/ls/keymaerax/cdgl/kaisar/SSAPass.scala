@@ -71,7 +71,7 @@ object SSAPass {
   }
   def ssa(sel: Selector, snapshot: Snapshot): Selector = {
     sel match {
-      case _: DefaultSelector => sel
+      case DefaultSelector => sel
       // @TODO: unsure / test
       case PatternSelector(e) => PatternSelector(ssa(e, snapshot))
       case ForwardSelector(pt) => ForwardSelector(ssa(pt, snapshot))

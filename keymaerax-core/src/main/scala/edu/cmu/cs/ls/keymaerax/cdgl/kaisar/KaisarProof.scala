@@ -113,7 +113,7 @@ case class ForwardSelector(forward: ProofTerm) extends Selector {}
 // @TODO: probably more useful to mean "all which contain e as a subexpression"
 // @TODO: Makes early elaboration passes annoying, perhaps implement this later
 case class PatternSelector(e: Expression) extends Selector {}
-case class DefaultSelector(f: Formula) extends Selector {}
+case object DefaultSelector extends Selector {}
 
 // Pattern language for left-hand side of assignment proofs. Expressions are used for most patterns, but assignment
 // patterns are not quite expressions because each assigned variable may introduce a proof variable.

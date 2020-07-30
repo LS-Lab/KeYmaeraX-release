@@ -108,10 +108,10 @@ object ProofChecker {
     }
   }
 
-  def methodAssumptions(con: Context, m: Selector): List[Formula] = {
+  def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
-      case DefaultSelector(f) =>
-        val fv = StaticSemantics(f).fv
+      case DefaultSelector =>
+        val fv = StaticSemantics(goal).fv
         fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v).toList)
       case ForwardSelector(pt) =>
         List(apply(con, pt))
@@ -120,11 +120,11 @@ object ProofChecker {
     }
   }
 
-  def methodAssumptions(con: Context, m: Method): (List[Formula], Method) = {
+  def methodAssumptions(con: Context, m: Method, goal: Formula): (List[Formula], Method) = {
     m match {
       case Using(sels, m) =>
-        val assms = sels.flatMap(methodAssumptions(con, _))
-        val (assm, meth) = methodAssumptions(con, m)
+        val assms = sels.flatMap(methodAssumptions(con, _, goal))
+        val (assm, meth) = methodAssumptions(con, m, goal)
         (assms ++ assm, meth)
       case RCF() | Auto() | Prop() | _: ByProof => (List(), m)
     }
@@ -179,8 +179,8 @@ object ProofChecker {
   }
 
   def apply(con: Context, f: Formula, m: Method): Unit = {
-    val defaultMeth = Using(List(DefaultSelector(f)), m)
-    val (assms, meth) = methodAssumptions(con, defaultMeth)
+    //val defaultMeth = Using(List(DefaultSelector(f)), m)
+    val (assms, meth) = methodAssumptions(con, m, f)
     meth match {
       case  RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
       // general-purpose auto heuristic
@@ -298,7 +298,8 @@ object ProofChecker {
     }
   }
   def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression]): Unit = {
-    methodAssumptions(con: Context, sel: Selector) match {
+    // Goal formala "true" should be ignored, case selector should not be "default"
+    methodAssumptions(con: Context, sel: Selector, True) match {
       case fml :: Nil =>
         // TODO: Support cases with non-ground patterns. Improve error messages for case where right-handed split produces too few cases but exhaustive split gives too many
         // Heuristic matching: split disjuncts based on number of cases.
