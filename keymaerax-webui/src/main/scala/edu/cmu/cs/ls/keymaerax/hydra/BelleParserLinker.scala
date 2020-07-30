@@ -66,11 +66,3 @@ object BelleParserLinker {
     }
   }
 }
-
-object BelleParserMain {
-  def main(args: Array[String]) = {
-    val s = scala.io.Source.fromFile("/home/nfulton/dev/scuba/time_triggered_better_hr/padi/below_lactate_threshold/proof.kyt").getLines().mkString("\n")
-    ToolProvider.setProvider(new MathematicaToolProvider(HyDRAInitializer.mathematicaConfig))
-    println(BelleParserLinker(s, "main"))
-  }
-}

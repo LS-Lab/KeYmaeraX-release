@@ -9,20 +9,19 @@ import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup, StringToVersion}
+import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutor
@@ -108,7 +107,7 @@ object SSLBoot extends App with Logging {
   //Initialize all tools.
   HyDRAInitializer(args, HyDRAServerConfig.database)
 
-  assert(Configuration.getOption(Configuration.Keys.JKS).isDefined,
+  assert(Configuration.get(Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
   if(HyDRAServerConfig.host != "0.0.0.0")
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
@@ -215,61 +214,11 @@ object HyDRAInitializer extends Logging {
 
   private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
-    tool.toLowerCase() match {
-      case "mathematica" => mathematicaConfig
-      case "wolframengine" => wolframEngineConfig
-      case "wolframscript" => Map.empty
-      case "z3" => Map.empty
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
+    ToolConfiguration.config(tool.toLowerCase)
   }
 
   private def preferredToolFromConfig: String = {
-    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
-  }
-
-  def mathematicaConfig: ToolProvider.Configuration = {
-    getMathematicaLinkName match {
-      case Some(l) => getMathematicaLibDir match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getMathematicaTcpip)
-        case None => Map("linkName" -> l, "tcpip" -> getMathematicaTcpip)
-      }
-      case None => DefaultConfiguration.defaultMathematicaConfig
-    }
-  }
-
-  def wolframEngineConfig: ToolProvider.Configuration = {
-    getWolframEngineLinkName match {
-      case Some(l) => getWolframEngineLibDir match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getWolframEngineTcpip)
-        case None => Map("linkName" -> l, "tcpip" -> getWolframEngineTcpip)
-      }
-      case None => DefaultConfiguration.defaultWolframEngineConfig
-    }
-  }
-
-  private def getMathematicaLinkName: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME)
-  }
-
-  private def getMathematicaLibDir: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-  }
-
-  private def getMathematicaTcpip: String = {
-    Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
-  }
-
-  private def getWolframEngineLinkName: Option[String] = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
-  }
-
-  private def getWolframEngineLibDir: Option[String] = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
-  }
-
-  private def getWolframEngineTcpip: String = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("false")
+    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 }
 

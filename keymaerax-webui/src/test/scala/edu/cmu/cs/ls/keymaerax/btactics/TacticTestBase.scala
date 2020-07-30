@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
-import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
@@ -61,46 +61,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     def asOption: Option[T] = option
   }
 
-  def configFileMathematicaConfig: Map[String, String] = {
-    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME)) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, DefaultConfiguration.defaultMathematicaConfig("linkName"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, DefaultConfiguration.defaultMathematicaConfig("libDir"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)) {
-      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, DefaultConfiguration.defaultMathematicaConfig("tcpip"), saveToFile = false)
-    }
-    Map(
-      "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
-      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR),
-      "tcpip" -> Configuration(Configuration.Keys.MATH_LINK_TCPIP))
-  }
-
-  def configFileWolframEngineConfig: Map[String, String] = {
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, DefaultConfiguration.defaultWolframEngineConfig("linkName"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, DefaultConfiguration.defaultWolframEngineConfig("libDir"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, DefaultConfiguration.defaultWolframEngineConfig("tcpip"), saveToFile = false)
-    }
-    Map(
-      "linkName" -> Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
-      "libDir" -> Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR),
-      "tcpip" -> Configuration(Configuration.Keys.WOLFRAMENGINE_TCPIP))
-  }
-
   /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
   class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
+    override def init(): Boolean = p.init()
     override def shutdown(): Unit = {} // do not shut down between tests and when switching providers in ToolProvider.setProvider
     def doShutdown(): Unit = super.shutdown()
   }
 
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
-  private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
+  private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
 
   //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
   private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = _
@@ -140,7 +109,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     withTemporaryConfig(Map(
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
-        Configuration.Keys.QE_TOOL -> "mathematica",
+        Configuration.Keys.QE_TOOL -> WOLFRAM,
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
@@ -150,14 +119,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       }
 
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = (t: Thread) => {
+      implicit val signaler: Signaler = (_: Thread) => {
         theInterpreter.kill()
         tool.cancel()
         tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
         mathematicaProvider.synchronized {
           mathematicaProvider().doShutdown() //@note see [[afterAll]]
           provider.shutdown()
-          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
         }
       }
       failAfter(to) { testcode(tool) }
@@ -178,6 +147,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     withTemporaryConfig(Map(Configuration.Keys.QE_TOOL -> "z3")) {
       val provider = new Z3ToolProvider
       ToolProvider.setProvider(provider)
+      ToolProvider.init()
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
@@ -227,7 +197,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
   def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any) {
-    val origConfig = tempConfig.keys.map(k => k -> Configuration.getOption(k))
+    val origConfig = tempConfig.keys.map(k => k -> Configuration.get[String](k))
     try {
       tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
       testcode
@@ -283,9 +253,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Test suite setup */
   override def beforeAll(): Unit = {
     mathematicaProvider =
-      if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(configFileMathematicaConfig)))
-      else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(configFileWolframEngineConfig)))
-      else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(Map.empty)))
+      if (WOLFRAM.equalsIgnoreCase("mathematica")) new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
+      else if (WOLFRAM.equalsIgnoreCase("wolframengine")) new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(ToolConfiguration.config(WOLFRAM))))
+      else if (WOLFRAM.equalsIgnoreCase("wolframscript")) new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(ToolConfiguration.config(WOLFRAM))))
       else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   }
 

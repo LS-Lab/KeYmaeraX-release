@@ -20,57 +20,66 @@ object ToolConfiguration {
   case class ConfigSuggestion(version: String, kernelPath: String, kernelName: String, jlinkPath: String, jlinkName: String)
 
   /** Returns the Mathematica configuration. */
-  def mathematicaConfig: Map[String, String] = {
+  def mathematicaConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
     def tcpip: String = {
-      Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).
+      Configuration.get[String](Configuration.Keys.MATH_LINK_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("false")
     }
 
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
-      case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
-        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-        case None =>
-          val libDir = DefaultConfiguration.defaultMathLinkPath._2
-          Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-      }
-      case None => DefaultConfiguration.defaultMathematicaConfig
+    if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
+      Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
+        "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
+    } else {
+      Configuration.get[String](Configuration.Keys.MATHEMATICA_LINK_NAME) match {
+        case Some(l) => Configuration.get[String](Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
+          //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+          case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+          case None =>
+            val libDir = DefaultConfiguration.defaultMathLinkPath._2
+            Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+        }
+        case None => DefaultConfiguration.defaultMathematicaConfig
 
+      }
     }
   }
 
   /** Returns the Wolfram Engine configuration. */
-  def wolframEngineConfig: Map[String, String] = {
+  def wolframEngineConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
     def tcpip: String = {
-      Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).
+      Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("true")
     }
 
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
-      case Some(l) => Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
-        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
-        case None =>
-          val libDir = DefaultConfiguration.defaultWolframEnginePath._2
-          Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+    if (preferred.contains("mathkernel") && preferred.contains("jlink")) {
+      Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
+        "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
+    } else {
+      Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
+        case Some(l) => Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
+          //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+          case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+          case None =>
+            val libDir = DefaultConfiguration.defaultWolframEnginePath._2
+            Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+        }
+        case None => DefaultConfiguration.defaultWolframEngineConfig
       }
-      case None => DefaultConfiguration.defaultWolframEngineConfig
-
     }
   }
 
   /** Returns the Wolfram Engine configuration. */
-  def wolframScriptConfig: Map[String, String] = Map.empty
+  def wolframScriptConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = preferred
 
   /** Returns the Z3 configuration. */
-  def z3Config: Map[String, String] = Map.empty
+  def z3Config(preferred: Map[String, String] = Map.empty): Map[String, String] = preferred
 
   /** Returns the tool configuration for the name `tool`. */
-  def config(tool: String): Map[String, String] = tool.toLowerCase() match {
-    case "mathematica" => Map("tool" -> "mathematica") ++ ToolConfiguration.mathematicaConfig
-    case "wolframengine" => Map("tool" -> "wolframengine") ++ ToolConfiguration.wolframEngineConfig
-    case "wolframscript" => Map("tool" -> "wolframscript") ++ ToolConfiguration.wolframScriptConfig
-    case "z3" => Map("tool" -> "z3") ++ ToolConfiguration.z3Config
+  def config(tool: String, preferred: Map[String, String] = Map.empty): Map[String, String] = tool.toLowerCase() match {
+    case "mathematica" => Map("tool" -> "mathematica") ++ ToolConfiguration.mathematicaConfig(preferred)
+    case "wolframengine" => Map("tool" -> "wolframengine") ++ ToolConfiguration.wolframEngineConfig(preferred)
+    case "wolframscript" => Map("tool" -> "wolframscript") ++ ToolConfiguration.wolframScriptConfig(preferred)
+    case "z3" => Map("tool" -> "z3") ++ ToolConfiguration.z3Config(preferred)
     case t => throw new Exception("Unknown tool '" + t + "'")
   }
 

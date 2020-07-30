@@ -280,6 +280,7 @@ class ToolTacticsTests extends TacticTestBase {
     proveBy("x>0 -> x>=0".asFormula,
       ToolTactics.switchSolver("Z3") & checkTool("Z3") & implyR(1) &
       ToolTactics.switchSolver("Mathematica") & checkTool("Mathematica") &
+      ToolTactics.switchSolver("Mathematica") & checkTool("Mathematica") &
       master()) shouldBe 'proved
   }
 

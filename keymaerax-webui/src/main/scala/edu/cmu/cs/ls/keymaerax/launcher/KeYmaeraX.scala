@@ -216,12 +216,12 @@ object KeYmaeraX {
 
 
   private def configFromFile(defaultTool: String): OptionMap = {
-    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
-        ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
+        ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
       case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
-        ToolConfiguration.wolframEngineConfig.map({ case (k,v) => Symbol(k) -> v })
-      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
+        ToolConfiguration.wolframEngineConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
+      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
@@ -401,7 +401,7 @@ object KeYmaeraX {
 
   /** Initializes Z3 from command line options. */
   private def initZ3(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new Z3ToolProvider())
+    ToolProvider.setProvider(Z3ToolProvider())
   }
 
   private def mathematicaConfig(options: OptionMap): Map[String, String] = {
@@ -411,10 +411,12 @@ object KeYmaeraX {
         " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
 
-    val mathematicaConfig =
-      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
-        "libDir" -> options('jlink).toString)
-      else DefaultConfiguration.defaultMathematicaConfig
+    val mathematicaConfig = ToolConfiguration.config("mathematica",
+      if (options.contains('mathkernel) && options.contains('jlink)) {
+        Map("linkName" -> options('mathkernel).toString, "libDir" -> options('jlink).toString)
+      } else {
+        Map.empty
+      })
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
       case Some(path) => path

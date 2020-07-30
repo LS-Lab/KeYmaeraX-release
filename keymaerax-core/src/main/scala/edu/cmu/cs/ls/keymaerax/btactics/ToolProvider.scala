@@ -37,9 +37,11 @@ object ToolProvider extends ToolProvider with Logging {
     */
   def setProvider(provider: ToolProvider): Unit = {
     if (provider != this) {
-      if (provider != f) f.shutdown()
-      f = provider
-      f.init()
+      if (provider != f) {
+        f.shutdown()
+        f = provider
+        f.init()
+      }
     } else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
 
