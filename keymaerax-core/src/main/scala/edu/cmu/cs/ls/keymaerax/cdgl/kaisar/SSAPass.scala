@@ -136,9 +136,10 @@ object SSAPass {
 
   def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
   def stutters(ours: Snapshot, other: Snapshot): Statement = {
-    val varDiff = other.keySet.filter(k => ours.get(k) != other.get(k))
+    val allKeys = other.keySet.++(ours.keySet)
+    val varDiff = allKeys.filter(k => ours.get(k) != other.get(k))
     KaisarProof.block(varDiff.toList.map(x =>
-      Modify(VarPat(Variable(x, other(x)), None), Left(Variable(x, opt(ours.get(x)))))))
+      Modify(VarPat(Variable(x, opt(other.get(x))), None), Left(Variable(x, opt(ours.get(x)))))))
   }
 
   def ssa(s: Statement, snapshot: Snapshot): (Statement, Snapshot) = {
