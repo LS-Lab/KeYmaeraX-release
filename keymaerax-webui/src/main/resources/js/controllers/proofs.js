@@ -114,7 +114,10 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
 
   $scope.deleteProof = function(proof) {
     $http.post('user/' + $scope.userId + "/proof/" + proof.id + "/delete").success(function(data) {
-       $route.reload();
+       if (data.success) {
+         var idx = $scope.proofs.indexOf(proof)
+         if (idx > -1) $scope.proofs.splice(idx, 1);
+       }
     });
   };
 
