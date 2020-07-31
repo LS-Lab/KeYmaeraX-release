@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
+import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
 import java.security.Permission
@@ -526,8 +527,11 @@ object KeYmaeraX {
                     outputFileName: Option[String], options: OptionMap): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
-    //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val pw = outputFileName.map(new PrintWriter(_))
+    //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails;
+    // create parent directories of hierarchical archive entry names: archive.kyx#folder/sub/entry).
+    val sanitized = outputFileName.map(sanitize)
+    sanitized.map(File(_)).foreach(_.parent.createDirectory())
+    val pw = sanitized.map(new PrintWriter(_))
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
 
@@ -663,13 +667,18 @@ object KeYmaeraX {
 
     val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
+
     //@note same archive entry name might be present in several .kyx files
+    def disambiguateEntry(outName: String, archiveName: String, entryName: String): String =
+      (if (outName.endsWith(archiveName)) outName
+       else outName + "-" + archiveName) + "-" + entryName
+
     val outputFileNames: Map[Path, Map[ParsedArchiveEntry, String]] =
       if (archiveContent.size == 1 && archiveContent.head._2.size == 1)
         Map(archiveContent.head._1 -> Map(archiveContent.head._2.head -> (outputFilePrefix + outputFileSuffix)))
       else archiveContent.map({ case (path, entries) =>
-        path -> entries.map(e => e -> (outputFilePrefix + "-" + path.getFileName + "-"
-          + e.name.replaceAll("\\W", "_") + outputFileSuffix)).toMap
+        path -> entries.map(e => e ->
+          sanitize(disambiguateEntry(outputFilePrefix, path.getFileName.toString, e.name) + outputFileSuffix)).toMap
       }).toMap
 
     /** Replaces the conjecture of `entry` with the `conjecture`. */
@@ -723,7 +732,8 @@ object KeYmaeraX {
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    new PrintWriter(outputFileName)
+    val proofEvidence = File(sanitize(outputFileName))
+    if (proofEvidence.exists) proofEvidence.delete()
 
     val t = tacticString match {
       case Some(tac) => ("user", "user", tac) :: Nil
@@ -766,6 +776,10 @@ object KeYmaeraX {
       })
     }
   }
+
+  /** Replaces illegal characters in file names. */
+  private def sanitize(filename: String): String = URLEncoder.encode(filename, "UTF-8").
+    replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator)
 
   /**
    * ModelPlex monitor synthesis for the given input files
