@@ -19,7 +19,7 @@ object SelectorEliminationPass {
 
   // The parser uses the same syntax for fact variables and for program variable proof terms which refer to all assignments
   // of a given variable
-  def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
+  private def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
     pt match {
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
@@ -34,7 +34,7 @@ object SelectorEliminationPass {
     }
   }
 
-  def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
+  private def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
@@ -45,7 +45,7 @@ object SelectorEliminationPass {
     }
   }
 
-  def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
+  private def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
     m match {
       case Using(use, m) =>
         val useAssms = use.flatMap(collectPts(kc, _, goal))
@@ -59,7 +59,7 @@ object SelectorEliminationPass {
     }
   }
 
-  def collectPts(kc: Context, dc: DomainStatement): (List[Note], DomainStatement) = {
+  private def collectPts(kc: Context, dc: DomainStatement): (List[Note], DomainStatement) = {
     dc match {
       case DomAnd(l, r) =>
         val (ptsL, dsL) = collectPts(kc, l)
@@ -85,12 +85,14 @@ object SelectorEliminationPass {
         sel match {
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
-            val (_, notes: List[Note]) =
-              pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
+            val (_, notes: List[Ghost]) =
+              pts.foldLeft[(Context, List[Ghost])]((kc, List[Ghost]()))({case ((kc, acc: List[Ghost]), pt) =>
                 // TODO: Hack: context doesnt say what conclusion is
                 val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
-                (c, Note(id, pt) :: acc)})
-            val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
+                // notes should be ghosts since they did not appear in the user's intended proof/program.
+                // proofchecking output after selector elimination should "look like" proofchecking the input
+                (c,  Ghost(Note(id, pt)) :: acc)})
+            val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
             val finalMeth = Using(noteSels, meth)
             Some(Block(notes.:+(Assert(e, f, finalMeth))))
           case ProveODE(ds, dc) =>

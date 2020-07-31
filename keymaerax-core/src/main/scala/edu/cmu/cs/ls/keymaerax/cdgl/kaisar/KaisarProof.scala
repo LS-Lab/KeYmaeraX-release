@@ -555,8 +555,8 @@ object Context {
 
   def taboos(con: Context, isGhost: Boolean = false, isInverseGhost: Boolean = false): Taboos = con match {
     case Triv() | Label(_, _) => Taboos.empty
-    case Ghost(s) => taboos(con, isGhost = true, isInverseGhost = false)
-    case InverseGhost(s) => taboos(con, isGhost = false, isInverseGhost = true)
+    case Ghost(s) => taboos(s, isGhost = true, isInverseGhost = false)
+    case InverseGhost(s) => taboos(s, isGhost = false, isInverseGhost = true)
     case Assume(pat: Term, f) => Taboos(boundVars = Set(), tabooVars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
     case Assert(pat: Term, f, m) => Taboos(boundVars = Set(), tabooVars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
     case Modify(pat: AsgnPat, _) => Taboos(boundVars = pat.boundVars, tabooVars = if (isGhost) pat.boundVars else Set(), functions = Set(), facts = if (isInverseGhost) pat.boundFacts else Set())
