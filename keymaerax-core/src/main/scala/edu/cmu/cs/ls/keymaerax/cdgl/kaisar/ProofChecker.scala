@@ -115,7 +115,8 @@ object ProofChecker {
     m match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v).toList)
+        val res = fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, isProgramVar = true).toList)
+        res
       case ForwardSelector(pt) =>
         List(apply(con, pt))
       case PatternSelector(e) =>

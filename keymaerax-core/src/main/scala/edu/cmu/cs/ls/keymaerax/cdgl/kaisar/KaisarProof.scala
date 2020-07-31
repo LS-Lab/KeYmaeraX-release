@@ -327,7 +327,7 @@ object Context {
         val left = findAll(Modify(pat, Left(l)), finder, isGhost)
         val right = findAll(Modify(TuplePat(pats), Left(r)), finder, isGhost)
         left ++ right
-      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f), true)) =>
+      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f), false)) =>
         // @TODO: Proper variable renaming
         List((p, Equal(x, f)))
       // default: proof variable name = program variable name
@@ -465,12 +465,29 @@ object Context {
   def find(con: Context, f: Finder): Option[(Ident, Formula)] = {
     findAll(con, f).headOption
   }
-  def getAll(con: Context, id: Ident): List[Formula] = {
-    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, false) => x == id case _ => false}
+  def getAll(con: Context, id: Ident, wantProgramVar: Boolean = false): List[Formula] = {
+    // if(finder(x, Equal(x, f), true)) =>
+    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, gotProgramVar) =>
+      if (wantProgramVar && gotProgramVar) {
+        val Equal(y, f) = v
+        id == y
+      } else if (wantProgramVar) {
+        false
+      } else {
+        id == x && !gotProgramVar
+      }}
     searchAll(con, f, isGhost = false).map(_._2)
   }
-  def get(con: Context, id: Ident): Option[Formula] = {
-    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, false) => x == id case _ => false}
+  def get(con: Context, id: Ident, wantProgramVar: Boolean = false): Option[Formula] = {
+    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, gotProgramVar) =>
+      if (wantProgramVar && gotProgramVar) {
+        val Equal(y, f) = v
+        id == y
+      } else if (wantProgramVar) {
+        false
+      } else {
+        id == x && !gotProgramVar
+      }}
     searchAll(con, f, isGhost = false).map(_._2).headOption
   }
 
