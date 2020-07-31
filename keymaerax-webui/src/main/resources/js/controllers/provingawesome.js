@@ -124,7 +124,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               size: 'md',
               resolve: {
                 title: function() { return "Prove lemmas"; },
-                message: function() { return "The proof uses " + usedLemmas.length + " lemmas; do you want to check them now?"; },
+                message: function() { return "The proof uses " + usedLemmas.length + " unproved lemmas; do you want to check them now?"; },
                 mode: function() { return "yesno"; }
               }
             });

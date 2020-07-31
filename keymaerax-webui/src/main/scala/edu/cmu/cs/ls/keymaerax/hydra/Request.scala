@@ -1480,8 +1480,13 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) 
           case p => p.map(m -> _)
         }
       })
-      (lemmaProofs.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
-        lemmaProofs.map({ case (m, p) => (m.name, p.proofId) })).distinct
+      //@note check non-existent or outdated lemmas
+      val unprovedLemmas = lemmaProofs.filter(e => LemmaDBFactory.lemmaDB.get("user" + File.separator + e._1.name) match {
+        case Some(l) => l.fact.conclusion == Sequent(IndexedSeq(), IndexedSeq(KeYmaeraXArchiveParser(e._1.keyFile).head.model.asInstanceOf[Formula]))
+        case None => true
+      })
+      (unprovedLemmas.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
+        unprovedLemmas.map({ case (m, p) => (m.name, p.proofId) })).distinct
     }
 
     val lemmaNames = recCollectRequiredLemmaNames(proofId.toInt, Nil)
