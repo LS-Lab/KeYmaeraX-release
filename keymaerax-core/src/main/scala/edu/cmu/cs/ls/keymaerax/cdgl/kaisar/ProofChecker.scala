@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 object ProofChecker {
   private def subst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(x, f)
   private def invSubst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(f, x)
-  val SSA: Boolean = false
+  val SSA: Boolean = true
 
   val nullaryBuiltin: Map[String, Formula] = Map("trueI" -> True)
   val unaryBuiltin: Map[String, (String, ForwardArg => Formula)] = Map(
@@ -115,7 +115,7 @@ object ProofChecker {
     m match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        val res = fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, isProgramVar = true).toList)
+        val res = fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, wantProgramVar = true).toList)
         res
       case ForwardSelector(pt) =>
         List(apply(con, pt))
