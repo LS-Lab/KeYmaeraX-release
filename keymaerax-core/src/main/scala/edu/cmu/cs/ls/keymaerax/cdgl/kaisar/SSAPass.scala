@@ -115,7 +115,7 @@ object SSAPass {
         val snap = leftSnap ++ rightSnap
         (BoxChoice(KaisarProof.block(leftS :: leftStutters :: Nil), KaisarProof.block(rightS :: rightStutters :: Nil)), snap)
       case BoxLoop(s) =>
-        val boundVars = taboos(s).boundVars
+        val boundVars = VariableSets(s).boundVars
         val preSnap = snapshot.addSet(boundVars)
         val (body, postSnap) = ssa(s, preSnap)
         val baseStutters = stutters(snapshot, preSnap)
@@ -165,7 +165,7 @@ object SSAPass {
       case PrintGoal(msg) => (PrintGoal(msg), snapshot)
       case ProveODE(ds, dc) =>
         // @TODO: Test time variable handling
-        val snap = snapshot.addSet(odeVars(ProveODE(ds, dc)))
+        val snap = snapshot.addSet(VariableSets(ProveODE(ds, dc)).boundVars)
         val ds1 = ssa(ds, snap)
         val dc1 = ssa(dc, snap)
         val inStutter = stutters(snapshot, snap)
@@ -201,26 +201,6 @@ object SSAPass {
         val l1 = ssa(l, snapshot)
         val r1 = ssa(r, snapshot)
         DomAnd(l1, r1)
-    }
-  }
-
-  def odeVars(ds: ProveODE): Set[Variable] = odeVars(ds.dc).++(odeVars(ds.ds))
-
-  def odeVars(ds: DomainStatement): Set[Variable] = {
-    ds match {
-      case _: DomAssume | _: DomAssert => Set()
-      case DomWeak(dc) => odeVars(dc)
-      case DomModify(x, f) => x.boundVars
-      case DomAnd(l, r) => odeVars(l).++(odeVars(r))
-    }
-  }
-
-  def odeVars(ds: DiffStatement): Set[Variable] = {
-    ds match {
-      case AtomicODEStatement(dp) => Set(dp.xp.x)
-      case DiffProductStatement(l, r) => odeVars(l).++(odeVars(r))
-      case DiffGhostStatement(ds) => odeVars(ds)
-      case InverseDiffGhostStatement(ds) => odeVars(ds)
     }
   }
 
