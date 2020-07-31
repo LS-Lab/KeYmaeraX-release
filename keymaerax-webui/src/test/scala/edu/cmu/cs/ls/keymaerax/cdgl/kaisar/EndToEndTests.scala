@@ -12,10 +12,13 @@ class EndToEndTests extends TacticTestBase {
 
   val check: String => Formula = Kaisar.apply
 
-  // @TODO: Need parser support for program variable in proof term
+  // @TODO: Need ghost feature to hide auxilliary notes in final formula
+  // @TODO: Need to apply proper renaming in lookups of fact variables
   "full proof checker" should "check box loop" in withMathematica { _ =>
+      // todo: should be !xFin instead of ?xFin
       val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} ?xFin:(x>=0);"
       val ff = check(pfStr)
       ff shouldBe "[?(x>=1); x_0 := x; {x:=x_0; x_0:=x+1;{?(x_0=x+1);}^@{?(x_0>=1);}^@}*;?(x_0>=0);]true".asFormula
+            // was [?x>=1;   x_0 := x; {x:=x_0; x_0:=x+1;{? x>=1; }^@{?x_0=x+1;}^@{?x_0>=1;}^@}*?x_0>=0;]true
   }
 }

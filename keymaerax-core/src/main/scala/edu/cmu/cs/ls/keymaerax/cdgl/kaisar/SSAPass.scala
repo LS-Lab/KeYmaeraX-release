@@ -137,6 +137,14 @@ object SSAPass {
     freshSet.toMap
   }
 
+  private def snapshotIncrement(snapshot: Snapshot, vars: Set[Variable]): Snapshot = {
+    val allVars: Set[String] = snapshot.keySet.++(vars.map(_.name))
+    allVars.foldLeft[Snapshot](Map()){case (snap, v) =>
+        val idx = opt(snapshot.get(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
+        snap.+(v -> idx)
+    }
+  }
+
   def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
   def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
@@ -164,10 +172,13 @@ object SSAPass {
         val snap = snapshotUnion(leftSnap, rightSnap)
         (BoxChoice(KaisarProof.block(leftS :: leftStutters :: Nil), KaisarProof.block(rightS :: rightStutters :: Nil)), snap)
       case BoxLoop(s) =>
-        val (body, bodySnap) = ssa(s, snapshot)
-        val baseStutters = stutters(snapshot, bodySnap)
-        val indStutters = stutters(bodySnap, snapshot)
-        (KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(indStutters :: body :: Nil)) :: Nil), bodySnap)
+        val boundVars = taboos(s).boundVars
+        val preSnap = snapshotIncrement(snapshot, boundVars)
+        val (body, postSnap) = ssa(s, preSnap)
+        val baseStutters = stutters(snapshot, preSnap)
+        val indStutters = stutters(postSnap, preSnap)
+        val res = KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(body :: indStutters :: Nil)) :: Nil)
+        (res, preSnap)
       case While(x: Expression, j: Formula, s: Statement) =>
         val (body, bodySnap) = ssa(s, snapshot)
         val baseStutters = stutters(snapshot, bodySnap)
@@ -190,7 +201,11 @@ object SSAPass {
         }).reverse
         (Switch(scrut, stutterClauses), maxSnap)
       case Assume(pat, f) => (Assume(ssa(pat, snapshot), ssa(f, snapshot)), snapshot)
-      case Assert(pat, f, m) => (Assert(ssa(pat, snapshot), ssa(f, snapshot), ssa(m, snapshot)), snapshot)
+      case Assert(pat, f, m) =>
+        val ppat = ssa(pat, snapshot)
+        val ff = ssa(f, snapshot)
+        val mm = ssa(m, snapshot)
+        (Assert(ppat, ff, mm), snapshot)
       case Note(x, proof, annotation) => (Note(x, ssa(proof, snapshot), annotation.map(ssa(_, snapshot))), snapshot)
       case LetFun(f, args, e) => {
         // Don't SSA parameters, only state variables
