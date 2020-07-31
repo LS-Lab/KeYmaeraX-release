@@ -141,8 +141,8 @@ object SSAPass {
   def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
     val varDiff = allKeys.filter(k => ours.get(k) != other.get(k))
-    KaisarProof.block(varDiff.toList.map(x =>
-      Modify(VarPat(Variable(x, opt(other.get(x))), None), Left(Variable(x, opt(ours.get(x)))))))
+    Phi(KaisarProof.block(varDiff.toList.map(x =>
+      Modify(VarPat(Variable(x, opt(other.get(x))), None), Left(Variable(x, opt(ours.get(x))))))))
   }
 
   def ssa(s: Statement, snapshot: Snapshot): (Statement, Snapshot) = {

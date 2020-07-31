@@ -405,6 +405,9 @@ object ProofChecker {
       case Was(now, was) =>
         val (ss, f) = apply(con, now)
         (Was(ss, was), f)
+      case Phi(s) =>
+        val (ss, f) = apply(con, s)
+        (Phi(ss), f)
       // Proofs that succeed unconditionally
       case Modify(VarPat(x, _), rhs) =>
         // @TODO: Needs to check ghostery

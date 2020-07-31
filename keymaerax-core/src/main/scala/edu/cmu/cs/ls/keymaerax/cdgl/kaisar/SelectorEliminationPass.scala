@@ -17,12 +17,28 @@ object SelectorEliminationPass {
     }
   }
 
+  // The parser uses the same syntax for fact variables and for program variable proof terms which refer to all assignments
+  // of a given variable
+  def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
+    pt match {
+      case ProofVar(x) =>
+        // If x is not found as a fact variable, assume it's a program variable
+        Context.get(kc, x) match {
+          case Some(_) => pt
+          case None => ProgramVar(x)
+        }
+      case ProofApp(m, n) => ProofApp(disambiguate(kc, m), disambiguate(kc, n))
+      case ProofInstance(e) => ProofInstance(e)
+      case ProgramVar(x) => throw new Exception("Didn't expect program variable proof term in selector elimination pass.")
+    }
+  }
+
   def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         fv.toSet.toList.map(ProgramVar)
-      case ForwardSelector(pt) => List(pt)
+      case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
         Context.unify(kc, pat).map({case (x, _) => ProofVar(x)}).toList
     }

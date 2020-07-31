@@ -48,6 +48,7 @@ object KaisarKeywordParser {
     case (id, None) => ProofVar(id)
     case (id, Some(args)) => args.foldLeft[ProofTerm](ProofVar(id))({case (acc, pt) => ProofApp(acc, pt)})
   })
+  //@TODO: add support for distinct ProofVar terms
   def proofTerm[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVarApp)
 
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)

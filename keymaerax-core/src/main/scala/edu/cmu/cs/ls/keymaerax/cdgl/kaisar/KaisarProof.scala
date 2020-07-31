@@ -197,13 +197,30 @@ case class Ghost(s: Statement) extends Statement
 // Inverse-ghost of statement [[s]], i.e., program of [[ss]] is part of the conclusion but not relevant to the proof.
 // For example, InverseGhost(Assume(_)) indicates a Demonic test which is never used in the proof
 case class InverseGhost(s: Statement) extends Statement
-// Debugging functionality: print [[msg]] with proof context
-case class PrintGoal(msg: String) extends Statement
 // Proof of differential equation, either angelic or demonic.
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
+
+// Statements which "just" attach metadata to their underlying nodes and don't change computational meaning
+sealed trait MetaNode extends Statement {
+  val children: List[Statement] = Nil
+}
+
+// Debugging functionality: print [[msg]] with proof context
+case class PrintGoal(msg: String) extends MetaNode {
+  override val children: List[Statement] = Nil
+}
 // Debugging feature. Equivalent to "now" in all respects, annotated with the fact that it was once "was"
 // before transformation by the proof checker
-case class Was(now: Statement, was: Statement) extends Statement
+case class Was(now: Statement, was: Statement) extends MetaNode {
+  override val children: List[Statement] = List(now)
+}
+
+// A sequence of assignments used as phi-node in static single assignment form
+case class Phi(asgns: Statement) extends MetaNode {
+  override val children: List[Statement] = List(asgns)
+}
+
+
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
 sealed trait DiffStatement extends ASTNode
@@ -232,6 +249,8 @@ case class DomWeak(dc: DomainStatement) extends DomainStatement
 case class DomModify(x: AsgnPat, f: Term) extends DomainStatement
 // Conjunction of domain constraints with proofs for each conjunct
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
+
+
 
 // Proof variable information includes program variables [[xs]] and proof variables [[ps]]
 case class ProofVars(xs: VCP, ps: SetLattice[String])
@@ -298,9 +317,11 @@ object Context {
       // default: proof variable name = program variable name
       case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f))) =>
         if (isGhost) {
-          throw ProofCheckException(s"Ghost variable $x inaccessible because it would escape its scope")
-        }
-        List((x, Equal(x, f)))
+          List()
+          // @TODO: Do we ever want to throw error
+          //throw ProofCheckException(s"Ghost variable $x inaccessible because it would escape its scope")
+        } else
+          List((x, Equal(x, f)))
       case Modify(VarPat(x, Some(_)), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
       case Modify(_, _) => List()
@@ -394,6 +415,7 @@ object Context {
         if (fmls.isEmpty) Nil
         else List(fmls.reduceRight(or))
       case Ghost(s) => searchAll(s, f, isGhost = true)
+      case Phi(s) => searchAll(s, f, isGhost = true)
       case InverseGhost(s) => Nil
         /*val xs = Context.taboos(InverseGhost(s)).vars
         search(s, f, isGhost) match {
@@ -439,9 +461,11 @@ object Context {
         }
       case BoxLoop(body) => lastFact(body)
       case While(_, _, body) => lastFact(body)
-      case Block(ss) => lastFact(ss.last)
+      // Note: After SSA, last statement is phi node, so keep looking to find "real" node
+      case Block(ss) => ss.map(lastFact).filter(_.isDefined).last
       case Was(now, was) => lastFact(now)
       case Ghost(s) => lastFact(s)
+      // Skips all meta nodes and inverse ghosts, for example
       case _ => None
     }
   }
@@ -488,7 +512,7 @@ object Context {
   object Taboos { val empty: Taboos = Taboos(Set(), Set(), Set())}
 
   def taboos(con: Context, isGhost: Boolean = false, isInverseGhost: Boolean = false): Taboos = con match {
-    case Triv() | PrintGoal(_) | Label(_, _) => Taboos.empty
+    case Triv() | Label(_, _) => Taboos.empty
     case Ghost(s) => taboos(con, isGhost = true, isInverseGhost = false)
     case InverseGhost(s) => taboos(con, isGhost = false, isInverseGhost = true)
     case Assume(pat: Term, f) => Taboos(vars = Set(), functions = Set(), facts = if (isInverseGhost) StaticSemantics(pat).toSet else Set())
@@ -508,7 +532,7 @@ object Context {
     case While(x: Term, j, s) =>taboos(s, isGhost, isInverseGhost).addFacts(StaticSemantics(x).toSet)
     case BoxLoop(s) => taboos(s, isGhost, isInverseGhost)
     case ProveODE(ds, dc) => taboos(ds, isGhost, isInverseGhost).++(taboos(dc, isGhost, isInverseGhost))
-    case Was(now, was) => taboos(now, isGhost, isInverseGhost)
+    case m: MetaNode => m.children.map(taboos(_, isGhost, isInverseGhost)).foldLeft(Taboos.empty)(_.++(_))
 
   }
   def taboos(con: DiffStatement, isGhost: Boolean, isInverseGhost: Boolean): Taboos = con match {
