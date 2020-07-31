@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 //import edu.cmu.cs.ls.keymaerax.cdgl.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Statements
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
@@ -93,7 +94,7 @@ object ProofChecker {
       // propositional steps
       case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m)
       // discharge goal with structured proof
-      case ByProof(proof: Proof) => apply(con, proof)
+      case ByProof(proof: Statements) => apply(con, proof)
     }
   }
 
@@ -190,8 +191,8 @@ object ProofChecker {
   }
 
 
-  def apply(con: Context, p: Proof): (Context, Formula) = {
-    apply(con, Block(p.ss))
+  def apply(con: Context, p: Statements): (Context, Formula) = {
+    apply(con, Block(p))
   }
   // Collect disjuncts only down the right side, rather than *all* disjuncts. This allows us to support case analyses
   // where some branches may be disjunctions

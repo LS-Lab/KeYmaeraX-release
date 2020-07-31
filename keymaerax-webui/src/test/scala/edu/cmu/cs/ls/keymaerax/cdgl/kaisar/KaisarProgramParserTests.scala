@@ -281,8 +281,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse by-proof" in {
     p("true", pc.variableTrueFalse(_)) shouldBe True
-    p("!(true) by auto;", pp.proof(_)) shouldBe Proof(List[Statement](Assert(Nothing, True, Auto())))
-    p("proof !(true) by auto; end", pp.method(_)) shouldBe ByProof(Proof(List[Statement](Assert(Nothing, True, Auto()))))
+    p("!(true) by auto;", pp.proof(_)) shouldBe List[Statement](Assert(Nothing, True, Auto()))
+    p("proof !(true) by auto; end", pp.method(_)) shouldBe ByProof(List[Statement](Assert(Nothing, True, Auto())))
   }
 
   // proof-statement parser

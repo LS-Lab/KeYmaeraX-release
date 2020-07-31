@@ -111,7 +111,7 @@ object ProofTraversal {
         val mid = m match {
           case _ : RCF | _ : Auto | _ : Prop => m
           case Using(uses, m) => Using(uses.map(traverse(kc, _, tf)), traverse(kc, m, tf))
-          case ByProof(pf) => ByProof(Proof(pf.ss.map(traverse(kc, _, tf))))
+          case ByProof(ss) => ByProof(ss.map(traverse(kc, _, tf)))
         }
         tf.postM(kc, mid)
     }

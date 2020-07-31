@@ -88,7 +88,7 @@ case class Prop() extends Method {}
 // introduce an assumption used in method
 case class Using(use: List[Selector], method: Method) extends Method {}
 // discharge goal with structured proof
-case class ByProof(proof: Proof) extends Method {}
+case class ByProof(proof: Statements) extends Method {}
 
 // Forward-chaining natural deduction proof term.
 sealed trait ProofTerm extends ASTNode
@@ -143,8 +143,7 @@ case class VarPat(x: Variable, p: Option[Ident] = None) extends AsgnPat
 case class TuplePat(pats: List[AsgnPat]) extends AsgnPat
 
 /* Language of structured proofs. Statements are block-structu  red, so entire proofs are single statements */
-sealed trait Statement extends ASTNode {
-}
+sealed trait Statement extends ASTNode
 // Proves nothing
 case class Triv() extends Statement
 // x is a formula pattern in assume and assert
@@ -262,25 +261,3 @@ case class DomWeak(dc: DomainStatement) extends DomainStatement
 case class DomModify(x: AsgnPat, f: Term) extends DomainStatement
 // Conjunction of domain constraints with proofs for each conjunct
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
-
-
-
-// Proof variable information includes program variables [[xs]] and proof variables [[ps]]
-case class ProofVars(xs: VCP, ps: SetLattice[String])
-
-// superceded by proofs as contexts
-// Structured context for checking Kaisar proofs
-/*sealed trait Context
-case class CEmpty() extends Context
-case class COne(id: Ident, fml: Formula) extends Context
-case class CLabel(label: Ident) extends Context
-case class COr(l: Context, r: Context) extends Context
-case class CAnd(l: Context, r: Context) extends Context
-case class CThen(l: Context, r: Context) extends Context
-case class CAssign(p: Option[Ident], x: Variable, f: Option[Term]) extends Context*/
-
-//object Context {
-/*case class Context (proofVars: Map[String, Formula]) {
-  */
-
-//}

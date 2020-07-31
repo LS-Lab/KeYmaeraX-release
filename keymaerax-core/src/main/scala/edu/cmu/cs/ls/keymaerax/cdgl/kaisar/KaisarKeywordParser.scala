@@ -117,7 +117,7 @@ object KaisarKeywordParser {
     | letFun | note | parseBlock | boxChoice  | patternMatch  | printGoal
     | ghost| bassignAny  | bsolve  | parseFor) ~ ws
 
-  def proof[_: P]: P[Proof] = statement.rep.map({ss: Seq[Statement] => Proof(ss.toList)})
+  def proof[_: P]: P[Statements] = statement.rep.map({ss: Seq[Statement] => ss.toList})
 }
 
 class KaisarKeywordParser {

@@ -314,7 +314,7 @@ object ProofParser {
 
   def statement[_: P]: P[Statement] = boxChoice
   def statements[_: P]: P[List[Statement]] = statement.rep.map(ss => flatten(ss.toList))
-  def proof[_: P]: P[Proof] = boxChoice.map(ss => Proof(List(ss)))
+  def proof[_: P]: P[Statements] = boxChoice.map(ss => List(ss))
 }
 
 object KaisarProgramParser {

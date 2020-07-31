@@ -42,7 +42,7 @@ object SSAPass {
       case Using(sels, m) =>
         Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
       // @TODO: Should this forget local proof variable numbering?
-      case ByProof(pf) => ByProof(Proof(ssa(Block(pf.ss), snapshot)._1.asInstanceOf[Block].ss))
+      case ByProof(ss) => ByProof(ssa(Block(ss), snapshot)._1.asInstanceOf[Block].ss)
     }
   }
   def ssa(sel: Selector, snapshot: Snapshot): Selector = {
