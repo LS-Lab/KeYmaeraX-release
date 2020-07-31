@@ -2,37 +2,12 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Snapshot
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 
 object SSAPass {
-
-  def next(x: Variable, snapshot: Snapshot): (Variable, Snapshot) = {
-    x match {
-      case BaseVariable(name, Some(_), sort) => throw new Exception("SSA pass expected no subscripted variables in input")
-      case BaseVariable(name, None, sort) =>
-        val index: Option[Int] = snapshot.get(name) match {
-          case None => Some(0)
-          case Some(None) => Some(0)
-          case Some(Some(i)) => Some(i+1)
-        }
-        val snap = snapshot.+(name -> index)
-        (BaseVariable(name, index, sort), snap)
-      case DifferentialSymbol(bv) =>
-        val (v, snap) = next(x, snapshot)
-        (DifferentialSymbol(v), snap)
-    }
-  }
-
-  def nexts(xs: Set[Variable], snapshot: Snapshot): (Set[Variable], Snapshot) = {
-    val acc: Set[Variable] = Set()
-    xs.foldLeft((acc, snapshot))({ case ((acc, snap), v) =>
-      val (x, snap1) = next(v, snap)
-      (acc.+(x), snap1)
-    })
-  }
-
+  // Term replacement/substitution function which reindexes variables according to snapshot
   private def replaceSnap(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
     f match {
       case bv: BaseVariable => Some(BaseVariable(bv.name, opt(snapshot.get(bv.name)), bv.sort))
@@ -99,7 +74,7 @@ object SSAPass {
   def ssa(mod: Modify, snapshot: Snapshot): (Modify, Snapshot) = {
       mod match {
       case Modify(VarPat(x, p), rhs) =>
-        val (xx, snap) = next(x, snapshot)
+        val (xx, snap) = snapshot.increment(x)
         (Modify(VarPat(xx, p), either(rhs, snapshot)), snap)
       case Modify(TuplePat(pat :: Nil), rhs) => ssa(Modify(pat, rhs), snapshot)
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
@@ -110,38 +85,6 @@ object SSAPass {
         val (Modify(pat1, Right(_)), snap1) = ssa(Modify(pat, Right(())), snapshot)
         val (Modify(TuplePat(pats1), Right(_)), snap2) = ssa(Modify(TuplePat(pats), Right(())), snap1)
         (Modify(TuplePat(pat1 :: pats1), Right(())), snap2)
-    }
-  }
-
-  private def snapshotUnion(l: Snapshot, r: Snapshot): Snapshot = {
-    val keys: Set[String] = l.keySet.++(r.keySet)
-    keys.foldLeft[Map[String, Option[Int]]](Map())((map, k) =>
-      (opt(l.get(k)), opt(r.get(k))) match {
-        case (Some(x: Int),Some(y: Int)) => map.+(k -> Some(x.max(y)))
-        case (x: Some[Int], _) => map.+(k -> x)
-        case (_, y: Some[Int]) => map.+(k -> y)
-        case _ => map
-      }
-    )
-  }
-
-  private def patSnap(pat: Expression, snapshot: Snapshot): Snapshot = {
-    val bv = snapshot.keySet.map(Variable(_))
-    val fv = pat match {
-      case f: Term => StaticSemantics(f)
-      case fml: Formula => StaticSemantics(fml).fv
-      case hp: Program => StaticSemantics(hp).fv
-    }
-    val fresh: Set[Variable] = fv.toSet.--(bv)
-    val freshSet = fresh.foldLeft[Set[(String, Option[Int])]](Set())((acc, x) => acc.+((x.name, Some(0))))
-    freshSet.toMap
-  }
-
-  private def snapshotIncrement(snapshot: Snapshot, vars: Set[Variable]): Snapshot = {
-    val allVars: Set[String] = snapshot.keySet.++(vars.map(_.name))
-    allVars.foldLeft[Snapshot](Map()){case (snap, v) =>
-        val idx = opt(snapshot.get(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
-        snap.+(v -> idx)
     }
   }
 
@@ -169,11 +112,11 @@ object SSAPass {
         val (rightS, rightSnap) = ssa(right, snapshot)
         val leftStutters = stutters(leftSnap, rightSnap)
         val rightStutters = stutters(rightSnap, leftSnap)
-        val snap = snapshotUnion(leftSnap, rightSnap)
+        val snap = leftSnap ++ rightSnap
         (BoxChoice(KaisarProof.block(leftS :: leftStutters :: Nil), KaisarProof.block(rightS :: rightStutters :: Nil)), snap)
       case BoxLoop(s) =>
         val boundVars = taboos(s).boundVars
-        val preSnap = snapshotIncrement(snapshot, boundVars)
+        val preSnap = snapshot.addSet(boundVars)
         val (body, postSnap) = ssa(s, preSnap)
         val baseStutters = stutters(snapshot, preSnap)
         val indStutters = stutters(postSnap, preSnap)
@@ -188,13 +131,13 @@ object SSAPass {
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {
-          val ps = patSnap(x, snapshot)
+          val ps = snapshot.addPattern(x)
           val xx = ssa(x, ps)
           val ff = ssa(f, ps)
           val (ss, snap2) = ssa(s, ps)
           ((xx, ff, ss), snap2)
         }})
-        val maxSnap = clauses.map(_._2).reduce(snapshotUnion)
+        val maxSnap = clauses.map(_._2).reduce(_ ++ _)
         val stutterClauses = clauses.map({case ((x, f, s), clauseSnap) =>
           val asgns = stutters(clauseSnap, maxSnap)
           (x, f, KaisarProof.block(asgns :: s :: Nil))
@@ -222,7 +165,7 @@ object SSAPass {
       case PrintGoal(msg) => (PrintGoal(msg), snapshot)
       case ProveODE(ds, dc) =>
         // @TODO: Test time variable handling
-        val (_bv, snap) = nexts(odeVars(ProveODE(ds, dc)), snapshot)
+        val snap = snapshot.addSet(odeVars(ProveODE(ds, dc)))
         val ds1 = ssa(ds, snap)
         val dc1 = ssa(dc, snap)
         val inStutter = stutters(snapshot, snap)
@@ -234,7 +177,7 @@ object SSAPass {
       // but that free variables may be introduced
       case Match(pat: Expression, e: Expression) =>
         // @TODO: snapshot needs to account for all variables seen in context as well.
-        val snap = patSnap(pat, snapshot)
+        val snap = snapshot.addPattern(pat)
         (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
       case Triv() => (Triv(), snapshot)
     }
@@ -293,7 +236,6 @@ object SSAPass {
     }
   }
   def apply(s: Statement): Statement = {
-    val snap: Snapshot = Map()
-    ssa(s, snap)._1
+    ssa(s, Snapshot.empty)._1
   }
 }

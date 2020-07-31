@@ -23,7 +23,6 @@ object KaisarProof {
   type TimeIdent = String
   type Statements = List[Statement]
   type Subscript = Option[Int]
-  type Snapshot = Map[String, Subscript]
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
