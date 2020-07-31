@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 
-/**
+/** Stores results of variable set computations for Kaisar proofs
   *
   * @param boundVars All program variables which are bound at some point in the proof
   * @param tabooVars All program variables which are taboo (not allowed to be referenced), usually because they are ghosts

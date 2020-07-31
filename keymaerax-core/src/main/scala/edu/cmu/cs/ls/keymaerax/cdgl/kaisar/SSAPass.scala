@@ -1,3 +1,25 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Lightweight static single assignment (SSA) transformation for Kaisar proofs.
+  * SSA for proofs has several subtleties for Kaisar proofs compared to the usual SSA transformations in compilers.
+  * A clear difference is that when we transform the variables of a verified program, we must be careful to update all
+  * proof steps so that they prove the new program.
+  *
+  * Because we want a clear interpretation of proofs and also because we do not use a control flow graph (CFG)
+  * representation, we do *not* use the standard notion of Phi nodes, which nondeterministically merge the versions
+  * of a variable. We simulate phi nodes using assignments, and our [[Phi]] constructor is simply labels those
+  * assignments used for this purpose.
+  *
+  * Whereas SSA is often used elsewhere to aid optimizers, we use it in Kaisar to support the implementation of
+  * named/labeled states and other features which require a persistent proof context. While SSA leads to significantly
+  * larger contexts, it gives a clear way to translate facts and contexts which may refer to different states or locations
+  * in a proof/program
+  * @author Brandon Bohrer
+  * @see [[edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot]]
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
@@ -7,8 +29,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 
 object SSAPass {
-  // Term replacement/substitution function which reindexes variables according to snapshot
-  private def replaceSnap(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
+  // Substitution helper function which re-indexes SSA variables according to a snapshot
+  private def renameUsingSnapshot(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
     f match {
       case bv: BaseVariable => Some(BaseVariable(bv.name, opt(snapshot.get(bv.name)), bv.sort))
       case dv: DifferentialSymbol => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.get(dv.x.name)), dv.sort)))
@@ -16,61 +38,81 @@ object SSAPass {
     }
   })
 
+  /**  SSA translation of a term */
   def ssa(f: Term, snapshot: Snapshot): Term = {
-    SubstitutionHelper.replacesFree(f)(replaceSnap(snapshot))
+    SubstitutionHelper.replacesFree(f)(renameUsingSnapshot(snapshot))
   }
 
+  /**  SSA translation of a hybrid program/game.
+    *  We assume for simplicity that the hybrid program does not bind any of the variables subject to SSA, meaning
+    *  we simply re-index free variable occurrences in [[hp]] */
   def ssa(hp: Program, snapshot: Snapshot): Program = {
-    SubstitutionHelper.replacesFree(hp)(replaceSnap(snapshot))
+    SubstitutionHelper.replacesFree(hp)(renameUsingSnapshot(snapshot))
   }
 
+  /**  SSA translation of a differential program
+    *  We assume for simplicity that the program does not bind any of the variables subject to SSA, meaning
+    *  we simply re-index free variable occurrences */
   def ssa(dp: DifferentialProgram, snapshot: Snapshot): DifferentialProgram = {
-    SubstitutionHelper.replacesFree(dp)(replaceSnap(snapshot)).asInstanceOf[DifferentialProgram]
+    SubstitutionHelper.replacesFree(dp)(renameUsingSnapshot(snapshot)).asInstanceOf[DifferentialProgram]
   }
 
+  /**  SSA translation of a formula
+    *  We assume for simplicity that the formula does not bind any of the variables subject to SSA, meaning
+    *  we simply re-index free variable occurrences */
   def ssa(fml: Formula, snapshot: Snapshot): Formula = {
-    SubstitutionHelper.replacesFree(fml)(replaceSnap(snapshot))
+    SubstitutionHelper.replacesFree(fml)(renameUsingSnapshot(snapshot))
   }
 
+  /**  SSA translation of a hybrid program/game */
   def ssa(exp: Expression, snapshot: Snapshot): Expression = {
-    SubstitutionHelper.replacesFree(exp)(replaceSnap(snapshot))
+    SubstitutionHelper.replacesFree(exp)(renameUsingSnapshot(snapshot))
   }
 
+  /**  SSA translation of a proof method */
   def ssa(m: Method, snapshot: Snapshot): Method = {
     m match {
       case _: RCF | _: Auto | _: Prop => m
       case Using(sels, m) =>
         Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
-      // @TODO: Should this forget local proof variable numbering?
+      // @TODO: This means variable indices which are used in ss can be reused elsewhere. Is this what we want?
       case ByProof(ss) => ByProof(ssa(Block(ss), snapshot)._1.asInstanceOf[Block].ss)
     }
   }
+
+  /** SSA translation of a fact selector */
   def ssa(sel: Selector, snapshot: Snapshot): Selector = {
     sel match {
       case DefaultSelector => sel
-      // @TODO: unsure / test
+      /* @TODO: Revisit this once pattern selectors have really been used. It's arguably better for a pattern to select
+       * facts regardless of which variable version/index is used. In that case, SSA renaming would be irrelevant here*/
       case PatternSelector(e) => PatternSelector(ssa(e, snapshot))
       case ForwardSelector(pt) => ForwardSelector(ssa(pt, snapshot))
     }
   }
 
+  /** SSA transformation of a forward proof term */
   def ssa(pt: ProofTerm, snapshot: Snapshot): ProofTerm = {
     pt match {
-      // Don't rename facts, just program variables
+      /* SSA doesn't re-index fact variable names, just program variables */
       case ProofVar(x) => ProofVar(x)
-      // Context lookup should treat programvar as referring to alll versions of x
+      /* ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
       case ProgramVar(x) => ProgramVar(x)
       case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
       case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))
     }
   }
 
+  /** Apply SSA to left disjunct */
   private def either(x: Either[Term, Unit], snapshot: Snapshot): Either[Term, Unit] = {
     x match {
       case Left(f) => Left(ssa(f, snapshot))
       case Right(()) => Right(())
     }
   }
+
+  /** SSA translation of a [[Modify]] proof statement
+    * @returns Translated statement and snapshot of final state */
   def ssa(mod: Modify, snapshot: Snapshot): (Modify, Snapshot) = {
       mod match {
       case Modify(VarPat(x, p), rhs) =>
@@ -88,14 +130,18 @@ object SSAPass {
     }
   }
 
-  def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
-  def stutters(ours: Snapshot, other: Snapshot): Statement = {
+  /** Collapse double option. */
+  private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
+
+  /** @return Stuttering assignments which cause other state snapshot to match ours. */
+  private def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
     val varDiff = allKeys.filter(k => ours.get(k) != other.get(k))
     Phi(KaisarProof.block(varDiff.toList.map(x =>
       Modify(VarPat(Variable(x, opt(other.get(x))), None), Left(Variable(x, opt(ours.get(x))))))))
   }
 
+  /** @returns Translated statement and snapshot of final state */
   def ssa(s: Statement, snapshot: Snapshot): (Statement, Snapshot) = {
     s match {
       case mod: Modify => ssa(mod, snapshot)
@@ -164,7 +210,7 @@ object SSAPass {
         (InverseGhost(ss), snap)
       case PrintGoal(msg) => (PrintGoal(msg), snapshot)
       case ProveODE(ds, dc) =>
-        // @TODO: Test time variable handling
+        // @TODO: Test whether SSA re-indexing accounts for ODE statements which instantiate some duration variable t
         val snap = snapshot.addSet(VariableSets(ProveODE(ds, dc)).boundVars)
         val ds1 = ssa(ds, snap)
         val dc1 = ssa(dc, snap)
@@ -173,21 +219,35 @@ object SSAPass {
       case Was(now: Statement, was: Statement) =>
         val (now1, snap) = ssa(now, snapshot)
         (Was(now1, was), snap)
-      // @TODO: Resolve semantics of Match patterns. Here I assume that bound variables are not shadowed in a pattern-match,
-      // but that free variables may be introduced
+      /* @TODO: Decide intended semantics of Match patterns. Here I assume that bound variables are not shadowed in a pattern-match,
+       * but that free variables may be introduced */
       case Match(pat: Expression, e: Expression) =>
-        // @TODO: snapshot needs to account for all variables seen in context as well.
+        /* @TODO: Snapshot needs to account for the fact that some variables in the pattern are
+         *  already bound in the context (free reference) while others are fresh (bound position) */
         val snap = snapshot.addPattern(pat)
         (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
       case Triv() => (Triv(), snapshot)
     }
   }
 
+  /** In contrast to other ssa functions, differential equations do not update the snapshot as we go.
+    * instead, [[snapshot]] should be the snapshot at the *end* of the ODE, which must be precomputed.
+    * this difference is due to product ODEs having to assign variables in parallel */
+  def ssa(ds: DiffStatement, snapshot: Snapshot): DiffStatement = {
+    ds match {
+      case AtomicODEStatement(dp: AtomicODE) =>
+        val x = Variable(dp.xp.name, opt(snapshot.get(dp.xp.name)), dp.xp.sort)
+        val dx = DifferentialSymbol(x)
+        AtomicODEStatement(AtomicODE(dx, ssa(dp.e, snapshot)))
+      case DiffProductStatement(l, r) => DiffProductStatement(ssa(l, snapshot), ssa(r, snapshot))
+      case DiffGhostStatement(ds) => DiffGhostStatement(ssa(ds, snapshot))
+      case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(ssa(ds, snapshot))
+    }
+  }
 
-  // In contrast to other ssa functions, differential equations do not update the snapshot here.
-  // instead, [[snapshot]] should be the snapshot at the *end* of the ODE, which must be precomputed.
-  // this difference is due to product ODEs having to assign variables in parallel
-  def ssa(ds: DomainStatement, snapshot: Snapshot): (DomainStatement) = {
+  /**  SSA translation of domain statement. [[DomModify]] might bind a duration variable, in which case [[snapshot]]
+    * refers to the *final* state of the ODE. */
+  def ssa(ds: DomainStatement, snapshot: Snapshot): DomainStatement = {
     ds match {
       case DomAssume(x, f) => (DomAssume(ssa(x, snapshot), ssa(f, snapshot)))
       case DomAssert(x, f, child) => (DomAssert(ssa(x, snapshot), ssa(f, snapshot), ssa(child, snapshot)))
@@ -204,17 +264,7 @@ object SSAPass {
     }
   }
 
-  def ssa(ds: DiffStatement, snapshot: Snapshot): (DiffStatement) = {
-    ds match {
-      case AtomicODEStatement(dp: AtomicODE) =>
-        val x = Variable(dp.xp.name, opt(snapshot.get(dp.xp.name)), dp.xp.sort)
-        val dx = DifferentialSymbol(x)
-        AtomicODEStatement(AtomicODE(dx, ssa(dp.e, snapshot)))
-      case DiffProductStatement(l, r) => DiffProductStatement(ssa(l, snapshot), ssa(r, snapshot))
-      case DiffGhostStatement(ds) => DiffGhostStatement(ssa(ds, snapshot))
-      case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(ssa(ds, snapshot))
-    }
-  }
+  /** Apply SSA translation pass to Kaisar statement */
   def apply(s: Statement): Statement = {
     ssa(s, Snapshot.empty)._1
   }
