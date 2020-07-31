@@ -12,7 +12,7 @@ import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object KaisarProof {
@@ -218,6 +218,14 @@ case class Was(now: Statement, was: Statement) extends MetaNode {
 // A sequence of assignments used as phi-node in static single assignment form
 case class Phi(asgns: Statement) extends MetaNode {
   override val children: List[Statement] = List(asgns)
+  private def toMap(s: Statement, reverse: Boolean): Map[Variable, Variable] = {
+    s match {
+      case Block(ss) => ss.map(toMap(_, reverse)).foldLeft[Map[Variable, Variable]](Map())(_ ++ _)
+      case Modify(VarPat(x1, _), Left(x2: Variable)) => if (reverse) Map(x2 -> x1) else Map(x1 -> x2)
+    }
+  }
+  def forwardMap:Map[Variable, Variable] = toMap(asgns, reverse = false)
+  def reverseMap:Map[Variable, Variable] = toMap(asgns, reverse = true)
 }
 
 
@@ -258,7 +266,8 @@ case class ProofVars(xs: VCP, ps: SetLattice[String])
 object Context {
   // Contexts are proof statements showing what game has been played thus far
   type Context = Statement
-
+  // fact identifier, fact formula, whether fact is from an assignment
+  type Finder = ((Ident, Formula, Boolean)) => Boolean
   def empty: Context = Triv()
   def :+(con: Context, s: Statement): Context = {
     con match {
@@ -305,17 +314,17 @@ object Context {
   }
 
   // find most recent element first
-  def findAll(mod: Modify, finder: ((Ident, Formula)) => Boolean, isGhost: Boolean): List[(Ident, Formula)] = {
+  def findAll(mod: Modify, finder: Finder, isGhost: Boolean): List[(Ident, Formula)] = {
     mod match {
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
         val left = findAll(Modify(pat, Left(l)), finder, isGhost)
         val right = findAll(Modify(TuplePat(pats), Left(r)), finder, isGhost)
         left ++ right
-      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f))) =>
+      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f), true)) =>
         // @TODO: Proper variable renaming
         List((p, Equal(x, f)))
       // default: proof variable name = program variable name
-      case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f))) =>
+      case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f), true)) =>
         if (isGhost) {
           List()
           // @TODO: Do we ever want to throw error
@@ -328,10 +337,10 @@ object Context {
     }
   }
 
-  def findAll(dc: DomainStatement, f: ((Ident, Formula)) => Boolean): List[(Ident, Formula)] = {
+  def findAll(dc: DomainStatement, f: Finder): List[(Ident, Formula)] = {
     dc match {
-      case DomAssume(x, fml) => matchAssume(x, fml).filter(f).toList//collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter(f).toList//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAssume(x, fml) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList//collectFirst({case (mx, mf) if mx == id => mf})
       case DomAnd(l, r) => findAll(l, f) ++ findAll(r, f)
       case DomWeak(dc) =>
         findAll(dc, f) match {
@@ -361,19 +370,19 @@ object Context {
   // @TODO: unsound
   def getAssignments(con: Context, x: Variable): List[Formula] =
     searchAll(con,
-      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f)) if x.name == xx && xx == xxx && idx == idxx => true
+      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
         case _ => false
       }, isGhost = false).map(_._2)
 
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
   // free variable binding after reference for admissibility
-  def searchAll(con: Context, f: ((Ident, Formula)) => Boolean, isGhost: Boolean): List[(Ident, Formula)] = {
+  def searchAll(con: Context, f: Finder, isGhost: Boolean): List[(Ident, Formula)] = {
     con match {
       case _: Triv => Nil
-      case Assume(x, g) => matchAssume(x, g).filter(f).toList
-      case Assert(x, g, _) => matchAssume(x, g).filter(f).toList
-      case Note(x, _, Some(g)) => if (f(x, g)) List((x, g)) else Nil
+      case Assume(x, g) => matchAssume(x, g).filter({case (x,y) => f(x,y,false)}).toList
+      case Assert(x, g, _) => matchAssume(x, g).filter({case (x,y) => f(x,y,false)}).toList
+      case Note(x, _, Some(g)) => if (f(x, g, false)) List((x, g)) else Nil
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")//if (f(x, True)) List((x, True)) else Nil
       //throw ProofCheckException("Note in context needs formula annotation")
       case mod: Modify => findAll(mod, f, isGhost)
@@ -433,19 +442,25 @@ object Context {
     }
   }
 
-  def findAll(con: Context, f: ((Ident, Formula)) => Boolean): List[(Ident, Formula)] = {
+  def findAll(con: Context, f: Finder): List[(Ident, Formula)] = {
     searchAll(con, f, isGhost = false)
   }
-  def find(con: Context, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
+  def find(con: Context, f: Finder): Option[(Ident, Formula)] = {
     findAll(con, f).headOption
   }
   def getAll(con: Context, id: Ident): List[Formula] = {
-    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
+    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, false) => x == id case _ => false}
     searchAll(con, f, isGhost = false).map(_._2)
   }
   def get(con: Context, id: Ident): Option[Formula] = {
-    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
+    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, v: Formula, false) => x == id case _ => false}
     searchAll(con, f, isGhost = false).map(_._2).headOption
+  }
+
+  private def substPhi(phi: Phi, fml: Formula): Formula = {
+    val mapping = phi.reverseMap
+    val res = SubstitutionHelper.replacesFree(fml)({case v: Variable => mapping.get(v) case f => None})
+    res
   }
 
   def lastFact(con: Context): Option[Formula] = {
@@ -462,7 +477,15 @@ object Context {
       case BoxLoop(body) => lastFact(body)
       case While(_, _, body) => lastFact(body)
       // Note: After SSA, last statement is phi node, so keep looking to find "real" node
-      case Block(ss) => ss.map(lastFact).filter(_.isDefined).last
+      case Block(ss) =>
+        // @TODO: Need a more general way to handle phi assignments
+        ss.reverse match {
+          case (phi: Phi) :: rest =>
+            val fact = rest.map(lastFact).filter(_.isDefined).head
+            fact.map(substPhi(phi, _))
+          case ss =>
+            ss.map(lastFact).filter(_.isDefined).head
+        }
       case Was(now, was) => lastFact(now)
       case Ghost(s) => lastFact(s)
       // Skips all meta nodes and inverse ghosts, for example
@@ -473,13 +496,14 @@ object Context {
   def contains(con: Context, id: Ident): Boolean = get(con, id).isDefined
 
   def unifyAll(con: Context, pat: Expression): List[(Ident, Formula)] = {
-    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, fml: Formula) =>
+    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, fml: Formula, false) =>
       try {
         UnificationMatch(pat, fml)
         true
       } catch {
         case _: ProverException => false
-      }}
+      }
+    case _ => false}
     searchAll(con, f, isGhost = false)
   }
   def unify(con: Context, pat: Expression): Option[(Ident, Formula)] = unifyAll(con, pat).headOption

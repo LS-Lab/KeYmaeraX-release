@@ -380,7 +380,8 @@ object ProofChecker {
             val ff = Box(Loop(a), p)
             Context.lastFact(res) match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
-              case Some(kFml2) if kFml != kFml2 => throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
+              case Some(kFml2) if kFml != kFml2 =>
+                throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
               case Some(kFml2) => (res, ff)
             }
         }

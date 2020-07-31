@@ -32,7 +32,10 @@ object ProofTraversal {
           case Was(now: Statement, was: Statement) =>
             Was(traverse(kc, now, tf), was)
           case Block(ss) =>
-            Block(ss.map(traverse(kc, _, tf)))
+            val (conFinal, revSS) = ss.foldLeft[(Context, List[Statement])](kc, List()){case ((con, acc), s) =>
+              (Context.:+(con, s), traverse(con, s, tf) :: acc)
+            }
+            Block(revSS.reverse)
           case Switch(sel, pats) =>
             Switch(sel, pats.map({case (v, pat, s) => (v, pat, (traverse(kc, s, tf)))}))
           case BoxChoice(left, right) =>

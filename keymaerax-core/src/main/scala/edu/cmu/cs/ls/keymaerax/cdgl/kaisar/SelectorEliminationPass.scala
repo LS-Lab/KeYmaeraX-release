@@ -23,7 +23,8 @@ object SelectorEliminationPass {
     pt match {
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
-        Context.get(kc, x) match {
+        val got = Context.get(kc, x)
+        got  match {
           case Some(_) => pt
           case None => ProgramVar(x)
         }

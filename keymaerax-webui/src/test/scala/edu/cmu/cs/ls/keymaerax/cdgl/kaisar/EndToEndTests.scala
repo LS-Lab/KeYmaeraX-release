@@ -16,6 +16,6 @@ class EndToEndTests extends TacticTestBase {
   "full proof checker" should "check box loop" in withMathematica { _ =>
       val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} ?xFin:(x>=0);"
       val ff = check(pfStr)
-      ff shouldBe "[?(x>=1); x_0 := x; {x_1:=x_0+1;{?(x_1>=1);}^@ x_0:=x_1;}*;?(x_0>=0);]true".asFormula
+      ff shouldBe "[?(x>=1); x_0 := x; {x:=x_0; x_0:=x+1;{?(x_0=x+1);}^@{?(x_0>=1);}^@}*;?(x_0>=0);]true".asFormula
   }
 }
