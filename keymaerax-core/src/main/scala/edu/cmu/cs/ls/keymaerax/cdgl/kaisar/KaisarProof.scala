@@ -228,7 +228,13 @@ case class Phi(asgns: Statement) extends MetaNode {
   def reverseMap:Map[Variable, Variable] = toMap(asgns, reverse = true)
 }
 
-
+// This is a meta node because it's only used in contexts while checking the interior of a loop.
+// It helps us handle variable admissibility/renaming for loops, especially for accessing the IH.
+// boxLoop is the entire loop, progress contains the prefix of the body checked so far, and IH is the name of
+// the inductive hypothesis
+case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement, ihVar: Ident, ihFml: Formula) extends MetaNode {
+  override val children: List[Statement] = List(block(boxLoop :: progress :: Nil))
+}
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
 sealed trait DiffStatement extends ASTNode
@@ -272,6 +278,7 @@ object Context {
   def :+(con: Context, s: Statement): Context = {
     con match {
       case _: Triv  => s
+      case BoxLoopProgress(bl, pr, ihv, ihf) => BoxLoopProgress(bl, :+(pr, s), ihv, ihf)
       case Block(ss) => Block(ss.:+(s))
       case sl => Block(List(sl, s))
     }
@@ -380,56 +387,60 @@ object Context {
   def searchAll(con: Context, f: Finder, isGhost: Boolean): List[(Ident, Formula)] = {
     con match {
       case _: Triv => Nil
-      case Assume(x, g) => matchAssume(x, g).filter({case (x,y) => f(x,y,false)}).toList
-      case Assert(x, g, _) => matchAssume(x, g).filter({case (x,y) => f(x,y,false)}).toList
+      case Assume(x, g) => matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
+      case Assert(x, g, _) => matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
       case Note(x, _, Some(g)) => if (f(x, g, false)) List((x, g)) else Nil
-      case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")//if (f(x, True)) List((x, True)) else Nil
+      case Note(x, _, None) => throw ProofCheckException("Note in context needs formula annotation") //if (f(x, True)) List((x, True)) else Nil
       //throw ProofCheckException("Note in context needs formula annotation")
       case mod: Modify => findAll(mod, f, isGhost)
       case Block(ss) =>
-         def iter(ss: List[Statement], f: Finder): List[(Ident, Formula)] = {
-           ss match {
-             case Nil => Nil
-             case (s: Phi) :: ss =>
-               val ff: Finder = ({case ((x: Ident, fml: Formula, b: Boolean)) => f(x, substPhi(s, fml), b)})
-               iter(ss, ff)
-             case s :: ss => {
-               val left =
-                 searchAll(s, f, isGhost) match {
-                   case ((yx, yf)) :: _ =>
-                     val surrounding = Block(ss.reverse)
-                     val t = Context.taboos(surrounding)
-                     val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
-                     if (inter.nonEmpty) {
-                       throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
-                     }
-                   List((yx, yf))
-                 case Nil => Nil
-               }
-               left ++ iter(ss, f)
-             }
-           }
-         }
+        def iter(ss: List[Statement], f: Finder): List[(Ident, Formula)] = {
+          ss match {
+            case Nil => Nil
+            case (s: Phi) :: ss =>
+              val ff: Finder = ({
+                case ((x: Ident, fml: Formula, b: Boolean)) => f(x, substPhi(s, fml), b)
+              })
+              iter(ss, ff)
+            case s :: ss =>
+              val left =
+                searchAll(s, f, isGhost) match {
+                  case ((yx, yf)) :: _ =>
+                    val surrounding = Block(ss.reverse)
+                    val t = Context.taboos(surrounding)
+                    val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
+                    if (inter.nonEmpty) {
+                      throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
+                    }
+                    List((yx, yf))
+                  case Nil => Nil
+                }
+              left ++ iter(ss, f)
+          }
+        }
+
         iter(ss.reverse, f)
       case BoxChoice(l, r) =>
-        val and: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {case ((k1, v1), (k2, v2)) =>
-          if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
-          else (k1, And(v1, v2))
+        val and: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
+          case ((k1, v1), (k2, v2)) =>
+            if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+            else (k1, And(v1, v2))
         }
         searchAll(l, f, isGhost) ++ searchAll(r, f, isGhost)
       // @TODO
       case Switch(sel, pats) =>
-        val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula)  = {case ((k1, v1), (k2,v2)) =>
-          if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
-          else (k1, Or(v1, v2))
+        val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
+          case ((k1, v1), (k2, v2)) =>
+            if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+            else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({case (v, e, s) => searchAll(s, f, isGhost)})
+        val fmls = pats.flatMap({ case (v, e, s) => searchAll(s, f, isGhost) })
         if (fmls.isEmpty) Nil
         else List(fmls.reduceRight(or))
       case Ghost(s) => searchAll(s, f, isGhost = true)
       case Phi(s) => searchAll(s, f, isGhost = true)
       case InverseGhost(s) => Nil
-        /*val xs = Context.taboos(InverseGhost(s)).vars
+      /*val xs = Context.taboos(InverseGhost(s)).vars
         search(s, f, isGhost) match {
           case Some(ml) =>
             // @TODO: distinguished exception
@@ -438,10 +449,13 @@ object Context {
         }*/
       case po: ProveODE => findAll(po.dc, f) // @TODO: Needs ghost arg?
       case Was(now, was) => searchAll(now, f, isGhost)
-      case _ : Label | _: LetFun | _: Match | _: PrintGoal => Nil
+      case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
       // @TODO: These loop cases probably work, but subtle
       case While(_, _, body) => searchAll(body, f, isGhost)
       case BoxLoop(body) => searchAll(body, f, isGhost)
+      case BoxLoopProgress(boxLoop, progress, ihVar, ihFml) =>
+        val ihMatch = if(f(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
+        ihMatch ++ searchAll(progress, f, isGhost)
     }
   }
 
@@ -466,12 +480,13 @@ object Context {
     res
   }
 
-  def lastFact(con: Context): Option[Formula] = {
+  def lastFact(con: Context): Option[(Ident, Formula)] = {
     con match {
-      case Assume(x, f) => Some(f)
-      case Assert(x, f, _) => Some(f)
-      case Note(x, pt, opt) => opt
-      case Modify(VarPat(x, _), Left(f)) => Some(Equal(x, f))
+      case Assume(x: Variable, f) => Some((x, f))
+      case Assert(x: Variable, f, _) => Some((x,f))
+      case Note(x: Variable, pt, opt) => opt.map((x, _))
+      case Modify(VarPat(x, Some(p)), Left(f)) => Some((p, Equal(x, f)))
+      case Modify(VarPat(x, _), Left(f)) => Some((x, Equal(x, f)))
       case BoxChoice(l, r) =>
         (lastFact(l), lastFact(r)) match {
           case (Some(resL), Some(resR)) if resL == resR => Some(resL)
@@ -485,7 +500,7 @@ object Context {
         ss.reverse match {
           case (phi: Phi) :: rest =>
             val fact = rest.map(lastFact).filter(_.isDefined).head
-            fact.map(substPhi(phi, _))
+            fact.map({case (x, fml) => (x, substPhi(phi, fml))})
           case ss =>
             ss.map(lastFact).filter(_.isDefined).head
         }

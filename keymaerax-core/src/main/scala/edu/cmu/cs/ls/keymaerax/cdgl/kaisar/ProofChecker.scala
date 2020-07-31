@@ -373,14 +373,15 @@ object ProofChecker {
       case BoxLoop(s: Statement) =>
         Context.lastFact(con) match {
           case None => throw ProofCheckException(s"No invariant found in $con")
-          case Some(kFml) =>
-            val (ss, f) = apply(con, s)
+          case Some((kName, kFml)) =>
+            val progCon = BoxLoopProgress(BoxLoop(s), Triv(), kName, kFml)
+            val (ss, f) = apply(progCon, s)
             val Box(a,p) = asBox(f)
             val res = BoxLoop(ss)
             val ff = Box(Loop(a), p)
             Context.lastFact(res) match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
-              case Some(kFml2) if kFml != kFml2 =>
+              case Some((kName2, kFml2)) if kFml != kFml2 =>
                 throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
               case Some(kFml2) => (res, ff)
             }
