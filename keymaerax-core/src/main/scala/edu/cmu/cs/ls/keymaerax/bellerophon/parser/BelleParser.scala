@@ -554,7 +554,9 @@ object BelleParser extends (String => BelleExpr) with Logging {
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
 
-      def expand[T <: Expression](e: T): T = if (expandAll) defs.exhaustiveSubst(e) else defs.elaborateToFunctions(e)
+      def expand[T <: Expression](e: T): T =
+        if (expandAll) defs.elaborateToFunctions(defs.exhaustiveSubst(e))
+        else defs.elaborateToFunctions(e)
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.

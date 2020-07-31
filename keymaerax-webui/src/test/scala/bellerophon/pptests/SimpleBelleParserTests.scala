@@ -734,6 +734,30 @@ class SimpleBelleParserTests extends TacticTestBase {
       ExpandAll(SubstitutionPair(PredOf(Function("g", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(0))) :: Nil)
   }
 
+  it should "default expand and elaborate model definitions with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("""dC("f(x)", 1)""", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note Known locations identify model definitions
+        (("f", None), (Some(Real), Bool, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, Region(0, 0, 0, 0)))
+      )), expandAll = true)
+    tactic shouldBe ExpandAll(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
+      TactixLibrary.dC("x>g()".asFormula)(1)
+  }
+
+  it should "default expand and elaborate model definitions with expandAllDefs and in tactics" in {
+    val tactic = BelleParser.parseWithInvGen("""dC("x>g", 1)""", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note Known locations identify model definitions
+        (("f", None), (Some(Real), Bool, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, Region(0, 0, 0, 0)))
+      )), expandAll = true)
+    tactic shouldBe ExpandAll(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
+      TactixLibrary.dC("x>g()".asFormula)(1)
+  }
+
   it should "topologically sort definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
