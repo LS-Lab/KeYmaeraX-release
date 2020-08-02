@@ -32,8 +32,8 @@ object SSAPass {
   // Substitution helper function which re-indexes SSA variables according to a snapshot
   private def renameUsingSnapshot(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
     f match {
-      case bv: BaseVariable => Some(BaseVariable(bv.name, opt(snapshot.get(bv.name)), bv.sort))
-      case dv: DifferentialSymbol => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.get(dv.x.name)), dv.sort)))
+      case bv: BaseVariable => Some(BaseVariable(bv.name, opt(snapshot.getOpt(bv.name)), bv.sort))
+      case dv: DifferentialSymbol => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.getOpt(dv.x.name)), dv.sort)))
       case _ => None
     }
   })
@@ -136,9 +136,9 @@ object SSAPass {
   /** @return Stuttering assignments which cause other state snapshot to match ours. */
   private def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
-    val varDiff = allKeys.filter(k => ours.get(k) != other.get(k))
+    val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
     Phi(KaisarProof.block(varDiff.toList.map(x =>
-      Modify(VarPat(Variable(x, opt(other.get(x))), None), Left(Variable(x, opt(ours.get(x))))))))
+      Modify(VarPat(Variable(x, opt(other.getOpt(x))), None), Left(Variable(x, opt(ours.getOpt(x))))))))
   }
 
   /** @returns Translated statement and snapshot of final state */
@@ -236,7 +236,7 @@ object SSAPass {
   def ssa(ds: DiffStatement, snapshot: Snapshot): DiffStatement = {
     ds match {
       case AtomicODEStatement(dp: AtomicODE) =>
-        val x = Variable(dp.xp.name, opt(snapshot.get(dp.xp.name)), dp.xp.sort)
+        val x = Variable(dp.xp.name, opt(snapshot.getOpt(dp.xp.name)), dp.xp.sort)
         val dx = DifferentialSymbol(x)
         AtomicODEStatement(AtomicODE(dx, ssa(dp.e, snapshot)))
       case DiffProductStatement(l, r) => DiffProductStatement(ssa(l, snapshot), ssa(r, snapshot))

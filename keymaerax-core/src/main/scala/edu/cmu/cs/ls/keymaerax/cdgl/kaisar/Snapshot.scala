@@ -1,20 +1,44 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/** A snapshot associates subscripts to variable names. Because indices are used in SSA to distinguish the values of one
+  * variable at different points in time or different points in the code, a snapshot suffices as an abstraction for
+  * different "times" (technically, locations) in a proof.
+  *
+  * @author Brandon Bohrer
+  * @see [[edu.cmu.cs.ls.keymaerax.cdgl.kaisar.SSAPass]]
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Subscript
 import edu.cmu.cs.ls.keymaerax.core._
 
 case class Snapshot (private val m: Map[String, Subscript])  {
+  /** Entry (x -> None) means we saw base variable "x", whereas no "x" entry means we never saw any version of "x". */
   val asMap: Map[String, Subscript] = m
+  /** Collapse Some(None) to None */
   private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
-  def get(s: String): Option[Subscript] = m.get(s)
+  /** Add an element x to the map, and override any previous index of x. In contrast, the public interface for
+    *  [[Snapshot]] should take the maximum index rather than forgetting the old index for x. */
+  private def +(x: (String, Subscript)): Snapshot = Snapshot(m.+(x))
+
+  /** Look up "x" but distinguish the "never saw x" case (None) vs "only saw x with no index" case (Some(None)) */
+  def getOpt(s: String): Option[Subscript] = m.get(s)
+  /** Look up "x" and don't distinguish the "never saw x" case. This can be more convenient, and is adequate so long as
+    * we wish for SSA numbering to start at x_0 rather than x. */
+  def get(s: String): Subscript = opt(getOpt(s))
+
+  /* The following functions wrap the underlying Map[T1, T2] methods. */
   def keySet: Set[String] = m.keySet
   def filter(p: ((String, Subscript)) => Boolean): Snapshot = Snapshot(m.filter(p))
-  def +(x: (String, Subscript)): Snapshot = Snapshot(m.+(x))
+
+  /** Take the union of two snapshots. When both snapshots mention the same variable, the greater subscript is kept. */
   def ++(other: Snapshot): Snapshot = {
     val keys: Set[String] = keySet.++(other.keySet)
     keys.foldLeft[Snapshot](Snapshot.empty)((map, k) =>
-      (opt(get(k)), opt(other.get(k))) match {
-        case (Some(x: Int),Some(y: Int)) => map.+(k -> Some(x.max(y)))
+      (opt(getOpt(k)), opt(other.getOpt(k))) match {
+        case (Some(x: Int), Some(y: Int)) => map.+(k -> Some(x.max(y)))
         case (x: Some[Int], _) => map.+(k -> x)
         case (_, y: Some[Int]) => map.+(k -> y)
         case _ => map
@@ -22,7 +46,11 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     )
   }
 
+  /** Augment snapshot with all variables freshly bound in the pattern. */
+  /* @TODO: Double-check that the snapshot captures all previous free appearances of variables and not just bound
+   * appearances. Otherwise, we might treat a variable in a pattern as a binder when it should be a free mention. */
   def addPattern(pat: Expression): Snapshot = {
+    // A pattern only binds a variable if it has not been mentioned before. So select just the "new" variables.
     val bv = keySet.map(Variable(_))
     val fv = pat match {
       case f: Term => StaticSemantics(f)
@@ -34,19 +62,24 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     Snapshot(freshSet.toMap)
   }
 
+  /** Add a set of bound variables to a snapshot. This (or increment) should be called wherever variables are assigned.
+    * If the variables have been bound before, their subscripts are increased according to SSA. */
   def addSet(vars: Set[Variable]): Snapshot = {
     val allVars: Set[String] = keySet.++(vars.map(_.name))
     allVars.foldLeft[Snapshot](Snapshot.empty){case (snap, v) =>
-      val idx = opt(get(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
+      val idx = opt(getOpt(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
       snap.+(v -> idx)
     }
   }
 
+  /** Add a variable to a snapshot. This (or addSet) should be called wherever a single variable is assigned.
+    * If [[x]] is already in the snapshot, its subscript is incremented.
+    * @return the variable with its new index and the updated snapshot. */
   def increment(x: Variable): (Variable, Snapshot) = {
     x match {
       case BaseVariable(name, Some(_), sort) => throw new Exception("SSA pass expected no subscripted variables in input")
       case BaseVariable(name, None, sort) =>
-        val index: Option[Int] = get(name) match {
+        val index: Option[Int] = getOpt(name) match {
           case None => Some(0)
           case Some(None) => Some(0)
           case Some(Some(i)) => Some(i+1)
@@ -59,6 +92,7 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     }
   }
 }
+
 object Snapshot {
   val empty: Snapshot = new Snapshot(Map())
 }
