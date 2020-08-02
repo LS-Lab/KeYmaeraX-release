@@ -1,3 +1,13 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Visitor pattern for Kaisar proofs, useful for implementing simple compiler passes.
+  * Basic context management is performed. The preX functions allow the visitor to optionally modify the statement
+  * instead of traversing it recursively, while the postX functions allow modifying the result of a recursive call.
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction]]
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
@@ -6,23 +16,44 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.FTPG
 
 object ProofTraversal {
+  /** Interface for modifying some or all syntactic classes of Kaisar proofs. While Kaisar has many syntactic classes,
+    * all follow the same pattern: 1) optionally modify the input of a recursive call. If you choose to do so, that
+    * recursive call ends. Else, modify the result of applying the inductive hypotheses.
+    *
+    * If your desired output is of a different type, have your traversal function mutate a variable.
+    * */
   trait TraversalFunction {
+    /* pre-modify statement */
     def preS(kc: Context, s: Statement): Option[Statement] = None
+    /* post-modify statement */
     def postS(kc: Context, s: Statement): Statement = s
+    /* pre-modify ODE domain statement */
     def preDomS(kc: Context, s: DomainStatement): Option[DomainStatement] = None
+    /* post-modify ODE domain statement */
     def postDomS(kc: Context, s: DomainStatement):  DomainStatement = s
+    /* pre-modify ODE differential statement */
     def preDiffS(kc: Context, s: DiffStatement): Option[DiffStatement] = None
+    /* post-modify ODE differential statement */
     def postDiffS(kc: Context, s: DiffStatement): DiffStatement = s
+    /* pre-modify fact selector for proof step */
     def preSel(kc: Context, s: Selector): Option[Selector] = None
-    def postSel(kc: Context, s: Selector):Selector  = s
+    /* post-modify fact selector for proof step */
+    def postSel(kc: Context, s: Selector): Selector  = s
+    /* pre-modify proof step method */
     def preM(kc: Context, s: Method): Option[Method] = None
+    /* post-modify proof step method */
     def postM(kc: Context, s: Method): Method = s
+    /* pre-modify forward proof term */
     def prePT(kc: Context, s: ProofTerm): Option[ProofTerm] = None
+    /* post-modify forward proof term */
     def postPT(kc: Context, s: ProofTerm): ProofTerm = s
+    /* pre-modify assignment pattern (pattern for LHS of an assignment statement) */
     def preAP(kc: Context, s: AsgnPat): Option[AsgnPat] = None
+    /* post-modify assignment pattern (pattern for LHS of an assignment statement) */
     def postAP(kc: Context, s: AsgnPat): AsgnPat  = s
   }
 
+  /* Traverse statement */
   def traverse(kc: Context, s: Statement, tf: TraversalFunction): Statement = {
     tf.preS(kc, s) match {
       case Some(st) => st
@@ -61,6 +92,7 @@ object ProofTraversal {
     }
   }
 
+  /** traverse a differential statement */
   def traverse(kc: Context, ds: DiffStatement, tf: TraversalFunction): DiffStatement = {
     tf.preDiffS(kc, ds) match {
       case Some(ds) => ds
@@ -75,6 +107,7 @@ object ProofTraversal {
     }
   }
 
+  /** traverse a domain statement */
   def traverse(kc: Context, ds: DomainStatement, tf: TraversalFunction): DomainStatement = {
     tf.preDomS(kc, ds) match {
       case Some(ds) => ds
@@ -91,6 +124,7 @@ object ProofTraversal {
     }
   }
 
+  /** traverse a forward proof term */
   def traverse(kc: Context, pt: ProofTerm, tf: TraversalFunction): ProofTerm = {
     tf.prePT(kc, pt) match {
       case Some(pt) => pt
@@ -104,6 +138,7 @@ object ProofTraversal {
     }
   }
 
+  /** traverse a proof step method */
   def traverse(kc: Context, m: Method, tf: TraversalFunction): Method = {
     tf.preM(kc, m) match {
       case Some(m) => m
@@ -117,6 +152,7 @@ object ProofTraversal {
     }
   }
 
+  /** Traverse a fact selector */
   def traverse(kc: Context, s: Selector, tf: TraversalFunction): Selector = {
     tf.preSel(kc, s) match {
       case Some(sel) => sel
@@ -129,6 +165,7 @@ object ProofTraversal {
     }
   }
 
+  /** Traverse an assignment pattern. */
   def traverse(kc: Context, ap: AsgnPat, tf: TraversalFunction): AsgnPat = {
     tf.preAP(kc, ap) match {
       case Some(ap) => ap

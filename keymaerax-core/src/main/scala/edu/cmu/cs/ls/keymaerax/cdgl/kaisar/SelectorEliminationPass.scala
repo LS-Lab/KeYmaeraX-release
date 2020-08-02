@@ -1,15 +1,26 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Reduces all other selectors to proof and program-variable selectors.
+  * Proof-term selectors are translated to [[Note]]s. Variables, which are armbiguous
+  * in the source syntax, are disambiguated to program variables or proof variables, and the "default"
+  * selector is lowered as well.
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 
 object SelectorEliminationPass {
+  /** Generous notion of free variables: include variables explicitly mentioned in proof term as well as program variables
+    * mentioned in any fact used in the proof. */
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
     pt match {
       case ProgramVar(x) => Set(x)
-      case ProofVar(x) => StaticSemantics(Context.get(con, x).get).fv.toSet
+      case ProofVar(x) => StaticSemantics(Context.get(con, x).getOrElse(True)).fv.toSet
       case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Term) => StaticSemantics(e).toSet
@@ -17,8 +28,7 @@ object SelectorEliminationPass {
     }
   }
 
-  // The parser uses the same syntax for fact variables and for program variable proof terms which refer to all assignments
-  // of a given variable
+  /** Determine which variables in [[pt]] are fact variables vs. program variables when resolved in context [[kc]]. */
   private def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
     pt match {
       case ProofVar(x) =>
@@ -30,10 +40,11 @@ object SelectorEliminationPass {
         }
       case ProofApp(m, n) => ProofApp(disambiguate(kc, m), disambiguate(kc, n))
       case ProofInstance(e) => ProofInstance(e)
-      case ProgramVar(x) => throw new Exception("Didn't expect program variable proof term in selector elimination pass.")
+      case ProgramVar(x) => throw new Exception("Did not expect program variable proof term in selector elimination pass.")
     }
   }
 
+  /** @return list of proof terms selected by selector. */
   private def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
       case DefaultSelector =>
@@ -45,6 +56,7 @@ object SelectorEliminationPass {
     }
   }
 
+  /** @return list of assumption proof term for method, paired with underlying method  */
   private def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
     m match {
       case Using(use, m) =>
@@ -59,6 +71,7 @@ object SelectorEliminationPass {
     }
   }
 
+  /** @return list of note statements for proof assumptions, paired with elaborated statement. */
   private def collectPts(kc: Context, dc: DomainStatement): (List[Note], DomainStatement) = {
     dc match {
       case DomAnd(l, r) =>
@@ -79,6 +92,7 @@ object SelectorEliminationPass {
     }
   }
 
+  /** @return statement where advanced selectors have been elaborated to simple selectors */
   def apply(s: Statement): Statement = {
     ProofTraversal.traverse(Context.empty, s, new TraversalFunction {
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
@@ -87,7 +101,7 @@ object SelectorEliminationPass {
             val (pts, meth) = collectPts(kc, m, f)
             val (_, notes: List[Ghost]) =
               pts.foldLeft[(Context, List[Ghost])]((kc, List[Ghost]()))({case ((kc, acc: List[Ghost]), pt) =>
-                // TODO: Hack: context doesnt say what conclusion is
+                // TODO: Hack: context doesn't say what conclusion is
                 val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
                 // notes should be ghosts since they did not appear in the user's intended proof/program.
                 // proofchecking output after selector elimination should "look like" proofchecking the input

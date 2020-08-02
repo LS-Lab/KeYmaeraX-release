@@ -1,23 +1,27 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-//import edu.cmu.cs.ls.keymaerax.cdgl.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Statements
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
+/** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
+  // If [[SSA]] is on, apply strict soundness/admissibility checking, which only works if our inputs have been pre-processed
+  // with static single assignment. If [[SSA]] is off, do not use strict soundness checking, in which case the checker is not sound.
   val SSA: Boolean = true
 
-
-  def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
+  /** @return all formulas selected by a selector */
+  private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        val res = fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, wantProgramVar = true).toList)
-        res
+        fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, wantProgramVar = true).toList)
       case ForwardSelector(pt) =>
         List(ForwardProofChecker(con, pt))
       case PatternSelector(e) =>
@@ -25,7 +29,7 @@ object ProofChecker {
     }
   }
 
-  // @TODO: Can't find assumptions for [[ghost0]] because note formula never annotated and context in wrong order, messes up search
+  /** @return formulas selected in method, paired with underlying basic method */
   def methodAssumptions(con: Context, m: Method, goal: Formula): (List[Formula], Method) = {
     m match {
       case Using(sels, m) =>
@@ -36,21 +40,28 @@ object ProofChecker {
     }
   }
 
-  def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method): Unit = {
+  /** @return unit if [[f]] succeeds, else throw [[ProofCheckException]] */
+  private def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method): Unit = {
     if(!f) throw new ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
   }
 
-  def rcf(assms: Set[Formula], f: Formula): Boolean = {
+  /* Implement rcf (real-closed fields) method */
+  private def rcf(assms: Set[Formula], f: Formula): Boolean = {
     edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(Imply(assms.foldLeft[Formula](True)(And), f))
   }
 
-  def auto(assms: Set[Formula], f: Formula): Boolean = {
+  /* implement heuristic "auto" method, which combines propositional and QE reasoning */
+  private def auto(assms: Set[Formula], f: Formula): Boolean = {
     prop(assms, f, rcf)
   }
 
-  val hyp: (Set[Formula], Formula) => Boolean = ((fs, f) => fs.contains(f))
+  /* trivial hypothesis-rule method */
+  private val hyp: (Set[Formula], Formula) => Boolean = ((fs, f) => fs.contains(f))
 
-  def contextAlphas(fmls: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+  /** Apply alpha (invertible) elimination rules to the context wherever possible, then recursively apply other prop rules.
+   * @param leaf is a proof method applied at leaves of search
+   * @return whether fmls |- f proves propositionally */
+  private def contextAlphas(fmls: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     fmls.find{case _: And => true case _: Equiv => true  case False => true case _ => false} match {
       case Some(False) => true
       case Some(And(l, r)) => prop(fmls.-(And(l,r)).+(l).+(r), f, leaf)
@@ -58,7 +69,11 @@ object ProofChecker {
       case _ => conclusionBeta(fmls, f, leaf)
     }
   }
-  def conclusionBeta(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+
+  /** Apply beta (non-invertible) elimination rules to the conclusion if possible, then recursively apply other prop rules.
+    * @param leaf is a proof method applied at leaves of search
+    * @return whether assms |- f proves propositionally */
+  private def conclusionBeta(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     f match {
       case And(l, r) => prop(assms, l, leaf) && prop(assms, r, leaf)
       case Equiv(l, r) => prop(assms.+(l), r) && prop(assms.+(r), l)
@@ -66,26 +81,32 @@ object ProofChecker {
     }
   }
 
-  def contextBetas(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+  /** Apply beta (non-invertible) elimination rules to the context if possible, then recursively apply other prop rules.
+    * @param leaf is a proof method applied at leaves of search
+    * @return whether assms |- f proves propositionally */
+  private def contextBetas(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     assms.find { case _: Or => true case _: Imply => true case _ => false } match {
       case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) || prop(assms.-(Or(l,r)).+(r), f, leaf)
       case Some(Imply(l, r)) => prop(assms.-(Imply(l,r)), l) && prop(assms.-(Imply(l,r)).+(r), f)
       case _ => leaf(assms, f)
     }
   }
-  def prop(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
-    // Alpha introduction rules
+
+  /** Prop method which attempts propositional proof.
+    * @param leaf is a proof method applied at leaves of search
+    * @return whether assms |- f proves propositionally */
+  private def prop(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    // Try alpha (invertible) rules on conclusion first
     f match {
-      case True => true
-      // True, False, And, Or, Imply, Equiv, Not, Box, Diamond, Forall, Cmp
+      case True => true  // True proves trivially
       case Imply(l, r) => prop(assms.+(l), r, leaf)
       case Not(f) => prop(assms.+(f), False)
       case _ => contextAlphas(assms, f, leaf)
     }
   }
 
-  def apply(con: Context, f: Formula, m: Method): Unit = {
-    //val defaultMeth = Using(List(DefaultSelector(f)), m)
+  /** @return unit if f proves by method [[m]], else throw. */
+  private def apply(con: Context, f: Formula, m: Method): Unit = {
     val (assms, meth) = methodAssumptions(con, m, f)
     meth match {
       case  RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
@@ -98,8 +119,9 @@ object ProofChecker {
     }
   }
 
-  // @TODO: Extremely incomplete
-  def exhaustive(es: List[Expression]): Boolean = {
+  /** exhaustive proof method which is used by default to check whether very simple case analyses are constructively exhaustive */
+  // @TODO: Make more complete
+  private def exhaustive(es: List[Expression]): Boolean = {
     val exprs = es.sortWith((l,r) => (l, r) match {
       case (_: Greater, _: Less) => true case (_: GreaterEqual, _: Less) => true
       case (_: Greater, _: LessEqual) => true case (_: GreaterEqual, _: LessEqual) => true
@@ -118,7 +140,8 @@ object ProofChecker {
     }
   }
 
-  def admitLetFun(con: Context, lf: LetFun): Unit = {
+  /**  @return unit only if [[LetFun]] statement is admissible (does not violate soundness conditions) */
+  private def admitLetFun(con: Context, lf: LetFun): Unit = {
     val LetFun(f, args, body) = lf
     val sigBody = StaticSemantics.signature(body)
     val sig = Context.signature(con)
@@ -130,16 +153,21 @@ object ProofChecker {
     }
   }
 
-  def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
+  /**  Check a differential equation proof */
+  // @TODO implement
+  private def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
     ???
   }
 
+  /** @return equivalent formula of f, with shape [a]P */
   private def asBox(f: Formula): Box = {
     f match {
       case b: Box => b
       case _ => Box(Dual(Test(f)), True)
     }
   }
+
+  /** @return equivalent formula of f, with shape <a>P */
   private def asDiamond(f: Formula): Diamond = {
     f match {
       case b: Diamond => b
@@ -147,9 +175,14 @@ object ProofChecker {
     }
   }
 
+
+  /** @TODO: These should use unification, see [[Context]] */
+  /** @return unification result of p and q, if any */
   private def unifyFml(p: Formula, q: Formula): Option[Formula] = {
     if (p == q) Some(p) else None
   }
+
+  /** @return unification result of formulas, if any. */
   private def unifyFmls(ps: Seq[Formula]): Option[Formula] = {
     ps match {
       case Nil => None
@@ -161,6 +194,7 @@ object ProofChecker {
     }
   }
 
+  /** @return Box formula which runs programs of [[p]] first, then programs of [[b]]*/
   private def concatBox(p: Formula, q: Formula): Formula = {
     (p, q) match {
       case (True, _) => q
@@ -173,6 +207,7 @@ object ProofChecker {
     }
   }
 
+  /** unzip triples */
   private def unzip3[T1,T2,T3](seq:List[(T1,T2,T3)]):(List[T1],List[T2],List[T3]) = {
     seq match {
       case Nil => (Nil, Nil, Nil)
@@ -182,6 +217,7 @@ object ProofChecker {
     }
   }
 
+  /** zip triples */
   private def zip3[T1,T2,T3](xs:List[T1],ys:List[T2],zs:List[T3]):List[(T1,T2,T3)] = {
     (xs, ys, zs) match {
       case (Nil, Nil, Nil) => Nil
@@ -190,20 +226,25 @@ object ProofChecker {
     }
   }
 
-
+  /** Check a proof, or list of statements.
+    * @return final context and conclusion, else raises. */
   def apply(con: Context, p: Statements): (Context, Formula) = {
     apply(con, Block(p))
   }
-  // Collect disjuncts only down the right side, rather than *all* disjuncts. This allows us to support case analyses
-  // where some branches may be disjunctions
-  def disjoin(fml: Formula, k: Int): List[Formula] = {
+
+  /** Collect disjuncts only down the right side, rather than *all* disjuncts. This allows us to support case analyses
+   * where some branches may be disjunctions */
+  private def disjoin(fml: Formula, k: Int): List[Formula] = {
     (fml, k) match {
       case (_, 1) => fml :: Nil
       case (Or(l, r), _) =>l :: disjoin(r, k-1)
       case (_, _) => throw ProofCheckException(s"Not enough branches in case statement, disjunct $fml unmatched")
     }
   }
-  def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression]): Unit = {
+
+  /** @return unit if the conclusion of selector [[sel]] has the same cases as the [[branches]], i.e. if our case analysis
+    * has exactly the right cases expected by the formula that we case-analyze */
+  private def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression]): Unit = {
     // Goal formala "true" should be ignored, case selector should not be "default"
     methodAssumptions(con: Context, sel: Selector, True) match {
       case fml :: Nil =>
@@ -222,8 +263,9 @@ object ProofChecker {
       case fmls => throw ProofCheckException("Switch expected scrutinee to match exactly one formula, but matches: " + fmls)
     }
   }
-  // Result is (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
-  // by that elaborated program
+
+  /** @return  (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
+  * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
       case Assert(_ , f, m) =>

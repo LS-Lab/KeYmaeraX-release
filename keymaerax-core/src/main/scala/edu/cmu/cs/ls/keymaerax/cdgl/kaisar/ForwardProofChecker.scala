@@ -1,3 +1,11 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Checks forward CdGL-style natural deduction proof terms
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context.Context
@@ -6,19 +14,32 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 
+/** Checks forward CdGL-style natural deduction proof terms */
 object ForwardProofChecker {
+  /** Replace variable with term */
   private def subst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(x, f)
+  /** Replace occurrences of term with variable */
   private def invSubst(x: Variable, f: Term, p: Formula): Formula = p.replaceAll(f, x)
-  val nullaryBuiltin: Map[String, Formula] = Map("trueI" -> True)
-  val unaryBuiltin: Map[String, (String, ForwardArg => Formula)] = Map(
+
+  /** When evaluating a forward proof term, distinguish [[ProvedArg]] (that is, arguments which are proofs of facts) vs.
+    * [[ExpressionArg]] which are simply inputs that do not require proof. */
+  private sealed trait ForwardArg
+  private case class ProvedArg (fml: Formula) extends ForwardArg
+  private case class ExpressionArg (expr: Expression) extends ForwardArg
+
+  /** The following tables define the built-in proof term connectives, with usage strings, organized by arity. */
+  private val nullaryBuiltin: Map[String, Formula] = Map("trueI" -> True)
+  private val unaryBuiltin: Map[String, (String, ForwardArg => Formula)] = Map(
     "andEL"   -> ("andEL (proof: P & Q)", {case ProvedArg(And(l, r)) => l}),
     "andER"   -> ("andER (proof: P & Q)", {case ProvedArg(And(l, r)) => r}),
     "equivEL" -> ("equivEL (proof: P <-> Q)", {case ProvedArg(Equiv(l, r)) => Imply(l, r)}),
     "equivER" -> ("equivER (proof: P <-> Q)", {case ProvedArg(Equiv(l, r)) => Imply(r, l)}),
     "notI"    -> ("notI (proof: P -> False)", {case (ProvedArg(Imply(p, False))) => Not(p)})
   )
-  val binaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg) => Formula)] = Map(
+  private val binaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg) => Formula)] = Map(
     "andI" -> ("andI (proofL: P) (proofR: Q)", {case (ProvedArg(l), ProvedArg(r)) => And(l, r)}),
+    /* Note that in natural deduction, we wish to compute the conclusion given the proof, so we annotate orI<X> with
+    *  the unknown disjunct, for example */
     "orIL" -> ("orIL (proof: P) (Q : Formula)", {case (ProvedArg(l), ExpressionArg(r: Formula)) => Or(l, r)}),
     "orIR" -> ("orIR (P: Formula) (proof: Q)", {case (ExpressionArg(l: Formula), ProvedArg(r)) => Or(l, r)}),
     "notE" -> ("notE (proofL: !P) (proofR: P)", {case (ProvedArg(Not(p)), ProvedArg(pp)) if p == pp => False}),
@@ -28,23 +49,20 @@ object ForwardProofChecker {
     "allE" -> ("allE (proof: forall x, P) (f: Term)", {case (ProvedArg(Forall(xs, p)), ExpressionArg(f: Term)) => subst(xs.head, f, p)}),
     "existsE" -> ("existsE (proofL: exists x, P) (proofR: forall y, P -> Q)", {case (ProvedArg(Exists(List(x), p)), ProvedArg(Forall(List(y), Imply(pp, q)))) if p == pp && x == y && !StaticSemantics(q).fv.contains(x) => q})
   )
-  val ternaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg, ForwardArg) => Formula)] = Map(
+  private val ternaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg, ForwardArg) => Formula)] = Map(
     "orE"     -> ("orE (proof: A | B) (proofL: A -> C) (proofR: B -> C)", {case (ProvedArg(Or(a,b)), ProvedArg(Imply(aa, c)), ProvedArg(Imply(bb, cc))) if a == aa && b == bb && c == cc => c}),
     "existsI" -> ("existsI (x: Variable) (f: Term) (proof: P(f))", {case (ExpressionArg(x: Variable), ExpressionArg(f: Term), ProvedArg(p)) => Exists(List(x), invSubst(x, f, p))})
   )
 
-  sealed trait ForwardArg
-  case class ProvedArg (fml: Formula) extends ForwardArg
-  case class ExpressionArg (expr: Expression) extends ForwardArg
-
-
-  def ptToForwardArg(con: Context, pt: ProofTerm): ForwardArg = {
+  // Distinguish proof terms that prove things vs. ones that supply inputs.
+  private def ptToForwardArg(con: Context, pt: ProofTerm): ForwardArg = {
     pt match {
       case ProofInstance(e) => ExpressionArg(e)
       case _ => ProvedArg(apply(con, pt))
     }
   }
 
+  // Type-safe application of unary proof rules.
   private def unary(name: String, arg1: ForwardArg): Formula = {
     val (spec, f) = unaryBuiltin(name)
     try {
@@ -55,6 +73,7 @@ object ForwardProofChecker {
     }
   }
 
+  // Type-safe application of binary proof rules.
   private def binary(name: String, arg1: ForwardArg, arg2: ForwardArg): Formula = {
     val (spec, f) = binaryBuiltin(name)
     try {
@@ -65,6 +84,7 @@ object ForwardProofChecker {
     }
   }
 
+  // Type-safe application of ternary proof rules.
   private def ternary(name: String, arg1: ForwardArg, arg2: ForwardArg, arg3: ForwardArg): Formula = {
     val (spec, f) = ternaryBuiltin(name)
     try {
@@ -75,7 +95,7 @@ object ForwardProofChecker {
     }
   }
 
-  // @TODO: Check scope and ghosting
+  /** @return the formula proven by proof term [[pt]] in context [[con]], else throws [[ProofCheckException]]*/
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
       case ProgramVar(x) =>

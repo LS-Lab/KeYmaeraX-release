@@ -3,7 +3,7 @@
   * See LICENSE.txt for the conditions of this license.
   */
 /**
-  * Syntactic compute variable sets for static semantics of Kaisar proofs
+  * Syntactically compute variable sets for static semantics of Kaisar proofs
   * @author Brandon Bohrer
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar

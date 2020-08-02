@@ -1,15 +1,15 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import fastparse.Parsed.{Failure, Success}
 
 
-
-
+/** Entry-point for Kaisar proof checker, which parses a proof and applies all passes in correct order */
 object Kaisar {
 
   private def p[T](s: String, parser: P[_] => P[T]): T =
