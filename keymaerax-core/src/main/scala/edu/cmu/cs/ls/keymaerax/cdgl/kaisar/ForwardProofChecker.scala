@@ -8,7 +8,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context.Context
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -99,7 +99,7 @@ object ForwardProofChecker {
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
       case ProgramVar(x) =>
-        val asgns = Context.getAssignments(con, x)
+        val asgns = con.getAssignments(x)
         asgns.reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1))
@@ -108,7 +108,7 @@ object ForwardProofChecker {
       case ProofApp(ProofApp(ProofApp(ProofVar(s), pt1), pt2), pt3) if ternaryBuiltin.contains(s.name) =>
         ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
       case ProofVar(s) =>
-        Context.get(con, s) match {
+        con.get(s) match {
           case Some(fml) =>
             fml
           case None => throw ProofCheckException(s"Undefined proof variable $s")

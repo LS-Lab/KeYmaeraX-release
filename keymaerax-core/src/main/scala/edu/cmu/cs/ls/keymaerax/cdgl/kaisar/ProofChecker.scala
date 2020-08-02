@@ -21,11 +21,9 @@ object ProofChecker {
     m match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        fv.toSet.toList.flatMap((v: Variable) => Context.get(con, v, wantProgramVar = true).toList)
-      case ForwardSelector(pt) =>
-        List(ForwardProofChecker(con, pt))
-      case PatternSelector(e) =>
-        Context.unify(con, e).toList.map(_._2)
+        fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
+      case ForwardSelector(pt) => List(ForwardProofChecker(con, pt))
+      case PatternSelector(e) => con.unify(e).toList.map(_._2)
     }
   }
 
@@ -144,7 +142,7 @@ object ProofChecker {
   private def admitLetFun(con: Context, lf: LetFun): Unit = {
     val LetFun(f, args, body) = lf
     val sigBody = StaticSemantics.signature(body)
-    val sig = Context.signature(con)
+    val sig = con.signature
     val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig)
     if (sig.contains(lf.asFunction)) {
       throw ProofCheckException(s"Multiply-defined function definition ${f.name}")
@@ -270,18 +268,18 @@ object ProofChecker {
     s match {
       case Assert(_ , f, m) =>
         apply(con, f, m)
-        (s, Box(Dual(Test(f)), True))
+        (Context(s), Box(Dual(Test(f)), True))
       case Note(x , pt,  conclusion) =>
         val res = ForwardProofChecker(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
           throw ProofCheckException(s"Note $x expected conclusion ${conclusion.get}, got $res")
         }
-        (Note(x, pt, Some(res)), res)
+        (Context(Note(x, pt, Some(res))), res)
       case Block(ss) =>
         val (c, fs) =
           ss.foldLeft[(Context, List[Formula])](Context.empty, List()){case ((acc, accF), s) =>
-            val (cc, ff) = apply(Context.:+(con, acc), s)
-            (Context.:+(acc, cc), accF.:+(ff))
+            val (cc, ff) = apply(con.:+(acc.s), s)
+            (acc.:+(cc.s), accF.:+(ff))
           }
         val ff = fs.reduceRight(concatBox)
         (c, ff)
@@ -289,8 +287,8 @@ object ProofChecker {
         val ((sl, fl), (sr, fr)) = (apply(con, left), apply(con, right))
         val (Box(a, p1), Box(b, p2)) = (asBox(fl), asBox(fr))
         val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
-        val ss = BoxChoice(sl, sr)
-        (ss, Box(Choice(a,b), p))
+        val ss = BoxChoice(sl.s, sr.s)
+        (Context(ss), Box(Choice(a,b), p))
       case Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
         val defaultVar = Variable("anon")
@@ -301,66 +299,69 @@ object ProofChecker {
         }
         val (cons, fmls) = branches.map(cb => {
           val v = cb._1 match {case vv: Variable => vv case _ => defaultVar}
-          val (c, f) = apply(Context.add(con, v, cb._2.asInstanceOf[Formula]), cb._3)
+          val (c, f) = apply(con.add(v, cb._2.asInstanceOf[Formula]), cb._3)
           (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}
           ).unzip
         val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
-        (Switch(sel, zip3(patterns, conds,cons)), Box(Dual(as.reduceRight(Choice)), p))
+        (Context(Switch(sel, zip3(patterns, conds,cons.map(_.s)))), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
-        val kc = Context.:+(con, Assume(x, j))
-        val (sa, fa) = apply(kc, s)
+        val kc = con.:+(Assume(x, j))
+        val (Context(sa), fa) = apply(kc, s)
         val ss = While(x, j, sa)
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
-        (ss, fml)
+        (Context(ss), fml)
       case BoxLoop(s: Statement) =>
-        Context.lastFact(con) match {
+        con.lastFact match {
           case None => throw ProofCheckException(s"No invariant found in $con")
           case Some((kName, kFml)) =>
             val progCon = BoxLoopProgress(BoxLoop(s), Triv(), kName, kFml)
-            val (ss, f) = apply(progCon, s)
+            val (ss, f) = apply(Context(progCon), s)
             val Box(a,p) = asBox(f)
-            val res = BoxLoop(ss)
+            val res = BoxLoop(ss.s)
             val ff = Box(Loop(a), p)
-            Context.lastFact(res) match {
+            Context(res).lastFact match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
               case Some((kName2, kFml2)) if kFml != kFml2 =>
                 throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
-              case Some(kFml2) => (res, ff)
+              case Some(kFml2) => (Context(res), ff)
             }
         }
-      case ProveODE(ds: DiffStatement, dc: DomainStatement) => apply(con, ds, dc)
+      case ProveODE(ds: DiffStatement, dc: DomainStatement) =>
+        val (x, y) = apply(con, ds, dc)
+        (Context(x), y)
+
       // @TODO: LetFun and Match should be checked in earlier passes?
-      case lf: LetFun => admitLetFun(con, lf); (lf, True)
+      case lf: LetFun => admitLetFun(con, lf); (Context(lf), True)
       case Match(pat, e) =>
         try {
           UnificationMatch(pat, e);
-          (Match(pat, e), True)
+          (Context(Match(pat, e)), True)
         } catch {
           case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify")
         }
       case Ghost(s) =>
         // @TODO: Check scope on f
         val (ss, f) = apply(con, s)
-        (Ghost(ss), True)
+        (Context(Ghost(ss.s)), True)
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con, s)
-        (InverseGhost(ss), True)
-      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.:+(con, s), True)
+        (Context(InverseGhost(ss.s)), True)
+      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (con.:+(s), True)
       case Was(now, was) =>
         val (ss, f) = apply(con, now)
-        (Was(ss, was), f)
+        (Context(Was(ss.s, was)), f)
       case Phi(s) =>
         val (ss, f) = apply(con, s)
-        (Phi(ss), f)
+        (Context(Phi(ss.s)), f)
       // Proofs that succeed unconditionally
       case Modify(VarPat(x, _), rhs) =>
         // @TODO: Needs to check ghostery
         if (SSA) {
           val n = x.name
           val xIdx = x.index.getOrElse(-1)
-          val freshVar = Context.fresh(con, n)
+          val freshVar = con.fresh(n)
           val yIdx = freshVar.index.getOrElse(-1)
           if ((yIdx > xIdx)) {
             throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
@@ -371,11 +372,11 @@ object ProofChecker {
             if (SSA && StaticSemantics(f).contains(x)) {
               throw ProofCheckException(s"Assignment to $x was not admissible")
             }
-            (s, Box(Assign(x,f), True))
-          case Right(_) => (s, Box(AssignAny(x), True))
+            (Context(s), Box(Assign(x,f), True))
+          case Right(_) => (Context(s), Box(AssignAny(x), True))
         }
-      case Assume(pat, f) => (s, Box(Test(f), True))
-      case _: Triv | _: Label => (s, True)
+      case Assume(pat, f) => (Context(s), Box(Test(f), True))
+      case _: Triv | _: Label => (Context(s), True)
     }
   }
 }

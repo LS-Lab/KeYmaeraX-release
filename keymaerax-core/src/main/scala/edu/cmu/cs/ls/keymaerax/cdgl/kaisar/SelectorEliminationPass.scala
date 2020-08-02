@@ -20,7 +20,7 @@ object SelectorEliminationPass {
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
     pt match {
       case ProgramVar(x) => Set(x)
-      case ProofVar(x) => StaticSemantics(Context.get(con, x).getOrElse(True)).fv.toSet
+      case ProofVar(x) => StaticSemantics(con.get(x).getOrElse(True)).fv.toSet
       case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Term) => StaticSemantics(e).toSet
@@ -33,7 +33,7 @@ object SelectorEliminationPass {
     pt match {
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
-        val got = Context.get(kc, x)
+        val got = kc.get(x)
         got  match {
           case Some(_) => pt
           case None => ProgramVar(x)
@@ -52,7 +52,7 @@ object SelectorEliminationPass {
         fv.toSet.toList.map(ProgramVar)
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
-        Context.unify(kc, pat).map({case (x, _) => ProofVar(x)}).toList
+        kc.unify(pat).map({case (x, _) => ProofVar(x)}).toList
     }
   }
 
@@ -83,7 +83,7 @@ object SelectorEliminationPass {
         val (_, notes: List[Note]) =
           pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
             // TODO: Hack: context doesnt say what conclusion is
-            val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
+            val (id, c: Context) = (kc.fresh(), kc.ghost(True))
             (c, Note(id, pt) :: acc)})
         val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
         val finalMeth = Using(noteSels, meth)
@@ -102,7 +102,7 @@ object SelectorEliminationPass {
             val (_, notes: List[Ghost]) =
               pts.foldLeft[(Context, List[Ghost])]((kc, List[Ghost]()))({case ((kc, acc: List[Ghost]), pt) =>
                 // TODO: Hack: context doesn't say what conclusion is
-                val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
+                val (id, c: Context) = (kc.fresh(), kc.ghost(True))
                 // notes should be ghosts since they did not appear in the user's intended proof/program.
                 // proofchecking output after selector elimination should "look like" proofchecking the input
                 (c,  Ghost(Note(id, pt)) :: acc)})

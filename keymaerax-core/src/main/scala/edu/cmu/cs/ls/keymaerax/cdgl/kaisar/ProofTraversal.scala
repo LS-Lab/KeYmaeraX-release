@@ -64,7 +64,7 @@ object ProofTraversal {
             Was(traverse(kc, now, tf), was)
           case Block(ss) =>
             val (conFinal, revSS) = ss.foldLeft[(Context, List[Statement])](kc, List()){case ((con, acc), s) =>
-              (Context.:+(con, s), traverse(con, s, tf) :: acc)
+              (con.:+(s), traverse(con, s, tf) :: acc)
             }
             Block(revSS.reverse)
           case Switch(sel, pats) =>

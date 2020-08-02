@@ -22,7 +22,10 @@ class SSAPassTests extends TacticTestBase {
     }
 
   def pssa(s: String): Statement = SSAPass(p(s, pp.statement(_)))
-  def checkSSA(s: String): (Statement, Formula) = ProofChecker(Context.empty, pssa(s))
+  def checkSSA(s: String): (Statement, Formula) = {
+    val (con, fml) = ProofChecker(Context.empty, pssa(s))
+    (con.s, fml)
+  }
 
   "SSA pass" should "transform assignment" in {
     val pfStr = "x:=x+1;"
