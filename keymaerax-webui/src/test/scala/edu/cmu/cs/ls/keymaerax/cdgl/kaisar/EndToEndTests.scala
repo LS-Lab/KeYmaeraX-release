@@ -12,12 +12,10 @@ class EndToEndTests extends TacticTestBase {
 
   val check: String => Formula = Kaisar.apply
 
-  // @TODO: Need ghost feature to hide auxilliary notes in final formula
-  // @TODO: Need to apply proper renaming in lookups of fact variables
+  // @TODO: programVar after BoxLoop should pick more intelligent equalities..
   "full proof checker" should "check box loop" in withMathematica { _ =>
-      // todo: should be !xFin instead of ?xFin
-      val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} ?xFin:(x>=0);"
+      val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto;"
       val ff = check(pfStr)
-      ff shouldBe "[?x>=1;x_0:=x;{x_1:=x_0+1; {?x_1>=1;}^@ x_0:=x_1;}*?x_0>=0;]true".asFormula
+      ff shouldBe "[?x>=1;x_0:=x;{x_1:=x_0+1; {?x_1>=1;}^@ x_0:=x_1;}*{?x_0>=0;}^@]true".asFormula
   }
 }

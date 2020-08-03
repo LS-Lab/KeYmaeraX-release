@@ -312,14 +312,14 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
-      case BoxLoop(s: Statement) =>
+      case BoxLoop(s: Statement, _) =>
         con.lastFact match {
           case None => throw ProofCheckException(s"No invariant found in $con")
           case Some((kName, kFml)) =>
-            val progCon = BoxLoopProgress(BoxLoop(s), Triv(), kName, kFml)
+            val progCon = BoxLoopProgress(BoxLoop(s, Some((kName, kFml))), Triv())
             val (ss, f) = apply(Context(progCon), s)
             val Box(a,p) = asBox(f)
-            val res = BoxLoop(ss.s)
+            val res = BoxLoop(ss.s, Some((kName, kFml)))
             val ff = Box(Loop(a), p)
             Context(res).lastFact match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")

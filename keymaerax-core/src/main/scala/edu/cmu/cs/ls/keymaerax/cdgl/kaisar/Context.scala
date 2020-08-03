@@ -34,7 +34,7 @@ case class Context(s: Statement) {
       case _: Triv  => Context(other)
       /* We are processing "pr" and simply remembering the loop "bl" while we do so.
        * the newly-processed "s" should be part of "pr". */
-      case BoxLoopProgress(bl, pr, ihv, ihf) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s, ihv, ihf))
+      case BoxLoopProgress(bl, pr) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s))
       case Block(ss) => Context(Block(ss.:+(other)))
       case sl => Context(Block(List(sl, other)))
     }
@@ -56,7 +56,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).signature
       case Was(now, was) => Context(now).signature
       case While(_, _, body) => Context(body).signature
-      case BoxLoop(body) => Context(body).signature
+      case BoxLoop(body, _) => Context(body).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
            | _: Label | _: Match => Set()
     }
@@ -68,6 +68,8 @@ case class Context(s: Statement) {
   def getAssignments(x: Variable): List[Formula] =
     searchAll(
       {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
+      // @TODO: Indices get renamed here, but is that correct?
+      case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx => true
        case _ => false
       }, isGhost = false).map(_._2)
 
@@ -127,8 +129,10 @@ case class Context(s: Statement) {
       case Was(now, was) => Context(was).searchAll(f, isGhost)
       case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
       case While(_, _, body) => Context(body).searchAll(f, isGhost)
-      case BoxLoop(body) => Context(body).searchAll(f, isGhost)
-      case BoxLoopProgress(boxLoop, progress, ihVar, ihFml) =>
+      case BoxLoop(body, ih) =>
+        val matchHere = ih match {case Some((ihVar, ihFml)) if f(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
+        matchHere ++ Context(body).searchAll(f, isGhost)
+      case BoxLoopProgress(BoxLoop(bl, Some((ihVar, ihFml))), progress) =>
         val ihMatch = if(f(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
         ihMatch ++ Context(progress).searchAll(f, isGhost)
     }
@@ -172,7 +176,7 @@ case class Context(s: Statement) {
           case (Some(resL), Some(resR)) if resL == resR => Some(resL)
           case _ => None
         }
-      case BoxLoop(body) => Context(body).lastFact
+      case BoxLoop(body, _) => Context(body).lastFact
       case While(_, _, body) => Context(body).lastFact
       // Note: After SSA, last statement is phi node, so keep looking to find "real" node
       case Block(ss) =>

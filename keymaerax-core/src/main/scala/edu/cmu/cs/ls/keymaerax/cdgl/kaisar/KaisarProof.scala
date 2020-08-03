@@ -201,7 +201,7 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
 case class While(x: Expression, j: Formula, s: Statement) extends Statement
 // Repeat [[s]] nondeterministically any number of times
-case class BoxLoop(s: Statement) extends Statement
+case class BoxLoop(s: Statement, ih: Option[(Ident, Formula)] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
 // For example, Ghost(Modify(_)) is a discrete ghost assignment
 // @TODO: Resolve scope-escaping issues
@@ -244,7 +244,7 @@ case class Phi(asgns: Statement) extends MetaNode {
 // It helps us handle variable admissibility/renaming for loops, especially for accessing the IH.
 // boxLoop is the entire loop, progress contains the prefix of the body checked so far, and IH is the name of
 // the inductive hypothesis
-case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement, ihVar: Ident, ihFml: Formula) extends MetaNode {
+case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNode {
   override val children: List[Statement] = List(block(boxLoop :: progress :: Nil))
 }
 

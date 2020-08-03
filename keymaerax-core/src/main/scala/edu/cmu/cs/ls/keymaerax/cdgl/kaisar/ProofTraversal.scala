@@ -60,7 +60,7 @@ object ProofTraversal {
       case None =>
         val mid =
         s match {
-          case BoxLoopProgress(bl, prog, inVar, inFml) => BoxLoopProgress(bl, traverse(kc, prog, tf), inVar, inFml)
+          case BoxLoopProgress(bl, prog) => BoxLoopProgress(bl, traverse(kc, prog, tf))
           case Phi(asgns) => Phi(traverse(kc, asgns, tf))
           case Was(now: Statement, was: Statement) =>
             Was(traverse(kc, now, tf), was)
@@ -75,8 +75,8 @@ object ProofTraversal {
             BoxChoice(traverse(kc, left, tf), traverse(kc, right, tf))
           case While(x, j, ss) =>
             While(x, j, traverse(kc, ss, tf))
-          case BoxLoop(s) =>
-            BoxLoop(traverse(kc, s, tf))
+          case BoxLoop(s, ih) =>
+            BoxLoop(traverse(kc, s, tf), ih)
           case Ghost(ss) =>
             Ghost(traverse(kc, ss, tf))
           case InverseGhost(ss) =>
