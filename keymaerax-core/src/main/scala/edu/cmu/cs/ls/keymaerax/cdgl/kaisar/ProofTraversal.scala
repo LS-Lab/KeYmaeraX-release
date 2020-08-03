@@ -60,6 +60,8 @@ object ProofTraversal {
       case None =>
         val mid =
         s match {
+          case BoxLoopProgress(bl, prog, inVar, inFml) => BoxLoopProgress(bl, traverse(kc, prog, tf), inVar, inFml)
+          case Phi(asgns) => Phi(traverse(kc, asgns, tf))
           case Was(now: Statement, was: Statement) =>
             Was(traverse(kc, now, tf), was)
           case Block(ss) =>
@@ -83,10 +85,9 @@ object ProofTraversal {
             ProveODE(traverse(kc, ds, tf), traverse(kc, dc, tf))
           case Assert(x, f, child) =>
             Assert(x, f, traverse(kc, child, tf))
-          case e: PrintGoal => e
-          case e: Assume => e
-          case e: Modify => e
-          case e: Label => e
+          case Note(x, pt, ann) =>
+            Note(x, traverse(kc, pt, tf), ann)
+          case _: PrintGoal | _: Assume | _: Modify | _: Label | _: LetFun | _: Match | _: Triv => s
         }
         tf.postS(kc, mid)
     }
@@ -130,6 +131,7 @@ object ProofTraversal {
       case Some(pt) => pt
       case None =>
         val mid = pt match {
+          case ProgramVar(x) => ProgramVar(x)
           case ProofVar(x: Ident) => ProofVar(x)
           case ProofInstance(e) => ProofInstance(e)
           case ProofApp(m, n) => ProofApp(traverse(kc, m, tf), traverse(kc, m, tf))
@@ -160,6 +162,7 @@ object ProofTraversal {
         val mid = s match {
           case ForwardSelector(pt) => ForwardSelector(traverse(kc, pt, tf))
           case PatternSelector(e) => PatternSelector(e)
+          case DefaultSelector => DefaultSelector
         }
         tf.postSel(kc, mid)
     }

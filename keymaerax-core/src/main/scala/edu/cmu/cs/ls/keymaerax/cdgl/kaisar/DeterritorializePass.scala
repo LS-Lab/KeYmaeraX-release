@@ -43,6 +43,7 @@ case class DeterritorializePass(tt: TimeTable) {
       if (snapshot.contains(name) && !except.contains(Variable(name))) {
         Some(BaseVariable(name, snapshot.get(name), sort))
       } else None
+    case _ => None
     })
     SubstitutionHelper.replacesFree(f)(reindexOne)
   }
@@ -119,7 +120,7 @@ case class DeterritorializePass(tt: TimeTable) {
           case DomAssume(x, f) =>  DomAssume(x, translate(kc, f))
           case DomAssert(x, f, child) => DomAssert(x, translate(kc, f), child)
           case DomModify(x, f) => DomModify(x, translate(kc, f))
-          case _: DomAnd => ds
+          case _: DomAnd | _: DomWeak => ds
         }
       }
 
@@ -135,7 +136,7 @@ case class DeterritorializePass(tt: TimeTable) {
         s match {
           case Assume(pat, f) => Assume(pat, translate(kc, f))
           case Assert(pat, f, m) => Assert(pat, translate(kc, f), m)
-          case Modify(pat, Left(f)) => Modify(pat, Right(translate(kc, f)))
+          case Modify(pat, Left(f)) => Modify(pat, Left(translate(kc, f)))
           case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation)))
           case LetFun(f, args, e: Term) => LetFun(f, args, translate(kc, e, localVars = args))
           case Match(pat, e: Term) => Match(translatePat(kc, pat), translate(kc, e))
@@ -144,7 +145,7 @@ case class DeterritorializePass(tt: TimeTable) {
           // Filter out no-op'd labels
           case BoxChoice(Ghost(Triv()), right) => right
           case BoxChoice(left, Ghost(Triv())) => left
-          case Block(ss) => Block(ss.filter({case Ghost(Triv()) => false case _ => false}))
+          case Block(ss) => KaisarProof.block(ss.filter({case Ghost(Triv()) => false case _ => true}))
           case s => s
         }
       }

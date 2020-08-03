@@ -20,9 +20,10 @@ object Kaisar {
 
   def apply(pf: String): Formula = {
     val in = p(pf, ProofParser.statement(_))
-    val sel = SelectorEliminationPass(in)
+    val sel = new SelectorEliminationPass()(in)
     val ssa = SSAPass(sel)
-    val (s, ff) = ProofChecker(Context.empty, ssa)
+    val dt = DeterritorializePass(ssa)
+    val (s, ff) = ProofChecker(Context.empty, dt)
     ff
   }
 }

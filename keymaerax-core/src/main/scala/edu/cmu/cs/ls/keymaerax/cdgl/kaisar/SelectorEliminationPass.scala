@@ -14,7 +14,9 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.core._
 
-object SelectorEliminationPass {
+class SelectorEliminationPass() {
+  var ghostCon: Context = Context.empty
+
   /** Generous notion of free variables: include variables explicitly mentioned in proof term as well as program variables
     * mentioned in any fact used in the proof. */
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
@@ -80,11 +82,12 @@ object SelectorEliminationPass {
         (ptsL ++ ptsR, DomAnd(dsL, dsR))
       case DomAssert(x, f, m) =>
         val (pts, meth) = collectPts(kc, m, f)
-        val (_, notes: List[Note]) =
-          pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
+        val notes: List[Note] =
+          pts.foldLeft[List[Note]](List[Note]())({case (acc: List[Note], pt) =>
             // TODO: Hack: context doesnt say what conclusion is
-            val (id, c: Context) = (kc.fresh(), kc.ghost(True))
-            (c, Note(id, pt) :: acc)})
+            val id = ghostCon.fresh()
+            ghostCon = ghostCon.ghost(True)
+            Note(id, pt) :: acc})
         val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
         val finalMeth = Using(noteSels, meth)
         (notes, DomAssert(x, f, finalMeth))
@@ -94,18 +97,20 @@ object SelectorEliminationPass {
 
   /** @return statement where advanced selectors have been elaborated to simple selectors */
   def apply(s: Statement): Statement = {
-    ProofTraversal.traverse(Context.empty, s, new TraversalFunction {
+    ghostCon = Context(s)
+    val ret = ProofTraversal.traverse(Context.empty, s, new TraversalFunction {
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
-            val (_, notes: List[Ghost]) =
-              pts.foldLeft[(Context, List[Ghost])]((kc, List[Ghost]()))({case ((kc, acc: List[Ghost]), pt) =>
+            val notes: List[Ghost] =
+              pts.foldLeft[List[Ghost]]((List[Ghost]()))({case (acc: List[Ghost], pt) =>
                 // TODO: Hack: context doesn't say what conclusion is
-                val (id, c: Context) = (kc.fresh(), kc.ghost(True))
+                val id = ghostCon.fresh()
+                ghostCon = ghostCon.ghost(True)
                 // notes should be ghosts since they did not appear in the user's intended proof/program.
                 // proofchecking output after selector elimination should "look like" proofchecking the input
-                (c,  Ghost(Note(id, pt)) :: acc)})
+                Ghost(Note(id, pt)) :: acc})
             val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
             val finalMeth = Using(noteSels, meth)
             Some(Block(notes.:+(Assert(e, f, finalMeth))))
@@ -116,5 +121,7 @@ object SelectorEliminationPass {
         }
       }
     })
+    ghostCon = Context.empty
+    ret
   }
 }
