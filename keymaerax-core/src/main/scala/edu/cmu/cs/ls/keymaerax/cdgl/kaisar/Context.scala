@@ -34,9 +34,9 @@ case class Context(s: Statement) {
       case _: Triv  => Context(other)
       /* We are processing "pr" and simply remembering the loop "bl" while we do so.
        * the newly-processed "s" should be part of "pr". */
-      case BoxLoopProgress(bl, pr, ihv, ihf) => Context(BoxLoopProgress(bl, Context(pr).:+(s).s, ihv, ihf))
-      case Block(ss) => Context(Block(ss.:+(s)))
-      case sl => Context(Block(List(sl, s)))
+      case BoxLoopProgress(bl, pr, ihv, ihf) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s, ihv, ihf))
+      case Block(ss) => Context(Block(ss.:+(other)))
+      case sl => Context(Block(List(sl, other)))
     }
   }
 
@@ -222,7 +222,7 @@ case class Context(s: Statement) {
   }
 
   /**  Bind the next ghost variable to formula f */
-  def ghost(f: Formula): Context = Context(s).add(fresh(), f)
+  def ghost(f: Formula): Context = add(fresh(), f)
 }
 
 object Context {
