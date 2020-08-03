@@ -24,6 +24,12 @@ object KaisarProof {
   type Statements = List[Statement]
   type Subscript = Option[Int]
 
+  // Failures in proof transformation passes (as opposed to proof checking)
+  case class TransformationException(msg: String) extends Exception(msg)
+  // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
+  case class ElaborationException(msg: String) extends Exception(msg)
+
+
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
   // we elaborate to the core expression syntax
@@ -31,6 +37,14 @@ object KaisarProof {
   // In concrete proofs, the label function name is generated from; the labels in the proof.
   val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
+
+  def getAt(t: Term): Option[(Term, String)] = {
+    t match {
+      case FuncOf(Function("at", None, Tuple(Real, Unit), Real, true), Pair(e, FuncOf(Function(label, _, _, _, _),_))) =>
+        Some(e, label)
+      case _ => None
+    }
+  }
 
   // Special functions max, min, and abs are already used in KeYmaera X, but are often used in Kaisar proofs as well
   val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)

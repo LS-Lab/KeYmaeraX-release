@@ -28,6 +28,7 @@ case class Snapshot (private val m: Map[String, Subscript])  {
   /** Look up "x" and don't distinguish the "never saw x" case. This can be more convenient, and is adequate so long as
     * we wish for SSA numbering to start at x_0 rather than x. */
   def get(s: String): Subscript = opt(getOpt(s))
+  def contains(s: String): Boolean = getOpt(s).isDefined
 
   /* The following functions wrap the underlying Map[T1, T2] methods. */
   def keySet: Set[String] = m.keySet
@@ -90,6 +91,12 @@ case class Snapshot (private val m: Map[String, Subscript])  {
         val (v, snap) = increment(x)
         (DifferentialSymbol(v), snap)
     }
+  }
+
+  /** @return whether every key has same or higher subscript in other snapshot */
+  def <=(other: Snapshot): Boolean = {
+    if (!m.keySet.subsetOf(other.keySet)) return false
+    m.forall({case (x, None) => true case (x, Some(i)) => i <= other.get(x).get})
   }
 }
 

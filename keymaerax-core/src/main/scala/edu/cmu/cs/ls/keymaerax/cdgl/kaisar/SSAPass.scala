@@ -268,4 +268,7 @@ object SSAPass {
   def apply(s: Statement): Statement = {
     ssa(s, Snapshot.empty)._1
   }
+
+  /** Convert context to snapshot */
+  def toSnapshot(kc: Context): Snapshot = ssa(kc.s, Snapshot.empty)._2
 }

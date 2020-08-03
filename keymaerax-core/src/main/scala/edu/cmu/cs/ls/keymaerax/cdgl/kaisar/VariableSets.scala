@@ -79,6 +79,7 @@ object VariableSets {
     case ProveODE(ds, dc) => apply(ds, isGhost, isInverseGhost).++(apply(dc, isGhost, isInverseGhost))
     case m: MetaNode => m.children.map(apply(_, isGhost, isInverseGhost)).foldLeft(VariableSets.empty)(_.++(_))
   }
+  def apply(kc: Context): VariableSets = apply(kc.s)
 
   /** Compute static semantic variables sets for a given Kaisar differential statement, depending on the context in
     * which it appears
@@ -110,5 +111,4 @@ object VariableSets {
     case DomModify(x: AsgnPat, f: Term) => ofBound(x.boundVars, isGhost).++(ofFacts(x.boundFacts, isInverseGhost))
     case DomAnd(l, r) => apply(l, isGhost, isInverseGhost).++(apply(r, isGhost, isInverseGhost))
   }
-
 }
