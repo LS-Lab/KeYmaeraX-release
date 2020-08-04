@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -79,13 +80,15 @@ class StringConverter(val s: String) {
 
   /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = {
-    val exprs = s.stripPrefix("(").stripSuffix(")").split("~>")
+    val exprs =
+      if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>")
+      else s.split("~>")
     assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
     val repl = KeYmaeraXParser(exprs(1))
     val what =
       if (repl.kind == FormulaKind) KeYmaeraXParser.formulaParser(exprs(0))
       else if (repl.kind == TermKind) KeYmaeraXParser.termParser(exprs(0))
       else KeYmaeraXParser.programParser(exprs(0))
-    SubstitutionPair(what, repl)
+    UnificationMatch(what, repl).usubst.subsDefsInput.head
   }
 }
