@@ -302,7 +302,9 @@ object ProofParser {
 
   def postfixStatement[_: P]: P[Statement] =
     ((atomicStatement | proveODE) ~ Index ~ "*".!.rep).
-      map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)}), i)})
+      map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) =>
+        BoxLoop(acc, Context(acc).lastFact)
+      }), i)})
 
   def sequence[_: P]: P[Statements] =
     postfixStatement.rep(1).map(ss => ss.toList)
