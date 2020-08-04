@@ -209,7 +209,7 @@ object ProofChecker {
       case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
       case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
     }}}
-    res.flatMap(accum(core, _))
+    res.map(accum(core, _)).getOrElse(core)
   }
 
   // @TODO: Should be fine without admissibility check, at least for safety, but maybe not for liveness.
@@ -222,15 +222,26 @@ object ProofChecker {
         case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
         case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
       }}}
-    res.flatMap(accum(core, _))
+    res.map(accum(core, _)).getOrElse(core)
+  }
+
+  private def diffStatementToAtoms(ds: DiffStatement): Set[AtomicODEStatement] = {
+    ds match {
+      case ao: AtomicODEStatement => Set(ao)
+      case DiffProductStatement(l, r) => diffStatementToAtoms(l).++(diffStatementToAtoms(r))
+      case DiffGhostStatement(ds) => diffStatementToAtoms(ds)
+      case InverseDiffGhostStatement(ds) =>Set()
+    }
   }
 
   /** @TODO: Ensure assertions hold at all times, ensure solution and DI both allowed. */
   private def applyAssertions(kc: Context, ds: Option[DiffStatement], assumps: Set[DomAssume], asserts: Set[DomAssert]): Option[DomainStatement] = {
     val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
-    val discreteAssigns = ds.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
+    val dSet = ds.map(diffStatementToAtoms).getOrElse(Set())
+    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
     val con = (discreteAssumps ++ discreteAssigns).foldLeft[Context](kc)(_.:+(_))
-    asserts.foldLeft[Option[DomainStatement]](None)({case ((acc, DomAssert(x, f, m))) =>
+    val assump = assumps.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
+    asserts.foldLeft[Option[DomainStatement]](assump)({case ((acc, DomAssert(x, f, m))) =>
       val (Context(Assert(xx, ff, mm)), _) = apply(con, Assert(x, f, m))
       accum(acc, DomAssert(xx, ff, mm))})
   }
