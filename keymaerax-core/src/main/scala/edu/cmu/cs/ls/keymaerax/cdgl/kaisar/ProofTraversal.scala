@@ -87,7 +87,8 @@ object ProofTraversal {
             Assert(x, f, traverse(kc, child, tf))
           case Note(x, pt, ann) =>
             Note(x, traverse(kc, pt, tf), ann)
-          case _: PrintGoal | _: Assume | _: Modify | _: Label | _: LetFun | _: Match | _: Triv => s
+          case Modify(pat, rhs) => Modify(traverse(kc, pat, tf), rhs)
+          case _: PrintGoal | _: Assume | _: Label | _: LetFun | _: Match | _: Triv => s
         }
         tf.postS(kc, mid)
     }
