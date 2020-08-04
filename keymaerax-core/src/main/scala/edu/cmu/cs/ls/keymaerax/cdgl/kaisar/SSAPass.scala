@@ -31,9 +31,11 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 object SSAPass {
   // Substitution helper function which re-indexes SSA variables according to a snapshot
   private def renameUsingSnapshot(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
-    f match {
-      case bv: BaseVariable => Some(BaseVariable(bv.name, opt(snapshot.getOpt(bv.name)), bv.sort))
-      case dv: DifferentialSymbol => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.getOpt(dv.x.name)), dv.sort)))
+    // f@x is not resolved during SSA, it's resolved during separate following pass.
+    (KaisarProof.getAt(f), f) match {
+      case (Some(_), _) => Some(f)
+      case (None, bv: BaseVariable) => Some(BaseVariable(bv.name, opt(snapshot.getOpt(bv.name)), bv.sort))
+      case (None, dv: DifferentialSymbol) => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.getOpt(dv.x.name)), dv.sort)))
       case _ => None
     }
   })
@@ -166,7 +168,8 @@ object SSAPass {
         val (body, postSnap) = ssa(s, preSnap)
         val baseStutters = stutters(snapshot, preSnap)
         val indStutters = stutters(postSnap, preSnap)
-        val res = KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(body :: indStutters :: Nil)) :: Nil)
+        // @TODO: Should ih be SSA'd or left alone?
+        val res = KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(body :: indStutters :: Nil), ih) :: Nil)
         (res, preSnap)
       case While(x: Expression, j: Formula, s: Statement) =>
         val (body, bodySnap) = ssa(s, snapshot)
@@ -268,7 +271,4 @@ object SSAPass {
   def apply(s: Statement): Statement = {
     ssa(s, Snapshot.empty)._1
   }
-
-  /** Convert context to snapshot */
-  def toSnapshot(kc: Context): Snapshot = ssa(kc.s, Snapshot.empty)._2
 }

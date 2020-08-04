@@ -37,11 +37,18 @@ object KaisarProof {
   // In concrete proofs, the label function name is generated from; the labels in the proof.
   val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
-
+  // Stable is the counterpart to "at", which says that at(stable(x_i), L) should always be x_i
+  val stable: Function = Function("stable", domain = Real, sort = Real, interpreted = true)
   def getAt(t: Term): Option[(Term, String)] = {
     t match {
       case FuncOf(Function("at", None, Tuple(Real, Unit), Real, true), Pair(e, FuncOf(Function(label, _, _, _, _),_))) =>
         Some(e, label)
+      case _ => None
+    }
+  }
+  def getStable(t: Term): Option[Term] = {
+    t match {
+      case FuncOf(Function("stable", None, Real, Real, true), e) => Some(e)
       case _ => None
     }
   }
@@ -269,7 +276,7 @@ case class DomAssume(x: Expression, f:Formula) extends DomainStatement
 // Differential assertion which is proved with differential cut and then possibly used in proof
 case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStatement
 // Distinct from "differential weakening" rule, meaning a domain constraint which is in the conclusion but not the
-// proof, which is weakened before continuing prof
+// proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
 case class DomModify(x: AsgnPat, f: Term) extends DomainStatement

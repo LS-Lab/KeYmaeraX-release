@@ -108,7 +108,7 @@ object ForwardProofChecker {
       case ProofApp(ProofApp(ProofApp(ProofVar(s), pt1), pt2), pt3) if ternaryBuiltin.contains(s.name) =>
         ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
       case ProofVar(s) =>
-        con.get(s) match {
+        con.getHere(s) match {
           case Some(fml) =>
             fml
           case None => throw ProofCheckException(s"Undefined proof variable $s")

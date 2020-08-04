@@ -40,7 +40,8 @@ object ProofChecker {
 
   /** @return unit if [[f]] succeeds, else throw [[ProofCheckException]] */
   private def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method): Unit = {
-    if(!f) throw new ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
+    if(!f)
+      throw new ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
   }
 
   /* Implement rcf (real-closed fields) method */
@@ -267,8 +268,9 @@ object ProofChecker {
   def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
       case Assert(_ , f, m) =>
-        apply(con, f, m)
-        (Context(s), Box(Dual(Test(f)), True))
+        val elabF = con.elaborate(f)
+        apply(con, elabF, m)
+        (Context(s), Box(Dual(Test(elabF)), True))
       case Note(x , pt,  conclusion) =>
         val res = ForwardProofChecker(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
@@ -317,11 +319,12 @@ object ProofChecker {
           case None => throw ProofCheckException(s"No invariant found in $con")
           case Some((kName, kFml)) =>
             val progCon = BoxLoopProgress(BoxLoop(s, Some((kName, kFml))), Triv())
-            val (ss, f) = apply(Context(progCon), s)
+            val (ss, f) = apply(con.:+(progCon), s)
             val Box(a,p) = asBox(f)
             val res = BoxLoop(ss.s, Some((kName, kFml)))
             val ff = Box(Loop(a), p)
-            Context(res).lastFact match {
+            val lookup = Context(ss.s).lastFact
+            lookup match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
               case Some((kName2, kFml2)) if kFml != kFml2 =>
                 throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
@@ -375,7 +378,9 @@ object ProofChecker {
             (Context(s), Box(Assign(x,f), True))
           case Right(_) => (Context(s), Box(AssignAny(x), True))
         }
-      case Assume(pat, f) => (Context(s), Box(Test(f), True))
+      case Assume(pat, f) =>
+        val elabF = con.elaborate(f)
+        (Context(s), Box(Test(elabF), True))
       case _: Triv | _: Label => (Context(s), True)
     }
   }

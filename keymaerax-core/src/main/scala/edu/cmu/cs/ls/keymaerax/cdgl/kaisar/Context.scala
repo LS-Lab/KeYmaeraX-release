@@ -35,7 +35,10 @@ case class Context(s: Statement) {
       /* We are processing "pr" and simply remembering the loop "bl" while we do so.
        * the newly-processed "s" should be part of "pr". */
       case BoxLoopProgress(bl, pr) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s))
-      case Block(ss) => Context(Block(ss.:+(other)))
+      case Block(ss) =>
+        // recursively handle boxloopprogress inside of sequence
+        val (rest, last) = (ss.dropRight(1), Context(ss.last).:+(other).s)
+        Context(KaisarProof.block(rest :+ last))
       case sl => Context(Block(List(sl, other)))
     }
   }
@@ -89,10 +92,16 @@ case class Context(s: Statement) {
           ss match {
             case Nil => Nil
             case (s: Phi) :: ss =>
+              val left =
+                Context(s.asgns).searchAll(f, isGhost).filter({case (yx, yf) =>
+                  val surrounding = Block(ss.reverse)
+                  val t = VariableSets(surrounding)
+                  val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
+                  inter.isEmpty})
               val ff: Finder = ({
                 case ((x: Ident, fml: Formula, b: Boolean)) => f(x, Context.substPhi(s, fml), b)
               })
-              iter(ss, ff)
+              left ++ iter(ss, ff)
             case s :: ss =>
               val left =
                 Context(s).searchAll(f, isGhost) match {
@@ -122,7 +131,9 @@ case class Context(s: Statement) {
         if (fmls.isEmpty) Nil
         else List(fmls.reduceRight(or))
       case Ghost(s) => Context(s).searchAll(f, isGhost = true)
-      case Phi(s) => Context(s).searchAll(f, isGhost = true)
+      // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
+      // to select the equalities introduced by phi nodes.
+      case Phi(s) => Context(s).searchAll(f, isGhost = false)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => Nil
       case po: ProveODE => Context.findAll(po.dc, f)
@@ -161,38 +172,52 @@ case class Context(s: Statement) {
     }
     searchAll(f, isGhost = false).map(_._2).headOption
   }
+  def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborate)
 
-  /** Used in proof statements with implicit assumptions, such as BoxLoop which implicitly finds a base case.
-    * @return Most recent fact of context */
-  def lastFact: Option[(Ident, Formula)] = {
+    /** Used in proof statements with implicit assumptions, such as BoxLoop which implicitly finds a base case.
+    * @return Most recent fact of context and context of phi assignments since the fact was bound */
+  private def lastFactMobile: (Option[(Ident, Formula)], List[Phi]) = {
     s match {
-      case Assume(x: Variable, f) => Some((x, f))
-      case Assert(x: Variable, f, _) => Some((x,f))
-      case Note(x: Variable, pt, opt) => opt.map((x, _))
-      case Modify(VarPat(x, Some(p)), Left(f)) => Some((p, Equal(x, f)))
-      case Modify(VarPat(x, _), Left(f)) => Some((x, Equal(x, f)))
+      case Assume(x: Variable, f) => (Some((x, f)), Nil)
+      case Assert(x: Variable, f, _) => (Some((x,f)), Nil)
+      case Note(x: Variable, pt, opt) => (opt.map((x, _)), Nil)
+      case Modify(VarPat(x, Some(p)), Left(f)) => (Some((p, Equal(x, f))), Nil)
+      case Modify(VarPat(x, _), Left(f)) => (Some((x, Equal(x, f))), Nil)
       case BoxChoice(l, r) =>
-        (Context(l).lastFact, Context(r).lastFact) match {
-          case (Some(resL), Some(resR)) if resL == resR => Some(resL)
-          case _ => None
+        (Context(l).lastFactMobile, Context(r).lastFactMobile) match {
+          case ((Some(resL), Nil), (Some(resR), Nil)) if resL == resR => (Some(resL), Nil)
+          case ((Some(resL), _), (Some(resR), _)) => throw new ProofCheckException("Loop inductive statement cannot appear under box choice ++")
+          case _ => (None, Nil)
         }
-      case BoxLoop(body, _) => Context(body).lastFact
-      case While(_, _, body) => Context(body).lastFact
+      case BoxLoop(body, _) => Context(body).lastFactMobile
+      case While(_, _, body) => Context(body).lastFactMobile
       // Note: After SSA, last statement is phi node, so keep looking to find "real" node
       case Block(ss) =>
         // @TODO: Need a more general way to handle phi assignments
         ss.reverse match {
           case (phi: Phi) :: rest =>
-            val fact = rest.map(Context(_).lastFact).filter(_.isDefined).head
-            fact.map({case (x, fml) => (x, Context.substPhi(phi, fml))})
+            val (fact, phis) = rest.map(Context(_).lastFactMobile).filter(_._1.isDefined).head
+            (fact, phi :: phis)
           case ss =>
-            ss.map(Context(_).lastFact).filter(_.isDefined).head
+            ss.map(Context(_).lastFactMobile).filter(_._1.isDefined).head
         }
-      case Was(now, was) => Context(now).lastFact
-      case Ghost(s) => Context(s).lastFact
+      case Was(now, was) => Context(now).lastFactMobile
+      case Ghost(s) => Context(s).lastFactMobile
       // Skips all meta nodes and inverse ghosts, for example
-      case _ => None
+      case _ => (None, Nil)
     }
+  }
+
+  private def destabilize(f: Formula): Formula =
+    SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
+
+  def elaborate(f: Formula): Formula = destabilize(f)
+
+  def lastFact: Option[(Ident, Formula)] = {
+    val (fml, phis) = lastFactMobile
+    val mapped = fml.map({case ((k,fact)) => (k, phis.foldLeft(fact)((fml, phi) => Context.substPhi(phi, fml)))})
+    val res =  mapped.map({case (k, v) => (k, destabilize(v))})
+    res
   }
 
   /** Does the context contain a fact named [[id]]? */
@@ -320,6 +345,11 @@ object Context {
   // Rename formula according to assignment from an SSA Phi node
   private def substPhi(phi: Phi, fml: Formula): Formula = {
     val mapping = phi.reverseMap
-    SubstitutionHelper.replacesFree(fml)({case v: Variable => mapping.get(v) case f => None})
+    SubstitutionHelper.replacesFree(fml)(term => {
+      (KaisarProof.getStable(term), term) match {
+        case (Some(_), _) => Some(term)
+        case (None, v: Variable) => mapping.get(v)
+        case (None, _) => None
+      }})
   }
 }

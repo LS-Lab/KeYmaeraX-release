@@ -40,12 +40,43 @@ case class DeterritorializePass(tt: TimeTable) {
   private def reindex(snapshot: Snapshot, f: Term, except: Set[Ident]): Term = {
     val reindexOne: Term => Option[Term] = ({case BaseVariable(name, _, sort) =>
       // rename program variables but not function arguments
-      if (snapshot.contains(name) && !except.contains(Variable(name))) {
-        Some(BaseVariable(name, snapshot.get(name), sort))
+      // Insert "stable" function to indicate that proofchecking should never change the index on this variable -
+      // we already figured out the right index.
+      if (!except.contains(Variable(name))) {
+        Some(FuncOf(KaisarProof.stable, BaseVariable(name, snapshot.get(name), sort)))
       } else None
     case _ => None
     })
     SubstitutionHelper.replacesFree(f)(reindexOne)
+  }
+
+  // Traverse context and populate snapshot with all assigned variables
+  private def contextToSnapshot(context: Context): Snapshot = {
+    var snap = Snapshot.empty
+    val tf = new TraversalFunction {
+      override def postAP(kc: Context, ap: AsgnPat): AsgnPat = {
+        ap match {
+          case VarPat(x, _) => snap = snap.revisit(x); ap
+          case _ => ap
+        }
+      }
+
+      override def postDiffS(kc: Context, s: DiffStatement): DiffStatement = {
+        s match {
+          case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _)) => snap = snap.revisit(x); s
+          case _ => s
+        }
+      }
+
+      override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
+        s match {
+          case DomModify(VarPat(x, _), f) => snap = snap.revisit(x); s
+          case _ => s
+        }
+      }
+    }
+    ProofTraversal.traverse(Context.empty, context.s, tf)
+    snap
   }
 
   private def renameAdmissible(kc: Context, label: TimeIdent, f: Term, except: Set[Ident]): Option[Term] = {
@@ -53,7 +84,7 @@ case class DeterritorializePass(tt: TimeTable) {
       case None => throw TransformationException(s"Undefined line label: $label")
       case Some((labelSnap, labelCon)) =>
         // @TODO: This is slow
-        val hereSnap = SSAPass.toSnapshot(kc)
+        val hereSnap = contextToSnapshot(kc)
         // @TODO: Implement forward label references
         // @TODO: Check is only correct if different branches a ++ b reuse same indices.
         // For now, only allow label translation if the reference appears after definition.
