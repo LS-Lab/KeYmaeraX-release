@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Statements
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, UnificationMatch}
@@ -152,10 +152,174 @@ object ProofChecker {
     }
   }
 
-  /**  Check a differential equation proof */
+  /** @return triple (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]] */
+  private def collectDiffStatements(statement: DiffStatement): (Set[AtomicODEStatement], Set[AtomicODEStatement],  Set[AtomicODEStatement]) = {
+    statement match {
+      case st: AtomicODEStatement => (Set(st), Set(), Set())
+      case DiffProductStatement(l, r) =>
+        val (a1, b1, c1) = collectDiffStatements(l)
+        val (a2, b2, c2) = collectDiffStatements(r)
+        (a1.++(a2), b1.++(b2), c1.++(c2))
+      case DiffGhostStatement(ds) =>
+        val (a, b, c) = collectDiffStatements(ds)
+        (Set(), a.++(b).++(c), Set())
+      case InverseDiffGhostStatement(ds) =>
+        val (a, b, c) = collectDiffStatements(ds)
+        (Set(), Set(), a.++(b).++(c))
+    }
+  }
+
+  private def collectDomStatements(statement: DomainStatement): (Set[DomAssume], Set[DomAssert],  Set[DomainStatement], Set[DomModify]) = {
+    statement match {
+      case da: DomAssume => (Set(da), Set(), Set(), Set())
+      case da: DomAssert => (Set(), Set(da), Set(), Set())
+      case dw: DomWeak =>
+        val (a, b, c, d) = collectDomStatements(dw)
+        (Set(), Set(), a.++(b).++(c), d)
+      case dm: DomModify =>(Set(), Set(), Set(), Set(dm))
+      case DomAnd(l, r) =>
+        val (a1, b1, c1, d1) = collectDomStatements(l)
+        val (a2, b2, c2, d2) = collectDomStatements(r)
+        (a1.++(a2), b1.++(b2), c1.++(c2), d1.++(d2))
+    }
+  }
+
+  private def accum(t: Option[DiffStatement], x: DiffStatement): Some[DiffStatement] =
+    t match {case None => Some(x) case Some(y) => Some(DiffProductStatement(y, x))}
+
+  private def accum(t: Option[DomainStatement], x: DomainStatement): Some[DomainStatement] =
+    t match {case None => Some(x) case Some(y) => Some(DomAnd(y, x))}
+
+  /** Is ghost term [[x' = term]] admissible? Allow linear and constant terms. */
+  private def admissibleGhost(x: Variable, term: Term): Boolean = {
+    if (!StaticSemantics(term).contains(x)) return true
+    term match {
+      case (Plus(Times(y: BaseVariable, c), r)) => x == y && !StaticSemantics(Pair(c, r)).contains(x)
+      case _ => false
+    }
+  }
+
+  // @return elaborated context
+  private def applyGhosts(kc: Context, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
+    val ghosts: Option[DiffStatement] = None
+    val res = ds.foldLeft[Option[DiffStatement]](ghosts){{case (acc, ds) =>
+    ds match {
+      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs)) if admissibleGhost(x1, rhs) =>
+        accum(core, ds)
+      case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
+      case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
+    }}}
+    res.flatMap(accum(core, _))
+  }
+
+  // @TODO: Should be fine without admissibility check, at least for safety, but maybe not for liveness.
+  private def applyInverseGhosts(kc: Context, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
+    val iGhosts: Option[DiffStatement] = None
+    val res = ds.foldLeft[Option[DiffStatement]](iGhosts){{case (acc, ds) =>
+      ds match {
+        case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs)) if admissibleGhost(x1, rhs) =>
+          accum(core, ds)
+        case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
+        case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
+      }}}
+    res.flatMap(accum(core, _))
+  }
+
+  /** @TODO: Ensure assertions hold at all times, ensure solution and DI both allowed. */
+  private def applyAssertions(kc: Context, ds: Option[DiffStatement], assumps: Set[DomAssume], asserts: Set[DomAssert]): Option[DomainStatement] = {
+    val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
+    val discreteAssigns = ds.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
+    val con = (discreteAssumps ++ discreteAssigns).foldLeft[Context](kc)(_.:+(_))
+    asserts.foldLeft[Option[DomainStatement]](None)({case ((acc, DomAssert(x, f, m))) =>
+      val (Context(Assert(xx, ff, mm)), _) = apply(con, Assert(x, f, m))
+      accum(acc, DomAssert(xx, ff, mm))})
+  }
+
+  private def isAssertive(dom: DomainStatement): Boolean = {
+    dom match {
+      case DomAssert(x, f, child) => true
+      case DomAnd(l, r) =>isAssertive(l) && isAssertive(r)
+      case _ => false
+    }
+
+  }
+
+  private def applyDuration(kc: Context, dom: Option[DomainStatement], mod: Set[DomModify]): Option[DomainStatement] = {
+    if (mod.size >= 2)
+      throw ProofCheckException(s"ODE should have at most one duration statement, got: $mod")
+    else if (mod.isEmpty) return dom
+    if(dom.nonEmpty && !isAssertive(dom.get))
+      throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}")
+    val oneMod@DomModify(ap, rhs) = mod.toList.head
+    accum(dom, oneMod)
+  }
+
+  private def applyWeakens(kc: Context, dur: Option[DomainStatement], weak: Set[DomainStatement]): Option[DomainStatement] = {
+    val weakDom = weak.toList.foldLeft[Option[DomainStatement]](None)(accum)
+    weakDom match {case None => dur case Some(weakStatement) => accum(dur, DomWeak(weakStatement))}
+  }
+
+  private def diffStatementToODE(ds: DiffStatement): Option[DifferentialProgram] = {
+    ds match {
+      case AtomicODEStatement(dp) => Some(dp)
+      case DiffProductStatement(l, r) =>
+        (diffStatementToODE(l), diffStatementToODE(r)) match {
+          case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
+          case (None, r) => r
+          case (l, None) => l
+        }
+      case InverseDiffGhostStatement(ds) => diffStatementToODE(ds)
+      case DiffGhostStatement(ds) => None
+    }
+  }
+
+  private def domainStatementToODE(dc: DomainStatement, isAngelic: Boolean): Formula = {
+    dc match {
+      case DomAssume(x, f) => f
+      case DomWeak(dc) => domainStatementToODE(dc, isAngelic)
+      case DomAnd(l, r) => And(domainStatementToODE(l, isAngelic), domainStatementToODE(r, isAngelic))
+      case DomAssert(x, f, child) if (isAngelic) => f
+      case DomAssert(x, f, child) => True
+      case DomModify(x, f) => True
+    }
+  }
+
+  private def modToEq(mod: DomModify): Equal = {
+    val (DomModify(VarPat(x, _), e)) = mod
+    Equal(x, e)
+  }
+  private def odeProofConclusion(proveODE: ProveODE, mod: Option[DomModify]): Formula = {
+    val ode = diffStatementToODE(proveODE.ds).getOrElse(throw ProofCheckException("Expected ODE in ODE proof"))
+    val dom = domainStatementToODE(proveODE.dc, isAngelic = mod.nonEmpty)
+    val odeSystem = ODESystem(ode, dom)
+    val hp = mod.map(dm => Compose(odeSystem, Test(modToEq(dm)))).getOrElse(odeSystem)
+    if (mod.nonEmpty) {
+      Box(Dual(hp), True)
+    } else {
+      Box(hp, True)
+    }
+  }
+
+    /**  Check a differential equation proof */
   // @TODO implement
+  // @TODO: require that ode is preceded by assignment to duration variable, if any
   private def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
-    ???
+    val (cores, ghosts, invGhost) = collectDiffStatements(ds)
+    val (assume, assert, weak, modify) = collectDomStatements(dc)
+    val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
+    val ghosted = applyGhosts(con, core, ghosts)
+    val asserted = applyAssertions(con, ghosted, assume, assert)
+    val durated = applyDuration(con, asserted, modify)
+    val inversed = applyInverseGhosts(con, ghosted, invGhost)
+    val weakened = applyWeakens(con, durated, weak)
+    val proveODE =
+      (inversed, weakened) match {
+        case (Some(inv), Some(weak)) => ProveODE(inv, weak)
+        case _ => throw ProofCheckException("Expected ODE and domain, got none")
+      }
+    val fml = odeProofConclusion(proveODE, modify.toList.headOption)
+    (proveODE, fml)
+
   }
 
   /** @return equivalent formula of f, with shape [a]P */
