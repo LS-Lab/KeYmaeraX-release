@@ -270,9 +270,9 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   // method parser
   "method parser" should "parse terminal methods" in {
-    p("by RCF", pp.method(_)) shouldBe RCF()
-    p("by auto", pp.method(_)) shouldBe Auto()
-    p("by prop", pp.method(_)) shouldBe Prop()
+    p("by RCF", pp.method(_)) shouldBe Using(List(DefaultSelector), RCF())
+    p("by auto", pp.method(_)) shouldBe Using(List(DefaultSelector), Auto())
+    p("by prop", pp.method(_)) shouldBe Using(List(DefaultSelector), Prop())
   }
 
   it should "parse using" in {
@@ -281,8 +281,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse by-proof" in {
     p("true", pc.variableTrueFalse(_)) shouldBe True
-    p("!(true) by auto;", pp.proof(_)) shouldBe List[Statement](Assert(Nothing, True, Auto()))
-    p("proof !(true) by auto; end", pp.method(_)) shouldBe ByProof(List[Statement](Assert(Nothing, True, Auto())))
+    p("!(true) by auto;", pp.proof(_)) shouldBe List[Statement](Assert(Nothing, True, Using(List(DefaultSelector), (Auto()))))
+    p("proof !(true) by auto; end", pp.method(_)) shouldBe Using(List(DefaultSelector), ByProof(List[Statement](Assert(Nothing, True, Using(List(DefaultSelector), Auto())))))
   }
 
   // proof-statement parser
@@ -291,7 +291,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse assertion" in {
-    p("!x:(true) by auto;", pp.statement(_)) shouldBe Assert(Variable("x"), True, Auto())
+    p("!x:(true) by auto;", pp.statement(_)) shouldBe Assert(Variable("x"), True, Using(List(DefaultSelector), Auto()))
   }
 
   it should "parse assignments" in {
@@ -327,8 +327,8 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse switch " in {
     p("switch { case xOne:(x <= 1) => !x: (true) by auto; case xPos:(x >= 0) => !x: (true) by auto;}", pp.statement(_)) shouldBe
       Switch(None, List(
-        (Variable("xOne"), LessEqual(Variable("x"), Number(1)), Assert(Variable("x"), True, Auto())),
-        (Variable("xPos"), GreaterEqual(Variable("x"), Number(0)), Assert(Variable("x"), True, Auto()))))
+        (Variable("xOne"), LessEqual(Variable("x"), Number(1)), Assert(Variable("x"), True, Using(List(DefaultSelector), Auto()))),
+        (Variable("xPos"), GreaterEqual(Variable("x"), Number(0)), Assert(Variable("x"), True, Using(List(DefaultSelector), Auto())))))
   }
 
   it should "parse box-choice" in {
@@ -345,7 +345,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse boxloop" in {
     p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe
-      BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(VarPat("x".asVariable), Left(Minus(Variable("x"), Number(1)))))))
+      BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(VarPat("x".asVariable), Left(Minus(Variable("x"), Number(1)))))),
+        Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))))))
   }
 
   it should "parse ghost" in {
@@ -391,7 +392,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse diffcut" in {
     p("x' = y & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
-    )), DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Auto()))
+    )), DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector),Auto())))
   }
 
   it should "parse dc-assign" in {
@@ -405,7 +406,7 @@ class KaisarProgramParserTests extends TacticTestBase {
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
           DomModify(VarPat(Variable("t")), Variable("T")),
-          DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Auto())))
+          DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
   }
 
   "formula error messages" should "exist" in {
