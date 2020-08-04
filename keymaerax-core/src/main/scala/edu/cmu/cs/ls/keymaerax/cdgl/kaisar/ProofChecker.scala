@@ -173,7 +173,7 @@ object ProofChecker {
     statement match {
       case da: DomAssume => (Set(da), Set(), Set(), Set())
       case da: DomAssert => (Set(), Set(da), Set(), Set())
-      case dw: DomWeak =>
+      case DomWeak(dw) =>
         val (a, b, c, d) = collectDomStatements(dw)
         (Set(), Set(), a.++(b).++(c), d)
       case dm: DomModify =>(Set(), Set(), Set(), Set(dm))
