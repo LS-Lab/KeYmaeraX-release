@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
 import edu.cmu.cs.ls.keymaerax.core._
 
 class SelectorEliminationPass() {
@@ -51,7 +52,10 @@ class SelectorEliminationPass() {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        fv.toSet.toList.map(ProgramVar)
+        // @TODO: filter down only to bound variables of context.
+        // But filtering is probably very slow.
+        val candidates = fv.toSet.toList.map(ProgramVar)
+        candidates.filter(x => kc.getAssignments(x.x).nonEmpty)
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
         kc.unify(pat).map({case (x, _) => ProofVar(x)}).toList
@@ -65,7 +69,9 @@ class SelectorEliminationPass() {
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
         val combineAssms = useAssms ++ assms
-        val allFree = combineAssms.map(freeVarsPT(kc, _)).reduce(_ ++ _)
+        if(combineAssms.isEmpty && use != List(DefaultSelector))
+          throw ElaborationException("Non-default selector should select at least one fact.")
+        val allFree = combineAssms.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePt = allFree.toList.map(ProgramVar)
         val dedupAssms = freePt ++ combineAssms.filter(!_.isInstanceOf[ProgramVar])
         (dedupAssms, meth)
