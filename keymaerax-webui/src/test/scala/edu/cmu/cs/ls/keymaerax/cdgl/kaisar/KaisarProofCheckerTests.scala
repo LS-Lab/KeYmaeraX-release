@@ -5,6 +5,7 @@ import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
+import edu.cmu.cs.ls.keymaerax.core._
 
 class KaisarProofCheckerTests extends TacticTestBase {
   import KaisarProof._
@@ -122,4 +123,53 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{?(x^2 >= 0);}^@]true".asFormula
   }
 
+  "ode proof checking" should "prove trivial  system proof" in withMathematica { _ =>
+    val pfStr = "x' = y, y' = x;"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{x'=y,y'=x&true}]true".asFormula
+  }
+
+  it should "prove diffghost" in withMathematica { _ =>
+    val pfStr = "(G x' = y G);"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe False // todo
+  }
+
+  // @TODO: proper handling of formula output in inverseghost proof
+  it should "prove inverse diffghost" in withMathematica { _ =>
+    val pfStr = "{G x' = y G};"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[{x'=y&true}]true".asFormula
+  }
+
+  it should "prove diffweak" in withMathematica { _ =>
+    val pfStr = "x' = y & {G dc:(x > 0) G};"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe True
+  }
+
+  it should "prove diffcut" in withMathematica { _ =>
+    val pfStr = "x' = y & !dc:(x > 0) by auto;"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe True
+  }
+
+  it should "prove dc-assign" in withMathematica { _ =>
+    val pfStr = "x' = y & t := T;"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe True
+  }
+
+  it should "prove conjunction" in withMathematica { _ =>
+    val pfStr = "x' = y & t := T & !dc:(x > 0) by auto;"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe True
+  }
 }
