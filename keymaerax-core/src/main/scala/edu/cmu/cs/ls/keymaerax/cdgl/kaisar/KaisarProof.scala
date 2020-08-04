@@ -83,6 +83,19 @@ object KaisarProof {
     }
   }
 
+  def ghost(s: Statement): Statement = {
+    s match {
+      case ProveODE(ds, dc) => ProveODE(DiffGhostStatement(ds), dc)
+      case _ => Ghost(s)
+    }
+  }
+
+  def inverseGhost(s: Statement): Statement = {
+    s match {
+      case ProveODE(ds, dc) => ProveODE(InverseDiffGhostStatement(ds), DomWeak(dc))
+      case _ => InverseGhost(s)
+    }
+  }
 }
 
 // Umbrella trait for all syntactic classes of abstract syntax tree

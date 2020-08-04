@@ -258,8 +258,8 @@ object ProofParser {
 
   def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep ~ "}").map({case (i, ss) => locate(block(ss.toList), i)})
   def boxLoop[_: P]: P[BoxLoop] = (Index ~ statement.rep ~ "*").map({case (i, ss) => locate(BoxLoop(block(ss.toList)), i)})
-  def ghost[_: P]: P[Ghost] = (Index ~ "(G" ~ statement.rep ~ "G)").map({case (i, ss) => locate(Ghost(block(ss.toList)), i)})
-  def inverseGhost[_: P]: P[InverseGhost] = (Index ~ "{G" ~ statement.rep ~ "G}").map({case (i, ss )=> locate(InverseGhost(block(ss.toList)), i)})
+  def ghost[_: P]: P[Statement] = (Index ~ "(G" ~ statement.rep ~ "G)").map({case (i, ss) => locate(KaisarProof.ghost(block(ss.toList)), i)})
+  def inverseGhost[_: P]: P[Statement] = (Index ~ "{G" ~ statement.rep ~ "G}").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
