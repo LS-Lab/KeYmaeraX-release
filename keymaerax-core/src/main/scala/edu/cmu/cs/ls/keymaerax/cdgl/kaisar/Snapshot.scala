@@ -73,6 +73,21 @@ case class Snapshot (private val m: Map[String, Subscript])  {
     }
   }
 
+  /** Input should be in SSA form already. Call this on every variable to reconstruct Snapshot from output of SSA. */
+  def revisit(x: Variable): Snapshot = {
+    x match {
+      case BaseVariable(name, opt, _) =>
+        val index = (opt, getOpt(name)) match {
+          case (_, None) => opt
+          case (None, Some(x)) => x
+          case (x, Some(None)) => x
+          case (Some(i), Some(Some(j))) => Some(i.max(j))
+        }
+        this.+(name -> index)
+      case DifferentialSymbol(bv) => revisit(bv)
+    }
+  }
+
   /** Add a variable to a snapshot. This (or addSet) should be called wherever a single variable is assigned.
     * If [[x]] is already in the snapshot, its subscript is incremented.
     * @return the variable with its new index and the updated snapshot. */
@@ -96,7 +111,7 @@ case class Snapshot (private val m: Map[String, Subscript])  {
   /** @return whether every key has same or higher subscript in other snapshot */
   def <=(other: Snapshot): Boolean = {
     if (!m.keySet.subsetOf(other.keySet)) return false
-    m.forall({case (x, None) => true case (x, Some(i)) => i <= other.get(x).get})
+    m.forall({case (x, None) => true case (x, Some(i)) => other.get(x).exists(i <= _)})
   }
 }
 
