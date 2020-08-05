@@ -1168,12 +1168,14 @@ object SimplifierV3 {
       case Equal(l, r) => if (r == Number(0)) List() else List(eqNorm)
       case And(l, r) => List(andEqNorm)
       case Or(l, r) => List(orEqNorm)
+      case True => Nil
+      case False => Nil
       case _ => throw new IllegalArgumentException("cannot normalize " + f + " to have 0 on RHS (must be a conjunction/disjunction of atomic equations)")
     }
   }
 
   private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
+    f match {
       case LessEqual(l,r) => List(leFlip,leNorm)
       case GreaterEqual(l,r) => if (r == Number(0)) List() else List(geNorm)
       case Less(l,r) => List(ltFlip,ltNorm)
@@ -1182,13 +1184,15 @@ object SimplifierV3 {
       case NotEqual(l,r) => if (r == Number(0)) List() else List(neqNorm)
       case And(l,r) =>  Nil
       case Or(l,r) =>  Nil
+      case True => Nil
+      case False => Nil
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
     }
   }
 
   // Simplifier index that normalizes only a single inequality to have 0 on the RHS
   private def ineqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
+    f match {
       case LessEqual(l,r) => ()
       case GreaterEqual(l,r) => ()
       case Less(l,r) => ()
@@ -1200,7 +1204,7 @@ object SimplifierV3 {
 
   // ineqNormalize + equality and disequalities (all atomic comparisons)
   private def atomNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
+    f match {
       case LessEqual(l,r) => ()
       case GreaterEqual(l,r) => ()
       case Less(l,r) => ()
@@ -1214,21 +1218,25 @@ object SimplifierV3 {
 
   // Simplifier index that normalizes a formula into max/min >= normal form
   private def maxMinGeqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
+    f match {
       case GreaterEqual(l,r:Number) if r.value.toInt == 0 => List()
       case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
       case And(l,r) =>  List(minGeqNorm)
       case Or(l,r) =>  List(maxGeqNorm)
+      case True => Nil
+      case False => Nil
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >= 0s or =0s)")
     }
   }
 
   // Simplifier index that normalizes a formula into max/min > normal form
   private def maxMinGtNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
+    f match {
       case Greater(l,r:Number) if r.value.toInt == 0 => List()
       case And(l,r) =>  List(minGtNorm)
       case Or(l,r) =>  List(maxGtNorm)
+      case True => Nil
+      case False => Nil
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >0 normal form (must be a conjunction/disjunction of > 0s)")
     }
   }

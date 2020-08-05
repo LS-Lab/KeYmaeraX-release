@@ -267,4 +267,17 @@ class SimplifierV3Tests extends TacticTestBase {
     maxminres._1 shouldBe "min((-abs(x*y),max((max((x-5,y)),min((0-x,f+g+1.0-(1+z)))))))>=0".asFormula
   }
 
+  it should "not fail on true/false" in withMathematica { _ =>
+    semiAlgNormalize("true".asFormula)._1 shouldBe "true".asFormula
+    semiAlgNormalize("false".asFormula)._1 shouldBe "false".asFormula
+    semiAlgNormalize("true -> x>=5".asFormula)._1 shouldBe "false|x-5>=0".asFormula
+    semiAlgNormalize("x>=5 -> false".asFormula)._1 shouldBe "5-x>0|false".asFormula
+    semiAlgNormalize("!x>=5 -> false".asFormula)._1 shouldBe "x-5>=0|false".asFormula
+    semiAlgNormalize("true <-> x>=5".asFormula)._1 shouldBe "(true&x-5>=0)|(false&5-x>0)".asFormula
+
+    baseNormalize("false -> true".asFormula)._1 shouldBe "true|true".asFormula
+    algNormalize("true -> x=4".asFormula)._1 shouldBe "false|x-4=0".asFormula
+    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "false|x-5>=0".asFormula
+  }
+
 }
