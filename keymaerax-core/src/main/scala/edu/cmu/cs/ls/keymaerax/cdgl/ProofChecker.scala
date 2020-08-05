@@ -36,8 +36,9 @@ case class ProofException(msg: String, context: Context=Context.empty) extends E
   * @see [[ProofChecker.apply]]
   */
 object ProofChecker {
-  /** @return compute differential of formula [[p]] */
-  private def deriveFormula(p: Formula, map: Map[Variable, Term]): Formula = {
+  /** @see  [[kaisar.ProofChecker]]
+   * @return compute differential of formula [[p]] */
+  def deriveFormula(p: Formula, map: Map[Variable, Term]): Formula = {
     p match {
       case And(p, q) => And(deriveFormula(p, map), deriveFormula(q, map))
       case Or(p, q) => And(deriveFormula(p, map), deriveFormula(q, map))
@@ -125,7 +126,7 @@ object ProofChecker {
   type Indices = Map[Either[String, String], Option[Int]]
 
   /**
-    * Traverse expression and record indices with which each varable appears
+    * Traverse expression and record indices with which each variable appears
     * @param init Indices of variables seen so far
     * @param e Expression in which to collect variable references
     * @return Index map including occurrences in e

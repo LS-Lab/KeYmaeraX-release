@@ -159,12 +159,18 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{x'=y&x>0}]true".asFormula
   }
 
-  // @TODO: DI proofs very broken. fix. write test that catches bug.
+  // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
   it should "prove diffcut" in withMathematica { _ =>
-    val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by auto;"
+    val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solve;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[y:=0; x:=1;{x' = y}]true".asFormula
+  }
+
+  it should "catch bad diffcut" in withMathematica { _ =>
+    val pfStr = "?xZero:(x:=1); x' = -1 & !dc:(x > 0) using xZero by induction;"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
 
   it should "catch invalid dc-assign: not bound" in withMathematica { _ =>
@@ -193,7 +199,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "prove diamond assertion " in withMathematica { _ =>
-    val pfStr = "t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by auto};"
+    val pfStr = "t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by induction};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:=0; {{t'=1, x'=y & t>=0}; ?(t=T);}^@]true".asFormula

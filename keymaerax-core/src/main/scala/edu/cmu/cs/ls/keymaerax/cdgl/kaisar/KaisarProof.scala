@@ -112,17 +112,21 @@ final case class Proof(ss: List[Statement])
 // A proof-method expresses a single step of unstructured heuristic proof,
 // generally as justification of a single step of some structured proof.
 // @TODO: case exhaustiveness checking method
-sealed trait Method extends ASTNode
+sealed trait Method extends ASTNode { val selectors: List[Selector] = Nil}
 // constructive real-closed field arithmetic
-case class RCF() extends Method {}
+case class RCF() extends Method
 // general-purpose auto heuristic
-case class Auto() extends Method {}
+case class Auto() extends Method
 // propositional steps
-case class Prop() extends Method {}
+case class Prop() extends Method
+// solve differential equation (can only be used in ODE)
+case class Solve() extends Method
+// differential induction (can only be used in ODE)
+case class DiffInduction() extends Method
 // introduce an assumption used in method
-case class Using(use: List[Selector], method: Method) extends Method {}
+case class Using(use: List[Selector], method: Method) extends Method {override val selectors: List[Selector] = use ++ method.selectors}
 // discharge goal with structured proof
-case class ByProof(proof: Statements) extends Method {}
+case class ByProof(proof: Statements) extends Method
 
 // Forward-chaining natural deduction proof term.
 sealed trait ProofTerm extends ASTNode

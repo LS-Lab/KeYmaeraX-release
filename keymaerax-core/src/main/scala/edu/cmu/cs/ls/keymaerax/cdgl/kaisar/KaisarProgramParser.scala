@@ -192,6 +192,8 @@ object ProofParser {
   def rcf[_: P]: P[RCF] = P("by" ~ ws ~ Index ~ "RCF").map(i => locate(RCF(), i))
   def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
   def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
+  def solve[_: P]: P[Solve] = P("by" ~ ws ~ Index ~ "solve").map(i => locate(Solve(), i))
+  def diffInduction[_: P]: P[DiffInduction] = P("by" ~ ws ~ Index ~ "induction").map(i => locate(DiffInduction(), i))
   def using[_: P]: P[Using] = (Index ~ P("using") ~ selector.rep  ~ rawMethod).
     map({case (i, sels, meth) => locate(Using(sels.toList, meth), i)})
   def byProof[_: P]: P[ByProof] = (Index ~ "proof" ~ proof ~ "end").
@@ -203,7 +205,7 @@ object ProofParser {
     (Index ~ expression).map({case (i, e)  => locate(PatternSelector(e), i)})
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
 
-  def rawMethod[_: P]: P[Method] = rcf | auto | prop | using | byProof
+  def rawMethod[_: P]: P[Method] = rcf | auto | prop | solve | diffInduction | using | byProof
   // If method has no selectors, then insert the "default" heuristic selection method
   def method[_: P]: P[Method] = rawMethod.map({case u: Using => u case m => Using(List(DefaultSelector), m)})
 
