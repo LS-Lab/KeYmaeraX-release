@@ -175,7 +175,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   "timesPowers" should "cover all cases" in withMathematica { _ =>
     val x = "x".asTerm
     val y = "y".asTerm
-    val z = "z".asTerm
+    val z = "z'".asTerm
     val pa = ring23
     val c = pa.Coefficient(1, 1)
     val m1 = pa.Monomial(c, pa.ofSparse((x, 2), (y, 1), (z, 3)))
@@ -184,11 +184,11 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val res2 = m1.timesPowers(IndexedSeq((x, 1), (z, 1)))
     val res3 = m2.timesPowers(IndexedSeq((z, 1)))
     res1._1 shouldBe IndexedSeq((x,2), (y,2), (z,3))
-    res1._2.conclusion.succ(0) shouldBe "1*x^2*y^1*z^3*(1*y^1)=1*x^2*y^2*z^3".asFormula
+    res1._2.conclusion.succ(0) shouldBe "1*x^2*y^1*z'^3*(1*y^1)=1*x^2*y^2*z'^3".asFormula
     res2._1 shouldBe IndexedSeq((x,3), (y,1), (z,4))
-    res2._2.conclusion.succ(0) shouldBe "1*x^2*y^1*z^3*(1*x^1*z^1)=1*x^3*y^1*z^4 ".asFormula
+    res2._2.conclusion.succ(0) shouldBe "1*x^2*y^1*z'^3*(1*x^1*z'^1)=1*x^3*y^1*z'^4 ".asFormula
     res3._1 shouldBe IndexedSeq((y,1), (z,1))
-    res3._2.conclusion.succ(0) shouldBe "1*y^1*(1*z^1)=1*y^1*z^1 ".asFormula
+    res3._2.conclusion.succ(0) shouldBe "1*y^1*(1*z'^1)=1*y^1*z'^1 ".asFormula
   }
 
   it should "be constructed" in withMathematica { _ =>

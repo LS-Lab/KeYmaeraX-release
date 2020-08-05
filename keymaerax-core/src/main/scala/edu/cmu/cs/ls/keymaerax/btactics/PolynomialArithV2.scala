@@ -213,6 +213,7 @@ object PolynomialArithV2 extends TwoThreeTreePolynomialRing(
 object MonomialOrders {
   val variableConstantOrdering: Ordering[Term] = Ordering.by{
     case BaseVariable(n, i, Real) => (0, n, i)
+    case DifferentialSymbol(BaseVariable(n, i, Real)) => (0, n, i)
     case FuncOf(Function(n, i, Unit, Real, false), Nothing) => (1, n, i)
     case t => throw new IllegalArgumentException("variableConstantOrdering expects BaseVariable or FuncOf(_, Nothing) of sort Real, but got " + t)
   }
@@ -1016,7 +1017,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
         )
         monomialOrdering.compare(x.powers, v.powers)  match {
         case 0 =>
-          val vx = (v.forgetPrv+x).get
+          val vx = (v.forgetPrv+x).getOrElse(throw new IllegalArgumentException(v.forgetPrv.powersTerm + " and " + x.powersTerm + " do not fit"))
           val newRhs = Plus(Plus(left.rhs, vx.rhs), right.rhs)
           val newPrv = useDirectly(branch2Value, treeInst ++ Seq(("vx_", vx.rhs)), Seq(tree.prv, vx.prv))
           Stay(Branch2(left, vx, right, Some(newPrv)))
