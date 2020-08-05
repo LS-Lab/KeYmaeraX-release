@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt
 
 class KaisarProofCheckerTests extends TacticTestBase {
   import KaisarProof._
@@ -109,6 +110,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
+  // @TODO: Fix ghost scope management
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
     val pfStr = "?xVal:(x:=1); (G ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; G) !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
@@ -130,11 +132,16 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{x'=y,y'=x&true}]true".asFormula
   }
 
-  it should "prove diffghost" in withMathematica { _ =>
+  it should "ban diffghost with no body" in withMathematica { _ =>
     val pfStr = "(G x' = y G);"
     val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+  }
+  it should "prove diffghost" in withMathematica { _ =>
+    val pfStr = "y' = y^2, (G x' = y G);"
+    val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe False // todo
+    ff shouldBe "[{y'=y^2&true}]true".asFormula
   }
 
   // @TODO: proper handling of formula output in inverseghost proof
@@ -149,27 +156,46 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val pfStr = "x' = y & {G dc:(x > 0) G};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe True
+    ff shouldBe "[{x'=y&x>0}]true".asFormula
   }
 
+  // @TODO: DI proofs very broken. fix. write test that catches bug.
   it should "prove diffcut" in withMathematica { _ =>
-    val pfStr = "x' = y & !dc:(x > 0) by auto;"
+    val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe True
+    ff shouldBe "[y:=0; x:=1;{x' = y}]true".asFormula
+  }
+
+  it should "catch invalid dc-assign: not bound" in withMathematica { _ =>
+    val pfStr = "x' = y & t := T;"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+  }
+
+  it should "catch invalid dc-assign 2: not initialized" in withMathematica { _ =>
+    val pfStr = "t' = 1, x' = y & t := T;"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
+  }
+
+  it should "catch invalid dc-assign 3: wrong clock" in withMathematica { _ =>
+    val pfStr = "t:= 0; {t' = 2, x' = y & t := T};"
+    val pf = p(pfStr, pp.statement(_))
+    a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
 
   it should "prove dc-assign" in withMathematica { _ =>
-    val pfStr = "x' = y & t := T;"
+    val pfStr = "t:= 0; {t' = 1, x' = y & t := T};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe True
+    ff shouldBe "[t:= 0; {{t' = 1, x' = y}; ?(t= T);}^@]true".asFormula
   }
 
-  it should "prove conjunction" in withMathematica { _ =>
-    val pfStr = "x' = y & t := T & !dc:(x > 0) by auto;"
+  it should "prove diamond assertion " in withMathematica { _ =>
+    val pfStr = "t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by auto};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe True
+    ff shouldBe "[t:=0; {{t'=1, x'=y & t>=0}; ?(t=T);}^@]true".asFormula
   }
 }

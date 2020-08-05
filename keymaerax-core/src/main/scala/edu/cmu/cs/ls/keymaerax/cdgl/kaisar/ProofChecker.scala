@@ -270,28 +270,40 @@ object ProofChecker {
     weakDom match {case None => dur case Some(weakStatement) => accum(dur, DomWeak(weakStatement))}
   }
 
-  private def diffStatementToODE(ds: DiffStatement): Option[DifferentialProgram] = {
+  private def diffStatementToODE(ds: DiffStatement, mod: Option[DomModify]): Option[DifferentialProgram] = {
     ds match {
-      case AtomicODEStatement(dp) => Some(dp)
+      case AtomicODEStatement(dp) =>
+        (mod, dp.e) match {
+          case (Some(DomModify(VarPat(durvar, _), _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
+          case (Some(DomModify(VarPat(durvar, _), _)), rhs) if (dp.xp.x == durvar) =>
+            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs")
+          case _ => ()
+        }
+        Some(dp)
       case DiffProductStatement(l, r) =>
-        (diffStatementToODE(l), diffStatementToODE(r)) match {
+        (diffStatementToODE(l, mod), diffStatementToODE(r, mod)) match {
           case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
           case (None, r) => r
           case (l, None) => l
         }
-      case InverseDiffGhostStatement(ds) => diffStatementToODE(ds)
+      case InverseDiffGhostStatement(ds) => diffStatementToODE(ds, mod)
       case DiffGhostStatement(ds) => None
     }
   }
 
-  private def domainStatementToODE(dc: DomainStatement, isAngelic: Boolean): Formula = {
+  private def domainStatementToODE(dc: DomainStatement, isAngelic: Boolean): Option[Formula] = {
     dc match {
-      case DomAssume(x, f) => f
+      case DomAssume(x, f) => Some(f)
       case DomWeak(dc) => domainStatementToODE(dc, isAngelic)
-      case DomAnd(l, r) => And(domainStatementToODE(l, isAngelic), domainStatementToODE(r, isAngelic))
-      case DomAssert(x, f, child) if (isAngelic) => f
-      case DomAssert(x, f, child) => True
-      case DomModify(x, f) => True
+      case DomAnd(l, r) =>
+        (domainStatementToODE(l, isAngelic), domainStatementToODE(r, isAngelic)) match {
+          case (Some(l), Some(r)) => Some(And(l, r))
+          case (None, r) => r
+          case (l, None) => l
+        }
+      case DomAssert(x, f, child) if (isAngelic) => Some(f)
+      case DomAssert(x, f, child) => None
+      case DomModify(x, f) => None
     }
   }
 
@@ -300,9 +312,13 @@ object ProofChecker {
     Equal(x, e)
   }
   private def odeProofConclusion(proveODE: ProveODE, mod: Option[DomModify]): Formula = {
-    val ode = diffStatementToODE(proveODE.ds).getOrElse(throw ProofCheckException("Expected ODE in ODE proof"))
-    val dom = domainStatementToODE(proveODE.dc, isAngelic = mod.nonEmpty)
+    val ode = diffStatementToODE(proveODE.ds, mod).getOrElse(throw ProofCheckException("Expected ODE in ODE proof"))
+    val dom = domainStatementToODE(proveODE.dc, isAngelic = mod.nonEmpty).getOrElse(True)
     val odeSystem = ODESystem(ode, dom)
+    val odeBV = StaticSemantics(odeSystem).bv
+    mod.foreach(dm =>
+      if(!odeBV.contains(dm.x.boundVars.toList.head))
+        throw ProofCheckException("ODE duration variable must be bound in ODE"))
     val hp = mod.map(dm => Compose(odeSystem, Test(modToEq(dm)))).getOrElse(odeSystem)
     if (mod.nonEmpty) {
       Box(Dual(hp), True)
@@ -328,7 +344,12 @@ object ProofChecker {
         case (Some(inv), Some(weak)) => ProveODE(inv, weak)
         case _ => throw ProofCheckException("Expected ODE and domain, got none")
       }
-    val fml = odeProofConclusion(proveODE, modify.toList.headOption)
+    val theMod = modify.toList.headOption
+    val fml = odeProofConclusion(ProveODE(ds,dc), modify.toList.headOption)
+    theMod.foreach({case DomModify(VarPat(x, _), f) =>
+      if (!con.getAssignments(x).exists({case Equal(y, Number(n)) if n.toInt == 0 && x == y => true case _ => false}))
+        throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE")
+    })
     (proveODE, fml)
 
   }
@@ -520,9 +541,15 @@ object ProofChecker {
           case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify")
         }
       case Ghost(s) =>
-        // @TODO: Check scope on f
+        // @TODO: May need to apply/eliminate/rewind SSA assignments in order to achieve valid scope
+        // @TODO: Probably need isGhost flag to filter out unwanted assignments
         val (ss, f) = apply(con, s)
-        (Context(Ghost(ss.s)), True)
+        val taboo = VariableSets(ss).boundVars
+        val fv = StaticSemantics(f).fv
+        if (taboo.intersect(fv.toSet).nonEmpty) {
+          throw ProofCheckException(s"Ghost variable assignment escapes scope in ghost statement $f")
+        }
+        (Context(Ghost(ss.s)), f)
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con, s)
         (Context(InverseGhost(ss.s)), True)
