@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
@@ -25,19 +25,25 @@ class AssessmentProverTests extends TacticTestBase {
     private val TURNSTILE = "==>"
     private val GOAL_SEP = ";;"
 
-    //private val EXTRACTOR = """\\sol\s*(?:\[(syneq|polyeq|qe|loop|dI)(?:\s*:\s*(\w+\s*=\s*"[^"]+")+)?\])?\s*\\kyxline\s*"([^"]+)"""".r(GRADER, ARGS, EXPR)
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
-    private def KYXLINE_EXTRACTOR = kyxlineExtractor("").r(SOL)
+    private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(SOL)
     private val SOL_EXTRACTOR = """\\sol\s*""" + KYXLINE_EXTRACTOR.regex + """\s*"""
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val GRADER_EXTRACTOR = """(?:\\autog\s+(\w+)\((.*)\))?""".stripMargin
     private val EXTRACTOR = (SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(SOL, TEST_SOL, NO_SOL, GRADER, ARGS)
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
+    private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
     def artifactsFromString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
-      else ExpressionArtifact(s.asExpr)
+      else {
+        val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(0).nonEmpty)
+        val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
+        val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
+        if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
+        else ExpressionArtifact(s.asExpr)
+      }
     }
 
     def fromString(s: String): List[AssessmentProverInfo] = {
@@ -83,6 +89,10 @@ class AssessmentProverTests extends TacticTestBase {
       List(AssessmentProverInfo(None, Map.empty,
         SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent)),
         List(SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent))), List.empty))
+    AssessmentProverInfo.fromString("""\sol \kyxline"x>0,y>0,z>0"""") shouldBe
+      List(AssessmentProverInfo(None, Map.empty,
+        ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula)),
+        List(ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula))), List.empty))
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
@@ -92,6 +102,9 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "prove simple formula examples" in withZ3 { _ =>
+    AssessmentProver.polynomialEquality("true".asFormula, "true".asFormula, normalize=false) shouldBe 'proved
+    AssessmentProver.polynomialEquality("[ctrl;]true".asFormula, "[ctrl;]true".asFormula, normalize=false) shouldBe 'proved
+    AssessmentProver.polynomialEquality("[ctrl;]P()".asFormula, "[ctrl;]P()".asFormula, normalize=false) shouldBe 'proved
     inside (AssessmentProver.polynomialEquality("x>=0".asFormula, "x+0*5>=2-4*1/2".asFormula, normalize=false)) {
       case p =>
         p.conclusion shouldBe "==> x=x+0*5 & 0=2-4*1/2".asSequent
@@ -230,6 +243,18 @@ class AssessmentProverTests extends TacticTestBase {
       Map(
         "question" -> "x>2 & y>=1 -> [{x:=x+y;y:=y+2;}*]x>1",
         "tactic" -> "implyR(1);loop({`#1`},1);auto;done")
+    ) shouldBe 'proved
+  }
+
+  it should "prove optional question with a list of diffcuts" in withZ3 { _ =>
+    AssessmentProver.check(
+      ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil),
+      ExpressionArtifact("false".asFormula), //@note ignored because question will be used instead
+      Some(AssessmentProver.Modes.BELLE_PROOF),
+      Map(
+        "question" -> "x>=3 & v>=2 & a>=1 & j>=0 -> [{x'=v,v'=a,a'=j}]x>=3",
+        "tactic" -> "implyR(1); for #i do dC({`#i`},1); <(nil, dI(1); done) endfor; dW(1); QE; done"
+      )
     ) shouldBe 'proved
   }
 

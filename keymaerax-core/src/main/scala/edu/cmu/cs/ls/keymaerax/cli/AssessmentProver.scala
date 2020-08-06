@@ -12,7 +12,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
-import scala.collection.immutable.{IndexedSeq, HashSet}
+import scala.annotation.tailrec
+import scala.collection.immutable.{HashSet, IndexedSeq}
 import scala.collection.mutable.ListBuffer
 
 /** Assesses dL terms and formulas for equality, equivalence, implication etc. with restricted automation. */
@@ -40,6 +41,7 @@ object AssessmentProver {
   /** Assessment prover input artifacts (expressions, sequents etc.) */
   abstract class Artifact
   case class ExpressionArtifact(expr: Expression) extends Artifact
+  case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
 
   /** Proves equivalence of `a` and `b` by QE. */
@@ -90,9 +92,17 @@ object AssessmentProver {
       }
     }, na)
 
-    val combined = terms.map(_._2).reduceRight(And)
-    val lemmas = terms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS)
-    prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R) | nil)*(terms.size-1) & BranchTactic(lemmas))
+    val (realTerms, otherTerms) = terms.partition({ case (_, Equal(l, r)) => l.sort == Real && r.sort == Real })
+    require(otherTerms.forall({ case (_, Equal(l, r)) => l == r }), "Expected all non-Real terms to be syntactically equal, but got " + otherTerms.mkString(","))
+
+    if (realTerms.nonEmpty) {
+      val combined = realTerms.map(_._2).reduceRight(And)
+      val lemmas = realTerms.map({ case (_, e) => polynomialEquality(e.left, e.right) }).map(byUS)
+      prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R) | nil) * (realTerms.size - 1) & BranchTactic(lemmas))
+    } else {
+      //@note formulas without terms, such as true/false or [ctrl;]true
+      syntacticEquality(a, b)
+    }
   }
 
   /** Proves polynomial equality between the terms resulting from chasing simple programs in `a` and `b`. */
@@ -205,7 +215,10 @@ object AssessmentProver {
           val m = KeYmaeraXParser(q).asInstanceOf[Formula]
           have match {
             case ExpressionArtifact(h: Formula) =>
-              val t = BelleParser(args("tactic").replaceAllLiterally("#1", h.prettyString))
+              val t = expandTactic(args("tactic"), h :: Nil)
+              prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
+            case ListExpressionArtifact(hs: List[Expression]) =>
+              val t = expandTactic(args("tactic"), hs)
               prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
           }
         case None =>
@@ -240,6 +253,26 @@ object AssessmentProver {
     Imply(
       s.ante.distinct.sortWith((a, b) => ref.ante.indexOf(a) < ref.ante.indexOf(b)).reduceRightOption(And).getOrElse(True),
       s.succ.distinct.sortWith((a, b) => ref.succ.indexOf(a) < ref.succ.indexOf(b)).reduceRightOption(Or).getOrElse(False))
+  }
+
+  private val TACTIC_REPETITION_EXTRACTOR = "for #i do(.*)endfor".r("reptac")
+
+  /** Expands occurrences of #i in tactic string `s` with arguments from argument list `args`. */
+  @tailrec
+  private def expandTactic(s: String, args: List[Expression]): BelleExpr = {
+    val repTacs = TACTIC_REPETITION_EXTRACTOR.findAllMatchIn(s).toList
+    if (repTacs.nonEmpty) {
+      val unfolded = repTacs.map(_.group("reptac")).map(t => {
+        t -> (1 to args.size).map(i => t.replaceAllLiterally("#i", s"#$i")).mkString(";")
+      })
+      val replaced = unfolded.foldRight(s)({ case ((what, repl), s) => s.replaceAllLiterally(s"for #i do${what}endfor", repl) })
+      assert(!replaced.contains("#i"), "Expected to have replaced all variable-length argument repetitions")
+      expandTactic(replaced, args)
+    } else {
+      val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replaceAllLiterally(s"#$i", args(i-1).prettyString) })
+      require(!ts.contains("#"), "Not enough arguments provided for tactic")
+      BelleParser(ts)
+    }
   }
 
 }
