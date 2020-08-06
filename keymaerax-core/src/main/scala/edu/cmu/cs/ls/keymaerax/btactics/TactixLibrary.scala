@@ -351,7 +351,7 @@ object TactixLibrary extends HilbertCalculus
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic()
-  def auto: DependentTactic = anon { (seq: Sequent) => master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done }
+  def auto: DependentTactic = anons { (_: ProvableSig) => master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
