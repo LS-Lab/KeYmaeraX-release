@@ -30,7 +30,7 @@ class AssessmentProverTests extends TacticTestBase {
     private val SOL_EXTRACTOR = """\\sol\s*""" + KYXLINE_EXTRACTOR.regex + """\s*"""
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
-    private val GRADER_EXTRACTOR = """(?:\\autog\s+(\w+)\((.*)\))?""".stripMargin
+    private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*)\)})?""".stripMargin
     private val EXTRACTOR = (SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(SOL, TEST_SOL, NO_SOL, GRADER, ARGS)
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
@@ -38,7 +38,7 @@ class AssessmentProverTests extends TacticTestBase {
     def artifactsFromString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
       else {
-        val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(0).nonEmpty)
+        val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
         val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
         val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
         if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
@@ -72,18 +72,18 @@ class AssessmentProverTests extends TacticTestBase {
   "Extractor" should "extract grading information" in {
     AssessmentProverInfo.fromString("""\sol \kyxline"x>=0"""") shouldBe
       List(AssessmentProverInfo(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog syneq()""") shouldBe
+    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{syneq()}""") shouldBe
       List(AssessmentProverInfo(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog polyeq(vars="x")""") shouldBe
+    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{polyeq(vars="x")}""") shouldBe
       List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog polyeq(vars="x")""") shouldBe
+    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog{polyeq(vars="x")}""") shouldBe
       List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
         List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog polyeq(vars="x")""") shouldBe
+    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}""") shouldBe
       List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
         List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula)),
         List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
-    AssessmentProverInfo.fromString("""\sol \kyxline"2*x=y" \autog dI(vars="x",question="{x'=1,y'=2}")""") shouldBe
+    AssessmentProverInfo.fromString("""\sol \kyxline"2*x=y" \autog{dI(vars="x",question="{x'=1,y'=2}")}""") shouldBe
       List(AssessmentProverInfo(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
     AssessmentProverInfo.fromString("""\sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"""") shouldBe
       List(AssessmentProverInfo(None, Map.empty,
