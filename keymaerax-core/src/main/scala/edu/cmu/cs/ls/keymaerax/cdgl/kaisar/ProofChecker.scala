@@ -195,59 +195,49 @@ object ProofChecker {
     res.map(accum(core, _)).getOrElse(core)
   }
 
-  private def solveAssertion(baseCon: Context, asrt: DomAssert, ode: ODESystem, sols: List[(Variable, Term)]): DomAssert = {
-    val DomAssert(x, f, m) = asrt
-    val tvar: Variable = Variable("t") // @TODO select correct and fresh timevar
-    // @TODO: Duration in sols
+  private def solveAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val DomAssert(x, f, m) = assertion
     val methAssumps = m.selectors
-    val subSol = sols.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
+    val subSol = proveODE.solutions.get.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
     val solMeth = Using(methAssumps, RCF())
     // @TODO: Assume domain constraint
     apply(baseCon, subSol, solMeth)
-    asrt
+    assertion
   }
 
-  // @TODO prettier argument passing
-  private def inductAssertion(baseCon: Context, assumps: Set[DomAssume], asrt: DomAssert, proveODE: ProveODE, ode: ODESystem, sols: List[(Variable, Term)]): DomAssert = {
-    val DomAssert(x, f, m) = asrt
-    val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
+  private def inductAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val DomAssert(x, f, m) = assertion
+    val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
     // @TODO unsound: need to forget baseCon, or rather check that baseCon has been correctly SSA renamed.
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
-    val odeMap = DifferentialHelper.atomicOdes(ode.ode).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
+    val odeMap = DifferentialHelper.atomicOdes(proveODE.asODESystem).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
     // @TODO: if assertion name is found in context, or is lastFact then look up. May require generalizing lastFact to lastFacts that returns all facts since last state change.
     apply(baseCon, f, Using(List(DefaultSelector),  Auto()))
     apply(ihCon, lieDerivative, Using(m.selectors, Auto()))
-    asrt
+    assertion
   }
 
-  private def applyAssertion(baseCon: Context, assumps: Set[DomAssume], asrt: DomAssert, proveODE: ProveODE, ode: ODESystem, sols: List[(Variable, Term)]): DomAssert = {
-    val DomAssert(x, f, m) = asrt
+  // val DomAssert(xx, ff, mm) = applyAssertion(kc, assumps, asrt, proveODE, odeSystem, sols)
+  private def applyAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val DomAssert(x, f, m) = assertion
     val (_assms, meth) = methodAssumptions(baseCon, m, f)
     meth match {
-      case Solution() => solveAssertion(baseCon, asrt, ode, sols)
-      case DiffInduction() => inductAssertion(baseCon, assumps, asrt, proveODE, ode, sols)
+      case Solution() => solveAssertion(baseCon, proveODE, assertion, coll)
+      case DiffInduction() => inductAssertion(baseCon, proveODE, assertion, coll)
       case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solve\"")
     }
   }
 
   /** @TODO: Debug assertion checker. */
-  private def applyAssertions(kc: Context, proveODE: ProveODE, odeSystem: ODESystem, ds: Option[DiffStatement], assumps: Set[DomAssume], asserts: Set[DomAssert], time: Option[Variable]): Option[DomainStatement] = {
-    val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
-    val dSet = ds.map(_.atoms).getOrElse(Set())
-    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
-    val con = (discreteAssumps ++ discreteAssigns).foldLeft[Context](kc)(_.:+(_))
-    val assump = assumps.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
+  private def applyAssertions(kc: Context, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
+    val assump = coll.assumptions.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
     // @TODO: Compute fresh index of t, e.g. using snapshot or boundvars
-    val tvar = time.getOrElse(Variable("t"))
     // @TODO: Correctly support SSA renaming - test odes combined with SSA pass.
-    val map = VariableSets(con).boundVars.toList.map(v => (v -> v))
-    // Only compute solution if at least one method used is "solve"
-    val sols = proveODE.solutions.getOrElse(Nil)
-    asserts.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
-      val DomAssert(xx, ff, mm) = applyAssertion(kc, assumps, asrt, proveODE, odeSystem, sols)
+    coll.assertions.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
+      val DomAssert(xx, ff, mm) = applyAssertion(kc, proveODE, asrt, coll)
       accum(acc, DomAssert(xx, ff, mm))})
   }
 
@@ -269,15 +259,12 @@ object ProofChecker {
 
     /**  Check a differential equation proof */
   // @TODO debug and soundify
-  private def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
-    val dsCollect@DiffCollection(cores, ghosts, invGhost) = ds.collect
-    val dcCollect@DomCollection(assume, assert, weak, modify) = dc.collect
+  private def apply(con: Context, inODE: ProveODE): (ProveODE, Formula) = {
+    val DiffCollection(cores, ghosts, invGhost) = inODE.ds.collect
+    val dcCollect@DomCollection(assume, assert, weak, modify) = inODE.dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
     val ghosted = applyGhosts(con, core, ghosts)
-    val timeVar = modify.toList.headOption.map({case DomModify(VarPat(x, _), _) => x})
-    val inODE = ProveODE(ds, dc)
-    val plainODE = inODE.asODESystem
-    val asserted = applyAssertions(con, ProveODE(ds, dc), plainODE, ghosted, assume, assert, timeVar)
+    val asserted = applyAssertions(con, inODE, ghosted, dcCollect)
     val durated = applyDuration(con, asserted, modify)
     val inversed = applyInverseGhosts(con, ghosted, invGhost)
     val weakened = applyWeakens(con, durated, weak)
@@ -469,8 +456,8 @@ object ProofChecker {
               case Some(kFml2) => (Context(res), ff)
             }
         }
-      case ProveODE(ds: DiffStatement, dc: DomainStatement) =>
-        val (x, y) = apply(con, ds, dc)
+      case pode: ProveODE =>
+        val (x, y) = apply(con, pode)
         (Context(x), y)
 
       // @TODO: LetFun and Match should be checked in earlier passes?

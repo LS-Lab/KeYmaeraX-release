@@ -237,6 +237,7 @@ case class InverseGhost(s: Statement) extends Statement
 // Proof of differential equation, either angelic or demonic.
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   lazy val solutions: Option[List[(Variable, Term)]] = {
+    // @TODO: Duration in sols
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem
@@ -366,17 +367,10 @@ sealed trait DiffStatement extends ASTNode {
     }
   }
 
-  def atoms: Set[AtomicODEStatement] = {
-    this match {
-      case ao: AtomicODEStatement => Set(ao)
-      case DiffProductStatement(l, r) => l.atoms ++ r.atoms
-      case DiffGhostStatement(ds) => ds.atoms
-      case InverseDiffGhostStatement(ds) =>Set()
-    }
-  }
+  def atoms: Set[AtomicODEStatement] = collect.atoms
 
   /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
-  def collect: DiffCollection = {
+  lazy val collect: DiffCollection = {
     this match {
       case st: AtomicODEStatement => DiffCollection(Set(st), Set(), Set())
       case DiffProductStatement(l, r) =>
