@@ -75,7 +75,7 @@ object VariableSets {
       }).reduce((l, r) => l.++(r))
     case BoxChoice(left, right) => apply(left, isGhost, isInverseGhost).++(apply(right, isGhost, isInverseGhost))
     case While(x: Term, j, s) => apply(s, isGhost, isInverseGhost).addTabooFacts(StaticSemantics(x).toSet)
-    case BoxLoop(s) => apply(s, isGhost, isInverseGhost)
+    case BoxLoop(s, _) => apply(s, isGhost, isInverseGhost)
     case ProveODE(ds, dc) => apply(ds, isGhost, isInverseGhost).++(apply(dc, isGhost, isInverseGhost))
     case m: MetaNode => m.children.map(apply(_, isGhost, isInverseGhost)).foldLeft(VariableSets.empty)(_.++(_))
   }

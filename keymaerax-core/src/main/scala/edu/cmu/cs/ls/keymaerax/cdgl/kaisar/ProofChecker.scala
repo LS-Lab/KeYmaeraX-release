@@ -254,6 +254,7 @@ object ProofChecker {
     val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = diffStatementToAtoms(proveODE.ds)
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
+    // @TODO unsound: need to forget baseCon, or rather check that baseCon has been correctly SSA renamed.
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = DifferentialHelper.atomicOdes(ode.ode).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
