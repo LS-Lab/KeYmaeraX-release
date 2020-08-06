@@ -9,6 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
+import edu.cmu.cs.ls.keymaerax.btactics.Integrator
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
@@ -234,7 +235,58 @@ case class Ghost(s: Statement) extends Statement
 // For example, InverseGhost(Assume(_)) indicates a Demonic test which is never used in the proof
 case class InverseGhost(s: Statement) extends Statement
 // Proof of differential equation, either angelic or demonic.
-case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
+case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
+  lazy val solutions: Option[List[(Variable, Term)]] = {
+    if (timeVar.isEmpty) None
+    else {
+      val ode = asODESystem
+      // @TODO: Support arbitrary xys?
+      val xys: Set[(BaseVariable, BaseVariable)] =
+        StaticSemantics(ode).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> x))
+      val solutions = Integrator(xys.toMap, timeVar.get, ode)
+      Some(solutions.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") }))
+    }
+  }
+
+  // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
+  lazy val timeVar: Option[Variable] = {
+    duration match {
+      case Some((x, f)) => Some(x)
+      case None => ds.clocks.toList match {
+        case v :: Nil => Some(v)
+        case _ => None
+      }
+    }
+  }
+
+
+  lazy val asODESystem: ODESystem = {
+    ODESystem(ds.asDifferentialProgram(modifier))
+  }
+
+  lazy val isAngelic: Boolean = modifier.isDefined
+  lazy val modifier: Option[DomModify] = {
+    dc.modifier
+  }
+
+  lazy val duration: Option[(Variable, Term)] = {
+    modifier.flatMap({case DomModify(VarPat(x, _), f) => Some(x, f) case _ => None})
+  }
+
+  lazy val conclusion: Formula = {
+    val odeSystem = asODESystem
+    val odeBV = StaticSemantics(odeSystem).bv
+    modifier.foreach(dm =>
+      if(!odeBV.contains(dm.x.boundVars.toList.head))
+        throw ProofCheckException("ODE duration variable must be bound in ODE"))
+    val hp = modifier.map(dm => Compose(odeSystem, Test(dm.asEquals))).getOrElse(odeSystem)
+    if (modifier.nonEmpty) {
+      Box(Dual(hp), True)
+    } else {
+      Box(hp, True)
+    }
+  }
+} //de: DifferentialProgram
 
 // Statements which "just" attach metadata to their underlying nodes and don't change computational meaning
 sealed trait MetaNode extends Statement {
@@ -272,8 +324,75 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
   override val children: List[Statement] = List(block(boxLoop :: progress :: Nil))
 }
 
+final case class DomCollection(assumptions: Set[DomAssume], assertions: Set[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify])
+final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[AtomicODEStatement], inverseGhosts: Set[AtomicODEStatement])
+
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
-sealed trait DiffStatement extends ASTNode
+sealed trait DiffStatement extends ASTNode {
+  private def getDifferentialProgram(mod: Option[DomModify]): Option[DifferentialProgram] = {
+    this match {
+      case AtomicODEStatement(dp) =>
+        (mod, dp.e) match {
+          case (Some(DomModify(VarPat(durvar, _), _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
+          case (Some(DomModify(VarPat(durvar, _), _)), rhs) if (dp.xp.x == durvar) =>
+            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs")
+          case _ => ()
+        }
+        Some(dp)
+      case DiffProductStatement(l, r) =>
+        (l.getDifferentialProgram(mod), r.getDifferentialProgram(mod)) match {
+          case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
+          case (None, r) => r
+          case (l, None) => l
+        }
+      case InverseDiffGhostStatement(ds) => ds.getDifferentialProgram(mod)
+      case DiffGhostStatement(ds) => None
+    }
+  }
+
+  def asDifferentialProgram(mod: Option[DomModify]): DifferentialProgram = {
+    val x = DifferentialSymbol(BaseVariable("dummy"))
+    getDifferentialProgram(mod).getOrElse(AtomicODE(x, Number(0)))
+  }
+
+  lazy val clocks: Set[Variable] = {
+    this match {
+      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number)) if rhs.value.toInt == 1 => Set(x)
+      case _: AtomicODEStatement => Set()
+      case DiffProductStatement(l, r) => l.clocks ++ r.clocks
+      // since it's common to ghost in clock variables, we probably want this.
+      case DiffGhostStatement(ds) => ds.clocks
+      case InverseDiffGhostStatement(ds) => Set()
+    }
+  }
+
+  def atoms: Set[AtomicODEStatement] = {
+    this match {
+      case ao: AtomicODEStatement => Set(ao)
+      case DiffProductStatement(l, r) => l.atoms ++ r.atoms
+      case DiffGhostStatement(ds) => ds.atoms
+      case InverseDiffGhostStatement(ds) =>Set()
+    }
+  }
+
+  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
+  def collect: DiffCollection = {
+    this match {
+      case st: AtomicODEStatement => DiffCollection(Set(st), Set(), Set())
+      case DiffProductStatement(l, r) =>
+        val DiffCollection(a1, b1, c1) = l.collect
+        val DiffCollection(a2, b2, c2) = r.collect
+        DiffCollection(a1.++(a2), b1.++(b2), c1.++(c2))
+      case DiffGhostStatement(ds) =>
+        val DiffCollection(a, b, c) = ds.collect
+        DiffCollection(Set(), a.++(b).++(c), Set())
+      case InverseDiffGhostStatement(ds) =>
+        val DiffCollection(a, b, c) = ds.collect
+        DiffCollection(Set(), Set(), a.++(b).++(c))
+    }
+  }
+}
+
 // Specifies a single ODE being proved
 case class AtomicODEStatement(dp: AtomicODE) extends DiffStatement
 // Corresponding proofs for each conjunct of differential product
@@ -285,7 +404,62 @@ case class InverseDiffGhostStatement(ds: DiffStatement) extends DiffStatement
 
 //Proof steps regarding the domain, for example differential cuts and weakening of domain constraints.
 // Angelic solutions require witnesses for duration, also given here
-sealed trait DomainStatement extends ASTNode
+sealed trait DomainStatement extends ASTNode {
+  def asFormula(isAngelic: Boolean): Option[Formula] = {
+    this match {
+      case DomAssume(x, f) => Some(f)
+      case DomAssert(x, f, child) if (isAngelic) => Some(f)
+      case DomAssert(x, f, child) => None
+      case DomModify(x, f) => None
+      case DomWeak(dc) => dc.asFormula(isAngelic)
+      case DomAnd(l, r) =>
+        (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
+          case (Some(l), Some(r)) => Some(And(l, r))
+          case (None, r) => r
+          case (l, None) => l
+        }
+    }
+  }
+
+  def isAssertive: Boolean = {
+    this match {
+      case DomAssert(x, f, child) => true
+      case DomAnd(l, r) => l.isAssertive && r.isAssertive
+      case _ => false
+    }
+  }
+
+  def modifier: Option[DomModify] = {
+    this match {
+      case dm: DomModify =>Some(dm)
+      case DomAnd(l, r) =>
+        (l.modifier, r.modifier) match {
+          case (Some(x), Some(y)) => throw ProofCheckException("ODE should only have one duration statement")
+          case (None, r) => r
+          case (l, None) => l
+        }
+      case _: DomWeak | _: DomAssume | _: DomAssert => None
+    }
+  }
+
+  lazy val collect: DomCollection = {
+    this match {
+      case da: DomAssume => DomCollection(Set(da), Set(), Set(), Set())
+      case da: DomAssert => DomCollection(Set(), Set(da), Set(), Set())
+      case DomWeak(dw) =>
+        val DomCollection(a, b, c, d) = dw.collect
+        DomCollection(Set(), Set(), a.++(b).++(c), d)
+      case dm: DomModify => DomCollection(Set(), Set(), Set(), Set(dm))
+      case DomAnd(l, r) =>
+        val DomCollection(a1, b1, c1, d1) = l.collect
+        val DomCollection(a2, b2, c2, d2) = r.collect
+        DomCollection(a1.++(a2), b1.++(b2), c1.++(c2), d1.++(d2))
+    }
+  }
+
+  lazy val demonFormula: Option[Formula] = asFormula(isAngelic = false)
+  lazy val angelFormula: Option[Formula] = asFormula(isAngelic = true)
+}
 // x is formula pattern in assume and assert
 // Introduces assumption in domain, i.e., a domain formula which appears in the conclusion and can be accessed
 // by differential weakening
@@ -296,6 +470,11 @@ case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStat
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
-case class DomModify(x: AsgnPat, f: Term) extends DomainStatement
+case class DomModify(x: AsgnPat, f: Term) extends DomainStatement {
+  lazy val asEquals: Equal = {
+    val (DomModify(VarPat(x, _), e)) = this
+    Equal(x, e)
+  }
+}
 // Conjunction of domain constraints with proofs for each conjunct
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement

@@ -154,38 +154,6 @@ object ProofChecker {
     }
   }
 
-  /** @return triple (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]] */
-  private def collectDiffStatements(statement: DiffStatement): (Set[AtomicODEStatement], Set[AtomicODEStatement],  Set[AtomicODEStatement]) = {
-    statement match {
-      case st: AtomicODEStatement => (Set(st), Set(), Set())
-      case DiffProductStatement(l, r) =>
-        val (a1, b1, c1) = collectDiffStatements(l)
-        val (a2, b2, c2) = collectDiffStatements(r)
-        (a1.++(a2), b1.++(b2), c1.++(c2))
-      case DiffGhostStatement(ds) =>
-        val (a, b, c) = collectDiffStatements(ds)
-        (Set(), a.++(b).++(c), Set())
-      case InverseDiffGhostStatement(ds) =>
-        val (a, b, c) = collectDiffStatements(ds)
-        (Set(), Set(), a.++(b).++(c))
-    }
-  }
-
-  private def collectDomStatements(statement: DomainStatement): (Set[DomAssume], Set[DomAssert],  Set[DomainStatement], Set[DomModify]) = {
-    statement match {
-      case da: DomAssume => (Set(da), Set(), Set(), Set())
-      case da: DomAssert => (Set(), Set(da), Set(), Set())
-      case DomWeak(dw) =>
-        val (a, b, c, d) = collectDomStatements(dw)
-        (Set(), Set(), a.++(b).++(c), d)
-      case dm: DomModify =>(Set(), Set(), Set(), Set(dm))
-      case DomAnd(l, r) =>
-        val (a1, b1, c1, d1) = collectDomStatements(l)
-        val (a2, b2, c2, d2) = collectDomStatements(r)
-        (a1.++(a2), b1.++(b2), c1.++(c2), d1.++(d2))
-    }
-  }
-
   private def accum(t: Option[DiffStatement], x: DiffStatement): Some[DiffStatement] =
     t match {case None => Some(x) case Some(y) => Some(DiffProductStatement(y, x))}
 
@@ -227,15 +195,6 @@ object ProofChecker {
     res.map(accum(core, _)).getOrElse(core)
   }
 
-  private def diffStatementToAtoms(ds: DiffStatement): Set[AtomicODEStatement] = {
-    ds match {
-      case ao: AtomicODEStatement => Set(ao)
-      case DiffProductStatement(l, r) => diffStatementToAtoms(l).++(diffStatementToAtoms(r))
-      case DiffGhostStatement(ds) => diffStatementToAtoms(ds)
-      case InverseDiffGhostStatement(ds) =>Set()
-    }
-  }
-
   private def solveAssertion(baseCon: Context, asrt: DomAssert, ode: ODESystem, sols: List[(Variable, Term)]): DomAssert = {
     val DomAssert(x, f, m) = asrt
     val tvar: Variable = Variable("t") // @TODO select correct and fresh timevar
@@ -252,7 +211,7 @@ object ProofChecker {
   private def inductAssertion(baseCon: Context, assumps: Set[DomAssume], asrt: DomAssert, proveODE: ProveODE, ode: ODESystem, sols: List[(Variable, Term)]): DomAssert = {
     val DomAssert(x, f, m) = asrt
     val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
-    val dSet = diffStatementToAtoms(proveODE.ds)
+    val dSet = proveODE.ds.atoms
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
     // @TODO unsound: need to forget baseCon, or rather check that baseCon has been correctly SSA renamed.
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
@@ -274,18 +233,10 @@ object ProofChecker {
     }
   }
 
-  def solve(tvar: Variable, xys: List[(Variable, Variable)], ode: ODESystem): List[(Variable, Term)] = {
-    try {
-      val initialConditions = xys.toMap
-      val solutions = Integrator(initialConditions, tvar, ode)
-      solutions.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") })
-    } catch {case e : Exception => throw ProofCheckException(s"ODE $ode not integrable")}
-  }
-
   /** @TODO: Debug assertion checker. */
   private def applyAssertions(kc: Context, proveODE: ProveODE, odeSystem: ODESystem, ds: Option[DiffStatement], assumps: Set[DomAssume], asserts: Set[DomAssert], time: Option[Variable]): Option[DomainStatement] = {
     val discreteAssumps = assumps.toList.map({case DomAssume(x, f) => Assume(x, f)})
-    val dSet = ds.map(diffStatementToAtoms).getOrElse(Set())
+    val dSet = ds.map(_.atoms).getOrElse(Set())
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
     val con = (discreteAssumps ++ discreteAssigns).foldLeft[Context](kc)(_.:+(_))
     val assump = assumps.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
@@ -294,29 +245,18 @@ object ProofChecker {
     // @TODO: Correctly support SSA renaming - test odes combined with SSA pass.
     val map = VariableSets(con).boundVars.toList.map(v => (v -> v))
     // Only compute solution if at least one method used is "solve"
-    val sols =
-      if (asserts.exists({case DomAssert(e, f, m) => methodAssumptions(kc, m, f)._2 == Solution() case _ => false}))
-        solve(tvar, map, odeSystem)
-      else Nil
+    val sols = proveODE.solutions.getOrElse(Nil)
     asserts.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
       val DomAssert(xx, ff, mm) = applyAssertion(kc, assumps, asrt, proveODE, odeSystem, sols)
       accum(acc, DomAssert(xx, ff, mm))})
   }
 
-  private def isAssertive(dom: DomainStatement): Boolean = {
-    dom match {
-      case DomAssert(x, f, child) => true
-      case DomAnd(l, r) =>isAssertive(l) && isAssertive(r)
-      case _ => false
-    }
-
-  }
 
   private def applyDuration(kc: Context, dom: Option[DomainStatement], mod: Set[DomModify]): Option[DomainStatement] = {
     if (mod.size >= 2)
       throw ProofCheckException(s"ODE should have at most one duration statement, got: $mod")
     else if (mod.isEmpty) return dom
-    if(dom.nonEmpty && !isAssertive(dom.get))
+    if(dom.nonEmpty && !dom.get.isAssertive)
       throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}")
     val oneMod@DomModify(ap, rhs) = mod.toList.head
     accum(dom, oneMod)
@@ -327,77 +267,16 @@ object ProofChecker {
     weakDom match {case None => dur case Some(weakStatement) => accum(dur, DomWeak(weakStatement))}
   }
 
-  private def diffStatementToODE(ds: DiffStatement, mod: Option[DomModify]): Option[DifferentialProgram] = {
-    ds match {
-      case AtomicODEStatement(dp) =>
-        (mod, dp.e) match {
-          case (Some(DomModify(VarPat(durvar, _), _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
-          case (Some(DomModify(VarPat(durvar, _), _)), rhs) if (dp.xp.x == durvar) =>
-            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs")
-          case _ => ()
-        }
-        Some(dp)
-      case DiffProductStatement(l, r) =>
-        (diffStatementToODE(l, mod), diffStatementToODE(r, mod)) match {
-          case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
-          case (None, r) => r
-          case (l, None) => l
-        }
-      case InverseDiffGhostStatement(ds) => diffStatementToODE(ds, mod)
-      case DiffGhostStatement(ds) => None
-    }
-  }
-
-  private def domainStatementToODE(dc: DomainStatement, isAngelic: Boolean): Option[Formula] = {
-    dc match {
-      case DomAssume(x, f) => Some(f)
-      case DomWeak(dc) => domainStatementToODE(dc, isAngelic)
-      case DomAnd(l, r) =>
-        (domainStatementToODE(l, isAngelic), domainStatementToODE(r, isAngelic)) match {
-          case (Some(l), Some(r)) => Some(And(l, r))
-          case (None, r) => r
-          case (l, None) => l
-        }
-      case DomAssert(x, f, child) if (isAngelic) => Some(f)
-      case DomAssert(x, f, child) => None
-      case DomModify(x, f) => None
-    }
-  }
-
-  private def modToEq(mod: DomModify): Equal = {
-    val (DomModify(VarPat(x, _), e)) = mod
-    Equal(x, e)
-  }
-
-  private def proofToODE(proveODE: ProveODE, mod: Option[DomModify]): ODESystem = {
-    val ode = diffStatementToODE(proveODE.ds, mod).getOrElse(throw ProofCheckException("Expected ODE in ODE proof"))
-    val dom = domainStatementToODE(proveODE.dc, isAngelic = mod.nonEmpty).getOrElse(True)
-    ODESystem(ode, dom)
-  }
-
-  private def odeProofConclusion(proveODE: ProveODE, mod: Option[DomModify]): Formula = {
-    val odeSystem = proofToODE(proveODE, mod)
-    val odeBV = StaticSemantics(odeSystem).bv
-    mod.foreach(dm =>
-      if(!odeBV.contains(dm.x.boundVars.toList.head))
-        throw ProofCheckException("ODE duration variable must be bound in ODE"))
-    val hp = mod.map(dm => Compose(odeSystem, Test(modToEq(dm)))).getOrElse(odeSystem)
-    if (mod.nonEmpty) {
-      Box(Dual(hp), True)
-    } else {
-      Box(hp, True)
-    }
-  }
-
     /**  Check a differential equation proof */
   // @TODO debug and soundify
   private def apply(con: Context, ds: DiffStatement, dc: DomainStatement): (ProveODE, Formula) = {
-    val (cores, ghosts, invGhost) = collectDiffStatements(ds)
-    val (assume, assert, weak, modify) = collectDomStatements(dc)
+    val dsCollect@DiffCollection(cores, ghosts, invGhost) = ds.collect
+    val dcCollect@DomCollection(assume, assert, weak, modify) = dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
     val ghosted = applyGhosts(con, core, ghosts)
     val timeVar = modify.toList.headOption.map({case DomModify(VarPat(x, _), _) => x})
-    val plainODE = proofToODE(ProveODE(ds, dc), modify.toList.headOption)
+    val inODE = ProveODE(ds, dc)
+    val plainODE = inODE.asODESystem
     val asserted = applyAssertions(con, ProveODE(ds, dc), plainODE, ghosted, assume, assert, timeVar)
     val durated = applyDuration(con, asserted, modify)
     val inversed = applyInverseGhosts(con, ghosted, invGhost)
@@ -408,7 +287,7 @@ object ProofChecker {
         case _ => throw ProofCheckException("Expected ODE and domain, got none")
       }
     val theMod = modify.toList.headOption
-    val fml = odeProofConclusion(ProveODE(ds,dc), modify.toList.headOption)
+    val fml = proveODE.conclusion
     theMod.foreach({case DomModify(VarPat(x, _), f) =>
       if (!con.getAssignments(x).exists({case Equal(y, Number(n)) if n.toInt == 0 && x == y => true case _ => false}))
         throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE")
