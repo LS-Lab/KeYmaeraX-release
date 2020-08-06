@@ -160,9 +160,8 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: better ProveODE data structure
-  // @TODO: test and fix: time variable other than t
   // @TODO: test and fix: solution (and maybe even induction) that need domain constraint to prove
+  // @TODO: ensure list of induction cuts in correct order
   // @TODO: SSA and deleting bad assumptions.
   it should "prove diffcut" in withMathematica { _ =>
     val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"
@@ -200,6 +199,13 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:= 0; {{t' = 1, x' = y}; ?(t= T);}^@]true".asFormula
+  }
+
+  it should "prove renamed dc-assign" in withMathematica { _ =>
+    val pfStr = "timer:= 0; {timer' = 1, x' = y & timer := T};"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[timer:= 0; {{timer' = 1, x' = y}; ?(timer = T);}^@]true".asFormula
   }
 
   it should "prove diamond assertion " in withMathematica { _ =>
