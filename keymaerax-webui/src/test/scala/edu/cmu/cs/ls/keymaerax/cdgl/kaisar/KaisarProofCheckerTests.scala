@@ -160,7 +160,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: test and fix: solution (and maybe even induction) that need domain constraint to prove
+  // @TODO: test and fix: solution, induction that use initial constraint
   // @TODO: ensure list of induction cuts in correct order
   // @TODO: SSA and deleting bad assumptions.
   it should "prove diffcut" in withMathematica { _ =>
@@ -214,4 +214,17 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:=0; {{t'=1, x'=y & t>=0}; ?(t=T);}^@]true".asFormula
   }
+
+  it should "prove triple induction " in withMathematica { _ =>
+    val pfStr = "?xInit:(x:=0); ?yInit:(y:=0); ?zInit:(z:=0); " +
+      "{x'=z, y' = 1, z' = y " +
+      "& !yInv:(y >= 0) using yInit  by induction" +
+      "& !zInv:(z >= 0) using zInit yInv by induction" +
+      "& !xInv:(x >= 0) using xInit zInv by induction" +
+      "};"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[x:=0; y:=0;z:=0;{x'=z, y'=1, z'=y}]true".asFormula
+  }
+
 }

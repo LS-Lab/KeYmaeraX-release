@@ -265,7 +265,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   def overrideTimeVar(v: Variable): Unit = (explicitTimeVar = Some(v))
 
   lazy val asODESystem: ODESystem = {
-    ODESystem(ds.asDifferentialProgram(modifier))
+    ODESystem(ds.asDifferentialProgram(modifier), dc.asFormula(isAngelic).getOrElse(True))
   }
 
   lazy val isAngelic: Boolean = modifier.isDefined
@@ -355,6 +355,7 @@ sealed trait DiffStatement extends ASTNode {
     }
   }
 
+  def hasDifferentialProgram(mod: Option[DomModify]): Boolean = getDifferentialProgram(mod).isDefined
   def asDifferentialProgram(mod: Option[DomModify]): DifferentialProgram = {
     val x = DifferentialSymbol(BaseVariable("dummy"))
     getDifferentialProgram(mod).getOrElse(AtomicODE(x, Number(0)))

@@ -23,7 +23,8 @@ object ProofChecker {
     m match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
+        val res = fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
+        res
       case ForwardSelector(pt) => List(ForwardProofChecker(con, pt))
       case PatternSelector(e) => con.unify(e).toList.map(_._2)
     }
@@ -110,7 +111,7 @@ object ProofChecker {
   private def apply(con: Context, f: Formula, m: Method): Unit = {
     val (assms, meth) = methodAssumptions(con, m, f)
     meth match {
-      case  RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
+      case RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
       // general-purpose auto heuristic
       case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m)
       // propositional steps
@@ -175,7 +176,7 @@ object ProofChecker {
     val res = ds.foldLeft[Option[DiffStatement]](ghosts){{case (acc, ds) =>
     ds match {
       case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs)) if admissibleGhost(x1, rhs) =>
-        accum(core, ds)
+        accum(acc, DiffGhostStatement(ds))
       case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
       case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
     }}}
@@ -215,7 +216,9 @@ object ProofChecker {
     val odeMap = DifferentialHelper.atomicOdes(proveODE.asODESystem).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
     // @TODO: if assertion name is found in context, or is lastFact then look up. May require generalizing lastFact to lastFacts that returns all facts since last state change.
-    apply(baseCon, f, Using(List(DefaultSelector),  Auto()))
+    val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
+    val filteredSelectors = m.selectors.filter({case ForwardSelector(ProofVar(x)) if allCutNames.contains(x) => false case _ => true})
+    apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()))
     apply(ihCon, lieDerivative, Using(m.selectors, Auto()))
     assertion
   }
@@ -233,11 +236,31 @@ object ProofChecker {
 
   /** @TODO: Debug assertion checker. */
   private def applyAssertions(kc: Context, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
-    val assump = coll.assumptions.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
+    def unpack(ds: Statement): Option[DomainStatement] = ds match {
+      case _: Triv => None
+      case Block(ss) =>
+        val dss = ss.map(unpack).filter(_.isDefined).map(_.get)
+        if (dss.isEmpty) None
+        else Some(dss.reduceRight(DomAnd))
+      case Assume(x, f) => Some(DomAssume(x, f))
+      case Assert(x, f, m) => Some(DomAssert(x, f, m))
+    }
+    val domAssump = coll.assumptions.toList//.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
+    val assump = domAssump.map(da => Assume(da.x, da.f))
+    val assumeCon = assump.foldLeft[Context](Context.empty)({case (thisCon, da) => thisCon.:+(da)})
+    val commonCon = kc.:+(assumeCon.s)
     // @TODO: Correctly support SSA renaming - test odes combined with SSA pass.
-    coll.assertions.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
-      val DomAssert(xx, ff, mm) = applyAssertion(kc, proveODE, asrt, coll)
-      accum(acc, DomAssert(xx, ff, mm))})
+    val resCon =
+      coll.assertions.foldLeft[Context](Context.empty)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
+        val thisCon = commonCon.:+(acc.s)
+        val DomAssert(xx, ff, mm) = applyAssertion(thisCon, proveODE, asrt, coll)
+        acc.:+(Assert(xx, ff, mm))
+      })
+    (assump, unpack(resCon.s)) match {
+      case (Nil, opt) => opt
+      case (_ ::_, None) => Some(domAssump.reduce(DomAnd))
+      case (_ ::_, Some(ds)) => Some((domAssump.:+(ds)).reduce(DomAnd))
+    }
   }
 
 
@@ -286,6 +309,9 @@ object ProofChecker {
         case _ => throw ProofCheckException("Expected ODE and domain, got none")
       }
     val theMod = modify.toList.headOption
+    if (!proveODE.ds.hasDifferentialProgram(proveODE.dc.modifier)) {
+      throw new ProofCheckException("ODE proof must have at least one non-ghost equation")
+    }
     val fml = proveODE.conclusion
     theMod.foreach({case DomModify(VarPat(x, _), f) =>
       if (!con.getAssignments(x).exists({case Equal(y, Number(n)) if n.toInt == 0 && x == y => true case _ => false}))
