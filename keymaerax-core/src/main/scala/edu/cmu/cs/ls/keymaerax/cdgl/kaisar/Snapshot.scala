@@ -12,6 +12,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Subscript
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 
 case class Snapshot (private val m: Map[String, Subscript])  {
@@ -117,5 +118,32 @@ case class Snapshot (private val m: Map[String, Subscript])  {
 
 object Snapshot {
   val empty: Snapshot = new Snapshot(Map())
+  def ofContext(c: Context): Snapshot = {
+    var snap = Snapshot.empty
+    val tf = new TraversalFunction {
+      override def postAP(kc: Context, ap: AsgnPat): AsgnPat = {
+        ap match {
+          case VarPat(x, _) => snap = snap.revisit(x); ap
+          case _ => ap
+        }
+      }
+
+      override def postDiffS(kc: Context, s: DiffStatement): DiffStatement = {
+        s match {
+          case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _)) => snap = snap.revisit(x); s
+          case _ => s
+        }
+      }
+
+      override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
+        s match {
+          case DomModify(VarPat(x, _), f) => snap = snap.revisit(x); s
+          case _ => s
+        }
+      }
+    }
+  ProofTraversal.traverse(Context.empty, c.s, tf)
+  snap
+  }
 }
 

@@ -50,41 +50,13 @@ case class DeterritorializePass(tt: TimeTable) {
     SubstitutionHelper.replacesFree(f)(reindexOne)
   }
 
-  // Traverse context and populate snapshot with all assigned variables
-  private def contextToSnapshot(context: Context): Snapshot = {
-    var snap = Snapshot.empty
-    val tf = new TraversalFunction {
-      override def postAP(kc: Context, ap: AsgnPat): AsgnPat = {
-        ap match {
-          case VarPat(x, _) => snap = snap.revisit(x); ap
-          case _ => ap
-        }
-      }
-
-      override def postDiffS(kc: Context, s: DiffStatement): DiffStatement = {
-        s match {
-          case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _)) => snap = snap.revisit(x); s
-          case _ => s
-        }
-      }
-
-      override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
-        s match {
-          case DomModify(VarPat(x, _), f) => snap = snap.revisit(x); s
-          case _ => s
-        }
-      }
-    }
-    ProofTraversal.traverse(Context.empty, context.s, tf)
-    snap
-  }
 
   private def renameAdmissible(kc: Context, label: TimeIdent, f: Term, except: Set[Ident]): Option[Term] = {
     tt.get(label) match {
       case None => throw TransformationException(s"Undefined line label: $label")
       case Some((labelSnap, labelCon)) =>
         // @TODO: This is slow
-        val hereSnap = contextToSnapshot(kc)
+        val hereSnap = Snapshot.ofContext(kc)
         // @TODO: Implement forward label references
         // @TODO: Check is only correct if different branches a ++ b reuse same indices.
         // For now, only allow label translation if the reference appears after definition.

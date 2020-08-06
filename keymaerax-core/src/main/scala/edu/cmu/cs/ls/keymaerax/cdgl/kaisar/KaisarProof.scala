@@ -250,7 +250,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   }
 
   // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
-  lazy val timeVar: Option[Variable] = {
+  private lazy val inferredTimeVar: Option[Variable] = {
     duration match {
       case Some((x, f)) => Some(x)
       case None => ds.clocks.toList match {
@@ -260,6 +260,9 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     }
   }
 
+  var explicitTimeVar: Option[Variable] = None
+  def timeVar: Option[Variable] = if(explicitTimeVar.isDefined) explicitTimeVar else inferredTimeVar
+  def overrideTimeVar(v: Variable): Unit = (explicitTimeVar = Some(v))
 
   lazy val asODESystem: ODESystem = {
     ODESystem(ds.asDifferentialProgram(modifier))
@@ -287,7 +290,8 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       Box(hp, True)
     }
   }
-} //de: DifferentialProgram
+}
+object ProveODE { val defaultTimeVariable: Variable = Variable("t")}
 
 // Statements which "just" attach metadata to their underlying nodes and don't change computational meaning
 sealed trait MetaNode extends Statement {

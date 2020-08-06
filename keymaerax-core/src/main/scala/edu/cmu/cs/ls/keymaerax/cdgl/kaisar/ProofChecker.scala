@@ -234,7 +234,6 @@ object ProofChecker {
   /** @TODO: Debug assertion checker. */
   private def applyAssertions(kc: Context, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
     val assump = coll.assumptions.toList.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
-    // @TODO: Compute fresh index of t, e.g. using snapshot or boundvars
     // @TODO: Correctly support SSA renaming - test odes combined with SSA pass.
     coll.assertions.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
       val DomAssert(xx, ff, mm) = applyAssertion(kc, proveODE, asrt, coll)
@@ -257,9 +256,22 @@ object ProofChecker {
     weakDom match {case None => dur case Some(weakStatement) => accum(dur, DomWeak(weakStatement))}
   }
 
+  /* Decide what time variable "t" to use for ProveODE in solutions. Often, the time variable is clear from the proof,
+   * but if not, consult the context/snapshot to determine a fresh version of the time varable */
+  private def initializeTimeVar(context: Context, e: ProveODE): Unit = {
+    e.timeVar match {
+      case Some(x) =>
+      case None =>
+        // @TODO: Slow
+        val timeVar = Snapshot.ofContext(context.:+(e)).increment(ProveODE.defaultTimeVariable)._1
+        e.overrideTimeVar(timeVar)
+    }
+  }
+
     /**  Check a differential equation proof */
   // @TODO debug and soundify
   private def apply(con: Context, inODE: ProveODE): (ProveODE, Formula) = {
+    initializeTimeVar(con, inODE)
     val DiffCollection(cores, ghosts, invGhost) = inODE.ds.collect
     val dcCollect@DomCollection(assume, assert, weak, modify) = inODE.dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
