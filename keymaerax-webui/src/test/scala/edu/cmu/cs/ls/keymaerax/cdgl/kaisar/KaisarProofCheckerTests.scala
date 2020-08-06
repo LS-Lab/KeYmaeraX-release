@@ -160,13 +160,12 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: rename solve method
   // @TODO: better ProveODE data structure
   // @TODO: test and fix: time variable other than t
   // @TODO: test and fix: solution (and maybe even induction) that need domain constraint to prove
   // @TODO: SSA and deleting bad assumptions.
   it should "prove diffcut" in withMathematica { _ =>
-    val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solve;"
+    val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[y:=0; x:=1;{x' = y}]true".asFormula

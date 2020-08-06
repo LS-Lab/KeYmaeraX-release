@@ -120,7 +120,7 @@ case class Auto() extends Method
 // propositional steps
 case class Prop() extends Method
 // solve differential equation (can only be used in ODE)
-case class Solve() extends Method
+case class Solution() extends Method
 // differential induction (can only be used in ODE)
 case class DiffInduction() extends Method
 // introduce an assumption used in method

@@ -36,7 +36,7 @@ object ProofChecker {
         val assms = sels.flatMap(methodAssumptions(con, _, goal))
         val (assm, meth) = methodAssumptions(con, m, goal)
         (assms ++ assm, meth)
-      case RCF() | Auto() | Prop() | Solve() | DiffInduction() | _: ByProof => (List(), m)
+      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof => (List(), m)
     }
   }
 
@@ -268,7 +268,7 @@ object ProofChecker {
     val DomAssert(x, f, m) = asrt
     val (_assms, meth) = methodAssumptions(baseCon, m, f)
     meth match {
-      case Solve() => solveAssertion(baseCon, asrt, ode, sols)
+      case Solution() => solveAssertion(baseCon, asrt, ode, sols)
       case DiffInduction() => inductAssertion(baseCon, assumps, asrt, proveODE, ode, sols)
       case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solve\"")
     }
@@ -295,7 +295,7 @@ object ProofChecker {
     val map = VariableSets(con).boundVars.toList.map(v => (v -> v))
     // Only compute solution if at least one method used is "solve"
     val sols =
-      if (asserts.exists({case DomAssert(e, f, m) => methodAssumptions(kc, m, f)._2 == Solve() case _ => false}))
+      if (asserts.exists({case DomAssert(e, f, m) => methodAssumptions(kc, m, f)._2 == Solution() case _ => false}))
         solve(tvar, map, odeSystem)
       else Nil
     asserts.foldLeft[Option[DomainStatement]](assump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
