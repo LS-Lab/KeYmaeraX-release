@@ -1990,7 +1990,13 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(ListArg(ai: FormulaArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
+       * if we encounter a singleton list (for example in dC), then present it as a single argument. */
+      case BelleTermInput(value, Some(ListArg(ai: FormulaArg))) =>
+        val values = value.split(",")
+        if (values.isEmpty) value
+        else if (values.length == 1) "{`"+value+"`}"
+        else "[" + values.map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(OptionArg(_))) => "{`"+value+"`}"
