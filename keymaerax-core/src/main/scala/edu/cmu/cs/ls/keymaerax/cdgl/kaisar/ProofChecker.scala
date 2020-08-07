@@ -516,10 +516,10 @@ object ProofChecker {
         if (taboo.intersect(fv.toSet).nonEmpty) {
           throw ProofCheckException(s"Ghost variable assignment escapes scope in ghost statement $f")
         }
-        (Context(Ghost(ss.s)), f)
+        (Context(Ghost(ss.s)), True)
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con, s)
-        (Context(InverseGhost(ss.s)), True)
+        (Context(InverseGhost(ss.s)), f)
       case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (con.:+(s), True)
       case Was(now, was) =>
         val (ss, f) = apply(con, now)

@@ -110,7 +110,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
-  // @TODO: Fix ghost scope management
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
     val pfStr = "?xVal:(x:=1); (G ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; G) !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
@@ -122,7 +121,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val pfStr = "{G x := 0; G} !q:(x^2 >= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[{?(x^2 >= 0);}^@]true".asFormula
+    ff shouldBe "[x:=0; {?(x^2 >= 0);}^@]true".asFormula
   }
 
   "ode proof checking" should "prove trivial  system proof" in withMathematica { _ =>
@@ -144,7 +143,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{y'=y^2&true}]true".asFormula
   }
 
-  // @TODO: proper handling of formula output in inverseghost proof
   it should "prove inverse diffghost" in withMathematica { _ =>
     val pfStr = "{G x' = y G};"
     val pf = p(pfStr, pp.statement(_))
@@ -212,10 +210,11 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[t:=0; {{t'=1, x'=y & t>=0}; ?(t=T);}^@]true".asFormula
   }
 
-  // @TODO: Should we use ? in domain constraint assumption syntax?
+  // @TODO syntax: Should we use ? in domain constraint assumption syntax?
+  // @TODO syntax: what should ghost vs inverse ghost syntax be?
   // @TODO: Should fail by SSA soundness checks which I need to add.
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "t:= 0; x:= 1;  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xRange by solution};"
+    val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit xRange by solution};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:=0; x:= 1; {t' = 1, x' = -1 & x>=0}]true".asFormula

@@ -150,7 +150,6 @@ case class Context(s: Statement) {
   }
 
   // top-level search function wrapper.
-  // @TODO: Change lots of functions to be Context methods, get rid of Context.Context
   private def findAll(f: Finder): List[(Ident, Formula)] = {
     searchAll(f, isGhost = false)
   }

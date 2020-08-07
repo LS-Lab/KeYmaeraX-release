@@ -235,7 +235,6 @@ case class While(x: Expression, j: Formula, s: Statement) extends Statement
 case class BoxLoop(s: Statement, ih: Option[(Ident, Formula)] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
 // For example, Ghost(Modify(_)) is a discrete ghost assignment
-// @TODO: Resolve scope-escaping issues
 case class Ghost(s: Statement) extends Statement
 // Inverse-ghost of statement [[s]], i.e., program of [[ss]] is part of the conclusion but not relevant to the proof.
 // For example, InverseGhost(Assume(_)) indicates a Demonic test which is never used in the proof
