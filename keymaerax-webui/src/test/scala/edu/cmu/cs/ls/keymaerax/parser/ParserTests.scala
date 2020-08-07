@@ -131,7 +131,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
         argNames shouldBe 'empty
         expr.value shouldBe "x:=x+1;".asProgram
     }
-    entry.model shouldBe "x>=0 -> [{prg;}*]x>=0".asFormula
+    entry.model shouldBe "x>=0 -> [{prg{|^@|};}*]x>=0".asFormula
   }
 
   it should "report useful message on missing semicolon in program variable declaration" in {
@@ -421,18 +421,20 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "not expand functions to their definition" in {
+  it should "report functions both non-expanded and expanded to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "not expand functions recursively to their definition" in {
+  it should "report functions both non-expanded and expanded recursively to their definition" in {
     val input = "Functions. R y() = (3+z()). R z() = (7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -446,10 +448,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "add () but not expand functions to their definition" in {
+  it should "add () and report functions both non-expanded and expanded to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7+1".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
@@ -474,18 +477,20 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
   }
 
-  it should "not expand properties to their definition in annotations" in {
+  it should "report properties both non-expanded and expanded to their definition in annotations" in {
     val input = "Functions. B inv() <-> (x>=1). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
-  it should "not expand functions in properties" in {
+  it should "report functions in properties both non-expanded and expanded" in {
     val input = "Functions. R y() = (3+7). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=3+7".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
@@ -494,6 +499,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     val input = "Functions. R b. R y() = (3+b). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End."
     val listener = mock[(Program,Formula) => Unit]
     (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once
+    (listener.apply _).expects("{x:=x+b();}*".asProgram, "x>=3+b()".asFormula).once
     KeYmaeraXParser.setAnnotationListener(listener)
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("inv", None))) {
