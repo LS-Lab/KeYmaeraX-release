@@ -214,7 +214,8 @@ object SSAPass {
       case PrintGoal(msg) => (PrintGoal(msg), snapshot)
       case ProveODE(ds, dc) =>
         // @TODO: Test whether SSA re-indexing accounts for ODE statements which instantiate some duration variable t
-        val snap = snapshot.addSet(VariableSets(ProveODE(ds, dc)).boundVars)
+        val bound = VariableSets(ProveODE(ds, dc)).boundVars
+        val snap = snapshot.addSet(bound)
         val ds1 = ssa(ds, snap)
         val dc1 = ssa(dc, snap)
         val inStutter = stutters(snapshot, snap)
@@ -257,9 +258,11 @@ object SSAPass {
       case DomWeak(dc) =>
         val dc1 = ssa(dc, snapshot)
         DomWeak(dc1)
-      case DomModify(x, f) =>
-        val (Modify(ap, _), _) = ssa(Modify(x, Right(())), snapshot)
-        DomModify(ap, ssa(f, snapshot))
+      // note: final subscript of time variable t was already precomputed in snapshot. Don't use ssa(mod: Modify)
+      // since it would doubly increment the subscript
+      case DomModify(VarPat(x, p), f) =>
+        val xt = ssa(x, snapshot).asInstanceOf[Variable]
+        DomModify(VarPat(xt, p), ssa(f, snapshot))
       case DomAnd(l, r) =>
         val l1 = ssa(l, snapshot)
         val r1 = ssa(r, snapshot)

@@ -23,6 +23,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context.Finder
+import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
@@ -72,10 +73,10 @@ case class Context(s: Statement) {
     searchAll(
       {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
       // @TODO: Indices get renamed here, but is that correct?
-      case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx => true
-       case _ => false
+      case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx  => true
+     case _ => false
       }, isGhost = false).map(_._2)
-
+  
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
   def searchAll(f: Finder, isGhost: Boolean): List[(Ident, Formula)] = {

@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Integrator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, Statements}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, ODEAdmissibilityException, Statements}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
@@ -204,9 +204,9 @@ object ProofChecker {
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
     val baseCon = subContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
-    val solMeth = Using(methAssumps, RCF())
-    // @TODO: Assume domain constraint
-    apply(baseCon, subSol, solMeth)
+    val (id, timeCon) = (baseCon.fresh(), baseCon.ghost(GreaterEqual(proveODE.timeVar.get, Number(0))))
+    val solMeth = Using(ForwardSelector(ProofVar(id)) :: methAssumps, RCF())
+    apply(timeCon, subSol, solMeth)
     assertion
   }
 
@@ -291,10 +291,20 @@ object ProofChecker {
     }
   }
 
+  private def checkODEContext(kc: Context, proveODE: ProveODE): Unit = {
+    val bv = VariableSets(proveODE).boundVars.filter(_.isInstanceOf[BaseVariable])
+    val kv = VariableSets(kc.s)
+    val taboo = kv.freeVars ++ kv.boundVars
+    val clash = bv.intersect(taboo)
+    if (clash.nonEmpty)
+      throw ODEAdmissibilityException(clash)
+  }
+
     /**  Check a differential equation proof */
   // @TODO debug and soundify
   private def apply(con: Context, inODE: ProveODE): (ProveODE, Formula) = {
     initializeTimeVar(con, inODE)
+    checkODEContext(con, inODE)
     val DiffCollection(cores, ghosts, invGhost) = inODE.ds.collect
     val dcCollect@DomCollection(assume, assert, weak, modify) = inODE.dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
@@ -313,8 +323,14 @@ object ProofChecker {
       throw new ProofCheckException("ODE proof must have at least one non-ghost equation")
     }
     val fml = proveODE.conclusion
+    def sameTimeVar(x: Variable, y: Variable): Boolean = {
+      (x == y && x.index.isEmpty) || // if not SSA vars
+      (x.name == y.name && x.index.contains(0)  && y.index.isEmpty) || // if SSA vars 1
+      (x.name == y.name && x.index.isDefined  && y.index.contains(x.index.get-1))// if SSA vars 1
+    }
     theMod.foreach({case DomModify(VarPat(x, _), f) =>
-      if (!con.getAssignments(x).exists({case Equal(y, Number(n)) if n.toInt == 0 && x == y => true case _ => false}))
+      val asgn = con.getAssignments(x)
+      if (!asgn.exists({case Equal(y: Variable, Number(n)) if n.toInt == 0 && sameTimeVar(x, y) => true case _ => false}))
         throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE")
     })
     (proveODE, fml)

@@ -29,6 +29,7 @@ object KaisarProof {
   case class TransformationException(msg: String) extends Exception(msg)
   // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
   case class ElaborationException(msg: String) extends Exception(msg)
+  case class ODEAdmissibilityException(vars: Set[Variable]) extends Exception(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
 
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
@@ -203,7 +204,6 @@ case class Modify(pat: AsgnPat, hp: Either[Term, Unit]) extends Statement
 // Introduces a line label [[st]]. Terms f@st (likewise formulas) are then equal to the value of f at the location of
 // [[Label(st)]]. Labels are globally scoped with forward and backward reference, but references must be acyclic
 // for well-definedness
-// @TODO: Implement
 case class Label(st: TimeIdent, snapshot: Option[Snapshot] = None) extends Statement
 // Note checks forward [[proof]] and stores the result in proof-variable [[x]]
 // In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
@@ -249,7 +249,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
     }
   lazy val solutions: Option[List[(Variable, Term)]] = {
-    // @TODO: Duration in sols
+    // @TODO: Duration in sols, and write a test that needs it
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem

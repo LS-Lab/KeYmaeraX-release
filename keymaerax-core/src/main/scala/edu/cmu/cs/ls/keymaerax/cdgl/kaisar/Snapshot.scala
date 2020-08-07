@@ -69,8 +69,12 @@ case class Snapshot (private val m: Map[String, Subscript])  {
   def addSet(vars: Set[Variable]): Snapshot = {
     val allVars: Set[String] = keySet.++(vars.map(_.name))
     allVars.foldLeft[Snapshot](Snapshot.empty){case (snap, v) =>
-      val idx = opt(getOpt(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
-      snap.+(v -> idx)
+      // keep elements which were only in keySet but not vars
+      if (!vars.contains(Variable(v))) (snap.+(v -> get(v)))
+      else {
+        val idx = opt(getOpt(v)) match {case None => Some(0) case Some(i) => Some(i+1)}
+        snap.+(v -> idx)
+      }
     }
   }
 
