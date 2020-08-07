@@ -159,8 +159,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{x'=y&x>0}]true".asFormula
   }
 
-  // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: SSA and deleting bad assumptions.
+  // @TODO: Still debugging ode proof checker, write more tests
   it should "prove diffcut" in withMathematica { _ =>
     val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"
     val pf = p(pfStr, pp.statement(_))
@@ -214,9 +213,9 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Should we use ? in domain constraint assumption syntax?
-  // @TODO: Succeeds for bad reasons (need to SSA-ify and improve context management).
+  // @TODO: Should fail by SSA soundness checks which I need to add.
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "t:= 0; x:= 1;  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) by solution};"
+    val pfStr = "t:= 0; x:= 1;  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xRange by solution};"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:=0; x:= 1; {t' = 1, x' = -1 & x>=0}]true".asFormula

@@ -113,7 +113,10 @@ final case class Proof(ss: List[Statement])
 // A proof-method expresses a single step of unstructured heuristic proof,
 // generally as justification of a single step of some structured proof.
 // @TODO: case exhaustiveness checking method
-sealed trait Method extends ASTNode { val selectors: List[Selector] = Nil}
+sealed trait Method extends ASTNode {
+  val selectors: List[Selector] = Nil
+  val atom: Method = this
+}
 // constructive real-closed field arithmetic
 case class RCF() extends Method
 // general-purpose auto heuristic
@@ -125,7 +128,10 @@ case class Solution() extends Method
 // differential induction (can only be used in ODE)
 case class DiffInduction() extends Method
 // introduce an assumption used in method
-case class Using(use: List[Selector], method: Method) extends Method {override val selectors: List[Selector] = use ++ method.selectors}
+case class Using(use: List[Selector], method: Method) extends Method {
+  override val selectors: List[Selector] = use ++ method.selectors
+  override val atom: Method = method.atom
+}
 // discharge goal with structured proof
 case class ByProof(proof: Statements) extends Method
 
@@ -236,14 +242,21 @@ case class Ghost(s: Statement) extends Statement
 case class InverseGhost(s: Statement) extends Statement
 // Proof of differential equation, either angelic or demonic.
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
+  // get predecessor of SSA variable. If there is no subscript, assume it's not an SSA variable so doesn't need pred.
+  private def initOf(x: BaseVariable): BaseVariable =
+    x match {
+      case BaseVariable(x, None, s) => BaseVariable(x, None, s)
+      case BaseVariable(x, Some(0), s) => BaseVariable(x, None, s)
+      case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
+    }
   lazy val solutions: Option[List[(Variable, Term)]] = {
     // @TODO: Duration in sols
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem
-      // @TODO: Support arbitrary xys?
+      // @TODO: Check that this works for all SSA's
       val xys: Set[(BaseVariable, BaseVariable)] =
-        StaticSemantics(ode).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> x))
+        StaticSemantics(ode).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
       val solutions = Integrator(xys.toMap, timeVar.get, ode)
       Some(solutions.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") }))
     }
@@ -330,7 +343,12 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
 }
 
 /** Note: assertions are a list because it matters what order assertions are proved in. Order does not matter for the others. */
-final case class DomCollection(assumptions: Set[DomAssume], assertions: List[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify])
+final case class DomCollection(assumptions: Set[DomAssume], assertions: List[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify]) {
+  def constraints: Context = {
+    val assume = assumptions.foldLeft(Context.empty)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f))})
+    assertions.foldLeft(assume)({case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
+  }
+}
 final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[AtomicODEStatement], inverseGhosts: Set[AtomicODEStatement])
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
@@ -460,12 +478,14 @@ sealed trait DomainStatement extends ASTNode {
   lazy val demonFormula: Option[Formula] = asFormula(isAngelic = false)
   lazy val angelFormula: Option[Formula] = asFormula(isAngelic = true)
 }
+trait DomainFact extends DomainStatement
+
 // x is formula pattern in assume and assert
 // Introduces assumption in domain, i.e., a domain formula which appears in the conclusion and can be accessed
 // by differential weakening
-case class DomAssume(x: Expression, f:Formula) extends DomainStatement
+case class DomAssume(x: Expression, f:Formula) extends DomainFact
 // Differential assertion which is proved with differential cut and then possibly used in proof
-case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStatement
+case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainFact
 // Distinct from "differential weakening" rule, meaning a domain constraint which is in the conclusion but not the
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement

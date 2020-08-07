@@ -196,17 +196,22 @@ object ProofChecker {
     res.map(accum(core, _)).getOrElse(core)
   }
 
-  private def solveAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+  private def solveFml(sols: List[(Variable, Term)], f: Formula): Formula = sols.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
+  private def solveAssertion(discreteCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
     val methAssumps = m.selectors
-    val subSol = proveODE.solutions.get.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
+    val sols = proveODE.solutions.get
+    val subSol = solveFml(sols, f)
+    val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
+    val baseCon = subContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
     val solMeth = Using(methAssumps, RCF())
     // @TODO: Assume domain constraint
     apply(baseCon, subSol, solMeth)
     assertion
   }
 
-  private def inductAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+  private def inductAssertion(discreteCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val baseCon = odeContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
@@ -224,12 +229,11 @@ object ProofChecker {
   }
 
   // val DomAssert(xx, ff, mm) = applyAssertion(kc, assumps, asrt, proveODE, odeSystem, sols)
-  private def applyAssertion(baseCon: Context, proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+  private def applyAssertion(baseCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
-    val (_assms, meth) = methodAssumptions(baseCon, m, f)
-    meth match {
-      case Solution() => solveAssertion(baseCon, proveODE, assertion, coll)
-      case DiffInduction() => inductAssertion(baseCon, proveODE, assertion, coll)
+    m.atom match {
+      case Solution() => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
+      case DiffInduction() => inductAssertion(baseCon, odeContext, proveODE, assertion, coll)
       case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solve\"")
     }
   }
@@ -245,22 +249,18 @@ object ProofChecker {
       case Assume(x, f) => Some(DomAssume(x, f))
       case Assert(x, f, m) => Some(DomAssert(x, f, m))
     }
-    val domAssump = coll.assumptions.toList//.foldLeft[Option[DomainStatement]](None)({case ((acc, da)) => accum(acc, da)})
-    val assump = domAssump.map(da => Assume(da.x, da.f))
-    val assumeCon = assump.foldLeft[Context](Context.empty)({case (thisCon, da) => thisCon.:+(da)})
-    val commonCon = kc.:+(assumeCon.s)
-    // @TODO: Correctly support SSA renaming - test odes combined with SSA pass.
-    val resCon =
-      coll.assertions.foldLeft[Context](Context.empty)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
-        val thisCon = commonCon.:+(acc.s)
-        val DomAssert(xx, ff, mm) = applyAssertion(thisCon, proveODE, asrt, coll)
-        acc.:+(Assert(xx, ff, mm))
+    val domAssump = coll.assumptions.toList
+    val resAsserts: List[DomainFact] =
+      coll.assertions.foldLeft[List[DomainFact]](domAssump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
+        val DomAssert(xx, ff, mm) = applyAssertion(kc, acc, proveODE, asrt, coll)
+        acc.:+(DomAssert(xx, ff, mm))
       })
-    (assump, unpack(resCon.s)) match {
-      case (Nil, opt) => opt
-      case (_ ::_, None) => Some(domAssump.reduce(DomAnd))
-      case (_ ::_, Some(ds)) => Some((domAssump.:+(ds)).reduce(DomAnd))
-    }
+    // @TODO: refactor this into common method / refeactor DomAssert vs Assert conversions
+    val resCon = resAsserts.foldRight[Context](Context.empty)({
+      case (DomAssume(x, f), acc) => acc.:+(Assume(x, f))
+      case (DomAssert(x, f, m), acc) => acc.:+(Assert(x, f, m))
+    })
+    unpack(resCon.s)
   }
 
 
