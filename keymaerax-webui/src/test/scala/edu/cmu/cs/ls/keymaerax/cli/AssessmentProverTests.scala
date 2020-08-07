@@ -269,6 +269,12 @@ class AssessmentProverTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  "Program equivalence" should "prove simple examples" in withZ3 { _ =>
+    AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe 'proved
+  }
+
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     run(extractSolutions(QUIZ_PATH + "/2/main.tex"))
   }
@@ -295,6 +301,10 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "prove quiz 11" in withZ3 { _ =>
     run(extractSolutions(QUIZ_PATH + "/11/main.tex"))
+  }
+
+  it should "prove quiz 14" in withZ3 { _ =>
+    run(extractSolutions(QUIZ_PATH + "/14/main.tex"))
   }
 
   private def run(assessments: List[AssessmentProverInfo]): Unit = {

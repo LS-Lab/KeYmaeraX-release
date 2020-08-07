@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, PolynomialArithV2, SimplifierV3}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -33,6 +33,8 @@ object AssessmentProver {
     val DI_PREMISE: String = "dipremise"
     /** DI with additional free variables check. */
     val DI: String = "di"
+    /** Program equivalence. */
+    val PRG_EQUIV = "prgequiv"
     /** Provable using a tactic. */
     val BELLE_PROOF: String = "prove"
     val modes: Set[String] = Set(SYN_EQ, POLY_EQ, BELLE_PROOF)
@@ -168,6 +170,22 @@ object AssessmentProver {
     KeYmaeraXProofChecker(5000)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
+  /** Checks program equivalence by `[a;]P <-> [b;]P.` */
+  def prgEquivalence(a: Program, b: Program): ProvableSig = {
+    val p = PredOf(Function("P", None, Unit, Bool), Nothing)
+    def searchCMon(at: PosInExpr) = TacticFactory.anon { (seq: Sequent) =>
+      val anteCtxs = seq.ante.map(_.at(at)._1).zipWithIndex
+      val succCtxs = seq.succ.map(_.at(at)._1).zipWithIndex
+      val anteMatch = anteCtxs.find({ case (ctx, _) => succCtxs.exists(_._1 == ctx) })
+      val succMatch = succCtxs.find({ case (ctx, _) => anteMatch.exists(_._1 == ctx) })
+      anteMatch.map({ case (_, i) => cohideOnlyL(AntePos(i)) }).getOrElse(skip) &
+        succMatch.map({ case (_, i) => cohideOnlyR(SuccPos(i)) }).getOrElse(skip) &
+        implyRi & CMon(PosInExpr(1::Nil))
+    }
+    KeYmaeraXProofChecker(5000)(chase(1,0::Nil) & chase(1,1::Nil) &
+      SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil))))))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(a, p), Box(b, p)))))
+  }
+
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
   def prove(s: Sequent, t: BelleExpr): ProvableSig = {
     KeYmaeraXProofChecker(5000)(t)(s)
@@ -209,16 +227,20 @@ object AssessmentProver {
           }
         case None => throw new IllegalArgumentException("Mandatory question missing in DI check")
       }
+    case Modes.PRG_EQUIV => (have, expected) match {
+      case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => prgEquivalence(e, h)
+    }
     case Modes.BELLE_PROOF =>
       args.get("question") match {
         case Some(q) =>
-          val m = KeYmaeraXParser(q).asInstanceOf[Formula]
           have match {
-            case ExpressionArtifact(h: Formula) =>
-              val t = expandTactic(args("tactic"), h :: Nil)
+            case ExpressionArtifact(h) =>
+              val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
+              val t = expand(args("tactic"), h :: Nil, BelleParser)
               prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
-            case ListExpressionArtifact(hs: List[Expression]) =>
-              val t = expandTactic(args("tactic"), hs)
+            case ListExpressionArtifact(hs) =>
+              val m = expand(q, hs, KeYmaeraXParser).asInstanceOf[Formula]
+              val t = expand(args("tactic"), hs, BelleParser)
               prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
           }
         case None =>
@@ -257,9 +279,9 @@ object AssessmentProver {
 
   private val TACTIC_REPETITION_EXTRACTOR = "for #i do(.*)endfor".r("reptac")
 
-  /** Expands occurrences of #i in tactic string `s` with arguments from argument list `args`. */
+  /** Expands occurrences of #i in string `s` with arguments from argument list `args`. */
   @tailrec
-  private def expandTactic(s: String, args: List[Expression]): BelleExpr = {
+  private def expand[T](s: String, args: List[Expression], parser: String=>T): T = {
     val repTacs = TACTIC_REPETITION_EXTRACTOR.findAllMatchIn(s).toList
     if (repTacs.nonEmpty) {
       val unfolded = repTacs.map(_.group("reptac")).map(t => {
@@ -267,11 +289,11 @@ object AssessmentProver {
       })
       val replaced = unfolded.foldRight(s)({ case ((what, repl), s) => s.replaceAllLiterally(s"for #i do${what}endfor", repl) })
       assert(!replaced.contains("#i"), "Expected to have replaced all variable-length argument repetitions")
-      expandTactic(replaced, args)
+      expand(replaced, args, parser)
     } else {
       val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replaceAllLiterally(s"#$i", args(i-1).prettyString) })
       require(!ts.contains("#"), "Not enough arguments provided for tactic")
-      BelleParser(ts)
+      parser(ts)
     }
   }
 
