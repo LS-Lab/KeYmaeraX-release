@@ -160,7 +160,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: ensure list of induction cuts in correct order
   // @TODO: SSA and deleting bad assumptions.
   it should "prove diffcut" in withMathematica { _ =>
     val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"

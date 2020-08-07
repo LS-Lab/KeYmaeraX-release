@@ -329,7 +329,8 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
   override val children: List[Statement] = List(block(boxLoop :: progress :: Nil))
 }
 
-final case class DomCollection(assumptions: Set[DomAssume], assertions: Set[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify])
+/** Note: assertions are a list because it matters what order assertions are proved in. Order does not matter for the others. */
+final case class DomCollection(assumptions: Set[DomAssume], assertions: List[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify])
 final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[AtomicODEStatement], inverseGhosts: Set[AtomicODEStatement])
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
@@ -430,7 +431,7 @@ sealed trait DomainStatement extends ASTNode {
 
   def modifier: Option[DomModify] = {
     this match {
-      case dm: DomModify =>Some(dm)
+      case dm: DomModify => Some(dm)
       case DomAnd(l, r) =>
         (l.modifier, r.modifier) match {
           case (Some(x), Some(y)) => throw ProofCheckException("ODE should only have one duration statement")
@@ -443,12 +444,12 @@ sealed trait DomainStatement extends ASTNode {
 
   lazy val collect: DomCollection = {
     this match {
-      case da: DomAssume => DomCollection(Set(da), Set(), Set(), Set())
-      case da: DomAssert => DomCollection(Set(), Set(da), Set(), Set())
+      case da: DomAssume => DomCollection(Set(da), List(), Set(), Set())
+      case da: DomAssert => DomCollection(Set(), List(da), Set(), Set())
       case DomWeak(dw) =>
         val DomCollection(a, b, c, d) = dw.collect
-        DomCollection(Set(), Set(), a.++(b).++(c), d)
-      case dm: DomModify => DomCollection(Set(), Set(), Set(), Set(dm))
+        DomCollection(Set(), List(), a.++(b).++(c), d)
+      case dm: DomModify => DomCollection(Set(), List(), Set(), Set(dm))
       case DomAnd(l, r) =>
         val DomCollection(a1, b1, c1, d1) = l.collect
         val DomCollection(a2, b2, c2, d2) = r.collect
