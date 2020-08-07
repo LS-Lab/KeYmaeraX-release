@@ -3514,7 +3514,7 @@ object Ax extends Logging {
     * @derived
     */
   @Axiom("[d]", conclusion = "__[a<sup>d</sup>]P__↔&langle;a&rangle;P", displayLevel = "menu",
-    key = "0", recursor = "0", unifier = "surjlinear")
+    key = "0", recursor = ".", unifier = "surjlinear")
   lazy val dualDirectb: DerivedAxiomInfo = derivedAxiom("[d] dual direct",
     Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
     useExpansionAt(diamond)(1, 1::Nil) &
@@ -3530,7 +3530,7 @@ object Ax extends Logging {
     * @derived
     */
   @Axiom("<d>",conclusion = "__&langle;a<sup>d</sup>&rangle;P__↔[a]P",
-    key = "0", recursor = "0", unifier = "surjlinear")
+    key = "0", recursor = ".", unifier = "surjlinear")
   lazy val dualDirectd: DerivedAxiomInfo =
     derivedAxiom("<d> dual direct",
       Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
