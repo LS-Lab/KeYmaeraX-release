@@ -100,6 +100,7 @@ object FormulaTools extends Logging {
       case LessEqual(a,b) => Greater(a,b)
       case True => False
       case False => True
+      case _: PredOf => formula
       case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Not(g:CompositeFormula) => g match {
