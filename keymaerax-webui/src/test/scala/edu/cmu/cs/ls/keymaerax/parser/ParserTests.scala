@@ -270,6 +270,36 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     }
   }
 
+  it should "parse (demonic) choices" in {
+    KeYmaeraXParser("a;++b;") shouldBe Choice(ProgramConst("a"), ProgramConst("b"))
+    KeYmaeraXParser("a; ∪ b;") shouldBe KeYmaeraXParser("a;++b;")
+    KeYmaeraXParser("{a;^@++b;^@}^@") shouldBe Dual(Choice(Dual(ProgramConst("a")), Dual(ProgramConst("b"))))
+    KeYmaeraXParser("a;--b;") shouldBe KeYmaeraXParser("{a;^@++b;^@}^@")
+    KeYmaeraXParser("a; ∩ b;") shouldBe KeYmaeraXParser("a;--b;")
+  }
+
+  it should "parse precedence consistently" in {
+    KeYmaeraXParser("a;b;++c;") shouldBe Choice(Compose(ProgramConst("a"), ProgramConst("b")), ProgramConst("c"))
+    KeYmaeraXParser("a;b; ∩ c;") shouldBe Dual(Choice(Dual(Compose(ProgramConst("a"), ProgramConst("b"))), Dual(ProgramConst("c"))))
+    KeYmaeraXParser("a;b;--c;") shouldBe KeYmaeraXParser("a;b; ∩ c;")
+  }
+
+  it should "parse (demonic) loops" in {
+    KeYmaeraXParser("{a;}*") shouldBe Loop(ProgramConst("a"))
+    KeYmaeraXParser("{{a;^@}*}^@") shouldBe Dual(Loop(Dual(ProgramConst("a"))))
+    KeYmaeraXParser("{a;}×") shouldBe KeYmaeraXParser("{{a;^@}*}^@")
+  }
+
+  it should "parse (demonic) tests" in {
+    KeYmaeraXParser("?P();") shouldBe Test(PredOf(Function("P", None, Unit, Bool), Nothing))
+    KeYmaeraXParser("?P();^@") shouldBe Dual(Test(PredOf(Function("P", None, Unit, Bool), Nothing)))
+  }
+
+  it should "parse (demonic) ODEs" in {
+    KeYmaeraXParser("{x'=v}") shouldBe AtomicODE(DifferentialSymbol(Variable("x")), Variable("v"))
+    KeYmaeraXParser("{x'=v}^@") shouldBe Dual(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")), True))
+  }
+
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
     KeYmaeraXParser("r_0 > 0") should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }

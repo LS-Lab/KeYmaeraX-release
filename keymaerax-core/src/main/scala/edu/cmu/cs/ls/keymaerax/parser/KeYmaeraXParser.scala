@@ -662,7 +662,9 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
         //assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "And stack for predicationals has already been handled")
         reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, tok1, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
-
+      // special case for sDchoice -- notation
+      case r :+ Expr(p1: Program) :+ Token(MINUS,loc) if la==MINUS =>
+        reduce(ParseState(st.stack, Token(DCHOICE, loc.spanTo(laloc)) +: st.input.tail), 1, Bottom, r)
 
       // special case for sCompose in case statementSemicolon
       //@todo review
@@ -1064,7 +1066,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
-    la==DCHOICE || la==DSTAR ||
+    la==DCHOICE || la==MINUS /* -- demonic choice notation */ || la==DSTAR ||
     (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
