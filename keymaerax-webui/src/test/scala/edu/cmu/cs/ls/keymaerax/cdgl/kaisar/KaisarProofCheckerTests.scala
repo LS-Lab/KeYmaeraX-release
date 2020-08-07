@@ -160,7 +160,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   // @TODO: Some trivial DIs succeed but much more debugging / soundness needed.
-  // @TODO: test and fix: solution, induction that use initial constraint
   // @TODO: ensure list of induction cuts in correct order
   // @TODO: SSA and deleting bad assumptions.
   it should "prove diffcut" in withMathematica { _ =>
@@ -213,6 +212,15 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[t:=0; {{t'=1, x'=y & t>=0}; ?(t=T);}^@]true".asFormula
+  }
+
+  // @TODO: Should we use ? in domain constraint assumption syntax?
+  // @TODO: Succeeds for bad reasons (need to SSA-ify and improve context management).
+  it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
+    val pfStr = "t:= 0; x:= 1;  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) by solution};"
+    val pf = p(pfStr, pp.statement(_))
+    val (ss, ff) = ProofChecker(Context.empty, pf)
+    ff shouldBe "[t:=0; x:= 1; {t' = 1, x' = -1 & x>=0}]true".asFormula
   }
 
   it should "prove triple induction " in withMathematica { _ =>
