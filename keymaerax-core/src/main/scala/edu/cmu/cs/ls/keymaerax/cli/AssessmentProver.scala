@@ -54,6 +54,12 @@ object AssessmentProver {
   /** Compares terms `a` and `b` for having the same real values. */
   def valueEquality(a: Term, b: Term): ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(a, b))
 
+  /** Compares terms in lists `a` and `b` pairwise for the same real value. */
+  def valueEquality(a: List[Term], b: List[Term]): ProvableSig = {
+    require(a.nonEmpty && a.length == b.length, "Same-length non-empty lists expected, but got " + a.mkString(",") + " vs. " + b.mkString(","))
+    ProvableSig.proveArithmetic(BigDecimalQETool, a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+  }
+
   /** Proves polynomial equality of `a` and `b`. */
   def polynomialEquality(a: Term, b: Term): ProvableSig = {
     KeYmaeraXProofChecker(5000)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(a, b))))
@@ -199,6 +205,7 @@ object AssessmentProver {
     }
     case Modes.VALUE_EQ =>(have, expected) match {
       case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => valueEquality(h, e)
+      case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) => valueEquality(h, e)
     }
     case Modes.POLY_EQ => (have, expected) match {
       case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => polynomialEquality(h, e)
