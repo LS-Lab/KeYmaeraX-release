@@ -22,7 +22,7 @@ import scala.collection.immutable
  * @see [[ProvableSig]]
  */
 object ProofChecker {
-  case class ProofCheckException(str: String, cause: Throwable = null) extends Exception (cause) { override def toString: String = str}
+  case class ProofCheckException(str: String, cause: Throwable = null, location: Option[Int] = None) extends Exception (cause) { override def toString: String = str}
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))

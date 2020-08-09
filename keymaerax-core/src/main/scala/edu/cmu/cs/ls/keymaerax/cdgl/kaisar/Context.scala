@@ -29,6 +29,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 case class Context(s: Statement) {
+  // @TODO: Search for "last" location
+  def location: Option[Int] = s.location
+
   /** Add s to the "end" of the context. */
   def :+(other: Statement): Context = {
     s match {
@@ -258,6 +261,7 @@ object Context {
   // Type of user-supplied predicates used to search the context.
   // fact identifier, fact formula, whether fact is from an assignment
   type Finder = ((Ident, Formula, Boolean)) => Boolean
+
   def empty: Context = Context(Triv())
 
   /** Do the head constructors of two expressions match? */
@@ -288,14 +292,15 @@ object Context {
           case (ucf1: BinaryCompositeFormula, ucf2: BinaryCompositeFormula) =>
             matchAssume(ucf1.left, ucf2.left)
           case (q1: Quantified, q2: Quantified) => matchAssume(q1.child, q2.child)
-          case (m1: Modal, m2: Modal) =>matchAssume(m1.child, m2.child)
+          case (m1: Modal, m2: Modal) => matchAssume(m1.child, m2.child)
         }
     }
   }
 
   /** Find all fact bindings which satisfy [[finder]] in statement [[mod]]
-    * @param mod  A [[Modify]] statement which is searched for bindings
-    * @param finder A user-supplied search predicate
+    *
+    * @param mod     A [[Modify]] statement which is searched for bindings
+    * @param finder  A user-supplied search predicate
     * @param isGhost Does [[mod]] appear under a [[Ghost]] constructor in its surrounding context?
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
   private def findAll(mod: Modify, finder: Finder, isGhost: Boolean): List[(Ident, Formula)] = {
@@ -305,11 +310,11 @@ object Context {
         val right = findAll(Modify(TuplePat(pats), Left(r)), finder, isGhost)
         left ++ right
       /* Deterministic assignment that was annotated with a proof variable name for the introduced equality */
-      case Modify(VarPat(x, Some(p)), Left(f)) if(finder(p, Equal(x, f), false)) =>
+      case Modify(VarPat(x, Some(p)), Left(f)) if (finder(p, Equal(x, f), false)) =>
         // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
         List((p, Equal(x, f)))
       /* Deterministic assignment which was never annotated with a proof variable name to remember the introduced equality */
-      case Modify(VarPat(x, None), Left(f)) if(finder(x, Equal(x, f), true)) =>
+      case Modify(VarPat(x, None), Left(f)) if (finder(x, Equal(x, f), true)) =>
         /* @TODO (usability): If another recursive call finds a match for "finder", return that other match. But if *no*
              branch succeeds, somebody, somewhere should give the user an error message like
              "Ghost variable $x inaccessible because it would escape its scope" */
@@ -324,8 +329,9 @@ object Context {
   }
 
   /** Find all fact bindings which satisfy [[finder]] in statement [[dc]]
-    * @param dc  A [[DomainStatement]] statement which is searched for bindings
-    * @param f A user-supplied search predicate
+    *
+    * @param dc A [[DomainStatement]] statement which is searched for bindings
+    * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
   /* @TODO: Does this need an "isGhost" argument */
   private def findAll(dc: DomainStatement, f: Finder): List[(Ident, Formula)] = {
@@ -352,4 +358,5 @@ object Context {
         case (None, _) => None
       }})
   }
+
 }
