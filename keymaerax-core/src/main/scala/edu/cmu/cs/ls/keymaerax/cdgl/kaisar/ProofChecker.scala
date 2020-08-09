@@ -127,6 +127,8 @@ object ProofChecker {
     val exprs = es.sortWith((l,r) => (l, r) match {
       case (_: Greater, _: Less) => true case (_: GreaterEqual, _: Less) => true
       case (_: Greater, _: LessEqual) => true case (_: GreaterEqual, _: LessEqual) => true
+      case (_: Less, _: Greater) => false case (_: Less, _: GreaterEqual) => false
+      case (_: LessEqual, _: Greater) => false case (_: LessEqual, _: GreaterEqual) => false
       case _ => l.toString < r.toString
     })
     exprs match {
