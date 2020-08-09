@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 class EndToEndTests extends TacticTestBase {
 
+
   val check: String => Formula = Kaisar.apply
 
   // @TODO: limit set of programVar equalities after BoxLoop...
@@ -106,22 +107,23 @@ class EndToEndTests extends TacticTestBase {
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
+    // //"{x' = v, v' = a, t' = 1 & t <= T & v>=0};" +
+    //
     val pfStr =
-      "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d)" +
-        "!inv:(v^2/2*B <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
-        "{{switch {" +
-        "case accel: ((v + T*A)^2/2*B <= (d - (x + v*T + (A*T^2)/2)) + 1) =>" +
-        "  a := A;" +
-        "  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using accel acc brk tstep by auto;" +
-        "case brake: ((v + T*A)^2/2*B >= (d - (x + v*T + (A*T^2)/2))) =>" +
-        "  a := -B;" +
-        "  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep by auto;" +
-        "}}" +
-        "t:= 0;" +
-        //"{x' = v, v' = a, t' = 1 & t <= T & v>=0};" +
-        "!invStep: (v^2/2*B <= (d - x)) using safeAcc by auto;" +
-        "}*" +
-        "!safe:(x <= d & v >= 0) using inv by auto;"
+      """?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d)
+        |!inv:(v^2/2*B <= (d - x) & v >= 0) using xInit vInit brk separate by auto;
+        |{{switch {
+        |case accel: ((v + T*A)^2/2*B <= (d - (x + v*T + (A*T^2)/2)) + 1) =>
+        |  a := A;
+        |  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using accel acc brk tstep by auto;
+        |case brake: ((v + T*A)^2/2*B >= (d - (x + v*T + (A*T^2)/2))) =>
+        |  a := -B;
+        |  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep by auto;
+        |}}
+        |t:= 0;
+        |invStep: (v^2/2*B <= (d - x)) using safeAcc by auto;
+        |}*
+        |!safe:(x <= d & v >= 0) using inv by auto;""".stripMargin
     val ff = check(pfStr)
     ff shouldBe False
   }

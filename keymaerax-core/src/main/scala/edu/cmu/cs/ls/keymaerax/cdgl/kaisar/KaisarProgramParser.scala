@@ -14,6 +14,10 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
 import edu.cmu.cs.ls.keymaerax.core._
+import fastparse.Parsed.TracedFailure
+import fastparse.internal.Msgs
+
+import scala.collection.immutable.StringOps
 
 object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
@@ -327,4 +331,34 @@ object KaisarProgramParser {
   def program[_: P]: P[Program] = expression.map(_.asInstanceOf[Program])
   def differentialProgram[_: P]: P[DifferentialProgram] = expression.map(_.asInstanceOf[DifferentialProgram])
   def term[_: P]: P[Term] = expression.map(_.asInstanceOf[Term])
+
+  private def expectedClass(groups: Msgs, terminals: Msgs): String = {
+    val grps = groups.value.map(_.force)
+    val trms = terminals.value.map(_.force)
+    if (trms.contains("\"print\""))
+      return "proof statement"
+    "<unknown>"
+  }
+
+  def recoverErrorMessage(trace: TracedFailure): String = {
+    val expected = expectedClass(trace.groups, trace.terminals)
+    val location = trace.input.prettyIndex(trace.index)
+    val MAX_LENGTH = 80
+    val snippet = trace.input.slice(trace.index, trace.index + MAX_LENGTH).filter(c => !Set('\n', '\r').contains(c))
+    s"Expected $expected at ${location}, got:\n$snippet"
+  }
+
+  def prettyIndex(index: Int, input: String): (Int, Int) = {
+    var lines = (input:StringOps).lines.toList
+    var colIndex = index
+    var lineIndex = 0
+    // @TODO: Could be off by one
+    while (lines.nonEmpty && colIndex >= lines.head.length) {
+      lineIndex = lineIndex + 1
+      colIndex = colIndex - lines.head.length
+      lines = lines.tail
+    }
+    (lineIndex, colIndex)
+  }
+
 }

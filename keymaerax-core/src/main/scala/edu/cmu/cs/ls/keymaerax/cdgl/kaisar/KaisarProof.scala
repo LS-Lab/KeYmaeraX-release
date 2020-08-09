@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
+import fastparse.Parsed.TracedFailure
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
@@ -30,7 +31,9 @@ object KaisarProof {
   // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
   case class ElaborationException(msg: String) extends Exception(msg)
   case class ODEAdmissibilityException(vars: Set[Variable]) extends Exception(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
-
+  case class KaisarParseException(trace: Option[TracedFailure] = None) extends Exception {
+    override def toString: String = if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)
+  }
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
