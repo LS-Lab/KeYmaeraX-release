@@ -65,7 +65,7 @@ class SelectorEliminationPass() {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        // @TODO: filter down only to bound variables of context.
+        // @TODO: filters down only to bound variables of context.
         // But filtering is probably very slow.
         val candidates = fv.toSet.toList.map(ProgramVar)
         candidates.filter(x => kc.getAssignments(x.x).nonEmpty)
@@ -88,13 +88,14 @@ class SelectorEliminationPass() {
       case Using(use, m) =>
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
-        val combineAssms = useAssms ++ assms
-        if(combineAssms.isEmpty && use != List(DefaultSelector))
+        val combineAssmsCandidates = useAssms ++ assms
+        if(combineAssmsCandidates.isEmpty && use != List(DefaultSelector))
           throw ElaborationException("Non-default selector should select at least one fact.")
-        val allFree = combineAssms.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
+        val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramVar)
         val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
-        val dedupAssms = freePt ++ combineAssms.filter(!_.isInstanceOf[ProgramVar])
+        val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
+        val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)
       case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction => (List(), m)
     }
