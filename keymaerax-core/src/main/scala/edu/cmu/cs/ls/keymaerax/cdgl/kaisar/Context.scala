@@ -88,8 +88,8 @@ case class Context(s: Statement) {
       case Assume(x, g) => Context.matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
       case Assert(x, g, _) => Context.matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
       case Note(x, _, Some(g)) => if (f(x, g, false)) List((x, g)) else Nil
-      // While unannotated Note's are allowed in contexts (for transformation passes), they cannot be looked up.
-      case Note(x, _, None) => throw ProofCheckException("Note in context needs formula annotation")
+      // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
+      case Note(x, _, None) => if (f(x, KaisarProof.askLaterP, false)) List((x, KaisarProof.askLaterP)) else Nil
       case mod: Modify => Context.findAll(mod, f, isGhost)
       case Block(ss) =>
         def iter(ss: List[Statement], f: Finder): List[(Ident, Formula)] = {
@@ -129,6 +129,7 @@ case class Context(s: Statement) {
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>
             if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+            else if (v1 == v2) (k1, v1) // optimize identical branches
             else (k1, Or(v1, v2))
         }
         val fmls = pats.flatMap({ case (v, e, s) => Context(s).searchAll(f, isGhost) })
@@ -140,7 +141,7 @@ case class Context(s: Statement) {
       case Phi(s) => Context(s).searchAll(f, isGhost = false)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => Nil
-      case po: ProveODE => Context.findAll(po.dc, f)
+      case po: ProveODE => Context.findAll(po, po.ds, f) ++ Context.findAll(po.dc, f)
       case Was(now, was) => Context(was).searchAll(f, isGhost)
       case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
       case While(_, _, body) => Context(body).searchAll(f, isGhost)
@@ -330,6 +331,34 @@ object Context {
       case Modify(_, _) => List()
     }
   }
+
+  /** Find all fact and program variable bindings which satisfy [[finder]] in statement [[ds]]
+    *
+    * @param odeContext ODE proof in which ds appears
+    * @param ds A [[DiffStatement]] statement which is searched for bindings
+    * @param f  A user-supplied search predicate
+    * @return all bindings which satisfy [[finder]] */
+  /* @TODO: This needs an "isGhost" argument */
+  /* @TODO: Add support for fact binding in ODE body */
+  private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder): List[(Ident, Formula)] = {
+    ds match {
+      case AtomicODEStatement(AtomicODE(xp, e)) =>
+        // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
+        // whether "fake" solutions exist already
+        odeContext.bestSolutions match {
+          case Some(sols) =>
+            val solMap = sols.toMap
+            if (solMap.contains(xp.x)  && f(xp.x, Equal(xp.x, solMap(xp.x)), true)) {
+              List((xp.x, Equal(xp.x, solMap(xp.x))))
+            } else List()
+          case None => List()
+        }
+      case DiffProductStatement(l, r) => findAll(odeContext, l, f) ++ findAll(odeContext, r, f)
+      case DiffGhostStatement(ds) => findAll(odeContext, ds, f)
+      case InverseDiffGhostStatement(ds) => findAll(odeContext, ds, f)
+    }
+  }
+
 
   /** Find all fact bindings which satisfy [[finder]] in statement [[dc]]
     *
