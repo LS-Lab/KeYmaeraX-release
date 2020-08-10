@@ -135,7 +135,7 @@ object ProofTraversal {
           case ProgramVar(x) => ProgramVar(x)
           case ProofVar(x: Ident) => ProofVar(x)
           case ProofInstance(e) => ProofInstance(e)
-          case ProofApp(m, n) => ProofApp(traverse(kc, m, tf), traverse(kc, m, tf))
+          case ProofApp(m, n) => ProofApp(traverse(kc, m, tf), traverse(kc, n, tf))
         }
         tf.postPT(kc, mid)
     }
