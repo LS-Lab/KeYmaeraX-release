@@ -70,7 +70,7 @@ object ProofTraversal {
             }
             Block(revSS.reverse)
           case Switch(sel, pats) =>
-            Switch(sel, pats.map({case (v, pat, s) => (v, pat, (traverse(kc, s, tf)))}))
+            Switch(sel, pats.map({case (v, pat: Formula, s) => (v, pat, (traverse(kc.:+(Assume(v, pat)), s, tf)))}))
           case BoxChoice(left, right) =>
             BoxChoice(traverse(kc, left, tf), traverse(kc, right, tf))
           case While(x, j, ss) =>
