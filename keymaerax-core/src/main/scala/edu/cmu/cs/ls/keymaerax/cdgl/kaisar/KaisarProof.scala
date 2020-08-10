@@ -68,6 +68,11 @@ object KaisarProof {
   // patttern "*" or "_". This is elaborated before proofchecking
   val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing)
 
+  /** [[askLaterT]] is strictly used in the internal representation. If a term cannot be elaborated until a later
+    * proof-checking pass, then symbol [[askLaterT]] is used to represent a dummy term */
+  val askLaterT: FuncOf = FuncOf(Function("askLater", domain = Unit, sort = Real, interpreted = true), Nothing)
+  val askLaterP: PredOf = PredOf(Function("askLater", domain = Unit, sort = Bool, interpreted = true), Nothing)
+
   // Proof statement Block() sequences a list of statements. [[flatten]] flattens the tree structure induced by the
   // [[Block]] constructor.
   def flatten(ss: Statements): Statements = {
@@ -251,18 +256,37 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       case BaseVariable(x, Some(0), s) => BaseVariable(x, None, s)
       case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
     }
-  lazy val solutions: Option[List[(Variable, Term)]] = {
+
+  def solutionsFrom(xys: Map[Variable, Term]): Option[List[(Variable, Term)]] = {
     // @TODO: Duration in sols, and write a test that needs it
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem
-      // @TODO: Check that this works for all SSA's
-      val xys: Set[(BaseVariable, BaseVariable)] =
-        StaticSemantics(ode).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
-      val solutions = Integrator(xys.toMap, timeVar.get, ode)
-      Some(solutions.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") }))
+      val result = Integrator(xys.toMap, timeVar.get, ode)
+      Some(result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") }))
     }
   }
+
+  // Real [[solutions]] function assumes ODE is already in SSA form. Sometimes we need to check "whether solutions exist" before SSA pass, so use
+  // silly initial values so that the integrator can run.
+  private lazy val dummySolutions: Option[List[(Variable, Term)]] = {
+    val dummyXys: Set[(Variable, Term)] =
+      StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
+    solutionsFrom(dummyXys.toMap)
+  }
+
+  def hasDummySolution: Boolean = dummySolutions.isDefined
+
+  lazy val solutions: Option[List[(Variable, Term)]] = {
+    // @TODO: Check that this works for all SSA's
+    val xys: Set[(Variable, Term)] =
+      StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
+    try {
+      solutionsFrom(xys.toMap)
+    } catch { case (m: MatchError) => None } // Throws if not in SSA form
+  }
+
+  lazy val bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
 
   // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
   private lazy val inferredTimeVar: Option[Variable] = {
