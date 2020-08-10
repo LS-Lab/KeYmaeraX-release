@@ -88,14 +88,15 @@ class EndToEndTests extends TacticTestBase {
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr =
       "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
-      "!inv:(v^2/2*B <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
+      "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
       "{{switch {" +
-        "case accel: ((v + T*A)^2/2*B <= (d - (x + v*T + (A*T^2)/2)) + 1) =>" +
+        "case accel: ((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2))) =>" +
         "  a := A;" +
-        "  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using accel acc brk tstep by auto;" +
-        "case brake: ((v + T*A)^2/2*B >= (d - (x + v*T + (A*T^2)/2))) =>" +
+        "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using accel acc inv brk tstep ... by auto;" +
+        "case brake: ((v + T*A)^2/(2*B)  + 1 >= (d - (x + v*T + (A*T^2)/2))) =>" +
         "  a := -B;" +
-        "  !safeAcc:((v + T*a)^2/2*B <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep by auto;" +
+        "  ?fast:(v >= B*T);" +
+        "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep fast ... by auto;" +
         "}}" +
         "t:= 0;" +
         //"{x' = v, v' = a, t' = 1 & t <= T & v>=0};" +
