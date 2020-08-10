@@ -207,7 +207,8 @@ object ProofParser {
   def patternSelector[_: P]: P[PatternSelector] =
     (Index ~ P("*")).map(i => locate(PatternSelector(wild), i)) |
     (Index ~ expression).map({case (i, e)  => locate(PatternSelector(e), i)})
-  def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
+  def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
+  def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
   def rawMethod[_: P]: P[Method] = rcf | auto | prop | solution | diffInduction | using | byProof
   // If method has no selectors, then insert the "default" heuristic selection method
