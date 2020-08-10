@@ -38,8 +38,8 @@ class KaisarProgramParserTests extends TacticTestBase {
       case x: Failure => throw new KPPTestException(x.trace().toString)
     }
 
-  val (vx, vy) = (Variable("x"), Variable("y"))
-  val (dx, dy) = (DifferentialSymbol(vx), DifferentialSymbol(vy))
+  val (vx, vy, vt, vv, vT, va) = (Variable("x"), Variable("y"), Variable("t"), Variable("v"), Variable("T"), Variable("a"))
+  val (dx, dy, dt, dv) = (DifferentialSymbol(vx), DifferentialSymbol(vy), DifferentialSymbol(vt), DifferentialSymbol(vv))
 
   // terms
   "term parser" should "parse variable" in {
@@ -137,6 +137,11 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse ode with constraint with conjunction" in {
     p("x' = 5, y' = 2 & x = y & y = x;", ep.program(_)) shouldBe ODESystem(DifferentialProduct(AtomicODE(dx, Number(5)), AtomicODE(dy, Number(2))),
       And(Equal(vx, vy), Equal(vy, vx)))
+  }
+
+  it should "parse example from 1d car" in {
+    p("{x' = v, v' = a, t' = 1 & (t <= T & v>=0)};", ep.program(_)) shouldBe ODESystem(DifferentialProduct(AtomicODE(dx, vv), DifferentialProduct(AtomicODE(dv, va), AtomicODE(dt, Number(1)))),
+      And(LessEqual(vt, vT), GreaterEqual(vv, Number(0))))
   }
 
   it should "parse dual" in {
@@ -407,6 +412,14 @@ class KaisarProgramParserTests extends TacticTestBase {
       , DomAnd(
           DomModify(VarPat(Variable("t")), Variable("T")),
           DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
+  }
+
+  it should "parse example from 1d car" in {
+    val nt = Nothing
+    p("{{x' = v, v' = a, t' = 1 & t <= T & v>=0}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(
+      AtomicODEStatement(AtomicODE(dx, vv)), DiffProductStatement(AtomicODEStatement(AtomicODE(dv, va)), AtomicODEStatement(AtomicODE(dt, Number(1))))),
+      DomAssume(nt, And(LessEqual(vt, vT), GreaterEqual(vv, Number(0)))))
+    )
   }
 
   "formula error messages" should "exist" in {
