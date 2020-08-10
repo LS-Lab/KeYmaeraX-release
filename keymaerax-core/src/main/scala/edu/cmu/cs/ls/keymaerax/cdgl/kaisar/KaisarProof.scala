@@ -116,9 +116,6 @@ sealed trait ASTNode {
   def setLocation(loc: Int): Unit = { location = Some(loc)}
 }
 
-//@TODO Eliminate: redundant with Block
-final case class Proof(ss: List[Statement])
-
 // A proof-method expresses a single step of unstructured heuristic proof,
 // generally as justification of a single step of some structured proof.
 // @TODO: case exhaustiveness checking method
