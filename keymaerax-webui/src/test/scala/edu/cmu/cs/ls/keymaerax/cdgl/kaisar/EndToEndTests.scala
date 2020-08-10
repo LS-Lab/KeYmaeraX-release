@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
 import edu.cmu.cs.ls.keymaerax.tags._
@@ -85,34 +85,53 @@ class EndToEndTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
-  /* @TODO: Needs differential equation */
+  /* @TODO: This test would be prettier and faster if (1) ODE solution assignments can be annotated and
+   * (2) Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
+   */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr =
       "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
       "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
       "{{switch {" +
         "case accel: ((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2))) =>" +
-        "  a := A;" +
-        "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using accel acc inv brk tstep ... by auto;" +
+        "  ?accA:(a := A);" +
+        "  !safe1:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using accel acc accA inv brk tstep ... by auto;" +
+        "  note safeAcc = andI(safe1, accA);" +
         "case brake: ((v + T*A)^2/(2*B)  + 1 >= (d - (x + v*T + (A*T^2)/2))) =>" +
-        "  a := -B;" +
+        "  ?accB:(a := -B);" +
         "  ?fast:(v >= B*T);" +
-        "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep fast ... by auto;" +
+        "  !safe2:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc accB brk inv tstep fast ... by auto;" +
+        "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{x' = v, v' = a, t' = 1 & (t <= T & v>=0)};" +
-        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv by auto;" +
+        "{x' = v, v' = a, t' = 1 & dc: (t <= T & v>=0)};" +
+        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
       "}*" +
-       "!safe:(x <= d & v >= 0) using inv brk by auto;"
+       "!safe:(x <= d & v >= 0) using inv brk  by auto;"
     val ff = check(pfStr)
     val discreteFml =
-      "[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@{a_0:=a;t_0:=t;}{{{?(v_0+T*A)^2/(2*B)+1>=d-(x_0+v_0*T+A*T^2/2);a_1:=-B;?v_0>=B*T;{?(v_0+T*a_1)^2/(2*B)<=d-(x_0+v_0*T+a_1*T^2/2);}^@}^@++{?(v_0+T*A)^2/(2*B)<=d-(x_0+v_0*T+A*T^2/2);a_1:=A;{?(v_0+T*a_1)^2/(2*B)<=d-(x_0+v_0*T+a_1*T^2/2);}^@}^@}^@t_1:=0;{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@a_0:=a_1;t_0:=t_1;}*{?x_0<=d&v_0>=0;}^@]true".asFormula
+      ("[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;" +
+        "{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@" +
+        "{x_1:=x_0;v_1:=v_0;a_0:=a;t_0:=t;}" +
+        "{{{?(v_1+T*A)^2/(2*B)+1>=d-(x_1+v_1*T+A*T^2/2);" +
+          "a_1:=-B;?v_1>=B*T;" +
+          "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
+          "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=-B&v_1>=B*T;}^@}" +
+        "^@++" +
+        "{?(v_1+T*A)^2/(2*B)<=d-(x_1+v_1*T+A*T^2/2);" +
+        "  a_1:=A;" +
+        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
+        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=A;}^@}^@}^@" +
+        "t_1:=0;" +
+        "{x_2:=x_1;v_2:=v_1;t_2:=t_1;}" +
+        "{x_2'=v_2,v_2'=a_1,t_2'=1&t_2<=T&v_2>=0}" +
+        "{?v_2^2/(2*B)<=d-x_2&v_2>=0;}^@" +
+        "x_1:=x_2;v_1:=v_2;a_0:=a_1;t_0:=t_2;}*" +
+      "{?x_1<=d&v_1>=0;}^@]true").asFormula
     ff shouldBe discreteFml
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
-    // //"{x' = v, v' = a, t' = 1 & t <= T & v>=0};" +
-    //
     val pfStr =
       """?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d)
         |!inv:(v^2/2*B <= (d - x) & v >= 0) using xInit vInit brk separate by auto;
