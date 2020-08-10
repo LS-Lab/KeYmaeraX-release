@@ -124,7 +124,6 @@ case class Context(s: Statement) {
         }
         iter(ss.reverse, f)
       case BoxChoice(l, r) => Context(l).searchAll(f, isGhost) ++ Context(r).searchAll(f, isGhost)
-      // @TODO: Revisit and test this.
       case Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>

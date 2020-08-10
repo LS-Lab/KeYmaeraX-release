@@ -51,8 +51,6 @@ class SelectorEliminationPass() {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        // @TODO: filter down only to bound variables of context.
-        // But filtering is probably very slow.
         val candidates = fv.toSet.toList.map(ProgramVar)
         candidates.filter(x => kc.getAssignments(x.x).nonEmpty).map(ForwardSelector)
       case ForwardSelector(pt) => List(ForwardSelector(disambiguate(kc, pt)))
@@ -65,8 +63,6 @@ class SelectorEliminationPass() {
     sel match {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
-        // @TODO: filters down only to bound variables of context.
-        // But filtering is probably very slow.
         val candidates = fv.toSet.toList.map(ProgramVar)
         candidates.filter(x => kc.getAssignments(x.x).nonEmpty)
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
