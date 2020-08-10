@@ -274,6 +274,7 @@ object Context {
       // No matching in quantified vars or program, so reapply to q1/m1
       case (q1: Quantified, q2: Quantified) => q1.reapply(q1.vars, q2.child) == q2
       case (m1: Modal, m2: Modal) => m1.reapply(m1.program, m2.child) == m2
+      case _ => false
     }
   }
 
@@ -282,6 +283,8 @@ object Context {
     * @return the set of fact bindings introduced by an assumption statement */
   private def matchAssume(e: Expression, f: Formula): Map[Ident, Formula] = {
     e match {
+      // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name.
+      case Nothing => Map()
       case BaseVariable(x, _, _) => Map(Variable(x) -> f)
       case _ =>
         if (!sameHead(e, f))
