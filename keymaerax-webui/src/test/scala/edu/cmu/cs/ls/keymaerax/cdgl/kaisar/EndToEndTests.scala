@@ -10,8 +10,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 class EndToEndTests extends TacticTestBase {
-
-
   val check: String => Formula = Kaisar.apply
 
   // @TODO: limit set of programVar equalities after BoxLoop...
@@ -147,8 +145,7 @@ class EndToEndTests extends TacticTestBase {
         |invStep: (v^2/2*B <= (d - x)) using safeAcc by auto;
         |}*
         |!safe:(x <= d & v >= 0) using inv by auto;""".stripMargin
-    val ff = check(pfStr)
-    ff shouldBe False
+    a[Exception] shouldBe thrownBy(check(pfStr))
   }
 
 }
