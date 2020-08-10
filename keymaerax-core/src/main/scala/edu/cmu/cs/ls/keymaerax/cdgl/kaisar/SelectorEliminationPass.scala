@@ -127,9 +127,8 @@ class SelectorEliminationPass() {
             val (keptPts, notePts) = pts.partition({case ProofVar(x) => true case _ => false})
             val notes: List[Ghost] =
               notePts.foldLeft[List[Ghost]]((List[Ghost]()))({case (acc: List[Ghost], pt) =>
-                // TODO: Hack: context doesn't say what conclusion is
                 val id = ghostCon.fresh()
-                ghostCon = ghostCon.ghost(True)
+                ghostCon = ghostCon.ghost(KaisarProof.askLaterP)
                 // notes should be ghosts since they did not appear in the user's intended proof/program.
                 // proofchecking output after selector elimination should "look like" proofchecking the input
                 Ghost(Note(id, pt)) :: acc})
