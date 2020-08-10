@@ -136,6 +136,12 @@ object ProofChecker {
       case (GreaterEqual(l1, r1) :: Less(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
       case (Greater(l1, r1) :: LessEqual(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
       case (GreaterEqual(l1, r1) :: LessEqual(l2, Plus(r2, Number(k))) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+
+      case (Greater(Plus(l1, Number(k)), r1) :: Less(l2, r2) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+      case (GreaterEqual(Plus(l1, Number(k)), r1) :: Less(l2, r2) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+      case (Greater(Plus(l1, Number(k)), r1) :: LessEqual(l2, r2) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+      case (GreaterEqual(Plus(l1, Number(k)), r1) :: LessEqual(l2, r2) :: Nil) => l1 == l2 && r1 == r2 && k > 0
+
       case (Greater(l1, r1: Number) :: Less(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
       case (GreaterEqual(l1, r1: Number) :: Less(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
       case (Greater(l1, r1: Number) :: LessEqual(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
