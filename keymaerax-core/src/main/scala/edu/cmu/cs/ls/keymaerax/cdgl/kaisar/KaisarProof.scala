@@ -26,6 +26,9 @@ object KaisarProof {
   type Statements = List[Statement]
   type Subscript = Option[Int]
 
+  case class LabelDef(label: TimeIdent, args: List[String] = Nil)
+  case class LabelRef(label: TimeIdent, args: List[Term] = Nil)
+
   // Failures in proof transformation passes (as opposed to proof checking)
   case class TransformationException(msg: String) extends Exception(msg)
   // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
@@ -210,7 +213,7 @@ case class Modify(pat: AsgnPat, hp: Either[Term, Unit]) extends Statement
 // Introduces a line label [[st]]. Terms f@st (likewise formulas) are then equal to the value of f at the location of
 // [[Label(st)]]. Labels are globally scoped with forward and backward reference, but references must be acyclic
 // for well-definedness
-case class Label(st: TimeIdent, snapshot: Option[Snapshot] = None) extends Statement
+case class Label(st: LabelDef, snapshot: Option[Snapshot] = None) extends Statement
 // Note checks forward [[proof]] and stores the result in proof-variable [[x]]
 // In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
 // elaboration for performance reasons

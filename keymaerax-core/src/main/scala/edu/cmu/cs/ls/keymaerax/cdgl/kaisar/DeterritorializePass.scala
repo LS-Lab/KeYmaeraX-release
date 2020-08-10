@@ -23,8 +23,8 @@ object DeterritorializePass {
     val collectSnapshots = new TraversalFunction {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Label(ident: TimeIdent, Some(snap: Snapshot)) => times = times.+(ident -> (snap, kc))
-          case Label(ident, None) => throw TransformationException("Expected label statement to contain snapshot")
+          case Label(lr, Some(snap: Snapshot)) => times = times.+(lr.label -> (snap, kc))
+          case Label(lr, None) => throw TransformationException("Expected label statement to contain snapshot")
           case _ => ()
         }
         s

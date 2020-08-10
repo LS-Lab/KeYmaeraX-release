@@ -91,12 +91,20 @@ object ExpressionParser {
     // check neg not followed by numeral since neg followed by numeral is Number() constructor already
     (("-".! ~ !CharIn(">0-9")).? ~ power).map({case (None, e) => e case (Some(_), e) => Neg(e)})
 
+  def labelRefArgs[_: P]: P[List[Term]] = {
+    ("(" ~ term.rep(sep = ",") ~ ")").map(terms => terms.toList)
+  }
+
+  def labelRef[_: P]: P[LabelRef] = {
+    (identString ~ labelRefArgs.?).map({case (lit, maybeArgs)  => LabelRef(lit, maybeArgs.getOrElse(Nil))})
+  }
+
   def at[_: P]: P[Term] = {
     val at = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
-    (neg ~ (CharIn("@") ~ ident).?).map({
+    (neg ~ (CharIn("@") ~ labelRef).?).map({
       case (e, None) => e
-      case (e, Some(s)) =>
-        val label = Function(s.name, domain = Unit, sort = Unit, interpreted = true)
+      case (e, Some(LabelRef(s, args))) =>
+        val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
         FuncOf(at, Pair(e, FuncOf(label, Nothing)))
     })
   }
@@ -246,9 +254,13 @@ object ProofParser {
     map({case (i, p, Left(f)) => locate(Modify(p, Left(f)), i)
          case (i, p, Right(_)) => locate(Modify(p, Right()), i)})
 
+  def labelDefArgs[_: P]: P[List[String]] = {
+    ("(" ~ identString.rep(sep = ",") ~ ")").map(ids => ids.toList)
+  }
+
   def label[_: P]: P[Label] = {
     import NoWhitespace._
-    (Index ~ ident ~ ":" ~ !P("=")).map({case (i, id) => locate(Label(id.name), i)})
+    (Index ~ ident ~ labelDefArgs.? ~ ":" ~ !P("=")).map({case (i, id, args) => locate(Label(LabelDef(id.name, args.getOrElse(Nil))), i)})
   }
 
   def branch[_: P]: P[(Expression, Expression, Statement)] = {
