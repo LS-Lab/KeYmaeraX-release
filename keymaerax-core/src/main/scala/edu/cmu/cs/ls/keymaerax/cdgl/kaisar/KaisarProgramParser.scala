@@ -263,7 +263,7 @@ object ProofParser {
   }
 
 
-  def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep ~ "}").map({case (i, ss) => locate(block(ss.toList), i)})
+  def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep(1) ~ "}" ~ P(";").?).map({case (i, ss) => locate(block(ss.toList), i)})
   def boxLoop[_: P]: P[BoxLoop] = (Index ~ statement.rep ~ "*").map({case (i, ss) => locate(BoxLoop(block(ss.toList)), i)})
   def ghost[_: P]: P[Statement] = (Index ~ "(G" ~ statement.rep ~ "G)").map({case (i, ss) => locate(KaisarProof.ghost(block(ss.toList)), i)})
   def inverseGhost[_: P]: P[Statement] = (Index ~ "{G" ~ statement.rep ~ "G}").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
@@ -299,6 +299,7 @@ object ProofParser {
   def proveODE[_: P]: P[ProveODE] =
     (Index ~ diffStatement ~ ("&" ~ domainStatement).?.
         map({case Some(v) => v case None => DomAssume(Nothing, True)})
+      ~ P(";").?
     ).map({case(i, ds, dc) => locate(ProveODE(ds, dc), i)})
 
   def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~ literal ~ ";").
