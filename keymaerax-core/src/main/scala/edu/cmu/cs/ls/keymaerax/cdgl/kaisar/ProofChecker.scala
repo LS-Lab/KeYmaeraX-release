@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.Integrator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.cdgl.Hyp
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, ODEAdmissibilityException, Statements}
@@ -37,7 +38,7 @@ object ProofChecker {
         val assms = sels.flatMap(methodAssumptions(con, _, goal))
         val (assm, meth) = methodAssumptions(con, m, goal)
         (assms ++ assm, meth)
-      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof => (List(), m)
+      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof | _: Exhaustive => (List(), m)
     }
   }
 
@@ -116,6 +117,10 @@ object ProofChecker {
       case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m)
       // propositional steps
       case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m)
+      // case exhaustiveness
+      case Exhaustive() =>
+        val branches = disjoin(f, 0)
+        qeAssert (exhaustive(branches), assms, f, m)
       // discharge goal with structured proof
       case ByProof(proof: Statements) => apply(con, proof)
     }

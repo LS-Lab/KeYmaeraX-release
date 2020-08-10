@@ -118,7 +118,6 @@ sealed trait ASTNode {
 
 // A proof-method expresses a single step of unstructured heuristic proof,
 // generally as justification of a single step of some structured proof.
-// @TODO: case exhaustiveness checking method
 sealed trait Method extends ASTNode {
   val selectors: List[Selector] = Nil
   val atom: Method = this
@@ -133,6 +132,8 @@ case class Prop() extends Method
 case class Solution() extends Method
 // differential induction (can only be used in ODE)
 case class DiffInduction() extends Method
+// check whether conclusion is an exhaustive disjunction for case analysis
+case class Exhaustive() extends Method
 // introduce an assumption used in method
 case class Using(use: List[Selector], method: Method) extends Method {
   override val selectors: List[Selector] = use ++ method.selectors

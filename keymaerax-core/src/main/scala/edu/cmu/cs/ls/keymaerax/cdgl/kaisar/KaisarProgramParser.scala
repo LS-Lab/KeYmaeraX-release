@@ -193,6 +193,7 @@ object ProofParser {
 
   def locate[T <: ASTNode](x:T, i: Int): T = {x.setLocation(i); x}
 
+  def exhaustive[_: P]: P[Exhaustive] = P("by" ~ ws ~ Index ~ "exhaustion").map(i => locate(Exhaustive(), i))
   def rcf[_: P]: P[RCF] = P("by" ~ ws ~ Index ~ "RCF").map(i => locate(RCF(), i))
   def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
   def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
@@ -210,7 +211,7 @@ object ProofParser {
   def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
-  def rawMethod[_: P]: P[Method] = rcf | auto | prop | solution | diffInduction | using | byProof
+  def rawMethod[_: P]: P[Method] = rcf | auto | prop | solution | diffInduction | exhaustive | using | byProof
   // If method has no selectors, then insert the "default" heuristic selection method
   def method[_: P]: P[Method] = rawMethod.map({case u: Using => u case m => Using(List(DefaultSelector), m)})
 

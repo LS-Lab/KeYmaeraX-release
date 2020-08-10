@@ -97,7 +97,7 @@ class SelectorEliminationPass() {
         val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
         val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)
-      case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction => (List(), m)
+      case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => (List(), m)
     }
   }
 
