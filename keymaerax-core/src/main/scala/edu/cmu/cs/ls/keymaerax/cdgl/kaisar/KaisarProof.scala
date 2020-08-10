@@ -256,7 +256,6 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     }
 
   def solutionsFrom(xys: Map[Variable, Term]): Option[List[(Variable, Term)]] = {
-    // @TODO: Duration in sols, and write a test that needs it
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem
@@ -265,8 +264,8 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     }
   }
 
-  // Real [[solutions]] function assumes ODE is already in SSA form. Sometimes we need to check "whether solutions exist" before SSA pass, so use
-  // silly initial values so that the integrator can run.
+  // Real [[solutions]] function assumes ODE is already in SSA form. Sometimes we need to check
+  // "whether solutions exist" before SSA pass, so use silly initial values so that the integrator can run.
   private lazy val dummySolutions: Option[List[(Variable, Term)]] = {
     val dummyXys: Set[(Variable, Term)] =
       StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
@@ -275,8 +274,8 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
 
+  /** Get true solution of ODE. Only works if proof is in SSA form */
   lazy val solutions: Option[List[(Variable, Term)]] = {
-    // @TODO: Check that this works for all SSA's
     val xys: Set[(Variable, Term)] =
       StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
     try {
@@ -284,6 +283,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     } catch { case (m: MatchError) => None } // Throws if not in SSA form
   }
 
+  /** Get best avaiable solutions: true solutions if SSA has been performed, else dummy solutions */
   lazy val bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
 
   // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
@@ -502,7 +502,26 @@ sealed trait DomainStatement extends ASTNode {
   lazy val demonFormula: Option[Formula] = asFormula(isAngelic = false)
   lazy val angelFormula: Option[Formula] = asFormula(isAngelic = true)
 }
-trait DomainFact extends DomainStatement
+object DomainStatement {
+  def ofStatement(ds: Statement): Option[DomainStatement] = ds match {
+    case _: Triv => None
+    case Block(ss) =>
+      val dss = ss.map(ofStatement).filter(_.isDefined).map(_.get)
+      if (dss.isEmpty) None
+      else Some(dss.reduceRight(DomAnd))
+    case Assume(x, f) => Some(DomAssume(x, f))
+    case Assert(x, f, m) => Some(DomAssert(x, f, m))
+  }
+}
+
+trait DomainFact extends DomainStatement {
+  def asStatement: Statement = {
+    this match {
+      case (DomAssume(x, f)) => Assume(x, f)
+      case (DomAssert(x, f, m)) => Assert(x, f, m)
+    }
+  }
+}
 
 // x is formula pattern in assume and assert
 // Introduces assumption in domain, i.e., a domain formula which appears in the conclusion and can be accessed

@@ -224,12 +224,11 @@ object ProofChecker {
   }
 
   private def inductAssertion(discreteCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val baseCon = odeContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
+    val baseCon = odeContext.foldLeft(discreteCon)({case (acc, df) => acc.:+(df.asStatement)})
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
-    // @TODO unsound: need to forget baseCon, or rather check that baseCon has been correctly SSA renamed.
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = DifferentialHelper.atomicOdes(proveODE.asODESystem).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
@@ -241,7 +240,6 @@ object ProofChecker {
     assertion
   }
 
-  // val DomAssert(xx, ff, mm) = applyAssertion(kc, assumps, asrt, proveODE, odeSystem, sols)
   private def applyAssertion(baseCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
     m.atom match {
@@ -251,29 +249,15 @@ object ProofChecker {
     }
   }
 
-  /** @TODO: Debug assertion checker. */
   private def applyAssertions(kc: Context, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
-    def unpack(ds: Statement): Option[DomainStatement] = ds match {
-      case _: Triv => None
-      case Block(ss) =>
-        val dss = ss.map(unpack).filter(_.isDefined).map(_.get)
-        if (dss.isEmpty) None
-        else Some(dss.reduceRight(DomAnd))
-      case Assume(x, f) => Some(DomAssume(x, f))
-      case Assert(x, f, m) => Some(DomAssert(x, f, m))
-    }
     val domAssump = coll.assumptions.toList
     val resAsserts: List[DomainFact] =
       coll.assertions.foldLeft[List[DomainFact]](domAssump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
         val DomAssert(xx, ff, mm) = applyAssertion(kc, acc, proveODE, asrt, coll)
         acc.:+(DomAssert(xx, ff, mm))
       })
-    // @TODO: refactor this into common method / refeactor DomAssert vs Assert conversions
-    val resCon = resAsserts.foldRight[Context](Context.empty)({
-      case (DomAssume(x, f), acc) => acc.:+(Assume(x, f))
-      case (DomAssert(x, f, m), acc) => acc.:+(Assert(x, f, m))
-    })
-    unpack(resCon.s)
+    val resCon = resAsserts.foldRight[Context](Context.empty)({case (df, con) => con.:+(df.asStatement)})
+    DomainStatement.ofStatement(resCon.s)
   }
 
 
@@ -314,7 +298,6 @@ object ProofChecker {
   }
 
     /**  Check a differential equation proof */
-  // @TODO debug and soundify
   private def apply(con: Context, inODE: ProveODE): (ProveODE, Formula) = {
     initializeTimeVar(con, inODE)
     checkODEContext(con, inODE)

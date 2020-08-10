@@ -211,7 +211,6 @@ object SSAPass {
         (InverseGhost(ss), snap)
       case PrintGoal(msg) => (PrintGoal(msg), snapshot)
       case ProveODE(ds, dc) =>
-        // @TODO: Test whether SSA re-indexing accounts for ODE statements which instantiate some duration variable t
         val bound = VariableSets(ProveODE(ds, dc)).boundVars
         val snap = snapshot.addSet(bound)
         val ds1 = ssa(ds, snap)
