@@ -54,6 +54,8 @@ object ForwardProofChecker {
     "existsI" -> ("existsI (x: Variable) (f: Term) (proof: P(f))", {case (ExpressionArg(x: Variable), ExpressionArg(f: Term), ProvedArg(p)) => Exists(List(x), invSubst(x, f, p))})
   )
 
+  val allBuiltins: Set[String] = nullaryBuiltin.keySet ++ unaryBuiltin.keySet ++ binaryBuiltin.keySet ++ ternaryBuiltin.keySet
+
   // Distinguish proof terms that prove things vs. ones that supply inputs.
   private def ptToForwardArg(con: Context, pt: ProofTerm): ForwardArg = {
     pt match {
