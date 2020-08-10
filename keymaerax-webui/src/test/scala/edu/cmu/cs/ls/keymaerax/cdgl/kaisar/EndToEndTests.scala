@@ -85,6 +85,7 @@ class EndToEndTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
+  /* @TODO: Needs differential equation */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr =
       "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
@@ -99,12 +100,14 @@ class EndToEndTests extends TacticTestBase {
         "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep fast ... by auto;" +
         "}}" +
         "t:= 0;" +
-        //"{x' = v, v' = a, t' = 1 & t <= T & v>=0};" +
-        "!invStep: (v^2/2*B <= (d - x)) using safeAcc by auto;" +
+        //"{x' = v, v' = a, t' = 1 & (t <= T & v>=0)};" +
+        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv by auto;" +
       "}*" +
-       "!safe:(x <= d & v >= 0) using inv by auto;"
+       "!safe:(x <= d & v >= 0) using inv brk by auto;"
     val ff = check(pfStr)
-    ff shouldBe False
+    val discreteFml =
+      "[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@{a_0:=a;t_0:=t;}{{{?(v_0+T*A)^2/(2*B)+1>=d-(x_0+v_0*T+A*T^2/2);a_1:=-B;?v_0>=B*T;{?(v_0+T*a_1)^2/(2*B)<=d-(x_0+v_0*T+a_1*T^2/2);}^@}^@++{?(v_0+T*A)^2/(2*B)<=d-(x_0+v_0*T+A*T^2/2);a_1:=A;{?(v_0+T*a_1)^2/(2*B)<=d-(x_0+v_0*T+a_1*T^2/2);}^@}^@}^@t_1:=0;{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@a_0:=a_1;t_0:=t_1;}*{?x_0<=d&v_0>=0;}^@]true".asFormula
+    ff shouldBe discreteFml
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
