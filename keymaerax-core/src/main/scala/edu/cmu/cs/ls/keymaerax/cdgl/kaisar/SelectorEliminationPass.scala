@@ -111,14 +111,6 @@ class SelectorEliminationPass() {
       case DomAssert(x, f, m) =>
         val meth = disambiguate(kc, m, f)
         DomAssert(x, f, meth)
-        /*val notes: List[Note] =
-          pts.foldLeft[List[Note]](List[Note]())({case (acc: List[Note], pt) =>
-            // TODO: Hack: context doesnt say what conclusion is
-            val id = ghostCon.fresh()
-            ghostCon = ghostCon.ghost(True)
-            Note(id, pt) :: acc})*/
-        //val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
-        //val finalMeth = Using(noteSels, meth)
       case _: DomWeak | _: DomAssume | _: DomModify => dc
     }
   }
@@ -131,8 +123,9 @@ class SelectorEliminationPass() {
         sel match {
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
+            val (keptPts, notePts) = pts.partition({case ProofVar(x) => true case _ => false})
             val notes: List[Ghost] =
-              pts.foldLeft[List[Ghost]]((List[Ghost]()))({case (acc: List[Ghost], pt) =>
+              notePts.foldLeft[List[Ghost]]((List[Ghost]()))({case (acc: List[Ghost], pt) =>
                 // TODO: Hack: context doesn't say what conclusion is
                 val id = ghostCon.fresh()
                 ghostCon = ghostCon.ghost(True)
@@ -140,7 +133,8 @@ class SelectorEliminationPass() {
                 // proofchecking output after selector elimination should "look like" proofchecking the input
                 Ghost(Note(id, pt)) :: acc})
             val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
-            val finalMeth = Using(noteSels, meth)
+            val fullSels = keptPts.map(ForwardSelector) ++ noteSels
+            val finalMeth = Using(fullSels, meth)
             Some(Block(notes.:+(Assert(e, f, finalMeth))))
           case ProveODE(ds, dc) =>
             val dom = collectPts(kc, dc)
