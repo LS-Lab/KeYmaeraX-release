@@ -85,6 +85,7 @@ class EndToEndTests extends TacticTestBase {
 
   // @TODO: Write a test that sets duration t := T and then proves something that cares that t = T.
   // @TODO: Write a test that gives a name to an ODE solution equation
+  // @TODO: Write a test that exercises ODE ghost scope escaping
   // @TODO: Write a test that uses an alternative ?x:P syntax for domain constraints
   // @TODO: Write a test that expects initial values to be automatically found in dI
   // @TODO: Write tests that exercise pattern match statements, let statements, pattern selectors,

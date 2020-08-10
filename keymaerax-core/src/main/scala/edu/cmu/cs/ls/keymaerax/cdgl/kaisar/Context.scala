@@ -140,7 +140,7 @@ case class Context(s: Statement) {
       case Phi(s) => Context(s).searchAll(f, isGhost = false)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => Nil
-      case po: ProveODE => Context.findAll(po, po.ds, f) ++ Context.findAll(po.dc, f)
+      case po: ProveODE => Context.findAll(po, po.ds, f, isGhost = false, isInverseGhost = false) ++ Context.findAll(po.dc, f, isInverseGhost = false)
       case Was(now, was) => Context(was).searchAll(f, isGhost)
       case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
       case While(_, _, body) => Context(body).searchAll(f, isGhost)
@@ -337,11 +337,10 @@ object Context {
     * @param ds A [[DiffStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  /* @TODO: This needs an "isGhost" argument */
   /* @TODO: Add support for fact binding in ODE body */
-  private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder): List[(Ident, Formula)] = {
+  private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder, isGhost: Boolean , isInverseGhost: Boolean): List[(Ident, Formula)] = {
     ds match {
-      case AtomicODEStatement(AtomicODE(xp, e)) =>
+      case AtomicODEStatement(AtomicODE(xp, e)) if(!isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
         // whether "fake" solutions exist already
         odeContext.bestSolutions match {
@@ -352,9 +351,10 @@ object Context {
             } else List()
           case None => List()
         }
-      case DiffProductStatement(l, r) => findAll(odeContext, l, f) ++ findAll(odeContext, r, f)
-      case DiffGhostStatement(ds) => findAll(odeContext, ds, f)
-      case InverseDiffGhostStatement(ds) => findAll(odeContext, ds, f)
+      case AtomicODEStatement(dp) => List()
+      case DiffProductStatement(l, r) => findAll(odeContext, l, f, isGhost, isInverseGhost) ++ findAll(odeContext, r, f, isGhost, isInverseGhost)
+      case DiffGhostStatement(ds) => findAll(odeContext, ds, f, isGhost = true, isInverseGhost = false)
+      case InverseDiffGhostStatement(ds) => findAll(odeContext, ds, f, isInverseGhost = true, isGhost = false)
     }
   }
 
@@ -364,14 +364,14 @@ object Context {
     * @param dc A [[DomainStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  /* @TODO: Does this need an "isGhost" argument */
-  private def findAll(dc: DomainStatement, f: Finder): List[(Ident, Formula)] = {
+  private def findAll(dc: DomainStatement, f: Finder, isInverseGhost: Boolean): List[(Ident, Formula)] = {
     dc match {
-      case DomAssume(x, fml) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList//collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList//collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAnd(l, r) => findAll(l, f) ++ findAll(r, f)
+      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList
+      case DomAssume(x, fml) => Nil
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList
+      case DomAnd(l, r) => findAll(l, f, isInverseGhost) ++ findAll(r, f, isInverseGhost)
       case DomWeak(dc) =>
-        findAll(dc, f) match {
+        findAll(dc, f, isInverseGhost = true) match {
           case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
           case Nil => Nil
         }
