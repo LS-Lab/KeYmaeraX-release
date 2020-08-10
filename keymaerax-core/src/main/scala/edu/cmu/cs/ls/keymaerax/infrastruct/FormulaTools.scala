@@ -326,6 +326,15 @@ object FormulaTools extends Logging {
     case Dual(a)         => false
   }
 
+  /** Check whether given `program` contains literal [[Dual]]. */
+  def literalDualFree(program: Program): Boolean = program match {
+    case Dual(a) => false
+    case Choice(a, b)    => literalDualFree(a) && literalDualFree(b)
+    case Compose(a, b)   => literalDualFree(a) && literalDualFree(b)
+    case Loop(a)         => literalDualFree(a)
+    case _       => true
+  }
+
   /** Returns all terms {{{b^e}}} such that e is not a natural number occurring in given formula .
     * @note This is soundness-critical.
     * @author Nathan Fulton */

@@ -1,13 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -184,12 +184,30 @@ object AssessmentProver {
       val succCtxs = seq.succ.map(_.at(at)._1).zipWithIndex
       val anteMatch = anteCtxs.find({ case (ctx, _) => succCtxs.exists(_._1 == ctx) })
       val succMatch = succCtxs.find({ case (ctx, _) => anteMatch.exists(_._1 == ctx) })
-      anteMatch.map({ case (_, i) => cohideOnlyL(AntePos(i)) }).getOrElse(skip) &
-        succMatch.map({ case (_, i) => cohideOnlyR(SuccPos(i)) }).getOrElse(skip) &
-        implyRi & CMon(PosInExpr(1::Nil))
+      (anteMatch, succMatch) match {
+        case (Some((_, ai)), Some((_, si))) =>
+          cohideOnlyL(AntePos(ai)) & cohideOnlyR(SuccPos(si)) & implyRi & CMon(PosInExpr(1::Nil))
+        case _ => throw new TacticInapplicableFailure("No matching contexts found")
+      }
     }
-    KeYmaeraXProofChecker(5000)(chase(1,0::Nil) & chase(1,1::Nil) &
-      SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil))))))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(a, p), Box(b, p)))))
+    def unloop() = TacticFactory.anon { (seq: Sequent) =>
+      val anteLoops = seq.ante.zipWithIndex.find({ case (Box(Loop(ap), _), _) => FormulaTools.dualFree(ap) case _ => false })
+      val succLoops = seq.succ.zipWithIndex.find({ case (Box(Loop(bp), _), _) => FormulaTools.dualFree(bp) case _ => false })
+      (anteLoops, succLoops) match {
+        case (Some((af@Box(_, ap), ai)), Some((Box(bbody, bp), si))) =>
+          if (ap != bp) throw new TacticInapplicableFailure("No matching loop postconditions found")
+          cohideOnlyL(AntePos(ai)) & cohideOnlyR(SuccPos(si)) & cut(Box(bbody, af)) <(
+            useAt(Ax.I)(-2, 1::Nil) & boxAnd(-2) & prop & done
+            ,
+            hideR(1) & implyRi & useAt(Ax.IIinduction, PosInExpr(1::Nil))(1) &
+            useAt(Ax.iterateb)(1, 1::0::Nil) & G(1) & implyR(1) & andL(-1) & hideL(-1) &
+            chase(-1) & chase(1)
+          )
+      }
+    }
+    val (as, bs) = (elaborateToSystem(a), elaborateToSystem(b))
+    KeYmaeraXProofChecker(5000)(chase(1, 0::Nil) & chase(1, 1::Nil) &
+      SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop))))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
@@ -302,6 +320,18 @@ object AssessmentProver {
       require(!ts.contains("#"), "Not enough arguments provided for tactic")
       parser(ts)
     }
+  }
+
+  /** Elaborates program constants to system constants in dual-free contexts. */
+  private def elaborateToSystem(prg: Program): Program = {
+    if (FormulaTools.literalDualFree(prg)) {
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case ProgramConst(name, space) => Right(SystemConst(name, space))
+          case _ => Left(None)
+        }
+      }, prg).get
+    } else prg
   }
 
 }

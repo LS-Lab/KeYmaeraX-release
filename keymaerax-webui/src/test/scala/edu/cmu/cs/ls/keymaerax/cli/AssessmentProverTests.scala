@@ -152,6 +152,11 @@ class AssessmentProverTests extends TacticTestBase {
       "requirement failed: Formula operators do not match at position '.'; expected x>=0 (GreaterEqual) but got -(2-4*1/2)--(x+0*5)>0 (Greater)"
   }
 
+  "Value equality" should "prove simple examples" in withZ3 { _ =>
+    AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe 'proved
+    AssessmentProver.valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe 'proved
+  }
+
   "DI result check" should "prove simple DI examples" in withZ3 { _ =>
     AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [v':=w;][w':=-v;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe 'proved
     AssessmentProver.dIPremiseCheck("==> [v':=w;][w':=-v;]2*v*v'+2*w*w'-0=0".asSequent, "==> [w':=-v;][v':=w;]2*v*v'+2*w*w'=0".asSequent, diffAssignsMandatory=true, normalize=false) shouldBe 'proved
@@ -273,10 +278,23 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe 'proved
+    AssessmentProver.prgEquivalence("x:=2;++y:=3;".asProgram, "y:=4-1;++z:=2;x:=z;".asProgram) shouldBe 'proved
+  }
+
+  it should "prove simple system loops" in withZ3 { _ =>
+    AssessmentProver.prgEquivalence("{a{|^@|};++b{|^@|};}*".asProgram, "{b{|^@|};++a{|^@|};}*".asProgram) shouldBe 'proved
+  }
+
+  it should "elaborate to system loops when dual does not occur literally" in withZ3 { _ =>
+    AssessmentProver.prgEquivalence("{a;++b;}*".asProgram, "{b;++a;}*".asProgram) shouldBe 'proved
   }
 
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     run(extractSolutions(QUIZ_PATH + "/2/main.tex"))
+  }
+
+  it should "prove quiz 3" in withZ3 { _ =>
+    run(extractSolutions(QUIZ_PATH + "/3/main.tex"))
   }
 
   it should "prove quiz 4" in withZ3 { _ =>
