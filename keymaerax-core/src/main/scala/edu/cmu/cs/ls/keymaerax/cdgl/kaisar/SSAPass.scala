@@ -139,8 +139,9 @@ object SSAPass {
   private def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
     val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
-    Phi(KaisarProof.block(varDiff.toList.map(x =>
-      Modify(VarPat(Variable(x, opt(other.getOpt(x))), None), Left(Variable(x, opt(ours.getOpt(x))))))))
+    val asgns = varDiff.toList.map(x => Modify(VarPat(Variable(x, opt(other.getOpt(x))), None), Left(Variable(x, opt(ours.getOpt(x))))))
+    if (asgns.isEmpty) Triv()
+    else Phi(KaisarProof.block(asgns))
   }
 
   /** @returns Translated statement and snapshot of final state */
@@ -180,11 +181,9 @@ object SSAPass {
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {
-          val ps = snapshot.addPattern(x)
-          val xx = ssa(x, ps)
-          val ff = ssa(f, ps)
-          val (ss, snap2) = ssa(s, ps)
-          ((xx, ff, ss), snap2)
+          val ff = ssa(f, snapshot)
+          val (ss, snap2) = ssa(s, snapshot)
+          ((x, ff, ss), snap2)
         }})
         val maxSnap = clauses.map(_._2).reduce(_ ++ _)
         val stutterClauses = clauses.map({case ((x, f, s), clauseSnap) =>
@@ -192,12 +191,11 @@ object SSAPass {
           (x, f, KaisarProof.block(asgns :: s :: Nil))
         }).reverse
         (Switch(scrut, stutterClauses), maxSnap)
-      case Assume(pat, f) => (Assume(ssa(pat, snapshot), ssa(f, snapshot)), snapshot)
+      case Assume(pat, f) => (Assume(pat/*ssa(pat, snapshot)*/, ssa(f, snapshot)), snapshot)
       case Assert(pat, f, m) =>
-        val ppat = ssa(pat, snapshot)
         val ff = ssa(f, snapshot)
         val mm = ssa(m, snapshot)
-        (Assert(ppat, ff, mm), snapshot)
+        (Assert(pat, ff, mm), snapshot)
       case Note(x, proof, annotation) => (Note(x, ssa(proof, snapshot), annotation.map(ssa(_, snapshot))), snapshot)
       case LetFun(f, args, e) => {
         // Don't SSA parameters, only state variables
