@@ -100,7 +100,7 @@ class EndToEndTests extends TacticTestBase {
         "  !safeAcc:((v + T*a)^2/(2*B) <= (d - (x + v*T + (a*T^2)/2))) using brake acc brk inv tstep fast ... by auto;" +
         "}}" +
         "t:= 0;" +
-        //"{x' = v, v' = a, t' = 1 & (t <= T & v>=0)};" +
+        "{x' = v, v' = a, t' = 1 & (t <= T & v>=0)};" +
         "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv by auto;" +
       "}*" +
        "!safe:(x <= d & v >= 0) using inv brk by auto;"
