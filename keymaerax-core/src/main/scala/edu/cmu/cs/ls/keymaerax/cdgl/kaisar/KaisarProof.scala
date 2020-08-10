@@ -47,13 +47,36 @@ object KaisarProof {
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
   // Stable is the counterpart to "at", which says that at(stable(x_i), L) should always be x_i
   val stable: Function = Function("stable", domain = Real, sort = Real, interpreted = true)
-  def getAt(t: Term): Option[(Term, String)] = {
+
+  private def rN(n: Int): Sort = {
+    if(n == 0) Unit
+    else Tuple(Real, rN(n-1))
+  }
+  private def pairTerms(fs: List[Term]): Term = {
+    fs.foldRight[Term](Nothing)(Pair)
+  }
+
+  private def unpairTerms(f: Term): List[Term] = {
+    f match {
+      case Nothing => Nil
+      case Pair(l, r) => l :: unpairTerms(r)
+      case _ => throw ProofCheckException("Expected list argument to label reference, but got: " + f)
+    }
+  }
+
+  def makeAt(f: Term, lr: LabelRef): Term = {
+    val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interpreted = true), pairTerms(lr.args))
+    FuncOf(Function("at", None, Tuple(Real, Unit), Real, interpreted = true), Pair(f, labelFun))
+  }
+
+  def getAt(t: Term): Option[(Term, LabelRef)] = {
     t match {
-      case FuncOf(Function("at", None, Tuple(Real, Unit), Real, true), Pair(e, FuncOf(Function(label, _, _, _, _),_))) =>
-        Some(e, label)
+      case FuncOf(Function("at", None, Tuple(Real, Unit), Real, true), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
+        Some(e, LabelRef(label, unpairTerms(args)))
       case _ => None
     }
   }
+
   def getStable(t: Term): Option[Term] = {
     t match {
       case FuncOf(Function("stable", None, Real, Real, true), e) => Some(e)

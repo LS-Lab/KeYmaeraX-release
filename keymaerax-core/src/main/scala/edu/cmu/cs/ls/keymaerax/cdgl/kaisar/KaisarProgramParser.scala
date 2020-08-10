@@ -103,9 +103,7 @@ object ExpressionParser {
     val at = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
     (neg ~ (CharIn("@") ~ labelRef).?).map({
       case (e, None) => e
-      case (e, Some(LabelRef(s, args))) =>
-        val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
-        FuncOf(at, Pair(e, FuncOf(label, Nothing)))
+      case (e, Some(lr:LabelRef)) => makeAt(e, lr)
     })
   }
 

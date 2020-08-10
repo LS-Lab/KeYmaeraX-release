@@ -71,7 +71,7 @@ case class DeterritorializePass(tt: TimeTable) {
 
   private def transHelper(kc: Context, local: Set[Ident]): Term => Option[Term] = (f: Term) =>
     KaisarProof.getAt(f) match {
-      case Some((e, label)) => renameAdmissible(kc, label, e, local)
+      case Some((e, label)) => renameAdmissible(kc, label.label, e, local)
       case None => None
     }
 

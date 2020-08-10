@@ -91,6 +91,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse at" in {
     p("x@init", ep.term(_)) shouldBe FuncOf(at, Pair(vx, init))
+    p("x@init(y)", ep.term(_)) shouldBe makeAt(Variable("x"), LabelRef("init", List(Variable("y"))))
+    p("x@init(y, z)", ep.term(_)) shouldBe makeAt(Variable("x"), LabelRef("init", List(Variable("y"),Variable("z"))))
   }
 
   it should "parse parens" in {
