@@ -24,7 +24,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.LabelRef
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{LabelDef, LabelRef}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
@@ -147,11 +147,16 @@ object SSAPass {
     else Phi(KaisarProof.block(asgns))
   }
 
+  /** Translate indices of label arguments */
+  def ssa(ld: LabelDef, snapshot: Snapshot): LabelDef = {
+    LabelDef(ld.label, ld.args.map(ssa(_, snapshot).asInstanceOf[Variable]))
+  }
+
   /** @returns Translated statement and snapshot of final state */
   def ssa(s: Statement, snapshot: Snapshot): (Statement, Snapshot) = {
     s match {
       case mod: Modify => ssa(mod, snapshot)
-      case Label(st , _) => (Label(st, Some(snapshot)), snapshot)
+      case Label(ld, _) => (Label(ssa(ld, snapshot), Some(snapshot)), snapshot)
       case Block(ss) =>
         val (ssRev, finalSnap) =
           ss.foldLeft[(List[Statement], Snapshot)]((Nil, snapshot))({case ((acc, snapshot), s1) =>

@@ -26,7 +26,7 @@ object KaisarProof {
   type Statements = List[Statement]
   type Subscript = Option[Int]
 
-  case class LabelDef(label: TimeIdent, args: List[String] = Nil)
+  case class LabelDef(label: TimeIdent, args: List[Variable] = Nil)
   case class LabelRef(label: TimeIdent, args: List[Term] = Nil)
 
   // Failures in proof transformation passes (as opposed to proof checking)
@@ -299,6 +299,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   }
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
+  def hasTrueSolution: Boolean = solutions.isDefined
 
   /** Get true solution of ODE. Only works if proof is in SSA form */
   lazy val solutions: Option[List[(Variable, Term)]] = {

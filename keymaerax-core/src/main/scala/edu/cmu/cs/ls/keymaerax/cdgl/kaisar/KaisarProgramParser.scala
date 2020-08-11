@@ -252,8 +252,8 @@ object ProofParser {
     map({case (i, p, Left(f)) => locate(Modify(p, Left(f)), i)
          case (i, p, Right(_)) => locate(Modify(p, Right()), i)})
 
-  def labelDefArgs[_: P]: P[List[String]] = {
-    ("(" ~ identString.rep(sep = ",") ~ ")").map(ids => ids.toList)
+  def labelDefArgs[_: P]: P[List[Variable]] = {
+    ("(" ~ identString.rep(sep = ",") ~ ")").map(ids => ids.toList.map(Variable(_)))
   }
 
   def label[_: P]: P[Label] = {

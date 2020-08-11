@@ -311,8 +311,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse label" in {
     p("init:", pp.statement(_)) shouldBe Label(LabelDef("init"))
-    p("init(x):", pp.statement(_)) shouldBe Label(LabelDef("init", List("x")))
-    p("init(x,y):", pp.statement(_)) shouldBe Label(LabelDef("init", List("x", "y")))
+    p("init(x):", pp.statement(_)) shouldBe Label(LabelDef("init", List(Variable("x"))))
+    p("init(x,y):", pp.statement(_)) shouldBe Label(LabelDef("init", List(Variable("x"), Variable("y"))))
   }
 
   it should "parse note" in {

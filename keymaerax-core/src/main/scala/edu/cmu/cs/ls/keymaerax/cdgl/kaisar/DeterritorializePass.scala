@@ -56,7 +56,7 @@ case class DeterritorializePass(tt: TimeTable) {
   private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident]): Term = {
     val (_, _, ld) = tt(lr.label)
     if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments")
-    val argMap = ld.args.zip(lr.args).foldLeft[Map[String, Term]](Map())({case (acc, (k, v)) => acc.+(k -> v)})
+    val argMap = ld.args.zip(lr.args).foldLeft[Map[Variable, Term]](Map())({case (acc, (k, v)) => acc.+(k -> v)})
     val termAcc = destabilize(reindex(labelSnap, f, except))
     if (DeterritorializePass.DEBUG) println(s"Rewinding from ${termAcc.prettyString}")
     def fail = throw TransformationException(s"Value of $f@$lr is ill-defined")
@@ -67,14 +67,22 @@ case class DeterritorializePass(tt: TimeTable) {
           val res = SubstitutionHelper.replaceFree(f)(x, rhs)
           if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
           res
-        case Modify(VarPat(x, _), Right(_)) if argMap.contains(x.name) =>
-          if (DeterritorializePass.DEBUG) println(s"Replace $x := * by ${argMap(x.name)} in $f")
-          val res = SubstitutionHelper.replaceFree(f)(x, argMap(x.name))
+        case Modify(VarPat(x, _), Right(_)) if argMap.contains(x) =>
+          if (DeterritorializePass.DEBUG) println(s"Replace $x := * by ${argMap(x)} in $f")
+          val res = SubstitutionHelper.replaceFree(f)(x, argMap(x))
           if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
           res
-        case Modify(VarPat(x, _), Right(_)) if !argMap.contains(x.name) =>
+        case Modify(VarPat(x, _), Right(_)) if !argMap.contains(x) =>
           throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
-            s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x.name)}")
+            s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}")
+        case proveODE@ProveODE(ds, dc) if proveODE.hasTrueSolution =>
+          // solution RHS has label arguments pre-applied
+          val solMap = proveODE.solutions.get.toMap.map({case (x, t) => (x, SubstitutionHelper.replacesFree(t)({case x: BaseVariable => argMap.get(x) case _ => None}))})
+          val fullMap = argMap.foldLeft[Map[Variable, Term]](solMap)({case (acc, (k, v)) => acc.+(k -> v)})
+          if (DeterritorializePass.DEBUG) println(s"Replacing solutions $fullMap in $f")
+          val res = SubstitutionHelper.replacesFree(f)({case x: BaseVariable => fullMap.get(x) case _ => None})
+          if (DeterritorializePass.DEBUG) println(s"Replacing to: $res")
+          res
         case Block(ss) => ss.foldRight[Term](f)(traverse)
         case BoxChoice(l, r) =>
           // Note: This can lead to surprising behavior, this will allow a user to prove some p(x@l) and then
@@ -84,9 +92,7 @@ case class DeterritorializePass(tt: TimeTable) {
           if (ll == f) rr
           else if (rr == f) ll
           else fail
-        // @TODO: Implement more cases, including ODE
         case Phi(asgns) => traverse(asgns, f)
-        case ProveODE(ds, dc) => fail
         case BoxLoop(s, ih) =>
           val ff = traverse(s, f)
           if (f == ff) f
