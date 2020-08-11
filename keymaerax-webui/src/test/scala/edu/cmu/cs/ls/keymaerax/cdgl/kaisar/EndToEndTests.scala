@@ -213,6 +213,50 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe discreteFml
   }
 
+  it should "Prove 1d car safety with forward labels" in withMathematica { _ =>
+    val pfStr =
+      "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
+        "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
+        "{{switch {" +
+        "case accel: (v^2/(2*B)@ode(A, T) <= (d-x)@ode(A, T)) =>" +
+        "  ?accA:(a := A);" +
+        "  !safe1:(v^2/(2*B)@ode(a, T) <= (d-x)@ode(a, T)) using accel acc accA inv brk tstep ... by auto;" +
+        "  note safeAcc = andI(safe1, accA);" +
+        "case brake: (v^2/(2*B)@ode(B, T) + 1 >= (d-x)@ode(B, T)) =>" +
+        "  ?accB:(a := -B);" +
+        "  ?fast:(v >= B*T);" +
+        "  !safe2:(v^2/(2*B)@ode(a, T) <= (d-x)@ode(a, T)) using brake acc accB brk inv tstep fast ... by auto;" +
+        "  note safeAcc = andI(safe2, andI(accB, fast));" +
+        "}}" +
+        "t:= 0;" +
+        "{x' = v, v' = a, t' = 1 & dc: (t <= T & v>=0)};" +
+        "ode(a, t):" +
+        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
+        "}*" +
+        "!safe:(x <= d & v >= 0) using inv brk  by auto;"
+    val ff = check(pfStr)
+    val discreteFml =
+      ("[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;" +
+        "{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@" +
+        "{x_1:=x_0;v_1:=v_0;a_0:=a;t_0:=t;}" +
+        "{{{?(v_1+T*A)^2/(2*B)+1>=d-(x_1+v_1*T+A*T^2/2);" +
+        "a_1:=-B;?v_1>=B*T;" +
+        "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
+        "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=-B&v_1>=B*T;}^@}" +
+        "^@++" +
+        "{?(v_1+T*A)^2/(2*B)<=d-(x_1+v_1*T+A*T^2/2);" +
+        "  a_1:=A;" +
+        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
+        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=A;}^@}^@}^@" +
+        "t_1:=0;" +
+        "{x_2:=x_1;v_2:=v_1;t_2:=t_1;}" +
+        "{x_2'=v_2,v_2'=a_1,t_2'=1&t_2<=T&v_2>=0}" +
+        "{?v_2^2/(2*B)<=d-x_2&v_2>=0;}^@" +
+        "x_1:=x_2;v_1:=v_2;a_0:=a_1;t_0:=t_2;}*" +
+        "{?x_1<=d&v_1>=0;}^@]true").asFormula
+    ff shouldBe discreteFml
+  }
+
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
     val pfStr =
       """?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d)
