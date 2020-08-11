@@ -138,6 +138,17 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
   }
 
+
+  // @TODO: Write tests that make sure to actually prove T >= 0
+  // @TODO: programVar lookup needs to be more sound
+  // @TODO: elaborator should catch unbound references
+  // @TODO: consider annotations on modifiers because cuts are too awkward
+  it should "prove and then use dc-assign" in withMathematica { _ =>
+    val pfStr = "t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[t_0:= 0; x_0 := 0; {t_1:=t_0;x_1:=x_0;}{{t_1' = 1, x_1' = 2 & t_1<=T}; ?(t_1=T);}^@{?(x_1=2*T);}^@]true".asFormula
+  }
+
   it should "prove renamed dc-assign" in withMathematica { _ =>
     val pfStr = "timer:= 0; {timer' = 1, x' = y & timer := T};"
     val ff = check(pfStr)
@@ -166,7 +177,6 @@ class EndToEndTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
-  // @TODO: Write a test that sets duration t := T and then proves something that cares that t = T.
   // @TODO: Write a test that gives a name to an ODE solution equation
   // @TODO: Write a test that exercises ODE ghost scope escaping
   // @TODO: Write a test that uses an alternative ?x:P syntax for domain constraints

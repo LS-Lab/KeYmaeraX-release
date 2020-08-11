@@ -217,7 +217,11 @@ object ProofChecker {
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
     val baseCon = subContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
-    val (id, timeCon) = (baseCon.fresh(), baseCon.ghost(GreaterEqual(proveODE.timeVar.get, Number(0))))
+    val timeFml = proveODE.duration match {
+      case None => GreaterEqual(proveODE.timeVar.get, Number(0))
+      case Some((_, dur)) => And(GreaterEqual(proveODE.timeVar.get, Number(0)), GreaterEqual(dur, proveODE.timeVar.get))
+    }
+    val (id, timeCon) = (baseCon.fresh(), baseCon.ghost(timeFml))
     val solMeth = Using(ForwardSelector(ProofVar(id)) :: methAssumps, RCF())
     apply(timeCon, subSol, solMeth)
     assertion
@@ -245,7 +249,7 @@ object ProofChecker {
     m.atom match {
       case Solution() => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
       case DiffInduction() => inductAssertion(baseCon, odeContext, proveODE, assertion, coll)
-      case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solve\"")
+      case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solution\"")
     }
   }
 
