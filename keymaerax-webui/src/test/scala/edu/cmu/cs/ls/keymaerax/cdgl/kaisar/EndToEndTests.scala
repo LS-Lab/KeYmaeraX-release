@@ -68,6 +68,33 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; {k_0 := 0; ++ k_0 := 1;} x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
   }
 
+  it should "support forward label separated by irrelevant choice inside of loop " in withMathematica { _ =>
+    val pfStr =
+      "?zInit:(z := 5);" +
+      "!base:(true) by auto;" +
+      "{!xLater:(x@final(z) = 10) using zInit by auto;" +
+      "y := *;" +
+      "{k := 0; ++ k := 1;}" +
+      "x := z + y;" +
+      "final(y):" +
+      "!last:(y = z -> x = 10) using xLater by auto;" +
+      "!istep:(true) by auto;" +
+      "}*"
+    val ff = check(pfStr)
+    ff shouldBe ("[z_0:=5; " +
+      "{?(true);}^@ " +
+      "{y_0 := y; k_0 := k; x_0 := x;}" +
+      "{" +
+      "  {?(z_0 + z_0 = 10);}^@ " +
+      "  y_1 :=*; " +
+      "  {k_1 := 0; ++ k_1 := 1;} " +
+      "  x_1 := z_0 + y_1; " +
+      "  {?(y_1=z_0-> x_1=10);}^@ " +
+      "  {?(true);}^@" +
+      "  {y_0 := y_1; k_0 := k_1; x_0 := x_1;}" +
+      "}*]true").asFormula
+  }
+
   it should "support forward label separated by irrelevant loop " in withMathematica { _ =>
     val pfStr =
       "?zInit:(z := 5);" +
@@ -81,7 +108,7 @@ class EndToEndTests extends TacticTestBase {
     val ff = check(pfStr)
     ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; {?(true);}^@ k_0:=k; {{k_1 := 0; ++ k_1 := 1;}{?(true);}^@k_0:=k_1;}* x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
   }
-  
+
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
     val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
     val ff = check(pfStr)
