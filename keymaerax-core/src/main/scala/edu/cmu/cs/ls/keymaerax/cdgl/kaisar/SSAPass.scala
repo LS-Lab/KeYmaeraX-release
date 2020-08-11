@@ -167,9 +167,9 @@ object SSAPass {
       case BoxChoice(left, right) =>
         val (leftS, leftSnap) = ssa(left, snapshot)
         val (rightS, rightSnap) = ssa(right, snapshot)
-        val leftStutters = stutters(leftSnap, rightSnap)
-        val rightStutters = stutters(rightSnap, leftSnap)
         val snap = leftSnap ++ rightSnap
+        val leftStutters = stutters(leftSnap, snap)
+        val rightStutters = stutters(rightSnap, snap)
         (BoxChoice(KaisarProof.block(leftS :: leftStutters :: Nil), KaisarProof.block(rightS :: rightStutters :: Nil)), snap)
       case BoxLoop(s, ih) =>
         val boundVars = VariableSets(s).boundVars
