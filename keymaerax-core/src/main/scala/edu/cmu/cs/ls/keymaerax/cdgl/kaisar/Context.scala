@@ -100,6 +100,9 @@ case class Context(s: Statement) {
   }
 
   /** Return all assignments which mention any variant of "x" */
+  /* @TODO (soundness): searchAll needs to maintain a list of "taboo" variables that have been bound after the 'current' point.
+  *    In SSA style, this will only be Phi variables which get bound multiple times. Filter out any taboo variables, but don't
+  *   consider it an error to search for them. */
   /* @TODO (soundness): The soundness of this function is questionable. It *may* be sound for SSA, but certainly not
   *    for arbitrary contexts. */
   def getAssignments(x: Variable): List[Formula] =
