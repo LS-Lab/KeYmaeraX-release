@@ -460,8 +460,9 @@ object ProofChecker {
           }
         val ff = fs.reduceRight(concatBox)
         (c, ff)
-      case BoxChoice(left: Statement, right: Statement) =>
-        val ((sl, fl), (sr, fr)) = (apply(con, left), apply(con, right))
+      case bc@BoxChoice(left: Statement, right: Statement) =>
+        val (conL, conR) = (con.:+(BoxChoiceProgress(bc, 0, Triv())), con.:+(BoxChoiceProgress(bc, 1, Triv())))
+        val ((sl, fl), (sr, fr)) = (apply(conL, left), apply(conR, right))
         val (Box(a, p1), Box(b, p2)) = (asBox(fl), asBox(fr))
         val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
         val ss = BoxChoice(sl.s, sr.s)

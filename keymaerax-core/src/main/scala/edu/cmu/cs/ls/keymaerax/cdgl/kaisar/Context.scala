@@ -51,6 +51,11 @@ case class Context(s: Statement) {
       case (switch: Switch, switchPr: SwitchProgress) if switch == switchPr.switch =>
         // Subtract the progress of r from the branch where progress is being made.
         Context(switch.pats(switchPr.onBranch)._3) -- Context(switchPr.progress)
+      case (bc: BoxChoice, bcPr: BoxChoiceProgress) if bc == bcPr.bc =>
+        if (bcPr.onBranch == 0)
+          Context(bc.left) -- Context(bcPr.progress)
+        else
+          Context(bc.right) -- Context(bcPr.progress)
       case (l, r) => if (l == r) Context.empty else fail
     }
   }
@@ -63,6 +68,7 @@ case class Context(s: Statement) {
        * the newly-processed "s" should be part of "pr". */
       case BoxLoopProgress(bl, pr) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s))
       case SwitchProgress(switch, onBranch, pr) => Context(SwitchProgress(switch, onBranch, Context(pr).:+(other).s))
+      case BoxChoiceProgress(bc, onBranch, pr) => Context(BoxChoiceProgress(bc, onBranch, Context(pr).:+(other).s))
       case Block(ss) =>
         // recursively handle boxloopprogress inside of sequence
         val (rest, last) = (ss.dropRight(1), Context(ss.last).:+(other).s)
@@ -180,6 +186,8 @@ case class Context(s: Statement) {
         val v = x match {case vv: Variable => vv case _ => defaultVar}
         val branchMatch = if (f(v, fml, false)) List((v, fml)) else List()
         branchMatch ++ Context(progress).searchAll(f, isGhost)
+      case BoxChoiceProgress(bc, onBranch, progress) =>
+        Context(progress).searchAll(f, isGhost)
     }
   }
 

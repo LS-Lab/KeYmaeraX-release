@@ -397,6 +397,11 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
 case class SwitchProgress(switch: Switch, onBranch: Int, progress: Statement) extends MetaNode {
   override val children: List[Statement] = List(progress)
 }
+// Meta node for box choice in progress. onBranch indicates which branch was taken, 0-indexed
+case class BoxChoiceProgress(bc: BoxChoice, onBranch: Int, progress: Statement) extends MetaNode {
+  override val children: List[Statement] = List(progress)
+}
+
 
 /** Note: assertions are a list because it matters what order assertions are proved in. Order does not matter for the others. */
 final case class DomCollection(assumptions: Set[DomAssume], assertions: List[DomAssert],  weakens: Set[DomainStatement], modifiers: Set[DomModify]) {

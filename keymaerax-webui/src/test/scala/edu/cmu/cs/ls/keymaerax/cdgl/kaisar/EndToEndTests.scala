@@ -109,6 +109,12 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; {?(true);}^@ k_0:=k; {{k_1 := 0; ++ k_1 := 1;}{?(true);}^@k_0:=k_1;}* x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
   }
 
+  it should "support forward label going outside box choice" in withMathematica { _ =>
+    val pfStr = "x:=0; {!foo:(x@final > 0) by auto; ++ x:=1;} x:=1; final:"
+    val ff = check(pfStr)
+    ff shouldBe "[x_0:=0; {{{?(1 > 0);}^@x_1:=x_0; } ++ x_1 := 1;} x_2:=1;]true".asFormula
+  }
+
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
     val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
     val ff = check(pfStr)
@@ -240,7 +246,7 @@ class EndToEndTests extends TacticTestBase {
       ("[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;" +
         "{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@" +
         "{x_1:=x_0;v_1:=v_0;a_0:=a;t_0:=t;}" +
-        "{{{?(A*T+v_1)^2/(2*B)+1>=d-(A*(T^2/2)+v_1*T+x_1);" + // (A*(T^2/2)+v_1*T+x_1)
+        "{{{?(A*T+v_1)^2/(2*B)+1>=d-(A*(T^2/2)+v_1*T+x_1);" +
         "a_1:=-B;?v_1>=B*T;" +
         "{?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1);}^@" +
         "{?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1)&a_1=-B&v_1>=B*T;}^@}" +

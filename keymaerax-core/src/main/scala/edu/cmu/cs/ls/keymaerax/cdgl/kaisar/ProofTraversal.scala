@@ -61,6 +61,7 @@ object ProofTraversal {
         val mid =
         s match {
           case SwitchProgress(switch, onBranch, progress) => SwitchProgress(switch, onBranch, traverse(kc, progress, tf))
+          case BoxChoiceProgress(bc, onBranch, progress) => BoxChoiceProgress(bc, onBranch, traverse(kc, progress, tf))
           case BoxLoopProgress(bl, prog) => BoxLoopProgress(bl, traverse(kc, prog, tf))
           case Phi(asgns) => Phi(traverse(kc, asgns, tf))
           case Was(now: Statement, was: Statement) =>
@@ -73,8 +74,9 @@ object ProofTraversal {
           case switch@Switch(sel, pats) =>
             Switch(sel, pats.zipWithIndex.map({case ((v, pat: Formula, s), i) =>
               (v, pat, (traverse(kc.:+(SwitchProgress(switch, i, Triv())), s, tf)))}))
-          case BoxChoice(left, right) =>
-            BoxChoice(traverse(kc, left, tf), traverse(kc, right, tf))
+          case bc@BoxChoice(left, right) =>
+            val (conL, conR) = (kc.:+(BoxChoiceProgress(bc, 0, Triv())), kc.:+(BoxChoiceProgress(bc, 1, Triv())))
+            BoxChoice(traverse(conL, left, tf), traverse(conR, right, tf))
           case While(x, j, ss) =>
             While(x, j, traverse(kc, ss, tf))
           case BoxLoop(s, ih) =>
