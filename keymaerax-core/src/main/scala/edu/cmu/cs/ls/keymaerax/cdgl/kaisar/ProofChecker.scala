@@ -466,18 +466,16 @@ object ProofChecker {
         val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
         val ss = BoxChoice(sl.s, sr.s)
         (Context(ss), Box(Choice(a,b), p))
-      case Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
+      case switch@Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
-        val defaultVar = Variable("anon")
         val (patterns, conds, bodies) = unzip3(branches)
         sel match {
           case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement")
           case Some(sel) => compareCasesToScrutinee(con, sel, branches.map(_._2))
         }
-        val (cons, fmls) = branches.map(cb => {
-          val v = cb._1 match {case vv: Variable => vv case _ => defaultVar}
-          val (c, f) = apply(con.add(v, cb._2.asInstanceOf[Formula]), cb._3)
-          (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}
+        val (cons, fmls) = branches.zipWithIndex.map({case (cb, i) => {
+          val (c, f) = apply(con.:+(SwitchProgress(switch, i, Triv())), cb._3)
+          (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}}
           ).unzip
         val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))

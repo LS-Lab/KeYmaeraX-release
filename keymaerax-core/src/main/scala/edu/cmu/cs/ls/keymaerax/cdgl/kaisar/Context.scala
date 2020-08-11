@@ -47,6 +47,10 @@ case class Context(s: Statement) {
           else lrStatement
         }
       case (Block(l), r) if l.nonEmpty && l.head == r => Context(Block(l.tail))
+      // Only works if "other" is making progress on *this* switch statement
+      case (switch: Switch, switchPr: SwitchProgress) if switch == switchPr.switch =>
+        // Subtract the progress of r from the branch where progress is being made.
+        Context(switch.pats(switchPr.onBranch)._3) -- Context(switchPr.progress)
       case (l, r) => if (l == r) Context.empty else fail
     }
   }
@@ -58,6 +62,7 @@ case class Context(s: Statement) {
       /* We are processing "pr" and simply remembering the loop "bl" while we do so.
        * the newly-processed "s" should be part of "pr". */
       case BoxLoopProgress(bl, pr) => Context(BoxLoopProgress(bl, Context(pr).:+(other).s))
+      case SwitchProgress(switch, onBranch, pr) => Context(SwitchProgress(switch, onBranch, Context(pr).:+(other).s))
       case Block(ss) =>
         // recursively handle boxloopprogress inside of sequence
         val (rest, last) = (ss.dropRight(1), Context(ss.last).:+(other).s)
@@ -169,6 +174,12 @@ case class Context(s: Statement) {
       case BoxLoopProgress(BoxLoop(bl, Some((ihVar, ihFml))), progress) =>
         val ihMatch = if(f(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
         ihMatch ++ Context(progress).searchAll(f, isGhost)
+      case SwitchProgress(switch, onBranch, progress) =>
+        val (x, fml: Formula, e) = switch.pats(onBranch)
+        val defaultVar = Variable("anon")
+        val v = x match {case vv: Variable => vv case _ => defaultVar}
+        val branchMatch = if (f(v, fml, false)) List((v, fml)) else List()
+        branchMatch ++ Context(progress).searchAll(f, isGhost)
     }
   }
 

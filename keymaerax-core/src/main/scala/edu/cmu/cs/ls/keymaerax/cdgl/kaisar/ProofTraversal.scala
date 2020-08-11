@@ -60,6 +60,7 @@ object ProofTraversal {
       case None =>
         val mid =
         s match {
+          case SwitchProgress(switch, onBranch, progress) => SwitchProgress(switch, onBranch, traverse(kc, progress, tf))
           case BoxLoopProgress(bl, prog) => BoxLoopProgress(bl, traverse(kc, prog, tf))
           case Phi(asgns) => Phi(traverse(kc, asgns, tf))
           case Was(now: Statement, was: Statement) =>
@@ -69,8 +70,9 @@ object ProofTraversal {
               (con.:+(s), traverse(con, s, tf) :: acc)
             }
             Block(revSS.reverse)
-          case Switch(sel, pats) =>
-            Switch(sel, pats.map({case (v, pat: Formula, s) => (v, pat, (traverse(kc.:+(Assume(v, pat)), s, tf)))}))
+          case switch@Switch(sel, pats) =>
+            Switch(sel, pats.zipWithIndex.map({case ((v, pat: Formula, s), i) =>
+              (v, pat, (traverse(kc.:+(SwitchProgress(switch, i, Triv())), s, tf)))}))
           case BoxChoice(left, right) =>
             BoxChoice(traverse(kc, left, tf), traverse(kc, right, tf))
           case While(x, j, ss) =>

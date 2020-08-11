@@ -92,6 +92,7 @@ object VariableSets {
     case m: Phi => apply(m.asgns, isGhost, isInverseGhost).forgetBound
     // @TODO: Are there ever cases where we want to check _bl instead?
     case BoxLoopProgress(_bl, progress) => apply(progress, isGhost, isInverseGhost)
+    case SwitchProgress(switch, onBranch, progress) => apply(progress, isGhost, isInverseGhost)
     case m: MetaNode => m.children.map(apply(_, isGhost, isInverseGhost)).foldLeft(VariableSets.empty)(_.++(_))
   }
   def apply(kc: Context): VariableSets = apply(kc.s)
