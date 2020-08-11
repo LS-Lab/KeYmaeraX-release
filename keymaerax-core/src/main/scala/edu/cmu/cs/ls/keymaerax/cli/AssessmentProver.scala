@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, PolynomialArithV2, SimplifierV3, TacticFactory}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -33,6 +33,8 @@ object AssessmentProver {
     val DI_PREMISE: String = "dipremise"
     /** DI with additional free variables check. */
     val DI: String = "di"
+    /** Loop with automated proofs on each branch. */
+    val LOOP: String = "loop"
     /** Program equivalence. */
     val PRG_EQUIV = "prgequiv"
     /** Provable using a tactic. */
@@ -176,6 +178,15 @@ object AssessmentProver {
     KeYmaeraXProofChecker(5000)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
+  /** Checks `inv` for being a loop invariant for `question` of the shape `P->[{a;}*]Q` or `[{a;}*]P`. */
+  def loopCheck(question: Formula, inv: Formula): ProvableSig = question match {
+    case Imply(a, b@Box(_: Loop, _)) =>
+      prove(Sequent(IndexedSeq(a), IndexedSeq(b)), loop(inv)(1) & OnAll(auto & done) & done)
+    case b@Box(_: Loop, _) =>
+      prove(Sequent(IndexedSeq(), IndexedSeq(b)), loop(inv)(1) & OnAll(auto & done) & done)
+    case _ => throw new IllegalArgumentException("Loop only applicable to P->[{a;}*]Q or [{a;}*]P questions")
+  }
+
   /** Checks program equivalence by `[a;]P <-> [b;]P.` */
   def prgEquivalence(a: Program, b: Program): ProvableSig = {
     val p = PredOf(Function("P", None, Unit, Bool), Nothing)
@@ -254,6 +265,23 @@ object AssessmentProver {
       }
     case Modes.PRG_EQUIV => (have, expected) match {
       case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => prgEquivalence(e, h)
+    }
+    case Modes.LOOP => args.get("question") match {
+      case Some(q) =>
+        have match {
+          case ExpressionArtifact(h: Formula) =>
+            var inv: Option[Formula] = None
+            KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+            val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
+            loopCheck(m, inv.getOrElse(h))
+          case ListExpressionArtifact(h) =>
+            var inv: Option[Formula] = None
+            KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+            val m = expand(q, h, KeYmaeraXParser).asInstanceOf[Formula]
+            loopCheck(m, inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))
+          case _ => throw new IllegalArgumentException("Expected a single loop invariant formula, but got " + have)
+        }
+      case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
     }
     case Modes.BELLE_PROOF =>
       args.get("question") match {

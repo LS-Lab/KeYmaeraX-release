@@ -357,6 +357,10 @@ class AssessmentProverTests extends TacticTestBase {
     run(extractSolutions(QUIZ_PATH + "/7/main.tex"))
   }
 
+  it should "prove quiz 8" in withZ3 { _ =>
+    run(extractSolutions(QUIZ_PATH + "/8/main.tex"))
+  }
+
   it should "prove quiz 10" in withZ3 { _ =>
     run(extractSolutions(QUIZ_PATH + "/10/main.tex"))
   }
