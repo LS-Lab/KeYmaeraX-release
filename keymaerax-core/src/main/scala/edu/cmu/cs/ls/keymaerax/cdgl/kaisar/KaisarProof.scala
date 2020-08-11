@@ -540,7 +540,7 @@ object DomainStatement {
   }
 }
 
-trait DomainFact extends DomainStatement {
+sealed trait DomainFact extends DomainStatement {
   def asStatement: Statement = {
     this match {
       case (DomAssume(x, f)) => Assume(x, f)

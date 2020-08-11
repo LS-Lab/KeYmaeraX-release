@@ -8,12 +8,13 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.DeterritorializePass.TimeTable
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, TimeIdent, TransformationException}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelRef, TimeIdent, TransformationException}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 
 object DeterritorializePass {
+  val DEBUG: Boolean = false
   type TimeTable = Map[TimeIdent, (Snapshot, Context)]
 
   /** Translate away labels in statement, which must be in SSA form. */
@@ -51,27 +52,58 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
 
-  private def renameAdmissible(kc: Context, label: TimeIdent, f: Term, except: Set[Ident]): Option[Term] = {
-    tt.get(label) match {
+  private def destabilize(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
+  private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident]): Term = {
+    val termAcc = destabilize(reindex(labelSnap, f, except))
+    if (DeterritorializePass.DEBUG) println(s"Rewinding from ${termAcc.prettyString}")
+    def fail = throw TransformationException(s"Value of $f@$lr is ill-defined")
+    def traverse(s: Statement, f: Term): Term = {
+      s match {
+        case Modify(VarPat(x, _), Left(rhs)) =>
+          if (DeterritorializePass.DEBUG) println(s"Replace $x = $rhs in $f")
+          val res = SubstitutionHelper.replaceFree(f)(x, rhs)
+          if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
+          res
+        case Modify(VarPat(x, _), Right(_)) => fail
+        case Block(ss) => ss.foldRight[Term](f)(traverse)
+        case BoxChoice(l, r) =>
+          // If at most one branch binds the free variables of f, use that branch, else ill-defined
+          val (ll, rr) = (traverse(l, f), traverse(r, f))
+          if (ll == f) rr
+          else if (rr == f) ll
+          else fail
+        // @TODO: Implement more cases, including ODE
+        case Phi(asgns) => traverse(asgns, f)
+        case ProveODE(ds, dc) => fail
+        case BoxLoop(s, ih) => fail
+        case _ => f
+      }
+    }
+    // @TODO: Support arguments of labels
+    val res = traverse(conDiff.s, termAcc)
+    if (DeterritorializePass.DEBUG) println("Replaced to: " + res)
+    res
+  }
+
+  private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident]): Option[Term] = {
+    tt.get(label.label) match {
       case None => throw TransformationException(s"Undefined line label: $label")
       case Some((labelSnap, labelCon)) =>
         // @TODO: This is slow
         val hereSnap = Snapshot.ofContext(kc)
         // @TODO: Implement forward label references
-        // @TODO: Check is only correct if different branches a ++ b reuse same indices.
-        // For now, only allow label translation if the reference appears after definition.
-        // We do not check whether any of the referenced variables have gone out of scope - omitting this check
-        // should be sound, but just allows us to reference things that are somewhat useless.
         if (!(labelSnap <= hereSnap)) {
-          throw TransformationException(s"Label $label can only must be defined before use")
-        }
-        Some(reindex(labelSnap, f, except))
+          val conDiff = labelCon -- kc
+          val res = rewind(conDiff, labelSnap, label, f, except)
+          Some(res)
+        } else
+          Some(reindex(labelSnap, f, except))
     }
   }
 
   private def transHelper(kc: Context, local: Set[Ident]): Term => Option[Term] = (f: Term) =>
     KaisarProof.getAt(f) match {
-      case Some((e, label)) => renameAdmissible(kc, label.label, e, local)
+      case Some((e, label)) => renameAdmissible(kc, label, e, local)
       case None => None
     }
 

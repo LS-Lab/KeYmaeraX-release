@@ -32,6 +32,17 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[?x>=1;{?x>=x;}^@ x_0:=x;{x_1:=x_0+1;  {?x_1>=x_0;}^@ {?x_1>=x;}^@ x_0:=x_1;}*{?x_0>=0;}^@]true".asFormula
   }
 
+  it should "support straight-line forward label" in withMathematica { _ =>
+    val pfStr =
+      "!xLater:(x@final = 4) by auto;" +
+      "x := 0;" +
+      "x := x + 1;" +
+      "x := x + 3;" +
+      "final: !result:(x > 3) using xLater by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[{?(0 + 1 + 3 = 4);}^@ x_0:= 0; x_1 := x_0 + 1; x_2 := x_1 + 3; {?(x_2>3);}^@]true".asFormula
+  }
+
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
     val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
     val ff = check(pfStr)

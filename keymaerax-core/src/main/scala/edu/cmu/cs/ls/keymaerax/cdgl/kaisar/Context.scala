@@ -32,6 +32,24 @@ case class Context(s: Statement) {
   // @TODO: Search for "last" location
   def location: Option[Int] = s.location
 
+  def --(other: Context): Context = {
+    def fail = throw new Exception(s"Context $other is not a subcontext of $this")
+    (this.s, other.s) match {
+      case (s, Triv()) => Context(s)
+      case (Block(ss1), Block(ss2)) =>
+        if (ss2.length > ss1.length) fail
+        else if (ss2.isEmpty) Context(Block(ss1))
+        else {
+          val lrs = ss1.zip(ss2).dropWhile({ case (l, r) => l == r }).map({ case (l, r) => Context(l).--(Context(r)) })
+          val lrStatement = lrs.foldLeft(Context.empty)({ case (l, r) => l.:+(r.s) })
+          if (ss1.length >= ss2.length)
+            lrStatement.:+(Block(ss1.drop(ss2.length)))
+          else lrStatement
+        }
+      case (l, r) => if (l == r) Context.empty else fail
+    }
+  }
+
   /** Add s to the "end" of the context. */
   def :+(other: Statement): Context = {
     s match {
