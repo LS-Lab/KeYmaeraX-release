@@ -46,6 +46,7 @@ case class Context(s: Statement) {
             lrStatement.:+(Block(ss1.drop(ss2.length)))
           else lrStatement
         }
+      case (Block(l), r) if l.nonEmpty && l.head == r => Context(Block(l.tail))
       case (l, r) => if (l == r) Context.empty else fail
     }
   }
