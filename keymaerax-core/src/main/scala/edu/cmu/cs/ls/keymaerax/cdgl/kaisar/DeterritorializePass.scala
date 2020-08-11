@@ -8,14 +8,14 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.DeterritorializePass.TimeTable
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelRef, TimeIdent, TransformationException}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef, TimeIdent, TransformationException}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 
 object DeterritorializePass {
   val DEBUG: Boolean = false
-  type TimeTable = Map[TimeIdent, (Snapshot, Context)]
+  type TimeTable = Map[TimeIdent, (Snapshot, Context, LabelDef)]
 
   /** Translate away labels in statement, which must be in SSA form. */
   def apply(s: Statement): Statement = {
@@ -24,8 +24,8 @@ object DeterritorializePass {
     val collectSnapshots = new TraversalFunction {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Label(lr, Some(snap: Snapshot)) => times = times.+(lr.label -> (snap, kc))
-          case Label(lr, None) => throw TransformationException("Expected label statement to contain snapshot")
+          case Label(ld, Some(snap: Snapshot)) => times = times.+(ld.label -> (snap, kc, ld))
+          case Label(ld, None) => throw TransformationException("Expected label statement to contain snapshot")
           case _ => ()
         }
         s
@@ -54,6 +54,9 @@ case class DeterritorializePass(tt: TimeTable) {
 
   private def destabilize(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
   private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident]): Term = {
+    val (_, _, ld) = tt(lr.label)
+    if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments")
+    val argMap = ld.args.zip(lr.args).foldLeft[Map[String, Term]](Map())({case (acc, (k, v)) => acc.+(k -> v)})
     val termAcc = destabilize(reindex(labelSnap, f, except))
     if (DeterritorializePass.DEBUG) println(s"Rewinding from ${termAcc.prettyString}")
     def fail = throw TransformationException(s"Value of $f@$lr is ill-defined")
@@ -64,9 +67,18 @@ case class DeterritorializePass(tt: TimeTable) {
           val res = SubstitutionHelper.replaceFree(f)(x, rhs)
           if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
           res
-        case Modify(VarPat(x, _), Right(_)) => fail
+        case Modify(VarPat(x, _), Right(_)) if argMap.contains(x.name) =>
+          if (DeterritorializePass.DEBUG) println(s"Replace $x := * by ${argMap(x.name)} in $f")
+          val res = SubstitutionHelper.replaceFree(f)(x, argMap(x.name))
+          if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
+          res
+        case Modify(VarPat(x, _), Right(_)) if !argMap.contains(x.name) =>
+          throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
+            s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x.name)}")
         case Block(ss) => ss.foldRight[Term](f)(traverse)
         case BoxChoice(l, r) =>
+          // Note: This can lead to surprising behavior, this will allow a user to prove some p(x@l) and then
+          // be disappointed that p(x@l) is a weaker statement than they had hoped.
           // If at most one branch binds the free variables of f, use that branch, else ill-defined
           val (ll, rr) = (traverse(l, f), traverse(r, f))
           if (ll == f) rr
@@ -88,10 +100,9 @@ case class DeterritorializePass(tt: TimeTable) {
   private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident]): Option[Term] = {
     tt.get(label.label) match {
       case None => throw TransformationException(s"Undefined line label: $label")
-      case Some((labelSnap, labelCon)) =>
+      case Some((labelSnap, labelCon, _labelDef)) =>
         // @TODO: This is slow
         val hereSnap = Snapshot.ofContext(kc)
-        // @TODO: Implement forward label references
         if (!(labelSnap <= hereSnap)) {
           val conDiff = labelCon -- kc
           val res = rewind(conDiff, labelSnap, label, f, except)

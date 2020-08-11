@@ -24,6 +24,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.LabelRef
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
@@ -31,9 +32,11 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 object SSAPass {
   // Substitution helper function which re-indexes SSA variables according to a snapshot
   private def renameUsingSnapshot(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
-    // f@x is not resolved during SSA, it's resolved during separate following pass.
+    // f@x(args) is not eliminated during SSA (it has a separate pass), but the arguments are evaluated at the current
+    // location, so they are SSA'd here
     (KaisarProof.getAt(f), f) match {
-      case (Some(_), _) => Some(f)
+      case (Some((trm, LabelRef(name, args))), _) =>
+        Some(KaisarProof.makeAt(trm, LabelRef(name, args.map(ssa(_, snapshot)))))
       case (None, bv: BaseVariable) => Some(BaseVariable(bv.name, opt(snapshot.getOpt(bv.name)), bv.sort))
       case (None, dv: DifferentialSymbol) => Some(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.getOpt(dv.x.name)), dv.sort)))
       case _ => None
