@@ -18,23 +18,31 @@ class AssessmentProverTests extends TacticTestBase {
     private val GRADER = "grader"
     private val ARGS = "args"
     private val SOL = "sol"
+    private val SOLFIN = "solfin"
     private val TEST_SOL = "testsol"
     private val NO_SOL = "nosol"
     private val ARG_NAME = "argName"
     private val ARG_VAL = "argVal"
+    private val ANSWER = "answer"
     private val TURNSTILE = "==>"
     private val GOAL_SEP = ";;"
+    private val INLINE_SOL_DELIM = "____"
+    private val TEX_NO_BREAK_SPACE = "~"
 
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
     private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(SOL)
-    private val SOL_EXTRACTOR = """\\sol\s*""" + KYXLINE_EXTRACTOR.regex + """\s*"""
+    private val SOL_EXTRACTOR = """(?:\\sol\s*""" + KYXLINE_EXTRACTOR.regex + ")"
+    private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
+    private val EITHER_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + """|""" + SOLFIN_EXTRACTOR + """)\s*"""
+    private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
-    private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*)\)})?""".stripMargin
-    private val EXTRACTOR = (SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(SOL, TEST_SOL, NO_SOL, GRADER, ARGS)
+    private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*?)\)})?""".stripMargin
+    private val EXTRACTOR = ("(?s)" + EITHER_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
+    /** Translates a `\kyxline` string into an artifact. */
     def artifactsFromString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
       else {
@@ -46,13 +54,27 @@ class AssessmentProverTests extends TacticTestBase {
       }
     }
 
+    /** Translates a `\solfin` string into a question string and an artifact. */
+    def solfinArtifactsFromString(s: String): (String, Artifact) = {
+      val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER)).mkString(",")
+      val artifact = artifactsFromString(answerStrings)
+      var i = 0
+      val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; "#" + i }).trim
+      (question, artifact)
+    }
+
     def fromString(s: String): List[AssessmentProverInfo] = {
-      val graderInfo = EXTRACTOR.findAllMatchIn(s).map(m => (m.group(SOL), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
-      graderInfo.map({ case (sol, testsol, nosol, grader, args) =>
-        val expectedArtifact = artifactsFromString(sol)
+      val graderInfo = EXTRACTOR.findAllMatchIn(s).map(m => (m.group(SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
+      graderInfo.map({ case (sol, solfin, testsol, nosol, grader, args) =>
+        val (expectedArtifact, solArgs) = (sol, solfin) match {
+          case (s, null) => (artifactsFromString(s), Map.empty)
+          case (null, s) =>
+            val (question, artifact) = solfinArtifactsFromString(s)
+            (artifact, Map("question" -> question))
+        }
         val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(SOL)).map(artifactsFromString).toList
         val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(SOL)).map(artifactsFromString).toList
-        AssessmentProverInfo(grader, argsFromString(args), expectedArtifact, testSolArtifacts, noSolArtifacts)
+        AssessmentProverInfo(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       }).toList
     }
 
@@ -74,6 +96,16 @@ class AssessmentProverTests extends TacticTestBase {
       List(AssessmentProverInfo(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{syneq()}""") shouldBe
       List(AssessmentProverInfo(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    AssessmentProverInfo.fromString(
+      """\sol \kyxline"x>=0" \autog{syneq()}
+        |\sol \kyxline"y=2"
+        |\autog{prove(question="#1 -> [{x'=v}]x>=0"
+        |             tactic="auto")}""".stripMargin) shouldBe
+      List(
+        AssessmentProverInfo(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty),
+        AssessmentProverInfo(Some("prove"), Map("question" -> "#1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
+          ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
+      )
     AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{polyeq(vars="x")}""") shouldBe
       List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog{polyeq(vars="x")}""") shouldBe
@@ -83,7 +115,10 @@ class AssessmentProverTests extends TacticTestBase {
       List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
         List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula)),
         List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
-    AssessmentProverInfo.fromString("""\sol \kyxline"2*x=y" \autog{dI(vars="x",question="{x'=1,y'=2}")}""") shouldBe
+    AssessmentProverInfo.fromString(
+      """\sol \kyxline"2*x=y"
+        |\autog{dI(vars="x",
+        |          question="{x'=1,y'=2}")}""".stripMargin) shouldBe
       List(AssessmentProverInfo(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
     AssessmentProverInfo.fromString("""\sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"""") shouldBe
       List(AssessmentProverInfo(None, Map.empty,
@@ -93,6 +128,15 @@ class AssessmentProverTests extends TacticTestBase {
       List(AssessmentProverInfo(None, Map.empty,
         ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula)),
         List(ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula))), List.empty))
+    AssessmentProverInfo.fromString(
+      """\solfin
+        |\begin{lstlisting}
+        |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
+        |\end{lstlisting}
+        |\autog{loop()}""".stripMargin) shouldBe
+      List(AssessmentProverInfo(Some("loop"), Map("question" -> "x>=0 -> [{?#1; x:=x+1;}*@invariant(#2)]x>=0"),
+        ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
+        List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
