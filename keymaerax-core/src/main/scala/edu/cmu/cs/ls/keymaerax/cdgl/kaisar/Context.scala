@@ -207,8 +207,14 @@ case class Context(s: Statement) {
       case Modify(VarPat(x, _), Left(f)) => (Some((x, Equal(x, f))), Nil)
       case BoxChoice(l, r) =>
         (Context(l).lastFactMobile, Context(r).lastFactMobile) match {
-          case ((Some(resL), Nil), (Some(resR), Nil)) if resL == resR => (Some(resL), Nil)
-          case ((Some(resL), _), (Some(resR), _)) => throw new ProofCheckException("Loop inductive statement cannot appear under box choice ++")
+          case ((Some((kl, vl)), leftPhis), (Some((kr, vr)), rightPhis)) =>
+            if (kl != kr) (None, Nil)
+            // There is a last fact, but we can't come up with unique phi assignments for it, so ignore it
+            else if (leftPhis != rightPhis) (None, Nil)
+            // Optimize identical ors
+            else if (vl == vr) (Some((kl, vl)), leftPhis)
+            else (Some((kl, Or(vl, vr))), leftPhis)
+          // note: if only one branch has last-fact, it would be unsound to return that fact. Instead, ignore it.
           case _ => (None, Nil)
         }
       case BoxLoop(body, _) => Context(body).lastFactMobile

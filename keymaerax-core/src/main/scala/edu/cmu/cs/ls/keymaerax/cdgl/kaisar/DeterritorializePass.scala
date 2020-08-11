@@ -87,7 +87,12 @@ case class DeterritorializePass(tt: TimeTable) {
         // @TODO: Implement more cases, including ODE
         case Phi(asgns) => traverse(asgns, f)
         case ProveODE(ds, dc) => fail
-        case BoxLoop(s, ih) => fail
+        case BoxLoop(s, ih) =>
+          val ff = traverse(s, f)
+          if (f == ff) f
+          else
+            throw TransformationException(s"Value of $f@$lr is under-defined because it depends on duration of loop ${BoxLoop(s, ih)}. " +
+              s"Change the loop body or change $f so that $f does not mention any variables modified by the loop.")
         case _ => f
       }
     }
