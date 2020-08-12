@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, PolynomialArithV2, SimplifierV3, TacticFactory}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, InvariantGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.core._
@@ -278,12 +278,22 @@ object AssessmentProver {
   }
 
   /** Checks `inv` for being a loop invariant for `question` of the shape `P->[{a;}*]Q` or `[{a;}*]P`. */
-  def loopCheck(question: Formula, inv: Formula): ProvableSig = question match {
-    case Imply(a, b@Box(_: Loop, _)) =>
-      prove(Sequent(IndexedSeq(a), IndexedSeq(b)), loop(inv)(1) & OnAll(auto & done) & done)
-    case b@Box(_: Loop, _) =>
-      prove(Sequent(IndexedSeq(), IndexedSeq(b)), loop(inv)(1) & OnAll(auto & done) & done)
-    case _ => throw new IllegalArgumentException("Loop only applicable to P->[{a;}*]Q or [{a;}*]P questions")
+  def loopCheck(question: Formula, inv: Formula): ProvableSig = {
+    def loopCheckTactic(inv: Formula): BelleExpr = {
+      loop(inv)(1) <(
+        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Precondition does not imply invariant"),
+        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant does not imply postcondition"),
+        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant is not preserved by loop body")
+      ) & done
+    }
+    
+    question match {
+      case Imply(a, b@Box(_: Loop, _)) =>
+        prove(Sequent(IndexedSeq(a), IndexedSeq(b)), loopCheckTactic(inv))
+      case b@Box(_: Loop, _) =>
+        prove(Sequent(IndexedSeq(), IndexedSeq(b)), loopCheckTactic(inv))
+      case _ => throw new IllegalArgumentException("Loop only applicable to P->[{a;}*]Q or [{a;}*]P questions")
+    }
   }
 
   /** Checks program equivalence by `[a;]P <-> [b;]P.` */
