@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
@@ -19,34 +20,132 @@ import scala.collection.mutable.ListBuffer
 /** Assesses dL terms and formulas for equality, equivalence, implication etc. with restricted automation. */
 object AssessmentProver {
 
-  /** Builtin assessment modes */
-  object Modes {
-    /** Equality of real values. */
-    val VALUE_EQ: String = "valueeq"
-    /** Syntactic equality. */
-    val SYN_EQ: String = "syneq"
-    /** Polynomial equality. */
-    val POLY_EQ: String = "polyeq"
-    /** Equivalent by QE. */
-    val QE_EQUIV: String = "qeEquivalence"
-    /** DI premise check. */
-    val DI_PREMISE: String = "dipremise"
-    /** DI with additional free variables check. */
-    val DI: String = "di"
-    /** Loop with automated proofs on each branch. */
-    val LOOP: String = "loop"
-    /** Program equivalence. */
-    val PRG_EQUIV = "prgequiv"
-    /** Provable using a tactic. */
-    val BELLE_PROOF: String = "prove"
-    val modes: Set[String] = Set(SYN_EQ, POLY_EQ, BELLE_PROOF)
-  }
-
   /** Assessment prover input artifacts (expressions, sequents etc.) */
   abstract class Artifact
   case class ExpressionArtifact(expr: Expression) extends Artifact
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
+  case class ChoiceArtifact(text: String) extends Artifact
+
+  abstract class Grader {
+    def check(have: Artifact): ProvableSig
+  }
+  object AskGrader {
+    /** Builtin assessment modes */
+    object Modes {
+      /** Equality of real values. */
+      val VALUE_EQ: String = "valueeq"
+      /** Syntactic equality. */
+      val SYN_EQ: String = "syneq"
+      /** Polynomial equality. */
+      val POLY_EQ: String = "polyeq"
+      /** Equivalent by QE. */
+      val QE_EQUIV: String = "qeEquivalence"
+      /** DI premise check. */
+      val DI_PREMISE: String = "dipremise"
+      /** DI with additional free variables check. */
+      val DI: String = "di"
+      /** Loop with automated proofs on each branch. */
+      val LOOP: String = "loop"
+      /** Program equivalence. */
+      val PRG_EQUIV = "prgequiv"
+      /** Provable using a tactic. */
+      val BELLE_PROOF: String = "prove"
+    }
+  }
+  case class AskGrader(mode: Option[String], args: Map[String, String], expected: Artifact) extends Grader {
+    /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
+    override def check(have: Artifact): ProvableSig = mode.getOrElse(Modes.SYN_EQ) match {
+      case Modes.SYN_EQ => (have, expected) match {
+        case (ExpressionArtifact(h), ExpressionArtifact(e)) => syntacticEquality(h, e)
+        case (SequentArtifact(h), SequentArtifact(e)) => syntacticEquality(h, e)
+      }
+      case Modes.VALUE_EQ =>(have, expected) match {
+        case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => valueEquality(h, e)
+        case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) => valueEquality(h, e)
+      }
+      case Modes.POLY_EQ => (have, expected) match {
+        case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => polynomialEquality(h, e)
+        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
+        case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
+      }
+      case Modes.QE_EQUIV => (have, expected) match {
+        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => qeEquivalence(h, e)
+      }
+      case Modes.DI_PREMISE =>
+        val diffAssignsMandatory = args.getOrElse("diffAssignsMandatory", "true").toBoolean
+        val normalize = args.getOrElse("normalize", "false").toBoolean
+        (have, expected) match {
+          case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => dIPremiseCheck(h, e, diffAssignsMandatory, normalize)
+          case (SequentArtifact(h :: Nil), SequentArtifact(e :: Nil)) => dIPremiseCheck(h, e, diffAssignsMandatory, normalize)
+        }
+      case Modes.DI =>
+        args.get("question") match {
+          case Some(q) =>
+            KeYmaeraXParser.programParser(q) match {
+              case ode: ODESystem => have match {
+                case ExpressionArtifact(h: Formula) => dICheck(ode, h)
+                case SequentArtifact(h :: Nil) => dICheck(ode, h.toFormula)
+              }
+              case _ => throw new IllegalArgumentException("Question must be an ODE system")
+            }
+          case None => throw new IllegalArgumentException("Mandatory question missing in DI check")
+        }
+      case Modes.PRG_EQUIV => (have, expected) match {
+        case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => prgEquivalence(e, h)
+      }
+      case Modes.LOOP => args.get("question") match {
+        case Some(q) =>
+          have match {
+            case ExpressionArtifact(h: Formula) =>
+              var inv: Option[Formula] = None
+              KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+              val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
+              loopCheck(m, inv.getOrElse(h))
+            case ListExpressionArtifact(h) =>
+              var inv: Option[Formula] = None
+              KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+              val m = expand(q, h, KeYmaeraXParser).asInstanceOf[Formula]
+              loopCheck(m, inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))
+            case _ => throw new IllegalArgumentException("Expected a single loop invariant formula, but got " + have)
+          }
+        case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
+      }
+      case Modes.BELLE_PROOF =>
+        args.get("question") match {
+          case Some(q) =>
+            have match {
+              case ExpressionArtifact(h) =>
+                val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
+                val t = expand(args("tactic"), h :: Nil, BelleParser)
+                prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
+              case ListExpressionArtifact(hs) =>
+                val m = expand(q, hs, KeYmaeraXParser).asInstanceOf[Formula]
+                val t = expand(args("tactic"), hs, BelleParser)
+                prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
+            }
+          case None =>
+            val t = BelleParser(args("tactic"))
+            (have, expected) match {
+              case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
+                prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), t)
+              case (SequentArtifact(h), SequentArtifact(e)) =>
+                val combined = sequentsToFormula(e, h, Equiv)
+                val lemmas = h.zip(e).map({ case (hs, es) =>
+                  prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(hs.toFormula, es.toFormula))), t)
+                }).map(byUS)
+                prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R))*(e.size-1) & BranchTactic(lemmas))
+            }
+        }
+    }
+  }
+  case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
+    override def check(have: Artifact): ProvableSig = have match {
+      case h: ChoiceArtifact =>
+        if (h.text == expected.text) KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True)))
+        else ProvableSig.startProof(False)
+    }
+  }
 
   /** Proves equivalence of `a` and `b` by QE. */
   def qeEquivalence(a: Formula, b: Formula): ProvableSig = {
@@ -224,93 +323,6 @@ object AssessmentProver {
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
   def prove(s: Sequent, t: BelleExpr): ProvableSig = {
     KeYmaeraXProofChecker(5000)(t)(s)
-  }
-
-  /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
-  def check(have: Artifact, expected: Artifact, mode: Option[String], args: Map[String, String]): ProvableSig = mode.getOrElse(Modes.SYN_EQ) match {
-    case Modes.SYN_EQ => (have, expected) match {
-      case (ExpressionArtifact(h), ExpressionArtifact(e)) => syntacticEquality(h, e)
-      case (SequentArtifact(h), SequentArtifact(e)) => syntacticEquality(h, e)
-    }
-    case Modes.VALUE_EQ =>(have, expected) match {
-      case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => valueEquality(h, e)
-      case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) => valueEquality(h, e)
-    }
-    case Modes.POLY_EQ => (have, expected) match {
-      case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => polynomialEquality(h, e)
-      case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
-      case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
-    }
-    case Modes.QE_EQUIV => (have, expected) match {
-      case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => qeEquivalence(h, e)
-    }
-    case Modes.DI_PREMISE =>
-      val diffAssignsMandatory = args.getOrElse("diffAssignsMandatory", "true").toBoolean
-      val normalize = args.getOrElse("normalize", "false").toBoolean
-      (have, expected) match {
-        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => dIPremiseCheck(h, e, diffAssignsMandatory, normalize)
-        case (SequentArtifact(h :: Nil), SequentArtifact(e :: Nil)) => dIPremiseCheck(h, e, diffAssignsMandatory, normalize)
-      }
-    case Modes.DI =>
-      args.get("question") match {
-        case Some(q) =>
-          KeYmaeraXParser.programParser(q) match {
-            case ode: ODESystem => have match {
-              case ExpressionArtifact(h: Formula) => dICheck(ode, h)
-              case SequentArtifact(h :: Nil) => dICheck(ode, h.toFormula)
-            }
-            case _ => throw new IllegalArgumentException("Question must be an ODE system")
-          }
-        case None => throw new IllegalArgumentException("Mandatory question missing in DI check")
-      }
-    case Modes.PRG_EQUIV => (have, expected) match {
-      case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => prgEquivalence(e, h)
-    }
-    case Modes.LOOP => args.get("question") match {
-      case Some(q) =>
-        have match {
-          case ExpressionArtifact(h: Formula) =>
-            var inv: Option[Formula] = None
-            KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-            val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
-            loopCheck(m, inv.getOrElse(h))
-          case ListExpressionArtifact(h) =>
-            var inv: Option[Formula] = None
-            KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-            val m = expand(q, h, KeYmaeraXParser).asInstanceOf[Formula]
-            loopCheck(m, inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))
-          case _ => throw new IllegalArgumentException("Expected a single loop invariant formula, but got " + have)
-        }
-      case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
-    }
-    case Modes.BELLE_PROOF =>
-      args.get("question") match {
-        case Some(q) =>
-          have match {
-            case ExpressionArtifact(h) =>
-              val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
-              val t = expand(args("tactic"), h :: Nil, BelleParser)
-              prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
-            case ListExpressionArtifact(hs) =>
-              val m = expand(q, hs, KeYmaeraXParser).asInstanceOf[Formula]
-              val t = expand(args("tactic"), hs, BelleParser)
-              prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
-          }
-        case None =>
-          val t = BelleParser(args("tactic"))
-          (have, expected) match {
-            case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
-              prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), t)
-            case (SequentArtifact(h), SequentArtifact(e)) =>
-              val combined = sequentsToFormula(e, h, Equiv)
-              val lemmas = h.zip(e).map({ case (hs, es) =>
-                prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(hs.toFormula, es.toFormula))), t)
-              }).map(byUS)
-              prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R))*(e.size-1) & BranchTactic(lemmas))
-          }
-    }
-
-
   }
 
   /** Converts list of `expected` subgoals and list of `actual` subgoals into a formula,

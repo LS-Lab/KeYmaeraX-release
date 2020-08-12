@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, AskGrader, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
@@ -11,10 +11,18 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
 
 import scala.util.Try
+import scala.util.matching.Regex
 
 class AssessmentProverTests extends TacticTestBase {
 
-  object AssessmentProverInfo {
+  abstract class Question
+
+  /** One question in a problem with grading information. */
+  case class AskQuestion(grader: Option[String], args: Map[String, String],
+                         expected: Artifact, testSols: List[Artifact], noSols: List[Artifact]) extends Question
+  object AskQuestion {
+    val QUESTION_START: String = "ask"
+
     private val GRADER = "grader"
     private val ARGS = "args"
     private val SOL = "sol"
@@ -38,9 +46,28 @@ class AssessmentProverTests extends TacticTestBase {
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
     private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*?)\)})?""".stripMargin
-    private val EXTRACTOR = ("(?s)" + EITHER_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
+
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
+
+    private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
+    private val GROUPS: List[String] = List(SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
+    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + EITHER_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
+
+    def firstFromString(rawContent: String): Option[AskQuestion] = {
+      val graderInfo = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
+      graderInfo.map({ case (sol, solfin, testsol, nosol, grader, args) =>
+        val (expectedArtifact, solArgs) = (sol, solfin) match {
+          case (s, null) => (artifactsFromString(s), Map.empty)
+          case (null, s) =>
+            val (question, artifact) = solfinArtifactsFromString(s)
+            (artifact, Map("question" -> question))
+        }
+        val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(SOL)).map(artifactsFromString).toList
+        val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(SOL)).map(artifactsFromString).toList
+        AskQuestion(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
+      })
+    }
 
     /** Translates a `\kyxline` string into an artifact. */
     def artifactsFromString(s: String): Artifact = {
@@ -63,21 +90,6 @@ class AssessmentProverTests extends TacticTestBase {
       (question, artifact)
     }
 
-    def fromString(s: String): List[AssessmentProverInfo] = {
-      val graderInfo = EXTRACTOR.findAllMatchIn(s).map(m => (m.group(SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
-      graderInfo.map({ case (sol, solfin, testsol, nosol, grader, args) =>
-        val (expectedArtifact, solArgs) = (sol, solfin) match {
-          case (s, null) => (artifactsFromString(s), Map.empty)
-          case (null, s) =>
-            val (question, artifact) = solfinArtifactsFromString(s)
-            (artifact, Map("question" -> question))
-        }
-        val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(SOL)).map(artifactsFromString).toList
-        val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(SOL)).map(artifactsFromString).toList
-        AssessmentProverInfo(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
-      }).toList
-    }
-
     def argsFromString(args: Option[String]): Map[String, String] = {
       args.map(ARG_SPLITTER.findAllMatchIn).getOrElse(Iterator.empty).
         map(m => (m.group(ARG_NAME), m.group(ARG_VAL))).
@@ -85,58 +97,191 @@ class AssessmentProverTests extends TacticTestBase {
     }
   }
 
-  case class AssessmentProverInfo(grader: Option[String], args: Map[String, String],
-                                  expected: Artifact, testSols: List[Artifact], noSols: List[Artifact])
+
+  case class Choice(text: String, isCorrect: Boolean)
+  case class OneChoiceQuestion(text: String, choices: List[(Choice)]) extends Question
+  object OneChoiceQuestion {
+    val QUESTION_START = "onechoice"
+
+    private val QUESTION_TEXT = "questiontext"
+    private val IS_CORRECT_CHOICE = "*"
+    private val CHOICE_TEXT = "choicetext"
+    private val CHOICES = "choices"
+
+    private val GROUPS: List[String] = List(QUESTION_TEXT, CHOICES)
+    private val QUESTION_TEXT_EXTRACTOR = """\s*(.*?)\s*"""
+    private val CHOICES_EXTRACTOR = """((?:\\choice(?:\*)?\s*(?-s:.*)\s*)+)"""
+    private val SINGLE_CHOICE_EXTRACTOR = """\\choice(\*)?\s*(.*)""".r(IS_CORRECT_CHOICE, CHOICE_TEXT)
+    private val QUESTION_EXTRACTOR: Regex = ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR +
+      CHOICES_EXTRACTOR).r(GROUPS:_*)
+
+    def firstFromString(rawContent: String): Option[OneChoiceQuestion] = {
+      val choices = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(QUESTION_TEXT), m.group(CHOICES)))
+      choices.map({ case (text, c) => OneChoiceQuestion(text, choicesFromString(c)) })
+    }
+
+    private def choicesFromString(rawContent: String): List[Choice] = {
+      SINGLE_CHOICE_EXTRACTOR.findAllMatchIn(rawContent).map(m =>
+        Choice(m.group(CHOICE_TEXT), m.group(IS_CORRECT_CHOICE) != null)).toList
+    }
+  }
+
+
+  /** A quiz problem block. */
+  case class Problem(name: Option[String], label: Option[String], rawContent: String, rawPoints: Option[String]) {
+    private val QUESTION_EXTRACTOR =
+      (AskQuestion.QUESTION_START :: OneChoiceQuestion.QUESTION_START :: Nil).
+        map("\\\\(" + _ + ")").mkString("|").r(AskQuestion.getClass.getSimpleName, OneChoiceQuestion.getClass.getSimpleName)
+
+    /** The problem questions with grading information. */
+    lazy val questions: List[Question] = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
+      (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
+       Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
+        case Some(AskQuestion.QUESTION_START) =>
+          AskQuestion.firstFromString(rawContent.substring(m.start))
+        case Some(OneChoiceQuestion.QUESTION_START) =>
+          OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
+      }
+    }).toList
+
+    /** The total points of the problem. */
+    def points: Option[Double] = rawPoints.map(_.toDouble)
+  }
+
+  object Problem {
+    private val PROBLEM_NAME = "problemname"
+    private val PROBLEM_CONTENT = "problemcontent"
+    private val PROBLEM_POINTS = "problempoints"
+    private val PROBLEM_LABEL = "problemlabel"
+    private val PROBLEM_EXTRACTOR = """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
+
+    def fromString(s: String): List[Problem] = {
+      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)), Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).toList
+    }
+  }
 
   private val COURSE_PATH: String = "/Course-current"
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quiz"
 
   "Extractor" should "extract grading information" in {
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0"""") shouldBe
-      List(AssessmentProverInfo(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{syneq()}""") shouldBe
-      List(AssessmentProverInfo(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString(
-      """\sol \kyxline"x>=0" \autog{syneq()}
-        |\sol \kyxline"y=2"
+    inside (Problem.fromString("""\begin{problem}\label{prob:first} \ask \sol \kyxline"x>=0" \end{problem}""")) {
+      case p :: Nil =>
+        p.name shouldBe empty
+        p.points shouldBe empty
+        p.label should contain ("prob:first")
+        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask Something simple \sol \kyxline"x>=0" \end{problem}""")) {
+      case p :: Nil =>
+        p.name should contain ("Problem A")
+        p.points should contain (4.0)
+        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}[Problem B] \ask A syntactic equality \sol \kyxline"x>=0" \autog{syneq()} \end{problem}""")) {
+      case p :: Nil =>
+        p.name should contain ("Problem B")
+        p.questions shouldBe
+          List(AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}
+        |\ask \sol \kyxline"x>=0" \autog{syneq()}
+        |\ask \sol \kyxline"y=2"
         |\autog{prove(question="#1 -> [{x'=v}]x>=0"
-        |             tactic="auto")}""".stripMargin) shouldBe
-      List(
-        AssessmentProverInfo(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty),
-        AssessmentProverInfo(Some("prove"), Map("question" -> "#1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
-          ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
-      )
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \autog{polyeq(vars="x")}""") shouldBe
-      List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog{polyeq(vars="x")}""") shouldBe
-      List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
-        List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}""") shouldBe
-      List(AssessmentProverInfo(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
-        List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula)),
-        List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
-    AssessmentProverInfo.fromString(
-      """\sol \kyxline"2*x=y"
+        |             tactic="auto")}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(
+            AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty),
+            AskQuestion(Some("prove"), Map("question" -> "#1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
+              ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
+          )
+    }
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \autog{polyeq(vars="x")}\end{problem}""")) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
+            List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
+            List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula)),
+            List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}
+        |\ask A DI question
+        |\sol \kyxline"2*x=y"
         |\autog{dI(vars="x",
-        |          question="{x'=1,y'=2}")}""".stripMargin) shouldBe
-      List(AssessmentProverInfo(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"""") shouldBe
-      List(AssessmentProverInfo(None, Map.empty,
-        SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent)),
-        List(SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent))), List.empty))
-    AssessmentProverInfo.fromString("""\sol \kyxline"x>0,y>0,z>0"""") shouldBe
-      List(AssessmentProverInfo(None, Map.empty,
-        ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula)),
-        List(ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula))), List.empty))
-    AssessmentProverInfo.fromString(
-      """\solfin
+        |          question="{x'=1,y'=2}")}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"\end{problem}""")) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(None, Map.empty,
+            SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent)),
+            List(SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent))), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>0,y>0,z>0"\end{problem}""")) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(None, Map.empty,
+            ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula)),
+            List(ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula))), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}
+        |\ask
+        |\solfin
         |\begin{lstlisting}
         |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
         |\end{lstlisting}
-        |\autog{loop()}""".stripMargin) shouldBe
-      List(AssessmentProverInfo(Some("loop"), Map("question" -> "x>=0 -> [{?#1; x:=x+1;}*@invariant(#2)]x>=0"),
-        ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
-        List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+        |\autog{loop()}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?#1; x:=x+1;}*@invariant(#2)]x>=0"),
+            ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
+            List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}
+        |\ask \sol \kyxline"x>=0"
+        |\onechoice
+        |A choice question
+        |\choice  Wrong answer
+        |\choice* Right answer
+        |\choice  Another wrong answer
+        |\onechoice
+        |Another choice question
+        |\choice* Correct
+        |\choice Incorrect
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe List(
+          AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula),
+            List(ExpressionArtifact("x>=0".asFormula)), List.empty),
+          OneChoiceQuestion("A choice question", List(
+            Choice("Wrong answer", isCorrect=false),
+            Choice("Right answer", isCorrect=true),
+            Choice("Another wrong answer", isCorrect=false))),
+          OneChoiceQuestion("Another choice question", List(
+            Choice("Correct", isCorrect=true),
+            Choice("Incorrect", isCorrect=false)))
+        )
+    }
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
@@ -270,51 +415,48 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Generic prove checker" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.check(ExpressionArtifact("A() -> [prg;]B()".asFormula), ExpressionArtifact("A()->[prg;]B()".asFormula),
-      Some(AssessmentProver.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop")) shouldBe 'proved
-    AssessmentProver.check(
-      SequentArtifact("A() ==> [prg;]B()".asSequent::Nil),
-      SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil),
-      Some(AssessmentProver.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop")) shouldBe 'proved
-    val p = AssessmentProver.check(
-      SequentArtifact("A() ==> [prg;]B()".asSequent::"==> [sys;]C() -> false&x=4".asSequent::Nil),
-      SequentArtifact("==> A() -> [prg;]B()".asSequent::"[sys;]C() ==> ".asSequent::Nil),
-      Some(AssessmentProver.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"))
+    AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), ExpressionArtifact("A() -> [prg;]B()".asFormula)).
+      check(ExpressionArtifact("A()->[prg;]B()".asFormula)) shouldBe 'proved
+    AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("A() ==> [prg;]B()".asSequent::Nil)).
+      check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)) shouldBe 'proved
+    val p = AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("==> A() -> [prg;]B()".asSequent::"[sys;]C() ==> ".asSequent::Nil)).
+      check(SequentArtifact("A() ==> [prg;]B()".asSequent::"==> [sys;]C() -> false&x=4".asSequent::Nil))
     p.conclusion shouldBe "==> ((A() -> [prg;]B()) <-> (true -> A() -> [prg;]B())) & ((true -> [sys;]C() -> false&x=4) <-> ([sys;]C() -> false))".asSequent
     p shouldBe 'proved
   }
 
   it should "prove optional question with solution as loop tactic input" in withZ3 { _ =>
-    AssessmentProver.check(
-      ExpressionArtifact("x>1&y>=0".asFormula),
-      ExpressionArtifact("false".asFormula), //@note ignored because question will be used instead
-      Some(AssessmentProver.Modes.BELLE_PROOF),
+    AskGrader(
+      Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x>2 & y>=1 -> [{x:=x+y;y:=y+2;}*]x>1",
-        "tactic" -> "implyR(1);loop({`#1`},1);auto;done")
+        "tactic" -> "implyR(1);loop({`#1`},1);auto;done"),
+      ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
+      check(ExpressionArtifact("x>1&y>=0".asFormula)
     ) shouldBe 'proved
   }
 
   it should "prove optional question with a list of diffcuts" in withZ3 { _ =>
-    AssessmentProver.check(
-      ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil),
-      ExpressionArtifact("false".asFormula), //@note ignored because question will be used instead
-      Some(AssessmentProver.Modes.BELLE_PROOF),
+    AskGrader(
+      Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x>=3 & v>=2 & a>=1 & j>=0 -> [{x'=v,v'=a,a'=j}]x>=3",
         "tactic" -> "implyR(1); for #i do dC({`#i`},1); <(nil, dI(1); done) endfor; dW(1); QE; done"
-      )
+      ),
+      ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
+      check(ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil)
     ) shouldBe 'proved
   }
 
   it should "prove optional question with solution as uniform substitution tactic input" in withZ3 { _ =>
-    AssessmentProver.check(
-      ExpressionArtifact("x<=m-V*(T-t)".asFormula),
-      ExpressionArtifact("false".asFormula), //@note ignored because question will be used instead
-      Some(AssessmentProver.Modes.BELLE_PROOF),
+    AskGrader(
+      Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x<=m & V>=0 -> [{{v:=0; ++ ?Q(m,t,x,T,V);v:=V;};{x'=v,t'=1 & t<=T}}*]x<=m",
-        "tactic" -> "US({`Q(m,t,x,T,V) ~> #1`});implyR(1);loop({`x<=m`},1);auto;done")
+        "tactic" -> "US({`Q(m,t,x,T,V) ~> #1`});implyR(1);loop({`x<=m`},1);auto;done"),
+      ExpressionArtifact("false".asFormula) //@note ignored because question will be used instead
+    ).check(
+      ExpressionArtifact("x<=m-V*(T-t)".asFormula)
     ) shouldBe 'proved
   }
 
@@ -373,20 +515,21 @@ class AssessmentProverTests extends TacticTestBase {
     run(extractSolutions(QUIZ_PATH + "/14/main.tex"))
   }
 
-  private def run(assessments: List[AssessmentProverInfo]): Unit = {
-    forEvery (table(assessments)) { case (grader, args, sol, testSols, noSols) =>
-      testSols.foreach(t => {
+  private def run(problems: List[Problem]): Unit = {
+    forEvery (table(problems)) { case (problem, grader, testAnswers, noAnswers) =>
+      println("Problem section: " + problem)
+      testAnswers.foreach(t => {
         println("Testing sol: " + t)
         val tic = System.nanoTime()
-        AssessmentProver.check(t, sol, grader, args) shouldBe 'proved withClue t
+        grader.check(t) shouldBe 'proved withClue t
         println("Successfully verified sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
       })
-      noSols.foreach(t => {
+      noAnswers.foreach(t => {
         println("Testing no-sol: " + t)
         val tic = System.nanoTime()
-        Try(AssessmentProver.check(t, sol, grader, args)).toOption.map(_ shouldNot be ('proved)) withClue t
+        Try(grader.check(t)).toOption.map(_ shouldNot be ('proved)) withClue t
         println("Successfully rejected no-sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
@@ -395,14 +538,22 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   /** Extracts solutions (have, expected) from the resource ath `path`. */
-  private def extractSolutions(path: String): List[AssessmentProverInfo] = {
+  private def extractSolutions(path: String): List[Problem] = {
     val content = resource.managed(io.Source.fromInputStream(getClass.getResourceAsStream(path), "UTF-8")).apply(_.mkString)
-    AssessmentProverInfo.fromString(content)
+    Problem.fromString(content.linesWithSeparators.filterNot(_.startsWith("%")).mkString)
   }
 
-  private def table(infos: List[AssessmentProverInfo]) = {
-    Table(("Method", "Args", "Sol", "TestSols", "NoSols"), infos.map(i => (i.grader, i.args, i.expected, i.testSols, i.noSols)):_*)
+  private def table(problems: List[Problem]) = {
+    Table(("Problem", "Grader", "TestAnswers", "NoAnswers"), problems.flatMap(p => p.questions.map({
+      case q: AskQuestion =>
+        (p.name, AskGrader(q.grader, q.args, q.expected), q.testSols, q.noSols)
+      case q: OneChoiceQuestion =>
+        val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
+          case (c, i) => (c.map(c => ChoiceArtifact(c.text)), i.map(c => ChoiceArtifact(c.text)))
+        }
+        assert(correct.size == 1, "Missing or non-unique correct solution")
+        (p.name, OneChoiceGrader(Map.empty[String, String], correct.head), correct, incorrect)
+    })):_*)
   }
-
 
 }
