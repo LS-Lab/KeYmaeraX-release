@@ -67,7 +67,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
       }
 
     try {
-      val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
+      val axiom = KeYmaeraXParser.strictParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
       (name, axiom, remainderTokens)
     } catch {
       case e: ParseException => throw e.inContext(input.toString, "Error occurred while parsing formula associated with axiom named " + name)

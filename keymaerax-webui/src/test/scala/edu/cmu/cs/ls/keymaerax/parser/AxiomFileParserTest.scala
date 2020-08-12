@@ -13,7 +13,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  */
 @CheckinTest
 class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester {
-  val loadAxiomString = PrivateMethod[String]('loadAxiomString)
+  private val loadAxiomString = PrivateMethod[String]('loadAxiomString)
 
   "KeYmaeraXAxiomParser" should "parse the axiom file" in {
     // even AxiomBase is private[core], so get Class by Java reflection
