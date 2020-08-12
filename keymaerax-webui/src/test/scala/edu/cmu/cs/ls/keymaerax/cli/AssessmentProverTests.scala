@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, AskGrader, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
@@ -99,9 +99,8 @@ class AssessmentProverTests extends TacticTestBase {
 
 
   case class Choice(text: String, isCorrect: Boolean)
-  case class OneChoiceQuestion(text: String, choices: List[(Choice)]) extends Question
-  object OneChoiceQuestion {
-    val QUESTION_START = "onechoice"
+  abstract class ChoiceQuestion(questionStart: String, questionFactory: (String, List[Choice]) => Question) {
+    val QUESTION_START: String = questionStart
 
     private val QUESTION_TEXT = "questiontext"
     private val IS_CORRECT_CHOICE = "*"
@@ -115,9 +114,9 @@ class AssessmentProverTests extends TacticTestBase {
     private val QUESTION_EXTRACTOR: Regex = ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR +
       CHOICES_EXTRACTOR).r(GROUPS:_*)
 
-    def firstFromString(rawContent: String): Option[OneChoiceQuestion] = {
+    def firstFromString(rawContent: String): Option[Question] = {
       val choices = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(QUESTION_TEXT), m.group(CHOICES)))
-      choices.map({ case (text, c) => OneChoiceQuestion(text, choicesFromString(c)) })
+      choices.map({ case (text, c) => questionFactory(text, choicesFromString(c)) })
     }
 
     private def choicesFromString(rawContent: String): List[Choice] = {
@@ -125,22 +124,29 @@ class AssessmentProverTests extends TacticTestBase {
         Choice(m.group(CHOICE_TEXT), m.group(IS_CORRECT_CHOICE) != null)).toList
     }
   }
+  case class OneChoiceQuestion(text: String, choices: List[Choice]) extends Question
+  object OneChoiceQuestion extends ChoiceQuestion("onechoice", new OneChoiceQuestion(_, _))
 
+  case class AnyChoiceQuestion(text: String, choices: List[(Choice)]) extends Question
+  object AnyChoiceQuestion extends ChoiceQuestion("anychoice", new AnyChoiceQuestion(_, _))
 
   /** A quiz problem block. */
   case class Problem(name: Option[String], label: Option[String], rawContent: String, rawPoints: Option[String]) {
     private val QUESTION_EXTRACTOR =
-      (AskQuestion.QUESTION_START :: OneChoiceQuestion.QUESTION_START :: Nil).
-        map("\\\\(" + _ + ")").mkString("|").r(AskQuestion.getClass.getSimpleName, OneChoiceQuestion.getClass.getSimpleName)
+      (AskQuestion.QUESTION_START :: OneChoiceQuestion.QUESTION_START :: AnyChoiceQuestion.QUESTION_START :: Nil).
+        map("\\\\(" + _ + ")").mkString("|").r(AskQuestion.getClass.getSimpleName, OneChoiceQuestion.getClass.getSimpleName, AnyChoiceQuestion.getClass.getSimpleName)
 
     /** The problem questions with grading information. */
     lazy val questions: List[Question] = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
       (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
-       Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
+       Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) ::
+       Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
         case Some(AskQuestion.QUESTION_START) =>
           AskQuestion.firstFromString(rawContent.substring(m.start))
         case Some(OneChoiceQuestion.QUESTION_START) =>
           OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
+        case Some(AnyChoiceQuestion.QUESTION_START) =>
+          AnyChoiceQuestion.firstFromString(rawContent.substring(m.start))
       }
     }).toList
 
@@ -549,10 +555,20 @@ class AssessmentProverTests extends TacticTestBase {
         (p.name, AskGrader(q.grader, q.args, q.expected), q.testSols, q.noSols)
       case q: OneChoiceQuestion =>
         val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
-          case (c, i) => (c.map(c => ChoiceArtifact(c.text)), i.map(c => ChoiceArtifact(c.text)))
+          case (c, i) =>
+            (c.map(c => ChoiceArtifact(c.text :: Nil)), i.map(c => ChoiceArtifact(c.text :: Nil)))
         }
+        //@todo do we ever have a \\onechoice with more than 1 correct answer?
         assert(correct.size == 1, "Missing or non-unique correct solution")
         (p.name, OneChoiceGrader(Map.empty[String, String], correct.head), correct, incorrect)
+      case q: AnyChoiceQuestion =>
+        val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
+          case (c, i) =>
+            //@note any other combination of selected choices
+            val incorrectCombinations = q.choices.toSet.subsets.filter(_ != c.toSet)
+            (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
+        }
+        (p.name, AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect)
     })):_*)
   }
 

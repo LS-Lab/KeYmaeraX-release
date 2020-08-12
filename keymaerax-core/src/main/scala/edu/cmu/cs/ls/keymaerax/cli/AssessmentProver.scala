@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, InvariantGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.core._
@@ -25,7 +25,7 @@ object AssessmentProver {
   case class ExpressionArtifact(expr: Expression) extends Artifact
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
-  case class ChoiceArtifact(text: String) extends Artifact
+  case class ChoiceArtifact(selected: List[String]) extends Artifact
 
   abstract class Grader {
     def check(have: Artifact): ProvableSig
@@ -142,7 +142,16 @@ object AssessmentProver {
   case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): ProvableSig = have match {
       case h: ChoiceArtifact =>
-        if (h.text == expected.text) KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True)))
+        //@note correct if answering with any of the correctly marked solutions
+        if (h.selected.nonEmpty && h.selected.toSet.subsetOf(expected.selected.toSet)) KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True)))
+        else ProvableSig.startProof(False)
+    }
+  }
+  case class AnyChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
+    override def check(have: Artifact): ProvableSig = have match {
+      case h: ChoiceArtifact =>
+        //@note correct if answering with exactly the correct yes/no pattern (modulo order)
+        if (h.selected.toSet == expected.selected.toSet) KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True)))
         else ProvableSig.startProof(False)
     }
   }
@@ -286,7 +295,7 @@ object AssessmentProver {
         master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant is not preserved by loop body")
       ) & done
     }
-    
+
     question match {
       case Imply(a, b@Box(_: Loop, _)) =>
         prove(Sequent(IndexedSeq(a), IndexedSeq(b)), loopCheckTactic(inv))
