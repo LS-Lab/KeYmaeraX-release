@@ -40,7 +40,7 @@ object AssessmentProver {
       /** Polynomial equality. */
       val POLY_EQ: String = "polyeq"
       /** Equivalent by QE. */
-      val QE_EQUIV: String = "qeEquivalence"
+      val QE: String = "qe"
       /** DI premise check. */
       val DI_PREMISE: String = "dipremise"
       /** DI with additional free variables check. */
@@ -71,8 +71,13 @@ object AssessmentProver {
         case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
         case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean)
       }
-      case Modes.QE_EQUIV => (have, expected) match {
-        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => qeEquivalence(h, e)
+      case Modes.QE => (have, expected) match {
+        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
+          args.get("op") match {
+            case None | Some("<->") => qe(h, e, Equiv)
+            case Some("->") => qe(h, e, Imply)
+            case Some("<-") => qe(e, h, Imply)
+          }
       }
       case Modes.PROP => (have, expected) match {
         case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
@@ -163,8 +168,8 @@ object AssessmentProver {
   }
 
   /** Proves equivalence of `a` and `b` by QE. */
-  def qeEquivalence(a: Formula, b: Formula): ProvableSig = {
-    KeYmaeraXProofChecker(5000)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(a, b))))
+  def qe(a: Formula, b: Formula, op: (Formula, Formula) => Formula): ProvableSig = {
+    KeYmaeraXProofChecker(5000)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(op(a, b))))
   }
 
   /** Compares terms `a` and `b` for having the same real values. */

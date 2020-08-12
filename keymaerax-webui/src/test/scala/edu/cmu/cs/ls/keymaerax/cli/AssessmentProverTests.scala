@@ -386,14 +386,14 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "QE equivalence" should "prove simple examples" in withZ3 { _ =>
-    AssessmentProver.qeEquivalence("x>=0".asFormula, "0<=x".asFormula)
-    AssessmentProver.qeEquivalence("x>=4".asFormula, "x>=0 & x^2>=16".asFormula) shouldBe 'proved
-    AssessmentProver.qeEquivalence("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula) shouldBe 'proved
+    AssessmentProver.qe("x>=0".asFormula, "0<=x".asFormula, Equiv)
+    AssessmentProver.qe("x>=4".asFormula, "x>=0 & x^2>=16".asFormula, Equiv) shouldBe 'proved
+    AssessmentProver.qe("x=1".asFormula, "x^2>=1 & x^2<=x".asFormula, Equiv) shouldBe 'proved
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      AssessmentProver.qeEquivalence("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula) shouldBe 'proved
+      AssessmentProver.qe("x>=4".asFormula, "abs(x)>=4 & abs(x)<=x".asFormula, Equiv) shouldBe 'proved
     }
-    AssessmentProver.qeEquivalence("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula) shouldBe 'proved
-    AssessmentProver.qeEquivalence("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula) shouldBe 'proved
+    AssessmentProver.qe("x>=4".asFormula, "\\forall y (0<=y&y<=4 -> x>=y)".asFormula, Equiv) shouldBe 'proved
+    AssessmentProver.qe("x>=4".asFormula, "\\exists y (y>=2 & x>=y^2)".asFormula, Equiv) shouldBe 'proved
   }
 
   "Syntactic sequent equality" should "prove simple examples" in {
@@ -519,6 +519,14 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "prove quiz 14" in withZ3 { _ =>
     run(extractSolutions(QUIZ_PATH + "/14/main.tex"))
+  }
+
+  it should "prove quiz 15" in withZ3 { _ =>
+    run(extractSolutions(QUIZ_PATH + "/15/main.tex"))
+  }
+
+  it should "prove quiz 16" in withZ3 { _ =>
+    run(extractSolutions(QUIZ_PATH + "/16/main.tex"))
   }
 
   private def run(problems: List[Problem]): Unit = {
