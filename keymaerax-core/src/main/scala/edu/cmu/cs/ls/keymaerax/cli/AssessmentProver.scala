@@ -49,6 +49,8 @@ object AssessmentProver {
       val LOOP: String = "loop"
       /** Program equivalence. */
       val PRG_EQUIV = "prgequiv"
+      /** Propositional */
+      val PROP = "prop"
       /** Provable using a tactic. */
       val BELLE_PROOF: String = "prove"
     }
@@ -71,6 +73,10 @@ object AssessmentProver {
       }
       case Modes.QE_EQUIV => (have, expected) match {
         case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => qeEquivalence(h, e)
+      }
+      case Modes.PROP => (have, expected) match {
+        case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
+          prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), prop)
       }
       case Modes.DI_PREMISE =>
         val diffAssignsMandatory = args.getOrElse("diffAssignsMandatory", "true").toBoolean
