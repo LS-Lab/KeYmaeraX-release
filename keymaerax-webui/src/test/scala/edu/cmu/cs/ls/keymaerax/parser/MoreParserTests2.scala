@@ -387,6 +387,17 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
       Greater(Variable("x"),Number(2)))
   }
 
+  it should "elaborate uppercase names to unit predicationals and lower case names to nullary predicates" in {
+    parser("P") shouldBe Variable("P")
+    parser("p") shouldBe Variable("p")
+    parser("[a;]P(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
+    parser("[a;]P") shouldBe parser("[a;]P(||)")
+    parser("[a;]p(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("p", AnyArg))
+    parser("[a;]p()") shouldBe Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))
+    parser("[a;]p") shouldBe parser("[a;]p()")
+    parser("[a;]P()") shouldBe Box(ProgramConst("a"), PredOf(Function("P", None, Unit, Bool), Nothing))
+  }
+
   it should "parse DG snippets" in {
     parser("[{x'=2,c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)), DifferentialProgramConst("c",Except(Variable("y_")::Nil))), True), Equal(Variable("x"),Number(99)))
     parser("[{c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), Equal(Variable("x"),Number(99)))

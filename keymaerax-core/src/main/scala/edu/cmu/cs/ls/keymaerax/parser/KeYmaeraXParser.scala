@@ -257,6 +257,12 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
     case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name, AnyArg))
     // lift misclassified defaulted program constant
     case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
+    // lift misclassified predicational
+    case x: Variable if kind==FormulaKind && x.index==None && x.name.charAt(0).isUpper =>
+      Some(UnitPredicational(x.name, AnyArg))
+    // lift misclassified nullary predicate
+    case x: Variable if kind==FormulaKind && x.index==None && x.name.charAt(0).isLower =>
+      Some(PredOf(Function(x.name, x.index, Unit, Bool), Nothing))
     // lift misclassified defaulted term (p(x))' to formula as needed.
     case Differential(t) if kind==FormulaKind => elaboratable(kind, t) match {
       case Some(f:Formula) => Some(DifferentialFormula(f))
