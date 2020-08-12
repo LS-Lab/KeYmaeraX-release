@@ -43,8 +43,8 @@ class AssessmentProverTests extends TacticTestBase {
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
     private val EITHER_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + """|""" + SOLFIN_EXTRACTOR + """)\s*"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
-    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
-    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*""" + kyxlineExtractor("?:") + """\s*)*)"""
+    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
+    private val NO_SOL_EXTRACTOR = """((?:\\nosol\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
     private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*?)\)})?""".stripMargin
 
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
@@ -203,7 +203,7 @@ class AssessmentProverTests extends TacticTestBase {
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol \kyxline"x+2>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
