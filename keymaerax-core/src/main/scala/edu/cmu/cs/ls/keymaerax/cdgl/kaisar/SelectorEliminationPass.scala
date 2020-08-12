@@ -23,7 +23,7 @@ class SelectorEliminationPass() {
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
     pt match {
       case ProgramVar(x) => Set(x)
-      case ProofVar(x) => StaticSemantics(con.get(x).getOrElse(True)).fv.toSet
+      case ProofVar(x) => StaticSemantics(con.get(x, isSound = false).getOrElse(True)).fv.toSet
       case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Term) => StaticSemantics(e).toSet
@@ -36,10 +36,12 @@ class SelectorEliminationPass() {
     pt match {
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
-        val got = kc.get(x)
+        val got = kc.get(x, isSound = false)
         got  match {
           case Some(_) => pt
-          case None => ProgramVar(x)
+          case None =>
+            // @TODO: Catch if program var is undefined
+            ProgramVar(x)
         }
       case ProofApp(m, n) => ProofApp(disambiguate(kc, m), disambiguate(kc, n))
       case ProofInstance(e) => ProofInstance(e)
@@ -64,7 +66,9 @@ class SelectorEliminationPass() {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
-        candidates.filter(x => kc.getAssignments(x.x).nonEmpty)
+        // Program is not yet SSA-form, so don't filter out program variables that get bound twice.
+        val eachAssigns = candidates.map(x => (x, kc.getAssignments(x.x, isSound = false)))
+        eachAssigns.filter(_._2.nonEmpty).map(_._1)
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
         kc.unify(pat).map({case (x, _) => ProofVar(x)}).toList

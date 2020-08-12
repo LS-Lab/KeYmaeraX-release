@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.apply
 
-  // @TODO: limit set of programVar equalities after BoxLoop...
   "full proof checker" should "check box loop" in withMathematica { _ =>
       val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto;"
       val ff = check(pfStr)
@@ -140,7 +139,6 @@ class EndToEndTests extends TacticTestBase {
 
 
   // @TODO: Write tests that make sure to actually prove T >= 0
-  // @TODO: programVar lookup needs to be more sound
   // @TODO: elaborator should catch unbound references
   // @TODO: consider annotations on modifiers because cuts are too awkward
   it should "prove and then use dc-assign" in withMathematica { _ =>

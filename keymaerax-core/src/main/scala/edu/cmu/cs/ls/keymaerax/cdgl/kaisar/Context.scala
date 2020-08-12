@@ -105,43 +105,47 @@ case class Context(s: Statement) {
   *   consider it an error to search for them. */
   /* @TODO (soundness): The soundness of this function is questionable. It *may* be sound for SSA, but certainly not
   *    for arbitrary contexts. */
-  def getAssignments(x: Variable): List[Formula] =
+  def getAssignments(x: Variable, isSound: Boolean = true): List[Formula] =
     searchAll(
       {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
       // @TODO: Indices get renamed here, but is that correct?
       case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx  => true
      case _ => false
-      }, isGhost = false).map(_._2)
+      }, isGhost = false, Set(), isSound).map(_._2)
   
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
-  def searchAll(f: Finder, isGhost: Boolean): List[(Ident, Formula)] = {
+  def searchAll(f: Finder, isGhost: Boolean, tabooProgramVars: Set[Variable], isSound: Boolean): List[(Ident, Formula)] = {
+    val fAdmiss: Finder = ({case (x, y, b) =>
+      val admissible = !isSound || StaticSemantics(y).fv.toSet.intersect(tabooProgramVars).isEmpty
+      admissible && f(x, y,b)})
     s match {
       case _: Triv => Nil
-      case Assume(x, g) => Context.matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
-      case Assert(x, g, _) => Context.matchAssume(x, g).filter({ case (x, y) => f(x, y, false) }).toList
-      case Note(x, _, Some(g)) => if (f(x, g, false)) List((x, g)) else Nil
+      case Assume(x, g) => Context.matchAssume(x, g).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
+      case Assert(x, g, _) => Context.matchAssume(x, g).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
+      case Note(x, _, Some(g)) => if (fAdmiss(x, g, false)) List((x, g)) else Nil
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
-      case Note(x, _, None) => if (f(x, KaisarProof.askLaterP, false)) List((x, KaisarProof.askLaterP)) else Nil
+      case Note(x, _, None) => if (fAdmiss(x, KaisarProof.askLaterP, false)) List((x, KaisarProof.askLaterP)) else Nil
       case mod: Modify => Context.findAll(mod, f, isGhost)
       case Block(ss) =>
-        def iter(ss: List[Statement], f: Finder): List[(Ident, Formula)] = {
+        def iter(ss: List[Statement], f: Finder, tabooProgramVars: Set[Variable]): List[(Ident, Formula)] = {
           ss match {
             case Nil => Nil
             case (s: Phi) :: ss =>
               val left =
-                Context(s.asgns).searchAll(f, isGhost).filter({case (yx, yf) =>
+                Context(s.asgns).searchAll(f, isGhost, tabooProgramVars, isSound).filter({case (yx, yf) =>
                   val surrounding = Block(ss.reverse)
                   val t = VariableSets(surrounding)
                   val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
                   inter.isEmpty})
               val ff: Finder = ({
-                case ((x: Ident, fml: Formula, b: Boolean)) => f(x, Context.substPhi(s, fml), b)
+                case ((x: Ident, fml: Formula, b: Boolean)) => fAdmiss(x, Context.substPhi(s, fml), b)
               })
-              left ++ iter(ss, ff)
+              val taboos = tabooProgramVars ++ VariableSets(s).boundVars
+              left ++ iter(ss, ff, taboos)
             case s :: ss =>
               val left =
-                Context(s).searchAll(f, isGhost) match {
+                Context(s).searchAll(f, isGhost, tabooProgramVars, isSound) match {
                   case ((yx, yf)) :: _ =>
                     val surrounding = Block(ss.reverse)
                     val t = VariableSets(surrounding)
@@ -152,11 +156,12 @@ case class Context(s: Statement) {
                     List((yx, yf))
                   case Nil => Nil
                 }
-              left ++ iter(ss, f)
+              val taboos = tabooProgramVars ++ VariableSets(s).boundVars
+              left ++ iter(ss, f, taboos)
           }
         }
-        iter(ss.reverse, f)
-      case BoxChoice(l, r) => Context(l).searchAll(f, isGhost) ++ Context(r).searchAll(f, isGhost)
+        iter(ss.reverse, f, tabooProgramVars)
+      case BoxChoice(l, r) => Context(l).searchAll(f, isGhost, tabooProgramVars, isSound ) ++ Context(r).searchAll(f, isGhost, tabooProgramVars, isSound)
       case Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>
@@ -164,44 +169,44 @@ case class Context(s: Statement) {
             else if (v1 == v2) (k1, v1) // optimize identical branches
             else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({ case (v, e, s) => Context(s).searchAll(f, isGhost) })
+        val fmls = pats.flatMap({ case (v, e, s) => Context(s).searchAll(f, isGhost, tabooProgramVars, isSound) })
         if (fmls.isEmpty) Nil
         else List(fmls.reduceRight(or))
-      case Ghost(s) => Context(s).searchAll(f, isGhost = true)
+      case Ghost(s) => Context(s).searchAll(f, isGhost = true, tabooProgramVars, isSound)
       // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
       // to select the equalities introduced by phi nodes.
-      case Phi(s) => Context(s).searchAll(f, isGhost = false)
+      case Phi(s) => Context(s).searchAll(f, isGhost = false, tabooProgramVars, isSound)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => Nil
       case po: ProveODE => Context.findAll(po, po.ds, f, isGhost = false, isInverseGhost = false) ++ Context.findAll(po.dc, f, isInverseGhost = false)
-      case Was(now, was) => Context(was).searchAll(f, isGhost)
+      case Was(now, was) => Context(was).searchAll(f, isGhost, tabooProgramVars, isSound)
       case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
-      case While(_, _, body) => Context(body).searchAll(f, isGhost)
+      case While(_, _, body) => Context(body).searchAll(f, isGhost, tabooProgramVars, isSound)
       case BoxLoop(body, ih) =>
-        val matchHere = ih match {case Some((ihVar, ihFml)) if f(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
-        matchHere ++ Context(body).searchAll(f, isGhost)
+        val matchHere = ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
+        matchHere ++ Context(body).searchAll(f, isGhost, tabooProgramVars, isSound)
       case BoxLoopProgress(BoxLoop(bl, Some((ihVar, ihFml))), progress) =>
-        val ihMatch = if(f(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
-        ihMatch ++ Context(progress).searchAll(f, isGhost)
+        val ihMatch = if(fAdmiss(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
+        ihMatch ++ Context(progress).searchAll(f, isGhost, tabooProgramVars, isSound)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
         val v = x match {case vv: Variable => vv case _ => defaultVar}
-        val branchMatch = if (f(v, fml, false)) List((v, fml)) else List()
-        branchMatch ++ Context(progress).searchAll(f, isGhost)
+        val branchMatch = if (fAdmiss(v, fml, false)) List((v, fml)) else List()
+        branchMatch ++ Context(progress).searchAll(f, isGhost, tabooProgramVars, isSound)
       case BoxChoiceProgress(bc, onBranch, progress) =>
-        Context(progress).searchAll(f, isGhost)
+        Context(progress).searchAll(f, isGhost, tabooProgramVars, isSound)
     }
   }
 
   // top-level search function wrapper.
   private def findAll(f: Finder): List[(Ident, Formula)] = {
-    searchAll(f, isGhost = false)
+    searchAll(f, isGhost = false, Set(), isSound = true)
   }
 
   /* Get most recent formula (if any), bound to identifier [[id]]
   * @param wantProgramVar search exclusively for unannotated assignments x:=f rather than facts named "x" */
-  def get(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = {
+  def get(id: Ident, wantProgramVar: Boolean = false, isSound: Boolean = true): Option[Formula] = {
     // gotProgramVar is true only for unannotated assignment statements.
     val f: ((Ident, Formula, Boolean)) => Boolean = {
       case (x: Ident, v: Formula, gotProgramVar) =>
@@ -214,7 +219,7 @@ case class Context(s: Statement) {
           id == x && !gotProgramVar
         }
     }
-    searchAll(f, isGhost = false).map(_._2).headOption
+    searchAll(f, isGhost = false, Set(), isSound).map(_._2).headOption
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborate)
 
@@ -283,7 +288,7 @@ case class Context(s: Statement) {
         case _: ProverException => false
       }
     case _ => false}
-    searchAll(f, isGhost = false)
+    searchAll(f, isGhost = false, Set(), isSound = true)
   }
   /** Return first fact that unifies with a pattern, if any. */
   def unify(pat: Expression): Option[(Ident, Formula)] = unifyAll(pat).headOption
