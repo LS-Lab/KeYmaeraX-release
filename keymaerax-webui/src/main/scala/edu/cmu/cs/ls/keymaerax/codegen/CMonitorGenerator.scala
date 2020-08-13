@@ -166,9 +166,10 @@ class CMonitorGenerator extends CodeGenerator {
       case And(l, r) => CAndProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
       case True => CReturn(compileTerm(dist))
       case Diamond(Test(p), q) =>
-        val (pMetric: Option[Term], pSatDist) = if (onlyEqualities(p)) (None, dist) else ModelPlex.toMetric(p) match {
-          //@note all nested ifs are satisfied, hence dist >= 0; encode And as 1/(1/x+1/y) (instead of min) has the advantage
-            // that changes in each conjunct are reflected in the combined safety distance
+        val (pMetric: Term, pSatDist) = ModelPlex.toMetric(p) match {
+          //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting pMetric has same property.
+          // Encode And as 1/(1/x+1/y) (instead of min) has the advantage that changes in each conjunct
+          // are reflected in the combined safety distance
           case c: ComparisonFormula =>
             assert(c.right == Number(0))
             // we want safety margin>=0 when formula is true
@@ -180,18 +181,19 @@ class CMonitorGenerator extends CodeGenerator {
               case _: NotEqual => FuncOf(Function("abs", None, Real, Real), c.left)
             }
             val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
-            dist match {
-              case Number(n) if n == 0 => (Some(simpMargin), simpMargin)
+            val (errorMargin, combinedMargin) = dist match {
+              case Number(n) if n == 0 => (simpMargin, simpMargin)
               case Divide(Number(n), Plus(l: Divide, r: Divide)) if n == 1 =>
                 //@note parallel composition of successive tests (n-ary conjunction)
-                (Some(simpMargin), Divide(Number(1), Plus(l, Plus(r, Divide(Number(1), simpMargin)))))
+                (simpMargin, Divide(Number(1), Plus(l, Plus(r, Divide(Number(1), simpMargin)))))
               case _ =>
                 //@todo other non-obvious divisions by zero
-                (Some(simpMargin), Divide(Number(1), Plus(Divide(Number(1), dist), Divide(Number(1), simpMargin))))
+                (simpMargin, Divide(Number(1), Plus(Divide(Number(1), dist), Divide(Number(1), simpMargin))))
             }
+            (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
         }
         //@note offset error distance from -1 since weak inequalities may otherwise result in safe distance 0
-        val errorDist = pMetric.map(t => CPlus(CNumber(-1), compileTerm(t))).getOrElse(CFalse)
+        val errorDist = CPlus(CNumber(-1), compileTerm(pMetric))
         CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorId(p), errorDist, p.prettyString))
     }
   }

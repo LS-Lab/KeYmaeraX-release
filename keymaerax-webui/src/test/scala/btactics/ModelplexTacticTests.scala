@@ -1022,14 +1022,14 @@ class ModelplexTacticTests extends TacticTestBase {
   "PLDI17" should "prove velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.model.asInstanceOf[Formula]
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("d"), Variable("v"), Variable("t"))
@@ -1043,14 +1043,14 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove controller monitor correctness" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ => withDatabase { db =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
@@ -1090,14 +1090,14 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove fallback preserves controller monitor" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "check all archive entries" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entries = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx")
+    val entries = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx")
     checkArchiveEntries(entries)
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Safety"))
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Plant Preserves Invariant"))
@@ -1107,7 +1107,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "generate a quantitative monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ctrlMonitorStateVars = List(Variable("d"), Variable("v"), Variable("t"))
@@ -1128,8 +1128,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val ctrlInputs = CGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
-    ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double V;\n  long double ep;\n} parameters;\n\ntypedef struct state {\n  long double d;\n  long double t;\n  long double v;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;\n\nverdict OrLeft185523722(state pre, state curr, const parameters* const params) {\n  if (pre.d >= (params->V)*(params->ep)) {\nif (0.0L <= curr.v) {\nif (curr.v <= params->V) {\nif (curr.d == pre.d) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=(1.0L)/(((1.0L)/((pre.d)-((params->V)*(params->ep))))+(((1.0L)/(curr.v))+((1.0L)/((params->V)-(curr.v))))) }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=((-1.0L))+((params->V)-(curr.v)) }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=((-1.0L))+(curr.v) }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+((pre.d)-((params->V)*(params->ep))) }; return result;\n}\n}\n\nverdict OrRight_555037299(state pre, state curr, const parameters* const params) {\n  if (curr.d == pre.d) {\nif (curr.v == 0.0L) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=0.0L }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n}"
-    ctrlMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (params->V >= 0.0L) {\nif (params->ep >= 0.0L) {\nverdict leftDist = OrLeft185523722(pre,curr,params);\nverdict rightDist = OrRight_555037299(pre,curr,params);\nint verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;\nverdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };\nreturn result;\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(params->ep) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(params->V) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
+    ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double V;\n  long double ep;\n} parameters;\n\ntypedef struct state {\n  long double d;\n  long double t;\n  long double v;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;\n\nverdict OrLeft1896387834(state pre, state curr, const parameters* const params) {\n  if (pre.d >= (params->V)*(params->ep)) {\nif (0.0L <= curr.v) {\nif (curr.v <= params->V) {\nif (curr.d == pre.d) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=(1.0L)/(((1.0L)/((pre.d)-((params->V)*(params->ep))))+(((1.0L)/(curr.v))+((1.0L)/((params->V)-(curr.v))))) }; return result;\n} else {\nverdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.d)-(pre.d), -((curr.d)-(pre.d))))) }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=((-1.0L))+((params->V)-(curr.v)) }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=((-1.0L))+(curr.v) }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+((pre.d)-((params->V)*(params->ep))) }; return result;\n}\n}\n\nverdict OrRight1981114317(state pre, state curr, const parameters* const params) {\n  if (curr.d == pre.d) {\nif (curr.v == 0.0L) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=0.0L }; return result;\n} else {\nverdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=((-1.0L))+(-(fmaxl(curr.v, -(curr.v)))) }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.d)-(pre.d), -((curr.d)-(pre.d))))) }; return result;\n}\n}"
+    ctrlMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (params->V >= 0.0L) {\nif (params->ep >= 0.0L) {\nverdict leftDist = OrLeft1896387834(pre,curr,params);\nverdict rightDist = OrRight1981114317(pre,curr,params);\nint verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;\nverdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };\nreturn result;\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(params->ep) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(params->V) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
   }
 
   "Waypoint navigation" should "generate a controller monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
