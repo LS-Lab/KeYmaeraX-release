@@ -244,10 +244,10 @@ object SSAPass {
     * this difference is due to product ODEs having to assign variables in parallel */
   def ssa(ds: DiffStatement, snapshot: Snapshot): DiffStatement = {
     ds match {
-      case AtomicODEStatement(dp: AtomicODE) =>
+      case AtomicODEStatement(dp: AtomicODE, ident) =>
         val x = Variable(dp.xp.name, opt(snapshot.getOpt(dp.xp.name)), dp.xp.sort)
         val dx = DifferentialSymbol(x)
-        AtomicODEStatement(AtomicODE(dx, ssa(dp.e, snapshot)))
+        AtomicODEStatement(AtomicODE(dx, ssa(dp.e, snapshot)), ident)
       case DiffProductStatement(l, r) => DiffProductStatement(ssa(l, snapshot), ssa(r, snapshot))
       case DiffGhostStatement(ds) => DiffGhostStatement(ssa(ds, snapshot))
       case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(ssa(ds, snapshot))

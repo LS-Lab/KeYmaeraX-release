@@ -235,6 +235,7 @@ object ProofParser {
     map({case (i, p, x) => locate(VarPat(p, x), i)})*/
   def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
   def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
+  def idExPat[_: P]: P[Option[Ident]] = exPat.map({case (e: Variable) => Some(e) case _ => None })
 
   def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
     case (i, pat, fml: Formula) => locate(Assume(pat, fml), i)
@@ -289,7 +290,8 @@ object ProofParser {
 
   def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
-  def atomicODEStatement[_: P]: P[AtomicODEStatement] = atomicOde.map(AtomicODEStatement)
+  def atomicODEStatement[_: P]: P[AtomicODEStatement] = (idExPat ~ atomicOde).map({case (id, ode) => AtomicODEStatement(ode, id)})
+  // @TODO: New syntax
   def ghostODE[_: P]: P[DiffStatement] = (Index ~ "(G" ~ diffStatement ~ "G)").
     map({case (i, ds) => locate(DiffGhostStatement(ds), i)})
   def inverseGhostODE[_: P]: P[DiffStatement] = (Index ~ "{G" ~ diffStatement ~ "G}").
@@ -317,10 +319,11 @@ object ProofParser {
     map({case (i, pg) => locate(PrintGoal(pg), i)})
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile | parseBlock | label | modify
+    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile | parseBlock | modify
 
   def postfixStatement[_: P]: P[Statement] =
-    ((atomicStatement | proveODE) ~ Index ~ "*".!.rep).
+    // line label syntax can collide with ODE label syntax, check labels last.
+    ((atomicStatement | proveODE  | label) ~ Index ~ "*".!.rep).
       map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) =>
         BoxLoop(acc, Context(acc).lastFact)
       }), i)})

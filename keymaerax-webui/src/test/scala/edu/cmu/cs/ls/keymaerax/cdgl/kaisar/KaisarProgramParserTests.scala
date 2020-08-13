@@ -382,13 +382,20 @@ class KaisarProgramParserTests extends TacticTestBase {
       , DomAssume(Nothing, True))
   }
 
+  it should "parse simple system with solution annotations" in {
+    p("{xSol: x' = y, ySol: y' = x};", pp.statement(_)) shouldBe ProveODE(DiffProductStatement(
+      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y")), Some(Variable("xSol"))),
+      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Variable("x")), Some(Variable("ySol"))))
+      , DomAssume(Nothing, True))
+  }
+
   it should "parse diffghost" in {
     p("(G x' = y G);", pp.diffStatement(_)) shouldBe DiffGhostStatement(AtomicODEStatement(
         AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
   }
 
   it should "parse diffghost with cuts" in {
-    p("{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by auto};", pp.proveODE(_)) shouldBe(
+    p("x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by auto", pp.proveODE(_)) shouldBe(
       ProveODE(DiffProductStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Neg(BaseVariable("x")))),
         DiffGhostStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Times(Variable("y"), Divide(Number(1), Number(2))))))),
         DomAssert(Variable("inv"), Equal(Times(Variable("x"), Power(Variable("y"), Number(2))), Number(1)), Using(List(DefaultSelector), Auto()))

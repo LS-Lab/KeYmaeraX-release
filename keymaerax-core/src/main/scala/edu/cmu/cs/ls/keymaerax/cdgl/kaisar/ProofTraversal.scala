@@ -104,7 +104,7 @@ object ProofTraversal {
       case Some(ds) => ds
       case None =>
         val mid = ds match {
-          case AtomicODEStatement(dp) => AtomicODEStatement(dp)
+          case AtomicODEStatement(dp, ident) => AtomicODEStatement(dp, ident)
           case DiffProductStatement(l, r) => DiffProductStatement(traverse(kc, l, tf), traverse(kc, r, tf))
           case DiffGhostStatement(ds) => DiffGhostStatement(traverse(kc, ds, tf))
           case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(traverse(kc, ds, tf))

@@ -183,7 +183,7 @@ case class DeterritorializePass(tt: TimeTable) {
 
       override def postDiffS(kc: Context, ds: DiffStatement): DiffStatement = {
         ds match {
-          case AtomicODEStatement(dp) => AtomicODEStatement(AtomicODE(dp.xp, translate(kc, dp.e)))
+          case AtomicODEStatement(dp, ident) => AtomicODEStatement(AtomicODE(dp.xp, translate(kc, dp.e)), ident)
           case _ => ds
         }
       }

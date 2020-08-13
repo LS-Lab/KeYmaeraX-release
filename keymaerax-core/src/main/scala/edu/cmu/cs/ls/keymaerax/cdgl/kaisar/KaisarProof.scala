@@ -416,7 +416,7 @@ final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[Atom
 sealed trait DiffStatement extends ASTNode {
   private def getDifferentialProgram(mod: Option[DomModify]): Option[DifferentialProgram] = {
     this match {
-      case AtomicODEStatement(dp) =>
+      case AtomicODEStatement(dp, _solIdent) =>
         (mod, dp.e) match {
           case (Some(DomModify(VarPat(durvar, _), _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
           case (Some(DomModify(VarPat(durvar, _), _)), rhs) if (dp.xp.x == durvar) =>
@@ -443,7 +443,7 @@ sealed trait DiffStatement extends ASTNode {
 
   lazy val clocks: Set[Variable] = {
     this match {
-      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number)) if rhs.value.toInt == 1 => Set(x)
+      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number), _solIdent) if rhs.value.toInt == 1 => Set(x)
       case _: AtomicODEStatement => Set()
       case DiffProductStatement(l, r) => l.clocks ++ r.clocks
       // since it's common to ghost in clock variables, we probably want this.
@@ -473,7 +473,7 @@ sealed trait DiffStatement extends ASTNode {
 }
 
 // Specifies a single ODE being proved
-case class AtomicODEStatement(dp: AtomicODE) extends DiffStatement
+case class AtomicODEStatement(dp: AtomicODE, solFact: Option[Ident] = None) extends DiffStatement
 // Corresponding proofs for each conjunct of differential product
 case class DiffProductStatement(l: DiffStatement, r: DiffStatement) extends DiffStatement
 // Proof for ghost ODE introduced for sake of proof but not in conclusion
