@@ -348,43 +348,80 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "prove quiz 4" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 3) ::
+        ("Direct velocity control", 1) :: Nil
     run(problems)
   }
 
   it should "prove quiz 5" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/5/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/5/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Axiom application", 10) :: ("Axiom identification: Top", 6) :: ("Axiom identification: All", 6) ::
+        ("Distributivity and non-distributivity", 5) :: ("If-then-else", 2) :: ("Nondeterministic assignments", 2) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 6" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/6/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/6/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Rule application", 10) :: ("Rule identification", 8) :: ("Arithmetic simplification", 6) ::
+        ("Proof rule criticism", 5) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 7" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/7/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Loop invariants", 5) :: ("Other Loop Rules", 4) ::
+        ("Incremental design in direct velocity control", 3) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 8" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/8/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/8/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Revisiting ping-pong events", 4) :: ("Faithful Event Models", 6) ::
+        ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 4) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 10" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/10/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
+        ("Differential Invariant Rules", 5) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 11" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/11/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Identify differential invariants and cuts", 10) :: ("Differential Invariance Rules", 5) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 14" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/14/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Player Count", 5) :: ("Strategically reachable set", 5) :: ("Game Shapes", 2) ::
+        ("Truth Identification", 5) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 15" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/15/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Game Region Shapes", 5) :: ("Game loop semantics", 5) :: ("Direct velocity control", 1) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 16" in withZ3 { _ =>
-    run(extractProblems(QUIZ_PATH + "/16/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
+        ("Robot simple chase game", 1) :: Nil
+    run(problems)
   }
 
   private def run(problems: List[Problem]): Unit = {
