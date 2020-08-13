@@ -38,9 +38,9 @@ object QuizExtractor {
 
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
     private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
-    private val KYX_SOL_EXTRACTOR = """(?:\\sol\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
-    private val TEXT_SOL_EXTRACTOR = """(?:\\sol\s*\{?([^}]+)?})"""
-    private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol\s*\{\$(.+?)\$})"""
+    private val KYX_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
+    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?([^}]+)?})"""
+    private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\$(.+?)\$})"""
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
     private val SOL_EXTRACTOR = """(?:""" + KYX_SOL_EXTRACTOR + "|" + TEX_TEXT_SOL_EXTRACTOR + "|" + TEXT_SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
@@ -135,7 +135,7 @@ object QuizExtractor {
 
     private val GROUPS: List[String] = List(QUESTION_TEXT, SOL)
     private val QUESTION_TEXT_EXTRACTOR = """\s*(.*?)\s*"""
-    private val QUESTION_SOL_EXTRACTOR = """\\(solf|solt)"""
+    private val QUESTION_SOL_EXTRACTOR = """\\(solf(?!in)|solt)"""
     private val QUESTION_EXTRACTOR: Regex = ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR +
       QUESTION_SOL_EXTRACTOR).r(GROUPS:_*)
 
