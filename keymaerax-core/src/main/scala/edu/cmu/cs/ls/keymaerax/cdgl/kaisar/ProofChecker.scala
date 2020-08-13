@@ -177,10 +177,15 @@ object ProofChecker {
   /** Is ghost term [[x' = term]] admissible? Allow linear and constant terms. */
   private def admissibleGhost(x: Variable, term: Term): Boolean = {
     if (!StaticSemantics(term).contains(x)) return true
-    term match {
-      case (Plus(Times(y: BaseVariable, c), r)) => x == y && !StaticSemantics(Pair(c, r)).contains(x)
-      case _ => false
+    val (coeff, addend) =  term match {
+      case (Plus(Times(y: BaseVariable, c), r)) if  x == y => (c, r)
+      case (Plus(Times(c, y: BaseVariable), r)) if x == y => (c, r)
+      case (Plus(r, Times(y: BaseVariable, c))) if x == y => (c, r)
+      case (Times(y: BaseVariable, c)) if x == y => (c, Number(0))
+      case (Times(c, y: BaseVariable)) if x == y => (c, Number(0))
+      case _ => return false
     }
+    !StaticSemantics(Pair(coeff, addend)).contains(x)
   }
 
   // @return elaborated context

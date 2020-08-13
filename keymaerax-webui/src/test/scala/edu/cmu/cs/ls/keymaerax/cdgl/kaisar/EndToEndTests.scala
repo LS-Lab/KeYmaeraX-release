@@ -175,6 +175,28 @@ class EndToEndTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
+  it should "prove simple ghost ODE" in withMathematica { _ =>
+    val pfStr = "" +
+      "x := 1;" +
+      "(G  y := (1/x)^(1/2); " +
+      "!inv:(x*y^2 = 1) by auto; G)" +
+      "{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by induction;}" +
+      "!nonZero:(x > 0) using inv by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[x:=1; {?(x*y^2 = 1);}^@{x' = -x};{?(x>0);}^@]true"
+  }
+
+  it should "catch ODE ghost scope escaping" in withMathematica { _ =>
+    val pfStr = "" +
+      "x := 1;" +
+      "(G y := (1/x)^(1/2); G)" +
+      "!base: (x*y^2 = 1) by auto;" +
+      "{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by induction;}" +
+      "!nonZero:(x*y^2 = 1) using inv by auto;"
+    a[ProofCheckException] shouldBe thrownBy(check(pfStr))
+  }
+
+
   // @TODO: Write a test that gives a name to an ODE solution equation
   // @TODO: Write a test that exercises ODE ghost scope escaping
   // @TODO: Write a test that uses an alternative ?x:P syntax for domain constraints

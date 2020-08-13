@@ -387,6 +387,14 @@ class KaisarProgramParserTests extends TacticTestBase {
         AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
   }
 
+  it should "parse diffghost with cuts" in {
+    p("{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by auto};", pp.proveODE(_)) shouldBe(
+      ProveODE(DiffProductStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Neg(BaseVariable("x")))),
+        DiffGhostStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Times(Variable("y"), Divide(Number(1), Number(2))))))),
+        DomAssert(Variable("inv"), Equal(Times(Variable("x"), Power(Variable("y"), Number(2))), Number(1)), Using(List(DefaultSelector), Auto()))
+      )
+    )
+  }
   it should "parse inverse diffghost" in {
     p("{G x' = y G};", pp.diffStatement(_)) shouldBe InverseDiffGhostStatement(AtomicODEStatement(
       AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
