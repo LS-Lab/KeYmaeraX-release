@@ -110,19 +110,21 @@ object AssessmentProver {
       case Modes.PRG_EQUIV => (have, expected) match {
         case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => prgEquivalence(e, h)
       }
-      case Modes.LOOP => args.get("question") match {
+      case Modes.LOOP =>
+        val invArg = args.get("inv").map(KeYmaeraXParser.formulaParser)
+        args.get("question") match {
         case Some(q) =>
           have match {
             case ExpressionArtifact(h: Formula) =>
               var inv: Option[Formula] = None
               KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-              val m = expand(q, h :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
-              loopCheck(m, inv.getOrElse(h))
+              val m = expand(q, h :: Nil, KeYmaeraXParser.formulaParser)
+              loopCheck(m, invArg.getOrElse(inv.getOrElse(h)))
             case ListExpressionArtifact(h) =>
               var inv: Option[Formula] = None
               KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-              val m = expand(q, h, KeYmaeraXParser).asInstanceOf[Formula]
-              loopCheck(m, inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))
+              val m = expand(q, h, KeYmaeraXParser.formulaParser)
+              loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False))))
             case _ => throw new IllegalArgumentException("Expected a single loop invariant formula, but got " + have)
           }
         case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
