@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
@@ -25,7 +25,9 @@ class AssessmentProverTests extends TacticTestBase {
 
     private val GRADER = "grader"
     private val ARGS = "args"
-    private val SOL = "sol"
+    private val KYX_SOL = "sol"
+    private val TEX_TEXT_SOL = "textextsol"
+    private val TEXT_SOL = "textsol"
     private val SOLFIN = "solfin"
     private val TEST_SOL = "testsol"
     private val NO_SOL = "nosol"
@@ -38,39 +40,43 @@ class AssessmentProverTests extends TacticTestBase {
     private val TEX_NO_BREAK_SPACE = "~"
 
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
-    private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(SOL)
-    private val SOL_EXTRACTOR = """(?:\\sol\s*""" + KYXLINE_EXTRACTOR.regex + ")"
+    private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
+    private val KYX_SOL_EXTRACTOR = """(?:\\sol\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
+    private val TEXT_SOL_EXTRACTOR = """(?:\\sol\s*\{?([^}]+)?})"""
+    private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol\s*\{\$(.+?)\$})"""
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
-    private val EITHER_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + """|""" + SOLFIN_EXTRACTOR + """)\s*"""
+    private val SOL_EXTRACTOR = """(?:""" + KYX_SOL_EXTRACTOR + "|" + TEX_TEXT_SOL_EXTRACTOR + "|" + TEXT_SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
-    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
-    private val NO_SOL_EXTRACTOR = """((?:\\nosol\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
-    private val GRADER_EXTRACTOR = """(?:\\autog\{(\w+)\((.*?)\)})?""".stripMargin
+    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
+    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
+    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{(\w+)\((.*?)\)})?""".stripMargin
 
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
-    private val GROUPS: List[String] = List(SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
-    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + EITHER_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
+    private val GROUPS: List[String] = List(KYX_SOL, TEX_TEXT_SOL, TEXT_SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
+    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
 
     def firstFromString(rawContent: String): Option[AskQuestion] = {
-      val graderInfo = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
-      graderInfo.map({ case (sol, solfin, testsol, nosol, grader, args) =>
-        val (expectedArtifact, solArgs) = (sol, solfin) match {
-          case (s, null) => (artifactsFromString(s), Map.empty)
-          case (null, s) =>
+      val graderInfo = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(KYX_SOL), m.group(TEX_TEXT_SOL), m.group(TEXT_SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
+      graderInfo.map({ case (kyxsol, textextsol, textsol, solfin, testsol, nosol, grader, args) =>
+        val (expectedArtifact, solArgs) = (kyxsol, textextsol, textsol, solfin) match {
+          case (s, null, null, null) => (artifactsFromKyxString(s), Map.empty)
+          case (null, s, null, null) => (artifactsFromTexString(s), Map.empty)
+          case (null, null, s, null) => (artifactsFromKyxString(s), Map.empty)
+          case (null, null, null, s) =>
             val (question, artifact) = solfinArtifactsFromString(s)
             (artifact, Map("question" -> question))
         }
-        val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(SOL)).map(artifactsFromString).toList
-        val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(SOL)).map(artifactsFromString).toList
+        val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(KYX_SOL)).map(artifactsFromKyxString).toList
+        val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(KYX_SOL)).map(artifactsFromKyxString).toList
         AskQuestion(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
     }
 
-    /** Translates a `\kyxline` string into an artifact. */
-    def artifactsFromString(s: String): Artifact = {
+    /** Translates `\kyxline` string into an artifact. */
+    def artifactsFromKyxString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
       else {
         val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
@@ -81,10 +87,36 @@ class AssessmentProverTests extends TacticTestBase {
       }
     }
 
+    /** Translates tex into an artifact. */
+    def artifactsFromTexString(s: String): Artifact = {
+      val x = Variable("x")
+      if (s.startsWith("\\{") && s.endsWith("\\}")) {
+        // lists \{1,2,3\}
+        ExpressionArtifact(s.stripPrefix("\\{").stripSuffix("\\}").split(",").map(s => Equal(x, Number(s.toDouble))).reduceRightOption(Or).getOrElse(False))
+      } else {
+        // intervals [0,3] \cup [0,\infty) \cup \lbrack 1,4 ] \cup (5,7\rbrack
+        val interval = """(\(|\[|\\lbrack)\s*(\d+)\s*,\s*(\d+|\\infty)\s*(\)|]|\\rbrack)""".r("(", "l", "u", ")")
+        val ivfml = interval.findAllMatchIn(s).map(m => (m.group("(") -> m.group("l"), m.group("u") -> m.group(")"))).map({
+          case (l, u) => And(
+              l match {
+                case ("(", lv) => Less(Number(lv.toDouble), x)
+                case ("[" | "\\lbrack", lv) => LessEqual(Number(lv.toDouble), x)
+              },
+              u match {
+                case ("\\infty", ")") => True
+                case (uv, ")") => Less(x, Number(uv.toDouble))
+                case (uv, "]" | "\\rbrack") => LessEqual(x, Number(uv.toDouble))
+              }
+            )
+        }).reduceRightOption(Or).getOrElse(False)
+        ExpressionArtifact(ivfml)
+      }
+    }
+
     /** Translates a `\solfin` string into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {
       val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER)).mkString(",")
-      val artifact = artifactsFromString(answerStrings)
+      val artifact = artifactsFromKyxString(answerStrings)
       var i = 0
       val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; "#" + i }).trim
       (question, artifact)
@@ -97,6 +129,24 @@ class AssessmentProverTests extends TacticTestBase {
     }
   }
 
+  case class AskTFQuestion(text: String, isTrue: Boolean) extends Question
+  object AskTFQuestion {
+    val QUESTION_START: String = "asktf"
+
+    private val QUESTION_TEXT = "questiontext"
+    private val SOL = "sol"
+
+    private val GROUPS: List[String] = List(QUESTION_TEXT, SOL)
+    private val QUESTION_TEXT_EXTRACTOR = """\s*(.*?)\s*"""
+    private val QUESTION_SOL_EXTRACTOR = """\\(solf|solt)"""
+    private val QUESTION_EXTRACTOR: Regex = ("""(?s)\\""" + QUESTION_START + QUESTION_TEXT_EXTRACTOR +
+      QUESTION_SOL_EXTRACTOR).r(GROUPS:_*)
+
+    def firstFromString(rawContent: String): Option[Question] = {
+      val asktf = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(QUESTION_TEXT), m.group(SOL)))
+      asktf.map({ case (text, c) => AskTFQuestion(text, c == "solt") })
+    }
+  }
 
   case class Choice(text: String, isCorrect: Boolean)
   abstract class ChoiceQuestion(questionStart: String, questionFactory: (String, List[Choice]) => Question) {
@@ -127,26 +177,37 @@ class AssessmentProverTests extends TacticTestBase {
   case class OneChoiceQuestion(text: String, choices: List[Choice]) extends Question
   object OneChoiceQuestion extends ChoiceQuestion("onechoice", new OneChoiceQuestion(_, _))
 
-  case class AnyChoiceQuestion(text: String, choices: List[(Choice)]) extends Question
+  case class AnyChoiceQuestion(text: String, choices: List[Choice]) extends Question
   object AnyChoiceQuestion extends ChoiceQuestion("anychoice", new AnyChoiceQuestion(_, _))
 
   /** A quiz problem block. */
   case class Problem(name: Option[String], label: Option[String], rawContent: String, rawPoints: Option[String]) {
     private val QUESTION_EXTRACTOR =
-      (AskQuestion.QUESTION_START :: OneChoiceQuestion.QUESTION_START :: AnyChoiceQuestion.QUESTION_START :: Nil).
-        map("\\\\(" + _ + ")").mkString("|").r(AskQuestion.getClass.getSimpleName, OneChoiceQuestion.getClass.getSimpleName, AnyChoiceQuestion.getClass.getSimpleName)
+      (AskTFQuestion.QUESTION_START ::
+        AskQuestion.QUESTION_START ::
+        OneChoiceQuestion.QUESTION_START ::
+        AnyChoiceQuestion.QUESTION_START :: Nil).
+        map("\\\\(" + _ + ")").mkString("|").r(
+          AskTFQuestion.getClass.getSimpleName,
+          AskQuestion.getClass.getSimpleName,
+          OneChoiceQuestion.getClass.getSimpleName,
+          AnyChoiceQuestion.getClass.getSimpleName
+        )
 
     /** The problem questions with grading information. */
     lazy val questions: List[Question] = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
       (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
        Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) ::
-       Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
+       Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) ::
+       Option(m.group(AskTFQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
         case Some(AskQuestion.QUESTION_START) =>
           AskQuestion.firstFromString(rawContent.substring(m.start))
         case Some(OneChoiceQuestion.QUESTION_START) =>
           OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
         case Some(AnyChoiceQuestion.QUESTION_START) =>
           AnyChoiceQuestion.firstFromString(rawContent.substring(m.start))
+        case Some(AskTFQuestion.QUESTION_START) =>
+          AskTFQuestion.firstFromString(rawContent.substring(m.start))
       }
     }).toList
 
@@ -482,51 +543,60 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/2/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 4) ::
+      ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 2) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 3" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/3/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Reflection", 0) :: ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 3) ::
+        ("Reachable Sets", 5) :: ("Program Shapes", 4) :: Nil
+    run(problems)
   }
 
   it should "prove quiz 4" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/4/main.tex"))
+    val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
+    run(problems)
   }
 
   it should "prove quiz 5" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/5/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/5/main.tex"))
   }
 
   it should "prove quiz 6" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/6/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/6/main.tex"))
   }
 
   it should "prove quiz 7" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/7/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/7/main.tex"))
   }
 
   it should "prove quiz 8" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/8/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/8/main.tex"))
   }
 
   it should "prove quiz 10" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/10/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/10/main.tex"))
   }
 
   it should "prove quiz 11" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/11/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/11/main.tex"))
   }
 
   it should "prove quiz 14" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/14/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/14/main.tex"))
   }
 
   it should "prove quiz 15" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/15/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/15/main.tex"))
   }
 
   it should "prove quiz 16" in withZ3 { _ =>
-    run(extractSolutions(QUIZ_PATH + "/16/main.tex"))
+    run(extractProblems(QUIZ_PATH + "/16/main.tex"))
   }
 
   private def run(problems: List[Problem]): Unit = {
@@ -551,9 +621,11 @@ class AssessmentProverTests extends TacticTestBase {
     }
   }
 
-  /** Extracts solutions (have, expected) from the resource ath `path`. */
-  private def extractSolutions(path: String): List[Problem] = {
-    val content = resource.managed(io.Source.fromInputStream(getClass.getResourceAsStream(path), "UTF-8")).apply(_.mkString)
+  /** Extracts quiz problems with their solutions (have, expected) from the resource at `path`. */
+  private def extractProblems(path: String): List[Problem] = {
+    val r = getClass.getResourceAsStream(path)
+    require(r != null, "Unable to find " + path + "; please check that keymaerax-webui/src/test/resources" + path + " exists")
+    val content = resource.managed(io.Source.fromInputStream(r, "UTF-8")).apply(_.mkString)
     Problem.fromString(content.linesWithSeparators.filterNot(_.startsWith("%")).mkString)
   }
 
@@ -577,6 +649,10 @@ class AssessmentProverTests extends TacticTestBase {
             (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
         }
         (p.name, AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect)
+      case q: AskTFQuestion =>
+        val correct = BoolArtifact(q.isTrue)
+        val incorrect = BoolArtifact(!q.isTrue)
+        (p.name, AskTFGrader(correct), correct :: Nil, incorrect :: Nil)
     })):_*)
   }
 

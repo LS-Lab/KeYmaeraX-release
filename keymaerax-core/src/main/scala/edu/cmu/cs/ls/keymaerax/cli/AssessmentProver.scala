@@ -26,6 +26,7 @@ object AssessmentProver {
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
   case class ChoiceArtifact(selected: List[String]) extends Artifact
+  case class BoolArtifact(value: Boolean) extends Artifact
 
   abstract class Grader {
     def check(have: Artifact): ProvableSig
@@ -164,6 +165,15 @@ object AssessmentProver {
         //@note correct if answering with exactly the correct yes/no pattern (modulo order)
         if (h.selected.toSet == expected.selected.toSet) KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True)))
         else ProvableSig.startProof(False)
+    }
+  }
+
+  case class AskTFGrader(expected: BoolArtifact) extends Grader {
+    override def check(have: Artifact): ProvableSig = have match {
+      case h: BoolArtifact =>
+        val ef = if (expected.value) True else False
+        val hf = if (h.value) True else False
+        KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef))))
     }
   }
 
