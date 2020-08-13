@@ -169,23 +169,39 @@ object ProofChecker {
   }
 
   /** Collect facts and assignments preceding an ODE, which are used to check the ODE proof  */
-  private case class ODEProofHeader(namedFacts: Map[Ident, Formula], unnamedFacts: Set[Formula], assigns: Map[Variable, Term], ghostAssigns: Map[Variable, Term]) {
+  private case class ODEProofHeader(namedFacts: Map[Ident, Formula], unnamedFacts: Set[Formula], assigns: Map[Variable, Term], ghostAssigns: Map[Variable, Term], phiAssigns: Map[Variable, Term]) {
     def addFact(x: Option[Ident], fml: Formula): ODEProofHeader = {
       x match {
-        case None => ODEProofHeader(namedFacts, unnamedFacts.+(fml), assigns, ghostAssigns)
-        case Some(x) => ODEProofHeader(namedFacts.+(x -> fml), unnamedFacts, assigns, ghostAssigns)
+        case None => ODEProofHeader(namedFacts, unnamedFacts.+(fml), assigns, ghostAssigns, phiAssigns)
+        case Some(x) => ODEProofHeader(namedFacts.+(x -> fml), unnamedFacts, assigns, ghostAssigns, phiAssigns)
       }
+    }
+
+    def addPhiAssign(x: Ident, f: Term): ODEProofHeader = {
+      f match {
+        case f: Variable =>
+          val renameAssigns = if(assigns.contains(f)) assigns.+(x -> assigns(f)) else assigns
+          val renameGhostAssigns = if(ghostAssigns.contains(f)) ghostAssigns.+(x -> ghostAssigns(f)) else ghostAssigns
+          ODEProofHeader(namedFacts, unnamedFacts, renameAssigns, renameGhostAssigns, phiAssigns.+(x -> f))
+        case f => ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns, phiAssigns.+(x -> f))
+      }
+
 
     }
 
-    def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns.+(x -> f), ghostAssigns.+(x -> f))
-    def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns.+(x -> f))
+    def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns.+(x -> f), ghostAssigns.+(x -> f), phiAssigns)
+    def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns.+(x -> f), phiAssigns)
   }
   private object ODEProofHeader {
-    val empty: ODEProofHeader = ODEProofHeader(Map(), Set(), Map(), Map())
+    val empty: ODEProofHeader = ODEProofHeader(Map(), Set(), Map(), Map(), Map())
   }
   private case class ODEContext(c: Context, header: ODEProofHeader) {
-    def containsFact(fml: Formula): Boolean = (header.namedFacts.values.toSet ++ header.unnamedFacts).contains(fml)
+    def applyPhi(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)({case v: Variable => header.phiAssigns.get(v) case _ => None})
+    def containsFact(fml: Formula, shouldApplyPhi: Boolean = true): Boolean = {
+      val fmls = if (shouldApplyPhi) Set(fml, applyPhi(fml)) else Set(fml)
+      val set = header.namedFacts.values.toSet ++ header.unnamedFacts
+      set.intersect(fmls).nonEmpty
+    }
   }
   private object ODEContext {
       def apply(c: Context): ODEContext = {
@@ -193,11 +209,12 @@ object ProofChecker {
         val header = last.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
           s match {
             case Phi(Modify(VarPat(x, maybeP), Left(f))) =>
-              acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
+              acc.addFact(maybeP, Equal(x, f)).addPhiAssign(x, f)
             case Ghost(Modify(VarPat(x, maybeP), Left(f))) =>
               acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
             case Modify(VarPat(x, maybeP), Left(f)) =>
               acc.addFact(maybeP, Equal(x, f)).addAssign(x, f)
+            case Ghost(Note(x, pt, Some(fml))) => acc.addFact(Some(x), fml)
             case Note(x, pt, Some(f)) => acc.addFact(Some(x), f)
             case Assert(x: Variable, f, m) => acc.addFact(Some(x), f)
             case Assume(x: Variable, f) => acc.addFact(Some(x), f)
@@ -288,16 +305,16 @@ object ProofChecker {
     val dSet = proveODE.ds.atoms
     val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(VarPat(dx, None), Left(e))})
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
-    val odeMap = DifferentialHelper.atomicOdes(proveODE.asODESystem).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
+    val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
     // @TODO: if assertion name is found in context, or is lastFact then look up. May require generalizing lastFact to lastFacts that returns all facts since last state change.
     val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
     val filteredSelectors = m.selectors.filter({case ForwardSelector(ProofVar(x)) if allCutNames.contains(x) => false case _ => true})
     /* Check base case. Consult context, report error if wrong fact proved in context, attempt automatic proof otherwise.*/
-    (odeCon.containsFact(f), x) match {
+    (odeCon.containsFact(f, shouldApplyPhi = true), x) match {
       case (true, _) =>
       case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
-        case Some(got) => throw ProofCheckException(s"You proved ${got} as a base case for differential invariant $x, but needed to prove $f")
+        case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f")
         case None => apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()))
       }
     }

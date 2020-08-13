@@ -453,6 +453,7 @@ sealed trait DiffStatement extends ASTNode {
   }
 
   def atoms: Set[AtomicODEStatement] = collect.atoms
+  def allAtoms: Set[AtomicODEStatement] = collect.atoms ++ collect.ghosts ++ collect.inverseGhosts
 
   /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
   lazy val collect: DiffCollection = {

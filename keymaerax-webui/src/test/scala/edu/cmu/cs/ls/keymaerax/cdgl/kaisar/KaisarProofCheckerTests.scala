@@ -136,12 +136,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
-  it should "prove diffghost" in withMathematica { _ =>
-    val pfStr = "/++ x:= 0; ++/ y' = y^2, /++ x' = y ++/;"
-    val pf = p(pfStr, pp.statement(_))
-    val (ss, ff) = ProofChecker(Context.empty, pf)
-    ff shouldBe "[{y'=y^2&true}]true".asFormula
-  }
 
   it should "prove inverse diffghost" in withMathematica { _ =>
     val pfStr = "/-- x' = y --/;"

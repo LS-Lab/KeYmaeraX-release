@@ -150,7 +150,7 @@ case class Context(s: Statement) {
                     val surrounding = Block(ss.reverse)
                     val t = VariableSets(surrounding)
                     val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
-                    if (inter.nonEmpty) {
+                    if (inter.nonEmpty && isSound) {
                       throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
                     }
                     List((yx, yf))
@@ -238,7 +238,7 @@ case class Context(s: Statement) {
         res.map(Phi)
       case Ghost(s) =>
         val res = Context(s).lastStatements(taboos)
-        res.map(Ghost)
+        res.map({case g: Ghost => g case s: Statement => Ghost(s)})
       case Block(ss) =>
         ss.foldRight[(List[Statement], Set[Variable], Boolean)]((List(), taboos, false))({case (s, (acc, taboos, done)) =>
           if (done) (acc, taboos, done)

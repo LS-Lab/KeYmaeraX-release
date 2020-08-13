@@ -137,10 +137,7 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[?(T>=0); t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
   }
 
-
-  // @TODO: Write tests that make sure to actually prove T >= 0
   // @TODO: elaborator should catch unbound references
-  // @TODO: consider annotations on modifiers because cuts are too awkward
   it should "prove and then use dc-assign" in withMathematica { _ =>
     val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
     val ff = check(pfStr)
@@ -175,6 +172,17 @@ class EndToEndTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
+  it should "catch invalid dc-assign 4: negative duration" in withMathematica { _ =>
+    val pfStr = "t:= 0; {t' = 1, x' = y & t := T};"
+    a[ProofCheckException] shouldBe thrownBy(check(pfStr))
+  }
+
+  it should "prove another simple diffghost" in withMathematica { _ =>
+    val pfStr = "/++ x:= 0; ++/ y' = y^2, /++ x' = y ++/;"
+    val ff = check(pfStr)
+    ff shouldBe "[{x_1:=x_0;y_0:=y;} {y_0'=y_0^2&true}]true".asFormula
+  }
+
   it should "prove simple ghost ODE" in withMathematica { _ =>
     val pfStr = "" +
       "x := 1;" +
@@ -183,7 +191,7 @@ class EndToEndTests extends TacticTestBase {
       "{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction;}" +
       "!nonZero:(x > 0) using inv by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[x:=1; {?(x*y^2 = 1);}^@{x' = -x};{?(x>0);}^@]true"
+    ff shouldBe "[x_0:=1; {x_1:=x_0;y_1:=y_0;}{x_1' = -x_1};{?(x_1>0);}^@]true".asFormula
   }
 
   it should "catch ODE ghost scope escaping" in withMathematica { _ =>
