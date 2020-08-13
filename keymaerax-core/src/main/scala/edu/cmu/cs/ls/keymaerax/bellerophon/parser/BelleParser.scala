@@ -319,11 +319,13 @@ object BelleParser extends TacticParser with Logging {
             case FuncOf(fn, _) => fn
             case PredOf(fn, _) => fn
             case p: ProgramConst => p
+            case s: SystemConst => s
           }
           defs.substs.find(sp => sp.what match {
             case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case ProgramConst(n, _) => n == x.name
+            case SystemConst(n, _) => n == x.name
           }) match {
             case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc)), tail)
             case None => throw ParseException(s"Expression definition not found: '${x.prettyString}'", st)
