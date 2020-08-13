@@ -178,9 +178,9 @@ class EndToEndTests extends TacticTestBase {
   it should "prove simple ghost ODE" in withMathematica { _ =>
     val pfStr = "" +
       "x := 1;" +
-      "(G  y := (1/x)^(1/2); " +
-      "!inv:(x*y^2 = 1) by auto; G)" +
-      "{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by induction;}" +
+      "/++  y := (1/x)^(1/2); " +
+      "!inv:(x*y^2 = 1) by auto; ++/" +
+      "{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction;}" +
       "!nonZero:(x > 0) using inv by auto;"
     val ff = check(pfStr)
     ff shouldBe "[x:=1; {?(x*y^2 = 1);}^@{x' = -x};{?(x>0);}^@]true"
@@ -189,9 +189,9 @@ class EndToEndTests extends TacticTestBase {
   it should "catch ODE ghost scope escaping" in withMathematica { _ =>
     val pfStr = "" +
       "x := 1;" +
-      "(G y := (1/x)^(1/2); G)" +
+      "/++ y := (1/x)^(1/2); ++/" +
       "!base: (x*y^2 = 1) by auto;" +
-      "{x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by induction;}" +
+      "{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction;}" +
       "!nonZero:(x*y^2 = 1) using inv by auto;"
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }

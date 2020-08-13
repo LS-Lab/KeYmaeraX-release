@@ -99,26 +99,26 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "ban ghost program variable escaping scope" in withMathematica { _ =>
-    val pfStr = "x:=1; (G y:= 2; G) !p:(x + y = 3) by auto;"
+    val pfStr = "x:=1; /++ y:= 2; ++/ !p:(x + y = 3) by auto;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "ban inverse ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "{G ?p:(x = 0); G} !q:(x = 0) using p by auto;"
+    val pfStr = "/-- ?p:(x = 0); --/ !q:(x = 0) using p by auto;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe (thrownBy(ProofChecker(Context.empty, pf)))
   }
 
   it should "allow ghost proof variable escaping scope" in withMathematica { _ =>
-    val pfStr = "?xVal:(x:=1); (G ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; G) !p:(x + 1 > 0) using q by auto;"
+    val pfStr = "?xVal:(x:=1); /++ ?yVal:(y:= 2); !p:(x + y = 3) using andI(xVal, yVal) by auto; !q:(x > 0) using andI(p, yVal) by auto; ++/ !p:(x + 1 > 0) using q by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=1;{?(x+1>0);}^@]true".asFormula
   }
 
   it should "allow inverse ghost program variable escaping scope for tautological purposes" in withMathematica { _ =>
-    val pfStr = "{G x := 0; G} !q:(x^2 >= 0) by auto;"
+    val pfStr = "/-- x := 0; --/ !q:(x^2 >= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=0; {?(x^2 >= 0);}^@]true".asFormula
@@ -132,26 +132,26 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "ban diffghost with no body" in withMathematica { _ =>
-    val pfStr = "(G x' = y G);"
+    val pfStr = "/++ x' = y ++/;"
     val pf = p(pfStr, pp.statement(_))
     a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
   it should "prove diffghost" in withMathematica { _ =>
-    val pfStr = "y' = y^2, (G x' = y G);"
+    val pfStr = "y' = y^2, /++ x' = y ++/;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{y'=y^2&true}]true".asFormula
   }
 
   it should "prove inverse diffghost" in withMathematica { _ =>
-    val pfStr = "{G x' = y G};"
+    val pfStr = "/-- x' = y --/;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{x'=y&true}]true".asFormula
   }
 
   it should "prove diffweak" in withMathematica { _ =>
-    val pfStr = "x' = y & {G dc:(x > 0) G};"
+    val pfStr = "x' = y & /-- dc:(x > 0) --/;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{x'=y&x>0}]true".asFormula

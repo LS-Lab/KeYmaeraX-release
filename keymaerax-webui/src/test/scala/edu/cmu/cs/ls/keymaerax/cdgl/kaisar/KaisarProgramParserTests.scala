@@ -359,11 +359,11 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse ghost" in {
-    p("(G x:= 2; G)", pp.statement(_)) shouldBe Ghost(Modify(VarPat("x".asVariable), Left(Number(2))))
+    p("/++ x:= 2; ++/", pp.statement(_)) shouldBe Ghost(Modify(VarPat("x".asVariable), Left(Number(2))))
   }
 
   it should "parse inverseghost" in {
-    p("{G x:= 2; G}", pp.statement(_)) shouldBe InverseGhost(Modify(VarPat("x".asVariable), Left(Number(2))))
+    p("/-- x:= 2; --/", pp.statement(_)) shouldBe InverseGhost(Modify(VarPat("x".asVariable), Left(Number(2))))
   }
 
   it should "parse print-goal" in {
@@ -390,12 +390,12 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffghost" in {
-    p("(G x' = y G);", pp.diffStatement(_)) shouldBe DiffGhostStatement(AtomicODEStatement(
+    p("/++ x' = y ++/;", pp.diffStatement(_)) shouldBe DiffGhostStatement(AtomicODEStatement(
         AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
   }
 
   it should "parse diffghost with cuts" in {
-    p("x' = -x, (G y' = y * (1/2) G) & !inv:(x*y^2 = 1) by auto", pp.proveODE(_)) shouldBe(
+    p("x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by auto", pp.proveODE(_)) shouldBe(
       ProveODE(DiffProductStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Neg(BaseVariable("x")))),
         DiffGhostStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Times(Variable("y"), Divide(Number(1), Number(2))))))),
         DomAssert(Variable("inv"), Equal(Times(Variable("x"), Power(Variable("y"), Number(2))), Number(1)), Using(List(DefaultSelector), Auto()))
@@ -403,12 +403,12 @@ class KaisarProgramParserTests extends TacticTestBase {
     )
   }
   it should "parse inverse diffghost" in {
-    p("{G x' = y G};", pp.diffStatement(_)) shouldBe InverseDiffGhostStatement(AtomicODEStatement(
+    p("/-- x' = y --/;", pp.diffStatement(_)) shouldBe InverseDiffGhostStatement(AtomicODEStatement(
       AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
   }
 
   it should "parse diffweak" in {
-    p("x' = y & {G dc:(x > 0) G};", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & /-- dc:(x > 0) --/;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
     )), DomWeak(DomAssume(Variable("dc"), Greater(Variable("x"), Number(0)))))
   }

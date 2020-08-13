@@ -88,8 +88,8 @@ object ExpressionParser {
       map({case (x, xs) => (xs.+:(x)).reduce(Power)})
 
   def neg[_: P]: P[Term] =
-    // check neg not followed by numeral since neg followed by numeral is Number() constructor already
-    (("-".! ~ !CharIn(">0-9")).? ~ power).map({case (None, e) => e case (Some(_), e) => Neg(e)})
+    // check neg not followed by inverse ghost terminator or numeral since neg followed by numeral is Number() constructor already
+    (("-".! ~ !("-/" | CharIn(">0-9"))).? ~ power).map({case (None, e) => e case (Some(_), e) => Neg(e)})
 
   def labelRefArgs[_: P]: P[List[Term]] = {
     ("(" ~ term.rep(sep = ",") ~ ")").map(terms => terms.toList)
@@ -112,8 +112,8 @@ object ExpressionParser {
       xs.foldLeft(x)({case (acc, ("/", e)) => Divide(acc, e) case (acc, ("*", e)) => Times(acc, e)})})
 
   def minus[_: P]: P[Term] =
-    // disambiguate "-" and "->"
-    (divide ~ ((("-"  ~ !P(">")) | "+").! ~ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
+    // disambiguate "-" and "->" and "--/"
+    (divide ~ ((("-"  ~ !("-/" | P(">")) )| "+").! ~ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
       xs.foldLeft(x)({case (acc, ("+", e)) => Plus(acc, e) case (acc, ("-", e)) => Minus(acc, e)})})
 
   def term[_: P]: P[Term] = minus
@@ -277,8 +277,8 @@ object ProofParser {
 
   def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep(1) ~ "}" ~ P(";").?).map({case (i, ss) => locate(block(ss.toList), i)})
   def boxLoop[_: P]: P[BoxLoop] = (Index ~ statement.rep ~ "*").map({case (i, ss) => locate(BoxLoop(block(ss.toList)), i)})
-  def ghost[_: P]: P[Statement] = (Index ~ "(G" ~ statement.rep ~ "G)").map({case (i, ss) => locate(KaisarProof.ghost(block(ss.toList)), i)})
-  def inverseGhost[_: P]: P[Statement] = (Index ~ "{G" ~ statement.rep ~ "G}").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
+  def ghost[_: P]: P[Statement] = (Index ~ "/++" ~ statement.rep ~ "++/").map({case (i, ss) => locate(KaisarProof.ghost(block(ss.toList)), i)})
+  def inverseGhost[_: P]: P[Statement] = (Index ~ "/--" ~ statement.rep ~ "--/").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
@@ -291,10 +291,9 @@ object ProofParser {
   def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
   def atomicODEStatement[_: P]: P[AtomicODEStatement] = (idExPat ~ atomicOde).map({case (id, ode) => AtomicODEStatement(ode, id)})
-  // @TODO: New syntax
-  def ghostODE[_: P]: P[DiffStatement] = (Index ~ "(G" ~ diffStatement ~ "G)").
+  def ghostODE[_: P]: P[DiffStatement] = (Index ~ "/++" ~ diffStatement ~ "++/").
     map({case (i, ds) => locate(DiffGhostStatement(ds), i)})
-  def inverseGhostODE[_: P]: P[DiffStatement] = (Index ~ "{G" ~ diffStatement ~ "G}").
+  def inverseGhostODE[_: P]: P[DiffStatement] = (Index ~ "/--" ~ diffStatement ~ "--/").
     map({case (i, ds) => locate(InverseDiffGhostStatement(ds), i)})
   def terminalODE[_: P]: P[DiffStatement] = ghostODE | inverseGhostODE | atomicODEStatement
   def diffStatement[_: P]: P[DiffStatement] =
@@ -304,7 +303,7 @@ object ProofParser {
   def domAssume[_: P]: P[DomAssume] = (Index ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
   def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
   def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
-  def domWeak[_: P]: P[DomWeak] = (Index ~ "{G" ~ domainStatement ~ "G}").map({case (i, ds) => locate(DomWeak(ds), i)})
+  def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
   def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).
     map({case (i, da) => locate(da.reduceRight(DomAnd), i)})
