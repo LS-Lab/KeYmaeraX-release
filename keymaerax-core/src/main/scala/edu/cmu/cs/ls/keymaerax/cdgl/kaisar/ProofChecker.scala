@@ -168,6 +168,36 @@ object ProofChecker {
     }
   }
 
+  /** Collect facts and assignments preceding an ODE, which are used to check the ODE proof  */
+  private case class ODEProofHeader(facts: Map[Option[Ident], Formula], assigns: Map[Variable, Term], ghostAssigns: Map[Variable, Term]) {
+    def addFact(x: Option[Ident], fml: Formula): ODEProofHeader = ODEProofHeader(facts.+(x -> fml), assigns, ghostAssigns)
+    def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(facts, assigns.+(x -> f), ghostAssigns.+(x -> f))
+    def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(facts, assigns, ghostAssigns.+(x -> f))
+  }
+  private object ODEProofHeader {
+    val empty: ODEProofHeader = ODEProofHeader(Map(), Map(), Map())
+  }
+  private case class ODEContext(c: Context, header: ODEProofHeader)
+  private object ODEContext {
+      def apply(c: Context): ODEContext = {
+        val header = c.lastBlock.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
+          s match {
+            case Ghost(Modify(VarPat(x, maybeP), Left(f))) =>
+              acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
+            case Modify(VarPat(x, maybeP), Left(f)) =>
+              acc.addFact(maybeP, Equal(x, f)).addAssign(x, f)
+            case Note(x, pt, Some(f)) => acc.addFact(Some(x), f)
+            case Assert(x: Variable, f, m) => acc.addFact(Some(x), f)
+            case Assume(x: Variable, f) => acc.addFact(Some(x), f)
+            // Even collect ghost facts because ghost proof might need them
+            case Ghost(Assert(x: Variable, f, m)) => acc.addFact(Some(x), f)
+            case Ghost(Assume(x: Variable, f)) => acc.addFact(Some(x), f)
+          }
+        })
+        ODEContext(c, header)
+    }
+  }
+
   private def accum(t: Option[DiffStatement], x: DiffStatement): Some[DiffStatement] =
     t match {case None => Some(x) case Some(y) => Some(DiffProductStatement(y, x))}
 
@@ -189,11 +219,11 @@ object ProofChecker {
   }
 
   // @return elaborated context
-  private def applyGhosts(kc: Context, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
+  private def applyGhosts(kc: ODEContext, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
     val ghosts: Option[DiffStatement] = None
     val res = ds.foldLeft[Option[DiffStatement]](ghosts){{case (acc, ds) =>
     ds match {
-      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs)) if admissibleGhost(x1, rhs) =>
+      case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _) if admissibleGhost(x1, rhs) =>
         accum(acc, DiffGhostStatement(ds))
       case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
       case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
@@ -202,11 +232,11 @@ object ProofChecker {
   }
 
   // @TODO: Should be fine without admissibility check, at least for safety, but maybe not for liveness.
-  private def applyInverseGhosts(kc: Context, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
+  private def applyInverseGhosts(kc: ODEContext, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
     val iGhosts: Option[DiffStatement] = None
     val res = ds.foldLeft[Option[DiffStatement]](iGhosts){{case (acc, ds) =>
       ds match {
-        case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs)) if admissibleGhost(x1, rhs) =>
+        case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _) if admissibleGhost(x1, rhs) =>
           accum(core, ds)
         case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
         case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
@@ -215,13 +245,13 @@ object ProofChecker {
   }
 
   private def solveFml(sols: List[(Variable, Term)], f: Formula): Formula = sols.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
-  private def solveAssertion(discreteCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+  private def solveAssertion(discreteCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
     val methAssumps = m.selectors
     val sols = proveODE.solutions.get
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
-    val baseCon = subContext.foldLeft(discreteCon)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
+    val baseCon = subContext.foldLeft(discreteCon.c)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
     val timeFml = proveODE.duration match {
       case None => GreaterEqual(proveODE.timeVar.get, Number(0))
       case Some((_, dur)) => And(GreaterEqual(proveODE.timeVar.get, Number(0)), GreaterEqual(dur, proveODE.timeVar.get))
@@ -232,12 +262,12 @@ object ProofChecker {
     assertion
   }
 
-  private def inductAssertion(discreteCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val baseCon = odeContext.foldLeft(discreteCon)({case (acc, df) => acc.:+(df.asStatement)})
+  private def inductAssertion(discreteCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val baseCon = domainFacts.foldLeft(discreteCon.c)({case (acc, df) => acc.:+(df.asStatement)})
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
-    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e)) => Modify(VarPat(dx, None), Left(e))})
+    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(VarPat(dx, None), Left(e))})
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = DifferentialHelper.atomicOdes(proveODE.asODESystem).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
@@ -249,7 +279,7 @@ object ProofChecker {
     assertion
   }
 
-  private def applyAssertion(baseCon: Context, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+  private def applyAssertion(baseCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
     m.atom match {
       case Solution() => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
@@ -258,7 +288,7 @@ object ProofChecker {
     }
   }
 
-  private def applyAssertions(kc: Context, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
+  private def applyAssertions(kc: ODEContext, proveODE: ProveODE, assertion: Option[DiffStatement], coll: DomCollection): Option[DomainStatement] = {
     val domAssump = coll.assumptions.toList
     val resAsserts: List[DomainFact] =
       coll.assertions.foldLeft[List[DomainFact]](domAssump)({case ((acc, asrt@(DomAssert(x, f, m)))) =>
@@ -270,7 +300,7 @@ object ProofChecker {
   }
 
 
-  private def applyDuration(kc: Context, dom: Option[DomainStatement], mod: Set[DomModify]): Option[DomainStatement] = {
+  private def applyDuration(kc: ODEContext, dom: Option[DomainStatement], mod: Set[DomModify]): Option[DomainStatement] = {
     if (mod.size >= 2)
       throw ProofCheckException(s"ODE should have at most one duration statement, got: $mod")
     else if (mod.isEmpty) return dom
@@ -280,26 +310,26 @@ object ProofChecker {
     accum(dom, oneMod)
   }
 
-  private def applyWeakens(kc: Context, dur: Option[DomainStatement], weak: Set[DomainStatement]): Option[DomainStatement] = {
+  private def applyWeakens(kc: ODEContext, dur: Option[DomainStatement], weak: Set[DomainStatement]): Option[DomainStatement] = {
     val weakDom = weak.toList.foldLeft[Option[DomainStatement]](None)(accum)
     weakDom match {case None => dur case Some(weakStatement) => accum(dur, DomWeak(weakStatement))}
   }
 
   /* Decide what time variable "t" to use for ProveODE in solutions. Often, the time variable is clear from the proof,
    * but if not, consult the context/snapshot to determine a fresh version of the time varable */
-  private def initializeTimeVar(context: Context, e: ProveODE): Unit = {
+  private def initializeTimeVar(context: ODEContext, e: ProveODE): Unit = {
     e.timeVar match {
       case Some(x) =>
       case None =>
         // @TODO: Slow
-        val timeVar = Snapshot.ofContext(context.:+(e)).increment(ProveODE.defaultTimeVariable)._1
+        val timeVar = Snapshot.ofContext(context.c.:+(e)).increment(ProveODE.defaultTimeVariable)._1
         e.overrideTimeVar(timeVar)
     }
   }
 
-  private def checkODEContext(kc: Context, proveODE: ProveODE): Unit = {
+  private def checkODEContext(kc: ODEContext, proveODE: ProveODE): Unit = {
     val bv = VariableSets(proveODE).boundVars.filter(_.isInstanceOf[BaseVariable])
-    val kv = VariableSets(kc.s)
+    val kv = VariableSets(kc.c.s)
     val taboo = kv.freeVars ++ kv.boundVars
     val clash = bv.intersect(taboo)
     if (clash.nonEmpty)
@@ -308,16 +338,17 @@ object ProofChecker {
 
     /**  Check a differential equation proof */
   private def apply(con: Context, inODE: ProveODE): (ProveODE, Formula) = {
-    initializeTimeVar(con, inODE)
-    checkODEContext(con, inODE)
+    val odeCon = ODEContext(con)
+    initializeTimeVar(odeCon, inODE)
+    checkODEContext(odeCon, inODE)
     val DiffCollection(cores, ghosts, invGhost) = inODE.ds.collect
     val dcCollect@DomCollection(assume, assert, weak, modify) = inODE.dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
-    val ghosted = applyGhosts(con, core, ghosts)
-    val asserted = applyAssertions(con, inODE, ghosted, dcCollect)
-    val durated = applyDuration(con, asserted, modify)
-    val inversed = applyInverseGhosts(con, ghosted, invGhost)
-    val weakened = applyWeakens(con, durated, weak)
+    val ghosted = applyGhosts(odeCon, core, ghosts)
+    val asserted = applyAssertions(odeCon, inODE, ghosted, dcCollect)
+    val durated = applyDuration(odeCon, asserted, modify)
+    val inversed = applyInverseGhosts(odeCon, ghosted, invGhost)
+    val weakened = applyWeakens(odeCon, durated, weak)
     val proveODE =
       (inversed, weakened) match {
         case (Some(inv), Some(weak)) => ProveODE(inv, weak)
@@ -325,7 +356,7 @@ object ProofChecker {
       }
     val theMod = modify.toList.headOption
     if (!proveODE.ds.hasDifferentialProgram(proveODE.dc.modifier)) {
-      throw new ProofCheckException("ODE proof must have at least one non-ghost equation")
+      throw ProofCheckException("ODE proof must have at least one non-ghost equation")
     }
     val fml = proveODE.conclusion
     def sameTimeVar(x: Variable, y: Variable): Boolean = {

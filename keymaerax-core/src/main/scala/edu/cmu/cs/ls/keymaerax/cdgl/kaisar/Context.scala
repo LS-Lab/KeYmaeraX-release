@@ -223,6 +223,44 @@ case class Context(s: Statement) {
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborate)
 
+  /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
+    * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
+    * appear ghosted or unghosted.  */
+  private def lastStatements(taboos: Set[Variable] = Set()): List[Statement] = {
+    s match {
+      case Assume(x: Variable, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Assert(x: Variable, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Modify(VarPat(x, _), Left(f)) => if (StaticSemantics(f).+(x).intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Modify(VarPat(x, _), Right(_)) => if (taboos.contains(x)) List(s) else Nil
+      case Note(x, pt, Some(fml)) => if(StaticSemantics(fml).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Phi(asgns) =>
+        val res = Context(asgns).lastStatements(taboos)
+        res.map(Phi)
+      case Ghost(s) =>
+        val res = Context(s).lastStatements(taboos)
+        res.map(Ghost)
+      case Block(ss) =>
+        ss.foldRight[(List[Statement], Set[Variable], Boolean)]((List(), taboos, false))({case (s, (acc, taboos, done)) =>
+          if (done) (acc, taboos, done)
+          else {
+            val res = Context(s).lastStatements(taboos)
+            if (res.isEmpty) (Nil, taboos, true)
+            else {
+              val tt = taboos ++ VariableSets(s).boundVars
+              (res ++ acc, tt, false)
+            }}})._1
+      case Was(now, was) => Context(now).lastStatements(taboos)
+      case _: PrintGoal => List(s)
+      case _ => Nil
+    }
+  }
+
+  /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
+    * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
+    * appear ghosted or unghosted.  */
+  def lastBlock: Block = Block(lastStatements())
+
+  // @TODO: Merge with lastStatements
     /** Used in proof statements with implicit assumptions, such as BoxLoop which implicitly finds a base case.
     * @return Most recent fact of context and context of phi assignments since the fact was bound */
   private def lastFactMobile: (Option[(Ident, Formula)], List[Phi]) = {
@@ -392,7 +430,7 @@ object Context {
   /* @TODO: Add support for fact binding in ODE body */
   private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder, isGhost: Boolean , isInverseGhost: Boolean): List[(Ident, Formula)] = {
     ds match {
-      case AtomicODEStatement(AtomicODE(xp, e)) if(!isInverseGhost)=>
+      case AtomicODEStatement(AtomicODE(xp, e), _) if(!isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
         // whether "fake" solutions exist already
         odeContext.bestSolutions match {
@@ -403,7 +441,7 @@ object Context {
             } else List()
           case None => List()
         }
-      case AtomicODEStatement(dp) => List()
+      case AtomicODEStatement(dp, _) => List()
       case DiffProductStatement(l, r) => findAll(odeContext, l, f, isGhost, isInverseGhost) ++ findAll(odeContext, r, f, isGhost, isInverseGhost)
       case DiffGhostStatement(ds) => findAll(odeContext, ds, f, isGhost = true, isInverseGhost = false)
       case InverseDiffGhostStatement(ds) => findAll(odeContext, ds, f, isInverseGhost = true, isGhost = false)
