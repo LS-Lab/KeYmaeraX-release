@@ -372,7 +372,7 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   // ODE proofs
   it should "parse simple atomic ode proof" in {
-    p("true;", pp.domainStatement(_)) shouldBe DomAssume(Nothing, True)
+    p("?true;", pp.domainStatement(_)) shouldBe DomAssume(Nothing, True)
   }
 
   it should "parse simple system proof" in {
@@ -408,7 +408,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffweak" in {
-    p("x' = y & /-- dc:(x > 0) --/;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & /-- ?dc:(x > 0) --/;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
     )), DomWeak(DomAssume(Variable("dc"), Greater(Variable("x"), Number(0)))))
   }
@@ -435,7 +435,7 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse example from 1d car" in {
     val nt = Nothing
-    p("{{x' = v, v' = a, t' = 1 & t <= T & v>=0}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(
+    p("{{x' = v, v' = a, t' = 1 & ?(t <= T & v>=0)}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(
       AtomicODEStatement(AtomicODE(dx, vv)), DiffProductStatement(AtomicODEStatement(AtomicODE(dv, va)), AtomicODEStatement(AtomicODE(dt, Number(1))))),
       DomAssume(nt, And(LessEqual(vt, vT), GreaterEqual(vv, Number(0)))))
     )

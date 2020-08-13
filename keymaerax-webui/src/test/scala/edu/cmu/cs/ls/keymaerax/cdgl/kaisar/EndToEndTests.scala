@@ -115,7 +115,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
+    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
     val ff = check(pfStr)
     ff shouldBe "[t_0:=0; x_0:= 1; {t_1 := t_0;x_1:=x_0;}{t_1' = 1, x_1' = -1 & x_1>=0}]true".asFormula
   }
@@ -222,7 +222,7 @@ class EndToEndTests extends TacticTestBase {
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{x' = v, v' = a, t' = 1 & dc: (t <= T & v>=0)};" +
+        "{x' = v, v' = a, t' = 1 & ?dc: (t <= T & v>=0)};" +
         "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
       "}*" +
        "!safe:(x <= d & v >= 0) using inv brk  by auto;"
@@ -265,7 +265,7 @@ class EndToEndTests extends TacticTestBase {
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{x' = v, v' = a, t' = 1 & dc: (t <= T & v>=0)};" +
+        "{x' = v, v' = a, t' = 1 & ?dc: (t <= T & v>=0)};" +
         "ode(a, t):" +
         "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
         "}*" +

@@ -300,7 +300,7 @@ object ProofParser {
     (Index ~ terminalODE.rep(sep = ",", min = 1)).
     map({case (i, dps)=> locate(dps.reduceRight(DiffProductStatement), i)})
 
-  def domAssume[_: P]: P[DomAssume] = (Index ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
+  def domAssume[_: P]: P[DomAssume] = (Index ~ "?" ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
   def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
   def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
