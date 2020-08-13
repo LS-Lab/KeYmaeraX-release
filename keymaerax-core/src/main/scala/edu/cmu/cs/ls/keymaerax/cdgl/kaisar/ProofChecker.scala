@@ -169,19 +169,31 @@ object ProofChecker {
   }
 
   /** Collect facts and assignments preceding an ODE, which are used to check the ODE proof  */
-  private case class ODEProofHeader(facts: Map[Option[Ident], Formula], assigns: Map[Variable, Term], ghostAssigns: Map[Variable, Term]) {
-    def addFact(x: Option[Ident], fml: Formula): ODEProofHeader = ODEProofHeader(facts.+(x -> fml), assigns, ghostAssigns)
-    def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(facts, assigns.+(x -> f), ghostAssigns.+(x -> f))
-    def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(facts, assigns, ghostAssigns.+(x -> f))
+  private case class ODEProofHeader(namedFacts: Map[Ident, Formula], unnamedFacts: Set[Formula], assigns: Map[Variable, Term], ghostAssigns: Map[Variable, Term]) {
+    def addFact(x: Option[Ident], fml: Formula): ODEProofHeader = {
+      x match {
+        case None => ODEProofHeader(namedFacts, unnamedFacts.+(fml), assigns, ghostAssigns)
+        case Some(x) => ODEProofHeader(namedFacts.+(x -> fml), unnamedFacts, assigns, ghostAssigns)
+      }
+
+    }
+
+    def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns.+(x -> f), ghostAssigns.+(x -> f))
+    def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns.+(x -> f))
   }
   private object ODEProofHeader {
-    val empty: ODEProofHeader = ODEProofHeader(Map(), Map(), Map())
+    val empty: ODEProofHeader = ODEProofHeader(Map(), Set(), Map(), Map())
   }
-  private case class ODEContext(c: Context, header: ODEProofHeader)
+  private case class ODEContext(c: Context, header: ODEProofHeader) {
+    def containsFact(fml: Formula): Boolean = (header.namedFacts.values.toSet ++ header.unnamedFacts).contains(fml)
+  }
   private object ODEContext {
       def apply(c: Context): ODEContext = {
-        val header = c.lastBlock.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
+        val last = c.lastBlock
+        val header = last.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
           s match {
+            case Phi(Modify(VarPat(x, maybeP), Left(f))) =>
+              acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
             case Ghost(Modify(VarPat(x, maybeP), Left(f))) =>
               acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
             case Modify(VarPat(x, maybeP), Left(f)) =>
@@ -189,6 +201,8 @@ object ProofChecker {
             case Note(x, pt, Some(f)) => acc.addFact(Some(x), f)
             case Assert(x: Variable, f, m) => acc.addFact(Some(x), f)
             case Assume(x: Variable, f) => acc.addFact(Some(x), f)
+            case Assert(Nothing, f, m) => acc.addFact(None, f)
+            case Assume(Nothing, f) => acc.addFact(None, f)
             // Even collect ghost facts because ghost proof might need them
             case Ghost(Assert(x: Variable, f, m)) => acc.addFact(Some(x), f)
             case Ghost(Assume(x: Variable, f)) => acc.addFact(Some(x), f)
@@ -219,12 +233,17 @@ object ProofChecker {
   }
 
   // @return elaborated context
-  private def applyGhosts(kc: ODEContext, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
+  private def applyGhosts(kc: ODEContext, core: Option[DiffStatement], allGhosts: Set[AtomicODEStatement]): Option[DiffStatement] = {
     val ghosts: Option[DiffStatement] = None
-    val res = ds.foldLeft[Option[DiffStatement]](ghosts){{case (acc, ds) =>
+    val res = allGhosts.foldLeft[Option[DiffStatement]](ghosts){{case (acc, ds) =>
     ds match {
       case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _) if admissibleGhost(x1, rhs) =>
-        accum(acc, DiffGhostStatement(ds))
+        if(kc.header.ghostAssigns.contains(x1))
+          accum(acc, DiffGhostStatement(ds))
+        else if (kc.header.assigns.contains(x1))
+          throw ProofCheckException(s"Ghost variable $x1 must be initialized with a ghost assignment, found non-ghost assignment")
+        else
+          throw ProofCheckException(s"Ghost variable $x1 needs to be assigned right before different ghost ${DifferentialSymbol(x1)}")
       case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
       case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
     }}}
@@ -262,8 +281,8 @@ object ProofChecker {
     assertion
   }
 
-  private def inductAssertion(discreteCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val baseCon = domainFacts.foldLeft(discreteCon.c)({case (acc, df) => acc.:+(df.asStatement)})
+  private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
+    val baseCon = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.asStatement)})
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
@@ -274,7 +293,15 @@ object ProofChecker {
     // @TODO: if assertion name is found in context, or is lastFact then look up. May require generalizing lastFact to lastFacts that returns all facts since last state change.
     val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
     val filteredSelectors = m.selectors.filter({case ForwardSelector(ProofVar(x)) if allCutNames.contains(x) => false case _ => true})
-    apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()))
+    /* Check base case. Consult context, report error if wrong fact proved in context, attempt automatic proof otherwise.*/
+    (odeCon.containsFact(f), x) match {
+      case (true, _) =>
+      case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
+        case Some(got) => throw ProofCheckException(s"You proved ${got} as a base case for differential invariant $x, but needed to prove $f")
+        case None => apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()))
+      }
+    }
+    /* Prove inductive case */
     apply(ihCon, lieDerivative, Using(m.selectors, Auto()))
     assertion
   }
@@ -307,6 +334,14 @@ object ProofChecker {
     if(dom.nonEmpty && !dom.get.isAssertive)
       throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}")
     val oneMod@DomModify(ap, rhs) = mod.toList.head
+    val durFact = GreaterEqual(rhs, Number(0))
+    if(!kc.containsFact(durFact)) {
+      try {
+        apply(kc.c, durFact, Using(DefaultSelector :: Nil, Auto()))
+      } catch {
+        case t: Throwable => throw ProofCheckException(s"ODE has duration $rhs but could not prove $rhs >= 0. To fix this, assert T >= 0 immediately before ODE")
+      }
+    }
     accum(dom, oneMod)
   }
 

@@ -228,10 +228,10 @@ case class Context(s: Statement) {
     * appear ghosted or unghosted.  */
   private def lastStatements(taboos: Set[Variable] = Set()): List[Statement] = {
     s match {
-      case Assume(x: Variable, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
-      case Assert(x: Variable, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Assume(x, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
+      case Assert(x, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Modify(VarPat(x, _), Left(f)) => if (StaticSemantics(f).+(x).intersect(taboos).toSet.isEmpty) List(s) else Nil
-      case Modify(VarPat(x, _), Right(_)) => if (taboos.contains(x)) List(s) else Nil
+      case Modify(VarPat(x, _), Right(_)) => if (!taboos.contains(x)) List(s) else Nil
       case Note(x, pt, Some(fml)) => if(StaticSemantics(fml).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Phi(asgns) =>
         val res = Context(asgns).lastStatements(taboos)
@@ -251,7 +251,8 @@ case class Context(s: Statement) {
             }}})._1
       case Was(now, was) => Context(now).lastStatements(taboos)
       case _: PrintGoal => List(s)
-      case _ => Nil
+      case _ =>
+        Nil
     }
   }
 

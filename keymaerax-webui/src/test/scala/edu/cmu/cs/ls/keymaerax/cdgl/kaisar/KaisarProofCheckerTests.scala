@@ -137,7 +137,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
   it should "prove diffghost" in withMathematica { _ =>
-    val pfStr = "y' = y^2, /++ x' = y ++/;"
+    val pfStr = "/++ x:= 0; ++/ y' = y^2, /++ x' = y ++/;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{y'=y^2&true}]true".asFormula
@@ -151,7 +151,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
   it should "prove diffweak" in withMathematica { _ =>
-    val pfStr = "x' = y & /-- dc:(x > 0) --/;"
+    val pfStr = "x' = y & /-- ?dc:(x > 0) --/;"
     val pf = p(pfStr, pp.statement(_))
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[{x'=y&x>0}]true".asFormula
@@ -173,10 +173,8 @@ class KaisarProofCheckerTests extends TacticTestBase {
   }
 
 
-  // @TODO syntax: Should we use ? in domain constraint assumption syntax?
-  // @TODO syntax: what should ghost vs inverse ghost syntax be?
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & xRange:(x >=0) & !tRange:(t <= 1) using xInit xRange by solution};"
+    val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0) & !tRange:(t <= 1) using xInit xRange by solution};"
     val pf = p(pfStr, pp.statement(_))
     a[ODEAdmissibilityException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }

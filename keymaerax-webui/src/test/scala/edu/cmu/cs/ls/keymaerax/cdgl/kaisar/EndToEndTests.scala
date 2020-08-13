@@ -132,9 +132,9 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove dc-assign" in withMathematica { _ =>
-    val pfStr = "t:= 0; {t' = 1, x' = y & t := T};"
+    val pfStr = "?(T >= 0); t:= 0; {t' = 1, x' = y & t := T};"
     val ff = check(pfStr)
-    ff shouldBe "[t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
+    ff shouldBe "[?(T>=0); t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
   }
 
 
@@ -142,21 +142,21 @@ class EndToEndTests extends TacticTestBase {
   // @TODO: elaborator should catch unbound references
   // @TODO: consider annotations on modifiers because cuts are too awkward
   it should "prove and then use dc-assign" in withMathematica { _ =>
-    val pfStr = "t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
+    val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[t_0:= 0; x_0 := 0; {t_1:=t_0;x_1:=x_0;}{{t_1' = 1, x_1' = 2 & t_1<=T}; ?(t_1=T);}^@{?(x_1=2*T);}^@]true".asFormula
+    ff shouldBe "[?(T>=0); t_0:= 0; x_0 := 0; {t_1:=t_0;x_1:=x_0;}{{t_1' = 1, x_1' = 2 & t_1<=T}; ?(t_1=T);}^@{?(x_1=2*T);}^@]true".asFormula
   }
 
   it should "prove renamed dc-assign" in withMathematica { _ =>
-    val pfStr = "timer:= 0; {timer' = 1, x' = y & timer := T};"
+    val pfStr = "?(T>=0); timer:= 0; {timer' = 1, x' = y & timer := T};"
     val ff = check(pfStr)
-    ff shouldBe "[timer_0:= 0; {timer_1:=timer_0;x_0:=x;}{{timer_1' = 1, x_0' = y}; ?(timer_1 = T);}^@]true".asFormula
+    ff shouldBe "[?(T>=0); timer_0:= 0; {timer_1:=timer_0;x_0:=x;}{{timer_1' = 1, x_0' = y}; ?(timer_1 = T);}^@]true".asFormula
   }
 
   it should "prove diamond assertion " in withMathematica { _ =>
-    val pfStr = "t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by induction};"
+    val pfStr = "?(T>=0); t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by induction};"
     val ff = check(pfStr)
-    ff shouldBe "[t_0:=0; {t_1:=t_0;x_0:=x;}{{t_1'=1, x_0'=y & t_1>=0}; ?(t_1=T);}^@]true".asFormula
+    ff shouldBe "[?(T>=0);t_0:=0; {t_1:=t_0;x_0:=x;}{{t_1'=1, x_0'=y & t_1>=0}; ?(t_1=T);}^@]true".asFormula
   }
 
   it should "prove triple induction " in withMathematica { _ =>
