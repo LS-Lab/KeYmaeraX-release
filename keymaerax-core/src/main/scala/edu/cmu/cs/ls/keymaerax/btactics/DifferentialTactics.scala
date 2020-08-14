@@ -1903,7 +1903,7 @@ private object DifferentialTactics extends Logging {
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
+        // ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
