@@ -82,9 +82,9 @@ object ProofTraversal {
           case BoxLoop(s, ih) =>
             BoxLoop(traverse(kc, s, tf), ih)
           case Ghost(ss) =>
-            Ghost(traverse(kc, ss, tf))
+            Ghost(traverse(kc.withGhost, ss, tf))
           case InverseGhost(ss) =>
-            InverseGhost(traverse(kc, ss, tf))
+            InverseGhost(traverse(kc.withInverseGhost, ss, tf))
           case ProveODE(ds, dc) =>
             ProveODE(traverse(kc, ds, tf), traverse(kc, dc, tf))
           case Assert(x, f, child) =>
@@ -106,8 +106,8 @@ object ProofTraversal {
         val mid = ds match {
           case AtomicODEStatement(dp, ident) => AtomicODEStatement(dp, ident)
           case DiffProductStatement(l, r) => DiffProductStatement(traverse(kc, l, tf), traverse(kc, r, tf))
-          case DiffGhostStatement(ds) => DiffGhostStatement(traverse(kc, ds, tf))
-          case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(traverse(kc, ds, tf))
+          case DiffGhostStatement(ds) => DiffGhostStatement(traverse(kc.withGhost, ds, tf))
+          case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(traverse(kc.withInverseGhost, ds, tf))
         }
         tf.postDiffS(kc, mid)
     }
@@ -122,7 +122,7 @@ object ProofTraversal {
           ds match {
             case DomAssume(x, f) => DomAssume(x, f)
             case DomAssert(x, f, child) => DomAssert(x, f, traverse(kc, child, tf))
-            case DomWeak(dc) => DomWeak(traverse(kc, dc, tf))
+            case DomWeak(dc) => DomWeak(traverse(kc.withInverseGhost, dc, tf))
             case DomModify(x, hp) => DomModify(traverse(kc, x, tf), hp)
             case DomAnd(l, r) => DomAnd(traverse(kc, l, tf), traverse(kc, r, tf))
           }

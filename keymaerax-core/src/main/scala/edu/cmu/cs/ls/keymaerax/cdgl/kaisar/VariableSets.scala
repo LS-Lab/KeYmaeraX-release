@@ -59,6 +59,7 @@ object VariableSets {
     VariableSets(boundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 
+  // @TODO: Update VariableSets to use contexts instead of isGhost flags
   /** Compute static semantic variables sets for a given Kaisar [[statement]], depending on the context in which
     * [[statement]] appears
     *

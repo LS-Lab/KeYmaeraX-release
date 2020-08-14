@@ -14,9 +14,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
   val ep = ExpressionParser
   val pp = ProofParser
   val kp = KaisarKeywordParser
-
-  //  class KPPTestException(msg: String) extends Exception (msg)
-
+  
   def p[T](s: String, parser: P[_] => P[T]): T =
     parse(s, parser) match {
       case x: Success[T] => x.value

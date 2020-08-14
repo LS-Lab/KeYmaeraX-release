@@ -55,6 +55,7 @@ class SelectorEliminationPass() {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
+        val allAssignments = candidates.map(x => kc.getAssignments(x.x))
         candidates.filter(x => kc.getAssignments(x.x).nonEmpty).map(ForwardSelector)
       case ForwardSelector(pt) => List(ForwardSelector(disambiguate(kc, pt)))
       case sel => List(sel)

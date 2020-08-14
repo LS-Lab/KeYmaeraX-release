@@ -30,17 +30,26 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 case class Context(s: Statement) {
   import Context._
+  var outer: Context = this
   var ghostStatus: GhostMode = NonGhostMode
+
+  def withOuter: Context = {
+    val x = clone
+    x.outer = x
+    x
+  }
 
   def reapply(s: Statement): Context = {
     val x = Context(s)
     x.ghostStatus = ghostStatus
+    x.outer = outer
     x
   }
 
   override def clone: Context = {
     val x = Context(s)
     x.ghostStatus = ghostStatus
+    x.outer = outer
     x
   }
 
@@ -135,7 +144,7 @@ case class Context(s: Statement) {
   /* @TODO (soundness): The soundness of this function is questionable. It *may* be sound for SSA, but certainly not
   *    for arbitrary contexts. */
   def getAssignments(x: Variable, isSound: Boolean = true): List[Formula] =
-    searchAll(
+    withOuter.searchAll(
       {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
       // @TODO: Indices get renamed here, but is that correct?
       case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx  => true
@@ -179,7 +188,9 @@ case class Context(s: Statement) {
                     val surrounding = Block(ss.reverse)
                     val t = VariableSets(surrounding)
                     val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
-                    if (inter.nonEmpty && isSound) {
+                    // Prevent ghost variables from escaping scope, unless we're turning off soundness checks or we
+                    // are also a ghost.
+                    if (inter.nonEmpty && isSound && !isGhost) {
                       throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
                     }
                     List((yx, yf))
@@ -201,10 +212,10 @@ case class Context(s: Statement) {
         val fmls = pats.flatMap({ case (v, e, s) => reapply(s).searchAll(f, tabooProgramVars, isSound) })
         if (fmls.isEmpty) Nil
         else List(fmls.reduceRight(or))
-      case Ghost(s) => Context(s).withGhost.searchAll(f, tabooProgramVars, isSound)
+      case Ghost(s) => reapply(s).withGhost.searchAll(f, tabooProgramVars, isSound)
       // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
       // to select the equalities introduced by phi nodes.
-      case Phi(s) => Context(s).withInverseGhost.searchAll(f, tabooProgramVars, isSound)
+      case Phi(s) => reapply(s).withInverseGhost.searchAll(f, tabooProgramVars, isSound)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => Nil
       case po: ProveODE => findAll(po, po.ds, f) ++ findAll(po.dc, f)
@@ -249,7 +260,8 @@ case class Context(s: Statement) {
         /* @TODO (usability): If another recursive call finds a match for "finder", return that other match. But if *no*
              branch succeeds, somebody, somewhere should give the user an error message like
              "Ghost variable $x inaccessible because it would escape its scope" */
-        if (isGhost) {
+        // Hide ghost statements except when accessed from another ghost context.
+        if (isGhost && !outer.isGhost) {
           List()
         } else
           List((x, Equal(x, f)))
@@ -265,7 +277,6 @@ case class Context(s: Statement) {
     * @param ds A [[DiffStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  /* @TODO: Add support for fact binding in ODE body */
   private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder): List[(Ident, Formula)] = {
     ds match {
       case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!this.isInverseGhost)=>
@@ -317,7 +328,7 @@ case class Context(s: Statement) {
 
   // top-level search function wrapper.
   private def findAll(f: Finder): List[(Ident, Formula)] = {
-    searchAll(f, Set(), isSound = true)
+    withOuter.searchAll(f, Set(), isSound = true)
   }
 
   /* Get most recent formula (if any), bound to identifier [[id]]
@@ -335,7 +346,7 @@ case class Context(s: Statement) {
           id == x && !gotProgramVar
         }
     }
-    searchAll(f, Set(), isSound).map(_._2).headOption
+    withOuter.searchAll(f, Set(), isSound).map(_._2).headOption
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborate)
 

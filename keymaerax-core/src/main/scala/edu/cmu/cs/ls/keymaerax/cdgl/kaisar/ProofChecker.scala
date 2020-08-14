@@ -610,9 +610,7 @@ object ProofChecker {
           case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify")
         }
       case Ghost(s) =>
-        // @TODO: May need to apply/eliminate/rewind SSA assignments in order to achieve valid scope
-        // @TODO: Probably need isGhost flag to filter out unwanted assignments
-        val (ss, f) = apply(con, s)
+        val (ss, f) = apply(con.withGhost, s)
         val taboo = VariableSets(ss).boundVars
         val fv = StaticSemantics(f).fv
         if (taboo.intersect(fv.toSet).nonEmpty) {
@@ -620,7 +618,7 @@ object ProofChecker {
         }
         (Context(Ghost(ss.s)), True)
       case InverseGhost(s: Statement) =>
-        val (ss, f) = apply(con, s)
+        val (ss, f) = apply(con.withInverseGhost, s)
         (Context(InverseGhost(ss.s)), f)
       case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (con.:+(s), True)
       case Was(now, was) =>
