@@ -134,7 +134,7 @@ object Snapshot {
 
       override def postDiffS(kc: Context, s: DiffStatement): DiffStatement = {
         s match {
-          case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _)) => snap = snap.revisit(x); s
+          case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _), _) => snap = snap.revisit(x); s
           case _ => s
         }
       }
