@@ -575,7 +575,10 @@ object TactixLibrary extends HilbertCalculus
     * but is currently unprovable.
     * @see [[odeInvariant]]
     */
-  @Tactic("odeInvC", codeName = "odeInvC")
+  @Tactic("ODE Invariant Complete", codeName = "odeInvC",
+    premises = "*",
+    conclusion = "Γ, P |- [x'=f(x)&Q]P",
+    displayLevel="browse")
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
   // more

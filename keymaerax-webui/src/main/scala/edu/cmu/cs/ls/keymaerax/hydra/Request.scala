@@ -352,6 +352,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 }
                 case None => new CounterExampleResponse("cex.notool") :: Nil
               }
+              case None => new CounterExampleResponse("cex.none") :: Nil
             }
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
