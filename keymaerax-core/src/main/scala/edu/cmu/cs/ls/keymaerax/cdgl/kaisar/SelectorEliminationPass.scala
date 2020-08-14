@@ -39,13 +39,14 @@ class SelectorEliminationPass() {
         val got = kc.get(x, isSound = false)
         got  match {
           case Some(_) => pt
-          case None =>
-            // @TODO: Catch if program var is undefined
+          case None if VariableSets(kc).allVars.contains(x) =>
             ProgramVar(x)
+          case _ =>
+            throw ElaborationException(s"Tried to use unknown fact: $x. Typo?")
         }
       case ProofApp(m, n) => ProofApp(disambiguate(kc, m), disambiguate(kc, n))
       case ProofInstance(e) => ProofInstance(e)
-      case ProgramVar(x) => throw new Exception("Did not expect program variable proof term in selector elimination pass.")
+      case ProgramVar(x) => throw ElaborationException("Did not expect program variable proof term in selector elimination pass.")
     }
   }
 

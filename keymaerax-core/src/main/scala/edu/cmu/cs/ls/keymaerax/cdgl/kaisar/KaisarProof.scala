@@ -286,7 +286,10 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     else {
       val ode = asODESystem
       val result = Integrator(xys.toMap, timeVar.get, ode)
-      Some(result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") }))
+      val resultMap = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") })
+      val theTimeVar: Variable = if (result.size < xys.size) { xys.filter({case (x, f) => !resultMap.contains(x)}).head._1} else timeVar.get
+      val (timeX, timeF) = duration match {case Some((x, f)) => (x -> f) case None => (theTimeVar -> theTimeVar)}
+      Some((timeX, timeF) :: resultMap)
     }
   }
 
@@ -311,7 +314,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   }
 
   /** Get best avaiable solutions: true solutions if SSA has been performed, else dummy solutions */
-  lazy val bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
+  lazy val  bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
 
   // Note we may want a default variable like "t" if timeVar is none, but freshness checks need a context, not just the ODE.
   private lazy val inferredTimeVar: Option[Variable] = {

@@ -25,6 +25,7 @@ case class VariableSets (boundVars: Set[Variable], freeVars: Set[Variable], tabo
   def addTabooFuncs(f: Set[Ident]): VariableSets = VariableSets(boundVars, freeVars, tabooVars, tabooFunctions.++(f), tabooFacts)
   def addTabooFacts(p: Set[Ident]): VariableSets = VariableSets(boundVars, freeVars, tabooVars, tabooFunctions, tabooFacts.++(p))
   def forgetBound: VariableSets = VariableSets(Set(), freeVars, tabooVars, tabooFunctions, tabooFacts)
+  def allVars: Set[Variable] = freeVars ++ boundVars
   /** Set union  */
   def ++(other: VariableSets): VariableSets =
     VariableSets(boundVars.++(other.boundVars), freeVars.++(other.freeVars), tabooVars.++(other.tabooVars), tabooFunctions.++(other.tabooFunctions), tabooFacts.++(other.tabooFacts))
@@ -107,7 +108,7 @@ object VariableSets {
     * @return All bound and taboo variables of statement
     */
   def apply(diffStatement: DiffStatement, isGhost: Boolean, isInverseGhost: Boolean): VariableSets = diffStatement match {
-    case AtomicODEStatement(dp) => ofBound(Set(dp.xp.x), isGhost).addFreeVars(StaticSemantics(dp.e).toSet)
+    case AtomicODEStatement(dp, _) => ofBound(Set(dp.xp.x), isGhost).addFreeVars(StaticSemantics(dp.e).toSet)
     case DiffProductStatement(l, r) => apply(l, isGhost, isInverseGhost).++(apply(r, isGhost, isInverseGhost))
     case DiffGhostStatement(ds) => apply(ds, isGhost = true, isInverseGhost = false)
     case InverseDiffGhostStatement(ds) => apply(ds, isGhost = false, isInverseGhost = true)

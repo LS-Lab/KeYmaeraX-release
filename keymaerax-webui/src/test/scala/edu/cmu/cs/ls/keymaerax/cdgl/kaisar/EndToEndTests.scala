@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
 import edu.cmu.cs.ls.keymaerax.tags._
@@ -156,7 +157,11 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[?(T>=0); t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
   }
 
-  // @TODO: elaborator should catch unbound references
+  it should "catch unbound fact reference in provable proof" in withMathematica { _ =>
+    val pfStr = "!xFact:(true) using yFact by auto;"
+    a[ElaborationException] shouldBe thrownBy(check(pfStr))
+  }
+
   it should "prove and then use dc-assign" in withMathematica { _ =>
     val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
     val ff = check(pfStr)
