@@ -19,6 +19,12 @@ class EndToEndTests extends TacticTestBase {
       ff shouldBe "[?x>=1;x_0:=x;{x_1:=x_0+1; {?x_1>=1;}^@ x_0:=x_1;}*{?x_0>=0;}^@]true".asFormula
   }
 
+  it should "resolve lets in assertions" in withMathematica { _ =>
+    val pfStr = "let square(x) = x*x; !fact:(square(2) = 4) by auto;  !also:(square(2) >= 2) using fact by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[{?(2*2 = 4);}^@ {?(2*2 >= 2);}^@]true".asFormula
+  }
+
   it should "resolve simple backward state labels:" in withMathematica { _ =>
     val pfStr =
         "init: ?xZero:(x >= 1);" +

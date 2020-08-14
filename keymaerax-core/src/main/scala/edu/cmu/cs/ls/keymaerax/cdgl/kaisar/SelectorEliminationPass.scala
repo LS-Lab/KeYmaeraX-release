@@ -99,6 +99,7 @@ class SelectorEliminationPass() {
         val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
         val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)
+      case ByProof(pf) => (List(), ByProof(apply(Block(pf)) :: Nil))
       case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => (List(), m)
     }
   }
@@ -111,10 +112,12 @@ class SelectorEliminationPass() {
         // If left branch introduces domain constraint assumptions / assertions, then assertions in right half can mention.
         val dsR = collectPts(kc.:+(dsL.collect.constraints.s), r)
         (DomAnd(dsL, dsR))
+      case DomAssume(x, f) => DomAssume(x, kc.elaborateFunctions(f))
       case DomAssert(x, f, m) =>
         val meth = disambiguate(kc, m, f)
-        DomAssert(x, f, meth)
-      case _: DomWeak | _: DomAssume | _: DomModify => dc
+        DomAssert(x, kc.elaborateFunctions(f), meth)
+      case DomModify(x, f) => DomModify(x, kc.elaborateFunctions(f))
+      case DomWeak(dc) => DomWeak(dc)
     }
   }
 
@@ -137,11 +140,36 @@ class SelectorEliminationPass() {
             val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
             val fullSels = keptPts.map(ForwardSelector) ++ noteSels
             val finalMeth = Using(fullSels, meth)
-            Some(Block(notes.:+(Assert(e, f, finalMeth))))
+            Some(Block(notes.:+(Assert(e, kc.elaborateFunctions(f), finalMeth))))
           case ProveODE(ds, dc) =>
             val dom = collectPts(kc, dc)
             Some(ProveODE(ds, dom))
           case _ => None
+        }
+      }
+
+      private def elaborateODE(kc: Context, ds: DiffStatement): DiffStatement = {
+        ds match {
+          case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kc.elaborateFunctions(e)), solFact)
+          case DiffProductStatement(l, r) => DiffProductStatement(elaborateODE(kc, l), elaborateODE(kc, r))
+          case DiffGhostStatement(ds) => DiffGhostStatement(elaborateODE(kc, ds))
+          case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(elaborateODE(kc, ds))
+        }
+      }
+
+      // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
+      override def postS(kc: Context, s: Statement): Statement = {
+        s match {
+          case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f))
+          case Modify(pat, Left(f)) => Modify(pat, Left(kc.elaborateFunctions(f)))
+          // Elaborate all functions that are defined *before* f
+          case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e))
+          case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e))
+          case While(x, j, s) => While(x, kc.elaborateFunctions(j), s)
+          case BoxLoop(s, Some((ihk, ihv))) => BoxLoop(s, Some((ihk, kc.elaborateFunctions(ihv))))
+          // dc was elaborated in preS
+          case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, ds), dc)
+          case s => s
         }
       }
     })

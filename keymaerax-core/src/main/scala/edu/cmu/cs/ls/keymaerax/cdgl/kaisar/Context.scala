@@ -122,18 +122,21 @@ case class Context(s: Statement) {
 
   /** The set of function symbols defined in a statement. This includes proofs which are defined under a branch or under
     * a binder. */
-  def signature: Set[Function] = {
+  def signature: Map[Function, LetFun] = {
     s match {
-      case lf: LetFun => Set(lf.asFunction)
-      case Block(ss) => ss.flatMap(s => Context(s).signature).toSet
+      case lf: LetFun => Map(lf.asFunction -> lf)
+      case Block(ss) => ss.flatMap(s => Context(s).signature).toMap
       case BoxChoice(l, r) => Context(l).signature ++ Context(r).signature
-      case Switch(sel, pats) => pats.map(_._3).flatMap(Context(_).signature).toSet
+      case Switch(sel, pats) => pats.map(_._3).flatMap(Context(_).signature).toMap
       case Ghost(s) => Context(s).signature
       case Was(now, was) => Context(now).signature
       case While(_, _, body) => Context(body).signature
       case BoxLoop(body, _) => Context(body).signature
+      case BoxLoopProgress(bl, progress) => Context(progress).signature
+      case BoxChoiceProgress(bl, i, progress) => Context(progress).signature
+      case SwitchProgress(bl, i, progress) => Context(progress).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match => Set()
+           | _: Label | _: Match => Map()
     }
   }
 
@@ -432,7 +435,58 @@ case class Context(s: Statement) {
   private def destabilize(f: Formula): Formula =
     SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
 
+  /** Final elaboration step used in proof-checker or after deterritorialize pass */
   def elaborate(f: Formula): Formula = destabilize(f)
+
+  private def unpackPairs(t: Term): List[Term] = {
+    t match {
+      case Nothing => Nil
+      case Pair(l, r) => unpackPairs(l) ++ unpackPairs(r)
+      case f => List(f)
+    }
+  }
+
+  private def replaceFunctions(t: Term): Option[Term] = {
+    println("Traverse:" + t)
+    t match {
+      case f: FuncOf =>
+        println("funcof")
+        signature.get(f.func) match {
+          case Some(lf) =>
+            println("user-defined")
+            val elabChild = elaborateFunctions(f.child)
+            val elabArgs = unpackPairs(elabChild)
+            if (elabArgs.length != lf.args.length) {
+              println("arg mismatch")
+              throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}")
+            }
+            val argMap = lf.args.zip(elabArgs).toMap
+            Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Term])
+          case None =>
+            println("case none")
+            KaisarProof.getAt(f) match {
+              case Some((trm, lr)) =>
+                println("Found @")
+                Some(KaisarProof.makeAt(elaborateFunctions(trm), LabelRef(lr.label, lr.args.map(elaborateFunctions))))
+              case None =>
+                println("Not @")
+                if (KaisarProof.isBuiltinFunction(f.func)) {
+                  println("builtin funcof")
+                  val elabChild = elaborateFunctions(f.child)
+                  Some(FuncOf(f.func, elabChild))
+                } else {
+                  println("unknown function")
+                  throw ElaborationException(s"Unknown function ${f.func}")
+                }
+            }
+        }
+      case _ => println("Not funcof"); None
+    }
+  }
+
+  /** Elaborate user-defined functions in an expression*/
+  def elaborateFunctions(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f))
+  def elaborateFunctions(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f))
 
   def lastFact: Option[(Ident, Formula)] = {
     val (fml, phis) = lastFactMobile

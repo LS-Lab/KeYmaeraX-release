@@ -159,7 +159,7 @@ object ProofChecker {
   private def admitLetFun(con: Context, lf: LetFun): Unit = {
     val LetFun(f, args, body) = lf
     val sigBody = StaticSemantics.signature(body)
-    val sig = con.signature
+    val sig = con.signature.keySet
     val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig)
     if (sig.contains(lf.asFunction)) {
       throw ProofCheckException(s"Multiply-defined function definition ${f.name}")

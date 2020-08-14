@@ -56,6 +56,7 @@ object KaisarProof {
     fs.foldRight[Term](Nothing)(Pair)
   }
 
+  // @TODO: This also gets used in SelectorElimination, so factor in out and make it public
   private def unpairTerms(f: Term): List[Term] = {
     f match {
       case Nothing => Nil
@@ -69,9 +70,11 @@ object KaisarProof {
     FuncOf(Function("at", None, Tuple(Real, Unit), Real, interpreted = true), Pair(f, labelFun))
   }
 
+  private val atFunction: Function = Function("at", None, Tuple(Real, Unit), Real, true)
+
   def getAt(t: Term): Option[(Term, LabelRef)] = {
     t match {
-      case FuncOf(Function("at", None, Tuple(Real, Unit), Real, true), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
+      case FuncOf(atFunction, Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
         Some(e, LabelRef(label, unpairTerms(args)))
       case _ => None
     }
@@ -88,7 +91,6 @@ object KaisarProof {
   val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)
   val min: Function = Function("min", domain = Tuple(Real, Real), sort = Real, interpreted = true)
   val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
-  val builtin: Set[Function] = Set(min, max, abs)
 
   // We reuse expression syntax for patterns over expressions. We use an interpreted function wild() for the wildcard
   // patttern "*" or "_". This is elaborated before proofchecking
@@ -96,8 +98,13 @@ object KaisarProof {
 
   /** [[askLaterT]] is strictly used in the internal representation. If a term cannot be elaborated until a later
     * proof-checking pass, then symbol [[askLaterT]] is used to represent a dummy term */
-  val askLaterT: FuncOf = FuncOf(Function("askLater", domain = Unit, sort = Real, interpreted = true), Nothing)
-  val askLaterP: PredOf = PredOf(Function("askLater", domain = Unit, sort = Bool, interpreted = true), Nothing)
+  val askLaterTF: Function = Function("askLater", domain = Unit, sort = Real, interpreted = true)
+  val askLaterPF: Function = Function("askLater", domain = Unit, sort = Bool, interpreted = true)
+  val askLaterT: FuncOf = FuncOf(askLaterTF, Nothing)
+  val askLaterP: PredOf = PredOf(askLaterPF, Nothing)
+  val builtin: Set[Function] = Set(min, max, abs, askLaterTF, askLaterPF, wild.func, init.func, stable, atFunction)
+
+  def isBuiltinFunction(f: Function): Boolean = builtin.contains(f)
 
   // Proof statement Block() sequences a list of statements. [[flatten]] flattens the tree structure induced by the
   // [[Block]] constructor.
