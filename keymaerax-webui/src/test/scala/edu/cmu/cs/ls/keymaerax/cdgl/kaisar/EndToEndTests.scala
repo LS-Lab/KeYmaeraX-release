@@ -229,7 +229,10 @@ class EndToEndTests extends TacticTestBase {
   }
 
 
-  // @TODO: Write a test that exercises ODE ghost scope escaping
+  it should "allow ghost references in later ghosts" in withMathematica { _ =>
+    val pfStr = "/++ x := 1; ++/ y := 2; /++ x := x + 2; !xVal:(x=3) by auto; ++/"
+    check(pfStr) shouldBe "[y_0:= 2;]true".asFormula
+  }
   // @TODO: Write tests that exercise pattern match statements, let statements, pattern selectors,
 
   /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
