@@ -10,8 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
+import spray.json.DefaultJsonProtocol.StringJsonFormat
 
 import scala.util.Try
+import spray.json._
 
 class AssessmentProverTests extends TacticTestBase {
 
@@ -422,6 +424,154 @@ class AssessmentProverTests extends TacticTestBase {
       ("Reflection", 0) :: ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
         ("Robot simple chase game", 1) :: Nil
     run(problems)
+  }
+
+  "Submission extraction" should "extract answers in the oder listed in the file" in {
+    val s = """{
+      | "children": [
+      |   {
+      |     "type": "segment",
+      |     "otherStuff": [ { "lots": "of", "it": "?" }],
+      |     "children": [
+      |       {
+      |         "type": "segment",
+      |         "not actually": "a segment with questions",
+      |         "point_value": 0.0
+      |       },
+      |       {
+      |         "type": "segment",
+      |         "some intermediate": "segment that does not yet have the question prompt",
+      |         "children": [
+      |           {
+      |             "type": "atom",
+      |             "name": "problem",
+      |             "id": "25053",
+      |             "point_value": 3.0,
+      |             "title": "Problem block 1 (2 questions)",
+      |             "prompts": [
+      |               {
+      |                 "point_value": 2.0,
+      |                 "body": "A question",
+      |                 "id": "141",
+      |                 "children": [
+      |                   {
+      |                     "id": "142",
+      |                     "body": "y>=0"
+      |                   }
+      |                 ]
+      |               },
+      |               {
+      |                 "body": "This question has an answer with a syntax error",
+      |                 "point_value": 1.0,
+      |                 "id": "143",
+      |                 "children": [
+      |                   {
+      |                     "id": "144",
+      |                     "body": "x^2>=+0"
+      |                   }
+      |                 ]
+      |               }
+      |             ]
+      |           }
+      |         ],
+      |         "point_value": 3.0
+      |       },
+      |       {
+      |         "type": "segment",
+      |         "this segment": "has prompts but none of them auto-gradable (worth no points)",
+      |         "children": [
+      |           {
+      |             "type": "segment",
+      |             "point_value": 0.0
+      |           },
+      |           {
+      |             "type": "atom",
+      |             "name": "problem",
+      |             "title": "Problem block 2 (one non-autogradable question)",
+      |             "id": "17218",
+      |             "prompts": [
+      |                {
+      |                  "id": "145",
+      |                  "body": "This is the question",
+      |                  "children": [
+      |                    {
+      |                      "id": "146",
+      |                      "body": "Here is an answer",
+      |                      "and": "other stuff"
+      |                    }
+      |                  ],
+      |                  "point_value": 0.0
+      |                }
+      |             ],
+      |             "point_value": 0.0
+      |           }
+      |         ],
+      |         "point_value": 0.0
+      |       },
+      |       {
+      |         "point_value": 1.0,
+      |         "type": "atom",
+      |         "name": "problem",
+      |         "id": "25160",
+      |         "title": "Problem block 3 (single question)",
+      |         "this entry": "has one question",
+      |         "prompts": [
+      |           {
+      |             "id": "147",
+      |             "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
+      |             "children": [
+      |               {
+      |                 "body": "x>=0",
+      |                 "id": "148"
+      |               }
+      |             ],
+      |             "point_value": 1.0
+      |           }
+      |         ]
+      |       }
+      |     ],
+      |     "point_value": 4.0
+      |   },
+      |   {
+      |     "type": "segment",
+      |     "point_value": 1.0,
+      |     "children": [
+      |       {
+      |         "type": "atom",
+      |         "name": "problem",
+      |         "id": "25057",
+      |         "title": "Problem block in second segment",
+      |         "point_value": 1.0,
+      |         "prompts": [
+      |           {
+      |             "body": " A question in the second segment",
+      |             "id": "149",
+      |             "point_value": 1.0,
+      |             "children": [
+      |               {
+      |                 "id": "150",
+      |                 "body": "Second segment answer"
+      |               }
+      |             ]
+      |           }
+      |         ]
+      |       }
+      |     ]
+      |   }
+      | ]
+      |}""".stripMargin
+    Submission.extract(s.parseJson.asJsObject) shouldBe List(
+      Submission.Problem(25053, "Problem block 1 (2 questions)", List(
+        Submission.Prompt(141, 2.0, Some(Submission.Answer(142, "y>=0"))),
+        Submission.Prompt(143, 1.0, Some(Submission.Answer(144, "x^2>=+0")))
+      )),
+      Submission.Problem(25160, "Problem block 3 (single question)", List(
+        Submission.Prompt(147, 1.0, Some(Submission.Answer(148, "x>=0")))
+      )),
+      Submission.Problem(25057, "Problem block in second segment", List(
+        Submission.Prompt(149, 1.0, Some(Submission.Answer(150, "Second segment answer")))
+      ))
+    )
   }
 
   private def run(problems: List[Problem]): Unit = {
