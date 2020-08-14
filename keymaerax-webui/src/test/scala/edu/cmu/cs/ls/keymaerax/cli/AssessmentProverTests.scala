@@ -551,10 +551,19 @@ class AssessmentProverTests extends TacticTestBase {
       |             "body": " A question in the second segment",
       |             "id": "149",
       |             "point_value": 1.0,
+      |             "is_question_any_choice": false,
       |             "children": [
       |               {
       |                 "id": "150",
-      |                 "body": "Second segment answer"
+      |                 "body": "Sound",
+      |                 "is_selected": true,
+      |                 "is_choice": true
+      |               },
+      |               {
+      |                 "id": "151",
+      |                 "body": "Unsound",
+      |                 "is_selected": false,
+      |                 "is_choice": true
       |               }
       |             ]
       |           }
@@ -566,14 +575,16 @@ class AssessmentProverTests extends TacticTestBase {
       |}""".stripMargin
     Submission.extract(s.parseJson.asJsObject) shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", List(
-        Submission.Prompt(141, 2.0, Some(Submission.Answer(142, "y>=0"))),
-        Submission.Prompt(143, 1.0, Some(Submission.Answer(144, "x^2>=+0")))
+        Submission.Prompt(141, 2.0, List(Submission.TextAnswer(142, "y>=0"))),
+        Submission.Prompt(143, 1.0, List(Submission.TextAnswer(144, "x^2>=+0")))
       )),
       Submission.Problem(25160, "Problem block 3 (single question)", List(
-        Submission.Prompt(147, 1.0, Some(Submission.Answer(148, "x>=0")))
+        Submission.Prompt(147, 1.0, List(Submission.TextAnswer(148, "x>=0")))
       )),
       Submission.Problem(25057, "Problem block in second segment", List(
-        Submission.Prompt(149, 1.0, Some(Submission.Answer(150, "Second segment answer")))
+        Submission.Prompt(149, 1.0, List(
+          Submission.ChoiceAnswer(150, "Sound", isSelected=true),
+          Submission.ChoiceAnswer(151, "Unsound", isSelected=false)))
       ))
     ))
   }

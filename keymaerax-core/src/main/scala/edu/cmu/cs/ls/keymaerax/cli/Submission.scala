@@ -13,11 +13,19 @@ object Submission {
   private val NAME = "name"
   private val TYPE = "type"
   private val BODY = "body"
+  private val IS_CHOICE = "is_choice"
+  private val IS_FILL_IN_GAP = "is_fill_in_the_gap"
+  private val IS_SELECTED = "is_selected"
   private val PROMPTS = "prompts"
 
-  case class Answer(id: Long, text: String)
+  trait Answer {
+    val id: Long
+    val text: String
+  }
+  case class TextAnswer(id: Long, text: String) extends Answer
+  case class ChoiceAnswer(id: Long, text: String, isSelected: Boolean) extends Answer
   /** A single quiz question with submitted answer. */
-  case class Prompt(id: Long, points: Double, submission: Option[Answer])
+  case class Prompt(id: Long, points: Double, answers: List[Answer])
   /** A problem segment. */
   case class Problem(id: Long, title: String, prompts: List[Prompt])
   /** A quiz chapter. */
@@ -65,24 +73,34 @@ object Submission {
     Problem(id, title, prompts)
   }
 
-  /** Extracts a prompt and the answer submitted in response to it. */
+  /** Extracts a prompt and the answers submitted in response to it. */
   private def extractPrompt(root: JsObject): Prompt = {
     val id = root.fields(ID) match { case JsString(n) => n.toLong }
     val points = root.fields(POINT_VALUE) match { case JsNumber(n) => n.toDouble }
-    val submission = root.fields(CHILDREN) match {
+    val answers = root.fields(CHILDREN) match {
       case JsArray(s) =>
-        require(s.size <= 1, "Expected at most one submission, but got " + s.size + " for prompt " + id)
-        s.headOption.map(sub => {
+        s.map(sub => {
           val fields = sub.asJsObject.fields
           val id = fields(ID) match { case JsString(n) => n.toLong }
-          //@todo assumes submission will be in the prompt body
-          val answer = fields(BODY) match {
-            case JsString(s) => s
+          (fields.get(IS_CHOICE), fields.get(IS_FILL_IN_GAP)) match {
+            case (Some(JsBoolean(true)), None | Some(JsBoolean(false))) =>
+              val text = fields(BODY) match { case JsString(s) => s }
+              //@todo assumes selected option will be marked
+              val answer = fields(IS_SELECTED) match {
+                case JsBoolean(b) => b
+              }
+              ChoiceAnswer(id, text, answer)
+            case (None | Some(JsBoolean(false)), None | Some(JsBoolean(_))) =>
+              //@todo assumes submission will be in the prompt body
+              val answer = fields(BODY) match {
+                case JsString(s) => s
+              }
+              TextAnswer(id, answer)
           }
-          Answer(id, answer)
-        })
+        }).toList
+      case _ => List.empty
     }
-    Prompt(id, points, submission)
+    Prompt(id, points, answers)
   }
 
 }
