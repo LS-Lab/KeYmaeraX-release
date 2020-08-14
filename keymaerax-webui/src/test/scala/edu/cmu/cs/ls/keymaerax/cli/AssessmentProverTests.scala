@@ -427,7 +427,11 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Submission extraction" should "extract answers in the oder listed in the file" in {
-    val s = """{
+    //@todo assumes that there will be information to identify the chapter in the tex source (outermost title, or label)
+    //@todo assumes that answers will be in the prompt body
+    val s = """
+      |{"id": "11",
+      | "label": "ch:qdiffcut",
       | "children": [
       |   {
       |     "type": "segment",
@@ -560,7 +564,7 @@ class AssessmentProverTests extends TacticTestBase {
       |   }
       | ]
       |}""".stripMargin
-    Submission.extract(s.parseJson.asJsObject) shouldBe List(
+    Submission.extract(s.parseJson.asJsObject) shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", List(
         Submission.Prompt(141, 2.0, Some(Submission.Answer(142, "y>=0"))),
         Submission.Prompt(143, 1.0, Some(Submission.Answer(144, "x^2>=+0")))
@@ -571,7 +575,7 @@ class AssessmentProverTests extends TacticTestBase {
       Submission.Problem(25057, "Problem block in second segment", List(
         Submission.Prompt(149, 1.0, Some(Submission.Answer(150, "Second segment answer")))
       ))
-    )
+    ))
   }
 
   private def run(problems: List[Problem]): Unit = {

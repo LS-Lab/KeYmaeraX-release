@@ -9,6 +9,7 @@ object Submission {
   private val POINT_VALUE = "point_value"
   private val TITLE = "title"
   private val ID = "id"
+  private val LABEL = "label"
   private val NAME = "name"
   private val TYPE = "type"
   private val BODY = "body"
@@ -19,8 +20,17 @@ object Submission {
   case class Prompt(id: Long, points: Double, submission: Option[Answer])
   /** A problem segment. */
   case class Problem(id: Long, title: String, prompts: List[Prompt])
+  /** A quiz chapter. */
+  case class Chapter(id: Long, label: String, problems: List[Problem])
 
-  def extract(root: JsObject): List[Problem] = {
+  def extract(root: JsObject): Chapter = {
+    val id = root.fields(ID) match { case JsString(n) => n.toLong }
+    val label = root.fields(LABEL) match { case JsString(s) => s }
+    val problems = extractProblems(root)
+    Chapter(id, label, problems)
+  }
+
+  def extractProblems(root: JsObject): List[Problem] = {
     root.fields.get(CHILDREN) match {
       case Some(JsArray(segments)) =>
         segments.flatMap({
@@ -28,7 +38,7 @@ object Submission {
             //@note only auto-grade those segments that are worth points
             s.fields.get(POINT_VALUE) match {
               case Some(JsNumber(n)) if n>0 => s.fields.get(TYPE) match {
-                case Some(JsString("segment")) => extract(s)
+                case Some(JsString("segment")) => extractProblems(s)
                 case Some(JsString("atom")) => s.fields(NAME) match {
                   case JsString("problem") => Some(extractProblem(s))
                   case _ => None
