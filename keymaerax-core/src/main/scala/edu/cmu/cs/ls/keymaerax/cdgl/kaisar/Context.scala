@@ -431,14 +431,22 @@ object Context {
   /* @TODO: Add support for fact binding in ODE body */
   private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder, isGhost: Boolean , isInverseGhost: Boolean): List[(Ident, Formula)] = {
     ds match {
-      case AtomicODEStatement(AtomicODE(xp, e), _) if(!isInverseGhost)=>
+      case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
         // whether "fake" solutions exist already
         odeContext.bestSolutions match {
           case Some(sols) =>
             val solMap = sols.toMap
-            if (solMap.contains(xp.x)  && f(xp.x, Equal(xp.x, solMap(xp.x)), true)) {
-              List((xp.x, Equal(xp.x, solMap(xp.x))))
+            val (ident, isUnnamed) = solIdent match {case Some(id) => (id, false) case None => (xp.x, true)}
+            if (solMap.contains(xp.x)) {
+              val eqFact = Equal(xp.x, solMap(xp.x))
+              val fullFact = odeContext.timeVar match { case None => eqFact case Some(tvar) => And(eqFact, GreaterEqual(tvar, Number(0)))}
+              // Search using full fact and explicit name if possible
+              if (f(ident, fullFact, isUnnamed))
+                List((ident, fullFact))
+              // To better support ProgramVar lookups, always try f() with *just* the assignment fact as well, but pull
+              // a fast one and return the whole fact
+              else if (!isUnnamed && f(xp.x, eqFact, true)) List((xp.x, eqFact)) else List()
             } else List()
           case None => List()
         }

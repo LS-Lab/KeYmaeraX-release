@@ -307,7 +307,6 @@ object ProofChecker {
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
-    // @TODO: if assertion name is found in context, or is lastFact then look up. May require generalizing lastFact to lastFacts that returns all facts since last state change.
     val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
     val filteredSelectors = m.selectors.filter({case ForwardSelector(ProofVar(x)) if allCutNames.contains(x) => false case _ => true})
     /* Check base case. Consult context, report error if wrong fact proved in context, attempt automatic proof otherwise.*/
@@ -534,7 +533,7 @@ object ProofChecker {
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
-      case Assert(_ , f, m) =>
+      case Assert(x , f, m) =>
         val elabF = con.elaborate(f)
         apply(con, elabF, m)
         (Context(s), Box(Dual(Test(elabF)), True))

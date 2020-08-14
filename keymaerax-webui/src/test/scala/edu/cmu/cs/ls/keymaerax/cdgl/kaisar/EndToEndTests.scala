@@ -120,6 +120,25 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[t_0:=0; x_0:= 1; {t_1 := t_0;x_1:=x_0;}{t_1' = 1, x_1' = -1 & x_1>=0}]true".asFormula
   }
 
+
+  it should "automatically find base case assumption in diffcut" in withMathematica { _ =>
+    val pfStr = "?(y>=0); {y' = 1 & !dc:(y >= 0) by induction};"
+    val ff = check(pfStr)
+    ff shouldBe "[?(y>=0); y_0:=y;{y_0' = 1}]true".asFormula
+  }
+
+  it should "allow solution to be looked up later as assumption" in withMathematica { _ =>
+    val pfStr = "?xInit:(x:=0); ?tInit:(t:=0); {t' = 1, xSol: x' = 2}; !xFin:(x = 2*t) using xInit tInit xSol by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[x_0 := 0; t_0:=0; {x_1 := x_0; t_1 := t_0;};{t_1' = 1, x_1' = 2}; {?(x_1 = 2*t_1);}^@]true".asFormula
+  }
+
+  it should "include duration info when looking any solution" in withMathematica { _ =>
+    val pfStr = "?xInit:(x:=0); ?tInit:(t:=0); {t' = 1, xSol: x' = 2}; !xFin:(x >= 0) using xInit tInit xSol by auto;"
+    val ff = check(pfStr)
+    ff shouldBe "[x_0 := 0; t_0:=0; {x_1 := x_0; t_1 := t_0;};{t_1' = 1, x_1' = 2}; {?(x_1 >= 0);}^@]true".asFormula
+  }
+
   it should "prove diffcut" in withMathematica { _ =>
     val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"
     val ff = check(pfStr)
@@ -205,14 +224,10 @@ class EndToEndTests extends TacticTestBase {
   }
 
 
-  // @TODO: Write a test that gives a name to an ODE solution equation
   // @TODO: Write a test that exercises ODE ghost scope escaping
-  // @TODO: Write a test that uses an alternative ?x:P syntax for domain constraints
-  // @TODO: Write a test that expects initial values to be automatically found in dI
   // @TODO: Write tests that exercise pattern match statements, let statements, pattern selectors,
 
-  /* @TODO: This test would be prettier and faster if (1) ODE solution assignments can be annotated and
-   * (2) Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
+  /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
    */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr =
@@ -230,8 +245,9 @@ class EndToEndTests extends TacticTestBase {
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{x' = v, v' = a, t' = 1 & ?dc: (t <= T & v>=0)};" +
-        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
+        "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0)};" +
+        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " +
+          "using xSol vSol tSol safeAcc inv dc acc brk tstep ... by auto;" +
       "}*" +
        "!safe:(x <= d & v >= 0) using inv brk  by auto;"
     val ff = check(pfStr)
@@ -273,9 +289,9 @@ class EndToEndTests extends TacticTestBase {
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{x' = v, v' = a, t' = 1 & ?dc: (t <= T & v>=0)};" +
+        "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0)};" +
         "ode(a, t):" +
-        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep ... by auto;" +
+        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol ... by auto;" +
         "}*" +
         "!safe:(x <= d & v >= 0) using inv brk  by auto;"
     val ff = check(pfStr)
