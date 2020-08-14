@@ -447,40 +447,29 @@ case class Context(s: Statement) {
   }
 
   private def replaceFunctions(t: Term): Option[Term] = {
-    println("Traverse:" + t)
     t match {
       case f: FuncOf =>
-        println("funcof")
         signature.get(f.func) match {
           case Some(lf) =>
-            println("user-defined")
             val elabChild = elaborateFunctions(f.child)
             val elabArgs = unpackPairs(elabChild)
-            if (elabArgs.length != lf.args.length) {
-              println("arg mismatch")
+            if (elabArgs.length != lf.args.length)
               throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}")
-            }
             val argMap = lf.args.zip(elabArgs).toMap
             Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Term])
           case None =>
-            println("case none")
             KaisarProof.getAt(f) match {
               case Some((trm, lr)) =>
-                println("Found @")
                 Some(KaisarProof.makeAt(elaborateFunctions(trm), LabelRef(lr.label, lr.args.map(elaborateFunctions))))
               case None =>
-                println("Not @")
                 if (KaisarProof.isBuiltinFunction(f.func)) {
-                  println("builtin funcof")
                   val elabChild = elaborateFunctions(f.child)
                   Some(FuncOf(f.func, elabChild))
-                } else {
-                  println("unknown function")
+                } else
                   throw ElaborationException(s"Unknown function ${f.func}")
-                }
             }
         }
-      case _ => println("Not funcof"); None
+      case _ => None
     }
   }
 

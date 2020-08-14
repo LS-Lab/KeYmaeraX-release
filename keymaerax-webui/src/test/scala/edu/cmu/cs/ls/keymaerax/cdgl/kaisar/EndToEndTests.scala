@@ -25,6 +25,18 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[{?(2*2 = 4);}^@ {?(2*2 >= 2);}^@]true".asFormula
   }
 
+  it should "support let inside @" in withMathematica { _ =>
+    val pfStr = "let square(x) = x*x; !eq:(square(x)@last = 4) by auto; x:= 1; x:=3; x:=2; last:"
+    val ff = check(pfStr)
+    ff shouldBe "[{?(2 * 2 = 4);}^@ x_0 := 1; x_1 := 3; x_2 := 2;]true".asFormula
+  }
+
+  it should "support @ inside of let" in withMathematica { _ =>
+    val pfStr = "let square(x) = (x*x)@last; !eq:(square(x) = 4) by auto; x:= 1; x:=3; x:=2; last:"
+    val ff = check(pfStr)
+    ff shouldBe "[{?(2 * 2 = 4);}^@ x_0 := 1; x_1 := 3; x_2 := 2;]true".asFormula
+  }
+
   it should "resolve simple backward state labels:" in withMathematica { _ =>
     val pfStr =
         "init: ?xZero:(x >= 1);" +
