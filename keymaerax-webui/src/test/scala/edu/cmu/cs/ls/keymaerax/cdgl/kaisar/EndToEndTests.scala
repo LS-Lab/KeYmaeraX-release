@@ -301,23 +301,24 @@ class EndToEndTests extends TacticTestBase {
 
   it should "Prove 1d car safety with forward labels" in withMathematica { _ =>
     val pfStr =
-      "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
-        "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
+         "let SB() = (v^2/(2*B)); " +
+        "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
+        "!inv:(SB() <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
         "{{switch {" +
-        "case accel: ((v^2/(2*B))@ode(A, T) <= (d-x)@ode(A, T)) =>" +
+        "case accel: ((SB())@ode(A, T) <= (d-x)@ode(A, T)) =>" +
         "  ?accA:(a := A);" +
-        "  !safe1:((v^2/(2*B))@ode(a, T) <= (d-x)@ode(a, T)) using accel acc accA inv brk tstep ... by auto;" +
+        "  !safe1:((SB())@ode(a, T) <= (d-x)@ode(a, T)) using accel acc accA inv brk tstep ... by auto;" +
         "  note safeAcc = andI(safe1, accA);" +
-        "case brake: ((v^2/(2*B))@ode(A, T) + 1 >= (d-x)@ode(A, T)) =>" +
+        "case brake: ((SB())@ode(A, T) + 1 >= (d-x)@ode(A, T)) =>" +
         "  ?accB:(a := -B);" +
         "  ?fast:(v >= B*T);" +
-        "  !safe2:((v^2/(2*B))@ode(a, T) <= (d-x)@ode(a, T)) using brake acc accB brk inv tstep fast ... by auto;" +
+        "  !safe2:((SB())@ode(a, T) <= (d-x)@ode(a, T)) using brake acc accB brk inv tstep fast ... by auto;" +
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
         "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0)};" +
         "ode(a, t):" +
-        "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol ... by auto;" +
+        "!invStep: (SB() <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol ... by auto;" +
         "}*" +
         "!safe:(x <= d & v >= 0) using inv brk  by auto;"
     val ff = check(pfStr)

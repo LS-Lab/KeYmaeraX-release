@@ -169,6 +169,7 @@ class SelectorEliminationPass() {
           case BoxLoop(s, Some((ihk, ihv))) => BoxLoop(s, Some((ihk, kc.elaborateFunctions(ihv))))
           // dc was elaborated in preS
           case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, ds), dc)
+          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kc.elaborateFunctions(f), b)}))
           case s => s
         }
       }

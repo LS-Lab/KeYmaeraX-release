@@ -253,7 +253,7 @@ case class Note(x: Ident, proof: ProofTerm, var annotation: Option[Formula] = No
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
 // definition site of the function. Scope is lexical and functions must not be recursive for soundness.
 case class  LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement {
-  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real)
+  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Real)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
 case class Match(pat: Expression, e: Expression) extends Statement

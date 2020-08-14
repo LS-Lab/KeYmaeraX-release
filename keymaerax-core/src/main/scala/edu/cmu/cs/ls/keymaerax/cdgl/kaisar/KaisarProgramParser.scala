@@ -69,10 +69,11 @@ object ExpressionParser {
     map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
 
   def funcOf[_: P]: P[FuncOf] =
-    (ident ~ "(" ~ term.rep(min = 1, sep = ",") ~ ")").map({case (f, args) =>
+    // note: user-specified let definitions can have 0 args
+    (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
       val builtins = Set("min", "max", "abs")
-      val fn = Function(f.name, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real, interpreted = builtins.contains(f.name))
-      FuncOf(fn, args.reduceRight(Pair))
+      val fn = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Real, interpreted = builtins.contains(f.name))
+      FuncOf(fn, args.foldRight[Term](Nothing)(Pair))
     })
 
   def parenTerm[_: P]: P[Term] = (("(" ~ term ~ ")"))

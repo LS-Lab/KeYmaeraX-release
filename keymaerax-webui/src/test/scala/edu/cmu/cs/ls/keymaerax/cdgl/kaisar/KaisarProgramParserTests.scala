@@ -319,6 +319,11 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("note conj = andI(X, Y);", pp.statement(_)) shouldBe Note("conj".asVariable, ProofApp(ProofApp(ProofVar("andI".asVariable), ProofVar("X".asVariable)), ProofVar("Y".asVariable)))
   }
 
+  it should "parse SB symbol" in {
+    p("!inv:(SB() <= (d - x) & v >= 0) using xInit vInit brk separate by auto;", pp.statement(_)) shouldBe Assert(Variable("inv"), "SB() <= (d - x) & v >= 0".asFormula,
+      Using(List("xInit", "vInit","brk", "separate").map(s => ForwardSelector(ProofVar(Variable(s)))), Auto()))
+  }
+
   it should "parse letfun" in {
     p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square".asVariable,  List("x".asVariable), Times(Variable("x"), Variable("x")))
     p("let prod(x,z) = x*z;", pp.statement(_)) shouldBe LetFun("prod".asVariable,  List("x".asVariable, "z".asVariable), Times(Variable("x"), Variable("z")))
