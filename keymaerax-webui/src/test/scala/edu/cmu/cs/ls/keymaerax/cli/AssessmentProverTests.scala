@@ -426,11 +426,11 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
-  "Submission extraction" should "extract answers in the oder listed in the file" in {
+  "Submission extraction" should "extract answers in the order listed in the file" in {
     //@todo assumes that there will be information to identify the chapter in the tex source (outermost title, or label)
     //@todo assumes that answers will be in the prompt body
     val s = """
-      |{"id": "11",
+      |{"id": 11,
       | "label": "ch:qdiffcut",
       | "children": [
       |   {
@@ -449,17 +449,17 @@ class AssessmentProverTests extends TacticTestBase {
       |           {
       |             "type": "atom",
       |             "name": "problem",
-      |             "id": "25053",
+      |             "id": 25053,
       |             "point_value": 3.0,
       |             "title": "Problem block 1 (2 questions)",
       |             "prompts": [
       |               {
       |                 "point_value": 2.0,
       |                 "body": "A question",
-      |                 "id": "141",
+      |                 "id": 141,
       |                 "children": [
       |                   {
-      |                     "id": "142",
+      |                     "id": 142,
       |                     "body": "y>=0"
       |                   }
       |                 ]
@@ -467,10 +467,10 @@ class AssessmentProverTests extends TacticTestBase {
       |               {
       |                 "body": "This question has an answer with a syntax error",
       |                 "point_value": 1.0,
-      |                 "id": "143",
+      |                 "id": 143,
       |                 "children": [
       |                   {
-      |                     "id": "144",
+      |                     "id": 144,
       |                     "body": "x^2>=+0"
       |                   }
       |                 ]
@@ -492,14 +492,14 @@ class AssessmentProverTests extends TacticTestBase {
       |             "type": "atom",
       |             "name": "problem",
       |             "title": "Problem block 2 (one non-autogradable question)",
-      |             "id": "17218",
+      |             "id": 17218,
       |             "prompts": [
       |                {
-      |                  "id": "145",
+      |                  "id": 145,
       |                  "body": "This is the question",
       |                  "children": [
       |                    {
-      |                      "id": "146",
+      |                      "id": 146,
       |                      "body": "Here is an answer",
       |                      "and": "other stuff"
       |                    }
@@ -516,17 +516,17 @@ class AssessmentProverTests extends TacticTestBase {
       |         "point_value": 1.0,
       |         "type": "atom",
       |         "name": "problem",
-      |         "id": "25160",
+      |         "id": 25160,
       |         "title": "Problem block 3 (single question)",
       |         "this entry": "has one question",
       |         "prompts": [
       |           {
-      |             "id": "147",
+      |             "id": 147,
       |             "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
       |             "children": [
       |               {
       |                 "body": "x>=0",
-      |                 "id": "148"
+      |                 "id": 148
       |               }
       |             ],
       |             "point_value": 1.0
@@ -543,24 +543,24 @@ class AssessmentProverTests extends TacticTestBase {
       |       {
       |         "type": "atom",
       |         "name": "problem",
-      |         "id": "25057",
+      |         "id": 25057,
       |         "title": "Problem block in second segment",
       |         "point_value": 1.0,
       |         "prompts": [
       |           {
       |             "body": " A question in the second segment",
-      |             "id": "149",
+      |             "id": 149,
       |             "point_value": 1.0,
       |             "is_question_any_choice": false,
       |             "children": [
       |               {
-      |                 "id": "150",
+      |                 "id": 150,
       |                 "body": "Sound",
       |                 "is_selected": true,
       |                 "is_choice": true
       |               },
       |               {
-      |                 "id": "151",
+      |                 "id": 151,
       |                 "body": "Unsound",
       |                 "is_selected": false,
       |                 "is_choice": true

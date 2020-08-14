@@ -32,7 +32,7 @@ object Submission {
   case class Chapter(id: Long, label: String, problems: List[Problem])
 
   def extract(root: JsObject): Chapter = {
-    val id = root.fields(ID) match { case JsString(n) => n.toLong }
+    val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
     val label = root.fields(LABEL) match { case JsString(s) => s }
     val problems = extractProblems(root)
     Chapter(id, label, problems)
@@ -64,7 +64,7 @@ object Submission {
   /** Extracts a problem segment from the `root` JSON problem object (identified by having "name"="problem"). */
   private def extractProblem(root: JsObject): Problem = {
     require(root.fields(NAME) match { case JsString("problem") => true case _ => false })
-    val id = root.fields(ID) match { case JsString(n) => n.toLong }
+    val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
     val title = root.fields(TITLE) match { case JsString(s) => s }
     val prompts = root.fields.get(PROMPTS) match {
       case Some(JsArray(prompts)) => prompts.map(_.asJsObject).map(extractPrompt).toList
@@ -75,13 +75,13 @@ object Submission {
 
   /** Extracts a prompt and the answers submitted in response to it. */
   private def extractPrompt(root: JsObject): Prompt = {
-    val id = root.fields(ID) match { case JsString(n) => n.toLong }
+    val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
     val points = root.fields(POINT_VALUE) match { case JsNumber(n) => n.toDouble }
     val answers = root.fields(CHILDREN) match {
       case JsArray(s) =>
         s.map(sub => {
           val fields = sub.asJsObject.fields
-          val id = fields(ID) match { case JsString(n) => n.toLong }
+          val id = fields(ID) match { case JsNumber(n) => n.toLong }
           (fields.get(IS_CHOICE), fields.get(IS_FILL_IN_GAP)) match {
             case (Some(JsBoolean(true)), None | Some(JsBoolean(false))) =>
               val text = fields(BODY) match { case JsString(s) => s }
