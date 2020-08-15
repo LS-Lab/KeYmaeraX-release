@@ -277,7 +277,8 @@ trait SequentCalculus {
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic("∀L",
-    premises = "p(e), Γ |- Δ",
+    inputs = "θ[θ]:option[term]",
+    premises = "p(θ), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
   def allL(e: Option[Term])              : DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
   def allL(e: Term)                      : DependentPositionWithAppliedInputTactic = allL(Some(e))
@@ -300,11 +301,12 @@ trait SequentCalculus {
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   @Tactic("∃R",
-    inputs = "θ[θ]:term",
+    inputs = "θ[θ]:option[term]",
     premises = "Γ |- p(θ), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
-  def existsR(e: Term)             : DependentPositionWithAppliedInputTactic =
-    inputanon{ (pos: Position, seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, Some(e))(pos) }
+  def existsR(e: Option[Term])             : DependentPositionWithAppliedInputTactic =
+    inputanon{ (pos: Position, seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, e)(pos) }
+  def existsR(e: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
