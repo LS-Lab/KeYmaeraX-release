@@ -33,7 +33,6 @@ class SSAPassTests extends TacticTestBase {
   }
 
   it should "check fancy assignments" in {
-    // @TODO: Better "failing" tests to check that admissibility is strong enough
     val pfStr = "x := *; x := x^2; "
     val (ss, ff) = checkSSA(pfStr)
     ff shouldBe "[x_0:=*; x_1:=x_0^2;]true".asFormula

@@ -409,7 +409,7 @@ case class Context(s: Statement) {
           if (done) (acc, taboos, done)
           else {
             val res = reapply(s).lastStatements(taboos)
-            if (res.isEmpty) (Nil, taboos, true)
+            if (res.isEmpty) (acc, taboos, true)
             else {
               val tt = taboos ++ VariableSets(s).boundVars
               (res ++ acc, tt, false)
@@ -426,51 +426,22 @@ case class Context(s: Statement) {
     * appear ghosted or unghosted.  */
   def lastBlock: Block = Block(lastStatements())
 
-  // @TODO: Merge with lastStatements
-    /** Used in proof statements with implicit assumptions, such as BoxLoop which implicitly finds a base case.
-    * @return Most recent fact of context and context of phi assignments since the fact was bound */
-  private def lastFactMobile: (Option[(Ident, Formula)], List[Phi]) = {
-    s match {
-      case Assume(x: Variable, f) => (Some((x, f)), Nil)
-      case Assert(x: Variable, f, _) => (Some((x,f)), Nil)
-      case Note(x: Variable, pt, opt) => (opt.map((x, _)), Nil)
-      case Modify(VarPat(x, Some(p)), Left(f)) => (Some((p, Equal(x, f))), Nil)
-      case Modify(VarPat(x, _), Left(f)) => (Some((x, Equal(x, f))), Nil)
-      case BoxChoice(l, r) =>
-        (Context(l).lastFactMobile, Context(r).lastFactMobile) match {
-          case ((Some((kl, vl)), leftPhis), (Some((kr, vr)), rightPhis)) =>
-            if (kl != kr) (None, Nil)
-            // There is a last fact, but we can't come up with unique phi assignments for it, so ignore it
-            else if (leftPhis != rightPhis) (None, Nil)
-            // Optimize identical ors
-            else if (vl == vr) (Some((kl, vl)), leftPhis)
-            else (Some((kl, Or(vl, vr))), leftPhis)
-          // note: if only one branch has last-fact, it would be unsound to return that fact. Instead, ignore it.
-          case _ => (None, Nil)
-        }
-      case BoxLoop(body, _) => Context(body).lastFactMobile
-      case While(_, _, body) => Context(body).lastFactMobile
-      // Note: After SSA, last statement is phi node, so keep looking to find "real" node
-      case Block(ss) =>
-        def loop(ss: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
-          ss match {
-            case Nil => (None, Nil)
-            case (phi : Phi) :: rest =>
-              val (fact, phis) = loop(rest)
-              (fact, phi :: phis)
-            case s :: rest =>
-              Context(s).lastFactMobile match {
-                case (None, _) => loop(rest)
-                case res@(Some(_), _) => res
-              }
-          }
-        }
-        loop(ss.reverse)
-      case Was(now, was) => Context(now).lastFactMobile
-      case Ghost(s) => Context(s).lastFactMobile
-      // Skips all meta nodes and inverse ghosts, for example
-      case _ => (None, Nil)
+  /** The most recently proven fact in a context */
+  def lastFact: Option[(Ident, Formula)] = {
+    def unwind(wound: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
+      wound match {
+        case Assert(x: Variable, f, _) :: _ => (Some((x, f)), Nil)
+        case Assume(x: Variable, f) :: _ => (Some((x, f)), Nil)
+        case (phi: Phi) :: rest =>
+          val (fml, phis) = unwind(rest)
+          (fml, phi :: phis)
+        case  s :: ss => unwind(ss)
+        case Nil => (None, Nil)
+      }
     }
+    val (fml, phis) = unwind(lastStatements().reverse)
+    val mapped = fml.map({case ((k,fact)) => (k, phis.foldLeft(fact)((fml, phi) => Context.substPhi(phi, fml)))})
+    mapped.map({case (k, v) => (k, destabilize(v))})
   }
 
   /** Elaborate the "stable" term tag once it is no longer needed */
@@ -513,12 +484,6 @@ case class Context(s: Statement) {
   def elaborateFunctions(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f))
   def elaborateFunctions(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f))
 
-  /** The most recently proven fact in a context */
-  def lastFact: Option[(Ident, Formula)] = {
-    val (fml, phis) = lastFactMobile
-    val mapped = fml.map({case ((k,fact)) => (k, phis.foldLeft(fact)((fml, phi) => Context.substPhi(phi, fml)))})
-    mapped.map({case (k, v) => (k, destabilize(v))})
-  }
 
   /** Does the context contain a fact named [[id]]? */
   def contains(id: Ident): Boolean = get(id).isDefined
