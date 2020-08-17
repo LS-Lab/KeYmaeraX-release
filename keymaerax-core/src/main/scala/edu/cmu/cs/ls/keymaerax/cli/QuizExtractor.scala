@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TexExpressionArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -89,7 +89,7 @@ object QuizExtractor {
       val x = Variable("x")
       if (s.startsWith("\\{") && s.endsWith("\\}")) {
         // lists \{1,2,3\}
-        ExpressionArtifact(s.stripPrefix("\\{").stripSuffix("\\}").split(",").map(s => Equal(x, Number(s.toDouble))).reduceRightOption(Or).getOrElse(False))
+        TexExpressionArtifact(s.stripPrefix("\\{").stripSuffix("\\}").split(",").map(s => Equal(x, Number(s.toDouble))).reduceRightOption(Or).getOrElse(False))
       } else {
         // intervals [0,3] \cup [0,\infty) \cup \lbrack 1,4 ] \cup (5,7\rbrack
         val interval = """(\(|\[|\\lbrack)\s*(\d+)\s*,\s*(\d+|\\infty)\s*(\)|]|\\rbrack)""".r("(", "l", "u", ")")
@@ -105,8 +105,9 @@ object QuizExtractor {
               case (uv, "]" | "\\rbrack") => LessEqual(x, Number(uv.toDouble))
             }
           )
-        }).reduceRightOption(Or).getOrElse(False)
-        ExpressionArtifact(ivfml)
+        })
+        if (ivfml.hasNext) TexExpressionArtifact(ivfml.reduceRightOption(Or).getOrElse(False))
+        else throw new IllegalArgumentException("String " + s + " neither parseable as a a list of numbers \\{7,...\\} nor as intervals [l,h) ++ (l,h) ++ [l,h] ++ (l,h] where l is a number and h is a number or \\infty")
       }
     }
 
@@ -220,7 +221,9 @@ object QuizExtractor {
     private val PROBLEM_EXTRACTOR = """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
 
     def fromString(s: String): List[Problem] = {
-      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)), Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).toList
+      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)), Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).
+        filter(_.points.exists(_ > 0.0)).
+        toList
     }
   }
 }

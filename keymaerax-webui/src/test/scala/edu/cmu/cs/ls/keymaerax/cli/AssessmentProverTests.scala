@@ -10,9 +10,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
-import spray.json.DefaultJsonProtocol.StringJsonFormat
+import org.scalatest.EitherValues._
 
-import scala.util.Try
 import spray.json._
 
 class AssessmentProverTests extends TacticTestBase {
@@ -21,10 +20,11 @@ class AssessmentProverTests extends TacticTestBase {
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quiz"
 
   "Extractor" should "extract grading information" in {
-    inside (Problem.fromString("""\begin{problem}\label{prob:first} \ask \sol \kyxline"x>=0" \end{problem}""")) {
+    Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol \kyxline"x>=0" \end{problem}""") shouldBe 'empty
+    inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol \kyxline"x>=0" \end{problem}""")) {
       case p :: Nil =>
-        p.name shouldBe empty
-        p.points shouldBe empty
+        p.name shouldBe 'empty
+        p.points should contain (1.0)
         p.label should contain ("prob:first")
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
@@ -34,14 +34,14 @@ class AssessmentProverTests extends TacticTestBase {
         p.points should contain (4.0)
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[Problem B] \ask A syntactic equality \sol \kyxline"x>=0" \autog{syneq()} \end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0][Problem B] \ask A syntactic equality \sol \kyxline"x>=0" \autog{syneq()} \end{problem}""")) {
       case p :: Nil =>
         p.name should contain ("Problem B")
         p.questions shouldBe
           List(AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
     inside (Problem.fromString(
-      """\begin{problem}
+      """\begin{problem}[1.0]
         |\ask \sol \kyxline"x>=0" \autog{syneq()}
         |\ask \sol \kyxline"y=2"
         |\autog{prove(question="#1 -> [{x'=v}]x>=0"
@@ -55,18 +55,18 @@ class AssessmentProverTests extends TacticTestBase {
               ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
           )
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
             List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
@@ -74,7 +74,7 @@ class AssessmentProverTests extends TacticTestBase {
             List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
     }
     inside (Problem.fromString(
-      """\begin{problem}
+      """\begin{problem}[1.0]
         |\ask A DI question
         |\sol \kyxline"2*x=y"
         |\autog{dI(vars="x",
@@ -84,14 +84,14 @@ class AssessmentProverTests extends TacticTestBase {
         p.questions shouldBe
           List(AskQuestion(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(None, Map.empty,
             SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent)),
             List(SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent))), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}\ask \sol \kyxline"x>0,y>0,z>0"\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>0,y>0,z>0"\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(None, Map.empty,
@@ -99,7 +99,7 @@ class AssessmentProverTests extends TacticTestBase {
             List(ListExpressionArtifact(List("x>0".asFormula, "y>0".asFormula, "z>0".asFormula))), List.empty))
     }
     inside (Problem.fromString(
-      """\begin{problem}
+      """\begin{problem}[1.0]
         |\ask
         |\solfin
         |\begin{lstlisting}
@@ -114,7 +114,7 @@ class AssessmentProverTests extends TacticTestBase {
             List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
     }
     inside (Problem.fromString(
-      """\begin{problem}
+      """\begin{problem}[1.0]
         |\ask \sol \kyxline"x>=0"
         |\onechoice
         |A choice question
@@ -273,13 +273,13 @@ class AssessmentProverTests extends TacticTestBase {
 
   "Generic prove checker" should "prove simple examples" in withZ3 { _ =>
     AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), ExpressionArtifact("A() -> [prg;]B()".asFormula)).
-      check(ExpressionArtifact("A()->[prg;]B()".asFormula)) shouldBe 'proved
+      check(ExpressionArtifact("A()->[prg;]B()".asFormula)).left.value shouldBe 'proved
     AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("A() ==> [prg;]B()".asSequent::Nil)).
-      check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)) shouldBe 'proved
+      check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)).left.value shouldBe 'proved
     val p = AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("==> A() -> [prg;]B()".asSequent::"[sys;]C() ==> ".asSequent::Nil)).
       check(SequentArtifact("A() ==> [prg;]B()".asSequent::"==> [sys;]C() -> false&x=4".asSequent::Nil))
-    p.conclusion shouldBe "==> ((A() -> [prg;]B()) <-> (true -> A() -> [prg;]B())) & ((true -> [sys;]C() -> false&x=4) <-> ([sys;]C() -> false))".asSequent
-    p shouldBe 'proved
+    p.left.value.conclusion shouldBe "==> ((A() -> [prg;]B()) <-> (true -> A() -> [prg;]B())) & ((true -> [sys;]C() -> false&x=4) <-> ([sys;]C() -> false))".asSequent
+    p.left.value shouldBe 'proved
   }
 
   it should "prove optional question with solution as loop tactic input" in withZ3 { _ =>
@@ -290,7 +290,7 @@ class AssessmentProverTests extends TacticTestBase {
         "tactic" -> "implyR(1);loop({`#1`},1);auto;done"),
       ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
       check(ExpressionArtifact("x>1&y>=0".asFormula)
-    ) shouldBe 'proved
+    ).left.value shouldBe 'proved
   }
 
   it should "prove optional question with a list of diffcuts" in withZ3 { _ =>
@@ -302,7 +302,7 @@ class AssessmentProverTests extends TacticTestBase {
       ),
       ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
       check(ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil)
-    ) shouldBe 'proved
+    ).left.value shouldBe 'proved
   }
 
   it should "prove optional question with solution as uniform substitution tactic input" in withZ3 { _ =>
@@ -314,7 +314,7 @@ class AssessmentProverTests extends TacticTestBase {
       ExpressionArtifact("false".asFormula) //@note ignored because question will be used instead
     ).check(
       ExpressionArtifact("x<=m-V*(T-t)".asFormula)
-    ) shouldBe 'proved
+    ).left.value shouldBe 'proved
   }
 
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
@@ -335,7 +335,7 @@ class AssessmentProverTests extends TacticTestBase {
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 4) ::
+      ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 4) ::
       ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 2) :: Nil
     run(problems)
   }
@@ -343,7 +343,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 3" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 3) ::
+      ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 3) ::
         ("Reachable Sets", 5) :: ("Program Shapes", 4) :: Nil
     run(problems)
   }
@@ -351,7 +351,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 4" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 3) ::
+      ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 3) ::
         ("Direct velocity control", 1) :: Nil
     run(problems)
   }
@@ -359,7 +359,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 5" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/5/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Axiom application", 10) :: ("Axiom identification: Top", 6) :: ("Axiom identification: All", 6) ::
+      ("Axiom application", 10) :: ("Axiom identification: Top", 6) :: ("Axiom identification: All", 6) ::
         ("Distributivity and non-distributivity", 5) :: ("If-then-else", 2) :: ("Nondeterministic assignments", 2) :: Nil
     run(problems)
   }
@@ -367,7 +367,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 6" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/6/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Rule application", 10) :: ("Rule identification", 8) :: ("Arithmetic simplification", 6) ::
+      ("Rule application", 10) :: ("Rule identification", 8) :: ("Arithmetic simplification", 6) ::
         ("Proof rule criticism", 5) :: Nil
     run(problems)
   }
@@ -375,7 +375,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 7" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Loop invariants", 5) :: ("Other Loop Rules", 4) ::
+      ("Loop invariants", 5) :: ("Other Loop Rules", 4) ::
         ("Incremental design in direct velocity control", 3) :: Nil
     run(problems)
   }
@@ -383,7 +383,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 8" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/8/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Revisiting ping-pong events", 4) :: ("Faithful Event Models", 6) ::
+      ("Revisiting ping-pong events", 4) :: ("Faithful Event Models", 6) ::
         ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 4) :: Nil
     run(problems)
   }
@@ -391,7 +391,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 10" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
+      ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
         ("Differential Invariant Rules", 5) :: Nil
     run(problems)
   }
@@ -399,14 +399,14 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 11" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Identify differential invariants and cuts", 10) :: ("Differential Invariance Rules", 5) :: Nil
+      ("Identify differential invariants and cuts", 10) :: ("Differential Invariance Rules", 5) :: Nil
     run(problems)
   }
 
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Player Count", 5) :: ("Strategically reachable set", 5) :: ("Game Shapes", 2) ::
+      ("Player Count", 5) :: ("Strategically reachable set", 5) :: ("Game Shapes", 2) ::
         ("Truth Identification", 5) :: Nil
     run(problems)
   }
@@ -414,14 +414,14 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 15" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Game Region Shapes", 5) :: ("Game loop semantics", 5) :: ("Direct velocity control", 1) :: Nil
+      ("Game Region Shapes", 5) :: ("Game loop semantics", 5) :: ("Direct velocity control", 1) :: Nil
     run(problems)
   }
 
   it should "prove quiz 16" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Reflection", 0) :: ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
+      ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
         ("Robot simple chase game", 1) :: Nil
     run(problems)
   }
@@ -595,7 +595,7 @@ class AssessmentProverTests extends TacticTestBase {
       testAnswers.foreach(t => {
         println("Testing sol: " + t)
         val tic = System.nanoTime()
-        grader.check(t) shouldBe 'proved withClue t
+        grader.check(t).left.value shouldBe 'proved withClue t
         println("Successfully verified sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
@@ -603,7 +603,7 @@ class AssessmentProverTests extends TacticTestBase {
       noAnswers.foreach(t => {
         println("Testing no-sol: " + t)
         val tic = System.nanoTime()
-        Try(grader.check(t)).toOption.map(_ shouldNot be ('proved)) withClue t
+        grader.check(t) shouldNot be ('left)
         println("Successfully rejected no-sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
