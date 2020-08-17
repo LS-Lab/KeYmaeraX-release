@@ -59,75 +59,70 @@ object VariableSets {
     VariableSets(boundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 
-  // @TODO: Update VariableSets to use contexts instead of isGhost flags
   /** Compute static semantic variables sets for a given Kaisar [[statement]], depending on the context in which
     * [[statement]] appears
     *
     * @param statement The Kaisar statement whose variable sets should be computed
-    * @param isGhost Does [[statement]] appear under the [[Ghost]] constructor?
-    * @param isInverseGhost Does [[statement]] appear under the [[InverseGhost]] constructor
     * @return All bound and taboo variables of [[statement]]
     */
-  def apply(statement: Statement, isGhost: Boolean = false, isInverseGhost: Boolean = false): VariableSets = statement match {
+  def apply(statement: Statement): VariableSets = apply(Context(statement).withOuter)
+  def apply(kc: Context): VariableSets = kc.s match {
     case Triv() | Label(_, _) => VariableSets.empty
-    case Ghost(s) => apply(s, isGhost = true, isInverseGhost = false)
-    case InverseGhost(s) => apply(s, isGhost = false, isInverseGhost = true)
-    case Assume(pat: Term, f) => ofFacts(StaticSemantics(pat).toSet, f, isInverseGhost)
-    case Assert(pat: Term, f, m) => ofFacts(StaticSemantics(pat).toSet, f, isInverseGhost)
-    case Modify(pat: AsgnPat, Left(f)) => ofBound(pat.boundVars, isGhost).++(ofFacts(pat.boundFacts, True, isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
-    case Modify(pat: AsgnPat, _) => ofBound(pat.boundVars, isGhost).++(ofFacts(pat.boundFacts, True, isInverseGhost))
-    case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), isInverseGhost)
-    case LetFun(f, args, e) => ofFunc(Set(f), args, e, isInverseGhost)
-    case Match(pat: Term, e) => ofBound(StaticSemantics(pat).toSet, isGhost)
-    case Block(ss) => ss.map(apply(_, isGhost, isInverseGhost)).foldLeft(VariableSets.empty)((l, r) => l.++(r))
+    case Ghost(s) => apply(kc.reapply(s).withGhost)
+    case InverseGhost(s) => apply(kc.reapply(s).withInverseGhost)
+    case Assume(pat: Term, f) => ofFacts(StaticSemantics(pat).toSet, f, kc.isInverseGhost)
+    case Assert(pat: Term, f, m) => ofFacts(StaticSemantics(pat).toSet, f, kc.isInverseGhost)
+    case Modify(pat: AsgnPat, Left(f)) => ofBound(pat.boundVars, kc.isGhost).++(ofFacts(pat.boundFacts, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+    case Modify(pat: AsgnPat, _) => ofBound(pat.boundVars, kc.isGhost).++(ofFacts(pat.boundFacts, True, kc.isInverseGhost))
+    case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), kc.isInverseGhost)
+    case LetFun(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
+    case Match(pat: Term, e) => ofBound(StaticSemantics(pat).toSet, kc.isGhost)
+    case Block(ss) => ss.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)((l, r) => l.++(r))
     case Switch(scrutinee, pats) =>
       pats.map({ case (x: Term, fml: Formula, s) => {
-        val t = apply(s, isGhost, isInverseGhost)
-        val tt = t.++(ofFacts(Set(), fml, isInverseGhost))
-        if (isInverseGhost) tt.addTabooFacts(StaticSemantics(x).toSet) else tt
+        val t = apply(kc.reapply(s))
+        val tt = t.++(ofFacts(Set(), fml, kc.isInverseGhost))
+        if (kc.isInverseGhost) tt.addTabooFacts(StaticSemantics(x).toSet) else tt
       }
       }).reduce((l, r) => l.++(r))
-    case BoxChoice(left, right) => apply(left, isGhost, isInverseGhost).++(apply(right, isGhost, isInverseGhost))
-    case While(x: Term, j, s) => apply(s, isGhost, isInverseGhost).addTabooFacts(StaticSemantics(x).toSet)
-    case BoxLoop(s, _) => apply(s, isGhost, isInverseGhost)
-    case ProveODE(ds, dc) => apply(ds, isGhost, isInverseGhost).++(apply(dc, isGhost, isInverseGhost))
-    case m: Phi => apply(m.asgns, isGhost, isInverseGhost).forgetBound
+    case BoxChoice(left, right) => apply(kc.reapply(left)).++(apply(kc.reapply(right)))
+    case While(x: Term, j, s) => apply(kc.reapply(s)).addTabooFacts(StaticSemantics(x).toSet)
+    case BoxLoop(s, _) => apply(kc.reapply(s))
+    case ProveODE(ds, dc) => apply(kc, ds).++(apply(kc, dc))
+    case m: Phi => apply(m.asgns).forgetBound
     // @TODO: Are there ever cases where we want to check _bl instead?
-    case BoxLoopProgress(_bl, progress) => apply(progress, isGhost, isInverseGhost)
-    case SwitchProgress(switch, onBranch, progress) => apply(progress, isGhost, isInverseGhost)
-    case BoxChoiceProgress(bc, onBranch, progress) => apply(progress, isGhost, isInverseGhost)
-    case m: MetaNode => m.children.map(apply(_, isGhost, isInverseGhost)).foldLeft(VariableSets.empty)(_.++(_))
+    case BoxLoopProgress(_bl, progress) => apply(kc.reapply(progress))
+    case SwitchProgress(switch, onBranch, progress) => apply(kc.reapply(progress))
+    case BoxChoiceProgress(bc, onBranch, progress) => apply(kc.reapply(progress))
+    case m: MetaNode => m.children.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)(_.++(_))
   }
-  def apply(kc: Context): VariableSets = apply(kc.s)
 
   /** Compute static semantic variables sets for a given Kaisar differential statement, depending on the context in
     * which it appears
     *
+    * @param kc Kaisar context surrounding statement
     * @param diffStatement The differential Kaisar statement whose variable sets should be computed
-    * @param isGhost Does statement appear under the [[Ghost]] constructor?
-    * @param isInverseGhost Does statement appear under the [[InverseGhost]] constructor
     * @return All bound and taboo variables of statement
     */
-  def apply(diffStatement: DiffStatement, isGhost: Boolean, isInverseGhost: Boolean): VariableSets = diffStatement match {
-    case AtomicODEStatement(dp, _) => ofBound(Set(dp.xp.x), isGhost).addFreeVars(StaticSemantics(dp.e).toSet)
-    case DiffProductStatement(l, r) => apply(l, isGhost, isInverseGhost).++(apply(r, isGhost, isInverseGhost))
-    case DiffGhostStatement(ds) => apply(ds, isGhost = true, isInverseGhost = false)
-    case InverseDiffGhostStatement(ds) => apply(ds, isGhost = false, isInverseGhost = true)
+  def apply(kc: Context, diffStatement: DiffStatement): VariableSets = diffStatement match {
+    case AtomicODEStatement(dp, _) => ofBound(Set(dp.xp.x), kc.isGhost).addFreeVars(StaticSemantics(dp.e).toSet)
+    case DiffProductStatement(l, r) => apply(kc, l).++(apply(kc, r))
+    case DiffGhostStatement(ds) => apply(kc.withGhost, ds)
+    case InverseDiffGhostStatement(ds) => apply(kc.withInverseGhost, ds)
   }
 
   /** Compute static semantic variables sets for a given Kaisar domain statement, depending on the context in
     * which it appears
     *
+    * @param kc Kaisar context surrounding statement
     * @param domainStatement The Kaisar domain statement whose variable sets should be computed
-    * @param isGhost Does statement appear under the [[Ghost]] constructor?
-    * @param isInverseGhost Does statement appear under the [[InverseGhost]] constructor
     * @return All bound and taboo variables of statement
     */
-  def apply(domainStatement: DomainStatement, isGhost: Boolean, isInverseGhost: Boolean): VariableSets = domainStatement match {
-    case DomAssume(x: Term, f) => ofFacts(StaticSemantics(x).toSet, f, isInverseGhost)
-    case DomAssert(x: Term, f, child) => ofFacts(StaticSemantics(x).toSet, f, isInverseGhost)
-    case DomWeak(dc: DomainStatement) => apply(dc, isGhost = false, isInverseGhost = true)
-    case DomModify(x: AsgnPat, f: Term) => ofBound(x.boundVars, isGhost).++(ofFacts(x.boundFacts, True, isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
-    case DomAnd(l, r) => apply(l, isGhost, isInverseGhost).++(apply(r, isGhost, isInverseGhost))
+  def apply(kc: Context, domainStatement: DomainStatement): VariableSets = domainStatement match {
+    case DomAssume(x: Term, f) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
+    case DomAssert(x: Term, f, child) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
+    case DomWeak(dc: DomainStatement) => apply(kc.withInverseGhost, dc)
+    case DomModify(x: AsgnPat, f: Term) => ofBound(x.boundVars, kc.isGhost).++(ofFacts(x.boundFacts, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+    case DomAnd(l, r) => apply(kc, l).++(apply(kc, r))
   }
 }

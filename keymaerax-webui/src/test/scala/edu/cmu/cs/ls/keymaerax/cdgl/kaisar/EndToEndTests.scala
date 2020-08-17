@@ -10,6 +10,9 @@ import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
+// @TODO: Write tests that exercise pattern-matches in assertions. Decide how useful pattern selectors and match statements are.
+// (match statements might be kind of useless)
+
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.apply
 
@@ -251,7 +254,6 @@ class EndToEndTests extends TacticTestBase {
     val pfStr = "/++ x := 1; ++/ y := 2; /++ x := x + 2; !xVal:(x=3) by auto; ++/"
     check(pfStr) shouldBe "[y_0:= 2;]true".asFormula
   }
-  // @TODO: Write tests that exercise pattern match statements, let statements, pattern selectors,
 
   /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
    */
