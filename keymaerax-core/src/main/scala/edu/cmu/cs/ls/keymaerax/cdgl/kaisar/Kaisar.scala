@@ -14,9 +14,9 @@ import fastparse.Parsed.{Failure, Success}
 /** Entry-point for Kaisar proof checker, which parses a proof and applies all passes in correct order */
 object Kaisar {
   // Parse string [[s]] as a Kaisar proof, with additional error pretty-printing / locating
-  private def parseProof[T](s: String): T =
+  private def parseProof(s: String): Statement =
     parse(s, ProofParser.statement(_), verboseFailures = true) match {
-      case x: Success[T] =>
+      case x: Success[Statement] =>
         if (x.index < s.length) {
           val MAX_CHAR = 80 - "...".length
           val snippet = if (x.index < MAX_CHAR) s.take(x.index) else "..." + s.take(x.index).takeRight(MAX_CHAR)
