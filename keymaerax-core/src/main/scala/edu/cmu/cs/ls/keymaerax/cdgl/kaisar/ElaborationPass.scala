@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
 import edu.cmu.cs.ls.keymaerax.core._
 
-class SelectorEliminationPass() {
+class ElaborationPass() {
   var ghostCon: Context = Context.empty.asElaborationContext
 
   /** Generous notion of free variables: include variables explicitly mentioned in proof term as well as program variables
