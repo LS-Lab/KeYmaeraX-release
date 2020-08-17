@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import fastparse.Parsed.TracedFailure
+import StandardLibrary._
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
@@ -48,28 +49,9 @@ object KaisarProof {
   // Stable is the counterpart to "at", which says that at(stable(x_i), L) should always be x_i
   val stable: Function = Function("stable", domain = Real, sort = Real, interpreted = true)
 
-  // Vectorial type real^n
-  private def rN(n: Int): Sort = {
-    if(n == 0) Unit
-    else Tuple(Real, rN(n-1))
-  }
-
-  private def pairTerms(fs: List[Term]): Term = {
-    fs.foldRight[Term](Nothing)(Pair)
-  }
-
-  // @TODO: This also gets used in SelectorElimination, so factor in out and make it public
-  private def unpairTerms(f: Term): List[Term] = {
-    f match {
-      case Nothing => Nil
-      case Pair(l, r) => l :: unpairTerms(r)
-      case _ => throw ProofCheckException("Expected list argument to label reference, but got: " + f)
-    }
-  }
-
   // Construct a located term f@L
   def makeAt(f: Term, lr: LabelRef): Term = {
-    val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interpreted = true), pairTerms(lr.args))
+    val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interpreted = true), termsToTuple(lr.args))
     FuncOf(Function("at", None, Tuple(Real, Unit), Real, interpreted = true), Pair(f, labelFun))
   }
 
@@ -79,7 +61,7 @@ object KaisarProof {
   def getAt(t: Term): Option[(Term, LabelRef)] = {
     t match {
       case FuncOf(atFunction, Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
-        Some(e, LabelRef(label, unpairTerms(args)))
+        Some(e, LabelRef(label, tupleToTerms(args)))
       case _ => None
     }
   }

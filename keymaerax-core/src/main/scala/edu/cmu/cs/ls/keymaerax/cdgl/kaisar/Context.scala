@@ -475,16 +475,6 @@ case class Context(s: Statement) {
   /** Final elaboration step used in proof-checker or after deterritorialize pass */
   def elaborate(f: Formula): Formula = destabilize(f)
 
-  // @TODO: Factor out into common place.
-  // Convert nested pair into term list.
-  private def unpackPairs(t: Term): List[Term] = {
-    t match {
-      case Nothing => Nil
-      case Pair(l, r) => unpackPairs(l) ++ unpackPairs(r)
-      case f => List(f)
-    }
-  }
-
   /** Optionally replace user-defined function symbols in [[t]] */
   private def replaceFunctions(t: Term): Option[Term] = {
     t match {
@@ -492,7 +482,7 @@ case class Context(s: Statement) {
         signature.get(f.func) match {
           case Some(lf) =>
             val elabChild = elaborateFunctions(f.child)
-            val elabArgs = unpackPairs(elabChild)
+            val elabArgs = StandardLibrary.tupleToTerms(elabChild)
             if (elabArgs.length != lf.args.length)
               throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}")
             val argMap = lf.args.zip(elabArgs).toMap

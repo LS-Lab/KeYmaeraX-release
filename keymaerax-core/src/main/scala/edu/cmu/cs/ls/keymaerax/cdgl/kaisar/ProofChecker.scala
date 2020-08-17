@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, ODEAdmissibilityException, Statements}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
+import StandardLibrary._
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
@@ -469,25 +470,6 @@ object ProofChecker {
       case (Box(a, p1), Box(b, q1)) => Box(Compose(a, Compose(Dual(Test(p1)), b)), q1)
       case (p, Box(b, q1)) => Box(Compose(Dual(Test(p)), b), q1)
       case (Box(a, p1), q) => Box(Compose(a,Compose(Dual(Test(p1)), Dual(Test(q)))), True)
-    }
-  }
-
-  /** unzip triples */
-  private def unzip3[T1,T2,T3](seq:List[(T1,T2,T3)]):(List[T1],List[T2],List[T3]) = {
-    seq match {
-      case Nil => (Nil, Nil, Nil)
-      case (x, y, z):: xyzs =>
-        val (xs, ys, zs) = unzip3(xyzs)
-        (xs.+:(x), ys.+:(y), zs.+:(z))
-    }
-  }
-
-  /** zip triples */
-  private def zip3[T1,T2,T3](xs:List[T1],ys:List[T2],zs:List[T3]):List[(T1,T2,T3)] = {
-    (xs, ys, zs) match {
-      case (Nil, Nil, Nil) => Nil
-      case (x :: xs, y :: ys, z :: zs) => (x, y, z) :: zip3(xs, ys, zs)
-      case _ => throw new Exception("Mismatched lengths in zip3")
     }
   }
 
