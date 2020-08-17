@@ -336,7 +336,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 4) ::
-      ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 2) :: Nil
+      ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 4) :: Nil
     run(problems)
   }
 
@@ -344,14 +344,14 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 3) ::
-        ("Reachable Sets", 5) :: ("Program Shapes", 4) :: Nil
+        ("Reachable Sets", 5) :: ("Program Shapes", 8) :: ("Modeling pitfalls", 4) :: Nil
     run(problems)
   }
 
   it should "prove quiz 4" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 3) ::
+      ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 4) ::
         ("Direct velocity control", 1) :: Nil
     run(problems)
   }
@@ -368,14 +368,14 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/6/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Rule application", 10) :: ("Rule identification", 8) :: ("Arithmetic simplification", 6) ::
-        ("Proof rule criticism", 5) :: Nil
+        ("Proof rule criticism", 10) :: Nil
     run(problems)
   }
 
   it should "prove quiz 7" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Loop invariants", 5) :: ("Other Loop Rules", 4) ::
+      ("Loop invariants", 5) :: ("Other Loop Rules", 8) ::
         ("Incremental design in direct velocity control", 3) :: Nil
     run(problems)
   }
@@ -384,7 +384,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/8/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Revisiting ping-pong events", 4) :: ("Faithful Event Models", 6) ::
-        ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 4) :: Nil
+        ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 5) :: Nil
     run(problems)
   }
 
@@ -392,22 +392,23 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
-        ("Differential Invariant Rules", 5) :: Nil
+        ("Differential Invariant Rules", 10) :: Nil
     run(problems)
   }
 
   it should "prove quiz 11" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Identify differential invariants and cuts", 10) :: ("Differential Invariance Rules", 5) :: Nil
+      ("Explain differential cuts", 8) :: ("Identify differential invariants to cut", 10) ::
+        ("Differential Invariance Rules", 13) :: Nil
     run(problems)
   }
 
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Player Count", 5) :: ("Strategically reachable set", 5) :: ("Game Shapes", 2) ::
-        ("Truth Identification", 5) :: Nil
+      ("Player Count", 5) :: ("Strategically reachable set", 6) :: ("Game Shapes", 2) ::
+        ("Truth Identification", 10) :: Nil
     run(problems)
   }
 

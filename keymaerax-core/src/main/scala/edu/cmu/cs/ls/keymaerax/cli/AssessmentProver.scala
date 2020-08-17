@@ -39,6 +39,7 @@ object AssessmentProver {
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
   case class ChoiceArtifact(selected: List[String]) extends Artifact
   case class BoolArtifact(value: Boolean) extends Artifact
+  case class TextArtifact(value: String) extends Artifact
 
   abstract class Grader {
     val expected: Artifact
@@ -63,8 +64,10 @@ object AssessmentProver {
       val LOOP: String = "loop"
       /** Program equivalence. */
       val PRG_EQUIV = "prgequiv"
-      /** Propositional */
+      /** Propositional. */
       val PROP = "prop"
+      /** Text explanations. */
+      val EXPLANATION_CHECK = "explanation"
       /** Provable using a tactic. */
       val BELLE_PROOF: String = "prove"
     }
@@ -170,6 +173,12 @@ object AssessmentProver {
             }
           case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
         }
+        case Modes.EXPLANATION_CHECK =>
+          (have, expected) match {
+            case (TextArtifact(hs), TextArtifact(es)) =>
+              run(() => prove(Sequent(IndexedSeq(), IndexedSeq(GreaterEqual(Number(hs.length), Divide(Number(es.length), Number(3))))),
+                QE & DebuggingTactics.done("Explanation too short")))
+          }
         case Modes.BELLE_PROOF =>
           args.get("question") match {
             case Some(q) =>
@@ -449,7 +458,8 @@ object AssessmentProver {
 
     def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
       case Submission.TextAnswer(_, t) :: Nil =>
-        if (TexExpressionArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexString(t)
+        if (TexExpressionArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
+        else if (TextArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
         else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
       case answers =>
         // list if choice answers

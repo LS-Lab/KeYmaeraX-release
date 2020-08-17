@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TexExpressionArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -39,7 +39,7 @@ object QuizExtractor {
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
     private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
     private val KYX_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
-    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?([^}]+)?})"""
+    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?(?-s:(.+))?})"""
     private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\$(.+?)\$})"""
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
     private val SOL_EXTRACTOR = """(?:""" + KYX_SOL_EXTRACTOR + "|" + TEX_TEXT_SOL_EXTRACTOR + "|" + TEXT_SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
@@ -60,8 +60,8 @@ object QuizExtractor {
       graderInfo.map({ case (kyxsol, textextsol, textsol, solfin, testsol, nosol, grader, args) =>
         val (expectedArtifact, solArgs) = (kyxsol, textextsol, textsol, solfin) match {
           case (s, null, null, null) => (artifactsFromKyxString(s), Map.empty)
-          case (null, s, null, null) => (artifactsFromTexString(s), Map.empty)
-          case (null, null, s, null) => (artifactsFromKyxString(s), Map.empty)
+          case (null, s, null, null) => (artifactsFromTexMathString(s), Map.empty)
+          case (null, null, s, null) => (artifactsFromTexTextString(s), Map.empty)
           case (null, null, null, s) =>
             val (question, artifact) = solfinArtifactsFromString(s)
             (artifact, Map("question" -> question))
@@ -85,7 +85,7 @@ object QuizExtractor {
     }
 
     /** Translates tex into an artifact. */
-    def artifactsFromTexString(s: String): Artifact = {
+    def artifactsFromTexMathString(s: String): Artifact = {
       val x = Variable("x")
       if (s.startsWith("\\{") && s.endsWith("\\}")) {
         // lists \{1,2,3\}
@@ -110,6 +110,8 @@ object QuizExtractor {
         else throw new IllegalArgumentException("String " + s + " neither parseable as a a list of numbers \\{7,...\\} nor as intervals [l,h) ++ (l,h) ++ [l,h] ++ (l,h] where l is a number and h is a number or \\infty")
       }
     }
+
+    def artifactsFromTexTextString(s: String): Artifact = TextArtifact(s)
 
     /** Translates a `\solfin` string into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {
