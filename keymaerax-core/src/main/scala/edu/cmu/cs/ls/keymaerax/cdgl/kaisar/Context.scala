@@ -452,14 +452,20 @@ case class Context(s: Statement) {
       case While(_, _, body) => Context(body).lastFactMobile
       // Note: After SSA, last statement is phi node, so keep looking to find "real" node
       case Block(ss) =>
-        // @TODO: Need a more general way to handle phi assignments
-        ss.reverse match {
-          case (phi: Phi) :: rest =>
-            val (fact, phis) = rest.map(Context(_).lastFactMobile).filter(_._1.isDefined).head
-            (fact, phi :: phis)
-          case ss =>
-            ss.map(Context(_).lastFactMobile).filter(_._1.isDefined).head
+        def loop(ss: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
+          ss match {
+            case Nil => (None, Nil)
+            case (phi : Phi) :: rest =>
+              val (fact, phis) = loop(rest)
+              (fact, phi :: phis)
+            case s :: rest =>
+              Context(s).lastFactMobile match {
+                case (None, _) => loop(rest)
+                case res@(Some(_), _) => res
+              }
+          }
         }
+        loop(ss.reverse)
       case Was(now, was) => Context(now).lastFactMobile
       case Ghost(s) => Context(s).lastFactMobile
       // Skips all meta nodes and inverse ghosts, for example
