@@ -303,10 +303,10 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse assignments" in {
     p("x := 2;", ep.expression(_)) shouldBe Assign(Variable("x"), Number(2))
-    p("x := 2;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable), Left(Number(2)))
-    p("?p:(x := 2;);", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Left(Number(2)))
-    p("x := *;", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable), Right(()))
-    p("?p:(x := *);", pp.statement(_)) shouldBe Modify(VarPat("x".asVariable, Some(Variable("p"))), Right(()))
+    p("x := 2;", pp.statement(_)) shouldBe Modify(Nil, List(("x".asVariable, Some(Number(2)))))
+    p("?p:(x := 2;);", pp.statement(_)) shouldBe Modify(List(Variable("p")), List(("x".asVariable, Some(Number(2)))))
+    p("x := *;", pp.statement(_)) shouldBe Modify(Nil, List(("x".asVariable, None)))
+    p("?p:(x := *);", pp.statement(_)) shouldBe Modify(List(Variable("p")), List(("x".asVariable, None)))
   }
 
   it should "parse label" in {
@@ -347,28 +347,28 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse box-choice" in {
     p("x := 2; ?x:(1 > 0); ++ x := 3; ?x:(x > 0);", pp.statement(_)) shouldBe BoxChoice(
-      block(List(Modify(VarPat("x".asVariable),Left(Number(2))), Assume(Variable("x"), Greater(Number(1), Number(0))))),
-      block(List(Modify(VarPat("x".asVariable),Left(Number(3))), Assume(Variable("x"), Greater(Variable("x"), Number(0))))))
+      block(List(Modify(Nil, List((("x".asVariable), Some(Number(2))))), Assume(Variable("x"), Greater(Number(1), Number(0))))),
+      block(List(Modify(List("x".asVariable), List(("x".asVariable, (Some(Number(3)))))), Assume(Variable("x"), Greater(Variable("x"), Number(0))))))
   }
 
   it should "parse while" in {
     p("while (x > 0) { x := x - 1; y := y + 2;}", pp.statement(_)) shouldBe While(Nothing, Greater(Variable("x"), Number(0)),
-      block(List(Modify(VarPat("x".asVariable), Left(Minus(Variable("x"), Number(1))))
-      , Modify(VarPat("y".asVariable), Left(Plus(Variable("y"), Number(2)))))))
+      block(List(Modify(Nil, List(("x".asVariable, Some(Minus(Variable("x"), Number(1))))))
+      , Modify(Nil, List(("y".asVariable, Some(Plus(Variable("y"), Number(2)))))))))
   }
 
   it should "parse boxloop" in {
     p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe
-      BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(VarPat("x".asVariable), Left(Minus(Variable("x"), Number(1)))))),
+      BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(Nil, List(("x".asVariable, Some(Minus(Variable("x"), Number(1)))))))),
         Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))))))
   }
 
   it should "parse ghost" in {
-    p("/++ x:= 2; ++/", pp.statement(_)) shouldBe Ghost(Modify(VarPat("x".asVariable), Left(Number(2))))
+    p("/++ x:= 2; ++/", pp.statement(_)) shouldBe Ghost(Modify(Nil, List(("x".asVariable, Some(Number(2))))))
   }
 
   it should "parse inverseghost" in {
-    p("/-- x:= 2; --/", pp.statement(_)) shouldBe InverseGhost(Modify(VarPat("x".asVariable), Left(Number(2))))
+    p("/-- x:= 2; --/", pp.statement(_)) shouldBe InverseGhost(Modify(Nil, List(("x".asVariable, Some(Number(2))))))
   }
 
   it should "parse print-goal" in {
@@ -427,14 +427,14 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse dc-assign" in {
     p("x' = y & t := T;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
-    , DomModify(VarPat(Variable("t")), Variable("T")))
+    , DomModify(Variable("t"), Variable("T")))
   }
 
   it should "parse conjunction" in {
     p("x' = y & t := T & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
-          DomModify(VarPat(Variable("t")), Variable("T")),
+          DomModify(Variable("t"), Variable("T")),
           DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
   }
 

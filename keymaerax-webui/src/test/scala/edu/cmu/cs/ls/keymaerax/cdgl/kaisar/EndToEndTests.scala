@@ -301,6 +301,14 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe discreteFml
   }
 
+  it should "support tuple patterns" in withMathematica { _ =>
+    // ?(acc & brk & tstep & separate):(A > 0 & B > 0 & T > 0 & x < d);
+    val pfStr = "?(xInit, vInit):(x := 0; v := 0;); "
+    val ff = check(pfStr)
+    ff shouldBe "[x:= 0; v := 0; ?(A > 0); ?(B > 0); ?(T > 0); ?(x < d);]true".asFormula
+  }
+
+
   it should "Prove 1d car safety with forward labels" in withMathematica { _ =>
     val pfStr =
          "let SB() = (v^2/(2*B)); " +

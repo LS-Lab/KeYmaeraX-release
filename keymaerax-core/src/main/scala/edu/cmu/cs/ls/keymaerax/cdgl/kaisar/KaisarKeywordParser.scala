@@ -63,8 +63,8 @@ object KaisarKeywordParser {
   def byProof[_: P]: P[ByProof] = ("proof" ~ ws ~ proof ~ ws ~ "end").map(ByProof)
 
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
-  def modify[_: P]: P[Modify] = (ident ~ ws ~ ":=" ~ ws ~ term).map({case (x: Ident, f: Term) => Modify(VarPat(x), Left(f))})
-  def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: Ident) => Modify(VarPat(x), Right(Unit))}))
+  def modify[_: P]: P[Modify] = (ident ~ ws ~ ":=" ~ ws ~ term).map({case (x: Ident, f: Term) => Modify(Nil, List((x, Some(f))))})
+  def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: Ident) => Modify(Nil, List((x, None)))}))
   def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(ident, formula, method)})
   def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(ident, formula)})
   def label[_: P]: P[Label] = (identString ~ ":").map(c => Label(LabelDef(c)))
@@ -78,7 +78,7 @@ object KaisarKeywordParser {
   def branch[_: P]: P[(Expression, Expression, Statement)] = (expression ~ ws ~ "=>" ~ ws ~ parseBlock).map({case (e, blk) => (True, e, blk)})
   def patternMatch[_: P]: P[Switch] = ("cases" ~ ws ~ branch.rep ~ ws ~ "end").map(_.toList).map(Switch(None, _))
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ ws ~ literal).map(PrintGoal)
-  def ghost[_: P]: P[Ghost] = ("ghost"~ ws ~ ident ~ ws ~ "=" ~ ws ~ term).map({case (x, f) => Ghost(Modify(VarPat(x), Left(f)))})
+  def ghost[_: P]: P[Ghost] = ("ghost"~ ws ~ ident ~ ws ~ "=" ~ ws ~ term).map({case (x, f) => Ghost(Modify(Nil, List((x, Some(f)))))})
   def bsolve[_: P]: P[Statement] = (("solve" ~ ws ~ differentialProgram ~ ws ~
     "domain" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~
     "duration" ~ ws ~ ident)).map({case (dp, vdc, dcFml, vdur) =>

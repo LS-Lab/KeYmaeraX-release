@@ -205,12 +205,12 @@ object ProofChecker {
         val last = c.lastBlock
         val header = last.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
           s match {
-            case Phi(Modify(VarPat(x, maybeP), Left(f))) =>
-              acc.addFact(maybeP, Equal(x, f)).addPhiAssign(x, f)
-            case Ghost(Modify(VarPat(x, maybeP), Left(f))) =>
-              acc.addFact(maybeP, Equal(x, f)).addGhostAssign(x, f)
-            case Modify(VarPat(x, maybeP), Left(f)) =>
-              acc.addFact(maybeP, Equal(x, f)).addAssign(x, f)
+            case Phi(Modify(ps, (x, Some(f)) :: Nil)) =>
+              acc.addFact(ps.headOption, Equal(x, f)).addPhiAssign(x, f)
+            case Ghost(Modify(ps, (x, Some(f)) :: Nil)) =>
+              acc.addFact(ps.headOption, Equal(x, f)).addGhostAssign(x, f)
+            case Modify(ps, (x, Some(f)) :: Nil) =>
+              acc.addFact(ps.headOption, Equal(x, f)).addAssign(x, f)
             case Ghost(Note(x, pt, Some(fml))) => acc.addFact(Some(x), fml)
             case Note(x, pt, Some(f)) => acc.addFact(Some(x), f)
             case Assert(x: Variable, f, m) => acc.addFact(Some(x), f)
@@ -300,7 +300,7 @@ object ProofChecker {
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
-    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(VarPat(dx, None), Left(e))})
+    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(Nil, List((dx, Some(e))))})
     val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
@@ -413,7 +413,7 @@ object ProofChecker {
       (x.name == y.name && x.index.contains(0)  && y.index.isEmpty) || // if SSA vars 1
       (x.name == y.name && x.index.isDefined  && y.index.contains(x.index.get-1))// if SSA vars 1
     }
-    theMod.foreach({case DomModify(VarPat(x, _), f) =>
+    theMod.foreach({case DomModify(x, f) =>
       val asgn = con.getAssignments(x)
       if (!asgn.exists({case Equal(y: Variable, Number(n)) if n.toInt == 0 && sameTimeVar(x, y) => true case _ => false}))
         throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE")
@@ -612,7 +612,7 @@ object ProofChecker {
         val (ss, f) = apply(con, s)
         (Context(Phi(ss.s)), f)
       // Proofs that succeed unconditionally
-      case Modify(VarPat(x, _), rhs) =>
+      case Modify(_, (x, rhs) :: Nil) =>
         val n = x.name
         val xIdx = x.index.getOrElse(-1)
         val freshVar = con.fresh(n)
@@ -621,12 +621,12 @@ object ProofChecker {
           throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
         }
         rhs match {
-            case Left(f) =>
+            case Some(f) =>
               if (StaticSemantics(f).contains(x)) {
                 throw ProofCheckException(s"Assignment to $x was not admissible")
               }
               (Context(s), Box(Assign(x,f), True))
-            case Right(_) => (Context(s), Box(AssignAny(x), True))
+            case None => (Context(s), Box(AssignAny(x), True))
           }
       case Assume(pat, f) =>
         val elabF = con.elaborateStable(f)

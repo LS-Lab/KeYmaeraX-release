@@ -64,19 +64,21 @@ case class DeterritorializePass(tt: TimeTable) {
     def fail = throw TransformationException(s"Value of $f@$lr is ill-defined")
     def traverse(s: Statement, f: Term): Term = {
       s match {
-        case Modify(VarPat(x, _), Left(rhs)) =>
-          if (DeterritorializePass.DEBUG) println(s"Replace $x = $rhs in $f")
-          val res = SubstitutionHelper.replaceFree(f)(x, rhs)
-          if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
-          res
-        case Modify(VarPat(x, _), Right(_)) if argMap.contains(x) =>
-          if (DeterritorializePass.DEBUG) println(s"Replace $x := * by ${argMap(x)} in $f")
-          val res = SubstitutionHelper.replaceFree(f)(x, argMap(x))
-          if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
-          res
-        case Modify(VarPat(x, _), Right(_)) if !argMap.contains(x) =>
-          throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
-            s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}")
+        case mod: Modify =>
+          mod.mods.foldRight[Term](f){
+            case ((x, Some(rhs)), acc) =>
+              if (DeterritorializePass.DEBUG) println(s"Replace $x = $rhs in $acc")
+              val res = SubstitutionHelper.replaceFree(acc)(x, rhs)
+              if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
+              res
+            case ((x, None), acc) if argMap.contains(x) =>
+              if (DeterritorializePass.DEBUG) println(s"Replace $x := * by ${argMap(x)} in $acc")
+              val res = SubstitutionHelper.replaceFree(acc)(x, argMap(x))
+              if (DeterritorializePass.DEBUG) println(s"Replaced to: $res")
+              res
+            case ((x, None), acc) if !argMap.contains(x) =>
+              throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
+              s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}")}
         case proveODE@ProveODE(ds, dc) if proveODE.hasTrueSolution =>
           // solution RHS has label arguments pre-applied
           val solMap = proveODE.solutions.get.toMap.map({case (x, t) => (x, SubstitutionHelper.replacesFree(t)({case x: BaseVariable => argMap.get(x) case _ => None}))})
@@ -200,7 +202,7 @@ case class DeterritorializePass(tt: TimeTable) {
         s match {
           case Assume(pat, f) => Assume(pat, translate(kc, f))
           case Assert(pat, f, m) => Assert(pat, translate(kc, f), m)
-          case Modify(pat, Left(f)) => Modify(pat, Left(translate(kc, f)))
+          case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
           case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation)))
           case LetFun(f, args, e: Term) => LetFun(f, args, translate(kc, e, localVars = args))
           case Match(pat, e: Term) => Match(translatePat(kc, pat), translate(kc, e))

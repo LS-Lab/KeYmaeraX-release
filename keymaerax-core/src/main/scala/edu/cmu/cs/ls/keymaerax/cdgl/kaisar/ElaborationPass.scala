@@ -164,7 +164,7 @@ class ElaborationPass() {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
           case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f))
-          case Modify(pat, Left(f)) => Modify(pat, Left(kc.elaborateFunctions(f)))
+          case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions(_)))}))
           // Elaborate all functions that are defined *before* f
           case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e))
           case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e))

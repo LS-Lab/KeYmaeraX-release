@@ -226,10 +226,28 @@ case class Triv() extends Statement
 case class Assume(pat: Expression, f: Formula) extends Statement
 // Assertion proves formula f to be true with method m, then introduces it with name(s) given by pattern [[pat]]
 case class Assert(pat: Expression, f: Formula, m: Method) extends Statement
-// Modifies the variables specified by [[pat]] by executing [[hp]]. Pattern [[pat]] optionally specifies proof variable
-// where equalities induced by assignments are stored. When [[hp==Left(f)]] the assignment is deterministic to term f,
-// when [[hp==Right(())]] the assignment is nondeterministic
-case class Modify(pat: AsgnPat, hp: Either[Term, Unit]) extends Statement
+// Modifies the variables specified by [[ids]] by executing [[mods]]. List [[ids]] optionally specifies proof variable(s)
+// where equalities induced by assignments are stored. When [[mod==Some(f)]] the assignment is deterministic to term f,
+// when [[mod==None]] the assignment is nondeterministic
+case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extends Statement {
+  if(ids.length > 1 && ids.length != mods.length)
+    throw new Exception("Modify statement should have one fact name for each assignment or one fact name for the entire block")
+
+  def asgns: List[(Option[Ident], Variable, Option[Term])] =
+    ids match {
+      case Nil => mods.map({case (x, f) => (None, x, f)})
+      case id :: Nil => mods.map({case (x, f) => (Some(id), x, f)})
+      case _ => zip3(ids.map(Some(_)), mods.map(_._1), mods.map(_._2))
+    }
+}
+object Modify {
+  def apply(dm: DomModify): Modify = Modify(Nil, (dm.x, Some(dm.f)) :: Nil)
+  def apply(lst: List[(Option[Ident], Variable, Option[Term])]): Modify = {
+    val (a, b, c) = unzip3(lst)
+    Modify(a.filter(_.isDefined).map(_.get), b.zip(c))
+  }
+}
+
 // Introduces a line label [[st]]. Terms f@st (likewise formulas) are then equal to the value of f at the location of
 // [[Label(st)]]. Labels are globally scoped with forward and backward reference, but references must be acyclic
 // for well-definedness
@@ -338,14 +356,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   }
 
   lazy val duration: Option[(Variable, Term)] = {
-    modifier.flatMap({case DomModify(VarPat(x, _), f) => Some(x, f) case _ => None})
+    modifier.flatMap({case DomModify(x, f) => Some(x, f) case _ => None})
   }
 
   lazy val conclusion: Formula = {
     val odeSystem = asODESystem
     val odeBV = StaticSemantics(odeSystem).bv
     modifier.foreach(dm =>
-      if(!odeBV.contains(dm.x.boundVars.toList.head))
+      if(!odeBV.contains(dm.x))
         throw ProofCheckException("ODE duration variable must be bound in ODE"))
     val hp = modifier.map(dm => Compose(odeSystem, Test(dm.asEquals))).getOrElse(odeSystem)
     if (modifier.nonEmpty) {
@@ -378,7 +396,13 @@ case class Phi(asgns: Statement) extends MetaNode {
   private def toMap(s: Statement, reverse: Boolean): Map[Variable, Variable] = {
     s match {
       case Block(ss) => ss.map(toMap(_, reverse)).foldLeft[Map[Variable, Variable]](Map())(_ ++ _)
-      case Modify(VarPat(x1, _), Left(x2: Variable)) => if (reverse) Map(x2 -> x1) else Map(x1 -> x2)
+      case mod: Modify =>
+          mod.mods.foldLeft[Map[Variable, Variable]](Map())({
+            case (acc, (x, Some(f: Variable))) =>
+              if (reverse)
+                acc.+(f -> x)
+              else
+                acc.+(x -> f)})
     }
   }
   def forwardMap:Map[Variable, Variable] = toMap(asgns, reverse = false)
@@ -418,8 +442,8 @@ sealed trait DiffStatement extends ASTNode {
     this match {
       case AtomicODEStatement(dp, _solIdent) =>
         (mod, dp.e) match {
-          case (Some(DomModify(VarPat(durvar, _), _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
-          case (Some(DomModify(VarPat(durvar, _), _)), rhs) if (dp.xp.x == durvar) =>
+          case (Some(DomModify(durvar, _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
+          case (Some(DomModify(durvar, _)), rhs) if (dp.xp.x == durvar) =>
             throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs")
           case _ => ()
         }
@@ -573,10 +597,9 @@ case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainFact
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
-case class DomModify(x: AsgnPat, f: Term) extends DomainStatement {
+case class DomModify(x: Variable, f: Term) extends DomainStatement {
   lazy val asEquals: Equal = {
-    val (DomModify(VarPat(x, _), e)) = this
-    Equal(x, e)
+    Equal(x, f)
   }
 }
 // Conjunction of domain constraints with proofs for each conjunct

@@ -72,8 +72,11 @@ object VariableSets {
     case InverseGhost(s) => apply(kc.reapply(s).withInverseGhost)
     case Assume(pat: Term, f) => ofFacts(StaticSemantics(pat).toSet, f, kc.isInverseGhost)
     case Assert(pat: Term, f, m) => ofFacts(StaticSemantics(pat).toSet, f, kc.isInverseGhost)
-    case Modify(pat: AsgnPat, Left(f)) => ofBound(pat.boundVars, kc.isGhost).++(ofFacts(pat.boundFacts, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
-    case Modify(pat: AsgnPat, _) => ofBound(pat.boundVars, kc.isGhost).++(ofFacts(pat.boundFacts, True, kc.isInverseGhost))
+    case mod: Modify =>
+        mod.asgns.foldLeft[VariableSets](VariableSets.empty){
+          case (acc, (p, x, Some(f))) => acc ++ ofBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+          case (acc, (p, x, None)) => acc ++ ofBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost))
+        }
     case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), kc.isInverseGhost)
     case LetFun(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
     case Match(pat: Term, e) => ofBound(StaticSemantics(pat).toSet, kc.isGhost)
@@ -122,7 +125,7 @@ object VariableSets {
     case DomAssume(x: Term, f) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomAssert(x: Term, f, child) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomWeak(dc: DomainStatement) => apply(kc.withInverseGhost, dc)
-    case DomModify(x: AsgnPat, f: Term) => ofBound(x.boundVars, kc.isGhost).++(ofFacts(x.boundFacts, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+    case DomModify(x, f) => ofBound(Set(x), kc.isGhost).++(ofFacts(Set(x), True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
     case DomAnd(l, r) => apply(kc, l).++(apply(kc, r))
   }
 }

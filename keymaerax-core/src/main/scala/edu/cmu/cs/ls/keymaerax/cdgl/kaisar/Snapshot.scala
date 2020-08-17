@@ -125,10 +125,10 @@ object Snapshot {
   def ofContext(c: Context): Snapshot = {
     var snap = Snapshot.empty
     val tf = new TraversalFunction {
-      override def postAP(kc: Context, ap: AsgnPat): AsgnPat = {
-        ap match {
-          case VarPat(x, _) => snap = snap.revisit(x); ap
-          case _ => ap
+      override def postS(kc: Context, s: Statement): Statement = {
+        s match {
+          case mod: Modify => mod.mods.foreach({case (x, f) => snap = snap.revisit(x)}); mod
+          case s => s
         }
       }
 
@@ -141,7 +141,7 @@ object Snapshot {
 
       override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
         s match {
-          case DomModify(VarPat(x, _), f) => snap = snap.revisit(x); s
+          case DomModify(x, f) => snap = snap.revisit(x); s
           case _ => s
         }
       }

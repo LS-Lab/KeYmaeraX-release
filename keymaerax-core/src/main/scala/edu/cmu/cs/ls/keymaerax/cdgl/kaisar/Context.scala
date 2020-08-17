@@ -284,29 +284,22 @@ case class Context(s: Statement) {
     * @param finder  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
   private def findAll(mod: Modify, finder: Finder): List[(Ident, Formula)] = {
-    mod match {
-      case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        val left = findAll(Modify(pat, Left(l)), finder)
-        val right = findAll(Modify(TuplePat(pats), Left(r)), finder)
-        left ++ right
-      /* Deterministic assignment that was annotated with a proof variable name for the introduced equality */
-      case Modify(VarPat(x, Some(p)), Left(f)) if (finder(p, Equal(x, f), false)) =>
-        // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
-        List((p, Equal(x, f)))
-      /* Deterministic assignment which was never annotated with a proof variable name to remember the introduced equality */
-      case Modify(VarPat(x, None), Left(f)) if (finder(x, Equal(x, f), true)) =>
-        /* @TODO (usability): If another recursive call finds a match for "finder", return that other match. But if *no*
-             branch succeeds, somebody, somewhere should give the user an error message like
-             "Ghost variable $x inaccessible because it would escape its scope" */
-        // Hide ghost statements except when accessed from another ghost context.
-        if (isGhost && !outer.isGhost) {
-          List()
-        } else
-          List((x, Equal(x, f)))
-      case Modify(VarPat(x, Some(_)), Right(())) =>
-        throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
-      case Modify(_, _) => List()
-    }
+    mod.asgns.flatMap({case (Some(p), x, Some(f))if (finder(p, Equal(x, f), false)) =>
+      // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
+      List((p, Equal(x, f)))
+    case (None, x, Some(f)) if (finder(x, Equal(x, f), true)) =>
+      /* @TODO (usability): If another recursive call finds a match for "finder", return that other match. But if *no*
+           branch succeeds, somebody, somewhere should give the user an error message like
+           "Ghost variable $x inaccessible because it would escape its scope" */
+      // Hide ghost statements except when accessed from another ghost context.
+      if (isGhost && !outer.isGhost) {
+        List()
+      } else
+        List((x, Equal(x, f)))
+    case (Some(_), x, None) =>
+      throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
+    case _ => Nil
+    })
   }
 
   /** Find all fact and program variable bindings which satisfy [[finder]] in statement [[ds]]
@@ -360,7 +353,7 @@ case class Context(s: Statement) {
           case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
           case Nil => Nil
         }
-      case DomModify(ap, term) => reapply(Modify(ap, Left(term))).findAll(f)
+      case dm: DomModify => reapply(Modify(dm)).findAll(f)
     }
   }
 
@@ -395,8 +388,13 @@ case class Context(s: Statement) {
     s match {
       case Assume(x, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Assert(x, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
-      case Modify(VarPat(x, _), Left(f)) => if (StaticSemantics(f).+(x).intersect(taboos).toSet.isEmpty) List(s) else Nil
-      case Modify(VarPat(x, _), Right(_)) => if (!taboos.contains(x)) List(s) else Nil
+      case mod: Modify =>
+        val admissible = mod.mods.forall({
+          case (x, Some(f)) => StaticSemantics(f).+(x).intersect(taboos).toSet.isEmpty
+          case (x, None) => !taboos.contains(x)
+          case _ => false
+        })
+        if (admissible) List(s) else Nil
       case Note(x, pt, Some(fml)) => if(StaticSemantics(fml).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Phi(asgns) =>
         val res = reapply(asgns).lastStatements(taboos)

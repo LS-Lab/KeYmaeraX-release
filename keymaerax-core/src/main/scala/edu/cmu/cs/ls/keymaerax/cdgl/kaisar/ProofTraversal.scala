@@ -48,9 +48,9 @@ object ProofTraversal {
     /* post-modify forward proof term */
     def postPT(kc: Context, s: ProofTerm): ProofTerm = s
     /* pre-modify assignment pattern (pattern for LHS of an assignment statement) */
-    def preAP(kc: Context, s: AsgnPat): Option[AsgnPat] = None
+    //def preAP(kc: Context, s: AsgnPat): Option[AsgnPat] = None
     /* post-modify assignment pattern (pattern for LHS of an assignment statement) */
-    def postAP(kc: Context, s: AsgnPat): AsgnPat  = s
+    //def postAP(kc: Context, s: AsgnPat): AsgnPat  = s
   }
 
   /* Traverse statement */
@@ -91,7 +91,7 @@ object ProofTraversal {
             Assert(x, f, traverse(kc, child, tf))
           case Note(x, pt, ann) =>
             Note(x, traverse(kc, pt, tf), ann)
-          case Modify(pat, rhs) => Modify(traverse(kc, pat, tf), rhs)
+          case mod: Modify => mod
           case _: PrintGoal | _: Assume | _: Label | _: LetFun | _: Match | _: Triv => s
         }
         tf.postS(kc, mid)
@@ -123,7 +123,7 @@ object ProofTraversal {
             case DomAssume(x, f) => DomAssume(x, f)
             case DomAssert(x, f, child) => DomAssert(x, f, traverse(kc, child, tf))
             case DomWeak(dc) => DomWeak(traverse(kc.withInverseGhost, dc, tf))
-            case DomModify(x, hp) => DomModify(traverse(kc, x, tf), hp)
+            case DomModify(x, f) => DomModify(x, f)
             case DomAnd(l, r) => DomAnd(traverse(kc, l, tf), traverse(kc, r, tf))
           }
         tf.postDomS(kc, mid)
@@ -174,8 +174,8 @@ object ProofTraversal {
   }
 
   /** Traverse an assignment pattern. */
-  def traverse(kc: Context, ap: AsgnPat, tf: TraversalFunction): AsgnPat = {
-    tf.preAP(kc, ap) match {
+  /*def traverse(kc: Context, ap: AsgnPat, tf: TraversalFunction): AsgnPat = {
+    /tf.preAP(kc, ap) match {
       case Some(ap) => ap
       case None =>
         val mid = ap match {
@@ -184,5 +184,5 @@ object ProofTraversal {
         }
         tf.postAP(kc, mid)
     }
-  }
+  }*/
 }

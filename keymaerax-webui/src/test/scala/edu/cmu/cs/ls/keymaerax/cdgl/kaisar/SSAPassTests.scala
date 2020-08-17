@@ -29,7 +29,7 @@ class SSAPassTests extends TacticTestBase {
 
   "SSA pass" should "transform assignment" in {
     val pfStr = "x:=x+1;"
-    pssa(pfStr) shouldBe Modify(VarPat(Variable("x", Some(0)), None), Left(Plus(Variable("x"), Number(1))))
+    pssa(pfStr) shouldBe Modify(Nil, List((Variable("x", Some(0)), Some(Plus(Variable("x"), Number(1))))))
   }
 
   it should "check fancy assignments" in {

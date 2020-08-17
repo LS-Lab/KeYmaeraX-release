@@ -24,7 +24,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{LabelDef, LabelRef}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
@@ -119,20 +119,12 @@ object SSAPass {
   /** SSA translation of a [[Modify]] proof statement
     * @return Translated statement and snapshot of final state */
   def ssa(mod: Modify, snapshot: Snapshot): (Modify, Snapshot) = {
-      mod match {
-      case Modify(VarPat(x, p), rhs) =>
+    val (asgns, snap) =
+      mod.asgns.foldLeft[(List[(Option[Ident], Variable, Option[Term])], Snapshot)](Nil, snapshot)({case ((list, snapshot), (id, x, f)) =>
         val (xx, snap) = snapshot.increment(x)
-        (Modify(VarPat(xx, p), either(rhs, snapshot)), snap)
-      case Modify(TuplePat(pat :: Nil), rhs) => ssa(Modify(pat, rhs), snapshot)
-      case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        val (Modify(pat1, Left(l1)), snap1) = ssa(Modify(pat, Left(l)), snapshot)
-        val (Modify(TuplePat(pats1), Left(r1)), snap2) = ssa(Modify(TuplePat(pats), Left(r)), snap1)
-        (Modify(TuplePat(pat1 :: pats1), Left(Pair(l1, r1))), snap2)
-      case Modify(TuplePat(pat :: pats), Right(_)) =>
-        val (Modify(pat1, Right(_)), snap1) = ssa(Modify(pat, Right(())), snapshot)
-        val (Modify(TuplePat(pats1), Right(_)), snap2) = ssa(Modify(TuplePat(pats), Right(())), snap1)
-        (Modify(TuplePat(pat1 :: pats1), Right(())), snap2)
-    }
+        ((id, xx, f.map(ssa(_, snapshot))) :: list, snap)
+      })
+    (Modify(asgns.reverse), snap)
   }
 
   /** Collapse double option. */
@@ -142,7 +134,7 @@ object SSAPass {
   private def stutters(ours: Snapshot, other: Snapshot): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
     val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
-    val asgns = varDiff.toList.map(x => Modify(VarPat(Variable(x, opt(other.getOpt(x))), None), Left(Variable(x, opt(ours.getOpt(x))))))
+    val asgns = varDiff.toList.map(x => Modify(Nil, List((Variable(x, opt(other.getOpt(x))), Some(Variable(x, opt(ours.getOpt(x))))))))
     if (asgns.isEmpty) Triv()
     else Phi(KaisarProof.block(asgns))
   }
@@ -262,9 +254,9 @@ object SSAPass {
         DomWeak(dc1)
       // note: final subscript of time variable t was already precomputed in snapshot. Don't use ssa(mod: Modify)
       // since it would doubly increment the subscript
-      case DomModify(VarPat(x, p), f) =>
+      case DomModify(x, f) =>
         val xt = ssa(x, snapshot).asInstanceOf[Variable]
-        DomModify(VarPat(xt, p), ssa(f, snapshot))
+        DomModify(xt, ssa(f, snapshot))
       case DomAnd(l, r) =>
         val l1 = ssa(l, snapshot)
         val r1 = ssa(r, snapshot)

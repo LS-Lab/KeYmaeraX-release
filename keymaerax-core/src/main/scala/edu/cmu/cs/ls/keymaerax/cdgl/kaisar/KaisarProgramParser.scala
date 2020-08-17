@@ -76,7 +76,10 @@ object ExpressionParser {
       FuncOf(fn, args.foldRight[Term](Nothing)(Pair))
     })
 
-  def parenTerm[_: P]: P[Term] = (("(" ~ term ~ ")"))
+  def parenTerm[_: P]: P[Term] = (("(" ~ term.rep(sep = ",", min = 1) ~ ")")).map(ss =>
+     if (ss.length == 1) ss.head
+     else StandardLibrary.termsToTuple(ss.toList)
+  )
 
   def variable[_: P]: P[Variable] = variableTrueFalse.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
 
@@ -238,21 +241,48 @@ object ProofParser {
   def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
   def idExPat[_: P]: P[Option[Ident]] = exPat.map({case (e: Variable) => Some(e) case _ => None })
 
+  private def assembleMod(e: Term, hp: Program): Modify = {
+    def getIdent(f: Term): Option[Ident] = f match {case v: Variable => Some(v) case _ => None}
+    def traverse(e: Term, hp: Program): List[(Option[Ident], Variable, Option[Term])] = {
+      (e, hp) match {
+        case (id, Assign(x, f)) => (getIdent(id), x, Some(f)) :: Nil
+        case (id, AssignAny(x)) => (getIdent(id), x, None) :: Nil
+        case (Pair(xl, xr), Compose(al, ar)) => traverse(xl, al) ++ traverse(xr, ar)
+        case (_, Compose(al, ar)) => traverse(Nothing, al) ++ traverse(Nothing, ar)
+      }
+    }
+    val (eachId, vars, terms) = StandardLibrary.unzip3(traverse(e, hp))
+    val ids = eachId.filter(_.isDefined).map(_.get)
+    Modify(ids, vars.zip(terms))
+  }
+
   def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
     case (i, pat, fml: Formula) => locate(Assume(pat, fml), i)
-    case (i, pat: Variable, Assign(x, f)) => locate(Modify(VarPat(x, Some(pat)), Left(f)), i)
-    case (i, pat, Assign(x, f)) => locate(Modify(VarPat(x, None), Left(f)), i)
-    case (i, pat: Variable, AssignAny(x)) => locate(Modify(VarPat(x, Some(pat)), Right(())), i)
-    case (i, pat, AssignAny(x)) => locate(Modify(VarPat(x, None), Right(())), i)
+    case (i, pat: Term, hp: Program) =>  locate(assembleMod(pat, hp), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })
 
   def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ "(" ~ formula ~ ")" ~ method ~ ";").map({
     case (i, pat, fml, method) => locate(Assert(pat, fml, method), i)})
 
-  def modify[_: P]: P[Modify] = (Index ~ idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").
-    map({case (i, p, Left(f)) => locate(Modify(p, Left(f)), i)
-         case (i, p, Right(_)) => locate(Modify(p, Right()), i)})
+  private def zipAssign(lhs: Term, rhs: Option[Term]): List[(Option[Ident], Variable, Option[Term])] = {
+    (lhs, rhs) match {
+      case (x: Variable, opt) => (None, x, opt) :: Nil
+      case (Pair(l,r), None) => zipAssign(l, None) ++ zipAssign(r, None)
+      case (Pair(l, r), Some(Pair (lf, rf))) => zipAssign(l, Some(lf)) ++ zipAssign(r, Some(rf))
+      case (Pair(l, r), Some(f)) => throw new Exception("lhs and rhs of tuple assignment must have same length")
+    }
+  }
+
+  def modify[_: P]: P[Statement] = (Index ~ term ~ ":=" ~ ("*".!.map(_ => None) | term.map(Some(_))) ~ ";").
+    map({case (i, p, opt) =>
+      val (idOpts, xs, fs) = StandardLibrary.unzip3(zipAssign(p, opt))
+      val ids = idOpts.filter(_.isDefined).map(_.get)
+      val statement =
+        if (idOpts.isEmpty) {
+          KaisarProof.block(xs.zip(fs).map({case (x, f) => Modify(Nil, List((x, f)))}))
+        } else Modify(ids, xs.zip(fs))
+      locate(statement, i)})
 
   def labelDefArgs[_: P]: P[List[Variable]] = {
     ("(" ~ identString.rep(sep = ",") ~ ")").map(ids => ids.toList.map(Variable(_)))
@@ -303,7 +333,7 @@ object ProofParser {
 
   def domAssume[_: P]: P[DomAssume] = (Index ~ "?" ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
   def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
-  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
+  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(id, f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
   def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).
