@@ -16,14 +16,14 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
 import edu.cmu.cs.ls.keymaerax.core._
 
 class SelectorEliminationPass() {
-  var ghostCon: Context = Context.empty
+  var ghostCon: Context = Context.empty.asElaborationContext
 
   /** Generous notion of free variables: include variables explicitly mentioned in proof term as well as program variables
     * mentioned in any fact used in the proof. */
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
     pt match {
       case ProgramVar(x) => Set(x)
-      case ProofVar(x) => StaticSemantics(con.get(x, isSound = false).getOrElse(True)).fv.toSet
+      case ProofVar(x) => StaticSemantics(con.get(x).getOrElse(True)).fv.toSet
       case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Term) => StaticSemantics(e).toSet
@@ -36,7 +36,7 @@ class SelectorEliminationPass() {
     pt match {
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
-        val got = kc.get(x, isSound = false)
+        val got = kc.get(x)
         got  match {
           case Some(_) => pt
           case None if VariableSets(kc).allVars.contains(x) =>
@@ -69,7 +69,7 @@ class SelectorEliminationPass() {
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
         // Program is not yet SSA-form, so don't filter out program variables that get bound twice.
-        val eachAssigns = candidates.map(x => (x, kc.getAssignments(x.x, isSound = false)))
+        val eachAssigns = candidates.map(x => (x, kc.getAssignments(x.x)))
         eachAssigns.filter(_._2.nonEmpty).map(_._1)
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
@@ -123,8 +123,8 @@ class SelectorEliminationPass() {
 
   /** @return statement where advanced selectors have been elaborated to simple selectors */
   def apply(s: Statement): Statement = {
-    ghostCon = Context(s)
-    val ret = ProofTraversal.traverse(Context.empty, s, new TraversalFunction {
+    ghostCon = ghostCon.reapply(s)
+    val ret = ProofTraversal.traverse(Context.empty.asElaborationContext, s, new TraversalFunction {
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
           case Assert(e, f, m) =>
@@ -174,7 +174,7 @@ class SelectorEliminationPass() {
         }
       }
     })
-    ghostCon = Context.empty
+    ghostCon = Context.empty.asElaborationContext
     ret
   }
 }
