@@ -30,16 +30,27 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 case class Context(s: Statement) {
   import Context._
+  // Metadata are vars rather than constructor arguments so that pattern-matches on Context remain simple.
+
+  // When recursively traversing a proof statement with context, [[outer]] represents the context at the beginning of
+  // the recursion.
   private var outer: Context = this
+  // Tracks whether the *statement* being checked appears under a Ghost or InverseGhost node.
+  // This is *distinct* from whether the context statement [[s]] contains ghosts.
   private var ghostStatus: GhostMode = NonGhostMode
+  // The [[isElaborationContext]] flag should be true (only) in early elaboration passes, before SSA.
+  // The elaboration passes use this to disable strict SSA soundness checking and allow partial sanity checking of
+  // proofs that might not succeed.
   private var _isElaborationContext: Boolean = false
 
+  /** Remember the current context as the [[outer]] context before a recursive traversal */
   def withOuter: Context = {
     val x = clone
     x.outer = x
     x
   }
 
+  /** Convert input [[s]] to a context, but remember the metadata from [[this]] context */
   def reapply(s: Statement): Context = {
     val x = Context(s)
     x.ghostStatus = ghostStatus
@@ -48,6 +59,7 @@ case class Context(s: Statement) {
     x
   }
 
+  /** Copy this context to provide persistent interface */
   override def clone: Context = {
     val x = Context(s)
     x.ghostStatus = ghostStatus
@@ -56,21 +68,28 @@ case class Context(s: Statement) {
     x
   }
 
-
+  /** Are we checking a statement which appears as a forward ghost? */
   def isGhost: Boolean = (ghostStatus == ForwardGhostMode)
+  /** Are we checking a statement which appears as an inverse ghost? */
   def isInverseGhost: Boolean = (ghostStatus == InverseGhostMode)
+  /** Does this context represent an elaboration pass? */
   def isElaborationContext: Boolean = _isElaborationContext
+
+  /** Clone this context with the elaboration flag set */
   def asElaborationContext: Context = {
     val ec: Context = this.clone
     ec._isElaborationContext = true
     ec
   }
+
+  /** Clone this context but indicate that we are checking a ghost statement */
   def withGhost: Context = {
     val gc: Context = this.clone
     gc.ghostStatus = ForwardGhostMode
     gc
   }
 
+  /** Clone this context but indicate that we are checking an inverse ghost statement */
   def withInverseGhost: Context = {
     val gc: Context = this.clone
     gc.ghostStatus = InverseGhostMode
@@ -78,10 +97,16 @@ case class Context(s: Statement) {
   }
 
   // @TODO: Search for "last" location
+  /** Recover the "current" line and column number using the position information of the underlying statement  */
   def location: Option[Int] = s.location
 
+  /** Compute the "difference" between two contexts.  A "difference" only exists if the underlying statement of  [[other]]
+    * is a "prefix" of [[this]], and consists of statements in [[this]] which remain after deleting the prefix [[other]].
+    * When [[this]] is a branching proof (e.g. Switch), we consider [[other]] a prefix even if [[other]] is currently
+    * proving some branch of the switch.
+    * An exception is thrown if the difference does not exist. */
   def --(other: Context): Context = {
-    def fail = throw new Exception(s"Context $other is not a subcontext of $this")
+    def fail = throw new Exception(s"Context $other is not a prefix of $this")
     (this.s, other.s) match {
       case (s, Triv()) => Context(s)
       case (Block(ss1), Block(ss2)) =>
@@ -442,12 +467,16 @@ case class Context(s: Statement) {
     }
   }
 
+  /** Elaborate the "stable" term tag once it is no longer needed */
   private def destabilize(f: Formula): Formula =
     SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
 
+  // @TODO: Can we move this to the deterritorialize pass instead of ProofChecker?
   /** Final elaboration step used in proof-checker or after deterritorialize pass */
   def elaborate(f: Formula): Formula = destabilize(f)
 
+  // @TODO: Factor out into common place.
+  // Convert nested pair into term list.
   private def unpackPairs(t: Term): List[Term] = {
     t match {
       case Nothing => Nil
@@ -456,6 +485,7 @@ case class Context(s: Statement) {
     }
   }
 
+  /** Optionally replace user-defined function symbols in [[t]] */
   private def replaceFunctions(t: Term): Option[Term] = {
     t match {
       case f: FuncOf =>
@@ -487,11 +517,11 @@ case class Context(s: Statement) {
   def elaborateFunctions(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f))
   def elaborateFunctions(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f))
 
+  /** The most recently proven fact in a context */
   def lastFact: Option[(Ident, Formula)] = {
     val (fml, phis) = lastFactMobile
     val mapped = fml.map({case ((k,fact)) => (k, phis.foldLeft(fact)((fml, phi) => Context.substPhi(phi, fml)))})
-    val res =  mapped.map({case (k, v) => (k, destabilize(v))})
-    res
+    mapped.map({case (k, v) => (k, destabilize(v))})
   }
 
   /** Does the context contain a fact named [[id]]? */
@@ -584,7 +614,5 @@ object Context {
         case (Some(_), _) => Some(term)
         case (None, v: Variable) => mapping.get(v)
         case (None, _) => None
-      }})
-  }
-
+      }})}
 }

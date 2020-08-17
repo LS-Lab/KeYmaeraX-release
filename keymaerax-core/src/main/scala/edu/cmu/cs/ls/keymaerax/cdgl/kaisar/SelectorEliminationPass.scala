@@ -50,6 +50,7 @@ class SelectorEliminationPass() {
     }
   }
 
+  /** Return morally "the same" selector, but determine which variables are ProofVar vs. ProgramVar */
   private def disambiguate(kc: Context, sel: Selector, goal: Formula): List[Selector] = {
     sel match {
       case DefaultSelector =>
@@ -77,6 +78,7 @@ class SelectorEliminationPass() {
     }
   }
 
+  /** Return morally "the same" method, but determine which variables are ProofVar vs. ProgramVar */
   private def disambiguate(kc: Context, m: Method, goal: Formula): Method = {
     m match {
       case Using(use, m) => Using(use.flatMap(disambiguate(kc, _, goal)), disambiguate(kc, m, goal))
@@ -148,6 +150,7 @@ class SelectorEliminationPass() {
         }
       }
 
+      // Elaborate terms and formulas throughout an ODE proof
       private def elaborateODE(kc: Context, ds: DiffStatement): DiffStatement = {
         ds match {
           case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kc.elaborateFunctions(e)), solFact)

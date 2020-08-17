@@ -48,10 +48,12 @@ object KaisarProof {
   // Stable is the counterpart to "at", which says that at(stable(x_i), L) should always be x_i
   val stable: Function = Function("stable", domain = Real, sort = Real, interpreted = true)
 
+  // Vectorial type real^n
   private def rN(n: Int): Sort = {
     if(n == 0) Unit
     else Tuple(Real, rN(n-1))
   }
+
   private def pairTerms(fs: List[Term]): Term = {
     fs.foldRight[Term](Nothing)(Pair)
   }
@@ -65,6 +67,7 @@ object KaisarProof {
     }
   }
 
+  // Construct a located term f@L
   def makeAt(f: Term, lr: LabelRef): Term = {
     val labelFun = FuncOf(Function(lr.label, None, rN(lr.args.length), Unit, interpreted = true), pairTerms(lr.args))
     FuncOf(Function("at", None, Tuple(Real, Unit), Real, interpreted = true), Pair(f, labelFun))
@@ -72,6 +75,7 @@ object KaisarProof {
 
   private val atFunction: Function = Function("at", None, Tuple(Real, Unit), Real, true)
 
+  // Pattern match a located term  f@L
   def getAt(t: Term): Option[(Term, LabelRef)] = {
     t match {
       case FuncOf(atFunction, Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
@@ -80,6 +84,7 @@ object KaisarProof {
     }
   }
 
+  // Pattern match a stabilized term stable(f)
   def getStable(t: Term): Option[Term] = {
     t match {
       case FuncOf(Function("stable", None, Real, Real, true), e) => Some(e)
@@ -126,6 +131,7 @@ object KaisarProof {
     }
   }
 
+  // Smart constructor for ghosts: ODE vs discrete ghosts
   def ghost(s: Statement): Statement = {
     s match {
       case ProveODE(ds, dc) => ProveODE(DiffGhostStatement(ds), dc)
@@ -133,6 +139,7 @@ object KaisarProof {
     }
   }
 
+  // Smart constructor for inverse ghosts: ODE vs discrete ghosts
   def inverseGhost(s: Statement): Statement = {
     s match {
       case ProveODE(ds, dc) => ProveODE(InverseDiffGhostStatement(ds), DomWeak(dc))
@@ -199,6 +206,7 @@ case class ForwardSelector(forward: ProofTerm) extends Selector {}
 // @TODO: probably more useful to mean "all which contain e as a subexpression"
 // @TODO: Makes early elaboration passes annoying, perhaps implement this later
 case class PatternSelector(e: Expression) extends Selector {}
+// Heuristically selects assumptions which mention variables that the goal also mentions.
 case object DefaultSelector extends Selector {}
 
 // Pattern language for left-hand side of assignment proofs. Expressions are used for most patterns, but assignment
@@ -511,6 +519,7 @@ sealed trait DomainStatement extends ASTNode {
     }
   }
 
+  // Does the ODE contain an assertion?
   def isAssertive: Boolean = {
     this match {
       case DomAssert(x, f, child) => true
@@ -550,6 +559,7 @@ sealed trait DomainStatement extends ASTNode {
   lazy val demonFormula: Option[Formula] = asFormula(isAngelic = false)
   lazy val angelFormula: Option[Formula] = asFormula(isAngelic = true)
 }
+
 object DomainStatement {
   def ofStatement(ds: Statement): Option[DomainStatement] = ds match {
     case _: Triv => None

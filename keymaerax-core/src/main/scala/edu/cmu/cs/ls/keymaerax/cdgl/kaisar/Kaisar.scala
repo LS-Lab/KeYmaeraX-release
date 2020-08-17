@@ -13,8 +13,9 @@ import fastparse.Parsed.{Failure, Success}
 
 /** Entry-point for Kaisar proof checker, which parses a proof and applies all passes in correct order */
 object Kaisar {
-  private def p[T](s: String, parser: P[_] => P[T]): T =
-    parse(s, parser, verboseFailures = true) match {
+  // Parse string [[s]] as a Kaisar proof, with additional error pretty-printing / locating
+  private def parseProof[T](s: String): T =
+    parse(s, ProofParser.statement(_), verboseFailures = true) match {
       case x: Success[T] =>
         if (x.index < s.length) {
           val MAX_CHAR = 80 - "...".length
@@ -27,7 +28,7 @@ object Kaisar {
           try {
             x.toString()
             val rest = s.drop(x.index)
-            p(rest, parser)
+            parseProof(rest)
             throw new Exception(msg)
           } catch {
             case e: Throwable => throw new Exception(msg, e)
@@ -41,10 +42,14 @@ object Kaisar {
         throw exn
     }
 
+  /** Parse and check proof string [[pf]]
+    * @return The formula proved by [[pf]], if any, else raises an exception */
   def apply(pf: String): Formula = {
+    // Pass name used to print more informative error messages
     var currentPass = "parser"
     try {
-      val in = p(pf, ProofParser.statement(_))
+      val in = parseProof(pf)
+      // Apply all proof transformation and checking passes, and recover error messages if necessary
       try {
         currentPass = "selectorElimination"
         val sel = new SelectorEliminationPass()(in)

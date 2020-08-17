@@ -52,7 +52,9 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
 
+  /** Eliminate [[stable]] marker in terms */
   private def destabilize(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
+  /** Return a term equivalent to [[f@lr]] which only uses terms that are defined at the beginning of [[conDiff]] */
   private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident]): Term = {
     val (_, _, ld) = tt(lr.label)
     if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments")
@@ -102,12 +104,12 @@ case class DeterritorializePass(tt: TimeTable) {
         case _ => f
       }
     }
-    // @TODO: Support arguments of labels
     val res = traverse(conDiff.s, termAcc)
     if (DeterritorializePass.DEBUG) println("Replaced to: " + res)
     res
   }
 
+  /** Reindex [[f]] according to [[label]] if it is legal to do so. */
   private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident]): Option[Term] = {
     tt.get(label.label) match {
       case None => throw TransformationException(s"Undefined line label: $label")
@@ -123,24 +125,29 @@ case class DeterritorializePass(tt: TimeTable) {
     }
   }
 
+  // Rename individual atomic terms
   private def transHelper(kc: Context, local: Set[Ident]): Term => Option[Term] = (f: Term) =>
     KaisarProof.getAt(f) match {
       case Some((e, label)) => renameAdmissible(kc, label, e, local)
       case None => None
     }
 
+  /** Translate a term [[t]], but leave parameters [[localVars]] intact */
   private def translate(kc: Context, t: Term, localVars: List[Ident] = Nil): Term = {
     SubstitutionHelper.replacesFree(t)(transHelper(kc, localVars.toSet))
   }
 
+  /** Translate a formula [[fml]] */
   private def translate(kc: Context, fml: Formula): Formula = {
     SubstitutionHelper.replacesFree(fml)(transHelper(kc, Set()))
   }
 
+  /** Translate an expression [[e]] */
   private def translate(kc: Context, e: Expression): Expression = {
     SubstitutionHelper.replacesFree(e)(transHelper(kc, Set()))
   }
 
+  /** Translate an expression pattern [[pat]], where already-bound variables are not renamed */
   private def translatePat(kc: Context, pat: Expression): Expression = {
     val boundVars = VariableSets(kc).boundVars
     SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars))
