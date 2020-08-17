@@ -1038,8 +1038,6 @@ object IntervalArithmeticV2 {
       intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
 
-  @Tactic("intervalArithmetic")
-  def intervalArithmetic(trm: Term): InputTactic = inputanon { IntervalArithmeticV2.intervalArithmetic }
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalCutTerms")
