@@ -386,7 +386,7 @@ case class Context(s: Statement) {
     }
     withOuter.searchAll(f, Set()).map(_._2).headOption
   }
-  def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborate)
+  def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborateStable)
 
   /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
@@ -448,9 +448,10 @@ case class Context(s: Statement) {
   private def destabilize(f: Formula): Formula =
     SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
 
-  // @TODO: Can we move this to the deterritorialize pass instead of ProofChecker?
-  /** Final elaboration step used in proof-checker or after deterritorialize pass */
-  def elaborate(f: Formula): Formula = destabilize(f)
+  // While it would be nice to do all translation steps before the proof-checker, the lastFact computations in ProofChecker
+  // need "stable" markers to determine when loop base cases and inductive steps agree.
+  /** Final elaboration step used in proof-checker. */
+  def elaborateStable(f: Formula): Formula = destabilize(f)
 
   /** Optionally replace user-defined function symbols in [[t]] */
   private def replaceFunctions(t: Term): Option[Term] = {

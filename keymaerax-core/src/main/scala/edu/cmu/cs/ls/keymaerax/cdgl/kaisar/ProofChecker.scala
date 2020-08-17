@@ -516,7 +516,7 @@ object ProofChecker {
   def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
       case Assert(x , f, m) =>
-        val elabF = con.elaborate(f)
+        val elabF = con.elaborateStable(f)
         apply(con, elabF, m)
         (Context(s), Box(Dual(Test(elabF)), True))
       case Note(x , pt,  conclusion) =>
@@ -575,7 +575,8 @@ object ProofChecker {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant")
               case Some((kName2, kFml2)) if kFml != kFml2 =>
                 throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
-              case Some(kFml2) => (Context(res), ff)
+              case Some(kFml2) =>
+                (Context(res), ff)
             }
         }
       case pode: ProveODE =>
@@ -630,7 +631,7 @@ object ProofChecker {
           case Right(_) => (Context(s), Box(AssignAny(x), True))
         }
       case Assume(pat, f) =>
-        val elabF = con.elaborate(f)
+        val elabF = con.elaborateStable(f)
         (Context(s), Box(Test(elabF), True))
       case _: Triv | _: Label => (Context(s), True)
     }
