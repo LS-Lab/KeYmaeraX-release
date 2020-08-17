@@ -149,9 +149,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[{x'=y&x>0}]true".asFormula
   }
 
-  // @TODO: Still debugging ode proof checker, write more tests
-  // @TODO: specifically, write tests with other programs after the ode, which look up ODE facts/assignments in context
-  // And tests which use duration-assignments.
   it should "catch invalid dc-assign: not bound" in withMathematica { _ =>
     val pfStr = "x' = y & t := T;"
     val pf = p(pfStr, pp.statement(_))

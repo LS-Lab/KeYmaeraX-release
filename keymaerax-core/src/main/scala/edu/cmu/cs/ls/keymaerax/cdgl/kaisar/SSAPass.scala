@@ -117,7 +117,7 @@ object SSAPass {
   }
 
   /** SSA translation of a [[Modify]] proof statement
-    * @returns Translated statement and snapshot of final state */
+    * @return Translated statement and snapshot of final state */
   def ssa(mod: Modify, snapshot: Snapshot): (Modify, Snapshot) = {
       mod match {
       case Modify(VarPat(x, p), rhs) =>
@@ -177,7 +177,6 @@ object SSAPass {
         val (body, postSnap) = ssa(s, preSnap)
         val baseStutters = stutters(snapshot, preSnap)
         val indStutters = stutters(postSnap, preSnap)
-        // @TODO: Should ih be SSA'd or left alone?
         val res = KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(body :: indStutters :: Nil), ih) :: Nil)
         (res, preSnap)
       case While(x: Expression, j: Formula, s: Statement) =>
@@ -231,8 +230,6 @@ object SSAPass {
       /* @TODO: Decide intended semantics of Match patterns. Here I assume that bound variables are not shadowed in a pattern-match,
        * but that free variables may be introduced */
       case Match(pat: Expression, e: Expression) =>
-        /* @TODO: Snapshot needs to account for the fact that some variables in the pattern are
-         *  already bound in the context (free reference) while others are fresh (bound position) */
         val snap = snapshot.addPattern(pat)
         (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
       case Triv() => (Triv(), snapshot)

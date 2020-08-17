@@ -16,10 +16,6 @@ import StandardLibrary._
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
-  // If [[SSA]] is on, apply strict soundness/admissibility checking, which only works if our inputs have been pre-processed
-  // with static single assignment. If [[SSA]] is off, do not use strict soundness checking, in which case the checker is not sound.
-  val SSA: Boolean = true
-
   /** @return all formulas selected by a selector */
   private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
@@ -186,16 +182,16 @@ object ProofChecker {
           ODEProofHeader(namedFacts, unnamedFacts, renameAssigns, renameGhostAssigns, phiAssigns.+(x -> f))
         case f => ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns, phiAssigns.+(x -> f))
       }
-
-
     }
 
     def addAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns.+(x -> f), ghostAssigns.+(x -> f), phiAssigns)
     def addGhostAssign(x: Ident, f: Term): ODEProofHeader = ODEProofHeader(namedFacts, unnamedFacts, assigns, ghostAssigns.+(x -> f), phiAssigns)
   }
+
   private object ODEProofHeader {
     val empty: ODEProofHeader = ODEProofHeader(Map(), Set(), Map(), Map(), Map())
   }
+
   private case class ODEContext(c: Context, header: ODEProofHeader) {
     def applyPhi(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)({case v: Variable => header.phiAssigns.get(v) case _ => None})
     def containsFact(fml: Formula, shouldApplyPhi: Boolean = true): Boolean = {
@@ -379,6 +375,7 @@ object ProofChecker {
     }
   }
 
+  /** Throw an exception if proveODE unsoundly reuses variables from context. Assumes SSA. */
   private def checkODEContext(kc: ODEContext, proveODE: ProveODE): Unit = {
     val bv = VariableSets(proveODE).boundVars.filter(_.isInstanceOf[BaseVariable])
     val kv = VariableSets(kc.c.s)
@@ -441,11 +438,15 @@ object ProofChecker {
     }
   }
 
-
-  /** @TODO: These should use unification, see [[Context]] */
   /** @return unification result of p and q, if any */
   private def unifyFml(p: Formula, q: Formula): Option[Formula] = {
-    if (p == q) Some(p) else None
+    try {
+        val subst = UnificationMatch(p, q)
+        val r = subst(p)
+        Some(r)
+      } catch {
+      case _: ProverException => None
+    }
   }
 
   /** @return unification result of formulas, if any. */
@@ -612,24 +613,21 @@ object ProofChecker {
         (Context(Phi(ss.s)), f)
       // Proofs that succeed unconditionally
       case Modify(VarPat(x, _), rhs) =>
-        // @TODO: Needs to check ghostery
-        if (SSA) {
-          val n = x.name
-          val xIdx = x.index.getOrElse(-1)
-          val freshVar = con.fresh(n)
-          val yIdx = freshVar.index.getOrElse(-1)
-          if ((yIdx > xIdx)) {
-            throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
-          }
+        val n = x.name
+        val xIdx = x.index.getOrElse(-1)
+        val freshVar = con.fresh(n)
+        val yIdx = freshVar.index.getOrElse(-1)
+        if (yIdx > xIdx) {
+          throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
         }
         rhs match {
-          case Left(f) =>
-            if (SSA && StaticSemantics(f).contains(x)) {
-              throw ProofCheckException(s"Assignment to $x was not admissible")
-            }
-            (Context(s), Box(Assign(x,f), True))
-          case Right(_) => (Context(s), Box(AssignAny(x), True))
-        }
+            case Left(f) =>
+              if (StaticSemantics(f).contains(x)) {
+                throw ProofCheckException(s"Assignment to $x was not admissible")
+              }
+              (Context(s), Box(Assign(x,f), True))
+            case Right(_) => (Context(s), Box(AssignAny(x), True))
+          }
       case Assume(pat, f) =>
         val elabF = con.elaborateStable(f)
         (Context(s), Box(Test(elabF), True))
