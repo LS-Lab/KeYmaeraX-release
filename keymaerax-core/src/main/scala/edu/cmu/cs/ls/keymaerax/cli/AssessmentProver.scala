@@ -428,6 +428,76 @@ object AssessmentProver {
     KeYmaeraXProofChecker(5000)(t)(s)
   }
 
+  /** Grades a submission.
+    *
+    * @param options The prover options:
+    *                - 'in (mandatory) identifies the file to grade
+    *                - 'config (mandatory) identifies the grader configuration file (maps chapter labels to source files)
+    */
+  def grade(options: OptionMap, usage: String): Unit = {
+    require(options.contains('in), usage)
+    require(options.contains('config), usage)
+
+    val configSource = Source.fromFile(options('config).toString, "UTF-8")
+    val config = new Properties()
+    try { config.load(configSource.reader()) } finally { configSource.close() }
+
+    val inputFileName = options('in).toString
+    val src = Source.fromFile(inputFileName, "UTF-8")
+    val input = try { src.mkString.parseJson } finally { src.close() }
+    val chapter = Submission.extract(input.asJsObject)
+
+    def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
+      case Submission.TextAnswer(_, t) :: Nil =>
+        if (TexExpressionArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexString(t)
+        else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
+      case answers =>
+        // list if choice answers
+        val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+        ChoiceArtifact(choiceAnswers.filter(_.isSelected).map(_.text))
+    }
+
+    Option(config.getProperty(chapter.label)) match {
+      case Some(file) =>
+        val gradeSource = Source.fromFile(file, "UTF-8")
+        val problems = try {
+          Problem.fromString(gradeSource.mkString.linesWithSeparators.filterNot(_.startsWith("%")).mkString)
+        } finally {
+          gradeSource.close()
+        }
+        problems.zip(chapter.problems).map({ case (qp, ap) =>
+          qp.questions.zip(ap.prompts).map({ case (q, prompt) =>
+            val grader = q match {
+              case q: AskQuestion =>
+                AskGrader(q.grader, q.args, q.expected)
+              case q: OneChoiceQuestion =>
+                val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
+                assert(correct.selected.size == 1, "Missing or non-unique correct solution")
+                OneChoiceGrader(Map.empty[String, String], correct)
+              case q: AnyChoiceQuestion =>
+                val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
+                assert(correct.selected.nonEmpty, "Missing correct solution")
+                AnyChoiceGrader(Map.empty[String, String], correct)
+              case q: AskTFQuestion => AskTFGrader(BoolArtifact(q.isTrue))
+            }
+            try {
+              val a = toArtifact(prompt, grader.expected.getClass)
+              grader.check(a) match {
+                case Left(_) => println("OK")
+                case Right(msg) => println("ERROR:" + msg)
+              }
+
+            } catch {
+              case ex: ParseException => println("ERROR:Unable to parse, expected " + ex.expect + " but found " + ex.found)
+              case ex: Throwable => println("ERROR:" + ex.getMessage)
+            }
+          })
+        })
+
+      case None => throw new IllegalArgumentException("Missing grading information for " + chapter.label)
+    }
+  }
+
   /** Converts list of `expected` subgoals and list of `actual` subgoals into a formula,
     * combining the formulas in the sequents using `fml` (equivalence checking by default). */
   private def sequentsToFormula(expected: List[Sequent], actual: List[Sequent], fml: (Formula, Formula) => Formula = Equiv) = {

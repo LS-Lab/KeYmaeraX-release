@@ -30,12 +30,13 @@ object KeYmaeraX {
   /** Names of actions that KeYmaera X command line interface supports. */
   object Modes {
     val CODEGEN: String = "codegen"
+    val GRADE: String = "grade"
     val MODELPLEX: String = "modelplex"
     val PROVE: String = "prove"
     val REPL: String = "repl"
-    val STRIPHINTS: String = "striphints"
     val SETUP: String = "setup"
-    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, SETUP)
+    val STRIPHINTS: String = "striphints"
+    val modes: Set[String] = Set(CODEGEN, GRADE, MODELPLEX, PROVE, REPL, SETUP, STRIPHINTS)
   }
 
   /** Backend tools. */
@@ -62,6 +63,9 @@ object KeYmaeraX {
   def runCommand(options: OptionMap, usage: String): Unit = {
     //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
     options.get('mode) match {
+      case Some(Modes.GRADE) =>
+        initializeProver(combineConfigs(options, configFromFile("z3")), usage)
+        AssessmentProver.grade(options, usage)
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
