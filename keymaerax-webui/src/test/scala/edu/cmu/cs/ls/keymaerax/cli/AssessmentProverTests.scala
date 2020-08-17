@@ -17,7 +17,7 @@ import spray.json._
 class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"
-  private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quiz"
+  private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quizzes"
 
   "Extractor" should "extract grading information" in {
     Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol \kyxline"x>=0" \end{problem}""") shouldBe 'empty
