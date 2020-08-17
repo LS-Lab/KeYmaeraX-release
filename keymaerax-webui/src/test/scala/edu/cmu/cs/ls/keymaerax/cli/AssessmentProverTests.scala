@@ -20,21 +20,21 @@ class AssessmentProverTests extends TacticTestBase {
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quizzes"
 
   "Extractor" should "extract grading information" in {
-    Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol \kyxline"x>=0" \end{problem}""") shouldBe 'empty
-    inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol \kyxline"x>=0" \end{problem}""")) {
+    Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0}" \end{problem}""") shouldBe 'empty
+    inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
         p.name shouldBe 'empty
         p.points should contain (1.0)
         p.label should contain ("prob:first")
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask Something simple \sol \kyxline"x>=0" \end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask Something simple \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
         p.name should contain ("Problem A")
         p.points should contain (4.0)
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0][Problem B] \ask A syntactic equality \sol \kyxline"x>=0" \autog{syneq()} \end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0][Problem B] \ask A syntactic equality \sol{\kyxline"x>=0"} \autog{syneq()} \end{problem}""")) {
       case p :: Nil =>
         p.name should contain ("Problem B")
         p.questions shouldBe
@@ -42,8 +42,8 @@ class AssessmentProverTests extends TacticTestBase {
     }
     inside (Problem.fromString(
       """\begin{problem}[1.0]
-        |\ask \sol \kyxline"x>=0" \autog{syneq()}
-        |\ask \sol \kyxline"y=2"
+        |\ask \sol{\kyxline"x>=0"} \autog{syneq()}
+        |\ask \sol{\kyxline"y=2"}
         |\autog{prove(question="#1 -> [{x'=v}]x>=0"
         |             tactic="auto")}
         |\end{problem}""".stripMargin)) {
@@ -55,18 +55,18 @@ class AssessmentProverTests extends TacticTestBase {
               ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
           )
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol \kyxline"x+1>=1" \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
             List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>=0" \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol \kyxline"x+1>=1" \nosol \kyxline"x+1>=0" \nosol \kyxline"x-1>=2" \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
@@ -76,7 +76,7 @@ class AssessmentProverTests extends TacticTestBase {
     inside (Problem.fromString(
       """\begin{problem}[1.0]
         |\ask A DI question
-        |\sol \kyxline"2*x=y"
+        |\sol{\kyxline"2*x=y"}
         |\autog{dI(vars="x",
         |          question="{x'=1,y'=2}")}
         |\end{problem}""".stripMargin)) {
@@ -84,14 +84,14 @@ class AssessmentProverTests extends TacticTestBase {
         p.questions shouldBe
           List(AskQuestion(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(None, Map.empty,
             SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent)),
             List(SequentArtifact(List("x>0 ==> x>=0".asSequent, "y<0 ==> y<=0".asSequent))), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol \kyxline"x>0,y>0,z>0"\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>0,y>0,z>0"}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(None, Map.empty,
@@ -115,7 +115,7 @@ class AssessmentProverTests extends TacticTestBase {
     }
     inside (Problem.fromString(
       """\begin{problem}[1.0]
-        |\ask \sol \kyxline"x>=0"
+        |\ask \sol{\kyxline"x>=0"}
         |\onechoice
         |A choice question
         |\choice  Wrong answer
@@ -400,7 +400,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Explain differential cuts", 8) :: ("Identify differential invariants to cut", 10) ::
-        ("Differential Invariance Rules", 13) :: Nil
+        ("Differential Invariance Rules", 14) :: Nil
     run(problems)
   }
 

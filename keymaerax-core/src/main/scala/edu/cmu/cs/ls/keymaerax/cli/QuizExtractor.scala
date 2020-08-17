@@ -39,11 +39,13 @@ object QuizExtractor {
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
     private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
     private val KYX_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
-    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?(?-s:(.+))?})"""
+    //@note nested {} up to level 2
+    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{((?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)})"""
     private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\$(.+?)\$})"""
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
     private val SOL_EXTRACTOR = """(?:""" + KYX_SOL_EXTRACTOR + "|" + TEX_TEXT_SOL_EXTRACTOR + "|" + TEXT_SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
+    //@todo test and no sol text answers
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
     private val GRADER_EXTRACTOR = """(?:\\autog\s*\{(\w+)\((.*?)\)})?""".stripMargin
