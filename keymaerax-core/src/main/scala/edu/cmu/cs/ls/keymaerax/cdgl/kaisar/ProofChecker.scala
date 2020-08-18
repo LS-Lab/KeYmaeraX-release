@@ -9,9 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.cdgl.Hyp
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, ODEAdmissibilityException, Statements}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import StandardLibrary._
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
@@ -40,9 +39,14 @@ object ProofChecker {
   }
 
   /** @return unit if [[f]] succeeds, else throw [[ProofCheckException]] */
-  private def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method): Unit = {
-    if(!f)
-      throw new ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
+  private def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method, outerStatement: ASTNode): Unit = {
+    if(!f) {
+      outerStatement match {
+        // Give simple error message, no statement given
+        case Triv () => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
+        case s => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m", node = s)
+      }
+    }
   }
 
   /* Implement rcf (real-closed fields) method */
@@ -106,18 +110,18 @@ object ProofChecker {
   }
 
   /** @return unit if f proves by method [[m]], else throw. */
-  private def apply(con: Context, f: Formula, m: Method): Unit = {
+  private def apply(con: Context, f: Formula, m: Method, outerStatement: ASTNode = Triv()): Unit = {
     val (assms, meth) = methodAssumptions(con, m, f)
     meth match {
-      case RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m)
+      case RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m, outerStatement)
       // general-purpose auto heuristic
-      case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m)
+      case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m, outerStatement)
       // propositional steps
-      case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m)
+      case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m, outerStatement)
       // case exhaustiveness
       case Exhaustive() =>
-        val branches = disjoin(f, 0)
-        qeAssert (exhaustive(branches), assms, f, m)
+        val branches = disjoin(f, 0, outerStatement)
+        qeAssert (exhaustive(branches), assms, f, m, outerStatement)
       // discharge goal with structured proof
       case ByProof(proof: Statements) => apply(con, proof)
     }
@@ -159,9 +163,9 @@ object ProofChecker {
     val sig = con.signature.keySet
     val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig)
     if (sig.contains(lf.asFunction)) {
-      throw ProofCheckException(s"Multiply-defined function definition ${f.name}")
+      throw ProofCheckException(s"Multiply-defined function definition ${f.name}", node = lf)
     } else if (unboundFunctions.nonEmpty) {
-      throw ProofCheckException(s"Definition of function ${f.name} refers to undefined symbols: $unboundFunctions")
+      throw ProofCheckException(s"Definition of function ${f.name} refers to undefined symbols: $unboundFunctions", node = lf)
     }
   }
 
@@ -255,11 +259,11 @@ object ProofChecker {
         if(kc.header.ghostAssigns.contains(x1))
           accum(acc, DiffGhostStatement(ds))
         else if (kc.header.assigns.contains(x1))
-          throw ProofCheckException(s"Ghost variable $x1 must be initialized with a ghost assignment, found non-ghost assignment")
+          throw ProofCheckException(s"Ghost variable $x1 must be initialized with a ghost assignment, found non-ghost assignment", node = ds)
         else
-          throw ProofCheckException(s"Ghost variable $x1 needs to be assigned right before different ghost ${DifferentialSymbol(x1)}")
-      case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
-      case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
+          throw ProofCheckException(s"Ghost variable $x1 needs to be assigned right before differential ghost ${DifferentialSymbol(x1)}", node = ds)
+      case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds", node = ds)
+      case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts", node = ds)
     }}}
     res.map(accum(core, _)).getOrElse(core)
   }
@@ -271,8 +275,8 @@ object ProofChecker {
       ds match {
         case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _) if admissibleGhost(x1, rhs) =>
           accum(core, ds)
-        case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds")
-        case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts")
+        case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds", node = ds)
+        case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts", node = ds)
       }}}
     res.map(accum(core, _)).getOrElse(core)
   }
@@ -291,7 +295,7 @@ object ProofChecker {
     }
     val (id, timeCon) = (baseCon.fresh(), baseCon.ghost(timeFml))
     val solMeth = Using(ForwardSelector(ProofVar(id)) :: methAssumps, RCF())
-    apply(timeCon, subSol, solMeth)
+    apply(timeCon, subSol, solMeth, assertion)
     assertion
   }
 
@@ -310,12 +314,12 @@ object ProofChecker {
     (odeCon.containsFact(f, shouldApplyPhi = true), x) match {
       case (true, _) =>
       case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
-        case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f")
-        case None => apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()))
+        case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f", node = assertion)
+        case None => apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()), assertion)
       }
     }
     /* Prove inductive case */
-    apply(ihCon, lieDerivative, Using(m.selectors, Auto()))
+    apply(ihCon, lieDerivative, Using(m.selectors, Auto()), assertion)
     assertion
   }
 
@@ -324,7 +328,7 @@ object ProofChecker {
     m.atom match {
       case Solution() => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
       case DiffInduction() => inductAssertion(baseCon, odeContext, proveODE, assertion, coll)
-      case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solution\"")
+      case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solution\"", node = assertion)
     }
   }
 
@@ -342,17 +346,17 @@ object ProofChecker {
 
   private def applyDuration(kc: ODEContext, dom: Option[DomainStatement], mod: Set[DomModify]): Option[DomainStatement] = {
     if (mod.size >= 2)
-      throw ProofCheckException(s"ODE should have at most one duration statement, got: $mod")
+      throw ProofCheckException(s"ODE should have at most one duration statement, got: $mod", node = mod.toList.tail.head)
     else if (mod.isEmpty) return dom
     if(dom.nonEmpty && !dom.get.isAssertive)
-      throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}")
+      throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}", node = dom.get)
     val oneMod@DomModify(ap, rhs) = mod.toList.head
     val durFact = GreaterEqual(rhs, Number(0))
     if(!kc.containsFact(durFact)) {
       try {
-        apply(kc.c, durFact, Using(DefaultSelector :: Nil, Auto()))
+        apply(kc.c, durFact, Using(DefaultSelector :: Nil, Auto()), oneMod)
       } catch {
-        case t: Throwable => throw ProofCheckException(s"ODE has duration $rhs but could not prove $rhs >= 0. To fix this, assert T >= 0 immediately before ODE")
+        case t: Throwable => throw ProofCheckException(s"ODE has duration $rhs but could not prove $rhs >= 0. To fix this, assert T >= 0 immediately before ODE", node = oneMod)
       }
     }
     accum(dom, oneMod)
@@ -382,7 +386,7 @@ object ProofChecker {
     val taboo = kv.freeVars ++ kv.boundVars
     val clash = bv.intersect(taboo)
     if (clash.nonEmpty)
-      throw ODEAdmissibilityException(clash)
+      throw ODEAdmissibilityException(clash, node = proveODE)
   }
 
     /**  Check a differential equation proof */
@@ -401,11 +405,11 @@ object ProofChecker {
     val proveODE =
       (inversed, weakened) match {
         case (Some(inv), Some(weak)) => ProveODE(inv, weak)
-        case _ => throw ProofCheckException("Expected ODE and domain, got none")
+        case _ => throw ProofCheckException("Expected ODE and domain, got none", node = inODE)
       }
     val theMod = modify.toList.headOption
     if (!proveODE.ds.hasDifferentialProgram(proveODE.dc.modifier)) {
-      throw ProofCheckException("ODE proof must have at least one non-ghost equation")
+      throw ProofCheckException("ODE proof must have at least one non-ghost equation", node = inODE)
     }
     val fml = proveODE.conclusion
     def sameTimeVar(x: Variable, y: Variable): Boolean = {
@@ -416,7 +420,7 @@ object ProofChecker {
     theMod.foreach({case DomModify(x, f) =>
       val asgn = con.getAssignments(x)
       if (!asgn.exists({case Equal(y: Variable, Number(n)) if n.toInt == 0 && sameTimeVar(x, y) => true case _ => false}))
-        throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE")
+        throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE", node = inODE)
     })
     (proveODE, fml)
 
@@ -482,17 +486,17 @@ object ProofChecker {
 
   /** Collect disjuncts only down the right side, rather than *all* disjuncts. This allows us to support case analyses
    * where some branches may be disjunctions */
-  private def disjoin(fml: Formula, k: Int): List[Formula] = {
+  private def disjoin(fml: Formula, k: Int, node: ASTNode): List[Formula] = {
     (fml, k) match {
       case (_, 1) => fml :: Nil
-      case (Or(l, r), _) =>l :: disjoin(r, k-1)
-      case (_, _) => throw ProofCheckException(s"Not enough branches in case statement, disjunct $fml unmatched")
+      case (Or(l, r), _) =>l :: disjoin(r, k-1, node)
+      case (_, _) => throw ProofCheckException(s"Not enough branches in case statement, disjunct $fml unmatched", node = node)
     }
   }
 
   /** @return unit if the conclusion of selector [[sel]] has the same cases as the [[branches]], i.e. if our case analysis
     * has exactly the right cases expected by the formula that we case-analyze */
-  private def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression]): Unit = {
+  private def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression], node: ASTNode): Unit = {
     // Goal formala "true" should be ignored, case selector should not be "default"
     methodAssumptions(con: Context, sel: Selector, True) match {
       case fml :: Nil =>
@@ -502,13 +506,13 @@ object ProofChecker {
         // until we peel off the right number of cases.
         val disj = FormulaTools.disjuncts(fml)
         if (disj.length == branches.length && disj.toSet != branches.toSet)
-          throw ProofCheckException("Switch statement branches differ from scrutinee")
+          throw ProofCheckException("Switch statement branches differ from scrutinee", node = node)
         else if (disj.length != branches.length) {
-          val kDisj = disjoin(fml, branches.length)
+          val kDisj = disjoin(fml, branches.length, node)
           if (kDisj.toSet != branches.toSet)
-            throw ProofCheckException(s"Switch statement with scrutinee $sel expects branches $kDisj but got $branches")
+            throw ProofCheckException(s"Switch statement with scrutinee $sel expects branches $kDisj but got $branches", node = node)
         }
-      case fmls => throw ProofCheckException("Switch expected scrutinee to match exactly one formula, but matches: " + fmls)
+      case fmls => throw ProofCheckException("Switch expected scrutinee to match exactly one formula, but matches: " + fmls, node = node)
     }
   }
 
@@ -518,12 +522,12 @@ object ProofChecker {
     s match {
       case Assert(x , f, m) =>
         val elabF = con.elaborateStable(f)
-        apply(con, elabF, m)
+        apply(con, elabF, m, s)
         (Context(s), Box(Dual(Test(elabF)), True))
       case Note(x , pt,  conclusion) =>
         val res = ForwardProofChecker(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
-          throw ProofCheckException(s"Note $x expected conclusion ${conclusion.get}, got $res")
+          throw ProofCheckException(s"Note $x expected conclusion ${conclusion.get}, got $res", node = s)
         }
         (Context(Note(x, pt, Some(res))), res)
       case Block(ss) =>
@@ -538,23 +542,23 @@ object ProofChecker {
         val (conL, conR) = (con.:+(BoxChoiceProgress(bc, 0, Triv())), con.:+(BoxChoiceProgress(bc, 1, Triv())))
         val ((sl, fl), (sr, fr)) = (apply(conL, left), apply(conR, right))
         val (Box(a, p1), Box(b, p2)) = (asBox(fl), asBox(fr))
-        val p = unifyFml(p1, p2).getOrElse(throw new ProofCheckException("Could not unify branches of choice"))
+        val p = unifyFml(p1, p2).getOrElse(throw ProofCheckException("Could not unify branches of choice", node = bc))
         val ss = BoxChoice(sl.s, sr.s)
         (Context(ss), Box(Choice(a,b), p))
       case switch@Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
         val (patterns, conds, bodies) = unzip3(branches)
         sel match {
-          case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement")
-          case Some(sel) => compareCasesToScrutinee(con, sel, branches.map(_._2))
+          case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement", node = switch)
+          case Some(sel) => compareCasesToScrutinee(con, sel, branches.map(_._2), switch)
         }
         val (cons, fmls) = branches.zipWithIndex.map({case (cb, i) => {
           val (c, f) = apply(con.:+(SwitchProgress(switch, i, Triv())), cb._3)
           (c, concatBox(Box(Test(cb._2.asInstanceOf[Formula]), True), f))}}
           ).unzip
         val (as, ps) = fmls.map(asBox).map{case Box(a,p) => (Dual(a),p)}.unzip
-        val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify"))
-        (Context(Switch(sel, zip3(patterns, conds,cons.map(_.s)))), Box(Dual(as.reduceRight(Choice)), p))
+        val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify", node = switch))
+        (Context(Switch(sel, zip3(patterns, conds,cons.map(_.s), switch))), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
         val kc = con.:+(Assume(x, j))
         val (Context(sa), fa) = apply(kc, s)
@@ -562,20 +566,20 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
-      case BoxLoop(s: Statement, _) =>
+      case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {
-          case None => throw ProofCheckException(s"No invariant found in $con")
+          case None => throw ProofCheckException(s"No invariant found in $con", node = bl)
           case Some((kName, kFml)) =>
             val progCon = BoxLoopProgress(BoxLoop(s, Some((kName, kFml))), Triv())
             val (ss, f) = apply(con.:+(progCon), s)
             val Box(a,p) = asBox(f)
             val res = BoxLoop(ss.s, Some((kName, kFml)))
             val ff = Box(Loop(a), p)
-            val lookup = Context(ss.s).lastFact
+            val lookup = ss.lastFact
             lookup match {
-              case None => throw ProofCheckException(s"Inductive step does not prove invariant")
+              case None => throw ProofCheckException(s"Inductive step does not prove invariant", node = bl)
               case Some((kName2, kFml2)) if kFml != kFml2 =>
-                throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ")
+                throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ", node = bl)
               case Some(kFml2) =>
                 (Context(res), ff)
             }
@@ -586,19 +590,19 @@ object ProofChecker {
 
       // @TODO: LetFun and Match should be checked in earlier passes?
       case lf: LetFun => admitLetFun(con, lf); (Context(lf), True)
-      case Match(pat, e) =>
+      case mtch@Match(pat, e) =>
         try {
           UnificationMatch(pat, e);
           (Context(Match(pat, e)), True)
         } catch {
-          case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify")
+          case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify", node = mtch)
         }
-      case Ghost(s) =>
+      case ghost@Ghost(s) =>
         val (ss, f) = apply(con.withGhost, s)
         val taboo = VariableSets(ss).boundVars
         val fv = StaticSemantics(f).fv
         if (taboo.intersect(fv.toSet).nonEmpty) {
-          throw ProofCheckException(s"Ghost variable assignment escapes scope in ghost statement $f")
+          throw ProofCheckException(s"Ghost variable assignment escapes scope in ghost statement $f", node = ghost)
         }
         (Context(Ghost(ss.s)), True)
       case InverseGhost(s: Statement) =>
@@ -612,18 +616,18 @@ object ProofChecker {
         val (ss, f) = apply(con, s)
         (Context(Phi(ss.s)), f)
       // Proofs that succeed unconditionally
-      case Modify(_, (x, rhs) :: Nil) =>
+      case mod@Modify(_, (x, rhs) :: Nil) =>
         val n = x.name
         val xIdx = x.index.getOrElse(-1)
         val freshVar = con.fresh(n)
         val yIdx = freshVar.index.getOrElse(-1)
         if (yIdx > xIdx) {
-          throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form")
+          throw ProofCheckException(s"Assignment to $x was not in static-single-assignment form", node = mod)
         }
         rhs match {
             case Some(f) =>
               if (StaticSemantics(f).contains(x)) {
-                throw ProofCheckException(s"Assignment to $x was not admissible")
+                throw ProofCheckException(s"Assignment to $x was not admissible", node = mod)
               }
               (Context(s), Box(Assign(x,f), True))
             case None => (Context(s), Box(AssignAny(x), True))

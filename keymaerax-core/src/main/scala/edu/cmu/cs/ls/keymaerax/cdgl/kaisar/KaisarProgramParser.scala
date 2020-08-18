@@ -256,7 +256,12 @@ object ProofParser {
     val traversed = traverse(e, hp)
     val (eachId, vars, terms) = StandardLibrary.unzip3(traversed)
     val ids = eachId.filter(_.isDefined).map(_.get)
-    Modify(ids, vars.zip(terms))
+    val fullIds = (ids, e) match {
+      case (Nil, v: Variable) => List(v)
+      case (_ :: _, _) => ids
+      case _ => Nil
+    }
+    Modify(fullIds, vars.zip(terms))
   }
 
   def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
@@ -400,11 +405,11 @@ object KaisarProgramParser {
   def prettyIndex(index: Int, input: String): (Int, Int) = {
     var lines = (input:StringOps).lines.toList
     var colIndex = index
+    val SEPARATOR = if (input.contains("\r\n")) "\r\n" else if (input.contains("\r")) "\r" else "\n"
     var lineIndex = 0
-    // @TODO: Could be off by one
     while (lines.nonEmpty && colIndex >= lines.head.length) {
       lineIndex = lineIndex + 1
-      colIndex = colIndex - lines.head.length
+      colIndex = colIndex - (lines.head.length + SEPARATOR.length)
       lines = lines.tail
     }
     (lineIndex, colIndex)

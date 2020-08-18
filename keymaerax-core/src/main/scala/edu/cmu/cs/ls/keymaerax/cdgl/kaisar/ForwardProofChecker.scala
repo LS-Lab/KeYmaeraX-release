@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 
@@ -65,35 +65,35 @@ object ForwardProofChecker {
   }
 
   // Type-safe application of unary proof rules.
-  private def unary(name: String, arg1: ForwardArg): Formula = {
+  private def unary(name: String, arg1: ForwardArg, node: ASTNode): Formula = {
     val (spec, f) = unaryBuiltin(name)
     try {
       f(arg1)
     } catch {
       case t: Throwable =>
-        throw ProofCheckException(s"Expected argument: $spec\nBut got ($arg1)", cause = t)
+        throw ProofCheckException(s"Expected argument: $spec\nBut got ($arg1)", cause = t, node = node)
     }
   }
 
   // Type-safe application of binary proof rules.
-  private def binary(name: String, arg1: ForwardArg, arg2: ForwardArg): Formula = {
+  private def binary(name: String, arg1: ForwardArg, arg2: ForwardArg, node: ASTNode): Formula = {
     val (spec, f) = binaryBuiltin(name)
     try {
       f(arg1, arg2)
     } catch {
       case t: Throwable =>
-        throw ProofCheckException(s"Expected arguments: $spec\nBut got ($arg1) ($arg2)", cause = t)
+        throw ProofCheckException(s"Expected arguments: $spec\nBut got ($arg1) ($arg2)", cause = t, node = node)
     }
   }
 
   // Type-safe application of ternary proof rules.
-  private def ternary(name: String, arg1: ForwardArg, arg2: ForwardArg, arg3: ForwardArg): Formula = {
+  private def ternary(name: String, arg1: ForwardArg, arg2: ForwardArg, arg3: ForwardArg, node: ASTNode): Formula = {
     val (spec, f) = ternaryBuiltin(name)
     try {
       f(arg1, arg2, arg3)
     } catch {
       case t: Throwable =>
-        throw ProofCheckException(s"Expected arguments: $spec\nBut got ($arg1) ($arg2) ($arg3)", cause = t)
+        throw ProofCheckException(s"Expected arguments: $spec\nBut got ($arg1) ($arg2) ($arg3)", cause = t, node = node)
     }
   }
 
@@ -103,34 +103,33 @@ object ForwardProofChecker {
       case ProgramVar(x) =>
         val asgns = con.getAssignments(x)
         if (asgns.isEmpty) {
-          throw ProofCheckException(s"No assumptions found for program variable $x", location = con.location)
+          throw ProofCheckException(s"No assumptions found for program variable $x", node = pt)
         }
         asgns.reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
-      case ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1))
-      case ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>
-        binary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2))
-      case ProofApp(ProofApp(ProofApp(ProofVar(s), pt1), pt2), pt3) if ternaryBuiltin.contains(s.name) =>
-        ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3))
+      case app@ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1), app)
+      case app@ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>
+        binary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), app)
+      case app@ProofApp(ProofApp(ProofApp(ProofVar(s), pt1), pt2), pt3) if ternaryBuiltin.contains(s.name) =>
+        ternary(s.name, ptToForwardArg(con, pt1), ptToForwardArg(con, pt2), ptToForwardArg(con, pt3), app)
       case ProofVar(s) =>
         con.getHere(s) match {
           case Some(fml) =>
             fml
-          case None => throw ProofCheckException(s"Undefined proof variable $s")
+          case None => throw ProofCheckException(s"Undefined proof variable $s", node = pt)
         }
-      case ProofApp(pt, ProofInstance(e)) =>
+      case fullPt@ProofApp(pt, ProofInstance(e)) =>
         apply(con, pt) match {
           case Forall(List(x), p) => USubst(SubstitutionPair(x, e) :: Nil)(p)
-          case _ => throw ProofCheckException("Tried to instantiate non-quantifier")
+          case _ => throw ProofCheckException("Tried to instantiate non-quantifier", node = fullPt)
         }
       case ProofApp(pt1, pt2) =>
         (apply(con, pt1), apply(con, pt2)) match {
-          case (Imply(p, q), r)  if p == r => throw ProofCheckException(s"Argument $r in proof term does not match expected $p")
+          case (Imply(p, q), r)  if p == r => throw ProofCheckException(s"Argument $r in proof term does not match expected $p", node = pt2)
           case (Imply(p, q), r)  => q
-          case _ => throw ProofCheckException("Tried modus ponens on non-implication")
+          case (l, _) => throw ProofCheckException("Tried modus ponens on non-implication", node = pt1)
         }
-      case _ => throw ProofCheckException(s"Ill-typed forward proof term $pt")
+      case _ => throw ProofCheckException(s"Ill-typed forward proof term $pt", node = pt)
     }
   }
-
 }

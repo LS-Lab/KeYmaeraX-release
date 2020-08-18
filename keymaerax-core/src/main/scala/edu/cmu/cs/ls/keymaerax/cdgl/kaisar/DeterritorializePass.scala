@@ -25,7 +25,7 @@ object DeterritorializePass {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
           case Label(ld, Some(snap: Snapshot)) => times = times.+(ld.label -> (snap, kc, ld))
-          case Label(ld, None) => throw TransformationException("Expected label statement to contain snapshot")
+          case Label(ld, None) => throw TransformationException("Expected label statement to contain snapshot", node = s)
           case _ => ()
         }
         s
@@ -55,13 +55,13 @@ case class DeterritorializePass(tt: TimeTable) {
   /** Eliminate [[stable]] marker in terms */
   private def destabilize(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
   /** Return a term equivalent to [[f@lr]] which only uses terms that are defined at the beginning of [[conDiff]] */
-  private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident]): Term = {
+  private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident], node: ASTNode): Term = {
     val (_, _, ld) = tt(lr.label)
-    if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments")
+    if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments", node = node)
     val argMap = ld.args.zip(lr.args).foldLeft[Map[Variable, Term]](Map())({case (acc, (k, v)) => acc.+(k -> v)})
     val termAcc = destabilize(reindex(labelSnap, f, except))
     if (DeterritorializePass.DEBUG) println(s"Rewinding from ${termAcc.prettyString}")
-    def fail = throw TransformationException(s"Value of $f@$lr is ill-defined")
+    def fail = throw TransformationException(s"Value of $f@$lr is ill-defined", node = node)
     def traverse(s: Statement, f: Term): Term = {
       s match {
         case mod: Modify =>
@@ -78,7 +78,7 @@ case class DeterritorializePass(tt: TimeTable) {
               res
             case ((x, None), acc) if !argMap.contains(x) =>
               throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
-              s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}")}
+              s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}", node = node)}
         case proveODE@ProveODE(ds, dc) if proveODE.hasTrueSolution =>
           // solution RHS has label arguments pre-applied
           val solMap = proveODE.solutions.get.toMap.map({case (x, t) => (x, SubstitutionHelper.replacesFree(t)({case x: BaseVariable => argMap.get(x) case _ => None}))})
@@ -102,7 +102,7 @@ case class DeterritorializePass(tt: TimeTable) {
           if (f == ff) f
           else
             throw TransformationException(s"Value of $f@$lr is under-defined because it depends on duration of loop ${BoxLoop(s, ih)}. " +
-              s"Change the loop body or change $f so that $f does not mention any variables modified by the loop.")
+              s"Change the loop body or change $f so that $f does not mention any variables modified by the loop.", node = node)
         case _ => f
       }
     }
@@ -112,15 +112,15 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
   /** Reindex [[f]] according to [[label]] if it is legal to do so. */
-  private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident]): Option[Term] = {
+  private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident], node: ASTNode): Option[Term] = {
     tt.get(label.label) match {
-      case None => throw TransformationException(s"Undefined line label: $label")
+      case None => throw TransformationException(s"Undefined line label: $label", node = node)
       case Some((labelSnap, labelCon, _labelDef)) =>
         // @TODO: This is slow
         val hereSnap = Snapshot.ofContext(kc)
         if (!(labelSnap <= hereSnap)) {
           val conDiff = labelCon -- kc
-          val res = rewind(conDiff, labelSnap, label, f, except)
+          val res = rewind(conDiff, labelSnap, label, f, except, node)
           Some(res)
         } else
           Some(reindex(labelSnap, f, except))
@@ -128,36 +128,36 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
   // Rename individual atomic terms
-  private def transHelper(kc: Context, local: Set[Ident]): Term => Option[Term] = (f: Term) =>
-    KaisarProof.getAt(f) match {
-      case Some((e, label)) => renameAdmissible(kc, label, e, local)
+  private def transHelper(kc: Context, local: Set[Ident], node: ASTNode = Triv()): Term => Option[Term] = (f: Term) =>
+    KaisarProof.getAt(f, node) match {
+      case Some((e, label)) => renameAdmissible(kc, label, e, local, node)
       case None => None
     }
 
   /** Translate a term [[t]], but leave parameters [[localVars]] intact */
-  private def translate(kc: Context, t: Term, localVars: List[Ident] = Nil): Term = {
-    SubstitutionHelper.replacesFree(t)(transHelper(kc, localVars.toSet))
+  private def translate(kc: Context, t: Term, localVars: List[Ident] = Nil, node: ASTNode = Triv()): Term = {
+    SubstitutionHelper.replacesFree(t)(transHelper(kc, localVars.toSet, node))
   }
 
   /** Translate a formula [[fml]] */
-  private def translate(kc: Context, fml: Formula): Formula = {
-    SubstitutionHelper.replacesFree(fml)(transHelper(kc, Set()))
+  private def translate(kc: Context, fml: Formula, node: ASTNode): Formula = {
+    SubstitutionHelper.replacesFree(fml)(transHelper(kc, Set(), node))
   }
 
   /** Translate an expression [[e]] */
-  private def translate(kc: Context, e: Expression): Expression = {
-    SubstitutionHelper.replacesFree(e)(transHelper(kc, Set()))
+  private def translate(kc: Context, e: Expression, node: ASTNode): Expression = {
+    SubstitutionHelper.replacesFree(e)(transHelper(kc, Set(), node))
   }
 
   /** Translate an expression pattern [[pat]], where already-bound variables are not renamed */
-  private def translatePat(kc: Context, pat: Term): Term = {
+  private def translatePat(kc: Context, pat: Term, node: ASTNode): Term = {
     val boundVars = VariableSets(kc).boundVars
-    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars))
+    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars, node))
   }
 
-  private def translatePat(kc: Context, pat: Formula): Formula = {
+  private def translatePat(kc: Context, pat: Formula, node: ASTNode): Formula = {
     val boundVars = VariableSets(kc).boundVars
-    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars))
+    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars, node))
   }
 
   /** Translate away label references in a statement which must be in SSA form. */
@@ -174,30 +174,30 @@ case class DeterritorializePass(tt: TimeTable) {
       // translate named references in atoms
       override def postPT(kc: Context, pt: ProofTerm): ProofTerm = {
         pt match {
-          case ProofInstance(e) => ProofInstance(translate(kc, e))
+          case ProofInstance(e) => ProofInstance(translate(kc, e, pt))
           case _ => pt
         }
       }
 
       override def postSel(kc: Context, sel: Selector): Selector = {
         sel match {
-          case PatternSelector(e) => PatternSelector(translatePat(kc, e))
+          case PatternSelector(e) => PatternSelector(translatePat(kc, e, sel))
           case _ => sel
         }
       }
 
       override def postDomS(kc: Context, ds: DomainStatement): DomainStatement = {
         ds match {
-          case DomAssume(x, f) =>  DomAssume(x, translate(kc, f))
-          case DomAssert(x, f, child) => DomAssert(x, translate(kc, f), child)
-          case DomModify(x, f) => DomModify(x, translate(kc, f))
+          case DomAssume(x, f) =>  DomAssume(x, translate(kc, f, ds))
+          case DomAssert(x, f, child) => DomAssert(x, translate(kc, f, ds), child)
+          case DomModify(x, f) => DomModify(x, translate(kc, f, node = ds))
           case _: DomAnd | _: DomWeak => ds
         }
       }
 
       override def postDiffS(kc: Context, ds: DiffStatement): DiffStatement = {
         ds match {
-          case AtomicODEStatement(dp, ident) => AtomicODEStatement(AtomicODE(dp.xp, translate(kc, dp.e)), ident)
+          case AtomicODEStatement(dp, ident) => AtomicODEStatement(AtomicODE(dp.xp, translate(kc, dp.e, node = ds)), ident)
           case _ => ds
         }
       }
@@ -205,14 +205,14 @@ case class DeterritorializePass(tt: TimeTable) {
       // translate named references in atoms
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) => Assume(pat, translate(kc, f))
-          case Assert(pat, f, m) => Assert(pat, translate(kc, f), m)
+          case Assume(pat, f) => Assume(pat, translate(kc, f, s))
+          case Assert(pat, f, m) => Assert(pat, translate(kc, f, s), m)
           case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
-          case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation)))
+          case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation, s)))
           case LetFun(f, args, e: Term) => LetFun(f, args, translate(kc, e, localVars = args))
-          case Match(pat, e) => Match(translatePat(kc, pat), translate(kc, e))
-          case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, s) => (e1, translatePat(kc, e2), s)}))
-          case While(x, j, s) => While(x, translate(kc, j), s)
+          case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, s))
+          case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, bs) => (e1, translatePat(kc, e2, s), bs)}))
+          case While(x, j, bs) => While(x, translate(kc, j, s), bs)
           // Filter out no-op'd labels
           case BoxChoice(Ghost(Triv()), right) => right
           case BoxChoice(left, Ghost(Triv())) => left

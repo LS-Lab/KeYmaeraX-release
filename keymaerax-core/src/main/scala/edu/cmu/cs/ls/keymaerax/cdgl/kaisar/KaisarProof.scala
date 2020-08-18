@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import fastparse.Parsed.TracedFailure
 import StandardLibrary._
 
@@ -35,14 +34,25 @@ object KaisarProof {
   case class LabelDef(label: TimeIdent, args: List[Variable] = Nil)
   case class LabelRef(label: TimeIdent, args: List[Term] = Nil)
 
-  // Failures in proof transformation passes (as opposed to proof checking)
-  case class TransformationException(msg: String) extends Exception(msg)
-  // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
-  case class ElaborationException(msg: String) extends Exception(msg)
-  case class ODEAdmissibilityException(vars: Set[Variable]) extends Exception(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
-  case class KaisarParseException(trace: Option[TracedFailure] = None) extends Exception {
-    override def toString: String = if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)
+
+  class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (cause) {
+    val node: ASTNode = Triv()
+    def location: Option[Int] = node.location
   }
+  case class ProofCheckException(override val msg: String, override val cause: Throwable = null, override val node: ASTNode = Triv()) extends LocatedException (msg, cause) {
+    override def toString: String = msg
+  }
+
+  // Failures in proof transformation passes (as opposed to proof checking)
+  case class TransformationException(override val msg: String, override val node: ASTNode = Triv())
+    extends LocatedException(msg)
+  // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
+  case class ElaborationException(override val msg: String, override val node: ASTNode = Triv())
+    extends LocatedException(msg)
+  case class ODEAdmissibilityException(vars: Set[Variable], override val node: ASTNode = Triv())
+    extends LocatedException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
+  case class KaisarParseException(trace: Option[TracedFailure] = None, override val node: ASTNode = Triv())
+    extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get))
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
@@ -63,10 +73,10 @@ object KaisarProof {
   private val atFunction: Function = Function("at", None, Tuple(Real, Unit), Real, true)
 
   // Pattern match a located term  f@L
-  def getAt(t: Term): Option[(Term, LabelRef)] = {
+  def getAt(t: Term, node: ASTNode = Triv()): Option[(Term, LabelRef)] = {
     t match {
       case FuncOf(atFunction, Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
-        Some(e, LabelRef(label, tupleToTerms(args)))
+        Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
   }
@@ -245,8 +255,11 @@ case class Assert(pat: IdentPat, f: Formula, m: Method) extends Statement
 // where equalities induced by assignments are stored. When [[mod==Some(f)]] the assignment is deterministic to term f,
 // when [[mod==None]] the assignment is nondeterministic
 case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extends Statement {
+  val mod = this
   if(ids.length > 1 && ids.length != mods.length)
-    throw new Exception("Modify statement should have one fact name for each assignment or one fact name for the entire block")
+    throw new LocatedException("Modify statement should have one fact name for each assignment or one fact name for the entire block") {
+      override val node: ASTNode = mod
+    }
 
   def boundVars: Set[Variable] = mods.map(_._1).toSet
   def freeVars: Set[Variable] = mods.map({case (x, f) => StaticSemantics(f.getOrElse(Nothing)).toSet}).reduce(_ ++ _)
@@ -255,7 +268,7 @@ case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extend
     ids match {
       case Nil => mods.map({case (x, f) => (None, x, f)})
       case id :: Nil => mods.map({case (x, f) => (Some(id), x, f)})
-      case _ => zip3(ids.map(Some(_)), mods.map(_._1), mods.map(_._2))
+      case _ => zip3(ids.map(Some(_)), mods.map(_._1), mods.map(_._2), this)
     }
 }
 object Modify {
@@ -319,7 +332,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     else {
       val ode = asODESystem
       val result = Integrator(xys.toMap, timeVar.get, ode)
-      val resultMap = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f") })
+      val resultMap = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
       val theTimeVar: Variable = if (result.size < xys.size) { xys.filter({case (x, f) => !resultMap.contains(x)}).head._1} else timeVar.get
       val (timeX, timeF) = duration match {case Some((x, f)) => (x -> f) case None => (theTimeVar -> theTimeVar)}
       Some((timeX, timeF) :: resultMap)
@@ -382,7 +395,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     val odeBV = StaticSemantics(odeSystem).bv
     modifier.foreach(dm =>
       if(!odeBV.contains(dm.x))
-        throw ProofCheckException("ODE duration variable must be bound in ODE"))
+        throw ProofCheckException("ODE duration variable must be bound in ODE", node = this))
     val hp = modifier.map(dm => Compose(odeSystem, Test(dm.asEquals))).getOrElse(odeSystem)
     if (modifier.nonEmpty) {
       Box(Dual(hp), True)
@@ -462,7 +475,7 @@ sealed trait DiffStatement extends ASTNode {
         (mod, dp.e) match {
           case (Some(DomModify(durvar, _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
           case (Some(DomModify(durvar, _)), rhs) if (dp.xp.x == durvar) =>
-            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs")
+            throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs", node = this)
           case _ => ()
         }
         Some(dp)
@@ -557,7 +570,7 @@ sealed trait DomainStatement extends ASTNode {
       case dm: DomModify => Some(dm)
       case DomAnd(l, r) =>
         (l.modifier, r.modifier) match {
-          case (Some(x), Some(y)) => throw ProofCheckException("ODE should only have one duration statement")
+          case (Some(x), Some(y)) => throw ProofCheckException("ODE should only have one duration statement", node = this)
           case (None, r) => r
           case (l, None) => l
         }

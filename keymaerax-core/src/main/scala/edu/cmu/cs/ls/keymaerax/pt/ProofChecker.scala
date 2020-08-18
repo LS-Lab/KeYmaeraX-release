@@ -3,6 +3,8 @@ package edu.cmu.cs.ls.keymaerax.pt
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{ASTNode, Statement, Triv}
 
 import scala.collection.immutable
 
@@ -22,7 +24,6 @@ import scala.collection.immutable
  * @see [[ProvableSig]]
  */
 object ProofChecker {
-  case class ProofCheckException(str: String, cause: Throwable = null, location: Option[Int] = None) extends Exception (cause) { override def toString: String = str}
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))

@@ -43,11 +43,11 @@ class ElaborationPass() {
           case None if VariableSets(kc).allVars.contains(x) =>
             locate(ProgramVar(x), pt)
           case _ =>
-            throw ElaborationException(s"Tried to use unknown fact: $x. Typo?")
+            throw ElaborationException(s"Tried to use unknown fact: $x. Typo?", node = pt)
         }
       case ProofApp(m, n) => locate(ProofApp(disambiguate(kc, m), disambiguate(kc, n)), pt)
       case _: ProofInstance => pt
-      case ProgramVar(x) => throw ElaborationException("Did not expect program variable proof term in selector elimination pass.")
+      case ProgramVar(x) => throw ElaborationException("Did not expect program variable proof term in selector elimination pass.", node = pt)
     }
   }
 
@@ -94,7 +94,7 @@ class ElaborationPass() {
         val (assms, meth) = collectPts(kc, m, goal)
         val combineAssmsCandidates = useAssms ++ assms
         if(combineAssmsCandidates.isEmpty && use != List(DefaultSelector))
-          throw ElaborationException("Non-default selector should select at least one fact.")
+          throw ElaborationException("Non-default selector should select at least one fact.", node = m)
         val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramVar)
         val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
@@ -115,35 +115,18 @@ class ElaborationPass() {
         val dsR = collectPts(kc.:+(dsL.collect.constraints.s), r)
         locate(DomAnd(dsL, dsR), dc)
       case DomAssume(x, f) =>
-        elabFactBinding(x, kc.elaborateFunctions(f)).map({case (x, y) => locate(DomAssume(x, y), dc)}).
+        StandardLibrary.factBindings(x, kc.elaborateFunctions(f, dc), dc).map({case (x, y) => locate(DomAssume(x, y), dc)}).
           reduce[DomainStatement]({case (l, r) => locate(DomAnd(l, r), dc)})
       case DomAssert(x, f, m) =>
         if(x != Nothing && !x.isInstanceOf[Variable])
-          throw ElaborationException(s"Non-scalar fact patterns not allowed in domain constraint assertion ${dc}")
+          throw ElaborationException(s"Non-scalar fact patterns not allowed in domain constraint assertion ${dc}", node = dc)
         val meth = disambiguate(kc, m, f)
-        locate(DomAssert(x, kc.elaborateFunctions(f), meth), dc)
-      case DomModify(x, f) => locate(DomModify(x, kc.elaborateFunctions(f)), dc)
+        locate(DomAssert(x, kc.elaborateFunctions(f, dc), meth), dc)
+      case DomModify(x, f) => locate(DomModify(x, kc.elaborateFunctions(f, dc)), dc)
       case DomWeak(dc) => locate(DomWeak(dc), dc)
     }
   }
 
-  /** Elaborate fact binding patterns as in assertions ?pat:(fml); Vectorial patterns ?(x, y):(p & q) become lists of bindings. */
-  private def elabFactBinding(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {
-    def loop(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {
-      (lhs, rhs) match {
-        case (Nothing, _) => (Nothing, rhs) :: Nil
-        case (v: Variable, _) => (v, rhs) :: Nil
-        case (Pair(v: Variable, Nothing), _) => (v, rhs) :: Nil
-        case (Pair(l, r), And(pl, pr)) => loop(l, pl) ++ loop(r, pr)
-        // Note: Vectorial assumption must look like a conjunction in the *source syntax,* not just after expanding definitions
-        case _ => throw ElaborationException(s"Vectorial fact $lhs:$rhs expected right-hand-side to have shape p1 & ... & ... pn with one conjunct per fact name, but it did not.")
-      }
-    }
-    lhs match {
-      case v: Variable => List((v, rhs))
-      case _ => loop(lhs, rhs)
-    }
-  }
 
   /** @return statement where advanced selectors have been elaborated to simple selectors */
   def apply(s: Statement): Statement = {
@@ -163,7 +146,8 @@ class ElaborationPass() {
           val fv = mod.freeVars
           if(acc.intersect(fv).nonEmpty)
             throw ElaborationException(s"Simultaneous vector assignments are not supported, but assignment $mod tries to use simultaneously-bound variable(s) ${acc.intersect(fv)}. " +
-              s"To fix this, assign each variable separately, and if you wish to use a simultaneous assignment, introduce temporary variables for the old value(s) of ${acc.intersect(fv)}.")
+              s"To fix this, assign each variable separately, and if you wish to use a simultaneous assignment, introduce temporary variables for the old value(s) of ${acc.intersect(fv)}.",
+              node = mod)
           acc.++(bv)
         })
       }
@@ -203,10 +187,10 @@ class ElaborationPass() {
           case mod: Modify =>
             // ProofTraversal can handle locations if we're translating statements one-to-one, but we should do it by hand
             // when we introduce "new" assignments.
-            val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions))})), sel)
+            val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kc.elaborateFunctions(x, mod)))})), sel)
             Some(elabVectorAssign(elabFuncs))
           case Assume(e, f) =>
-            val assumes  = elabFactBinding(e, f).map({case (x, y) => locate(Assume(x, y), sel)})
+            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(x, y), sel)})
             Some(locate(KaisarProof.block(assumes), sel))
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
@@ -221,7 +205,7 @@ class ElaborationPass() {
             val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
             val fullSels = keptPts.map(ForwardSelector) ++ noteSels
             val finalMeth = locate(Using(fullSels, meth), meth)
-            val assertion = locate(Assert(e, kc.elaborateFunctions(f), finalMeth), sel)
+            val assertion = locate(Assert(e, kc.elaborateFunctions(f, sel), finalMeth), sel)
             Some(locate(Block(notes.:+(assertion)), sel))
           case ProveODE(ds, dc) =>
             val dom = collectPts(kc, dc)
@@ -233,7 +217,7 @@ class ElaborationPass() {
       // Elaborate terms and formulas throughout an ODE proof
       private def elaborateODE(kc: Context, ds: DiffStatement): DiffStatement = {
         ds match {
-          case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kc.elaborateFunctions(e)), solFact)
+          case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kc.elaborateFunctions(e, ds)), solFact)
           case DiffProductStatement(l, r) => DiffProductStatement(elaborateODE(kc, l), elaborateODE(kc, r))
           case DiffGhostStatement(ds) => DiffGhostStatement(elaborateODE(kc, ds))
           case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(elaborateODE(kc, ds))
@@ -243,15 +227,15 @@ class ElaborationPass() {
       // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f))
+          case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f, s))
           // Elaborate all functions that are defined *before* f
-          case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e))
-          case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e))
-          case While(x, j, s) => While(x, kc.elaborateFunctions(j), s)
-          case BoxLoop(s, Some((ihk, ihv))) => BoxLoop(s, Some((ihk, kc.elaborateFunctions(ihv))))
+          case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e, s))
+          case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e, s))
+          case While(x, j, body) => While(x, kc.elaborateFunctions(j, s), body)
+          case BoxLoop(body, Some((ihk, ihv))) => BoxLoop(body, Some((ihk, kc.elaborateFunctions(ihv, s))))
           // dc was elaborated in preS
           case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, ds), dc)
-          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kc.elaborateFunctions(f), b)}))
+          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kc.elaborateFunctions(f, s), b)}))
           case s => s
         }
       }

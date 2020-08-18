@@ -4,21 +4,21 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.KaisarParseException
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 import fastparse.Parsed.{Failure, Success}
 
 
 /** Entry-point for Kaisar proof checker, which parses a proof and applies all passes in correct order */
 object Kaisar {
+  private val MAX_CHAR = 80 - "...".length
+
   // Parse string [[s]] as a Kaisar proof, with additional error pretty-printing / locating
   private def parseProof(s: String): Statement =
     parse(s, ProofParser.statement(_), verboseFailures = true) match {
       case x: Success[Statement] =>
         if (x.index < s.length) {
-          val MAX_CHAR = 80 - "...".length
           val snippet = if (x.index < MAX_CHAR) s.take(x.index) else "..." + s.take(x.index).takeRight(MAX_CHAR)
           val (line, col) = KaisarProgramParser.prettyIndex(x.index, s)
           val msg = s"Could not parse entire input, failed after ($line, $col):\n\t$snippet"
@@ -61,14 +61,19 @@ object Kaisar {
         val (s, ff) = ProofChecker(Context.empty, dt)
         ff
       } catch {
-        case pce: ProofCheckException =>
-          if (pce.location.isDefined) {
-            val (line, col) = KaisarProgramParser.prettyIndex(pce.location.get, pf)
-            println(s"Error in pass $currentPass at location ($line, $col): ")
-          } else {
-            println(s"Error in pass $currentPass at unknown location")
+        case le: LocatedException =>
+          def snippetFor(s: ASTNode) = {
+            val str = s.toString
+            if (str.length < MAX_CHAR) str else "..." + str.take(MAX_CHAR)
           }
-          throw pce
+          val stmtMessage = if(le.node != Triv()) s" while checking statement ${snippetFor(le.node)}" else ""
+          if (le.location.isDefined) {
+            val (line, col) = KaisarProgramParser.prettyIndex(le.location.get, pf)
+            println(s"Error in pass $currentPass at location ($line, $col)$stmtMessage: ")
+          } else {
+            println(s"Error in pass $currentPass$stmtMessage at unknown location")
+          }
+          throw le
       }
     } catch {
       case kpe: KaisarParseException => throw kpe

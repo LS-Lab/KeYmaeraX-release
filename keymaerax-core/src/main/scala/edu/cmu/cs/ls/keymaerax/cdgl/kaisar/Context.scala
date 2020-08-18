@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context.Finder
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ProofCheckException
 
 case class Context(s: Statement) {
   import Context._
@@ -106,7 +106,7 @@ case class Context(s: Statement) {
     * proving some branch of the switch.
     * An exception is thrown if the difference does not exist. */
   def --(other: Context): Context = {
-    def fail = throw new Exception(s"Context $other is not a prefix of $this")
+    def fail = throw TransformationException(s"Context $other is not a prefix of $this", node = s)
     (this.s, other.s) match {
       case (s, Triv()) => Context(s)
       case (Block(ss1), Block(ss2)) =>
@@ -197,8 +197,8 @@ case class Context(s: Statement) {
       admissible && f(x, y,b)})
     s match {
       case _: Triv => Nil
-      case Assume(x, g) => Context.matchAssume(x, g).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
-      case Assert(x, g, _) => Context.matchAssume(x, g).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
+      case Assume(x, g) => Context.matchAssume(x, g, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
+      case Assert(x, g, _) => Context.matchAssume(x, g, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
       case Note(x, _, Some(g)) => if (fAdmiss(x, g, false)) List((x, g)) else Nil
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
       case Note(x, _, None) => if (fAdmiss(x, KaisarProof.askLaterP, false)) List((x, KaisarProof.askLaterP)) else Nil
@@ -229,7 +229,7 @@ case class Context(s: Statement) {
                     // Prevent ghost variables from escaping scope, unless we're turning off soundness checks or we
                     // are also a ghost.
                     if (inter.nonEmpty && !isElaborationContext && !isGhost) {
-                      throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope")
+                      throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
                     }
                     List((yx, yf))
                   case Nil => Nil
@@ -240,10 +240,10 @@ case class Context(s: Statement) {
         }
         iter(ss.reverse, f, tabooProgramVars)
       case BoxChoice(l, r) => reapply(l).searchAll(f, tabooProgramVars) ++ reapply(r).searchAll(f, tabooProgramVars)
-      case Switch(sel, pats) =>
+      case switch@Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>
-            if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+            if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names", node = switch)
             else if (v1 == v2) (k1, v1) // optimize identical branches
             else (k1, Or(v1, v2))
         }
@@ -297,7 +297,7 @@ case class Context(s: Statement) {
       } else
         List((x, Equal(x, f)))
     case (Some(_), x, None) =>
-      throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
+      throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable", node = mod)
     case _ => Nil
     })
   }
@@ -344,13 +344,13 @@ case class Context(s: Statement) {
     * @return all bindings which satisfy [[finder]] */
   private def findAll(dc: DomainStatement, f: Finder): List[(Ident, Formula)] = {
     dc match {
-      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList
+      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).filter({case (x,y) => f(x, y, false)}).toList
       case DomAssume(x, fml) => Nil
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml).filter({case (x,y) => f(x, y, false)}).toList
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).filter({case (x,y) => f(x, y, false)}).toList
       case DomAnd(l, r) => findAll(l, f) ++ findAll(r, f)
-      case DomWeak(dc) =>
+      case dw@DomWeak(dc) =>
         withInverseGhost.findAll(dc, f) match {
-          case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
+          case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected", node = dw)
           case Nil => Nil
         }
       case dm: DomModify => reapply(Modify(dm)).findAll(f)
@@ -452,27 +452,27 @@ case class Context(s: Statement) {
   def elaborateStable(f: Formula): Formula = destabilize(f)
 
   /** Optionally replace user-defined function symbols in [[t]] */
-  private def replaceFunctions(t: Term): Option[Term] = {
+  private def replaceFunctions(t: Term, node: ASTNode = Triv()): Option[Term] = {
     t match {
       case f: FuncOf =>
         signature.get(f.func) match {
           case Some(lf) =>
-            val elabChild = elaborateFunctions(f.child)
-            val elabArgs = StandardLibrary.tupleToTerms(elabChild)
+            val elabChild = elaborateFunctions(f.child, node)
+            val elabArgs = StandardLibrary.tupleToTerms(elabChild, node)
             if (elabArgs.length != lf.args.length)
-              throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}")
+              throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}", node = node)
             val argMap = lf.args.zip(elabArgs).toMap
             Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Term])
           case None =>
             KaisarProof.getAt(f) match {
               case Some((trm, lr)) =>
-                Some(KaisarProof.makeAt(elaborateFunctions(trm), LabelRef(lr.label, lr.args.map(elaborateFunctions))))
+                Some(KaisarProof.makeAt(elaborateFunctions(trm, node), LabelRef(lr.label, lr.args.map(x => elaborateFunctions(x, node)))))
               case None =>
                 if (KaisarProof.isBuiltinFunction(f.func)) {
-                  val elabChild = elaborateFunctions(f.child)
+                  val elabChild = elaborateFunctions(f.child, node)
                   Some(FuncOf(f.func, elabChild))
                 } else
-                  throw ElaborationException(s"Unknown function ${f.func}")
+                  throw ElaborationException(s"Unknown function ${f.func}", node = node)
             }
         }
       case _ => None
@@ -480,8 +480,8 @@ case class Context(s: Statement) {
   }
 
   /** Elaborate user-defined functions in an expression*/
-  def elaborateFunctions(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f))
-  def elaborateFunctions(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f))
+  def elaborateFunctions(f: Term, node: ASTNode): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f, node))
+  def elaborateFunctions(fml: Formula, node: ASTNode): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f, node))
 
 
   /** Does the context contain a fact named [[id]]? */
@@ -547,21 +547,25 @@ object Context {
   /** @param e the left-hand side of an assumption statement, which is a pattern that binds fact variables
     * @param f the right-hand side of an assumption statement, which is a formula expression
     * @return the set of fact bindings introduced by an assumption statement */
-  private def matchAssume(e: Expression, f: Formula): Map[Ident, Formula] = {
+  private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): Map[Ident, Formula] = {
     e match {
       // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name.
       case Nothing => Map()
       case BaseVariable(x, _, _) => Map(Variable(x) -> f)
+      case p: Pair =>
+        val bindings = StandardLibrary.factBindings(e, f)
+        bindings.map({case (x: Ident, f) => Map(x -> f)}).reduce(_ ++ _)
       case _ =>
+        // @TODO: Allows matching arbitrary patterns - delete this feature?
         if (!sameHead(e, f))
-          throw ProofCheckException(s"Pattern $e does not match formula $f")
+          throw ProofCheckException(s"Pattern $e does not match formula $f", node = node)
         (e, f) match {
           case (bcf1: BinaryCompositeFormula, bcf2: BinaryCompositeFormula) =>
-            matchAssume(bcf1.left, bcf2.left) ++ matchAssume(bcf1.right, bcf2.right)
+            matchAssume(bcf1.left, bcf2.left, node) ++ matchAssume(bcf1.right, bcf2.right, node)
           case (ucf1: BinaryCompositeFormula, ucf2: BinaryCompositeFormula) =>
-            matchAssume(ucf1.left, ucf2.left)
-          case (q1: Quantified, q2: Quantified) => matchAssume(q1.child, q2.child)
-          case (m1: Modal, m2: Modal) => matchAssume(m1.child, m2.child)
+            matchAssume(ucf1.left, ucf2.left, node)
+          case (q1: Quantified, q2: Quantified) => matchAssume(q1.child, q2.child, node)
+          case (m1: Modal, m2: Modal) => matchAssume(m1.child, m2.child, node)
         }
     }
   }
