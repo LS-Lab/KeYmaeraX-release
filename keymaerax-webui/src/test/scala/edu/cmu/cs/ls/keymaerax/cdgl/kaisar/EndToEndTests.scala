@@ -1,17 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
 import edu.cmu.cs.ls.keymaerax.tags._
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
-// @TODO: Write tests that exercise pattern-matches in assertions. Decide how useful pattern selectors and match statements are.
-// (match statements might be kind of useless)
+// @TODO: Decide how useful pattern selectors and match statements are. (match statements might be kind of useless)
+// @TODO: Test end-to-end angelic loop proofs with nominals etc
+// @TODO: New-and-improved context query interface for great happiness
+// @TODO: Smart-QE for efficiency
 
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.apply
@@ -258,7 +259,7 @@ class EndToEndTests extends TacticTestBase {
    */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr =
-      "?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d);" +
+      "?(xInit, vInit):(x:=0;v:=0); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);" +
       "!inv:(v^2/(2*B) <= (d - x) & v >= 0) using xInit vInit brk separate by auto;" +
       "{{switch {" +
         "case accel: ((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2))) =>" +
