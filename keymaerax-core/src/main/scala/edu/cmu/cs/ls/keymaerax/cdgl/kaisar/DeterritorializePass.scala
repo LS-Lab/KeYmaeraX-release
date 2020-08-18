@@ -150,7 +150,12 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
   /** Translate an expression pattern [[pat]], where already-bound variables are not renamed */
-  private def translatePat(kc: Context, pat: Expression): Expression = {
+  private def translatePat(kc: Context, pat: Term): Term = {
+    val boundVars = VariableSets(kc).boundVars
+    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars))
+  }
+
+  private def translatePat(kc: Context, pat: Formula): Formula = {
     val boundVars = VariableSets(kc).boundVars
     SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars))
   }
@@ -205,7 +210,7 @@ case class DeterritorializePass(tt: TimeTable) {
           case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
           case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation)))
           case LetFun(f, args, e: Term) => LetFun(f, args, translate(kc, e, localVars = args))
-          case Match(pat, e: Term) => Match(translatePat(kc, pat), translate(kc, e))
+          case Match(pat, e) => Match(translatePat(kc, pat), translate(kc, e))
           case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, s) => (e1, translatePat(kc, e2), s)}))
           case While(x, j, s) => While(x, translate(kc, j), s)
           // Filter out no-op'd labels

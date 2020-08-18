@@ -217,7 +217,7 @@ object ProofParser {
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
   def patternSelector[_: P]: P[PatternSelector] =
     (Index ~ P("*")).map(i => locate(PatternSelector(wild), i)) |
-    (Index ~ expression).map({case (i, e)  => locate(PatternSelector(e), i)})
+    (Index ~ term).map({case (i, e)  => locate(PatternSelector(e), i)})
   def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
@@ -238,7 +238,7 @@ object ProofParser {
   /*def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
     map({case (i, p, x) => locate(VarPat(p, x), i)})*/
   def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
-  def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
+  def exPat[_: P]: P[Term] = (term ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
   def idExPat[_: P]: P[Option[Ident]] = exPat.map({case (e: Variable) => Some(e) case _ => None })
 
   private def assembleMod(e: Term, hp: Program): Modify = {
@@ -261,7 +261,7 @@ object ProofParser {
 
   def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
     case (i, pat, fml: Formula) => locate(Assume(pat, fml), i)
-    case (i, pat: Term, hp: Program) =>  locate(assembleMod(pat, hp), i)
+    case (i, pat, hp: Program) =>  locate(assembleMod(pat, hp), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })
 
@@ -296,8 +296,8 @@ object ProofParser {
     (Index ~ ident ~ labelDefArgs.? ~ ":" ~ !P("=")).map({case (i, id, args) => locate(Label(LabelDef(id.name, args.getOrElse(Nil))), i)})
   }
 
-  def branch[_: P]: P[(Expression, Expression, Statement)] = {
-    ("case" ~ exPat ~ formula ~ "=>" ~ statement.rep).map({case (exp: Expression, fml: Formula, ss: Seq[Statement]) =>
+  def branch[_: P]: P[(Term, Formula, Statement)] = {
+    ("case" ~ exPat ~ formula ~ "=>" ~ statement.rep).map({case (exp, fml, ss: Seq[Statement]) =>
       (exp, fml, block(ss.toList))})
   }
 
@@ -317,8 +317,8 @@ object ProofParser {
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
   def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_))
-           | term.map(Right(_))
-           | ("(" ~ (formula | program) ~ ")").map(Right(_))) // formulas and programs should have parens to deconfuse
+           | term.map(Right(_)))
+           // @TODO: Unsupported for now| ("(" ~ (formula | program) ~ ")").map(Right(_))) // formulas and programs should have parens to deconfuse
     ~ "=" ~ expression ~ ";").
     map({case (i, Left((f, xs)), e) => locate(LetFun(f, xs.toList, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
 

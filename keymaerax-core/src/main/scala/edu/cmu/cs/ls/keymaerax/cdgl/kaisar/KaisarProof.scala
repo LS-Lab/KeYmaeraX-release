@@ -24,6 +24,11 @@ object KaisarProof {
   type Ident = Variable
   // Identifiers for line labels, which are typically alphabetic
   type TimeIdent = String
+  // Terms are used as patterns for left-hand sides of bindings:
+  //   Nothing -> no binding
+  //   Variable/Ident -> Bind one fact
+  //   Pair(v1, ... Pair(vn, Nothing)) -> pattern-match fact (p1 & ... pn) and bind vi -> pi
+  type IdentPat = Term
   type Statements = List[Statement]
   type Subscript = Option[Int]
 
@@ -187,7 +192,7 @@ case class ForwardSelector(forward: ProofTerm) extends Selector {}
 // Select [[all]] elements of the context which unify with an expression
 // @TODO: probably more useful to mean "all which contain e as a subexpression"
 // @TODO: Makes early elaboration passes annoying, perhaps implement this later
-case class PatternSelector(e: Expression) extends Selector {}
+case class PatternSelector(e: Term) extends Selector {}
 // Heuristically selects assumptions which mention variables that the goal also mentions.
 case object DefaultSelector extends Selector {}
 
@@ -221,11 +226,11 @@ case class TuplePat(pats: List[AsgnPat]) extends AsgnPat
 sealed trait Statement extends ASTNode
 // Proves nothing
 case class Triv() extends Statement
-// x is a formula pattern in assume and assert
+// Pat: IdentPat is pattern that binds zero, one, or many facts
 // Assume introduces assumption that f is true, with name(s) given by pattern [[pat]]
-case class Assume(pat: Expression, f: Formula) extends Statement
+case class Assume(pat: IdentPat, f: Formula) extends Statement
 // Assertion proves formula f to be true with method m, then introduces it with name(s) given by pattern [[pat]]
-case class Assert(pat: Expression, f: Formula, m: Method) extends Statement
+case class Assert(pat: IdentPat, f: Formula, m: Method) extends Statement
 // Modifies the variables specified by [[ids]] by executing [[mods]]. List [[ids]] optionally specifies proof variable(s)
 // where equalities induced by assignments are stored. When [[mod==Some(f)]] the assignment is deterministic to term f,
 // when [[mod==None]] the assignment is nondeterministic
@@ -267,7 +272,7 @@ case class  LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement
   val asFunction: Function = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Real)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
-case class Match(pat: Expression, e: Expression) extends Statement
+case class Match(pat: Term, e: Expression) extends Statement
 // Sequential composition of elements of [[ss]]
 case class Block(ss: Statements) extends Statement
 // Pattern formulas must form a constructively-exhaustive case analysis.
@@ -275,12 +280,12 @@ case class Block(ss: Statements) extends Statement
 // of the switch must be the branches of the scrutinee formula.
 // In each branch, bind a variable pattern to an assumption expression and prove the branch statement
 // the conclusion is the disjunction of branches
-case class Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) extends Statement
+case class Switch(scrutinee: Option[Selector], pats: List[(IdentPat, Formula, Statement)]) extends Statement
 // Execute either branch of a program nondeterministically, with corresponding proofs
 case class BoxChoice(left: Statement, right: Statement) extends Statement
-// x is a pattern
+// x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
-case class While(x: Expression, j: Formula, s: Statement) extends Statement
+case class While(x: IdentPat, j: Formula, s: Statement) extends Statement
 // Repeat [[s]] nondeterministically any number of times
 case class BoxLoop(s: Statement, ih: Option[(Ident, Formula)] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
@@ -590,12 +595,12 @@ sealed trait DomainFact extends DomainStatement {
   }
 }
 
-// x is formula pattern in assume and assert
+// x is an identifier pattern in assume and assert
 // Introduces assumption in domain, i.e., a domain formula which appears in the conclusion and can be accessed
 // by differential weakening
-case class DomAssume(x: Expression, f:Formula) extends DomainFact
+case class DomAssume(x: IdentPat, f:Formula) extends DomainFact
 // Differential assertion which is proved with differential cut and then possibly used in proof
-case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainFact
+case class DomAssert(x: IdentPat, f:Formula, child: Method) extends DomainFact
 // Distinct from "differential weakening" rule, meaning a domain constraint which is in the conclusion but not the
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement

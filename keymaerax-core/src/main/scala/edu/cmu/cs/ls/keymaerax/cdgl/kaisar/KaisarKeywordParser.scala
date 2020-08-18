@@ -52,7 +52,7 @@ object KaisarKeywordParser {
   def proofTerm[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVarApp)
 
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
-  def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | expression.map(PatternSelector))
+  def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | term.map(PatternSelector))
 
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
 
@@ -68,14 +68,14 @@ object KaisarKeywordParser {
   def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(ident, formula, method)})
   def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(ident, formula)})
   def label[_: P]: P[Label] = (identString ~ ":").map(c => Label(LabelDef(c)))
-  def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ expression ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
+  def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ term ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
   def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident.rep(sep=",") ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, xs, e) => LetFun(f, xs.toList, e)})
   def note[_: P]: P[Note] = ("note" ~ ws ~ ident ~ ws ~ "=" ~ ws ~ proofTerm).map({case (id, pt) => Note(id, pt)})
   def parseBlock[_: P]: P[Statement] = ("{" ~ ws ~ statement.rep(2) ~ ws ~ "}").map(ss => block(ss.toList))
   def boxChoice[_: P]: P[BoxChoice] = ("either" ~ ws ~ statement.rep ~ ws ~ "or" ~ ws ~ statement.rep ~ ws ~ "end").
     map({case (ls, rs) => BoxChoice(block(ls.toList), block(rs.toList))})
   //@TODO update
-  def branch[_: P]: P[(Expression, Expression, Statement)] = (expression ~ ws ~ "=>" ~ ws ~ parseBlock).map({case (e, blk) => (True, e, blk)})
+  def branch[_: P]: P[(Term, Formula, Statement)] = (formula ~ ws ~ "=>" ~ ws ~ parseBlock).map({case (e, blk) => (Nothing, e, blk)})
   def patternMatch[_: P]: P[Switch] = ("cases" ~ ws ~ branch.rep ~ ws ~ "end").map(_.toList).map(Switch(None, _))
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ ws ~ literal).map(PrintGoal)
   def ghost[_: P]: P[Ghost] = ("ghost"~ ws ~ ident ~ ws ~ "=" ~ ws ~ term).map({case (x, f) => Ghost(Modify(Nil, List((x, Some(f)))))})
