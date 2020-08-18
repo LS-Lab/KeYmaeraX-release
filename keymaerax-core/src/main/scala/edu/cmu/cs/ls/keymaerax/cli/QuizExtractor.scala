@@ -89,12 +89,13 @@ object QuizExtractor {
     /** Translates tex into an artifact. */
     def artifactsFromTexMathString(s: String): Artifact = {
       val x = Variable("x")
-      if (s.startsWith("\\{") && s.endsWith("\\}")) {
-        // lists \{1,2,3\}
-        TexExpressionArtifact(s.stripPrefix("\\{").stripSuffix("\\}").split(",").map(s => Equal(x, Number(s.toDouble))).reduceRightOption(Or).getOrElse(False))
+      if ((s.startsWith("\\{") || s.startsWith("{")) && s.endsWith("}")) {
+        // lists of terms \{1,2,3\} or {1,x,3+4}
+        TexExpressionArtifact(s.stripPrefix("\\").stripPrefix("{").stripSuffix("}").stripSuffix("\\").split(",").
+          map(s => Equal(x, s.asTerm)).reduceRightOption(Or).getOrElse(False))
       } else {
-        // intervals [0,3] \cup [0,\infty) \cup \lbrack 1,4 ] \cup (5,7\rbrack
-        val interval = """(\(|\[|\\lbrack)\s*(\d+)\s*,\s*(\d+|\\infty)\s*(\)|]|\\rbrack)""".r("(", "l", "u", ")")
+        // intervals [0,3] \cup [0,\infty) \cup \lbrack -1.0,4 ] \cup (5,7\rbrack
+        val interval = """(\(|\[|\\lbrack)\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?|\\infty)\s*(\)|]|\\rbrack)""".r("(", "l", "u", ")")
         val ivfml = interval.findAllMatchIn(s).map(m => (m.group("(") -> m.group("l"), m.group("u") -> m.group(")"))).map({
           case (l, u) => And(
             l match {
