@@ -27,6 +27,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ASTNode._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 
 object SSAPass {
@@ -76,44 +77,42 @@ object SSAPass {
 
   /**  SSA translation of a proof method */
   def ssa(m: Method, snapshot: Snapshot): Method = {
-    m match {
-      case _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => m
-      case Using(sels, m) =>
-        Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
-      // @TODO: This means variable indices which are used in ss can be reused elsewhere. Is this what we want?
-      case ByProof(ss) => ByProof(ssa(Block(ss), snapshot)._1.asInstanceOf[Block].ss)
-    }
+    val node =
+      m match {
+        case _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => m
+        case Using(sels, m) =>
+          Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
+        // @TODO: This means variable indices which are used in ss can be reused elsewhere. Is this what we want?
+        case ByProof(ss) => ByProof(ssa(Block(ss), snapshot)._1.asInstanceOf[Block].ss)
+      }
+    locate(node, m)
   }
 
   /** SSA translation of a fact selector */
   def ssa(sel: Selector, snapshot: Snapshot): Selector = {
-    sel match {
-      case DefaultSelector => sel
-      /* @TODO: Revisit this once pattern selectors have really been used. It's arguably better for a pattern to select
-       * facts regardless of which variable version/index is used. In that case, SSA renaming would be irrelevant here*/
-      case PatternSelector(e) => PatternSelector(ssa(e, snapshot))
-      case ForwardSelector(pt) => ForwardSelector(ssa(pt, snapshot))
-    }
+    val node =
+      sel match {
+        case DefaultSelector => sel
+        /* @TODO: Revisit this once pattern selectors have really been used. It's arguably better for a pattern to select
+         * facts regardless of which variable version/index is used. In that case, SSA renaming would be irrelevant here*/
+        case PatternSelector(e) => PatternSelector(ssa(e, snapshot))
+        case ForwardSelector(pt) => ForwardSelector(ssa(pt, snapshot))
+      }
+    locate(node, sel)
   }
 
   /** SSA transformation of a forward proof term */
   def ssa(pt: ProofTerm, snapshot: Snapshot): ProofTerm = {
-    pt match {
-      /* SSA doesn't re-index fact variable names, just program variables */
-      case ProofVar(x) => ProofVar(x)
-      /* ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
-      case ProgramVar(x) => ProgramVar(x)
-      case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
-      case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))
-    }
-  }
-
-  /** Apply SSA to left disjunct */
-  private def either(x: Either[Term, Unit], snapshot: Snapshot): Either[Term, Unit] = {
-    x match {
-      case Left(f) => Left(ssa(f, snapshot))
-      case Right(()) => Right(())
-    }
+    val node =
+      pt match {
+        /* SSA doesn't re-index fact variable names, just program variables */
+        case ProofVar(x) => ProofVar(x)
+        /* ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
+        case ProgramVar(x) => ProgramVar(x)
+        case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
+        case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))
+      }
+    locate(node, pt)
   }
 
   /** SSA translation of a [[Modify]] proof statement
@@ -124,19 +123,20 @@ object SSAPass {
         val (xx, snap) = snapshot.increment(x)
         ((id, xx, f.map(ssa(_, snapshot))) :: list, snap)
       })
-    (Modify(asgns.reverse), snap)
+    val node = Modify(asgns.reverse)
+    (locate(node, mod), snap)
   }
 
   /** Collapse double option. */
   private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
 
   /** @return Stuttering assignments which cause other state snapshot to match ours. */
-  private def stutters(ours: Snapshot, other: Snapshot): Statement = {
+  private def stutters(ours: Snapshot, other: Snapshot, locator: ASTNode = Triv()): Statement = {
     val allKeys = other.keySet.++(ours.keySet)
     val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
-    val asgns = varDiff.toList.map(x => Modify(Nil, List((Variable(x, opt(other.getOpt(x))), Some(Variable(x, opt(ours.getOpt(x))))))))
+    val asgns = varDiff.toList.map(x => locate(Modify(Nil, List((Variable(x, opt(other.getOpt(x))), Some(Variable(x, opt(ours.getOpt(x))))))), locator))
     if (asgns.isEmpty) Triv()
-    else Phi(KaisarProof.block(asgns))
+    else locate(Phi(locate(KaisarProof.block(asgns), locator)), locator)
   }
 
   /** Translate indices of label arguments */
@@ -146,7 +146,7 @@ object SSAPass {
 
   /** @returns Translated statement and snapshot of final state */
   def ssa(s: Statement, snapshot: Snapshot): (Statement, Snapshot) = {
-    s match {
+    val (node, snap) = s match {
       case mod: Modify => ssa(mod, snapshot)
       case Label(ld, _) => (Label(ssa(ld, snapshot), Some(snapshot)), snapshot)
       case Block(ss) =>
@@ -160,23 +160,25 @@ object SSAPass {
         val (leftS, leftSnap) = ssa(left, snapshot)
         val (rightS, rightSnap) = ssa(right, snapshot)
         val snap = leftSnap ++ rightSnap
-        val leftStutters = stutters(leftSnap, snap)
-        val rightStutters = stutters(rightSnap, snap)
+        val leftStutters = stutters(leftSnap, snap, s)
+        val rightStutters = stutters(rightSnap, snap, s)
         (BoxChoice(KaisarProof.block(leftS :: leftStutters :: Nil), KaisarProof.block(rightS :: rightStutters :: Nil)), snap)
-      case BoxLoop(s, ih) =>
-        val boundVars = VariableSets(s).boundVars
+      case BoxLoop(inBody, ih) =>
+        val boundVars = VariableSets(inBody).boundVars
         val preSnap = snapshot.addSet(boundVars)
-        val (body, postSnap) = ssa(s, preSnap)
-        val baseStutters = stutters(snapshot, preSnap)
-        val indStutters = stutters(postSnap, preSnap)
-        val res = KaisarProof.block(baseStutters :: BoxLoop(KaisarProof.block(body :: indStutters :: Nil), ih) :: Nil)
+        val (body, postSnap) = ssa(inBody, preSnap)
+        val baseStutters = stutters(snapshot, preSnap, s)
+        val indStutters = stutters(postSnap, preSnap, s)
+        val loop = locate(BoxLoop(KaisarProof.block(body :: indStutters :: Nil), ih), s)
+        val res = KaisarProof.block(baseStutters :: loop :: Nil)
         (res, preSnap)
-      case While(x: Expression, j: Formula, s: Statement) =>
-        val (body, bodySnap) = ssa(s, snapshot)
-        val baseStutters = stutters(snapshot, bodySnap)
-        val indStutters = stutters(bodySnap, snapshot)
+      case While(x: Expression, j: Formula, inBody: Statement) =>
+        val (body, bodySnap) = ssa(inBody, snapshot)
+        val baseStutters = stutters(snapshot, bodySnap, s)
+        val indStutters = stutters(bodySnap, snapshot, s)
         val (xx, jj) = (ssa(x, bodySnap), ssa(j, bodySnap))
-        (KaisarProof.block(baseStutters :: While(xx, jj, KaisarProof.block(indStutters :: body :: Nil)) :: Nil), bodySnap)
+        val whilst = locate(While(xx, jj, KaisarProof.block(indStutters :: body :: Nil)), s)
+        (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {
@@ -185,12 +187,12 @@ object SSAPass {
           ((x, ff, ss), snap2)
         }})
         val maxSnap = clauses.map(_._2).reduce(_ ++ _)
-        val stutterClauses = clauses.map({case ((x, f, s), clauseSnap) =>
-          val asgns = stutters(clauseSnap, maxSnap)
-          (x, f, KaisarProof.block(asgns :: s :: Nil))
+        val stutterClauses = clauses.map({case ((x, f, bs), clauseSnap) =>
+          val asgns = stutters(clauseSnap, maxSnap, s)
+          (x, f, KaisarProof.block(asgns :: bs :: Nil))
         }).reverse
         (Switch(scrut, stutterClauses), maxSnap)
-      case Assume(pat, f) => (Assume(pat/*ssa(pat, snapshot)*/, ssa(f, snapshot)), snapshot)
+      case Assume(pat, f) => (Assume(pat, ssa(f, snapshot)), snapshot)
       case Assert(pat, f, m) =>
         val ff = ssa(f, snapshot)
         val mm = ssa(m, snapshot)
@@ -214,8 +216,9 @@ object SSAPass {
         val snap = snapshot.addSet(bound)
         val ds1 = ssa(ds, snap)
         val dc1 = ssa(dc, snap)
-        val inStutter = stutters(snapshot, snap)
-        (KaisarProof.block(inStutter:: ProveODE(ds1, dc1) :: Nil), snap)
+        val inStutter = stutters(snapshot, snap, s)
+        val ode = locate(ProveODE(ds1, dc1), s)
+        (KaisarProof.block(inStutter:: ode :: Nil), snap)
       case Was(now: Statement, was: Statement) =>
         val (now1, snap) = ssa(now, snapshot)
         (Was(now1, was), snap)
@@ -226,13 +229,14 @@ object SSAPass {
         (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
       case Triv() => (Triv(), snapshot)
     }
+    (locate(node, s), snap)
   }
 
   /** In contrast to other ssa functions, differential equations do not update the snapshot as we go.
     * instead, [[snapshot]] should be the snapshot at the *end* of the ODE, which must be precomputed.
     * this difference is due to product ODEs having to assign variables in parallel */
   def ssa(ds: DiffStatement, snapshot: Snapshot): DiffStatement = {
-    ds match {
+    val node = ds match {
       case AtomicODEStatement(dp: AtomicODE, ident) =>
         val x = Variable(dp.xp.name, opt(snapshot.getOpt(dp.xp.name)), dp.xp.sort)
         val dx = DifferentialSymbol(x)
@@ -241,12 +245,13 @@ object SSAPass {
       case DiffGhostStatement(ds) => DiffGhostStatement(ssa(ds, snapshot))
       case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(ssa(ds, snapshot))
     }
+    locate(node, ds)
   }
 
   /**  SSA translation of domain statement. [[DomModify]] might bind a duration variable, in which case [[snapshot]]
     * refers to the *final* state of the ODE. */
   def ssa(ds: DomainStatement, snapshot: Snapshot): DomainStatement = {
-    ds match {
+    val node = ds match {
       case DomAssume(x, f) => (DomAssume(ssa(x, snapshot), ssa(f, snapshot)))
       case DomAssert(x, f, child) => (DomAssert(ssa(x, snapshot), ssa(f, snapshot), ssa(child, snapshot)))
       case DomWeak(dc) =>
@@ -262,6 +267,7 @@ object SSAPass {
         val r1 = ssa(r, snapshot)
         DomAnd(l1, r1)
     }
+    locate(node, ds)
   }
 
   /** Apply SSA translation pass to Kaisar statement */

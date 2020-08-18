@@ -111,10 +111,12 @@ object KaisarProof {
 
   // smart constructor for [[Block]] which will [[flatten]] the tree structure
   def block(ss: Statements): Statement = {
-    flatten(ss) match {
+    val flat = flatten(ss)
+    val located = flat.find(_.location.isDefined).getOrElse(Triv())
+    flat match {
       case List() => Triv()
       case List(s) => s
-      case ss => Block(ss)
+      case ss => ASTNode.locate(Block(ss), located)
     }
   }
 
@@ -141,6 +143,14 @@ sealed trait ASTNode {
   // Populated by parser and used to reconstruct error messages.
   var location: Option[Int] = None
   def setLocation(loc: Int): Unit = { location = Some(loc)}
+}
+object ASTNode {
+  def locate[T <: ASTNode](x:T, other: ASTNode): T = {
+    val theLocation: Option[Int] = if(x.location.isDefined) x.location else other.location
+    if (theLocation.isDefined)
+      x.setLocation(theLocation.get)
+    x
+  }
 }
 
 // A proof-method expresses a single step of unstructured heuristic proof,

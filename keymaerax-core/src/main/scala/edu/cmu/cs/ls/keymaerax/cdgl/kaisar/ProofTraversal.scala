@@ -11,6 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ASTNode._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.FTPG
@@ -56,7 +57,7 @@ object ProofTraversal {
   /* Traverse statement */
   def traverse(kc: Context, s: Statement, tf: TraversalFunction): Statement = {
     tf.preS(kc, s) match {
-      case Some(st) => st
+      case Some(st) => locate(st, s)
       case None =>
         val mid =
         s match {
@@ -91,17 +92,16 @@ object ProofTraversal {
             Assert(x, f, traverse(kc, child, tf))
           case Note(x, pt, ann) =>
             Note(x, traverse(kc, pt, tf), ann)
-          case mod: Modify => mod
-          case _: PrintGoal | _: Assume | _: Label | _: LetFun | _: Match | _: Triv => s
+          case _: Modify |  _: PrintGoal | _: Assume | _: Label | _: LetFun | _: Match | _: Triv => s
         }
-        tf.postS(kc, mid)
+        locate(tf.postS(kc, locate(mid, s)), s)
     }
   }
 
   /** traverse a differential statement */
   def traverse(kc: Context, ds: DiffStatement, tf: TraversalFunction): DiffStatement = {
     tf.preDiffS(kc, ds) match {
-      case Some(ds) => ds
+      case Some(theDs) => locate(theDs, ds)
       case None =>
         val mid = ds match {
           case AtomicODEStatement(dp, ident) => AtomicODEStatement(dp, ident)
@@ -109,14 +109,14 @@ object ProofTraversal {
           case DiffGhostStatement(ds) => DiffGhostStatement(traverse(kc.withGhost, ds, tf))
           case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(traverse(kc.withInverseGhost, ds, tf))
         }
-        tf.postDiffS(kc, mid)
+        locate(tf.postDiffS(kc, locate(mid, ds)), ds)
     }
   }
 
   /** traverse a domain statement */
   def traverse(kc: Context, ds: DomainStatement, tf: TraversalFunction): DomainStatement = {
     tf.preDomS(kc, ds) match {
-      case Some(ds) => ds
+      case Some(theDs) => locate(theDs, ds)
       case None =>
         val mid =
           ds match {
@@ -126,14 +126,14 @@ object ProofTraversal {
             case DomModify(x, f) => DomModify(x, f)
             case DomAnd(l, r) => DomAnd(traverse(kc, l, tf), traverse(kc, r, tf))
           }
-        tf.postDomS(kc, mid)
+        locate(tf.postDomS(kc, locate(mid, ds)), ds)
     }
   }
 
   /** traverse a forward proof term */
   def traverse(kc: Context, pt: ProofTerm, tf: TraversalFunction): ProofTerm = {
     tf.prePT(kc, pt) match {
-      case Some(pt) => pt
+      case Some(outPt) => locate(outPt, pt)
       case None =>
         val mid = pt match {
           case ProgramVar(x) => ProgramVar(x)
@@ -141,48 +141,35 @@ object ProofTraversal {
           case ProofInstance(e) => ProofInstance(e)
           case ProofApp(m, n) => ProofApp(traverse(kc, m, tf), traverse(kc, n, tf))
         }
-        tf.postPT(kc, mid)
+        locate(tf.postPT(kc, locate(mid, pt)), pt)
     }
   }
 
   /** traverse a proof step method */
   def traverse(kc: Context, m: Method, tf: TraversalFunction): Method = {
     tf.preM(kc, m) match {
-      case Some(m) => m
+      case Some(outM) => locate(outM, m)
       case None =>
         val mid = m match {
           case _ : RCF | _ : Auto | _ : Prop | _: Triv | _: Solution | _: DiffInduction | _: Exhaustive => m
           case Using(uses, m) => Using(uses.map(traverse(kc, _, tf)), traverse(kc, m, tf))
           case ByProof(ss) => ByProof(ss.map(traverse(kc, _, tf)))
         }
-        tf.postM(kc, mid)
+        locate(tf.postM(kc, locate(mid, m)), m)
     }
   }
 
   /** Traverse a fact selector */
   def traverse(kc: Context, s: Selector, tf: TraversalFunction): Selector = {
     tf.preSel(kc, s) match {
-      case Some(sel) => sel
+      case Some(outSel) => locate(outSel, s)
       case None =>
         val mid = s match {
           case ForwardSelector(pt) => ForwardSelector(traverse(kc, pt, tf))
           case PatternSelector(e) => PatternSelector(e)
           case DefaultSelector => DefaultSelector
         }
-        tf.postSel(kc, mid)
+        locate(tf.postSel(kc, locate(mid, s)), s)
     }
   }
-
-  /** Traverse an assignment pattern. */
-  /*def traverse(kc: Context, ap: AsgnPat, tf: TraversalFunction): AsgnPat = {
-    /tf.preAP(kc, ap) match {
-      case Some(ap) => ap
-      case None =>
-        val mid = ap match {
-          case TuplePat(aps) => TuplePat(aps.map(traverse(kc, _, tf)))
-          case _ : WildPat | _ : NoPat | _ : VarPat => ap
-        }
-        tf.postAP(kc, mid)
-    }
-  }*/
 }

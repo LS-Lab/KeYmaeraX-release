@@ -142,7 +142,6 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[t_0:=0; x_0:= 1; {t_1 := t_0;x_1:=x_0;}{t_1' = 1, x_1' = -1 & x_1>=0}]true".asFormula
   }
 
-
   it should "automatically find base case assumption in diffcut" in withMathematica { _ =>
     val pfStr = "?(y>=0); {y' = 1 & !dc:(y >= 0) by induction};"
     val ff = check(pfStr)
