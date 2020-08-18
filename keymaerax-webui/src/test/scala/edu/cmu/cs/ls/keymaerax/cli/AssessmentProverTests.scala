@@ -1,23 +1,29 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
+import java.io.{ByteArrayOutputStream, PrintWriter}
+
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, ListExpressionArtifact, OneChoiceGrader, SequentArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, OneChoiceGrader, SequentArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
+import edu.cmu.cs.ls.keymaerax.cli.Submission.TextAnswer
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
 import org.scalatest.EitherValues._
-
 import spray.json._
 
 class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quizzes"
+
+  private val RANDOM_TRIALS = 100
+  private val rand = RepeatableRandom()
 
   "Extractor" should "extract grading information" in {
     Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0}" \end{problem}""") shouldBe 'empty
@@ -33,6 +39,18 @@ class AssessmentProverTests extends TacticTestBase {
         p.name should contain ("Problem A")
         p.points should contain (4.0)
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask A tex question \sol{$\{1,(-2),x^2\}$} \end{problem}""")) {
+      case p :: Nil =>
+        p.name should contain ("Problem A")
+        p.points should contain (4.0)
+        p.questions shouldBe List(AskQuestion(None, Map.empty, TexExpressionArtifact("x=1|x=-2|x=x^2".asFormula), List(TexExpressionArtifact("x=1|x=-2|x=x^2".asFormula)), List.empty))
+    }
+    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask A tex interval question \sol{$[-2.0,3) \cup (1,\infty)$} \end{problem}""")) {
+      case p :: Nil =>
+        p.name should contain ("Problem A")
+        p.points should contain (4.0)
+        p.questions shouldBe List(AskQuestion(None, Map.empty, TexExpressionArtifact("-2.0<=x&x<3|1<x&true".asFormula), List(TexExpressionArtifact("-2.0<=x&x<3|1<x&true".asFormula)), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0][Problem B] \ask A syntactic equality \sol{\kyxline"x>=0"} \autog{syneq()} \end{problem}""")) {
       case p :: Nil =>
@@ -574,7 +592,8 @@ class AssessmentProverTests extends TacticTestBase {
       |   }
       | ]
       |}""".stripMargin
-    Submission.extract(s.parseJson.asJsObject) shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
+    import Submission.SubmissionJsonFormat._
+    s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", List(
         Submission.Prompt(141, 2.0, List(Submission.TextAnswer(142, "y>=0"))),
         Submission.Prompt(143, 1.0, List(Submission.TextAnswer(144, "x^2>=+0")))
@@ -588,6 +607,113 @@ class AssessmentProverTests extends TacticTestBase {
           Submission.ChoiceAnswer(151, "Unsound", isSelected=false)))
       ))
     ))
+  }
+
+  "Command line grader" should "grade random quiz 3 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) {
+      runGrader(problems, i, "ch:qchoicecontrol")
+    }
+  }
+
+  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String): Unit = {
+    val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
+    val (submission, expected) = createSubmission(problems, chapterLabel, rand)
+    val json = {
+      import Submission.SubmissionJsonFormat._
+      submission.toJson
+    }
+    val f = java.io.File.createTempFile("quiz", ".json")
+    val w = new PrintWriter(f)
+    w.print(json.compactPrint)
+    w.flush()
+    w.close()
+
+    val options = Map('in -> f.getAbsolutePath, 'config -> "lfcpsgrader.conf")
+    val msgsStream = new ByteArrayOutputStream()
+    val resultsStream = new ByteArrayOutputStream()
+    AssessmentProver.grade(options, msgsStream, resultsStream, "")
+    val msgs = msgsStream.toString
+    print(msgs)
+    val msgLines = msgs.lines
+    expected.foreach(e =>
+      msgLines.find(_.startsWith("Grading question " + e._1.id)) match {
+        case Some(t) => t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue(randClue)
+        case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
+      }
+    )
+    val results = {
+      import DefaultJsonProtocol._
+      import Submission.GradeJsonFormat._
+      resultsStream.toString.parseJson.convertTo[List[(Submission.Prompt, Double)]]
+    }
+
+    results.foreach({ case (prompt, grade) =>
+      expected.find(_._1.id == prompt.id) match {
+        case Some((_, answeredCorrectly)) => (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue(randClue)
+        case None => fail("Grade for unknown question " + prompt.id + "; " + randClue)
+      }
+    })
+  }
+
+  /** Creates a submission with randomly selected answers from the correct/incorrect sets in `problems`.
+    * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
+  private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
+    def createAnswer(p: Artifact): List[Submission.Answer] = p match {
+      case ExpressionArtifact(expr) => TextAnswer(1, expr.prettyString) :: Nil
+      case TexExpressionArtifact(expr) => expr match {
+        case fml: Formula =>
+          val disjuncts = FormulaTools.disjuncts(fml)
+          if (disjuncts.forall({ case Equal(_: Variable, _: Number) => true case _ => false })) {
+            // list of values
+            TextAnswer(1, disjuncts.map({ case Equal(_, n) => n.prettyString }).mkString("{", ",", "}")) :: Nil
+          } else {
+            // intervals
+            def left(a: Formula) = a match {
+              case Less(a, _) => "(" + a.prettyString
+              case LessEqual(a, _) => "[" + a.prettyString
+              case True => "(\\infty"
+            }
+            def right(a: Formula) = a match {
+              case Less(_, a) => a.prettyString + ")"
+              case LessEqual(_, a) => a.prettyString + "]"
+              case True => "\\infty)"
+            }
+            val answer = disjuncts.map({ case And(l, r) => left(l) + "," + right(r) }).mkString("\\cup")
+            TextAnswer(1, answer) :: Nil
+          }
+        case _ => TextAnswer(1, expr.prettyString) :: Nil
+      }
+      case ListExpressionArtifact(exprs) => TextAnswer(1, exprs.map(_.prettyString).mkString(",")) :: Nil
+      case SequentArtifact(goals) => TextAnswer(1, goals.map(_.prettyString).mkString(";;")) :: Nil
+      case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, _, isSelected=true))
+      case BoolArtifact(value) =>
+        //@todo assumes askTF is a choice with two options
+        Submission.ChoiceAnswer(1, "True", isSelected=value) ::
+        Submission.ChoiceAnswer(1, "False", isSelected=(!value)) :: Nil
+      case TextArtifact(value) => TextAnswer(1, value) :: Nil
+    }
+
+    /** Creates a prompt with its answers. Returns the prompt and correct=true/incorrect=false. */
+    def createPrompt(q: Question, i: Int): (Submission.Prompt, Boolean) = {
+      val (_, correct, incorrect) = toGrader(q)
+      //@note some questions may not have incorrect test answers annotated, but all have a correct solution
+      val answerIncorrectly = !r.rand.nextBoolean() && incorrect.nonEmpty
+      val answers = {
+        if (answerIncorrectly) createAnswer(incorrect(r.rand.nextInt(incorrect.size)))
+        else createAnswer(correct(r.rand.nextInt(correct.size)))
+      }
+      (Submission.Prompt(i, 1.0, answers), !answerIncorrectly)
+    }
+
+    def createProblem(p: Problem, i: Int): (Submission.Problem, List[(Submission.Prompt, Boolean)]) = {
+      //@note problems have IDs 1000,..., prompts of problem 1000 have IDs 2000,.... etc.
+      val answers = p.questions.zipWithIndex.map({ case (q, j) => createPrompt(q, 2000+1000*i+j) })
+      (Submission.Problem(1000 + i, p.name.getOrElse(""), answers.map(_._1)), answers)
+    }
+    val submittedProblems = problems.zipWithIndex.map((createProblem _).tupled)
+    (Submission.Chapter(1, chapterLabel, submittedProblems.map(_._1)),
+      submittedProblems.flatMap(_._2))
   }
 
   private def run(problems: List[Problem]): Unit = {
@@ -621,30 +747,36 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   private def table(problems: List[Problem]) = {
-    Table(("Problem", "Grader", "TestAnswers", "NoAnswers"), problems.flatMap(p => p.questions.map({
-      case q: AskQuestion =>
-        (p.name, AskGrader(q.grader, q.args, q.expected), q.testSols, q.noSols)
-      case q: OneChoiceQuestion =>
-        val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
-          case (c, i) =>
-            (c.map(c => ChoiceArtifact(c.text :: Nil)), i.map(c => ChoiceArtifact(c.text :: Nil)))
-        }
-        //@todo do we ever have a \\onechoice with more than 1 correct answer?
-        assert(correct.size == 1, "Missing or non-unique correct solution")
-        (p.name, OneChoiceGrader(Map.empty[String, String], correct.head), correct, incorrect)
-      case q: AnyChoiceQuestion =>
-        val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
-          case (c, i) =>
-            //@note any other combination of selected choices
-            val incorrectCombinations = q.choices.toSet.subsets.filter(_ != c.toSet)
-            (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
-        }
-        (p.name, AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect)
-      case q: AskTFQuestion =>
-        val correct = BoolArtifact(q.isTrue)
-        val incorrect = BoolArtifact(!q.isTrue)
-        (p.name, AskTFGrader(correct), correct :: Nil, incorrect :: Nil)
+    Table(("Problem", "Grader", "TestAnswers", "NoAnswers"), problems.flatMap(p => p.questions.map(q => {
+      val (grader, correct, incorrect) = toGrader(q)
+      (p.name, grader, correct, incorrect)
     })):_*)
+  }
+
+  /** Returns a grader, a list of correct solutions, and a list of incorrect solutions for question `q`. */
+  private def toGrader(q: Question): (Grader, List[Artifact], List[Artifact]) = q match {
+    case q: AskQuestion =>
+      (AskGrader(q.grader, q.args, q.expected), q.testSols, q.noSols)
+    case q: OneChoiceQuestion =>
+      val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
+        case (c, i) =>
+          (c.map(c => ChoiceArtifact(c.text :: Nil)), i.map(c => ChoiceArtifact(c.text :: Nil)))
+      }
+      //@todo do we ever have a \\onechoice with more than 1 correct answer?
+      assert(correct.size == 1, "Missing or non-unique correct solution")
+      (OneChoiceGrader(Map.empty[String, String], correct.head), correct, incorrect)
+    case q: AnyChoiceQuestion =>
+      val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
+        case (c, i) =>
+          //@note any other combination of selected choices
+          val incorrectCombinations = q.choices.toSet.subsets.filter(_ != c.toSet)
+          (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
+      }
+      (AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect.toList)
+    case q: AskTFQuestion =>
+      val correct = BoolArtifact(q.isTrue)
+      val incorrect = BoolArtifact(!q.isTrue)
+      (AskTFGrader(correct), correct :: Nil, incorrect :: Nil)
   }
 
 }

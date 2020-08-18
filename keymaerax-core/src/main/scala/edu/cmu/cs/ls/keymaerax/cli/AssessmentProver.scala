@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
+import java.io.{OutputStream, PrintStream}
 import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -17,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import spray.json._
@@ -442,8 +443,10 @@ object AssessmentProver {
     * @param options The prover options:
     *                - 'in (mandatory) identifies the file to grade
     *                - 'config (mandatory) identifies the grader configuration file (maps chapter labels to source files)
+    *                - 'msgOut (mandatory) message output stream
+    *                - 'resultOut (mandatory) result output stream
     */
-  def grade(options: OptionMap, usage: String): Unit = {
+  def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
     require(options.contains('in), usage)
     require(options.contains('config), usage)
 
@@ -454,12 +457,15 @@ object AssessmentProver {
     val inputFileName = options('in).toString
     val src = Source.fromFile(inputFileName, "UTF-8")
     val input = try { src.mkString.parseJson } finally { src.close() }
-    val chapter = Submission.extract(input.asJsObject)
+    val chapter = {
+      import Submission.SubmissionJsonFormat._
+      input.convertTo[Submission.Chapter]
+    }
 
     def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
       case Submission.TextAnswer(_, t) :: Nil =>
-        if (TexExpressionArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
-        else if (TextArtifact.getClass.isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
+        if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
+        else if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
         else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
       case answers =>
         // list if choice answers
@@ -475,10 +481,12 @@ object AssessmentProver {
         } finally {
           gradeSource.close()
         }
-        problems.zip(chapter.problems).map({ case (qp, ap) =>
-          qp.questions.zip(ap.prompts).map({ case (q, prompt) =>
+        val parsedProblems: List[(Problem, (List[(Grader, Submission.Prompt, Artifact)], List[(Submission.Prompt, Throwable)]))] =
+            problems.zip(chapter.problems).map({ case (qp, ap) =>
+          val parsed = qp.questions.zip(ap.prompts).map({ case (q, prompt) =>
             val grader = q match {
               case q: AskQuestion =>
+                //@todo access to previous question if grader mode is explanation
                 AskGrader(q.grader, q.args, q.expected)
               case q: OneChoiceQuestion =>
                 val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
@@ -491,21 +499,57 @@ object AssessmentProver {
               case q: AskTFQuestion => AskTFGrader(BoolArtifact(q.isTrue))
             }
             try {
-              val a = toArtifact(prompt, grader.expected.getClass)
-              grader.check(a) match {
-                case Left(_) => println("OK")
-                case Right(msg) => println("ERROR:" + msg)
-              }
-
+              Left((grader, prompt, toArtifact(prompt, grader.expected.getClass)))
             } catch {
-              case ex: ParseException => println("ERROR:Unable to parse, expected " + ex.expect + " but found " + ex.found)
-              case ex: Throwable => println("ERROR:" + ex.getMessage)
+              case ex: Throwable => Right((prompt, ex))
             }
+          })
+          (qp, parsed.partition(_.isLeft) match {
+            case (artifacts, parseErrors) => (artifacts.map(_.left.get), parseErrors.map(_.right.get))
           })
         })
 
+        val msgStream = new PrintStream(msgOut, true)
+        if (parsedProblems.exists(_._2._2.nonEmpty)) {
+          // report parse errors
+          parsedProblems.foreach({ case (p, (_, errors)) =>
+            msgStream.print("Parsing '" + p.name.getOrElse("") + "':")
+            if (errors.nonEmpty) {
+              msgStream.println("FAILED")
+              msgStream.println(errors.map({ case (prompt, ex) =>
+                prompt.answers.map(_.text).mkString(",") + "\n" + ex.getMessage }).mkString("\n"))
+            } else msgStream.println("PASSED")
+          })
+        } else {
+          // grade
+          val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (graders, _)) =>
+            msgStream.println("Grading section " + p.name.getOrElse(""))
+            val grades = graders.map({ case (grader, prompt, artifact) =>
+              msgStream.print("Grading question " + prompt.id + "...")
+              grader.check(artifact) match {
+                case Left(_) =>
+                  msgStream.println("PASSED")
+                  (prompt, prompt.points)
+                case Right(hint) =>
+                  msgStream.print("FAILED:")
+                  msgStream.println(hint)
+                  (prompt, 0.0)
+              }
+            })
+            msgStream.println("Done grading section " + p.name.getOrElse(""))
+            grades
+          })
+          printJSONGrades(allGrades, resultOut)
+        }
+
       case None => throw new IllegalArgumentException("Missing grading information for " + chapter.label)
     }
+  }
+
+  private def printJSONGrades(grades: List[(Submission.Prompt, Double)], out: OutputStream): Unit = {
+    import spray.json.DefaultJsonProtocol._
+    import Submission.GradeJsonFormat._
+    out.write(grades.toJson.compactPrint.getBytes("UTF-8"))
   }
 
   /** Converts list of `expected` subgoals and list of `actual` subgoals into a formula,
