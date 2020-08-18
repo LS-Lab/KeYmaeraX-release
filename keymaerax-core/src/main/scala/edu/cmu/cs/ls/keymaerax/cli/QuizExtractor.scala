@@ -114,7 +114,7 @@ object QuizExtractor {
       }
     }
 
-    def artifactsFromTexTextString(s: String): Artifact = TextArtifact(s)
+    def artifactsFromTexTextString(s: String): Artifact = TextArtifact(if (s.trim.nonEmpty) Some(s) else None)
 
     /** Translates a `\solfin` string into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {

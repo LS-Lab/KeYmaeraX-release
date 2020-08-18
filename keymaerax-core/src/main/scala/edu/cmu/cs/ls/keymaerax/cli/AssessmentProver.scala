@@ -39,8 +39,8 @@ object AssessmentProver {
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
   case class SequentArtifact(goals: List[Sequent]) extends Artifact
   case class ChoiceArtifact(selected: List[String]) extends Artifact
-  case class BoolArtifact(value: Boolean) extends Artifact
-  case class TextArtifact(value: String) extends Artifact
+  case class BoolArtifact(value: Option[Boolean]) extends Artifact
+  case class TextArtifact(value: Option[String]) extends Artifact
 
   abstract class Grader {
     val expected: Artifact
@@ -176,9 +176,10 @@ object AssessmentProver {
         }
         case Modes.EXPLANATION_CHECK =>
           (have, expected) match {
-            case (TextArtifact(hs), TextArtifact(es)) =>
+            case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
               run(() => prove(Sequent(IndexedSeq(), IndexedSeq(GreaterEqual(Number(hs.length), Divide(Number(es.length), Number(3))))),
                 QE & DebuggingTactics.done("Explanation too short")))
+            case (TextArtifact(None), _) => Right("No answer")
           }
         case Modes.BELLE_PROOF =>
           args.get("question") match {
@@ -233,10 +234,12 @@ object AssessmentProver {
 
   case class AskTFGrader(expected: BoolArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case h: BoolArtifact =>
-        val ef = if (expected.value) True else False
-        val hf = if (h.value) True else False
+      case BoolArtifact(Some(h)) =>
+        val ef = if (expected.value.get) True else False
+        val hf = if (h) True else False
         run(() => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))))
+      case BoolArtifact(_) =>
+        Right("No answer")
     }
   }
 
@@ -465,12 +468,17 @@ object AssessmentProver {
     def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
       case Submission.TextAnswer(_, t) :: Nil =>
         if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
-        else if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
+        else if (classOf[TextArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
         else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
       case answers =>
-        // list if choice answers
-        val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
-        ChoiceArtifact(choiceAnswers.filter(_.isSelected).map(_.text))
+        if (classOf[BoolArtifact].isAssignableFrom(expected)) {
+          val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+          BoolArtifact(choiceAnswers.find(_.isSelected).map(_.text == "True"))
+        } else {
+          // list if choice answers
+          val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+          ChoiceArtifact(choiceAnswers.filter(_.isSelected).map(_.text))
+        }
     }
 
     Option(config.getProperty(chapter.label)) match {
@@ -496,7 +504,7 @@ object AssessmentProver {
                 val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
                 assert(correct.selected.nonEmpty, "Missing correct solution")
                 AnyChoiceGrader(Map.empty[String, String], correct)
-              case q: AskTFQuestion => AskTFGrader(BoolArtifact(q.isTrue))
+              case q: AskTFQuestion => AskTFGrader(BoolArtifact(Some(q.isTrue)))
             }
             try {
               Left((grader, prompt, toArtifact(prompt, grader.expected.getClass)))

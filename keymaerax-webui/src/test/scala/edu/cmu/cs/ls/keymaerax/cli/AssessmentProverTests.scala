@@ -611,11 +611,12 @@ class AssessmentProverTests extends TacticTestBase {
 
   "Command line grader" should "grade random quiz 3 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
-    for (i <- 1 to RANDOM_TRIALS) {
-      runGrader(problems, i, "ch:qchoicecontrol")
-    }
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qchoicecontrol") }
   }
 
+  /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
+    * grading information currently missing from problems. Requires `lfcpsgrader.conf` to map `chapterLabel` to
+    * an absolute file path pointing to the quiz tex source. */
   private def runGrader(problems: List[Problem], i: Int, chapterLabel: String): Unit = {
     val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
     val (submission, expected) = createSubmission(problems, chapterLabel, rand)
@@ -638,7 +639,7 @@ class AssessmentProverTests extends TacticTestBase {
     val msgLines = msgs.lines
     expected.foreach(e =>
       msgLines.find(_.startsWith("Grading question " + e._1.id)) match {
-        case Some(t) => t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue(randClue)
+        case Some(t) => t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue randClue
         case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
       }
     )
@@ -650,7 +651,7 @@ class AssessmentProverTests extends TacticTestBase {
 
     results.foreach({ case (prompt, grade) =>
       expected.find(_._1.id == prompt.id) match {
-        case Some((_, answeredCorrectly)) => (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue(randClue)
+        case Some((_, answeredCorrectly)) => (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue randClue
         case None => fail("Grade for unknown question " + prompt.id + "; " + randClue)
       }
     })
@@ -689,9 +690,9 @@ class AssessmentProverTests extends TacticTestBase {
       case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, _, isSelected=true))
       case BoolArtifact(value) =>
         //@todo assumes askTF is a choice with two options
-        Submission.ChoiceAnswer(1, "True", isSelected=value) ::
-        Submission.ChoiceAnswer(1, "False", isSelected=(!value)) :: Nil
-      case TextArtifact(value) => TextAnswer(1, value) :: Nil
+        Submission.ChoiceAnswer(1, "True", isSelected=value.getOrElse(false)) ::
+        Submission.ChoiceAnswer(1, "False", isSelected=value.exists(!_)) :: Nil
+      case TextArtifact(value) => TextAnswer(1, value.getOrElse("")) :: Nil
     }
 
     /** Creates a prompt with its answers. Returns the prompt and correct=true/incorrect=false. */
@@ -767,15 +768,15 @@ class AssessmentProverTests extends TacticTestBase {
       (OneChoiceGrader(Map.empty[String, String], correct.head), correct, incorrect)
     case q: AnyChoiceQuestion =>
       val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
-        case (c, i) =>
+        case (c, _) =>
           //@note any other combination of selected choices
           val incorrectCombinations = q.choices.toSet.subsets.filter(_ != c.toSet)
           (ChoiceArtifact(c.map(_.text)), incorrectCombinations.map(c => ChoiceArtifact(c.map(_.text).toList)))
       }
       (AnyChoiceGrader(Map.empty[String, String], correct), correct :: Nil, incorrect.toList)
     case q: AskTFQuestion =>
-      val correct = BoolArtifact(q.isTrue)
-      val incorrect = BoolArtifact(!q.isTrue)
+      val correct = BoolArtifact(Some(q.isTrue))
+      val incorrect = BoolArtifact(Some(!q.isTrue))
       (AskTFGrader(correct), correct :: Nil, incorrect :: Nil)
   }
 
