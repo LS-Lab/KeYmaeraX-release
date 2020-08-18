@@ -114,12 +114,31 @@ class ElaborationPass() {
         // If left branch introduces domain constraint assumptions / assertions, then assertions in right half can mention.
         val dsR = collectPts(kc.:+(dsL.collect.constraints.s), r)
         (DomAnd(dsL, dsR))
-      case DomAssume(x, f) => DomAssume(x, kc.elaborateFunctions(f))
+      case DomAssume(x, f) =>
+        elabFactBinding(x, kc.elaborateFunctions(f)).map({case (x, y) => DomAssume(x, y)}).reduce(DomAnd)
       case DomAssert(x, f, m) =>
         val meth = disambiguate(kc, m, f)
         DomAssert(x, kc.elaborateFunctions(f), meth)
       case DomModify(x, f) => DomModify(x, kc.elaborateFunctions(f))
       case DomWeak(dc) => DomWeak(dc)
+    }
+  }
+
+  /** Elaborate fact binding patterns as in assertions ?pat:(fml); Vectorial patterns ?(x, y):(p & q) become lists of bindings. */
+  private def elabFactBinding(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {
+    def loop(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {
+      (lhs, rhs) match {
+        case (Nothing, _) => (Nothing, rhs) :: Nil
+        case (v: Variable, _) => (v, rhs) :: Nil
+        case (Pair(v: Variable, Nothing), _) => (v, rhs) :: Nil
+        case (Pair(l, r), And(pl, pr)) => loop(l, pl) ++ loop(r, pr)
+        // Note: Vectorial assumption must look like a conjunction in the *source syntax,* not just after expanding definitions
+        case _ => throw ElaborationException(s"Vectorial fact $lhs:$rhs expected right-hand-side to have shape p1 & ... & ... pn with one conjunct per fact name, but it did not.")
+      }
+    }
+    lhs match {
+      case v: Variable => List((v, rhs))
+      case _ => loop(lhs, rhs)
     }
   }
 
@@ -146,9 +165,10 @@ class ElaborationPass() {
         })
       }
 
+      // Elaborate vectorial modify into a block of single modifies
       private def elabVectorAssign(modify: Modify): Statement = {
         if(modify.mods.length == 1)
-          return modify
+          modify
         // If the assignment *vector* has a single name, then ghost in the assignment facts and note their conjunction.
         else if (modify.ids.length == 1 && modify.mods.length > 1) {
           val (asgnIds, assignsRev) = modify.mods.foldLeft[List[(Option[Ident], Modify)]](Nil){
@@ -178,8 +198,10 @@ class ElaborationPass() {
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
           case mod: Modify =>
-            val elabFuncs = Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions(_)))}))
+            val elabFuncs = Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions))}))
             Some(elabVectorAssign(elabFuncs))
+          case Assume(e, f) =>
+            Some(KaisarProof.block(elabFactBinding(e, f).map({case (x, y) => Assume(x, y)})))
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
             val (keptPts, notePts) = pts.partition({case ProofVar(x) => true case _ => false})

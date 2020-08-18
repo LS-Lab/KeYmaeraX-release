@@ -302,10 +302,9 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "support tuple patterns" in withMathematica { _ =>
-    // ?(acc & brk & tstep & separate):(A > 0 & B > 0 & T > 0 & x < d);
-    val pfStr = "?(xInit, vInit):(x := 0; v := 0;); "
+    val pfStr = "?(xInit, vInit):(x := 0; v := 0;); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);"
     val ff = check(pfStr)
-    ff shouldBe "[x:= 0; v := 0; ?(A > 0); ?(B > 0); ?(T > 0); ?(x < d);]true".asFormula
+    ff shouldBe "[x_0:= 0; v_0 := 0; ?(A > 0); ?(B > 0); ?(T > 0); ?(x_0 < d);]true".asFormula
   }
 
 
