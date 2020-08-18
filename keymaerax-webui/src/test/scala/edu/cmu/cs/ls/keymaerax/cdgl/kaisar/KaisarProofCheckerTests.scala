@@ -35,7 +35,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     ff shouldBe "[x:=*; y:=x^2;]true".asFormula
   }
 
-
   it should "compose assertions" in withMathematica { _ =>
     val pfStr = "x := *; y := x^2; !p:(y >= 0) by auto;"
     val pf = p(pfStr, pp.statement(_))
@@ -49,7 +48,6 @@ class KaisarProofCheckerTests extends TacticTestBase {
     val (ss, ff) = ProofChecker(Context.empty, pf)
     ff shouldBe "[x:=*; ?(x^2 = y & x >= 0);]true".asFormula
   }
-
 
   it should "reject invalid auto step" in withMathematica { _ =>
     val pfStr  = "!falsehood:(1 <= 0) by auto;"

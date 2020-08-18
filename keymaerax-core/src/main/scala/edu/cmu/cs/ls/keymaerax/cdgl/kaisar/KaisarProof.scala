@@ -233,6 +233,9 @@ case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extend
   if(ids.length > 1 && ids.length != mods.length)
     throw new Exception("Modify statement should have one fact name for each assignment or one fact name for the entire block")
 
+  def boundVars: Set[Variable] = mods.map(_._1).toSet
+  def freeVars: Set[Variable] = mods.map({case (x, f) => StaticSemantics(f.getOrElse(Nothing)).toSet}).reduce(_ ++ _)
+
   def asgns: List[(Option[Ident], Variable, Option[Term])] =
     ids match {
       case Nil => mods.map({case (x, f) => (None, x, f)})

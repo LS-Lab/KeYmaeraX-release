@@ -245,13 +245,16 @@ object ProofParser {
     def getIdent(f: Term): Option[Ident] = f match {case v: Variable => Some(v) case _ => None}
     def traverse(e: Term, hp: Program): List[(Option[Ident], Variable, Option[Term])] = {
       (e, hp) match {
+        case (Pair(id, Nothing), Assign(x, f)) => (getIdent(id), x, Some(f)) :: Nil
+        case (Pair(id, Nothing), AssignAny(x)) => (getIdent(id), x, None) :: Nil
+        case (Pair(xl, xr), Compose(al, ar)) => traverse(xl, al) ++ traverse(xr, ar)
         case (id, Assign(x, f)) => (getIdent(id), x, Some(f)) :: Nil
         case (id, AssignAny(x)) => (getIdent(id), x, None) :: Nil
-        case (Pair(xl, xr), Compose(al, ar)) => traverse(xl, al) ++ traverse(xr, ar)
         case (_, Compose(al, ar)) => traverse(Nothing, al) ++ traverse(Nothing, ar)
       }
     }
-    val (eachId, vars, terms) = StandardLibrary.unzip3(traverse(e, hp))
+    val traversed = traverse(e, hp)
+    val (eachId, vars, terms) = StandardLibrary.unzip3(traversed)
     val ids = eachId.filter(_.isDefined).map(_.get)
     Modify(ids, vars.zip(terms))
   }
@@ -406,5 +409,4 @@ object KaisarProgramParser {
     }
     (lineIndex, colIndex)
   }
-
 }

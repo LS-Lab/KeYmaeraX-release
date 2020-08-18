@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ElaborationException
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{ElaborationException, Ident}
 import edu.cmu.cs.ls.keymaerax.core._
 
 class ElaborationPass() {
@@ -127,8 +127,59 @@ class ElaborationPass() {
   def apply(s: Statement): Statement = {
     ghostCon = ghostCon.reapply(s)
     val ret = ProofTraversal.traverse(Context.empty.asElaborationContext, s, new TraversalFunction {
+
+      // Forward proof term conjoining input list of facts
+      private def conjoin(xs: List[Ident]): ProofTerm = {
+        xs.map(ProofVar).reduce[ProofTerm]{case (l, r) => ProofApp(ProofApp(ProofVar(Variable("andI")), l), r)}
+      }
+
+      // Throw an exception if we think the user is trying to write an invalid simultaneous assignment. We could just ignore
+      // this and treat it as a sequential assignment, but we done't want to confuse them.
+      private def checkAdmissibleAssignmentBlock(ss: List[Modify]): Unit = {
+        val _ = ss.foldRight[Set[Variable]](Set())({case (mod, acc) =>
+          val bv = mod.boundVars
+          val fv = mod.freeVars
+          if(acc.intersect(fv).nonEmpty)
+            throw ElaborationException(s"Simultaneous vector assignments are not supported, but assignment $mod tries to use simultaneously-bound variable(s) ${acc.intersect(fv)}. " +
+              s"To fix this, assign each variable separately, and if you wish to use a simultaneous assignment, introduce temporary variables for the old value(s) of ${acc.intersect(fv)}.")
+          acc.++(bv)
+        })
+      }
+
+      private def elabVectorAssign(modify: Modify): Statement = {
+        if(modify.mods.length == 1)
+          return modify
+        // If the assignment *vector* has a single name, then ghost in the assignment facts and note their conjunction.
+        else if (modify.ids.length == 1 && modify.mods.length > 1) {
+          val (asgnIds, assignsRev) = modify.mods.foldLeft[List[(Option[Ident], Modify)]](Nil){
+            // * assignments do not introduce facts
+            case (xfs, (x, None)) =>
+              (None, Modify(Nil, List((x, None)))) :: xfs
+            case (xfs, (x, Some(f))) =>
+              val id = ghostCon.fresh()
+              val fml = Equal(x, f)
+              ghostCon = ghostCon.ghost(fml)
+              (Some(id), Modify(List(id), List((x, Some(f))))) :: xfs
+          }.unzip
+          val assigns = assignsRev.reverse
+          checkAdmissibleAssignmentBlock(assigns)
+          val note = Note(modify.ids.head, conjoin(asgnIds.filter(_.isDefined).map(_.get)))
+          // Assign individually and then note the conjoined assignment
+          KaisarProof.block(assigns :+ note)
+        }
+        // If assignments are unannotated or individually annotated, just unpack them normally.
+        else {
+          val asgns = modify.asgns.map({case (id, x, f) => Modify(id.toList, List((x, f)))})
+          checkAdmissibleAssignmentBlock(asgns)
+          KaisarProof.block(asgns)
+        }
+      }
+
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
+          case mod: Modify =>
+            val elabFuncs = Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions(_)))}))
+            Some(elabVectorAssign(elabFuncs))
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)
             val (keptPts, notePts) = pts.partition({case ProofVar(x) => true case _ => false})
@@ -164,7 +215,6 @@ class ElaborationPass() {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
           case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f))
-          case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(kc.elaborateFunctions(_)))}))
           // Elaborate all functions that are defined *before* f
           case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e))
           case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e))
