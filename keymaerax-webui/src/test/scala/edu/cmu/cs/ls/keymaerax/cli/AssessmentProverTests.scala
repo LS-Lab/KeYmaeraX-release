@@ -686,7 +686,7 @@ class AssessmentProverTests extends TacticTestBase {
         case _ => TextAnswer(1, expr.prettyString) :: Nil
       }
       case ListExpressionArtifact(exprs) => TextAnswer(1, exprs.map(_.prettyString).mkString(",")) :: Nil
-      case SequentArtifact(goals) => TextAnswer(1, goals.map(_.prettyString).mkString(";;")) :: Nil
+      case SequentArtifact(goals) => TextAnswer(1, goals.map(_.toString).mkString(";;")) :: Nil
       case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, _, isSelected=true))
       case BoolArtifact(value) =>
         //@todo assumes askTF is a choice with two options
