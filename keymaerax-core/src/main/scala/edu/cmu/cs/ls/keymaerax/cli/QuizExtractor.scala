@@ -38,16 +38,20 @@ object QuizExtractor {
 
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
     private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
-    private val KYX_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{?\s*""" + KYXLINE_EXTRACTOR.regex + "}?)"
     //@note nested {} up to level 2
-    private val TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{((?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)})"""
-    private val TEX_TEXT_SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\$(.+?)\$})"""
+    private def nestedBracesText(capture: String) = "(" + capture + """(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)"""
+    private def texMathDelimText(capture: String) = """\$(""" + capture + """.+?)\$"""
+    private def solContent(capture: String) = "(?:" + kyxlineExtractor(capture) + "|" + texMathDelimText(capture) + "|" + nestedBracesText(capture) + ")"
+    // \sol
+    private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\s*""" + solContent("") + """\s*})"""
+    // \solfin
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
-    private val SOL_EXTRACTOR = """(?:""" + KYX_SOL_EXTRACTOR + "|" + TEX_TEXT_SOL_EXTRACTOR + "|" + TEXT_SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
-    //@todo test and no sol text answers
-    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
-    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + kyxlineExtractor("?:") + """}?\s*)*)"""
+    // \testsol
+    private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
+    // \nosol
+    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + solContent("?:") + """}\s*)*)"""
+    // \autog
     private val GRADER_EXTRACTOR = """(?:\\autog\s*\{(\w+)\((.*?)\)})?""".stripMargin
 
     private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
@@ -55,7 +59,8 @@ object QuizExtractor {
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
     private val GROUPS: List[String] = List(KYX_SOL, TEX_TEXT_SOL, TEXT_SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
-    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
+    private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
+    private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + ALL_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
 
     def firstFromString(rawContent: String): Option[AskQuestion] = {
       val graderInfo = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (m.group(KYX_SOL), m.group(TEX_TEXT_SOL), m.group(TEXT_SOL), m.group(SOLFIN), m.group(TEST_SOL), m.group(NO_SOL), Option(m.group(GRADER)), Option(m.group(ARGS))))
