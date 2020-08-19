@@ -52,9 +52,12 @@ object QuizExtractor {
     // \nosol
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + solContent("?:") + """}\s*)*)"""
     // \autog
-    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{(\w+)\((.*?)\)})?""".stripMargin
+    private val GRADER_NAME = """(\w+)"""
+    private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*"(""" + capture + """[^"]+)""""
+    private val GRADER_ARG = graderArg("").r(ARG_NAME, ARG_VAL)
+    private val GRADER_ARGS = graderArg("?:") + """(?:\s*,\s*""" + graderArg("?:") + """)*"""
+    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{""" + GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)})?"""
 
-    private val ARG_SPLITTER = """(\w+)\s*=\s*"([^"]+)"""".r(ARG_NAME, ARG_VAL)
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
@@ -131,7 +134,7 @@ object QuizExtractor {
     }
 
     def argsFromString(args: Option[String]): Map[String, String] = {
-      args.map(ARG_SPLITTER.findAllMatchIn).getOrElse(Iterator.empty).
+      args.map(GRADER_ARG.findAllMatchIn).getOrElse(Iterator.empty).
         map(m => (m.group(ARG_NAME), m.group(ARG_VAL))).
         toMap
     }

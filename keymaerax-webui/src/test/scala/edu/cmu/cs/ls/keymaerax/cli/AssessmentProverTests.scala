@@ -62,7 +62,7 @@ class AssessmentProverTests extends TacticTestBase {
       """\begin{problem}[1.0]
         |\ask \sol{\kyxline"x>=0"} \autog{syneq()}
         |\ask \sol{\kyxline"y=2"}
-        |\autog{prove(question="#1 -> [{x'=v}]x>=0"
+        |\autog{prove(question="#1 -> [{x'=v}]x>=0",
         |             tactic="auto")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
@@ -78,10 +78,10 @@ class AssessmentProverTests extends TacticTestBase {
         p.questions shouldBe
           List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
     }
-    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol{\kyxline"x+1>=1"} \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
+    inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol{\kyxline"x+1>=1"} \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x", question="x>=0 -> [{x'=2}@invariant(x>=0)}*]x>=0")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x", "question"->"x>=0 -> [{x'=2}@invariant(x>=0)}*]x>=0"), ExpressionArtifact("x>=0".asFormula),
             List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol{\kyxline"x+1>=1"} \nosol{\kyxline"x+1>=0"} \nosol{\kyxline"x-1>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
