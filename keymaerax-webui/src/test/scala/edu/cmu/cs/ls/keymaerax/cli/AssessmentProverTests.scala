@@ -426,6 +426,14 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 9" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/9/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Comparing event-triggered versus time-triggered controllers", 4) :: ("Reaction Times", 2) ::
+        ("From event responses to reaction times", 5) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 10" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
@@ -639,7 +647,8 @@ class AssessmentProverTests extends TacticTestBase {
       testAnswers.foreach(t => {
         println("Testing sol: " + t)
         val tic = System.nanoTime()
-        grader.check(t).left.value shouldBe 'proved withClue t
+        val result = grader.check(t)
+        result.left.value shouldBe 'proved withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
         println("Successfully verified sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
