@@ -209,10 +209,10 @@ object Configuration {
       def useDependencies(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES).getOrElse(default)
     }
     object PreservedStateHeuristic {
-      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
     }
     object HeuristicInvariants {
-      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
     }
     object FirstIntegrals {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)

@@ -54,16 +54,16 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val primedVars = DifferentialHelper.getPrimedVariables(ode)
     val atomicODEs = DifferentialHelper.atomicOdes(ode)
     val constantSlopeVars = atomicODEs.filter(_.e.isInstanceOf[Number]).map(_.xp.x)
-    val isTimeTriggered = FormulaTools.conjuncts(ode.constraint).exists({
-      //@todo most common case
-      case LessEqual(x, y) => y match {
-        case t: Term if StaticSemantics.freeVars(t).intersect(primedVars.toSet).isEmpty => constantSlopeVars.contains(x)
-        case _ => false
-      }
-      case _ => false
-    })
-
-    if (isTimeTriggered) throw new TacticInapplicableFailure("Pegasus does not yet support time-triggered systems")
+//    val isTimeTriggered = FormulaTools.conjuncts(ode.constraint).exists({
+//      //@todo most common case
+//      case LessEqual(x, y) => y match {
+//        case t: Term if StaticSemantics.freeVars(t).intersect(primedVars.toSet).isEmpty => constantSlopeVars.contains(x)
+//        case _ => false
+//      }
+//      case _ => false
+//    })
+//
+//    if (isTimeTriggered) throw new TacticInapplicableFailure("Pegasus does not yet support time-triggered systems")
 
     val vars = list(primedVars.map(k2m):_*)
     val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
