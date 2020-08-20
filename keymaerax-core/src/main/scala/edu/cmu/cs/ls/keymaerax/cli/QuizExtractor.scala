@@ -140,6 +140,10 @@ object QuizExtractor {
     }
   }
 
+  /** A question that refers to earlier questions in the same problem. */
+  case class MultiAskQuestion(main: AskQuestion, earlier: Map[Int, Question]) extends Question
+
+  /** A question with true/false answer options. */
   case class AskTFQuestion(text: String, isTrue: Boolean) extends Question
   object AskTFQuestion {
     val QUESTION_START: String = "asktf"
@@ -206,21 +210,34 @@ object QuizExtractor {
       )
 
     /** The problem questions with grading information. */
-    lazy val questions: List[Question] = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
-      (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
-        Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) ::
-        Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) ::
-        Option(m.group(AskTFQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
-        case Some(AskQuestion.QUESTION_START) =>
-          AskQuestion.firstFromString(rawContent.substring(m.start))
-        case Some(OneChoiceQuestion.QUESTION_START) =>
-          OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
-        case Some(AnyChoiceQuestion.QUESTION_START) =>
-          AnyChoiceQuestion.firstFromString(rawContent.substring(m.start))
-        case Some(AskTFQuestion.QUESTION_START) =>
-          AskTFQuestion.firstFromString(rawContent.substring(m.start))
-      }
-    }).toList
+    lazy val questions: List[Question] = {
+      val questions = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
+        (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
+          Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) ::
+          Option(m.group(AnyChoiceQuestion.getClass.getSimpleName)) ::
+          Option(m.group(AskTFQuestion.getClass.getSimpleName)) :: Nil).filter(_.isDefined).head match {
+          case Some(AskQuestion.QUESTION_START) =>
+            AskQuestion.firstFromString(rawContent.substring(m.start))
+          case Some(OneChoiceQuestion.QUESTION_START) =>
+            OneChoiceQuestion.firstFromString(rawContent.substring(m.start))
+          case Some(AnyChoiceQuestion.QUESTION_START) =>
+            AnyChoiceQuestion.firstFromString(rawContent.substring(m.start))
+          case Some(AskTFQuestion.QUESTION_START) =>
+            AskTFQuestion.firstFromString(rawContent.substring(m.start))
+        }
+      }).toList
+      val ARG_PLACEHOLDER = "argPlaceholder"
+      val NEG_HASH = """#(-\d+)""".r(ARG_PLACEHOLDER)
+      questions.zipWithIndex.map({
+        case (q@AskQuestion(_, args, _, _, _), i) =>
+          val backRefs = args.map({ case (k, v) =>
+            (k, (v, NEG_HASH.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER).toInt).toList))
+          }).values.flatMap(_._2).toList
+          if (backRefs.nonEmpty) MultiAskQuestion(q, backRefs.map(j => (j, questions(i+j))).toMap)
+          else q
+        case (q, _) => q
+      })
+    }
 
     /** The total points of the problem. */
     def points: Option[Double] = rawPoints.map(_.toDouble)
@@ -234,7 +251,8 @@ object QuizExtractor {
     private val PROBLEM_EXTRACTOR = """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
 
     def fromString(s: String): List[Problem] = {
-      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)), Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).
+      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)),
+          Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).
         filter(_.points.exists(_ > 0.0)).
         toList
     }

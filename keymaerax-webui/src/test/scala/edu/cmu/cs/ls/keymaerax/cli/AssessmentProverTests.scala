@@ -5,7 +5,7 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, OneChoiceGrader, SequentArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
 import edu.cmu.cs.ls.keymaerax.cli.Submission.TextAnswer
 import edu.cmu.cs.ls.keymaerax.core._
@@ -156,6 +156,19 @@ class AssessmentProverTests extends TacticTestBase {
             QuizExtractor.Choice("Correct", isCorrect=true),
             QuizExtractor.Choice("Incorrect", isCorrect=false)))
         )
+    }
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask Question 1 \sol{\kyxline"x*y^2=-1"}
+        |\ask Question 2 \sol{\kyxline"y'=y/2"}
+        |\autog{prove(question="x<0 -> [{x'=-x}]x<0",tactic="implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done")}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        val first = AskQuestion(None, Map.empty, ExpressionArtifact("x*y^2=-1".asFormula), List(ExpressionArtifact("x*y^2=-1".asFormula)), List.empty)
+        val second = AskQuestion(Some("prove"), Map("question"->"x<0 -> [{x'=-x}]x<0", "tactic"->"implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done"),
+          ExpressionArtifact("y'=y/2".asFormula),
+          List(ExpressionArtifact("y'=y/2".asFormula)), List.empty)
+        p.questions shouldBe List(first, MultiAskQuestion(second, Map(-1 -> first)))
     }
   }
 
@@ -422,6 +435,14 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 12" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/12/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Using differential ghosts", 3) :: ("Differential ghost construction", 16) ::
+        ("Parachute", 2) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
@@ -433,7 +454,8 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 15" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Game Region Shapes", 5) :: ("Game loop semantics", 5) :: ("Direct velocity control", 1) :: Nil
+      ("Semantic comparisons", 4) :: ("Game Region Shapes", 6) :: ("Game loop semantics", 5) ::
+        ("Direct velocity control", 1) :: Nil
     run(problems)
   }
 
@@ -758,6 +780,14 @@ class AssessmentProverTests extends TacticTestBase {
   private def toGrader(q: Question): (Grader, List[Artifact], List[Artifact]) = q match {
     case q: AskQuestion =>
       (AskGrader(q.grader, q.args, q.expected), q.testSols, q.noSols)
+    case MultiAskQuestion(main, earlier) =>
+      val (mainGrader, mainSols, mainNosols) = toGrader(main)
+      val earlierGraders = earlier.map({ case (k, v) => (k, toGrader(v)) }).toList.sortBy(_._1)
+      val grader = MultiAskGrader(mainGrader, earlierGraders.map({ case (k, (grader, _, _)) => (k, grader) }).toMap)
+      // take first solution from each question, second from each question, ... (result sorted earliest to main)
+      val sols = (earlierGraders.map(_._2._2) :+ mainSols).transpose.map(MultiArtifact)
+      val nosols = (earlierGraders.map(_._2._3) :+ mainNosols).transpose.map(MultiArtifact)
+      (grader, sols, nosols)
     case q: OneChoiceQuestion =>
       val (correct, incorrect) = q.choices.partition(_.isCorrect) match {
         case (c, i) =>

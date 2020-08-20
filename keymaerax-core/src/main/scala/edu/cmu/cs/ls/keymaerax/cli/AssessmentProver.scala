@@ -41,6 +41,7 @@ object AssessmentProver {
   case class ChoiceArtifact(selected: List[String]) extends Artifact
   case class BoolArtifact(value: Option[Boolean]) extends Artifact
   case class TextArtifact(value: Option[String]) extends Artifact
+  case class MultiArtifact(artifacts: List[Artifact]) extends Artifact
 
   abstract class Grader {
     val expected: Artifact
@@ -158,22 +159,22 @@ object AssessmentProver {
         case Modes.LOOP =>
           val invArg = args.get("inv").map(KeYmaeraXParser.formulaParser)
           args.get("question") match {
-          case Some(q) =>
-            have match {
-              case ExpressionArtifact(h: Formula) =>
-                var inv: Option[Formula] = None
-                KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                val m = expand(q, h :: Nil, KeYmaeraXParser.formulaParser)
-                run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h))))
-              case ListExpressionArtifact(h) =>
-                var inv: Option[Formula] = None
-                KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                val m = expand(q, h, KeYmaeraXParser.formulaParser)
-                run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))))
-              case _ => Right("Expected a single loop invariant formula, but got " + have)
-            }
-          case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
-        }
+            case Some(q) =>
+              have match {
+                case ExpressionArtifact(h: Formula) =>
+                  var inv: Option[Formula] = None
+                  KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+                  val m = expand(q, h :: Nil, KeYmaeraXParser.formulaParser)
+                  run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h))))
+                case ListExpressionArtifact(h) =>
+                  var inv: Option[Formula] = None
+                  KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+                  val m = expand(q, h, KeYmaeraXParser.formulaParser)
+                  run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))))
+                case _ => Right("Expected a single loop invariant formula, but got " + have)
+              }
+            case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
+          }
         case Modes.EXPLANATION_CHECK =>
           (have, expected) match {
             case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
@@ -215,6 +216,37 @@ object AssessmentProver {
       }
     }
   }
+  /** A grader that has access to multiple answers. */
+  case class MultiAskGrader(main: Grader, earlier: Map[Int, Grader]) extends Grader {
+    private val grader = main match {
+      case AskGrader(mode, args, expected) =>
+        val mergedExpected = expected //@todo ignored for now
+
+        val ARG_PLACEHOLDER = "argPlaceholder"
+        val ARG_INDEX = """#(-?\d+)""".r(ARG_PLACEHOLDER)
+        val argIdxs = args.values.flatMap(v => { ARG_INDEX.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER).toInt).toList }).toList.sorted
+        val newArgIdxs = argIdxs.map(i => (i, if (i<0) i+earlier.keys.size+1 else i+earlier.keys.size))
+        val mergedArgs = args.map({ case (k, v) =>
+          val rewrittenBackRefs = newArgIdxs.foldRight(v)({ case ((i, j), mv) => mv.replaceAllLiterally("#" + i, "#" + j) })
+          (k, rewrittenBackRefs)
+        })
+
+        AskGrader(mode, mergedArgs, mergedExpected)
+    }
+
+    override val expected: Artifact = grader.expected
+    override def check(have: Artifact): Either[ProvableSig, String] = have match {
+      //@note assumed sorted from earliest to main artifact
+      case MultiArtifact(as) =>
+        val mergedHave = as.reduceRight[Artifact]({
+          case (ExpressionArtifact(a), ExpressionArtifact(b)) => ListExpressionArtifact(a :: b :: Nil)
+          case (ExpressionArtifact(a), ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a)
+        })
+        //@todo may also want to recheck old answers to know how to grade the current answer
+        grader.check(mergedHave)
+    }
+  }
+
   case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
       case h: ChoiceArtifact =>
