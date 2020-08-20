@@ -46,7 +46,7 @@ object QuizExtractor {
     private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\s*""" + solContent("") + """\s*})"""
     // \solfin
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
-    private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + INLINE_SOL_DELIM).r(ANSWER)
+    private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
     // \testsol
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
     // \nosol
