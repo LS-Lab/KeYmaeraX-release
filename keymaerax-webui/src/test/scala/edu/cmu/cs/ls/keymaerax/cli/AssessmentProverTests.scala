@@ -17,12 +17,14 @@ import org.scalatest.LoneElement._
 import org.scalatest.EitherValues._
 import spray.json._
 
+import scala.io.Source
+
 class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quizzes"
 
-  private val RANDOM_TRIALS = 100
+  private val RANDOM_TRIALS = 3
   private val rand = RepeatableRandom()
 
   "Extractor" should "extract grading information" in {
@@ -474,212 +476,23 @@ class AssessmentProverTests extends TacticTestBase {
 
   "Submission extraction" should "extract answers in the order listed in the file" in {
     //@todo assumes that there will be information to identify the chapter in the tex source (outermost title, or label)
-    //@todo assumes that answers will be in the prompt body
-    val s = """
-      |{"id": 11,
-      | "label": "ch:qdiffcut",
-      | "children": [
-      |   {
-      |     "type": "segment",
-      |     "otherStuff": [ { "lots": "of", "it": "?" }],
-      |     "children": [
-      |       {
-      |         "type": "segment",
-      |         "not actually": "a segment with questions",
-      |         "point_value": 0.0
-      |       },
-      |       {
-      |         "type": "segment",
-      |         "some intermediate": "segment that does not yet have the question prompt",
-      |         "children": [
-      |           {
-      |             "type": "atom",
-      |             "name": "problem",
-      |             "id": 25053,
-      |             "label": "prob::1",
-      |             "point_value": 3.0,
-      |             "title": "Problem block 1 (2 questions)",
-      |             "prompts": [
-      |               {
-      |                 "point_value": 2.0,
-      |                 "name": "\\ask",
-      |                 "id": 141,
-      |                 "children": [
-      |                   {
-      |                     "id": 142,
-      |                     "name": "\\sol",
-      |                     "point_value": 2.0,
-      |                     "label": "prt-sol::1::a1",
-      |                     "cookies": [],
-      |                     "user_answer" : {
-      |                       "text": "y>=0",
-      |                       "is_checked": false
-      |                     }
-      |                   }
-      |                 ]
-      |               },
-      |               {
-      |                 "name": "\\ask",
-      |                 "body": "This question has an answer with a syntax error",
-      |                 "point_value": 1.0,
-      |                 "id": 143,
-      |                 "children": [
-      |                   {
-      |                     "id": 144,
-      |                     "name": "\\sol",
-      |                     "point_value": 1.0,
-      |                     "cookies": [],
-      |                     "label": "prt-sol::2::a1",
-      |                     "user_answer": {
-      |                       "text": "x^2>=+0",
-      |                       "is_checked": false
-      |                     }
-      |                   }
-      |                 ]
-      |               }
-      |             ]
-      |           }
-      |         ],
-      |         "point_value": 3.0
-      |       },
-      |       {
-      |         "type": "segment",
-      |         "this segment": "has prompts but none of them auto-gradable (worth no points)",
-      |         "children": [
-      |           {
-      |             "type": "segment",
-      |             "point_value": 0.0
-      |           },
-      |           {
-      |             "type": "atom",
-      |             "name": "problem",
-      |             "label": "prob::2",
-      |             "title": "Problem block 2 (one non-autogradable question)",
-      |             "id": 17218,
-      |             "prompts": [
-      |                {
-      |                  "id": 145,
-      |                  "name": "\\ask",
-      |                  "body": "This is the question",
-      |                  "children": [
-      |                    {
-      |                      "id": 146,
-      |                      "name": "\\sol",
-      |                      "label": "prt::block2::a1",
-      |                      "cookies": [],
-      |                      "user_answer": {
-      |                        "text": "Here is an answer",
-      |                        "is_checked": false
-      |                      },
-      |                      "and": "other stuff"
-      |                    }
-      |                  ],
-      |                  "point_value": 0.0
-      |                }
-      |             ],
-      |             "point_value": 0.0
-      |           }
-      |         ],
-      |         "point_value": 0.0
-      |       },
-      |       {
-      |         "point_value": 1.0,
-      |         "type": "atom",
-      |         "name": "problem",
-      |         "label": "prob::3",
-      |         "id": 25160,
-      |         "title": "Problem block 3 (single question)",
-      |         "this entry": "has one question",
-      |         "prompts": [
-      |           {
-      |             "id": 147,
-      |             "name": "\\ask",
-      |             "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
-      |             "children": [
-      |               {
-      |                 "name": "\\sol",
-      |                 "label": "prt::block3::a1",
-      |                 "is_choice": false,
-      |                 "is_fill_in_the_gap": false,
-      |                 "cookies": [],
-      |                 "user_answer": {
-      |                   "text": "x>=0",
-      |                   "is_checked": false
-      |                 },
-      |                 "id": 148
-      |               }
-      |             ],
-      |             "point_value": 1.0
-      |           }
-      |         ]
-      |       }
-      |     ],
-      |     "point_value": 4.0
-      |   },
-      |   {
-      |     "type": "segment",
-      |     "point_value": 1.0,
-      |     "children": [
-      |       {
-      |         "type": "atom",
-      |         "name": "problem",
-      |         "label": "prob::4",
-      |         "id": 25057,
-      |         "title": "Problem block in second segment",
-      |         "point_value": 1.0,
-      |         "prompts": [
-      |           {
-      |             "body": " A question in the second segment",
-      |             "id": 149,
-      |             "name": "\\onechoice",
-      |             "point_value": 1.0,
-      |             "is_question_any_choice": false,
-      |             "children": [
-      |               {
-      |                 "id": 150,
-      |                 "name": "\\choice",
-      |                 "label": "prt::seg2block::a1",
-      |                 "cookies": [],
-      |                 "user_answer": {
-      |                   "text": "",
-      |                   "is_checked": true
-      |                 },
-      |                 "body": "Sound",
-      |                 "is_choice": true
-      |               },
-      |               {
-      |                 "id": 151,
-      |                 "name": "\\choice",
-      |                 "label": "prt::seg2block::a2",
-      |                 "body": "Unsound",
-      |                 "cookies": [],
-      |                 "user_answer": {
-      |                   "is_checked": false,
-      |                   "text": ""
-      |                 },
-      |                 "is_choice": true
-      |               }
-      |             ]
-      |           }
-      |         ]
-      |       }
-      |     ]
-      |   }
-      | ]
-      |}""".stripMargin
+    val s = Source.fromInputStream(getClass.getResourceAsStream("/edu/cmu/cs/ls/keymaerax/cli/submission.json")).mkString
     import Submission.SubmissionJsonFormat._
     s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
-        Submission.Prompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol", "y>=0"))),
-        Submission.Prompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol", "x^2>=+0")))
+        Submission.Prompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
+          Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """{\kyxline"2"}"""))),
+        Submission.Prompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
+          Some(Submission.GraderCookie(501, "\\algog", "polyeq()")), "x^2>=+0", """{\kyxline"x^2>=0"}""")))
       )),
       Submission.Problem(25160, "Problem block 3 (single question)", "prob::3", List(
-        Submission.Prompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol", "x>=0")))
+        Submission.Prompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
+          None, "1,2", """{${1,2,3}$}""")))
       )),
       Submission.Problem(25057, "Problem block in second segment", "prob::4", List(
         Submission.Prompt(149, "\\onechoice", 1.0, List(
-          Submission.ChoiceAnswer(150, "prt::seg2block::a1", "\\choice", "Sound", isSelected=true),
-          Submission.ChoiceAnswer(151, "prt::seg2block::a2", "\\choice", "Unsound", isSelected=false)))
+          Submission.ChoiceAnswer(150, "prt::seg2block::a1", "\\choice*", None, "Sound", isSelected=true),
+          Submission.ChoiceAnswer(151, "prt::seg2block::a2", "\\choice", None, "Unsound", isSelected=false)))
       ))
     ))
   }
@@ -735,14 +548,22 @@ class AssessmentProverTests extends TacticTestBase {
   /** Creates a submission with randomly selected answers from the correct/incorrect sets in `problems`.
     * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
   private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
-    def createAnswer(p: Artifact): List[Submission.Answer] = p match {
-      case ExpressionArtifact(expr) => TextAnswer(1, "", "\\sol", expr.prettyString) :: Nil
+    def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
+      case AskGrader(mode, args, _) =>
+        Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}) + ")"))
+      case _: OneChoiceGrader => None
+      case _: AnyChoiceGrader => None
+      case _: AskTFGrader => None
+    }
+
+    def artifactString(a: Artifact): String = a match {
+      case ExpressionArtifact(expr) => expr.prettyString
       case TexExpressionArtifact(expr) => expr match {
         case fml: Formula =>
           val disjuncts = FormulaTools.disjuncts(fml)
           if (disjuncts.forall({ case Equal(_: Variable, _: Number) => true case _ => false })) {
             // list of values
-            TextAnswer(1, "", "\\sol", disjuncts.map({ case Equal(_, n) => n.prettyString }).mkString("{", ",", "}")) :: Nil
+            disjuncts.map({ case Equal(_, n) => n.prettyString }).mkString("{", ",", "}")
           } else {
             // intervals
             def left(a: Formula) = a match {
@@ -755,29 +576,49 @@ class AssessmentProverTests extends TacticTestBase {
               case LessEqual(_, a) => a.prettyString + "]"
               case True => "\\infty)"
             }
-            val answer = disjuncts.map({ case And(l, r) => left(l) + "," + right(r) }).mkString("\\cup")
-            TextAnswer(1, "", "\\sol", answer) :: Nil
+            disjuncts.map({ case And(l, r) => left(l) + "," + right(r) }).mkString("\\cup")
           }
-        case _ => TextAnswer(1, "", "\\sol", expr.prettyString) :: Nil
+        case _ => expr.prettyString
       }
-      case ListExpressionArtifact(exprs) => TextAnswer(1, "", "\\sol", exprs.map(_.prettyString).mkString(",")) :: Nil
-      case SequentArtifact(goals) => TextAnswer(1, "", "\\sol", goals.map(_.toString).mkString(";;")) :: Nil
-      case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, "", "\\choice", _, isSelected=true))
-      case BoolArtifact(value) =>
-        //@todo assumes askTF is a choice with two options
-        Submission.ChoiceAnswer(1, "", "\\choice", "True", isSelected=value.getOrElse(false)) ::
-        Submission.ChoiceAnswer(1, "", "\\choice", "False", isSelected=value.exists(!_)) :: Nil
-      case TextArtifact(value) => TextAnswer(1, "", "\\sol", value.getOrElse("")) :: Nil
+      case ListExpressionArtifact(exprs) => exprs.map(_.prettyString).mkString(",")
+      case SequentArtifact(goals) => goals.map(_.toString).mkString(";;")
+    }
+
+    def artifactSrcString(a: Artifact): String = a match {
+      case _: ExpressionArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
+      case _: TexExpressionArtifact => "{$" + artifactString(a) + "$}"
+      case _: ListExpressionArtifact => "{" + artifactString(a) + "}"
+      case _: SequentArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
+    }
+
+    def createAnswer(grader: Grader, a: Artifact): List[Submission.Answer] = {
+      val graderCookie = createGraderCookie(grader)
+      a match {
+        case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact =>
+          TextAnswer(1, "", "\\sol", graderCookie, artifactString(a), artifactSrcString(grader.expected)) :: Nil
+        case ChoiceArtifact(selected) => selected.map(s => Submission.ChoiceAnswer(1, "",
+          grader.expected match { case ChoiceArtifact(es) => if (es.contains(s)) "\\choice*" else "\\choice" },
+          graderCookie, s, isSelected=true))
+        case BoolArtifact(value) =>
+          //@todo assumes askTF is a choice with two options
+          Submission.ChoiceAnswer(1, "",
+            grader.expected match { case BoolArtifact(b) => if (b.contains(true)) "\\choice*" else "\\choice" },
+            graderCookie, "True", isSelected=value.getOrElse(false)) ::
+          Submission.ChoiceAnswer(1, "",
+            grader.expected match { case BoolArtifact(b) => if (b.contains(false)) "\\choice*" else "\\choice" },
+            graderCookie, "False", isSelected=value.exists(!_)) :: Nil
+        case TextArtifact(value) => TextAnswer(1, "", "\\sol", graderCookie, value.getOrElse(""), artifactSrcString(grader.expected)) :: Nil
+      }
     }
 
     /** Creates a prompt with its answers. Returns the prompt and correct=true/incorrect=false. */
     def createPrompt(q: Question, i: Int): (Submission.Prompt, Boolean) = {
-      val (_, correct, incorrect) = toGrader(q)
+      val (grader, correct, incorrect) = toGrader(q)
       //@note some questions may not have incorrect test answers annotated, but all have a correct solution
       val answerIncorrectly = !r.rand.nextBoolean() && incorrect.nonEmpty
       val answers = {
-        if (answerIncorrectly) createAnswer(incorrect(r.rand.nextInt(incorrect.size)))
-        else createAnswer(correct(r.rand.nextInt(correct.size)))
+        if (answerIncorrectly) createAnswer(grader, incorrect(r.rand.nextInt(incorrect.size)))
+        else createAnswer(grader, correct(r.rand.nextInt(correct.size)))
       }
       (Submission.Prompt(i, "", 1.0, answers), !answerIncorrectly)
     }

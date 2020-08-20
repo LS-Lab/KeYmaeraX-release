@@ -107,7 +107,7 @@ object AssessmentProver {
         case (ListExpressionArtifact(h), ExpressionArtifact(e)) =>
           if (h.exists(_.kind != e.kind)) return Right("Expected a " + e.kind + " but got a " + h.map(_.kind))
         case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
-          if (e.map(_.kind).toSet.size != 1 || h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
+          if (e.map(_.kind).toSet.size != 1 && h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
         case (h, e) =>
           if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got a " + h.hintString)
       }
@@ -528,7 +528,7 @@ object AssessmentProver {
 
     def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
       //@todo inspect name for answer kind to find out how to convert
-      case Submission.TextAnswer(_, _, _, t) :: Nil =>
+      case Submission.TextAnswer(_, _, _, _, t, _) :: Nil =>
         if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
         else if (classOf[TextArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
         else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
