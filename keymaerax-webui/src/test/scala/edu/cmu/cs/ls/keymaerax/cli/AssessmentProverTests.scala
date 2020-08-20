@@ -348,6 +348,11 @@ class AssessmentProverTests extends TacticTestBase {
     ).left.value shouldBe 'proved
   }
 
+  it should "reply with expected answer type to wrong answer format" in {
+    AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0".asFormula)).
+      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got a Sequent"
+  }
+
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe 'proved

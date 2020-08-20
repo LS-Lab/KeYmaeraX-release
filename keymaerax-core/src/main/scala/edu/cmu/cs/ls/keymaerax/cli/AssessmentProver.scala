@@ -33,15 +33,33 @@ import scala.util.{Failure, Success, Try}
 object AssessmentProver {
 
   /** Assessment prover input artifacts (expressions, sequents etc.) */
-  abstract class Artifact
-  case class ExpressionArtifact(expr: Expression) extends Artifact
-  case class TexExpressionArtifact(expr: Expression) extends Artifact
-  case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact
-  case class SequentArtifact(goals: List[Sequent]) extends Artifact
-  case class ChoiceArtifact(selected: List[String]) extends Artifact
-  case class BoolArtifact(value: Option[Boolean]) extends Artifact
-  case class TextArtifact(value: Option[String]) extends Artifact
-  case class MultiArtifact(artifacts: List[Artifact]) extends Artifact
+  abstract class Artifact {
+    def hintString: String
+  }
+  case class ExpressionArtifact(expr: Expression) extends Artifact {
+    override def hintString: String = expr.kind.toString
+  }
+  case class TexExpressionArtifact(expr: Expression) extends Artifact {
+    override def hintString: String = "Simple list/interval notation"
+  }
+  case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact {
+    override def hintString: String = "List of " + exprs.headOption.map(_.kind).getOrElse("<unknown>")
+  }
+  case class SequentArtifact(goals: List[Sequent]) extends Artifact {
+    override def hintString: String = "Sequent"
+  }
+  case class ChoiceArtifact(selected: List[String]) extends Artifact {
+    override def hintString: String = "Choice"
+  }
+  case class BoolArtifact(value: Option[Boolean]) extends Artifact {
+    override def hintString: String = "Boolean"
+  }
+  case class TextArtifact(value: Option[String]) extends Artifact {
+    override def hintString: String = "Text"
+  }
+  case class MultiArtifact(artifacts: List[Artifact]) extends Artifact {
+    override def hintString: String = "<unknown>"
+  }
 
   abstract class Grader {
     val expected: Artifact
@@ -91,13 +109,14 @@ object AssessmentProver {
         case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
           if (e.map(_.kind).toSet.size != 1 || h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
         case (h, e) =>
-          if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.getClass.getSimpleName + " but got a " + h.getClass.getSimpleName)
+          if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got a " + h.hintString)
       }
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
           case (ExpressionArtifact(h), ExpressionArtifact(e)) => run(() => syntacticEquality(h, e))
           case (TexExpressionArtifact(h), TexExpressionArtifact(e)) => run(() => syntacticEquality(h, e))
           case (SequentArtifact(h), SequentArtifact(e)) => run(() => syntacticEquality(h, e))
+          case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.hintString)
         }
         case Modes.VALUE_EQ =>(have, expected) match {
           case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => run(() => valueEquality(h, e))
@@ -106,6 +125,7 @@ object AssessmentProver {
             Right(if (h.size < e.size) "Too few values"
                   else if (h.size > e.size) "Too many values"
                   else "Incorrect answer"))
+          case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.hintString)
         }
         case Modes.POLY_EQ => (have, expected) match {
           case (ExpressionArtifact(h: Term), ExpressionArtifact(e: Term)) => run(() => polynomialEquality(h, e))
@@ -113,6 +133,7 @@ object AssessmentProver {
           case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
           case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
           case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
+          case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.hintString)
         }
         case Modes.QE => (have, expected) match {
           case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
@@ -127,12 +148,14 @@ object AssessmentProver {
               case Some("->") => run(() => qe(h, e, Imply))
               case Some("<-") => run(() => qe(e, h, Imply))
             }
+          case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
         }
         case Modes.PROP => (have, expected) match {
           case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
             run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), prop))
           case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
             run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), prop))
+          case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
         }
         case Modes.DI_PREMISE =>
           val diffAssignsMandatory = args.getOrElse("diffAssignsMandatory", "true").toBoolean
@@ -140,6 +163,7 @@ object AssessmentProver {
           (have, expected) match {
             case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => run(() => dIPremiseCheck(h, e, diffAssignsMandatory, normalize))
             case (SequentArtifact(h :: Nil), SequentArtifact(e :: Nil)) => run(() => dIPremiseCheck(h, e, diffAssignsMandatory, normalize))
+            case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
           }
         case Modes.DI =>
           args.get("question") match {
@@ -148,6 +172,7 @@ object AssessmentProver {
                 case ode: ODESystem => have match {
                   case ExpressionArtifact(h: Formula) => run(() => dICheck(ode, h))
                   case SequentArtifact(h :: Nil) => run(() => dICheck(ode, h.toFormula))
+                  case _ => Right("Answer must be a KeYmaera X formula, but got a " + have.hintString)
                 }
                 case _ => throw new IllegalArgumentException("Question must be an ODE system")
               }
@@ -155,6 +180,7 @@ object AssessmentProver {
           }
         case Modes.PRG_EQUIV => (have, expected) match {
           case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => run(() => prgEquivalence(e, h))
+          case _ => Right("Answer must be a KeYmaera X program, but got " + have.hintString)
         }
         case Modes.LOOP =>
           val invArg = args.get("inv").map(KeYmaeraXParser.formulaParser)
@@ -171,7 +197,7 @@ object AssessmentProver {
                   KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
                   val m = expand(q, h, KeYmaeraXParser.formulaParser)
                   run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))))
-                case _ => Right("Expected a single loop invariant formula, but got " + have)
+                case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
               }
             case _ => throw new IllegalArgumentException("Missing argument 'question' in check 'loop'")
           }
@@ -181,6 +207,7 @@ object AssessmentProver {
               run(() => prove(Sequent(IndexedSeq(), IndexedSeq(GreaterEqual(Number(hs.length), Divide(Number(es.length), Number(3))))),
                 QE & DebuggingTactics.done("Explanation too short")))
             case (TextArtifact(None), _) => Right("No answer")
+            case _ => Right("Answer must be an explanation, but got " + have.hintString)
           }
         case Modes.BELLE_PROOF =>
           args.get("question") match {
@@ -194,6 +221,7 @@ object AssessmentProver {
                   val m = expand(q, hs, KeYmaeraXParser).asInstanceOf[Formula]
                   val t = expand(args("tactic"), hs, BelleParser)
                   run(() => prove(Sequent(IndexedSeq(), IndexedSeq(m)), t))
+                case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.hintString)
               }
             case None =>
               val t = BelleParser(args("tactic"))
@@ -211,6 +239,7 @@ object AssessmentProver {
                   } else {
                     lemmaResults.find(_.isRight).get
                   }
+                case _ => Right("Answer must a KeYmaera X formula or sequent, but got " + have.hintString)
               }
           }
       }
