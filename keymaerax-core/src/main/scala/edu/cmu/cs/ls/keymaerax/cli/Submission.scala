@@ -20,7 +20,7 @@ object Submission {
       }
       override def read(json: JsValue): Submission.Prompt = {
         json.asJsObject.getFields(ID, MAX_POINTS) match {
-          case JsNumber(id) :: JsNumber(points) :: Nil => Prompt(id.toLong, points.toDouble, Nil)
+          case JsNumber(id) :: JsNumber(points) :: Nil => Prompt(id.toLong, "", points.toDouble, Nil)
         }
       }
     }
@@ -39,24 +39,36 @@ object Submission {
     private val BODY = "body"
     private val IS_CHOICE = "is_choice"
     private val IS_FILL_IN_GAP = "is_fill_in_the_gap"
-    private val IS_SELECTED = "is_selected"
+    private val IS_CHECKED = "is_checked"
     private val PROMPTS = "prompts"
+    private val USER_ANSWER = "user_answer"
+    private val TEXT = "text"
 
     implicit val answerJsonFormat: JsonFormat[Submission.Answer] = new RootJsonFormat[Submission.Answer] {
       override def write(answer: Answer): JsValue = {
         answer match {
-          case ChoiceAnswer(id, text, isSelected) =>
+          case ChoiceAnswer(id, label, name, text, isSelected) =>
             JsObject(
               ID -> id.toJson,
+              LABEL -> label.toJson,
+              NAME -> name.toJson,
               BODY -> text.toJson,
               IS_CHOICE -> true.toJson,
               IS_FILL_IN_GAP -> false.toJson,
-              IS_SELECTED -> isSelected.toJson
+              USER_ANSWER -> JsObject(
+                IS_CHECKED -> isSelected.toJson,
+                TEXT -> "".toJson
+              )
             )
-          case TextAnswer(id, text) =>
+          case TextAnswer(id, label, name, answer) =>
             JsObject(
               ID -> id.toJson,
-              BODY -> text.toJson,
+              LABEL -> label.toJson,
+              NAME -> name.toJson,
+              USER_ANSWER -> JsObject(
+                TEXT -> answer.toJson,
+                IS_CHECKED -> false.toJson
+              ),
               IS_CHOICE -> false.toJson,
               IS_FILL_IN_GAP -> false.toJson //@todo
             )
@@ -65,25 +77,21 @@ object Submission {
 
       override def read(json: JsValue): Answer = {
         val fields = json.asJsObject.fields
-        val id = fields(ID) match {
-          case JsNumber(n) => n.toLong
-        }
+        val id = fields(ID) match { case JsNumber(n) => n.toLong }
+        val name = fields(NAME) match { case JsString(s) => s }
+        val label = fields(LABEL) match { case JsString(s) => s}
         (fields.get(IS_CHOICE), fields.get(IS_FILL_IN_GAP)) match {
           case (Some(JsBoolean(true)), None | Some(JsBoolean(false))) =>
-            val text = fields(BODY) match {
-              case JsString(s) => s
+            val text = fields(BODY) match { case JsString(s) => s }
+            val answer = fields(USER_ANSWER) match {
+              case a: JsObject => a.fields(IS_CHECKED) match { case JsBoolean(b) => b }
             }
-            //@todo assumes selected option will be marked
-            val answer = fields(IS_SELECTED) match {
-              case JsBoolean(b) => b
-            }
-            ChoiceAnswer(id, text, answer)
+            ChoiceAnswer(id, label, name, text, answer)
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(_))) =>
-            //@todo assumes submission will be in the prompt body
-            val answer = fields(BODY) match {
-              case JsString(s) => s
+            val answer = fields(USER_ANSWER) match {
+              case a: JsObject => a.fields(TEXT) match { case JsString(s) => s }
             }
-            TextAnswer(id, answer)
+            TextAnswer(id, label, name, answer)
         }
       }
     }
@@ -93,29 +101,28 @@ object Submission {
       override def write(prompt: Submission.Prompt): JsValue = JsObject(
         ID -> prompt.id.toJson,
         POINT_VALUE -> prompt.points.toJson,
+        NAME -> prompt.name.toJson,
         CHILDREN -> prompt.answers.toJson
       )
 
       override def read(json: JsValue): Submission.Prompt = {
         val root = json.asJsObject
-        val id = root.fields(ID) match {
-          case JsNumber(n) => n.toLong
-        }
-        val points = root.fields(POINT_VALUE) match {
-          case JsNumber(n) => n.toDouble
-        }
+        val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        val name = root.fields(NAME) match { case JsString(s) => s }
+        val points = root.fields(POINT_VALUE) match { case JsNumber(n) => n.toDouble }
         val answers = root.fields(CHILDREN) match {
           case JsArray(s) => s.map(_.convertTo[Submission.Answer]).toList
           case _ => List.empty
         }
-        Prompt(id, points, answers)
+        Prompt(id, name, points, answers)
       }
     }
 
     implicit val problemJsonFormat: JsonFormat[Problem] = new RootJsonFormat[Problem] {
       override def write(problem: Problem): JsValue = JsObject(
-        ID -> JsNumber(problem.id),
-        TITLE -> JsString(problem.title),
+        ID -> problem.id.toJson,
+        TITLE -> problem.title.toJson,
+        LABEL -> problem.label.toJson,
         PROMPTS -> problem.prompts.toJson,
         TYPE -> "atom".toJson,
         NAME -> "problem".toJson,
@@ -127,17 +134,14 @@ object Submission {
         val root = json.asJsObject()
         require(root.fields(TYPE) match { case JsString("atom") => true case _ => false }, "Type 'atom' expected")
         require(root.fields(NAME) match { case JsString("problem") => true case _ => false }, "Name 'problem' expected")
-        val id = root.fields(ID) match {
-          case JsNumber(n) => n.toLong
-        }
-        val title = root.fields(TITLE) match {
-          case JsString(s) => s
-        }
+        val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        val title = root.fields(TITLE) match { case JsString(s) => s }
+        val label = root.fields(LABEL) match { case JsString(s) => s }
         val prompts = root.fields.get(PROMPTS) match {
           case Some(JsArray(prompts)) => prompts.map(_.convertTo[Prompt]).toList
           case _ => List.empty
         }
-        Problem(id, title, prompts)
+        Problem(id, title, label, prompts)
       }
     }
 
@@ -150,12 +154,8 @@ object Submission {
 
       override def read(json: JsValue): Chapter = {
         val root = json.asJsObject
-        val id = root.fields(ID) match {
-          case JsNumber(n) => n.toLong
-        }
-        val label = root.fields(LABEL) match {
-          case JsString(s) => s
-        }
+        val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        val label = root.fields(LABEL) match { case JsString(s) => s }
         val problems = extractProblems(root)
         Chapter(id, label, problems)
       }
@@ -189,14 +189,15 @@ object Submission {
 
   trait Answer {
     val id: Long
-    val text: String
+    val label: String
+    val name: String
   }
-  case class TextAnswer(id: Long, text: String) extends Answer
-  case class ChoiceAnswer(id: Long, text: String, isSelected: Boolean) extends Answer
-  /** A single quiz question with submitted answer. */
-  case class Prompt(id: Long, points: Double, answers: List[Answer])
+  case class TextAnswer(id: Long, label: String, name: String, answer: String) extends Answer
+  case class ChoiceAnswer(id: Long, label: String, name: String, text: String, isSelected: Boolean) extends Answer
+  /** A single quiz question with submitted answer. `name` indicates the type of prompt. */
+  case class Prompt(id: Long, name: String, points: Double, answers: List[Answer])
   /** A problem segment. */
-  case class Problem(id: Long, title: String, prompts: List[Prompt])
+  case class Problem(id: Long, title: String, label: String, prompts: List[Prompt])
   /** A quiz chapter. */
   case class Chapter(id: Long, label: String, problems: List[Problem])
 }

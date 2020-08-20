@@ -527,7 +527,8 @@ object AssessmentProver {
     }
 
     def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
-      case Submission.TextAnswer(_, t) :: Nil =>
+      //@todo inspect name for answer kind to find out how to convert
+      case Submission.TextAnswer(_, _, _, t) :: Nil =>
         if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
         else if (classOf[TextArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
         else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
@@ -586,7 +587,7 @@ object AssessmentProver {
             if (errors.nonEmpty) {
               msgStream.println("FAILED")
               msgStream.println(errors.map({ case (prompt, ex) =>
-                prompt.answers.map(_.text).mkString(",") + "\n" + ex.getMessage }).mkString("\n"))
+                prompt.answers.map(_.name).mkString(",") + "\n" + ex.getMessage }).mkString("\n"))
             } else msgStream.println("PASSED")
           })
         } else {

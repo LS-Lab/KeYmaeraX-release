@@ -496,28 +496,44 @@ class AssessmentProverTests extends TacticTestBase {
       |             "type": "atom",
       |             "name": "problem",
       |             "id": 25053,
+      |             "label": "prob::1",
       |             "point_value": 3.0,
       |             "title": "Problem block 1 (2 questions)",
       |             "prompts": [
       |               {
       |                 "point_value": 2.0,
-      |                 "body": "A question",
+      |                 "name": "\\ask",
       |                 "id": 141,
       |                 "children": [
       |                   {
       |                     "id": 142,
-      |                     "body": "y>=0"
+      |                     "name": "\\sol",
+      |                     "point_value": 2.0,
+      |                     "label": "prt-sol::1::a1",
+      |                     "cookies": [],
+      |                     "user_answer" : {
+      |                       "text": "y>=0",
+      |                       "is_checked": false
+      |                     }
       |                   }
       |                 ]
       |               },
       |               {
+      |                 "name": "\\ask",
       |                 "body": "This question has an answer with a syntax error",
       |                 "point_value": 1.0,
       |                 "id": 143,
       |                 "children": [
       |                   {
       |                     "id": 144,
-      |                     "body": "x^2>=+0"
+      |                     "name": "\\sol",
+      |                     "point_value": 1.0,
+      |                     "cookies": [],
+      |                     "label": "prt-sol::2::a1",
+      |                     "user_answer": {
+      |                       "text": "x^2>=+0",
+      |                       "is_checked": false
+      |                     }
       |                   }
       |                 ]
       |               }
@@ -537,16 +553,24 @@ class AssessmentProverTests extends TacticTestBase {
       |           {
       |             "type": "atom",
       |             "name": "problem",
+      |             "label": "prob::2",
       |             "title": "Problem block 2 (one non-autogradable question)",
       |             "id": 17218,
       |             "prompts": [
       |                {
       |                  "id": 145,
+      |                  "name": "\\ask",
       |                  "body": "This is the question",
       |                  "children": [
       |                    {
       |                      "id": 146,
-      |                      "body": "Here is an answer",
+      |                      "name": "\\sol",
+      |                      "label": "prt::block2::a1",
+      |                      "cookies": [],
+      |                      "user_answer": {
+      |                        "text": "Here is an answer",
+      |                        "is_checked": false
+      |                      },
       |                      "and": "other stuff"
       |                    }
       |                  ],
@@ -562,16 +586,26 @@ class AssessmentProverTests extends TacticTestBase {
       |         "point_value": 1.0,
       |         "type": "atom",
       |         "name": "problem",
+      |         "label": "prob::3",
       |         "id": 25160,
       |         "title": "Problem block 3 (single question)",
       |         "this entry": "has one question",
       |         "prompts": [
       |           {
       |             "id": 147,
+      |             "name": "\\ask",
       |             "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
       |             "children": [
       |               {
-      |                 "body": "x>=0",
+      |                 "name": "\\sol",
+      |                 "label": "prt::block3::a1",
+      |                 "is_choice": false,
+      |                 "is_fill_in_the_gap": false,
+      |                 "cookies": [],
+      |                 "user_answer": {
+      |                   "text": "x>=0",
+      |                   "is_checked": false
+      |                 },
       |                 "id": 148
       |               }
       |             ],
@@ -589,6 +623,7 @@ class AssessmentProverTests extends TacticTestBase {
       |       {
       |         "type": "atom",
       |         "name": "problem",
+      |         "label": "prob::4",
       |         "id": 25057,
       |         "title": "Problem block in second segment",
       |         "point_value": 1.0,
@@ -596,19 +631,32 @@ class AssessmentProverTests extends TacticTestBase {
       |           {
       |             "body": " A question in the second segment",
       |             "id": 149,
+      |             "name": "\\onechoice",
       |             "point_value": 1.0,
       |             "is_question_any_choice": false,
       |             "children": [
       |               {
       |                 "id": 150,
+      |                 "name": "\\choice",
+      |                 "label": "prt::seg2block::a1",
+      |                 "cookies": [],
+      |                 "user_answer": {
+      |                   "text": "",
+      |                   "is_checked": true
+      |                 },
       |                 "body": "Sound",
-      |                 "is_selected": true,
       |                 "is_choice": true
       |               },
       |               {
       |                 "id": 151,
+      |                 "name": "\\choice",
+      |                 "label": "prt::seg2block::a2",
       |                 "body": "Unsound",
-      |                 "is_selected": false,
+      |                 "cookies": [],
+      |                 "user_answer": {
+      |                   "is_checked": false,
+      |                   "text": ""
+      |                 },
       |                 "is_choice": true
       |               }
       |             ]
@@ -621,17 +669,17 @@ class AssessmentProverTests extends TacticTestBase {
       |}""".stripMargin
     import Submission.SubmissionJsonFormat._
     s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
-      Submission.Problem(25053, "Problem block 1 (2 questions)", List(
-        Submission.Prompt(141, 2.0, List(Submission.TextAnswer(142, "y>=0"))),
-        Submission.Prompt(143, 1.0, List(Submission.TextAnswer(144, "x^2>=+0")))
+      Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
+        Submission.Prompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol", "y>=0"))),
+        Submission.Prompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol", "x^2>=+0")))
       )),
-      Submission.Problem(25160, "Problem block 3 (single question)", List(
-        Submission.Prompt(147, 1.0, List(Submission.TextAnswer(148, "x>=0")))
+      Submission.Problem(25160, "Problem block 3 (single question)", "prob::3", List(
+        Submission.Prompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol", "x>=0")))
       )),
-      Submission.Problem(25057, "Problem block in second segment", List(
-        Submission.Prompt(149, 1.0, List(
-          Submission.ChoiceAnswer(150, "Sound", isSelected=true),
-          Submission.ChoiceAnswer(151, "Unsound", isSelected=false)))
+      Submission.Problem(25057, "Problem block in second segment", "prob::4", List(
+        Submission.Prompt(149, "\\onechoice", 1.0, List(
+          Submission.ChoiceAnswer(150, "prt::seg2block::a1", "\\choice", "Sound", isSelected=true),
+          Submission.ChoiceAnswer(151, "prt::seg2block::a2", "\\choice", "Unsound", isSelected=false)))
       ))
     ))
   }
@@ -688,13 +736,13 @@ class AssessmentProverTests extends TacticTestBase {
     * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
   private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
     def createAnswer(p: Artifact): List[Submission.Answer] = p match {
-      case ExpressionArtifact(expr) => TextAnswer(1, expr.prettyString) :: Nil
+      case ExpressionArtifact(expr) => TextAnswer(1, "", "\\sol", expr.prettyString) :: Nil
       case TexExpressionArtifact(expr) => expr match {
         case fml: Formula =>
           val disjuncts = FormulaTools.disjuncts(fml)
           if (disjuncts.forall({ case Equal(_: Variable, _: Number) => true case _ => false })) {
             // list of values
-            TextAnswer(1, disjuncts.map({ case Equal(_, n) => n.prettyString }).mkString("{", ",", "}")) :: Nil
+            TextAnswer(1, "", "\\sol", disjuncts.map({ case Equal(_, n) => n.prettyString }).mkString("{", ",", "}")) :: Nil
           } else {
             // intervals
             def left(a: Formula) = a match {
@@ -708,18 +756,18 @@ class AssessmentProverTests extends TacticTestBase {
               case True => "\\infty)"
             }
             val answer = disjuncts.map({ case And(l, r) => left(l) + "," + right(r) }).mkString("\\cup")
-            TextAnswer(1, answer) :: Nil
+            TextAnswer(1, "", "\\sol", answer) :: Nil
           }
-        case _ => TextAnswer(1, expr.prettyString) :: Nil
+        case _ => TextAnswer(1, "", "\\sol", expr.prettyString) :: Nil
       }
-      case ListExpressionArtifact(exprs) => TextAnswer(1, exprs.map(_.prettyString).mkString(",")) :: Nil
-      case SequentArtifact(goals) => TextAnswer(1, goals.map(_.toString).mkString(";;")) :: Nil
-      case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, _, isSelected=true))
+      case ListExpressionArtifact(exprs) => TextAnswer(1, "", "\\sol", exprs.map(_.prettyString).mkString(",")) :: Nil
+      case SequentArtifact(goals) => TextAnswer(1, "", "\\sol", goals.map(_.toString).mkString(";;")) :: Nil
+      case ChoiceArtifact(selected) => selected.map(Submission.ChoiceAnswer(1, "", "\\choice", _, isSelected=true))
       case BoolArtifact(value) =>
         //@todo assumes askTF is a choice with two options
-        Submission.ChoiceAnswer(1, "True", isSelected=value.getOrElse(false)) ::
-        Submission.ChoiceAnswer(1, "False", isSelected=value.exists(!_)) :: Nil
-      case TextArtifact(value) => TextAnswer(1, value.getOrElse("")) :: Nil
+        Submission.ChoiceAnswer(1, "", "\\choice", "True", isSelected=value.getOrElse(false)) ::
+        Submission.ChoiceAnswer(1, "", "\\choice", "False", isSelected=value.exists(!_)) :: Nil
+      case TextArtifact(value) => TextAnswer(1, "", "\\sol", value.getOrElse("")) :: Nil
     }
 
     /** Creates a prompt with its answers. Returns the prompt and correct=true/incorrect=false. */
@@ -731,13 +779,13 @@ class AssessmentProverTests extends TacticTestBase {
         if (answerIncorrectly) createAnswer(incorrect(r.rand.nextInt(incorrect.size)))
         else createAnswer(correct(r.rand.nextInt(correct.size)))
       }
-      (Submission.Prompt(i, 1.0, answers), !answerIncorrectly)
+      (Submission.Prompt(i, "", 1.0, answers), !answerIncorrectly)
     }
 
     def createProblem(p: Problem, i: Int): (Submission.Problem, List[(Submission.Prompt, Boolean)]) = {
       //@note problems have IDs 1000,..., prompts of problem 1000 have IDs 2000,.... etc.
       val answers = p.questions.zipWithIndex.map({ case (q, j) => createPrompt(q, 2000+1000*i+j) })
-      (Submission.Problem(1000 + i, p.name.getOrElse(""), answers.map(_._1)), answers)
+      (Submission.Problem(1000 + i, p.name.getOrElse(""), "", answers.map(_._1)), answers)
     }
     val submittedProblems = problems.zipWithIndex.map((createProblem _).tupled)
     (Submission.Chapter(1, chapterLabel, submittedProblems.map(_._1)),
