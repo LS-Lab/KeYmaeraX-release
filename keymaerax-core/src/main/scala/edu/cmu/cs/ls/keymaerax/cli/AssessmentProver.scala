@@ -107,7 +107,10 @@ object AssessmentProver {
         case (ListExpressionArtifact(h), ExpressionArtifact(e)) =>
           if (h.exists(_.kind != e.kind)) return Right("Expected a " + e.kind + " but got a " + h.map(_.kind))
         case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
-          if (e.map(_.kind).toSet.size != 1 && h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
+          require(e.map(_.kind).toSet.nonEmpty)
+          if (e.map(_.kind).toSet.size > 1) {
+            if (e.zip(h).forall({ case (ee, he) => ee.kind == he.kind })) Right("Expected " + e.map(_.kind).mkString + " gut got " + h.map(_.kind).mkString(","))
+          } else if (h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
         case (h, e) =>
           if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got a " + h.hintString)
       }
