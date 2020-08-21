@@ -370,6 +370,13 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.prgEquivalence("{a;++b;}*".asProgram, "{b;++a;}*".asProgram) shouldBe 'proved
   }
 
+  "AnyChoice grading" should "not give points when no answer was selected" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
+    val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
+    val graders = anyChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
+    graders.foreach(_.check(ChoiceArtifact(Nil)).right.value shouldBe "Incorrect answer")
+  }
+
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
