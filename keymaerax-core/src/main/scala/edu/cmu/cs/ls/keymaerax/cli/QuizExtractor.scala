@@ -37,7 +37,6 @@ object QuizExtractor {
     private val TEX_NO_BREAK_SPACE = "~"
 
     private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
-    private val KYXLINE_EXTRACTOR = kyxlineExtractor("").r(KYX_SOL)
     //@note nested {} up to level 2
     private def nestedBracesText(capture: String) = "(" + capture + """(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)"""
     private def texMathDelimText(capture: String) = """\$(""" + capture + """.+?)\$"""
