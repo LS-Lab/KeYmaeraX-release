@@ -50,7 +50,7 @@ object QuizExtractor {
     // \testsol
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
     // \nosol
-    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{?\s*""" + solContent("?:") + """}\s*)*)"""
+    private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
     // \autog
     private val GRADER_NAME = """(\w+)"""
     private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*"(""" + capture + """[^"]+)""""
@@ -76,10 +76,26 @@ object QuizExtractor {
             val (question, artifact) = solfinArtifactsFromString(s)
             (artifact, Map("question" -> question))
         }
-        val testSolArtifacts = expectedArtifact +: KYXLINE_EXTRACTOR.findAllMatchIn(testsol).map(_.group(KYX_SOL)).map(artifactsFromKyxString).toList
-        val noSolArtifacts = KYXLINE_EXTRACTOR.findAllMatchIn(nosol).map(_.group(KYX_SOL)).map(artifactsFromKyxString).toList
+        val testSolArtifacts = expectedArtifact +: artifactsFromNSolContents(testsol, "\\\\testsol")
+        val noSolArtifacts = artifactsFromNSolContents(nosol, "\\\\nosol")
         AskQuestion(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
+    }
+
+    private def artifactsFromNSolContents(s: String, split: String): List[Artifact] = {
+      if (s.nonEmpty) s.split(split).map(_.trim).map(_.stripPrefix("{").stripSuffix("}")).
+        filter(_.nonEmpty).toList.flatMap(artifactFromSolContent)
+      else List.empty
+    }
+
+    private def artifactFromSolContent(s: String): Option[Artifact] = {
+      solContent("").r(KYX_SOL, TEX_TEXT_SOL, TEXT_SOL).findFirstMatchIn(s).
+        map(m => (m.group(KYX_SOL), m.group(TEX_TEXT_SOL), m.group(TEXT_SOL))).
+        map({
+          case (s, null, null) => artifactsFromKyxString(s)
+          case (null, s, null) => artifactsFromTexMathString(s)
+          case (null, null, s) => artifactsFromTexTextString(s)
+        })
     }
 
     /** Translates `\kyxline` string into an artifact. */

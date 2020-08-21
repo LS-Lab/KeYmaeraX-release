@@ -172,6 +172,45 @@ class AssessmentProverTests extends TacticTestBase {
           List(ExpressionArtifact("y'=y/2".asFormula)), List.empty)
         p.questions shouldBe List(first, MultiAskQuestion(second, Map(-1 -> first)))
     }
+    // test that all test cases are read
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask Question 1
+        |\sol{\kyxline"3"}
+        |\testsol{\kyxline"2+1"}
+        |\testsol{$\{1,2,3\}$}
+        |\testsol{$[3,4] \cup \lbrack -1,\infty)$}
+        |\testsol{A text answer}
+        |\nosol{\kyxline"2+2"}
+        |\nosol{A wrong text answer}
+        |\nosol{$[8,9] \cup \lbrack -2,4)$}
+        |\nosol{$\{5,6,7\}$}
+        |\nosol{ }
+        |\autog{syneq()}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe List(
+          AskQuestion(
+            grader=Some("syneq"),
+            args=Map.empty,
+            expected=ExpressionArtifact(Number(3)),
+            testSols=List(
+              ExpressionArtifact("3".asTerm),
+              ExpressionArtifact("2+1".asTerm),
+              TexExpressionArtifact("x=1|x=2|x=3".asFormula),
+              TexExpressionArtifact("3<=x&x<=4 | -1<=x&true".asFormula),
+              TextArtifact(Some("A text answer"))
+            ),
+            noSols=List(
+              ExpressionArtifact("2+2".asTerm),
+              TextArtifact(Some("A wrong text answer")),
+              TexExpressionArtifact("8<=x&x<=9 | -2<=x&x<4".asFormula),
+              TexExpressionArtifact("x=5|x=6|x=7".asFormula),
+              TextArtifact(None)
+            )
+          )
+        )
+    }
   }
 
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
