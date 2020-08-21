@@ -735,7 +735,13 @@ class AssessmentProverTests extends TacticTestBase {
       val grader = MultiAskGrader(mainGrader, earlierGraders.map({ case (k, (grader, _, _)) => (k, grader) }).toMap)
       // take first solution from each question, second from each question, ... (result sorted earliest to main)
       val sols = (earlierGraders.map(_._2._2) :+ mainSols).transpose.map(MultiArtifact)
-      val nosols = (earlierGraders.map(_._2._3) :+ mainNosols).transpose.map(MultiArtifact)
+      // same for nosols, but fill in missing nosols with blank answers
+      val earlierNosols = earlierGraders.map(_._2._3)
+      val maxNosols = (earlierNosols.map(_.size) :+ mainNosols.size).max
+      val nosols = (
+        earlierNosols.map(n => n ++ List.fill(maxNosols-n.size)(TextArtifact(None))) :+
+        (mainNosols ++ List.fill(maxNosols-mainNosols.size)(TextArtifact(None)))).
+        transpose.map(MultiArtifact)
       (grader, sols, nosols)
     case q: OneChoiceQuestion =>
       val (correct, incorrect) = q.choices.partition(_.isCorrect) match {

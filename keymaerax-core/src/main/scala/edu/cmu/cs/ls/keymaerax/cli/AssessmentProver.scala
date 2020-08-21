@@ -270,12 +270,26 @@ object AssessmentProver {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
       //@note assumed sorted from earliest to main artifact
       case MultiArtifact(as) =>
-        val mergedHave = as.reduceRight[Artifact]({
-          case (ExpressionArtifact(a), ExpressionArtifact(b)) => ListExpressionArtifact(a :: b :: Nil)
-          case (ExpressionArtifact(a), ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a)
-        })
-        //@todo may also want to recheck old answers to know how to grade the current answer
-        grader.check(mergedHave)
+        grader.mode match {
+          case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
+            val mainArtifact = as.last
+            grader.args.get("ifCorrect") match {
+              case Some(checkEarlier) =>
+                val prereqAnsweredCorrectly = earlier.zip(as.dropRight(1)).forall({ case ((_, g), a) => g.check(a) match {
+                  case Left(p) => p.isProved
+                  case _ => false
+                }})
+                if (prereqAnsweredCorrectly) grader.check(mainArtifact)
+                else Right("Ignored explanation for a wrong answer")
+              case None => grader.check(mainArtifact)
+            }
+          case _ =>
+            val mergedHave = as.reduceRight[Artifact]({
+              case (ExpressionArtifact(a), ExpressionArtifact(b)) => ListExpressionArtifact(a :: b :: Nil)
+              case (ExpressionArtifact(a), ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a)
+            })
+            grader.check(mergedHave)
+        }
     }
   }
 
