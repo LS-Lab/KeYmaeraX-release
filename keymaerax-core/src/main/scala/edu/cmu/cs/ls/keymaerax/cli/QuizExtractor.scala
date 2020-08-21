@@ -196,7 +196,14 @@ object QuizExtractor {
   object AnyChoiceQuestion extends ChoiceQuestion("anychoice", new AnyChoiceQuestion(_, _))
 
   /** A quiz problem block. */
-  case class Problem(name: Option[String], label: Option[String], rawContent: String, rawPoints: Option[String]) {
+  case class Problem(name: Option[String], label: Option[String], questions: List[Question], points: Option[Double])
+
+  object Problem {
+    private val PROBLEM_NAME = "problemname"
+    private val PROBLEM_CONTENT = "problemcontent"
+    private val PROBLEM_POINTS = "problempoints"
+    private val PROBLEM_LABEL = "problemlabel"
+    private val PROBLEM_EXTRACTOR = """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
     private val QUESTION_EXTRACTOR =
       (AskTFQuestion.QUESTION_START ::
         AskQuestion.QUESTION_START ::
@@ -209,8 +216,16 @@ object QuizExtractor {
         AnyChoiceQuestion.getClass.getSimpleName
       )
 
+    def fromString(s: String): List[Problem] = {
+      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)),
+          Option(m.group(PROBLEM_LABEL)), questionsFromString(m.group(PROBLEM_CONTENT)),
+          pointsFromString(Option(m.group(PROBLEM_POINTS))))).
+        filter(_.points.exists(_ > 0.0)).
+        toList
+    }
+
     /** The problem questions with grading information. */
-    lazy val questions: List[Question] = {
+    private def questionsFromString(rawContent: String): List[Question] = {
       val questions = QUESTION_EXTRACTOR.findAllMatchIn(rawContent).flatMap(m => {
         (Option(m.group(AskQuestion.getClass.getSimpleName)) ::
           Option(m.group(OneChoiceQuestion.getClass.getSimpleName)) ::
@@ -240,21 +255,6 @@ object QuizExtractor {
     }
 
     /** The total points of the problem. */
-    def points: Option[Double] = rawPoints.map(_.toDouble)
-  }
-
-  object Problem {
-    private val PROBLEM_NAME = "problemname"
-    private val PROBLEM_CONTENT = "problemcontent"
-    private val PROBLEM_POINTS = "problempoints"
-    private val PROBLEM_LABEL = "problemlabel"
-    private val PROBLEM_EXTRACTOR = """(?s)\\begin\{problem}(?:\[(\d+\.?\d*)])?(?:\[([^]]*)])?(?:\\label\{([^}]+)})?(.*?)\\end\{problem}""".r(PROBLEM_POINTS, PROBLEM_NAME, PROBLEM_LABEL, PROBLEM_CONTENT)
-
-    def fromString(s: String): List[Problem] = {
-      PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)),
-          Option(m.group(PROBLEM_LABEL)), m.group(PROBLEM_CONTENT), Option(m.group(PROBLEM_POINTS)))).
-        filter(_.points.exists(_ > 0.0)).
-        toList
-    }
+    private def pointsFromString(rawPoints: Option[String]): Option[Double] = rawPoints.map(_.toDouble)
   }
 }
