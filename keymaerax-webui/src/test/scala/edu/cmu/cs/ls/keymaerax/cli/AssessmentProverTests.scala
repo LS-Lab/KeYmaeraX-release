@@ -504,6 +504,14 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 13" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/13/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Provability with differential invariants", 3) :: ("Differential invariant reduction", 5) ::
+        ("Differential invariant search", 2) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe

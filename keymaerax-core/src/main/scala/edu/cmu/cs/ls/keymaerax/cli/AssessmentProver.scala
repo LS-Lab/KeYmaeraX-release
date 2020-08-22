@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.{AnyChoiceQuestion, AskQuestion, AskTFQuestion, OneChoiceQuestion, Problem}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -80,6 +80,8 @@ object AssessmentProver {
       val DI_PREMISE: String = "dipremise"
       /** DI with additional free variables check. */
       val DI: String = "di"
+      /** Reduce differential invariant to equivalent other differential invariant. */
+      val DI_REDUCTION: String = "direduction"
       /** Loop with automated proofs on each branch. */
       val LOOP: String = "loop"
       /** Program equivalence. */
@@ -181,6 +183,17 @@ object AssessmentProver {
               }
             case None => throw new IllegalArgumentException("Mandatory question missing in DI check")
           }
+        case Modes.DI_REDUCTION => (have, expected) match {
+          case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
+            args.get("shape") match {
+              case Some("&=") => if (!FormulaTools.conjuncts(h).forall(_.isInstanceOf[Equal])) return Right("Not a conjunction of equalities")
+              case Some("atom") => if (!h.isInstanceOf[AtomicFormula]) return Right("Not an atomic formula")
+              case Some("=") => if (!h.isInstanceOf[Equal]) return Right("Not an equality")
+              case Some("<=") => if (!h.isInstanceOf[ComparisonFormula] || h.isInstanceOf[Equal]) return Right("Not an inequality")
+              case _ => throw new IllegalArgumentException("Question must have annotated shape")
+            }
+            run(() => dIReductionCheck(h, e))
+        }
         case Modes.PRG_EQUIV => (have, expected) match {
           case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => run(() => prgEquivalence(e, h))
           case _ => Right("Answer must be a KeYmaera X program, but got " + have.hintString)
@@ -459,6 +472,18 @@ object AssessmentProver {
     require(!StaticSemantics.freeVars(SimplifierV3.formulaSimp(inv, HashSet.empty,
       SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).isEmpty, "Invariant " + inv.prettyString + " does not mention free variables")
     KeYmaeraXProofChecker(5000)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
+  }
+
+  /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h')  */
+  def dIReductionCheck(h: Formula, e: Formula): ProvableSig = {
+    val abbreviatePrimes = TacticFactory.anon { s: Sequent =>
+      StaticSemantics.freeVars(s).toSet.filter(_.isInstanceOf[DifferentialSymbol]).
+        map(abbrvAll(_, None)).reduceRightOption[BelleExpr](_&_).getOrElse(skip) & SaturateTactic(hideL('L))
+    }
+    KeYmaeraXProofChecker(5000)(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
+      SimplifierV3.fullSimplify & prop & OnAll(QE & done))(
+      Sequent(IndexedSeq(), IndexedSeq(And(Equiv(e, h), Imply(DifferentialFormula(e), DifferentialFormula(h)))))
+    )
   }
 
   /** Checks `inv` for being a loop invariant for `question` of the shape `P->[{a;}*]Q` or `[{a;}*]P`. */
