@@ -35,9 +35,35 @@ object AssessmentProver {
   /** Assessment prover input artifacts (expressions, sequents etc.) */
   abstract class Artifact {
     def hintString: String
+    /** Checks the artifact for being of a certain shape (skip if None), returns None if shape constraint is met, an error message otherwise. */
+    def checkShape(shape: Option[String]): Option[String] = None
   }
   case class ExpressionArtifact(expr: Expression) extends Artifact {
     override def hintString: String = expr.kind.toString
+    override def checkShape(shape: Option[String]): Option[String] = {
+      shape match {
+        case Some("&=") => expr match {
+          case h: Formula if FormulaTools.conjuncts(h).forall(_.isInstanceOf[Equal]) => None
+          case _ => Some("Not a conjunction of equalities")
+        }
+        case Some("atom") if !expr.isInstanceOf[AtomicFormula] => expr match {
+          case _: AtomicFormula => None
+          case _ => Some("Not an atomic formula")
+        }
+        case Some("=") => expr match {
+          case _: Equal => None
+          case _ => Some("Not an equality")
+        }
+        case Some("<=") if !expr.isInstanceOf[ComparisonFormula] || expr.isInstanceOf[Equal] => expr match {
+          case _: Equal => Some("Not an inequality")
+          case _: ComparisonFormula => None
+          case _ => Some("Not an inequality")
+        }
+        case Some(_) => throw new IllegalArgumentException("Unknown shape " + shape)
+        case None => None
+      }
+    }
+
   }
   case class TexExpressionArtifact(expr: Expression) extends Artifact {
     override def hintString: String = "Simple list/interval notation"
@@ -116,6 +142,10 @@ object AssessmentProver {
         case (h, e) =>
           if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got a " + h.hintString)
       }
+      have.checkShape(args.get("shape")) match {
+        case Some(e) => return Right(e)
+        case None => // shape check passed
+      }
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
           case (ExpressionArtifact(h), ExpressionArtifact(e)) => run(() => syntacticEquality(h, e))
@@ -184,15 +214,7 @@ object AssessmentProver {
             case None => throw new IllegalArgumentException("Mandatory question missing in DI check")
           }
         case Modes.DI_REDUCTION => (have, expected) match {
-          case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) =>
-            args.get("shape") match {
-              case Some("&=") => if (!FormulaTools.conjuncts(h).forall(_.isInstanceOf[Equal])) return Right("Not a conjunction of equalities")
-              case Some("atom") => if (!h.isInstanceOf[AtomicFormula]) return Right("Not an atomic formula")
-              case Some("=") => if (!h.isInstanceOf[Equal]) return Right("Not an equality")
-              case Some("<=") => if (!h.isInstanceOf[ComparisonFormula] || h.isInstanceOf[Equal]) return Right("Not an inequality")
-              case _ => throw new IllegalArgumentException("Question must have annotated shape")
-            }
-            run(() => dIReductionCheck(h, e))
+          case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => run(() => dIReductionCheck(h, e))
         }
         case Modes.PRG_EQUIV => (have, expected) match {
           case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => run(() => prgEquivalence(e, h))
