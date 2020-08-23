@@ -49,7 +49,7 @@ object AssessmentProver {
           case h: Formula if FormulaTools.conjuncts(h).forall(_.isInstanceOf[Equal]) => None
           case _ => Some("Not a conjunction of equalities")
         }
-        case Some("atom") if !expr.isInstanceOf[AtomicFormula] => expr match {
+        case Some("atom") => expr match {
           case _: AtomicFormula => None
           case _ => Some("Not an atomic formula")
         }
@@ -57,7 +57,7 @@ object AssessmentProver {
           case _: Equal => None
           case _ => Some("Not an equality")
         }
-        case Some("<=") if !expr.isInstanceOf[ComparisonFormula] || expr.isInstanceOf[Equal] => expr match {
+        case Some("<=") => expr match {
           case _: Equal => Some("Not an inequality")
           case _: ComparisonFormula => None
           case _ => Some("Not an inequality")
