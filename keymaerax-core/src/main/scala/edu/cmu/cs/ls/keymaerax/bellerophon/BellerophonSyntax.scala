@@ -471,7 +471,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
 
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   @tailrec
-  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig =
+  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig = {
+    if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
       @tailrec
       def toPos(locator: Find): Option[Position] = {
@@ -505,6 +506,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         case _ => throw cause
       }
     } else throw cause
+  }
 
   override def prettyString: String = positionTactic.prettyString + "(" + locator.prettyString + ")"
 }
@@ -681,6 +683,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   private def tryAllAfter(locator: Find, cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
+        if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           @tailrec
           def toPos(locator: Find): Option[Position] = {
