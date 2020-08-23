@@ -9,6 +9,7 @@ import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.andCommute
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
@@ -18,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -58,6 +60,10 @@ object AssessmentProver {
           case _: Equal => Some("Not an inequality")
           case _: ComparisonFormula => None
           case _ => Some("Not an inequality")
+        }
+        case Some("qfra") => expr match {
+          case f: Formula if StaticSemantics.boundVars(f).isEmpty => None
+          case _ => Some("Not a quantifier-free formula of real arithmetic")
         }
         case Some(_) => throw new IllegalArgumentException("Unknown shape " + shape)
         case None => None
@@ -112,6 +118,8 @@ object AssessmentProver {
       val LOOP: String = "loop"
       /** Program equivalence. */
       val PRG_EQUIV = "prgequiv"
+      /** Contract equivalence. */
+      val CONTRACT_EQUIV = "contractequiv"
       /** Propositional. */
       val PROP = "prop"
       /** Text explanations. */
@@ -219,6 +227,10 @@ object AssessmentProver {
         case Modes.PRG_EQUIV => (have, expected) match {
           case (ExpressionArtifact(h: Program), ExpressionArtifact(e: Program)) => run(() => prgEquivalence(e, h))
           case _ => Right("Answer must be a KeYmaera X program, but got " + have.hintString)
+        }
+        case Modes.CONTRACT_EQUIV => (have, expected) match {
+          case (ExpressionArtifact(h: Formula), ExpressionArtifact(e: Formula)) => run(() => contractEquivalence(h, e))
+          case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
         }
         case Modes.LOOP =>
           val invArg = args.get("inv").map(KeYmaeraXParser.formulaParser)
@@ -561,6 +573,22 @@ object AssessmentProver {
       SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop))) & DebuggingTactics.done("Program is not as expected"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
+  def contractEquivalence(have: Formula, expected: Formula): ProvableSig = {
+    val rephrasePost = TacticFactory.anon { s: Sequent =>
+      val anteBoxes = s.ante.filter(_.isInstanceOf[Box])
+      val succBoxes = s.succ.zipWithIndex.filter(_._1.isInstanceOf[Box])
+      val boxes = (anteBoxes ++ succBoxes.map(_._1)).groupBy({ case Box(prg, _) => prg })
+      val postEquivs = boxes.map({ case (k, v) => k -> v.map({ case Box(_, f) => f }).toSet.subsets(2).toList.map(s => Equiv(s.head, s.tail.head)) })
+      val postEquivLemmas = postEquivs.map({ case (k, v) => k -> v.map(e => e -> Lemma(proveBy(e, prop), Nil)) }).filter(_._2.forall(_._2.fact.isProved))
+      succBoxes.flatMap({ case (Box(prg, fml), i) => postEquivLemmas.getOrElse(prg, List.empty).
+        find({ case (Equiv(l, r), _) => l==fml || r==fml }).
+        map({ case (Equiv(l, _), pr) => DebuggingTactics.print("Using lemma") & useAt(pr, if (l == fml) PosInExpr(0::Nil) else PosInExpr(1::Nil))(Position(SuccPos(i)) ++ PosInExpr(1::Nil)) & DebuggingTactics.print("Used") }) }).
+        reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    }
+    KeYmaeraXProofChecker(5000)(DebuggingTactics.print("Start") & chase(1) & prop & OnAll(rephrasePost & prop) &
+      DebuggingTactics.done("Incorrect answer"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
+  }
+
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
   def prove(s: Sequent, t: BelleExpr): ProvableSig = {
     KeYmaeraXProofChecker(5000)(t)(s)
@@ -733,6 +761,15 @@ object AssessmentProver {
         }
       }, prg).get
     } else prg
+  }
+
+  /** Elaborates program constants to system constants. */
+  private def elaborateToSystems(f: Formula): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+        Right(elaborateToSystem(e))
+      }
+    }, f).get
   }
 
 }
