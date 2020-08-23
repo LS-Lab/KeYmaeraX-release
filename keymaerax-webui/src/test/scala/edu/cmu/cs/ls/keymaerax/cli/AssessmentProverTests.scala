@@ -34,13 +34,13 @@ class AssessmentProverTests extends TacticTestBase {
         p.name shouldBe 'empty
         p.points should contain (1.0)
         p.label should contain ("prob:first")
-        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask Something simple \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
         p.name should contain ("Problem A")
         p.points should contain (4.0)
-        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask A tex question \sol{$\{1,(-2),x^2\}$} \end{problem}""")) {
       case p :: Nil =>
@@ -58,7 +58,7 @@ class AssessmentProverTests extends TacticTestBase {
       case p :: Nil =>
         p.name should contain ("Problem B")
         p.questions shouldBe
-          List(AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+          List(AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
     inside (Problem.fromString(
       """\begin{problem}[1.0]
@@ -70,28 +70,28 @@ class AssessmentProverTests extends TacticTestBase {
       case p :: Nil =>
         p.questions shouldBe
           List(
-            AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty),
+            AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty),
             AskQuestion(Some("prove"), Map("question" -> "#1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
-              ExpressionArtifact("y=2".asFormula), List(ExpressionArtifact("y=2".asFormula)), List.empty)
+              ExpressionArtifact("y=2"), List(ExpressionArtifact("y=2")), List.empty)
           )
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula), List(ExpressionArtifact("x>=0".asFormula)), List.empty))
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol{\kyxline"x+1>=1"} \testsol{\kyxline"x+2>=2"} \autog{polyeq(vars="x", question="x>=0 -> [{x'=2}@invariant(x>=0)}*]x>=0")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("polyeq"), Map("vars"->"x", "question"->"x>=0 -> [{x'=2}@invariant(x>=0)}*]x>=0"), ExpressionArtifact("x>=0".asFormula),
-            List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula), ExpressionArtifact("x+2>=2".asFormula)), List.empty))
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x", "question"->"x>=0 -> [{x'=2}@invariant(x>=0)}*]x>=0"), ExpressionArtifact("x>=0"),
+            List(ExpressionArtifact("x>=0"), ExpressionArtifact("x+1>=1"), ExpressionArtifact("x+2>=2")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>=0"} \testsol{\kyxline"x+1>=1"} \nosol{\kyxline"x+1>=0"} \nosol{\kyxline"x-1>=2"} \autog{polyeq(vars="x")}\end{problem}""")) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0".asFormula),
-            List(ExpressionArtifact("x>=0".asFormula), ExpressionArtifact("x+1>=1".asFormula)),
-            List(ExpressionArtifact("x+1>=0".asFormula), ExpressionArtifact("x-1>=2".asFormula))))
+          List(AskQuestion(Some("polyeq"), Map("vars"->"x"), ExpressionArtifact("x>=0"),
+            List(ExpressionArtifact("x>=0"), ExpressionArtifact("x+1>=1")),
+            List(ExpressionArtifact("x+1>=0"), ExpressionArtifact("x-1>=2"))))
     }
     inside (Problem.fromString(
       """\begin{problem}[1.0]
@@ -102,7 +102,7 @@ class AssessmentProverTests extends TacticTestBase {
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y".asFormula), List(ExpressionArtifact("2*x=y".asFormula)), List.empty))
+          List(AskQuestion(Some("dI"), Map("vars"->"x", "question"->"{x'=1,y'=2}"), ExpressionArtifact("2*x=y"), List(ExpressionArtifact("2*x=y")), List.empty))
     }
     inside (Problem.fromString("""\begin{problem}[1.0]\ask \sol{\kyxline"x>0 ==> x>=0 ;; y<0 ==> y<=0"}\end{problem}""")) {
       case p :: Nil =>
@@ -148,8 +148,8 @@ class AssessmentProverTests extends TacticTestBase {
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe List(
-          AskQuestion(None, Map.empty, ExpressionArtifact("x>=0".asFormula),
-            List(ExpressionArtifact("x>=0".asFormula)), List.empty),
+          AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"),
+            List(ExpressionArtifact("x>=0")), List.empty),
           OneChoiceQuestion("A choice question", List(
             QuizExtractor.Choice("Wrong answer", isCorrect=false),
             QuizExtractor.Choice("Right answer", isCorrect=true),
@@ -166,10 +166,10 @@ class AssessmentProverTests extends TacticTestBase {
         |\autog{prove(question="x<0 -> [{x'=-x}]x<0",tactic="implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
-        val first = AskQuestion(None, Map.empty, ExpressionArtifact("x*y^2=-1".asFormula), List(ExpressionArtifact("x*y^2=-1".asFormula)), List.empty)
+        val first = AskQuestion(None, Map.empty, ExpressionArtifact("x*y^2=-1"), List(ExpressionArtifact("x*y^2=-1")), List.empty)
         val second = AskQuestion(Some("prove"), Map("question"->"x<0 -> [{x'=-x}]x<0", "tactic"->"implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done"),
-          ExpressionArtifact("y'=y/2".asFormula),
-          List(ExpressionArtifact("y'=y/2".asFormula)), List.empty)
+          ExpressionArtifact("y'=y/2"),
+          List(ExpressionArtifact("y'=y/2")), List.empty)
         p.questions shouldBe List(first, MultiAskQuestion(second, Map(-1 -> first)))
     }
     // test that all test cases are read
@@ -193,16 +193,16 @@ class AssessmentProverTests extends TacticTestBase {
           AskQuestion(
             grader=Some("syneq"),
             args=Map.empty,
-            expected=ExpressionArtifact(Number(3)),
+            expected=ExpressionArtifact("3"),
             testSols=List(
-              ExpressionArtifact("3".asTerm),
-              ExpressionArtifact("2+1".asTerm),
+              ExpressionArtifact("3"),
+              ExpressionArtifact("2+1"),
               TexExpressionArtifact("x=1|x=2|x=3".asFormula),
               TexExpressionArtifact("3<=x&x<=4 | -1<=x&true".asFormula),
               TextArtifact(Some("A text answer"))
             ),
             noSols=List(
-              ExpressionArtifact("2+2".asTerm),
+              ExpressionArtifact("2+2"),
               TextArtifact(Some("A wrong text answer")),
               TexExpressionArtifact("8<=x&x<=9 | -2<=x&x<4".asFormula),
               TexExpressionArtifact("x=5|x=6|x=7".asFormula),
@@ -344,8 +344,8 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Generic prove checker" should "prove simple examples" in withZ3 { _ =>
-    AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), ExpressionArtifact("A() -> [prg;]B()".asFormula)).
-      check(ExpressionArtifact("A()->[prg;]B()".asFormula)).left.value shouldBe 'proved
+    AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), ExpressionArtifact("A() -> [prg;]B()")).
+      check(ExpressionArtifact("A()->[prg;]B()")).left.value shouldBe 'proved
     AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("A() ==> [prg;]B()".asSequent::Nil)).
       check(SequentArtifact("==> A() -> [prg;]B()".asSequent::Nil)).left.value shouldBe 'proved
     val p = AskGrader(Some(AskGrader.Modes.BELLE_PROOF), Map("tactic" -> "chase(1);prop"), SequentArtifact("==> A() -> [prg;]B()".asSequent::"[sys;]C() ==> ".asSequent::Nil)).
@@ -360,8 +360,8 @@ class AssessmentProverTests extends TacticTestBase {
       Map(
         "question" -> "x>2 & y>=1 -> [{x:=x+y;y:=y+2;}*]x>1",
         "tactic" -> "implyR(1);loop({`#1`},1);auto;done"),
-      ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
-      check(ExpressionArtifact("x>1&y>=0".asFormula)
+      ExpressionArtifact("false")). //@note ignored because question will be used instead
+      check(ExpressionArtifact("x>1&y>=0")
     ).left.value shouldBe 'proved
   }
 
@@ -372,7 +372,7 @@ class AssessmentProverTests extends TacticTestBase {
         "question" -> "x>=3 & v>=2 & a>=1 & j>=0 -> [{x'=v,v'=a,a'=j}]x>=3",
         "tactic" -> "implyR(1); for #i do dC({`#i`},1); <(nil, dI(1); done) endfor; dW(1); QE; done"
       ),
-      ExpressionArtifact("false".asFormula)). //@note ignored because question will be used instead
+      ExpressionArtifact("false")). //@note ignored because question will be used instead
       check(ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil)
     ).left.value shouldBe 'proved
   }
@@ -383,14 +383,14 @@ class AssessmentProverTests extends TacticTestBase {
       Map(
         "question" -> "x<=m & V>=0 -> [{{v:=0; ++ ?Q(m,t,x,T,V);v:=V;};{x'=v,t'=1 & t<=T}}*]x<=m",
         "tactic" -> "US({`Q(m,t,x,T,V) ~> #1`});implyR(1);loop({`x<=m`},1);auto;done"),
-      ExpressionArtifact("false".asFormula) //@note ignored because question will be used instead
+      ExpressionArtifact("false") //@note ignored because question will be used instead
     ).check(
-      ExpressionArtifact("x<=m-V*(T-t)".asFormula)
+      ExpressionArtifact("x<=m-V*(T-t)")
     ).left.value shouldBe 'proved
   }
 
   it should "reply with expected answer type to wrong answer format" in {
-    AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0".asFormula)).
+    AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0")).
       check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got a Sequent"
   }
 
@@ -427,7 +427,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 3" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 3) ::
+      ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 6) ::
         ("Reachable Sets", 5) :: ("Program Shapes", 8) :: ("Modeling pitfalls", 4) :: Nil
     run(problems)
   }
@@ -619,7 +619,7 @@ class AssessmentProverTests extends TacticTestBase {
     }
 
     def artifactString(a: Artifact): String = a match {
-      case ExpressionArtifact(expr) => expr.prettyString
+      case ExpressionArtifact(expr) => expr
       case TexExpressionArtifact(expr) => expr match {
         case fml: Formula =>
           val disjuncts = FormulaTools.disjuncts(fml)

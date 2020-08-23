@@ -105,7 +105,7 @@ object QuizExtractor {
         val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
         val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
         if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
-        else ExpressionArtifact(s.asExpr)
+        else ExpressionArtifact(s)
       }
     }
 
