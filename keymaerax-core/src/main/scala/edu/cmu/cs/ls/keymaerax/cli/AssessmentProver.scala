@@ -181,6 +181,7 @@ object AssessmentProver {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
               case (ht: Term, et: Term) => run(() => polynomialEquality(ht, et))
+              case (hf: Formula, ef: Formula) => run(() => polynomialEquality(hf, ef, normalize=false))
               case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.hintString)
             }
           case (TexExpressionArtifact(h: Term), TexExpressionArtifact(e: Term)) => run(() => polynomialEquality(h, e))
