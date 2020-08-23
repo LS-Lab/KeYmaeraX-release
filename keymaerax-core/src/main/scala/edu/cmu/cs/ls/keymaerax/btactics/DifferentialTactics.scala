@@ -1142,7 +1142,7 @@ private object DifferentialTactics extends Logging {
         case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
           odeInvariant(tryHard = true, useDw = true)(pos) & done
         case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
-          DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
+          DifferentialTactics.DconstV(pos) & DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
           diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) =>

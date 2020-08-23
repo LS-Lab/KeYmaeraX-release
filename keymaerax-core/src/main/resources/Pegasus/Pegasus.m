@@ -58,7 +58,7 @@ Print["Parameters: ", paramfree, " Const assumptions: ", asmsfree];
 
 InvGen[prob_List, opts:OptionsPattern[]]:=Catch[Module[
 {pre,f,vars,evoConst,post,
-preImpliesPost,postInvariant,preInvariant,class,constvars,constQ,eprob,
+preImpliesPost,postInvariant,preInvariant,preDomFalse,domImpPost,class,constvars,constQ,eprob,
 ERRSTR},
 
 ERRSTR="Incorrect Pegasus problem format.\n
@@ -99,7 +99,13 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
 	Throw[Format`FormatTriv[5]], 
     Print["Precondition implies postcondition. Proceeding."]
     ];
-
+  
+  (* Dom implies Post *)
+  domImpPost=Primitives`CheckSemiAlgInclusion[evoConst&&constQ,post, Join[constvars,vars]];
+  If[ TrueQ[domImpPost], 
+    Print["Domain constraint implies postcondition! Nothing to do."];
+	Throw[Format`FormatTriv[4]]];
+    
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
   postInvariant=LZZ`InvSFast[post, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[postInvariant], 
@@ -108,6 +114,12 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
     Print["Postcondition is (probably) not an invariant. Inv check gave: ", postInvariant,". Proceeding."]
     ];
 
+  (* Pre && Dom implies False *)
+  preDomFalse=Primitives`CheckSemiAlgInclusion[pre&&evoConst&&constQ,False, Join[constvars,vars]];
+  If[ TrueQ[preDomFalse], 
+    Print["Precondition & domain constraint are contradictory! Nothing to do."];
+	Throw[Format`FormatTriv[3]]];
+  
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
   preInvariant=LZZ`InvSFast[pre, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[preInvariant], 
