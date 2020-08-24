@@ -4,11 +4,12 @@
 */
 import com.wolfram.jlink.{Expr, KernelLink}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink, ToolExecutor}
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
@@ -214,6 +215,16 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     }
     t.join()
     compAfterRestart shouldBe Some("5".asTerm)
+  }
+
+  it should "shutdown and init repeatably" in withMathematica { tool =>
+    tool.shutdown()
+    for (_ <- 0 to 10) {
+      tool.init(ToolConfiguration.config("mathematica"))
+      tool shouldBe 'initialized
+      tool.qe("1>0".asFormula).fact shouldBe 'proved
+      tool.shutdown()
+    }
   }
 
   "Expressions deeper than 256" should "FEATURE_REQUEST: evaluate both as strings and expressions" taggedAs TodoTest in withMathematica { mathematica =>

@@ -60,8 +60,9 @@ object KeYmaeraXProofChecker {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val pw = outputFileName.map(fn => new PrintWriter(URLEncoder.encode(fn, "UTF-8").
-      replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator)))
+    val sanitized = outputFileName.map(sanitize)
+    sanitized.map(File(_)).foreach(_.parent.createDirectory())
+    val pw = sanitized.map(new PrintWriter(_))
 
     val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
       case DependentTactic("QE") => true
@@ -196,13 +197,18 @@ object KeYmaeraXProofChecker {
 
     val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
+
     //@note same archive entry name might be present in several .kyx files
+    def disambiguateEntry(outName: String, archiveName: String, entryName: String): String =
+      (if (outName.endsWith(archiveName)) outName
+      else outName + "-" + archiveName) + "-" + entryName
+
     val outputFileNames: Map[Path, Map[ParsedArchiveEntry, String]] =
       if (archiveContent.size == 1 && archiveContent.head._2.size == 1)
         Map(archiveContent.head._1 -> Map(archiveContent.head._2.head -> (outputFilePrefix + outputFileSuffix)))
       else archiveContent.map({ case (path, entries) =>
-        path -> entries.map(e => e -> (outputFilePrefix + "-" + path.getFileName + "-"
-          + e.name.replaceAll("\\W", "_") + outputFileSuffix)).toMap
+        path -> entries.map(e => e ->
+          sanitize(disambiguateEntry(outputFilePrefix, path.getFileName.toString, e.name) + outputFileSuffix)).toMap
       }).toMap
 
     /** Replaces the conjecture of `entry` with the `conjecture`. */
@@ -231,6 +237,10 @@ object KeYmaeraXProofChecker {
     if (statistics.exists(_.status=="unfinished")) sys.exit(-1)
   }
 
+  /** Replaces illegal characters in file names. */
+  private def sanitize(filename: String): String = URLEncoder.encode(filename, "UTF-8").
+    replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator)
+
   private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
                          options: OptionMap): List[ProofStatistics] = {
     def savePt(pt: ProvableSig): Unit = {
@@ -258,8 +268,8 @@ object KeYmaeraXProofChecker {
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    new PrintWriter(URLEncoder.encode(outputFileName, "UTF-8").
-      replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator))
+    val proofEvidence = File(sanitize(outputFileName))
+    if (proofEvidence.exists) proofEvidence.delete()
 
     val t = tacticString match {
       case Some(tac) => ("user", "user", tac) :: Nil

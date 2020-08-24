@@ -231,7 +231,7 @@ class StttTutorial extends TacticTestBase {
         |  nil,
         |  chase(1); unfold; doall(solve('R))
         |);
-        |US("J(._0,._1,._2,._3) ~> ._0>=0 & ._1+._0^2/(2*._2) <= ._3");
+        |US("J(v,x,B,S) ~> v>=0 & x+v^2/(2*B) <= S");
         |doall(QE);
         |done
         |""".stripMargin)
@@ -287,7 +287,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
-  "Example 10" should "be provable" in withQE { _ => withDatabase { db =>
+  "Example 10" should "FEATURE_REQUEST: be provable" in withQE { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 10", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
@@ -308,7 +308,7 @@ class StttTutorial extends TacticTestBase {
 
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
-        print("Base case") & speculativeQE,
+        print("Base case") & speculativeQE, //@todo speculativeQE with Z3 fails but QE works
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           printIndexed("Acc") & hideL(-15, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &

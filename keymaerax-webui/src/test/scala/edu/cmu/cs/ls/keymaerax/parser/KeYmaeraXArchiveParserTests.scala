@@ -5,12 +5,13 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Number, Plus, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Function, Greater, Number, Pair, Plus, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.scalatest.Inside.inside
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -1607,7 +1608,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                      |Expected: <unknown>""".stripMargin
   }
 
-  "Global definitions" should "be added to all entries" in {
+  "Global definitions" should "be added to all entries" in withTactics {
     val input =
       """SharedDefinitions
         | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
@@ -1669,8 +1670,13 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
-      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
+    inside (entry2.tactics) {
+      case (name, text, SeqTactic(ExpandAll(substs), lemma)) :: Nil =>
+        name shouldBe "Proof Entry 2"
+        text shouldBe "useLemma({`Entry 1`})"
+        substs should contain theSameElementsAs entry2.defs.substs
+        lemma shouldBe TactixLibrary.useLemmaX("Entry 1", None)
+    }
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
@@ -1684,7 +1690,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "add to all entries but not auto-expand if tactic expands" in {
+  it should "add to all entries but not auto-expand if tactic expands" in withTactics {
     val input =
       """SharedDefinitions
         | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
@@ -1747,8 +1753,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
-      Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
-        TactixLibrary.useLemmaX("Entry 1", None))::Nil
+      Expand("gt".asNamedSymbol, SubstitutionPair(
+        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))
+      ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
@@ -1762,10 +1770,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "add to all entries but not auto-expand if tactic uses US to expand" in {
+  it should "add to all entries but not auto-expand if tactic uses US to expand" in withTactics {
     val input =
       """SharedDefinitions
-        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
+        | Bool gt(Real x, Real y) <-> x > y;
         |End.
         |
         |Lemma "Entry 1"
@@ -1774,10 +1782,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |
         |Theorem "Entry 2"
-        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1") End.
+        | Tactic "Proof Entry 2" US("gt(x,y) ~> x>y") ; useLemma("Entry 1") End.
         |End.""".stripMargin
     val entries = parse(input)
     entries should have size 2
@@ -1787,7 +1795,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0>._1".asFormula), UnknownLocation),
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("._0>._1".asFormula), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
@@ -1797,7 +1805,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.info shouldBe empty
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
+        |Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1805,7 +1813,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
+        |Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1817,26 +1825,28 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 > ._1".asFormula), UnknownLocation),
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1")""",
-      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula)) &
-        TactixLibrary.useLemmaX("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(x,y) ~> x>y") ; useLemma("Entry 1")""",
+      TactixLibrary.USX(SubstitutionPair(
+        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(1)), DotTerm(Real, Some(2)))),
+        Greater(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+      ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
+        |Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Theorem "Entry 2"
-        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
-        | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma("Entry 1") End.
+        | Tactic "Proof Entry 2" US("gt(x,y) ~> x>y") ; useLemma("Entry 1") End.
         |End.""".stripMargin
   }
 

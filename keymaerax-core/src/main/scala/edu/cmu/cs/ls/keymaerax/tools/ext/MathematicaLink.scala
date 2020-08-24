@@ -78,7 +78,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-  protected val mathematicaExecutor: ToolExecutor = new ToolExecutor(1)
+  protected var mathematicaExecutor: ToolExecutor = _
 
   /** @inheritdoc */
   override def runUnchecked(cmd: String): (String, T) = runUnchecked(cmd, m2k)
@@ -106,7 +106,8 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   }
 
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
-  def shutdown(): Unit = mathematicaExecutor.shutdown()
+  def init(): Boolean = { mathematicaExecutor = new ToolExecutor(1); true }
+  def shutdown(): Unit = if (mathematicaExecutor != null) mathematicaExecutor.shutdown()
 
   protected def timeConstrained(cmd: MExpr): MExpr =
     if (timeout < 0) cmd
@@ -184,14 +185,16 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         }
         val args =
           if (machine.isEmpty) {
-            val process = startKernel(linkName, port)
-            Thread.sleep(500) // wait for MathKernel to stay alive
-            process match {
-              case Some(process: Process) if process.isAlive() =>
-                mathProcess = Some(process)
-              case Some(process: Process) if !process.isAlive() =>
-                mathProcess = None
-                throw new IllegalStateException(engineName + " terminated with exit code " + process.exitValue() + "; check that your license is valid and your computer is online for license checking")
+            startKernel(linkName, port) match {
+              case Some(process: Process) =>
+                for (_ <- 1 to 10; if !process.isAlive()) {
+                  Thread.sleep(200) // wait for MathKernel to stay alive
+                }
+                if (process.isAlive()) mathProcess = Some(process)
+                else {
+                  mathProcess = None
+                  throw new IllegalStateException(engineName + " terminated with exit code " + process.exitValue() + "; check that your license is valid and your computer is online for license checking")
+                }
               case _ => mathProcess = None
             }
             ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::port::Nil).toArray
@@ -201,7 +204,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         MathLinkFactory.createKernelLink(args)
       } else {
         logger.info("Launching " + engineName)
-        val args = ("-linkmode"::"launch"::"-linkprotocol"::"tcpip"::"-linkname"::linkName + " -mathlink"::Nil).toArray
+        val args = ("-linkmode" :: "launch" :: "-linkprotocol" :: "tcpip" :: "-linkname" :: linkName+" -mathlink" :: Nil).toArray
         MathLinkFactory.createKernelLink(args)
       }
 

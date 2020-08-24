@@ -103,6 +103,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     }
 
     /** Elaborates variable uses of declared functions. */
+    //@todo need to look into concrete programs that implement program constants when elaborating
     def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
 
     /** Elaborates program constants to system constants if their definition is dual-free. */
@@ -202,8 +203,22 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
             case e => throw ParseException("Definition of " + name._1 + " is not a program, but a " + e.kind, loc)
           }
       }
+      val repl = elaborateToFunctions(interpretation) match {
+        case r@FuncOf(fn: Function, c) =>
+          if (what.sort == fn.sort) r
+          else PredOf(Function(fn.name, fn.index, fn.domain, what.sort), c)
+        case p@PredOf(fn: Function, c) =>
+          if (what.sort == fn.sort) p
+          else FuncOf(Function(fn.name, fn.index, fn.domain, what.sort), c)
+        case r => r
+      }
 
-      SubstitutionPair(what, interpretation)
+      val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
+      if (undeclaredDots.nonEmpty) throw ParseException(
+        "Function/predicate " + what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
+        UnknownLocation)
+
+      SubstitutionPair(what, repl)
     }
   }
 

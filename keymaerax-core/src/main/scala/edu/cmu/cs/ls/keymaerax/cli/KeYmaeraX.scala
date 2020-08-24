@@ -171,14 +171,8 @@ object KeYmaeraX {
 
   /** Reads configuration from keymaerax.conf. */
   def configFromFile(defaultTool: String): OptionMap = {
-    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
-        ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
-      case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
-        ToolConfiguration.wolframEngineConfig.map({ case (k,v) => Symbol(k) -> v })
-      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
+    ToolConfiguration.config(Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
+      map({ case (k,v) => Symbol(k) -> v })
   }
 
   /** Combines tool configurations, favoring primary configuration over secondary configuration. */
@@ -188,23 +182,23 @@ object KeYmaeraX {
 
   /** Initializes Z3 from command line options. */
   private def initZ3(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new Z3ToolProvider())
+    ToolProvider.setProvider(Z3ToolProvider())
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: OptionMap, usage: String): Unit = {
-    ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(mathematicaConfig(options, usage)) :: new Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
   }
 
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: OptionMap, usage: String): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(mathematicaConfig(options, usage)) :: new Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
   }
 
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: OptionMap, usage: String): Unit = {
-    ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider :: new Z3ToolProvider() :: Nil))
+    ToolProvider.setProvider(MultiToolProvider(WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
   }
 
   /** Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.  */

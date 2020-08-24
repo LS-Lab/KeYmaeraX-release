@@ -7,13 +7,12 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.CustomAssertions.withSafeClue
-
 import org.scalatest._
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import org.scalatest.OptionValues._
-
 import org.scalamock.scalatest.MockFactory
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable._
 
@@ -648,5 +647,13 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     "[{x'=y, y'=x}]true".asFormula shouldBe Box(ODESystem(DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(y), x)), True), True)
+  }
+
+  "String converter" should "FEATURE_REQUEST: parse substitution pair with 0-based dots" taggedAs IgnoreInBuildTest in  {
+    //@note conversion to all 1-based indices also acceptable
+    "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair shouldBe SubstitutionPair(
+      PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+      Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))
+    )
   }
 }

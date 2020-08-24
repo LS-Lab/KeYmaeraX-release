@@ -332,10 +332,32 @@ object BelleParser extends TacticParser with Logging {
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
-        if (defs.substs.nonEmpty) ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
-        else st.input match {
-          case BelleToken(SEQ_COMBINATOR, _) :: rest => ParserState(r, rest)
-          case _ => ParserState(r, st.input)
+        //@note uses location information to distinguish file definitions from proof definitions (e.g., abstract loop invariant J(x))
+        val (modelDefs, proofDefs) = defs.decls.partition({
+          case (_, (_, _, _, _, UnknownLocation)) => false
+          case _ => true
+        })
+        val modelSubsts = Declaration(modelDefs).substs
+        val modelExpand = if (modelSubsts.nonEmpty) Some(ExpandAll(modelSubsts)) else None
+        // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
+        val proofsExpand = defs.substs.filter(_.what match {
+          case FuncOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case PredOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case ns: ProgramConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case _ => false
+        }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
+        val expand = (modelExpand, proofsExpand) match {
+          case (Some(me), Some(pe)) => Some(pe & me)
+          case (Some(me), None) => Some(me)
+          case (None, Some(pe)) => Some(pe)
+          case (None, None) => None
+        }
+        expand match {
+          case Some(e) => ParserState(r :+ ParsedBelleExpr(e, loc), st.input)
+          case None => st.input match {
+            case BelleToken(SEQ_COMBINATOR, _) :: rest => ParserState(r, rest)
+            case _ => ParserState(r, st.input)
+          }
         }
       //endregion
 
@@ -530,7 +552,9 @@ object BelleParser extends TacticParser with Logging {
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
 
-      def expand[T <: Expression](e: T): T = if (expandAll) defs.exhaustiveSubst(e) else defs.elaborateToFunctions(e)
+      def expand[T <: Expression](e: T): T =
+        if (expandAll) defs.elaborateToFunctions(defs.exhaustiveSubst(e))
+        else defs.elaborateToFunctions(e)
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.

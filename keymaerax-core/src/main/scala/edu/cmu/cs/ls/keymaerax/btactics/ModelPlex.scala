@@ -121,9 +121,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
       (Diamond(prg, posteqs), nonboundAssumptions)
     }
 
-    fml match {
-      case Imply(assumptions, Box(prg, _)) => conjectureOf(assumptions, prg)
-      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
+    proveBy(fml, SaturateTactic(TactixLibrary.alphaRule)).subgoals match {
+      case IndexedSeq(Sequent(assumptions, alternatives)) =>
+        val (boxes, negAssumptions) = alternatives.partition({ case _: Box => true case _ => false })
+        require(boxes.size == 1, "Expected a single box property, but got " + boxes.mkString(","))
+        val Box(prg, _) = boxes.head
+        conjectureOf((assumptions ++ negAssumptions.map(Not)).reduceRightOption(And).getOrElse(True), prg)
+      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml + "; formula must be propositionally equivalent to A -> [prg;]P")
     }
   }
 

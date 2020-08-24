@@ -34,14 +34,16 @@ object DefaultConfiguration {
 
   def defaultMathematicaConfig: Map[String, String] = {
     if (defaultMathLinkPath._1 != "" && defaultMathLinkPath._2 != "") Map(
-      "linkName" -> defaultMathLinkPath._1, "libDir" -> defaultMathLinkPath._2, "tcpip" -> "false")
+      "mathkernel" -> defaultMathLinkPath._1, "linkName" -> defaultMathLinkPath._1,
+      "jlink" -> defaultMathLinkPath._2, "libDir" -> defaultMathLinkPath._2,
+      "tcpip" -> "false")
     else Map.empty
   }
 
   def defaultWolframEngineConfig: Map[String, String] = {
     if (defaultWolframEnginePath._1 != "" && defaultWolframEnginePath._2 != "") Map(
-      "linkName" -> defaultWolframEnginePath._1,
-      "libDir" -> defaultWolframEnginePath._2,
+      "mathkernel" -> defaultWolframEnginePath._1, "linkName" -> defaultWolframEnginePath._1,
+      "jlink" -> defaultWolframEnginePath._2, "libDir" -> defaultWolframEnginePath._2,
       "tcpip" -> "true")
     else Map.empty
   }

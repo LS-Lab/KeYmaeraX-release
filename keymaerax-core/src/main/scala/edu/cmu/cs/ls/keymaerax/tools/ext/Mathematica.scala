@@ -50,7 +50,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
   private var qeMaxTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
 
-  private val memoryLimit: Long = Configuration.getOption(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
+  private val memoryLimit: Long = Configuration.get[String](Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
 
   override def init(config: Map[String,String]): Unit = {
     mQE.memoryLimit = memoryLimit
@@ -58,10 +58,22 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     mSOSsolve.memoryLimit = memoryLimit
     mCEX.memoryLimit = memoryLimit
     mODE.memoryLimit = memoryLimit
+    mPDE.memoryLimit = memoryLimit
     mSim.memoryLimit = memoryLimit
     mSolve.memoryLimit = memoryLimit
     mAlgebra.memoryLimit = memoryLimit
     mSimplify.memoryLimit = memoryLimit
+
+    // initialze tool thread pools
+    mQE.init()
+    mPegasus.init()
+    mCEX.init()
+    mODE.init()
+    mPDE.init()
+    mSim.init()
+    mSolve.init()
+    mAlgebra.init()
+    mSimplify.init()
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
@@ -154,7 +166,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
-    mCEX.timeout = Integer.parseInt(Configuration.getOption(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
+    mCEX.timeout = Integer.parseInt(Configuration.get[String](Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
     mCEX.findCounterExample(formula)
   }
 

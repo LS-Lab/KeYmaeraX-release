@@ -351,8 +351,36 @@ object Augmentors {
 
     /** Elaborates in `e` variable uses of functions listed in `signature`. Replaces all literal occurrences of
       * [[BaseVariable]] of the same name as a function in `signature`, but ignores all non-[[BaseVariable]] occurrences
-      * and ignores all non-function symbols in `signature`. */
+      * and ignores all non-function symbols in `signature`. Also elaborates [[FuncOf]] to [[PredOf]] per sort
+      * in `signature`. */
     def elaborateToFunctions(signature: Set[NamedSymbol]): Expression = {
+      val elaboratableVars = StaticSemantics.symbols(e).filter({
+        case BaseVariable(name, i, _) => signature.exists({
+          case Function(fn, fi, Unit, _, _) => fn == name && fi == i
+          case _ => false
+        })
+        case _ => false
+      }).map(_.asInstanceOf[BaseVariable])
+      val fnElaborated = elaboratableVars.foldLeft(e)((e, v) =>
+        e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+
+      val elaboratableFns = StaticSemantics.symbols(fnElaborated).flatMap({
+        case fn: Function =>
+          signature.find(ns => ns.name == fn.name && ns.index == fn.index) match {
+            case Some(ns: Function) =>
+              if (ns.domain == fn.domain && ns.sort != fn.sort) Some(ns -> fn)
+              else None
+            case _ => None
+          }
+        case _ => None
+      }).toMap
+
+      fnElaborated match {
+        case f@FuncOf(fn: Function, c) => elaboratableFns.get(fn).map(PredOf(_, c)).getOrElse(f)
+        case p@PredOf(fn: Function, c) => elaboratableFns.get(fn).map(FuncOf(_, c)).getOrElse(p)
+        case e => e
+      }
+
       val bySignature: NamedSymbol => Boolean = s => signature.exists({
         case Function(fn, fi, Unit, _, _) => fn == s.name && fi == s.index
         case _ => false

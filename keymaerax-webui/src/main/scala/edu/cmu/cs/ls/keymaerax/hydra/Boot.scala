@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutor
@@ -222,9 +222,9 @@ object HyDRAInitializer extends Logging {
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => ToolProvider.initFallbackZ3(new MathematicaToolProvider(config), "Mathematica")
-      case "wolframengine" => ToolProvider.initFallbackZ3(new WolframEngineToolProvider(config), "Wolfram Engine")
-      case "wolframscript" => ToolProvider.initFallbackZ3(new WolframScriptToolProvider, "Wolfram Script")
+      case "mathematica" => ToolProvider.initFallbackZ3(MathematicaToolProvider(config), "Mathematica")
+      case "wolframengine" => ToolProvider.initFallbackZ3(WolframEngineToolProvider(config), "Wolfram Engine")
+      case "wolframscript" => ToolProvider.initFallbackZ3(WolframScriptToolProvider(config), "Wolfram Script")
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -234,61 +234,11 @@ object HyDRAInitializer extends Logging {
 
   private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
-    tool.toLowerCase() match {
-      case "mathematica" => mathematicaConfig
-      case "wolframengine" => wolframEngineConfig
-      case "wolframscript" => Map.empty
-      case "z3" => Map.empty
-      case t => throw new Exception("Unknown tool '" + t + "'")
-    }
+    ToolConfiguration.config(tool.toLowerCase)
   }
 
   private def preferredToolFromConfig: String = {
     Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
-  }
-
-  def mathematicaConfig: ToolProvider.Configuration = {
-    getMathematicaLinkName match {
-      case Some(l) => getMathematicaLibDir match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getMathematicaTcpip)
-        case None => Map("linkName" -> l, "tcpip" -> getMathematicaTcpip)
-      }
-      case None => DefaultConfiguration.defaultMathematicaConfig
-    }
-  }
-
-  def wolframEngineConfig: ToolProvider.Configuration = {
-    getWolframEngineLinkName match {
-      case Some(l) => getWolframEngineLibDir match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getWolframEngineTcpip)
-        case None => Map("linkName" -> l, "tcpip" -> getWolframEngineTcpip)
-      }
-      case None => DefaultConfiguration.defaultWolframEngineConfig
-    }
-  }
-
-  private def getMathematicaLinkName: Option[String] = {
-    Configuration.get[String](Configuration.Keys.MATHEMATICA_LINK_NAME)
-  }
-
-  private def getMathematicaLibDir: Option[String] = {
-    Configuration.get[String](Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-  }
-
-  private def getMathematicaTcpip: String = {
-    Configuration.get[String](Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
-  }
-
-  private def getWolframEngineLinkName: Option[String] = {
-    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
-  }
-
-  private def getWolframEngineLibDir: Option[String] = {
-    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
-  }
-
-  private def getWolframEngineTcpip: String = {
-    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("false")
   }
 }
 

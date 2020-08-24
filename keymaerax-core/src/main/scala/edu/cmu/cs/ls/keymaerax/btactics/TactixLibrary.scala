@@ -17,8 +17,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import org.apache.logging.log4j.scala.Logger
 
@@ -986,14 +987,42 @@ object TactixLibrary extends HilbertCalculus
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
         useLemma(lemma, adapt)
-      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+      } else label(BelleLabels.lemmaUnproved(lemmaName))
     }
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Sequent) =>
     adapt match {
       case Some(t) =>
-        cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
+        val substs = lemma.evidence.flatMap({
+          case ToolEvidence(info) =>
+            import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+            val tactic = info.find(_._1 == "tactic").map(_._2)
+            val model = info.find(_._1 == "model")
+            (model, tactic) match {
+              case (Some(model), Some(tactic)) =>
+                val defs = KeYmaeraXArchiveParser(model._2).head.defs
+                if (tactic.contains("expandAllDefs")) {
+                  defs.substs
+                } else {
+                  val subst1 = """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+                  val expandedSymbols = """expand "([^"]+)"""".r("symbol").findAllMatchIn(tactic).map(_.group("symbol")).toList
+                  subst1 ++ defs.substs.filter({
+                    case SubstitutionPair(FuncOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                    case SubstitutionPair(PredOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                    case SubstitutionPair(PredicationalOf(fn, _), _) =>  expandedSymbols.contains(fn.prettyString)
+                    case _ => false
+                  })
+                }
+              case (None, Some(tactic)) =>
+                """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+              case (_, None) =>
+                //@todo unify sequent with lemma conclusion
+                Nil
+            }
+          case _ => Nil
+        })
+        ExpandAll(substs) & cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
           (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1)
            else /* toFormula returns true->conclusion */ implyR(1) & hideL('Llast)) &
           (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1)

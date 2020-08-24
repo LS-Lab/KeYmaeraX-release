@@ -105,7 +105,8 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
     "numAllProofSteps" -> JsNumber(modelpojo.numAllProofSteps),
-    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile))
+    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile)),
+    "folder" -> (if (modelpojo.name.contains("/")) JsString(modelpojo.name.substring(0, modelpojo.name.indexOf('/'))) else JsNull)
   ))
 
   def getJson = JsArray(objects:_*)
@@ -520,6 +521,15 @@ class ProofTreeResponse(tree: String) extends Response {
     "type" -> JsString("proof"),
     "tree" -> JsonParser(tree)
   )
+}
+
+case class ProofLemmasResponse(lemmas: List[(String, Int)]) extends Response {
+  def getJson: JsValue = JsObject({
+    "lemmas" -> JsArray(lemmas.map(l => JsObject(
+      "name" -> JsString(l._1),
+      "proofId" -> JsNumber(l._2)
+    )):_*)
+  })
 }
 
 class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {

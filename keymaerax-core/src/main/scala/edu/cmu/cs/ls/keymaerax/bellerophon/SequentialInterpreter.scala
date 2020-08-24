@@ -280,16 +280,18 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       }
 
     case ExpandAll(defs) =>
-      val substs = defs.map(s => USubst(s :: Nil))
-      TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
-      val foo =
-      apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
-        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);
-      foo match {
-        case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_++_))
-        case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_++_))
-        case v => v
-      }
+      if (defs.nonEmpty) {
+        val substs = defs.map(s => USubst(s :: Nil))
+        TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
+        val result =
+          apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
+            reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);
+        result match {
+          case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_ ++ _))
+          case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_ ++ _))
+          case v => v
+        }
+      } else v
 
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)

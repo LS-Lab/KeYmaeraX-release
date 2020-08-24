@@ -23,9 +23,9 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
-import scala.collection.immutable
 import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.collection.immutable.{List, Nil}
 import scala.reflect.io.File
@@ -124,6 +124,17 @@ object KeYmaeraX {
     */
   def help: String = stats + "\n" + usage
 
+  private def configFromFile(defaultTool: String): OptionMap = {
+    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+      case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
+        ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
+      case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
+        ToolConfiguration.wolframEngineConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
+      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+  }
+
   private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
     varNames.map(vn => KeYmaeraXParser(vn) match {
       case v: BaseVariable => v
@@ -176,6 +187,9 @@ object KeYmaeraX {
       // global options
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
       case "-launch" :: tail => launched(); nextOption(map, tail)
+      case "-timeout" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
+        else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
         nextOption(options, unprocessedArgs)

@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
@@ -88,7 +89,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     }
 
     val requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
-    ToolProvider.setProvider(new MathematicaToolProvider(configFileMathematicaConfig) {
+    ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")) {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved

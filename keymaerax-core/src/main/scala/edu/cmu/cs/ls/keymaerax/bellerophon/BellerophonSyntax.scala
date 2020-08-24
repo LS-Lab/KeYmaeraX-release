@@ -825,13 +825,13 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   * @see [[USubstOne]] */
 case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
   //@note serialize `s` for database since required in the proof tree when assembling provables
-  override def prettyString: String = s"""US("${s.what.prettyString}~>${s.repl.prettyString}")"""
+  override def prettyString: String = s"""expand "${name.prettyString}""""
 }
 /** Expands all definitions from the model provided in topologically sorted `defs`.
   * @see [[USubstOne]] */
 case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
   //@note serialize `defs` for database since required in the proof tree when assembling provables
-  override def prettyString: String = defs.map(s => s"""US("${s.what.prettyString}~>${s.repl.prettyString}")""").mkString(";")
+  override def prettyString: String = "expandAllDefs"
 }
 
 

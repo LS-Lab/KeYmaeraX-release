@@ -47,7 +47,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
@@ -709,10 +709,10 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
               if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-                Some(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+                Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
               } else None
             } else {
-              ToolProvider.setProvider(new Z3ToolProvider())
+              ToolProvider.setProvider(Z3ToolProvider())
               None
             }
           case "wolframengine" =>
@@ -721,14 +721,14 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
               if (Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-                Some(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+                Some(new MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
               } else None
             } else {
-              ToolProvider.setProvider(new Z3ToolProvider())
+              ToolProvider.setProvider(Z3ToolProvider())
               None
             }
-          case "wolframscript" => Some(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil))
-          case "z3" => Some(new Z3ToolProvider())
+          case "wolframscript" => Some(MultiToolProvider(new WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil))
+          case "z3" => Some(Z3ToolProvider())
           case _ => ToolProvider.setProvider(new NoneToolProvider); None
         }
         provider match {
@@ -836,12 +836,12 @@ class WolframScriptConfigStatusRequest(db: DBAbstraction) extends Request with R
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
+    //@todo switchSolver tactic switches tool without telling UI
     ToolProvider.tool(toolId) match {
       case Some(t: ToolOperationManagement) => new ToolStatusResponse(toolId, t.getAvailableWorkers) :: Nil
       case Some(_) => new ToolStatusResponse(toolId, -1) :: Nil
       case None => new ToolConfigErrorResponse(toolId, "Tool could not be started; please check KeYmaera X -> Preferences. Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
     }
-
   }
 }
 
@@ -1081,9 +1081,15 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
   }
 }
 
-class GetModelListRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
+class GetModelListRequest(db: DBAbstraction, userId: String, folder: Option[String]) extends UserRequest(userId, _ => true) with ReadRequest {
   def resultingResponses(): List[Response] = {
-    new ModelListResponse(db.getModelList(userId).filterNot(_.temporary)) :: Nil
+    //@todo folders in DB
+    val allModels = db.getModelList(userId).filterNot(_.temporary)
+    val models = folder match {
+      case None => allModels
+      case Some(f) => allModels.filter(_.name.startsWith(f + "/")).map(m => m.copy(name = m.name.stripPrefix(f + "/")))
+    }
+    new ModelListResponse(models) :: Nil
   }
 }
 
@@ -1360,8 +1366,75 @@ class CreateProofRequest(db: DBAbstraction, userId: String, modelId: String, nam
   }
 }
 
-class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String)
+class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName: String,
+                                    parentProofId: String, parentTaskId: String)
   extends UserRequest(userId, _ => true) with WriteRequest {
+  def resultingResponses(): List[Response] = {
+    val modelId: Int = db.getModelList(userId).find(_.name == lemmaName) match {
+      case Some(model) => model.modelId
+      case None =>
+        val tree: ProofTree = DbProofTree(db, parentProofId)
+        tree.locate(parentTaskId) match {
+          case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
+          case Some(node) if node.goal.isEmpty => return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
+          case Some(node) if node.goal.isDefined =>
+            def defsStringsOf(defs: Map[Name, Signature]): List[String] = {
+              defs.map({
+                case ((name, index), (domain, sort, _, interpretation, _)) =>
+                  sort.toString + " " + name +
+                    (index match { case Some(i) => "_" + i case None => "" }) +
+                    (domain match {
+                      case Some(Unit) => ""
+                      case Some(d: Tuple) => d.toString
+                      case Some(d) => "(" + d.toString + ")"
+                      case None => ""
+                    }) +
+                    (interpretation match {
+                      case Some(i) => (if (sort == Real) " = " else " <-> ") + "(" + i.prettyString + ")"
+                      case None => ""
+                    }) + ";"
+              }).toList
+            }
+
+            val goal = node.goal.get.toFormula
+            val bv = StaticSemantics.boundVars(goal).toSet
+            val symbols = StaticSemantics.symbols(goal) -- bv
+            val vars = bv.map(v => "Real " + v.prettyString + ";").mkString("\n  ")
+            val proofSession = session(parentProofId).asInstanceOf[ProofSession]
+            val usedParentDefs = proofSession.defs.decls.filter({ case ((n, i), _) => symbols.exists(s => s.name == n && s.index == i) })
+            val defs= defsStringsOf(usedParentDefs).mkString("\n  ")
+            val fileContents =
+              s"""Lemma "$lemmaName"
+                 |
+                 |Definitions
+                 |  $defs
+                 |End.
+                 |
+                 |ProgramVariables
+                 |  $vars
+                 |End.
+                 |
+                 |Problem
+                 |  ${goal.prettyString}
+                 |End.
+                 |End.""".stripMargin
+
+            db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
+        }
+    }
+    val modelProofs = db.getProofsForModel(modelId)
+    val proofId = modelProofs.find(_.closed) match {
+      case Some(proof) => proof.proofId
+      case None => modelProofs match {
+        case head :: _ => head.proofId
+        case Nil => db.createProofForModel(modelId, "Proof of " + lemmaName, "", currentDate(), None)
+      }
+    }
+    new CreatedIdResponse(proofId.toString) :: Nil
+  }
+}
+
+class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId, _ => true) with WriteRequest {
   def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
     model.tactic match {
@@ -1380,6 +1453,38 @@ class ProofsForModelRequest(db: DBAbstraction, userId: String, modelId: String)
     val proofs = db.getProofsForModel(modelId).map(proof =>
       (proof, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
+  }
+}
+
+class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    def collectLemmaNames(tactic: String): List[String] = {
+      """useLemma(?:At)?\("([^"]+)"""".r("lemmaName").findAllMatchIn(tactic).toList.map(m => m.group("lemmaName"))
+    }
+
+    /** Recursively required lemmas in the order they ought to be proved. */
+    def recCollectRequiredLemmaNames(proofId: Int, collectedLemmas: List[(String, Int)]): List[(String, Int)] = {
+      val proofInfo = db.getProofInfo(proofId)
+      val lemmaNames = (proofInfo.tactic.map(collectLemmaNames).getOrElse(Nil).toSet -- collectedLemmas.map(_._1).toSet).toList
+      val models = db.getModelList(userId).filter(m => lemmaNames.contains(m.name))
+      val lemmaProofs: List[(ModelPOJO, ProofPOJO)] = models.flatMap(m => {
+        val proofs = db.getProofsForModel(m.modelId)
+        proofs.find(_.tactic.isDefined) match {
+          case None => proofs.headOption.map(m -> _)
+          case p => p.map(m -> _)
+        }
+      })
+      //@note check non-existent or outdated lemmas
+      val unprovedLemmas = lemmaProofs.filter(e => LemmaDBFactory.lemmaDB.get("user" + File.separator + e._1.name) match {
+        case Some(l) => l.fact.conclusion == Sequent(IndexedSeq(), IndexedSeq(KeYmaeraXArchiveParser(e._1.keyFile).head.model.asInstanceOf[Formula]))
+        case None => true
+      })
+      (unprovedLemmas.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
+        unprovedLemmas.map({ case (m, p) => (m.name, p.proofId) })).distinct
+    }
+
+    val lemmaNames = recCollectRequiredLemmaNames(proofId.toInt, Nil)
+    ProofLemmasResponse(lemmaNames) :: Nil
   }
 }
 
@@ -1768,7 +1873,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
           // functions, predicates, and programs with definition
           case (s: Function, ((domain, sort, _, repl, _), insig)) if repl.isDefined =>
-            val arg = insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
+            val arg = insig.map(_._1.map(_.asInstanceOf[Term]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
             sort match {
               case Real => (s, FuncOf(s, arg), repl, insig)
               case Bool => (s, PredOf(s, arg), repl, insig)
@@ -1796,26 +1901,39 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
     Try(what.asExpr).toEither match {
       case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage)) :: Nil
       case Right(e) =>
-        val (name: String, index: Option[Int], domain: Option[Sort], sort: Sort) = e match {
-          case FuncOf(Function(n, i, d, s, _), _) =>
-            // uninterpreted predicates parse as functions when parsed standalone
-            proofSession.defs.asNamedSymbols.find(ns => ns.name == n && ns.index == i) match {
-              case Some(ns: Function) if ns.domain == d => (n, i, Some(d), ns.sort)
-              case None => (n, i, Some(d), s)
-            }
-          case PredOf(Function(n, i, d, s, _), _) => (n, i, Some(d), s)
-          case ProgramConst(n, _) => (n, None, None, Trafo)
-        }
+        val ewhat = elaborate(e, proofSession.defs.asNamedSymbols)
 
         Try(repl.asExpr).toEither match {
           case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
-          case Right(r) if r.sort == sort =>
-            session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-              ((name, index) -> (domain, sort, None, Some(r), UnknownLocation))))
-            BooleanResponse(flag = true) :: Nil
-          case Right(r) if r.sort != sort =>
-            BooleanResponse(flag = false, Some("Expected a replacement of sort " + sort + ", but got " + r.sort)) :: Nil
+          case Right(r) =>
+            val erepl = elaborate(r, proofSession.defs.asNamedSymbols)
+            if (erepl.sort == ewhat.sort) {
+              val fnwhat: Function = ewhat match {
+                case FuncOf(fn: Function, _) => fn
+                case PredOf(fn: Function, _) => fn
+                case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
+              }
+              session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                ((fnwhat.name, fnwhat.index) -> (Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
+              BooleanResponse(flag = true) :: Nil
+            } else BooleanResponse(flag = false, Some("Expected a replacement of sort " + ewhat.sort + ", but got " + erepl.sort)) :: Nil
         }
+    }
+  }
+
+  private def elaborate(e: Expression, elaboratables: List[NamedSymbol]): Expression = {
+    def elaborateTo(fn: Function, c: Term, to: (Function, Term) => Expression): Expression = {
+      elaboratables.find(ns => ns.name == fn.name && ns.index == fn.index) match {
+        case Some(ns: Function) =>
+          if (ns.domain == fn.domain && ns.sort != fn.sort) to(ns, c)
+          else e
+        case None => e
+      }
+    }
+    e match {
+      case FuncOf(fn: Function, c) => elaborateTo(fn, c, PredOf)
+      case PredOf(fn: Function, c) => elaborateTo(fn, c, FuncOf)
+      case _ => e
     }
   }
 }
@@ -2379,9 +2497,17 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
     val entry = KeYmaeraXArchiveParser.parse(model.keyFile, parseTactics=false).head
-    val conclusionFormula = entry.defs.exhaustiveSubst[Formula](entry.model.asInstanceOf[Formula])
-    val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
+
+    // proof may have expanded some definitions itself and used lemmas that expanded some definitions
     val provable = tree.root.provable
+    val conclusionSignature = StaticSemantics.signature(provable.conclusion)
+    val substs = entry.defs.substs.filter(_.what match {
+      case n: NamedSymbol => !conclusionSignature.contains(n) // expand definition if conclusion doesn't mention it anymore
+      case _ => true // should not get here
+    })
+    val conclusionFormula = entry.model.exhaustiveSubst(USubst(substs)).asInstanceOf[Formula]
+    val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
+
     if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil
     else if (provable.conclusion != conclusion) new ErrorResponse("Proof verification failed: proof " + proofId + " does not conclude the associated model.\n Expected " + conclusion.prettyString + "\nBut got\n" + provable.conclusion.prettyString)::Nil
     else {

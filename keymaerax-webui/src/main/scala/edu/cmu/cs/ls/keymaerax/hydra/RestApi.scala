@@ -245,8 +245,8 @@ object RestApi extends Logging {
   }}
 
   // GET /models/user returns a list of all models belonging to this user. The cookie must be set.
-  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
-    val request = new GetModelListRequest(database, userId)
+  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / Segment.?) {(userId, folder) => { pathEnd { get {
+    val request = new GetModelListRequest(database, userId, folder)
     completeRequest(request, t)
   }}}}
 
@@ -460,6 +460,19 @@ object RestApi extends Logging {
       }
     }}}
 
+    val openOrCreateLemmaProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "openOrCreateLemmaProof") { (userId, modelName) => { pathEnd {
+      post {
+        entity(as[String]) { x => {
+          val obj = x.parseJson
+          val parentProofId = obj.asJsObject.getFields("parentProofId").last.asInstanceOf[JsString].value
+          val parentTaskId = obj.asJsObject.getFields("parentTaskId").last.asInstanceOf[JsString].value
+
+          val request = new OpenOrCreateLemmaProofRequest(database, userId, modelName, parentProofId, parentTaskId)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
     val createModelTacticProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
       post {
         entity(as[String]) { _ => {
@@ -476,7 +489,7 @@ object RestApi extends Logging {
       }
     }}}
 
-    val proofList: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
+    val proofList: SessionToken=>Route = (t: SessionToken) => path("proofs" / "users" / Segment) { (userId) => { pathEnd {
       get {
         val request = new ProofsForUserRequest(database, userId)
         completeRequest(request, t)
@@ -500,6 +513,13 @@ object RestApi extends Logging {
     val initProofFromTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
       get {
         val request = new InitializeProofFromTacticRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val getProofLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "usedLemmas") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetProofLemmasRequest(database, userId, proofId)
         completeRequest(request, t)
       }
     }}}
@@ -1230,8 +1250,10 @@ object RestApi extends Logging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
+    openOrCreateLemmaProof ::
     createModelTacticProof::
     initProofFromTactic   ::
+    getProofLemmas        ::
     importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
