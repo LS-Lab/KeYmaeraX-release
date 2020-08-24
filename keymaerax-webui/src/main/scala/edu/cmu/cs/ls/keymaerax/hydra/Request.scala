@@ -1870,10 +1870,11 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
             }
           }).toMap
         // name, name expression (what), optional repl, optional plaintext definition from the model file
+        def dotted(d: Option[Sort]): Term = d.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
           // functions, predicates, and programs with definition
           case (s: Function, ((domain, sort, _, repl, _), insig)) if repl.isDefined =>
-            val arg = insig.map(_._1.map(_.asInstanceOf[Term]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
+            val arg = insig.map(_._1.map(_.asInstanceOf[Term]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(dotted(domain))
             sort match {
               case Real => (s, FuncOf(s, arg), repl, insig)
               case Bool => (s, PredOf(s, arg), repl, insig)
@@ -1881,7 +1882,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
           case (s: ProgramConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
           // functions, predicates, and programs without definition
           case (s: Function, ((domain, sort, _, None, _), _)) =>
-            val arg = domain.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
+            val arg = dotted(domain)
             sort match {
               case Real => (s, FuncOf(s, arg), None, None)
               case Bool => (s, PredOf(s, arg), None, None)
