@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TexExpressionArtifact, TextArtifact}
-import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Number, Or, True, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.util.matching.Regex
@@ -125,6 +125,10 @@ object QuizExtractor {
         // lists of terms \{1,2,3\} or {1,x,3+4}
         TexExpressionArtifact(s.stripPrefix("\\").stripPrefix("{").stripSuffix("}").stripSuffix("\\").split(",").
           map(s => Equal(x, s.asTerm)).reduceRightOption(Or).getOrElse(False))
+      } else if (s == "\\infty") {
+        TexExpressionArtifact(Number(Long.MaxValue))
+      } else if (s == "-\\infty") {
+        TexExpressionArtifact(Neg(Number(Long.MaxValue)))
       } else {
         // intervals [0,3] \cup [0,\infty) \cup \lbrack -1.0,4 ] \cup (5,7\rbrack
         val interval = """(\(|\[|\\lbrack)\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?|\\infty)\s*(\)|]|\\rbrack)""".r("(", "l", "u", ")")
