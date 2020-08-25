@@ -72,7 +72,11 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
   /** A parsed declaration, which assigns a signature to names. */
   case class Declaration(decls: Map[Name, Signature]) {
     /** The declarations as topologically sorted substitution pairs. */
-    lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._4.isDefined)).map((declAsSubstitutionPair _).tupled)
+    lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._4.isDefined).map({
+      case (name, (domain, sort, argNames, interpretation, loc)) =>
+        // elaborate to functions for topSort (topSort uses signature)
+        (name, (domain, sort, argNames, interpretation.map(elaborateToFunctions), loc))
+    })).map((declAsSubstitutionPair _).tupled)
 
     /** Declared names and signatures as [[NamedSymbol]]. */
     lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _, _)) => sort match {

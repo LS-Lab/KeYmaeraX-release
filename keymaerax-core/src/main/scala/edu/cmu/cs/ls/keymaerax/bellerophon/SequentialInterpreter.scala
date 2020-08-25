@@ -283,9 +283,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       if (defs.nonEmpty) {
         val substs = defs.map(s => USubst(s :: Nil))
         TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
-        val result =
-          apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
-            reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);
+        val result = apply(substs.map(TactixLibrary.US).reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
         result match {
           case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_ ++ _))
           case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_ ++ _))

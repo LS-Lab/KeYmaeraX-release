@@ -1059,6 +1059,23 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
+  it should "sort definitions correctly when parsing expandAllDefs" in withTactics {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real b = 3*y; Real y = 4; Real z(Real a) = a*b*y; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [ctrl;]x>=y End.
+        | Tactic "Expand" expandAllDefs End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.defs.substs shouldBe List("z(.) ~> .*b()*y()".asSubstitutionPair, "b()~>3*y()".asSubstitutionPair, "y() ~> 4".asSubstitutionPair)
+    inside (entry.tactics) {
+      case (_, _, ExpandAll(defs)) :: Nil => defs shouldBe entry.defs.substs
+    }
+  }
+
   it should "not elaborate to program constants when definitions contain duals" in {
     val input =
       """
