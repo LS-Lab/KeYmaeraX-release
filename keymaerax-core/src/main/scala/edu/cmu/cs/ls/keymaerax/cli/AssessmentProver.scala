@@ -723,8 +723,11 @@ object AssessmentProver {
       case "\\ask" =>
         require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
         p.answers.map({
-          case t@Submission.TextAnswer(_, _, name, _, answer, _) => name match {
-            case "\\sol" => QuizExtractor.AskQuestion.artifactFromSolContent(answer)
+          case Submission.TextAnswer(_, _, name, _, answer, expected) => name match {
+            case "\\sol" =>
+              if (expected.startsWith(QuizExtractor.AskQuestion.KYXLINE)) Some(QuizExtractor.AskQuestion.artifactsFromKyxString(answer))
+              else if (expected.startsWith(QuizExtractor.AskQuestion.MATH_DELIM)) Some(QuizExtractor.AskQuestion.artifactsFromTexMathString(answer))
+              else Some(QuizExtractor.AskQuestion.artifactsFromTexTextString(answer))
             case "\\solfin" =>
               Some(QuizExtractor.AskQuestion.solfinArtifactsFromString(answer)._2)
           }

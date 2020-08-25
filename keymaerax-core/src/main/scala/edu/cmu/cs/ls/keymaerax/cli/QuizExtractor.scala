@@ -19,6 +19,8 @@ object QuizExtractor {
                          expected: Artifact, testSols: List[Artifact], noSols: List[Artifact]) extends Question
   object AskQuestion {
     val QUESTION_START: String = "ask"
+    val KYXLINE = """\kyxline"""
+    val MATH_DELIM = "$"
 
     private val GRADER = "grader"
     private val ARGS = "args"
@@ -36,10 +38,10 @@ object QuizExtractor {
     private val INLINE_SOL_DELIM = "____"
     private val TEX_NO_BREAK_SPACE = "~"
 
-    private def kyxlineExtractor(capture: String) = """\\kyxline\s*"(""" + capture + """[^"]+)""""
+    private def kyxlineExtractor(capture: String) = """\""" + KYXLINE + """\s*"(""" + capture + """[^"]+)""""
     //@note nested {} up to level 2
     private def nestedBracesText(capture: String) = "(" + capture + """(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*})*})*)"""
-    private def texMathDelimText(capture: String) = """\$(""" + capture + """.+?)\$"""
+    private def texMathDelimText(capture: String) = """\""" + MATH_DELIM + "(" + capture + """.+?)\""" + MATH_DELIM
     private def solContent(capture: String) = "(?:" + kyxlineExtractor(capture) + "|" + texMathDelimText(capture) + "|" + nestedBracesText(capture) + ")"
     // \sol
     private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\s*""" + solContent("") + """\s*})"""

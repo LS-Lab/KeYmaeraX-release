@@ -120,7 +120,8 @@ object Submission {
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(_))) =>
             val bodySrc = fields(BODY_SRC) match { case JsString(s) =>
               //@note strip \sol {...} braces
-              s.stripPrefix("{").stripSuffix("}") }
+              s.trim.stripPrefix("{").stripSuffix("}")
+            }
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match { case JsString(s) => s }
             }
