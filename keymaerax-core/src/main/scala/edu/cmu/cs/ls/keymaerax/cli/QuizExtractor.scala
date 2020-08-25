@@ -55,7 +55,8 @@ object QuizExtractor {
     private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*"(""" + capture + """[^"]+)""""
     private val GRADER_ARG = graderArg("").r(ARG_NAME, ARG_VAL)
     private val GRADER_ARGS = graderArg("?:") + """(?:\s*,\s*""" + graderArg("?:") + """)*"""
-    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{""" + GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)})?"""
+    private val GRADER_METHOD = GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)"""
+    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{""" + GRADER_METHOD + """})?"""
 
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
@@ -87,7 +88,15 @@ object QuizExtractor {
       else List.empty
     }
 
-    private def artifactFromSolContent(s: String): Option[Artifact] = {
+    def graderInfoFromString(rawContent: String): (String, Map[String, String]) = {
+      GRADER_METHOD.r(GRADER, ARGS).findFirstMatchIn(rawContent).map(m => (m.group(GRADER), Option(m.group(ARGS)))) match {
+        case Some((grader, args)) => (grader, argsFromString(args))
+        case None => throw new IllegalArgumentException("Unexpected grader method " + rawContent)
+      }
+    }
+
+    /** Translates `\sol` into an artifact. */
+    def artifactFromSolContent(s: String): Option[Artifact] = {
       solContent("").r(KYX_SOL, TEX_TEXT_SOL, TEXT_SOL).findFirstMatchIn(s).
         map(m => (m.group(KYX_SOL), m.group(TEX_TEXT_SOL), m.group(TEXT_SOL))).
         map({

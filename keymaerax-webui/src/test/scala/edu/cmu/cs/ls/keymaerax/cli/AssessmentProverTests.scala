@@ -611,8 +611,9 @@ class AssessmentProverTests extends TacticTestBase {
     * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
   private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
     def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
-      case AskGrader(mode, args, _) =>
-        Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}) + ")"))
+      case AskGrader(Some(mode), args, _) =>
+        Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}).mkString(",") + ")"))
+      case AskGrader(None, _, _) => None
       case _: OneChoiceGrader => None
       case _: AnyChoiceGrader => None
       case _: AskTFGrader => None
@@ -661,6 +662,15 @@ class AssessmentProverTests extends TacticTestBase {
         case ChoiceArtifact(selected) => selected.map(s => Submission.ChoiceAnswer(1, "",
           grader.expected match { case ChoiceArtifact(es) => if (es.contains(s)) "\\choice*" else "\\choice" },
           graderCookie, s, isSelected=true))
+          grader.expected match {
+            case ChoiceArtifact(es) =>
+              val expectedTicked = es.intersect(selected)
+              val expectedNotick = es.toSet -- selected.toSet
+              val unexpectedTick = selected.toSet -- es.toSet
+              expectedTicked.map(s => Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected=true)) ++
+              expectedNotick.map(s => Submission.ChoiceAnswer(1, "", "\\choice*", graderCookie, s, isSelected=false)) ++
+              unexpectedTick.map(s => Submission.ChoiceAnswer(1, "", "\\choice", graderCookie, s, isSelected=true))
+          }
         case BoolArtifact(value) =>
           //@todo assumes askTF is a choice with two options
           Submission.ChoiceAnswer(1, "",
@@ -682,7 +692,14 @@ class AssessmentProverTests extends TacticTestBase {
         if (answerIncorrectly) createAnswer(grader, incorrect(r.rand.nextInt(incorrect.size)))
         else createAnswer(grader, correct(r.rand.nextInt(correct.size)))
       }
-      (Submission.Prompt(i, "", 1.0, answers), !answerIncorrectly)
+      val promptName = q match {
+        case _: AskQuestion => "\\ask"
+        case _: AnyChoiceQuestion => "\\anychoice"
+        case _: OneChoiceQuestion => "\\onechoice"
+        case _: AskTFQuestion => "\\asktf"
+        case _: MultiAskQuestion => "\\ask" //@note name of main question
+      }
+      (Submission.Prompt(i, promptName, 1.0, answers), !answerIncorrectly)
     }
 
     def createProblem(p: Problem, i: Int): (Submission.Problem, List[(Submission.Prompt, Boolean)]) = {

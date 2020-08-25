@@ -658,17 +658,11 @@ object AssessmentProver {
     *
     * @param options The prover options:
     *                - 'in (mandatory) identifies the file to grade
-    *                - 'config (mandatory) identifies the grader configuration file (maps chapter labels to source files)
     *                - 'msgOut (mandatory) message output stream
     *                - 'resultOut (mandatory) result output stream
     */
   def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
     require(options.contains('in), usage)
-    require(options.contains('config), usage)
-
-    val configSource = Source.fromFile(options('config).toString, "UTF-8")
-    val config = new Properties()
-    try { config.load(configSource.reader()) } finally { configSource.close() }
 
     val inputFileName = options('in).toString
     val src = Source.fromFile(inputFileName, "UTF-8")
@@ -678,94 +672,145 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
-    def toArtifact[T <: Artifact](p: Submission.Prompt, expected: Class[T]): Artifact = p.answers match {
-      //@todo inspect name for answer kind to find out how to convert
-      case Submission.TextAnswer(_, _, _, _, t, _) :: Nil =>
-        if (classOf[TexExpressionArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexMathString(t)
-        else if (classOf[TextArtifact].isAssignableFrom(expected)) QuizExtractor.AskQuestion.artifactsFromTexTextString(t)
-        else QuizExtractor.AskQuestion.artifactsFromKyxString(t)
-      case answers =>
-        if (classOf[BoolArtifact].isAssignableFrom(expected)) {
-          val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
-          BoolArtifact(choiceAnswers.find(_.isSelected).map(_.text == "True"))
-        } else {
-          // list if choice answers
-          val choiceAnswers = answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
-          ChoiceArtifact(choiceAnswers.filter(_.isSelected).map(_.text))
+    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, prompts) =>
+      val parsedAnswers = prompts.map(p => try {
+          Left(p -> toAnswerArtifact(p))
+        } catch {
+          case ex: Throwable => Right(p -> ex)
         }
-    }
+      )
+      (problem, parsedAnswers.partition(_.isLeft) match {
+        case (as, pe) => (as.map(_.left.get), pe.map(_.right.get))
+      })
+    })
 
-    Option(config.getProperty(chapter.label)) match {
-      case Some(file) =>
-        val gradeSource = Source.fromFile(file, "UTF-8")
-        val problems = try {
-          Problem.fromString(gradeSource.mkString.linesWithSeparators.filterNot(_.startsWith("%")).mkString)
-        } finally {
-          gradeSource.close()
-        }
-        val parsedProblems: List[(Problem, (List[(Grader, Submission.Prompt, Artifact)], List[(Submission.Prompt, Throwable)]))] =
-            problems.zip(chapter.problems).map({ case (qp, ap) =>
-          val parsed = qp.questions.zip(ap.prompts).map({ case (q, prompt) =>
-            val grader = q match {
-              case q: AskQuestion =>
-                //@todo access to previous question if grader mode is explanation
-                AskGrader(q.grader, q.args, q.expected)
-              case q: OneChoiceQuestion =>
-                val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
-                assert(correct.selected.size == 1, "Missing or non-unique correct solution")
-                OneChoiceGrader(Map.empty[String, String], correct)
-              case q: AnyChoiceQuestion =>
-                val correct = ChoiceArtifact(q.choices.filter(_.isCorrect).map(_.text))
-                assert(correct.selected.nonEmpty, "Missing correct solution")
-                AnyChoiceGrader(Map.empty[String, String], correct)
-              case q: AskTFQuestion => AskTFGrader(BoolArtifact(Some(q.isTrue)))
+    val msgStream = new PrintStream(msgOut, true)
+    if (parsedProblems.exists(_._2._2.nonEmpty)) {
+      // report parse errors
+      reportParseErrors(parsedProblems, msgStream)
+    } else {
+      val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (prompts, _)) =>
+        msgStream.println("Grading section " + p.title)
+        val graders = prompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
+        val grades = graders.map({ case (prompt, (grader, answerArtifact)) =>
+          msgStream.print("Grading question " + prompt.id + "...")
+          answerArtifact match {
+            case Some(a) => grader.check(a) match {
+              case Left(_) =>
+                msgStream.println("PASSED")
+                (prompt, prompt.points)
+              case Right(hint) =>
+                msgStream.print("FAILED:")
+                msgStream.println(hint)
+                (prompt, 0.0)
             }
-            try {
-              Left((grader, prompt, toArtifact(prompt, grader.expected.getClass)))
-            } catch {
-              case ex: Throwable => Right((prompt, ex))
-            }
-          })
-          (qp, parsed.partition(_.isLeft) match {
-            case (artifacts, parseErrors) => (artifacts.map(_.left.get), parseErrors.map(_.right.get))
-          })
+            case None =>
+              msgStream.print("FAILED:")
+              msgStream.println("No answer")
+              (prompt, 0.0)
+          }
         })
-
-        val msgStream = new PrintStream(msgOut, true)
-        if (parsedProblems.exists(_._2._2.nonEmpty)) {
-          // report parse errors
-          parsedProblems.foreach({ case (p, (_, errors)) =>
-            msgStream.print("Parsing '" + p.name.getOrElse("") + "':")
-            if (errors.nonEmpty) {
-              msgStream.println("FAILED")
-              msgStream.println(errors.map({ case (prompt, ex) =>
-                prompt.answers.map(_.name).mkString(",") + "\n" + ex.getMessage }).mkString("\n"))
-            } else msgStream.println("PASSED")
-          })
-        } else {
-          // grade
-          val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (graders, _)) =>
-            msgStream.println("Grading section " + p.name.getOrElse(""))
-            val grades = graders.map({ case (grader, prompt, artifact) =>
-              msgStream.print("Grading question " + prompt.id + "...")
-              grader.check(artifact) match {
-                case Left(_) =>
-                  msgStream.println("PASSED")
-                  (prompt, prompt.points)
-                case Right(hint) =>
-                  msgStream.print("FAILED:")
-                  msgStream.println(hint)
-                  (prompt, 0.0)
-              }
-            })
-            msgStream.println("Done grading section " + p.name.getOrElse(""))
-            grades
-          })
-          printJSONGrades(allGrades, resultOut)
-        }
-
-      case None => throw new IllegalArgumentException("Missing grading information for " + chapter.label)
+        msgStream.println("Done grading section " + p.title)
+        grades
+      })
+      printJSONGrades(allGrades, resultOut)
     }
+  }
+
+  /** Translates a submission prompt into a grader artifact (None if question not answered). */
+  private def toAnswerArtifact[T <: Artifact](p: Submission.Prompt): Option[Artifact] = {
+    p.name match {
+      case "\\ask" =>
+        require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
+        p.answers.map({
+          case t@Submission.TextAnswer(_, _, name, _, answer, _) => name match {
+            case "\\sol" => QuizExtractor.AskQuestion.artifactFromSolContent(answer)
+            case "\\solfin" =>
+              Some(QuizExtractor.AskQuestion.solfinArtifactsFromString(answer)._2)
+          }
+          case a => throw new IllegalArgumentException("Expected text answer for \\ask, but got " + a.getClass.getSimpleName)
+        }).head
+      case "\\onechoice" | "\\anychoice" =>
+        val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+        Some(ChoiceArtifact(choiceAnswers.filter(_.isSelected).map(_.text)))
+      case "\\asktf" =>
+        val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+        Some(BoolArtifact(choiceAnswers.find(_.isSelected).map(_.text == "True")))
+    }
+  }
+
+  /** Translates a submission prompt into the question and an expected artifact. */
+  private def toExpectedArtifact[T <: Artifact](p: Submission.Prompt): (Option[Artifact], Map[String, String]) = {
+    p.name match {
+      case "\\ask" =>
+        require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
+        p.answers.map({
+          case Submission.TextAnswer(_, _, name, _, _, expected) => name match {
+            case "\\sol" => (QuizExtractor.AskQuestion.artifactFromSolContent(expected), Map.empty[String, String])
+            case "\\solfin" =>
+              val (question, artifact) = QuizExtractor.AskQuestion.solfinArtifactsFromString(expected)
+              (Some(artifact), Map("question" -> question))
+          }
+          case a => throw new IllegalArgumentException("Expected text answer for \\ask, but got " + a.getClass.getSimpleName)
+        }).head
+      case "\\onechoice" | "\\anychoice" =>
+        val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+        (Some(ChoiceArtifact(choiceAnswers.filter(_.name == "\\choice*").map(_.text))), Map.empty)
+      case "\\asktf" =>
+        val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
+        val expectedTrue = choiceAnswers.find(_.name == "\\solt").exists(_.text == "True")
+        val expectedFalse = choiceAnswers.find(_.name == "\\solf").exists(_.text == "False")
+        val expected = if (expectedTrue) Some(true) else if (expectedFalse) Some(false) else throw new IllegalArgumentException("Missing expected answer in \\asktf prompt " + p.id)
+        (Some(BoolArtifact(expected)), Map.empty)
+    }
+  }
+
+  private def toGrader(p: Submission.Prompt): Grader = {
+    p.name match {
+      case "\\ask" =>
+        require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
+        p.answers.map({
+          case Submission.TextAnswer(_, _, _, grader, _, _) =>
+            grader.map(g => QuizExtractor.AskQuestion.graderInfoFromString(g.method)) match {
+              case Some((g, args)) =>
+                toExpectedArtifact(p) match {
+                  case (Some(expected), questionArgs) =>
+                    AskGrader(Some(g), args ++ questionArgs, expected)
+                  case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\ask prompt " + p.id)
+                }
+              case None => throw new IllegalArgumentException("Missing grader information for \\ask prompt " + p.id)
+            }
+        }).head
+      case "\\onechoice" =>
+        toExpectedArtifact(p) match {
+          case (Some(expected: ChoiceArtifact), _) => OneChoiceGrader(Map.empty, expected)
+          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\onechoice prompt " + p.id)
+        }
+      case "\\anychoice" =>
+        toExpectedArtifact(p) match {
+          case (Some(expected: ChoiceArtifact), _) => AnyChoiceGrader(Map.empty, expected)
+          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\anychoice prompt " + p.id)
+        }
+      case "\\asktf" =>
+        toExpectedArtifact(p) match {
+          case (Some(expected: BoolArtifact), _) => AskTFGrader(expected)
+          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\asktf prompt " + p.id)
+        }
+    }
+  }
+
+  private def reportParseErrors(parsedProblems: List[(Submission.Problem, (List[(Submission.Prompt, Option[Artifact])],
+                                                                           List[(Submission.Prompt, Throwable)]))],
+                                msgStream: PrintStream): Unit = {
+    parsedProblems.foreach({ case (p, (_, errors)) =>
+      msgStream.print("Parsing '" + p.title + "':")
+      if (errors.nonEmpty) {
+        msgStream.println("FAILED")
+        msgStream.println(errors.map({ case (prompt, ex) =>
+          prompt.answers.map(_.name).mkString(",") + "\n" + ex.getMessage
+        }).mkString("\n"))
+      } else msgStream.println("PASSED")
+    })
   }
 
   private def printJSONGrades(grades: List[(Submission.Prompt, Double)], out: OutputStream): Unit = {

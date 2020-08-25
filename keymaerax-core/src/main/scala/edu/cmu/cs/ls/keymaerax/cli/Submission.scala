@@ -70,7 +70,7 @@ object Submission {
     implicit val answerJsonFormat: JsonFormat[Submission.Answer] = new RootJsonFormat[Submission.Answer] {
       override def write(answer: Answer): JsValue = {
         answer match {
-          case ChoiceAnswer(id, label, name, grader, text, isSelected) =>
+          case ChoiceAnswer(id, label, name, _, text, isSelected) =>
             JsObject(
               ID -> id.toJson,
               LABEL -> label.toJson,
@@ -89,7 +89,10 @@ object Submission {
               ID -> id.toJson,
               LABEL -> label.toJson,
               NAME -> name.toJson,
-              COOKIES -> JsArray(),
+              COOKIES -> (grader match {
+                case Some(g) => JsArray(g.toJson)
+                case None => JsArray()
+              }),
               BODY_SRC -> expected.toJson,
               USER_ANSWER -> JsObject(
                 TEXT -> answer.toJson,
@@ -115,7 +118,9 @@ object Submission {
             }
             ChoiceAnswer(id, label, name, grader, text, answer)
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(_))) =>
-            val bodySrc = fields(BODY_SRC) match { case JsString(s) => s }
+            val bodySrc = fields(BODY_SRC) match { case JsString(s) =>
+              //@note strip \sol {...} braces
+              s.stripPrefix("{").stripSuffix("}") }
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match { case JsString(s) => s }
             }
