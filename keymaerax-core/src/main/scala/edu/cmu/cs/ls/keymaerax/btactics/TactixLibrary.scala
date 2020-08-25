@@ -216,11 +216,11 @@ object TactixLibrary extends HilbertCalculus
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
     Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))) &
     Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     })))
   )
 
