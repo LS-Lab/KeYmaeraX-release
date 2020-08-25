@@ -56,7 +56,7 @@ object QuizExtractor {
     private val GRADER_ARG = graderArg("").r(ARG_NAME, ARG_VAL)
     private val GRADER_ARGS = graderArg("?:") + """(?:\s*,\s*""" + graderArg("?:") + """)*"""
     private val GRADER_METHOD = GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)"""
-    private val GRADER_EXTRACTOR = """(?:\\autog\s*\{""" + GRADER_METHOD + """})?"""
+    private val GRADER_EXTRACTOR = """(?:\\algog\s*\{""" + GRADER_METHOD + """})?"""
 
     private val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r //@note matches unwanted {...,...} left and , outside {} right so needs filtering of results (not just split)
 
