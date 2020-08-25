@@ -22,5 +22,5 @@ object TactixInit {
   /** Default generator for differential invariants to use.
     * @see [[TactixLibrary]]
     * @see [[InvariantGenerator]] */
-  var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator) //@note asks invSupplier
+  var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator) //@note asks invSupplier
 }
