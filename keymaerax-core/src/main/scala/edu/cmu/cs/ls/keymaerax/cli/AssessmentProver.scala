@@ -393,6 +393,8 @@ object AssessmentProver {
             val mergedHave = as.reduceRight[Artifact]({
               case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
               case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
+              case (TextArtifact(None), _) => return Right("No answer for prerequisite question")
+              case (_, TextArtifact(None)) => return Right("No answer")
             })
             grader.check(mergedHave)
         }

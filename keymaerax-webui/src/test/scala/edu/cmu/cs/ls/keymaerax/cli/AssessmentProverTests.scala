@@ -582,7 +582,7 @@ class AssessmentProverTests extends TacticTestBase {
     w.flush()
     w.close()
 
-    val options = Map('in -> f.getAbsolutePath, 'config -> "lfcpsgrader.conf")
+    val options = Map('in -> f.getAbsolutePath)
     val msgsStream = new ByteArrayOutputStream()
     val resultsStream = new ByteArrayOutputStream()
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
@@ -766,12 +766,12 @@ class AssessmentProverTests extends TacticTestBase {
       val maxSols = (earlierSols.map(_.size) :+ mainSols.size).max
       val sols = (earlierSols.map(n => n ++ List.fill(maxSols-n.size)(n.last)) :+
         (mainSols ++ List.fill(maxSols-mainSols.size)(mainSols.last))).transpose.map(MultiArtifact)
-      // same for nosols, but fill in missing nosols with blank answers
+      // same for nosols, but fill in missing nosols with earlier sols (nosol on main answer is wrong even for earlier correct answer)
       val earlierNosols = earlierGraders.map(_._2._3)
       val maxNosols = (earlierNosols.map(_.size) :+ mainNosols.size).max
+      val paddedNosols = earlierNosols.zipWithIndex.map({ case (n, i) => n ++ List.fill(maxNosols-n.size)(earlierSols(i).take(maxNosols-n.size)).flatten.take(maxNosols-n.size) })
       val nosols = (
-        earlierNosols.map(n => n ++ List.fill(maxNosols-n.size)(TextArtifact(None))) :+
-        (mainNosols ++ List.fill(maxNosols-mainNosols.size)(TextArtifact(None)))).
+        paddedNosols :+ (mainNosols ++ List.fill(maxNosols-mainNosols.size)(TextArtifact(None)))).
         transpose.map(MultiArtifact)
       (grader, sols, nosols)
     case q: OneChoiceQuestion =>
