@@ -308,8 +308,10 @@ object AssessmentProver {
         case Modes.EXPLANATION_CHECK =>
           (have, expected) match {
             case (TextArtifact(Some(hs)), TextArtifact(Some(es))) =>
-              run(() => prove(Sequent(IndexedSeq(), IndexedSeq(GreaterEqual(Number(hs.length), Divide(Number(es.length), Number(3))))),
-                QE & DebuggingTactics.done("Explanation too short")))
+              val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
+              val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
+              val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
+              run(() => ProvableSig.proveArithmetic(BigDecimalQETool, GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2)))))
             case (TextArtifact(None), _) => Right("No answer")
             case _ => Right("Answer must be an explanation, but got " + have.hintString)
           }
