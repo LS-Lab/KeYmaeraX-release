@@ -438,7 +438,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 4) ::
-        ("Direct velocity control", 1) :: Nil
+        ("Direct velocity control", 2) :: Nil
     run(problems)
   }
 
@@ -446,7 +446,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/5/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Axiom application", 10) :: ("Axiom identification: Top", 6) :: ("Axiom identification: All", 6) ::
-        ("Distributivity and non-distributivity", 5) :: ("If-then-else", 2) :: ("Nondeterministic assignments", 2) :: Nil
+        ("Distributivity and non-distributivity", 10) :: ("If-then-else", 2) :: ("Nondeterministic assignments", 2) :: Nil
     run(problems)
   }
 
@@ -462,7 +462,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Loop invariants", 5) :: ("Other Loop Rules", 8) ::
-        ("Incremental design in direct velocity control", 3) :: Nil
+        ("Incremental design in direct velocity control", 5) :: Nil
     run(problems)
   }
 
@@ -502,7 +502,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/12/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Using differential ghosts", 3) :: ("Differential ghost construction", 16) ::
-        ("Parachute", 2) :: Nil
+        ("Parachute", 3) :: Nil
     run(problems)
   }
 
@@ -526,7 +526,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Semantic comparisons", 4) :: ("Game Region Shapes", 6) :: ("Game loop semantics", 5) ::
-        ("Direct velocity control", 1) :: Nil
+        ("Direct velocity control", 2) :: Nil
     run(problems)
   }
 
@@ -534,7 +534,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
-        ("Robot simple chase game", 1) :: Nil
+        ("Robot simple chase game", 2) :: Nil
     run(problems)
   }
 
@@ -545,13 +545,13 @@ class AssessmentProverTests extends TacticTestBase {
     s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
         Submission.Prompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
-          Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """{\kyxline"2"}"""))),
+          Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """\kyxline"2""""))),
         Submission.Prompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
-          Some(Submission.GraderCookie(501, "\\algog", "polyeq()")), "x^2>=+0", """{\kyxline"x^2>=0"}""")))
+          Some(Submission.GraderCookie(501, "\\algog", "polyeq()")), "x^2>=+0", """\kyxline"x^2>=0"""")))
       )),
       Submission.Problem(25160, "Problem block 3 (single question)", "prob::3", List(
         Submission.Prompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
-          None, "1,2", """{${1,2,3}$}""")))
+          None, "1,2", """${1,2,3}$""")))
       )),
       Submission.Problem(25057, "Problem block in second segment", "prob::4", List(
         Submission.Prompt(149, "\\onechoice", 1.0, List(
@@ -760,8 +760,12 @@ class AssessmentProverTests extends TacticTestBase {
       val (mainGrader, mainSols, mainNosols) = toGrader(main)
       val earlierGraders = earlier.map({ case (k, v) => (k, toGrader(v)) }).toList.sortBy(_._1)
       val grader = MultiAskGrader(mainGrader, earlierGraders.map({ case (k, (grader, _, _)) => (k, grader) }).toMap)
-      // take first solution from each question, second from each question, ... (result sorted earliest to main)
-      val sols = (earlierGraders.map(_._2._2) :+ mainSols).transpose.map(MultiArtifact)
+      // take first solution from each question, second from each question, ... (result sorted earliest to main),
+      // padded to same length with last element from each question
+      val earlierSols = earlierGraders.map(_._2._2)
+      val maxSols = (earlierSols.map(_.size) :+ mainSols.size).max
+      val sols = (earlierSols.map(n => n ++ List.fill(maxSols-n.size)(n.last)) :+
+        (mainSols ++ List.fill(maxSols-mainSols.size)(mainSols.last))).transpose.map(MultiArtifact)
       // same for nosols, but fill in missing nosols with blank answers
       val earlierNosols = earlierGraders.map(_._2._3)
       val maxNosols = (earlierNosols.map(_.size) :+ mainNosols.size).max
