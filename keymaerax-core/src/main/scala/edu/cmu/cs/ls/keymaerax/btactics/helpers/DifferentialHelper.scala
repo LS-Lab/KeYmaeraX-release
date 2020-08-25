@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, Un
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
+import scala.util.Try
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
@@ -95,128 +96,139 @@ object DifferentialHelper {
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
     //Four cases contain both a and b: +a+b, +a-b, -a+b, -a-b
     //y' = ay + b
-    UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
       case None    =>
     }
 
     //y' = ay - b
-    UnificationMatch.unifiable(" {y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable(" {y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //y' = -ay + b
-    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
       case None =>
     }
 
     //y' = -ay - b
-    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //Four cases contain both 1/a and b: +1/a+b, +1/a-b, -1/a+b, -1/a-b
     //y' = y/a + b
-    UnificationMatch.unifiable("{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), s("b(|y_|)".asTerm))
       case None    =>
     }
 
     //y' = y/a - b
-    UnificationMatch.unifiable(" {y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable(" {y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //y' = -y/a + b
-    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
       case None =>
     }
 
     //y' = -y/a - b
-    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //4 cases contain implicit a=1 and b: +y+b, +y-b, -y+b, -y-b
     //y' = y + b
-    UnificationMatch.unifiable("{y_'=y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, s("b(|y_|)".asTerm))
       case None    =>
     }
 
     //y' = y - b
-    UnificationMatch.unifiable(" {y_'=y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable(" {y_'=y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //y' = -y + b
-    UnificationMatch.unifiable("{y_'=-y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, s("b(|y_|)".asTerm))
       case None =>
     }
 
     //y' = -y - b
-    UnificationMatch.unifiable("{y_'=-y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, Neg(s("b(|y_|)".asTerm)))
       case None =>
     }
 
     //2 cases contain just a: +a and -a
     //y' = ay
-    UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
     //y' = -ay
-    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
     //2 cases contain just 1/a: +1/a and -1/a
     //y' = ay
-    UnificationMatch.unifiable("{y_'=y_/a(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=y_/a(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
     //y' = -ay
-    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-1/a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
     //2 cases contain just b: +b and -b
     //y' = b
-    UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
       case None    =>
     }
     //y' = b
-    UnificationMatch.unifiable("{y_'=-b(|y_|)}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, Neg(s("b(|y_|)".asTerm)))
       case None    =>
     }
 
     //Two cases contain neither a or b: y'=y and y'=-y
     //y' = y
-    UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
       case None    =>
     }
 
     //y' = -y
-    UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost) match {
+    Try(UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost)).toOption.flatten match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
       case None    =>
+    }
+
+    //@note last because Darboux assumes shapes guaranteed by unification above
+    ToolProvider.algebraTool() match {
+      case Some(at) => ghost match {
+        case AtomicODE(DifferentialSymbol(lhs), rhs) =>
+          val (quotient, remainder) = at.quotientRemainder(rhs, lhs, lhs)
+          return (lhs, quotient, remainder)
+        case _ =>
+      }
+      case _ =>
     }
 
     throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")

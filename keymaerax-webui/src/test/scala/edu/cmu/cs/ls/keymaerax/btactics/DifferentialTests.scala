@@ -1120,6 +1120,11 @@ class DifferentialTests extends TacticTestBase {
     // @todo simplify a*y+0, 1*y+b, a*y+-(b)
   }
 
+  it should "auto-cut avoid singularities" in withMathematica { _ =>
+    proveBy("x>1 ==> [{x'=x+1}]x>1".asSequent, dG("{y'=(-1/2*(x+1)/(x-1))*y}".asDifferentialProgram, Some("(x-1)*y^2=1".asFormula))(1)).
+      subgoals.loneElement shouldBe "x>1 ==> \\exists y [{x'=x+1,y'=(-1)/2*(x+1)/(x-1)*y+0&true&x-1!=0}](x-1)*y^2=1".asSequent
+  }
+
   it should "not allow non-linear ghosts (1)" in withTactics {
     a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{y'=y*y+1}".asDifferentialProgram, None)(1))
   }
@@ -1163,6 +1168,18 @@ class DifferentialTests extends TacticTestBase {
     val tactic = dG("{y'=0*y+(-a())}".asDifferentialProgram, Some("x>0 & y<0".asFormula))(1)
     val result = proveBy(s, tactic)
     result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=-a()}](x>0 & y<0)".asSequent
+  }
+
+  it should "add arbitrary shape" in withQE { _ =>
+    val s = "x<0 ==> [{x'=-x}]x<0".asSequent
+    val fml = Some("x*y^2=-1".asFormula)
+    val expected = "x<0 ==> \\exists y [{x'=-x,y'=1/2*y+0}]x*y^2=-1".asSequent
+    proveBy(s, dG("{y'=y*0.5}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe expected
+    proveBy(s, dG("{y'=1/2*y}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe expected
+    proveBy(s, dG("{y'=y/2}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe expected
+    proveBy(s, dG("{y'=0.5*y}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe "x<0 ==> \\exists y [{x'=-x,y'=0.5*y+0}]x*y^2=-1".asSequent
+    proveBy(s, dG("{y'=4*y/8}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe expected
+    proveBy(s, dG("{y'=4*y^5/(8*y^4)}".asDifferentialProgram, fml)(1)).subgoals.loneElement shouldBe expected
   }
 
   it should "solve x'=x" in withMathematica { _ =>
