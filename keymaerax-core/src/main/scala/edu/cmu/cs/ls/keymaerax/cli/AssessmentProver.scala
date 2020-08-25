@@ -278,7 +278,7 @@ object AssessmentProver {
           case (h@ExpressionArtifact(hs), e@ExpressionArtifact(es)) =>
             run(() => syntacticEquality(h.expr, e.expr)) match {
               case Left(p) =>
-                if (hs.count(_ == '(') + hs.count(_ == '{') == es.count(_ == '(') + es.count(_ == '{')) Left(p)
+                if (hs.count(_ == '(') + hs.count(_ == '{') <= es.count(_ == '(') + es.count(_ == '{')) Left(p)
                 else Right("Not minimal number of parentheses and braces")
               case r => r
             }
