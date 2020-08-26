@@ -678,6 +678,7 @@ class AssessmentProverTests extends TacticTestBase {
   /** Creates a submission with randomly selected answers from the correct/incorrect sets in `problems`.
     * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
   private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
+    @tailrec
     def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
       case AskGrader(Some(mode), args, _) =>
         Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}).mkString(",") + ")"))
@@ -731,6 +732,7 @@ class AssessmentProverTests extends TacticTestBase {
       val graderCookie = createGraderCookie(grader)
       a match {
         case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact =>
+          //@todo artifact does not indicate whether it came from \\sol or \\solfin
           TextAnswer(1, "", "\\sol", graderCookie, artifactString(a), artifactSrcString(grader.expected)) :: Nil
         case ChoiceArtifact(selected) => selected.map(s => Submission.ChoiceAnswer(1, "",
           grader.expected match { case ChoiceArtifact(es) => if (es.contains(s)) "\\choice*" else "\\choice" },
