@@ -763,9 +763,13 @@ object AssessmentProver {
         (Some(ChoiceArtifact(choiceAnswers.filter(_.name == "\\choice*").map(_.text))), Map.empty)
       case "\\asktf" =>
         val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
-        val expectedTrue = choiceAnswers.find(_.name == "\\solt").exists(_.text == "True")
-        val expectedFalse = choiceAnswers.find(_.name == "\\solf").exists(_.text == "False")
-        val expected = if (expectedTrue) Some(true) else if (expectedFalse) Some(false) else throw new IllegalArgumentException("Missing expected answer in \\asktf prompt " + p.id)
+        val expected = choiceAnswers.find(_.name == "\\choice*") match {
+          case Some(sol) =>
+            if (sol.text == "True") Some(true)
+            else if (sol.text == "False") Some(false)
+            else throw new IllegalArgumentException("Expected either True or False, but got " + sol.text)
+          case None => None
+        }
         (Some(BoolArtifact(expected)), Map.empty)
     }
   }
