@@ -292,14 +292,14 @@ trait UnifyUSCalculus {
   private[btactics]
   def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
     key match {
-      case None => TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
+      case None => TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
       case Some(k) =>
         val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
         val defaultKey = AxiomInfo(axiom).key
         if (key != defaultKey) {
             val ax = ProvableInfo(axiom)
             TactixLibrary.useAt(ax.provable, key)(pos)
-        } else TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
+        } else TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
     }
   }
 
