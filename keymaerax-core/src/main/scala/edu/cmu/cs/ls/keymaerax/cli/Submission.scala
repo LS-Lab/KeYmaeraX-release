@@ -48,7 +48,7 @@ object Submission {
 
     implicit val graderCookieJsonFormat: JsonFormat[Submission.GraderCookie] = new RootJsonFormat[Submission.GraderCookie] {
       private val GRADER = "grader"
-      private val GRADER_EXTRACTOR = "<p><span>(.*?)</span></p>".r(GRADER)
+      private val GRADER_EXTRACTOR = "(?s)<p><span>(.*?)</span></p>".r(GRADER)
 
       override def write(grader: GraderCookie): JsValue = {
         JsObject(
