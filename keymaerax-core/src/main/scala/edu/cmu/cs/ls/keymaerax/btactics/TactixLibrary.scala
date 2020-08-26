@@ -258,7 +258,7 @@ object TactixLibrary extends HilbertCalculus
   @Tactic(revealInternalSteps = true)
   val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
 
-  /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
+  /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
