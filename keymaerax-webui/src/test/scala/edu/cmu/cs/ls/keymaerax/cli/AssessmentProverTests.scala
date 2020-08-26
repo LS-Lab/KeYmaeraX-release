@@ -17,6 +17,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.EitherValues._
 import spray.json._
 
+import scala.annotation.tailrec
 import scala.io.Source
 
 class AssessmentProverTests extends TacticTestBase {
@@ -566,6 +567,71 @@ class AssessmentProverTests extends TacticTestBase {
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qchoicecontrol") }
   }
 
+  it should "grade random quiz 4 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qcontracts") }
+  }
+
+  it should "grade random quiz 5 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/5/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdynax") }
+  }
+
+  it should "grade random quiz 6 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/6/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qtruth") }
+  }
+
+  it should "grade random quiz 7 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qloops") }
+  }
+
+  it should "grade random quiz 8 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/8/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qevents") }
+  }
+
+  it should "grade random quiz 9 submissions" ignore withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/9/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qtime") }
+  }
+
+  it should "grade random quiz 10 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffinv") }
+  }
+
+  it should "grade random quiz 11 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffcut") }
+  }
+
+  it should "grade random quiz 12 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/12/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffghost") }
+  }
+
+  it should "grade random quiz 13 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/13/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffchart") }
+  }
+
+  it should "grade random quiz 14 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qHgames") }
+  }
+
+  it should "grade random quiz 15 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qwinning") }
+  }
+
+  it should "grade random quiz 16 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qgameproofs") }
+  }
+
   /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
     * grading information currently missing from problems. Requires `lfcpsgrader.conf` to map `chapterLabel` to
     * an absolute file path pointing to the quiz tex source. */
@@ -616,6 +682,8 @@ class AssessmentProverTests extends TacticTestBase {
       case AskGrader(Some(mode), args, _) =>
         Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}).mkString(",") + ")"))
       case AskGrader(None, _, _) => None
+      case MultiAskGrader(main, _) =>
+        createGraderCookie(main)
       case _: OneChoiceGrader => None
       case _: AnyChoiceGrader => None
       case _: AskTFGrader => None
@@ -647,6 +715,7 @@ class AssessmentProverTests extends TacticTestBase {
       }
       case ListExpressionArtifact(exprs) => exprs.map(_.prettyString).mkString(",")
       case SequentArtifact(goals) => goals.map(_.toString).mkString(";;")
+      case TextArtifact(text) => text.getOrElse("")
     }
 
     def artifactSrcString(a: Artifact): String = a match {
@@ -654,8 +723,10 @@ class AssessmentProverTests extends TacticTestBase {
       case _: TexExpressionArtifact => "{$" + artifactString(a) + "$}"
       case _: ListExpressionArtifact => "{" + artifactString(a) + "}"
       case _: SequentArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
+      case _: TextArtifact => artifactString(a)
     }
 
+    @tailrec
     def createAnswer(grader: Grader, a: Artifact): List[Submission.Answer] = {
       val graderCookie = createGraderCookie(grader)
       a match {
@@ -682,6 +753,7 @@ class AssessmentProverTests extends TacticTestBase {
             grader.expected match { case BoolArtifact(b) => if (b.contains(false)) "\\choice*" else "\\choice" },
             graderCookie, "False", isSelected=value.exists(!_)) :: Nil
         case TextArtifact(value) => TextAnswer(1, "", "\\sol", graderCookie, value.getOrElse(""), artifactSrcString(grader.expected)) :: Nil
+        case MultiArtifact(artifacts) => createAnswer(grader, artifacts.last)
       }
     }
 
