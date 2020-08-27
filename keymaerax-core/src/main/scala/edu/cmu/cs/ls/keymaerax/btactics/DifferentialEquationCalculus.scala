@@ -187,16 +187,16 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DG]]
     */
   @Tactic(
-    premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
-    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E[y,x,y']:expression;; P[y]:option[formula]")
-  def dG(E: Expression, P: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position) =>
+    premises = "Γ |- ∃y [x'=f(x),E&Q]G, Δ ;; G |- P",
+    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E[y,x,y']:expression;; G[y]:option[formula]")
+  def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) =>
     E match {
       case Equal(l: DifferentialSymbol, r) =>
-        DifferentialTactics.dG(AtomicODE(l, r), P)(pos)
+        DifferentialTactics.dG(AtomicODE(l, r), G)(pos)
       case dp: DifferentialProgram =>
-        DifferentialTactics.dG(dp, P)(pos)
+        DifferentialTactics.dG(dp, G)(pos)
       case ODESystem(dp, _) =>
-        DifferentialTactics.dG(dp, P)(pos)
+        DifferentialTactics.dG(dp, G)(pos)
       case _ =>
         throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
     }
