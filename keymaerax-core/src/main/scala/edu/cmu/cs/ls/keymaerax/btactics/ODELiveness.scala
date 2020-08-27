@@ -835,11 +835,16 @@ object ODELiveness {
     * ---- (kDomD)
     * G |- <ODE & Q> P
     *
-    * @param target the formula R to refine the postcondition
+    * @param R the formula R to refine the postcondition
     * @return two premises, as shown above when applied to a top-level succedent diamond
     */
+  @Tactic(names="K<&>",
+    codeName="kDomainDiamond",
+    premises="Γ |- < x'=f(x)&Q > R, Δ ;; Γ |- [ x'=f(x)&Q&!P ] !R, Δ",
+    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    displayLevel="browse")
   // was kDomD
-  def kDomainDiamond(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
+  def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "kDomD is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -848,7 +853,7 @@ object ODELiveness {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val newfml = Diamond(sys,target)
+    val newfml = Diamond(sys,R)
 
     cutR(newfml)(pos) <(
       skip,
@@ -864,10 +869,15 @@ object ODELiveness {
     * ---- (kDomD)
     * G |- <ODE & Q> P
     *
-    * @param target the formula R to refine the domain constraint
+    * @param R the formula R to refine the domain constraint
     * @return two premises, as shown above when applied to a top-level succedent diamond
     */
-  def dDR(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
+  @Tactic(names="Diamond Differential Refinement",
+    codeName="dDR",
+    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- [ x'=f(x)&R ] Q, Δ",
+    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    displayLevel="browse")
+  def dDR(R: Formula):DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dDR is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -876,7 +886,7 @@ object ODELiveness {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val newfml = Diamond(ODESystem(sys.ode,target),post)
+    val newfml = Diamond(ODESystem(sys.ode,R),post)
 
     cutR(newfml)(pos) <(
       skip,
@@ -1010,6 +1020,10 @@ object ODELiveness {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
+    require (StaticSemantics.boundVars(sys).intersect(StaticSemantics.freeVars(bnd)).isEmpty,
+      "Bound " + bnd +" must be constant for ODE " + sys.ode +"."
+    )
+
     val (property, propt) = ineqNormalize(post)
 
     val starter = propt match {
@@ -1054,10 +1068,13 @@ object ODELiveness {
       else
       andR(pos) <(
         andR(pos) <(
-        ToolTactics.hideNonFOL & QE, //G |- e() > 0
+        ToolTactics.hideNonFOL & QE &
+          DebuggingTactics.done("Unable to prove "+ bnd + "strictly positive."), //G |- e() > 0
         odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
-        compatCuts(pos) & dI('full)(pos)  // derivative lower bound
+        (compatCuts(pos) & dI('full)(pos) |
+          DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +"."))
+        // derivative lower bound
       )
     )
   }}
@@ -1568,15 +1585,6 @@ object ODELiveness {
     dDDGInternal(L, M, dim)(pos, sequent)
   )
 
-  @Tactic(names="Differentially-bounded Diff Ghost",
-    codeName="dDDG", // todo: rename the tactic directly
-    premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- <x'=f(x)&Q>P, Δ",
-    conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
-    displayLevel="internal")
-  def dDDG(L:Term, M: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
-    dDDGInternal(L, M, 1)(pos, sequent)
-  )
-
   /** dBDG rule
     *
     * G |- [ghosts, ODE] (||ghosts||)^2 <= p
@@ -1623,21 +1631,45 @@ object ODELiveness {
   )
 
   @Tactic(names="Bounded Diff Ghost",
-    codeName="dBDG", // todo: rename the tactic directly
-    premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- <x'=f(x)&Q>P, Δ",
-    conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
+    codeName="dBDG",
+    premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- < x'=f(x)&Q > P, Δ",
+    conclusion="Γ |- < y'=g(x,y),x'=f(x)& Q > P, Δ",
     displayLevel="internal")
   def dBDG(p: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     dBDGInternal(p, 1)(pos, sequent)
   )
 
+  @Tactic(names="Differentially-bounded Diff Ghost",
+    codeName="dDDG",
+    premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- < x'=f(x)&Q > P, Δ",
+    conclusion="Γ |- < y'=g(x,y),x'=f(x)&Q > P, Δ",
+    displayLevel="internal")
+  def dDDG(L:Term, M: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
+    dDDGInternal(L, M, 1)(pos, sequent)
+  )
+
   // Convenient wrapper for GEx
+  // todo: make this use default "nil"
   @Tactic(names="Global Existence",
     codeName="gEx",
-    premises="*",
-    conclusion="Γ |- <x'=f(x),t'=1,&Q>t>tau(), Δ",
-    displayLevel="internal")
+    premises="* (hints)",
+    conclusion="Γ |- < x'=f(x),t'=1 > t > s, Δ",
+    displayLevel="all")
   def gEx(hints: List[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
     odeReduce(strict = true, hints)(pos) & cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done
   )
+
+  @Tactic(names="Differential Variant",
+    codeName="dV",
+    premises="Γ |- [x'=f(x) & Q] p'-q' >= e(), Δ ;; Γ |- e() > 0, Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
+    conclusion="Γ |- < x'=f(x)&Q > p >= q, Δ",
+    inputs = "e():option[term]",
+    displayLevel="all")
+  def dV(e:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
+    e match {
+      case None => dVAuto(pos)
+      case Some(ee) => dV(ee,false)(pos)
+    }
+   )
+
 }
