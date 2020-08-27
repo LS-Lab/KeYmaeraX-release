@@ -592,7 +592,7 @@ class AssessmentProverTests extends TacticTestBase {
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qevents") }
   }
 
-  it should "grade random quiz 9 submissions" ignore withZ3 { _ =>
+  it should "grade random quiz 9 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/9/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qtime") }
   }
@@ -722,7 +722,7 @@ class AssessmentProverTests extends TacticTestBase {
     def artifactSrcString(a: Artifact): String = a match {
       case _: ExpressionArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TexExpressionArtifact => "{$" + artifactString(a) + "$}"
-      case _: ListExpressionArtifact => "{" + artifactString(a) + "}"
+      case _: ListExpressionArtifact => """{\kyxline"""" + artifactString(a) + "\"}"
       case _: SequentArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TextArtifact => artifactString(a)
     }
@@ -732,8 +732,27 @@ class AssessmentProverTests extends TacticTestBase {
       val graderCookie = createGraderCookie(grader)
       a match {
         case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact =>
-          //@todo artifact does not indicate whether it came from \\sol or \\solfin
-          TextAnswer(1, "", "\\sol", graderCookie, artifactString(a), artifactSrcString(grader.expected)) :: Nil
+          //@note guesses solfin from presence of grader question with placeholders
+          val (name, answer, expected) = grader match {
+            case AskGrader(_, args, _) => args.get("question") match {
+              case Some(q) if q.contains('#') =>
+                def solfinText(artifact: Artifact): String = {
+                  val exprs = artifact match {
+                    case e: ExpressionArtifact => e.expr :: Nil
+                    case ListExpressionArtifact(exprs) => exprs
+                  }
+                  exprs.zipWithIndex.foldRight(q)({
+                    case ((expr, i), answer) => answer.replaceAllLiterally(s"#${i+1}",
+                      QuizExtractor.AskQuestion.INLINE_SOL_DELIM + expr.prettyString + QuizExtractor.AskQuestion.INLINE_SOL_DELIM)
+                  })
+                }
+                val answerText = solfinText(a)
+                val expectedText = """{\begin{lstlisting}""" + solfinText(grader.expected) + """\end{lstlisting}}"""
+                ("\\solfin", answerText, expectedText)
+              case _ => ("\\sol", artifactString(a), artifactSrcString(grader.expected))
+            }
+          }
+          TextAnswer(1, "", name, graderCookie, answer, expected) :: Nil
         case ChoiceArtifact(selected) => selected.map(s => Submission.ChoiceAnswer(1, "",
           grader.expected match { case ChoiceArtifact(es) => if (es.contains(s)) "\\choice*" else "\\choice" },
           graderCookie, s, isSelected=true))

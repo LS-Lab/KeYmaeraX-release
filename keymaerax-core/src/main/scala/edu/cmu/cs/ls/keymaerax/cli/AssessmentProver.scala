@@ -294,7 +294,7 @@ object AssessmentProver {
                     KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
                     val m = expand(q, hf :: Nil, KeYmaeraXParser.formulaParser)
                     run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(hf))))
-                  case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.hintString)
+                  case _ => Right("Answer must be a KeYmaera X formula, but got " + have.hintString)
                 }
                 case ListExpressionArtifact(h) =>
                   var inv: Option[Formula] = None
@@ -753,14 +753,14 @@ object AssessmentProver {
           case Submission.TextAnswer(_, _, name, _, _, expected) => name match {
             case "\\sol" => (QuizExtractor.AskQuestion.artifactFromSolContent(expected), Map.empty[String, String])
             case "\\solfin" =>
-              val (question, artifact) = QuizExtractor.AskQuestion.solfinArtifactsFromString(expected)
+              val (question, artifact) = QuizExtractor.AskQuestion.solfinArtifactsFromLstList(expected)
               (Some(artifact), Map("question" -> question))
           }
           case a => throw new IllegalArgumentException("Expected text answer for \\ask, but got " + a.getClass.getSimpleName)
         }).head
       case "\\onechoice" | "\\anychoice" =>
         val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
-        (Some(ChoiceArtifact(choiceAnswers.filter(_.name == "\\choice*").map(_.text))), Map.empty)
+        (Some(ChoiceArtifact(choiceAnswers.filter(_.name == "\\choice*").map(_.text))), Map.empty[String, String])
       case "\\asktf" =>
         val choiceAnswers = p.answers.map(_.asInstanceOf[Submission.ChoiceAnswer])
         val expected = choiceAnswers.find(_.name == "\\choice*") match {
@@ -770,7 +770,7 @@ object AssessmentProver {
             else throw new IllegalArgumentException("Expected either True or False, but got " + sol.text)
           case None => None
         }
-        (Some(BoolArtifact(expected)), Map.empty)
+        (Some(BoolArtifact(expected)), Map.empty[String, String])
     }
   }
 
@@ -783,8 +783,7 @@ object AssessmentProver {
             grader.map(g => QuizExtractor.AskQuestion.graderInfoFromString(g.method)) match {
               case Some((g, args)) =>
                 toExpectedArtifact(p) match {
-                  case (Some(expected), questionArgs) =>
-                    AskGrader(Some(g), args ++ questionArgs, expected)
+                  case (Some(expected), a) => AskGrader(Some(g), args ++ a, expected)
                   case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\ask prompt " + p.id)
                 }
               case None => throw new IllegalArgumentException("Missing grader information for \\ask prompt " + p.id)

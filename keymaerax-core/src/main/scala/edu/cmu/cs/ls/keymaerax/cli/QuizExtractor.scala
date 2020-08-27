@@ -21,6 +21,7 @@ object QuizExtractor {
     val QUESTION_START: String = "ask"
     val KYXLINE = """\kyxline"""
     val MATH_DELIM = "$"
+    val INLINE_SOL_DELIM = "____"
 
     private val GRADER = "grader"
     private val ARGS = "args"
@@ -35,7 +36,6 @@ object QuizExtractor {
     private val ANSWER = "answer"
     private val TURNSTILE = "==>"
     private val GOAL_SEP = ";;"
-    private val INLINE_SOL_DELIM = "____"
     private val TEX_NO_BREAK_SPACE = "~"
 
     private def kyxlineExtractor(capture: String) = """\""" + KYXLINE + """\s*"(""" + capture + """[^"]+)""""
@@ -46,7 +46,8 @@ object QuizExtractor {
     // \sol
     private val SOL_EXTRACTOR = """(?:\\sol(?!fin)\s*\{\s*""" + solContent("") + """\s*})"""
     // \solfin
-    private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\\begin\{lstlisting}([^\\]*)\\end\{lstlisting})"""
+    private val SOLFIN_BODY_EXTRACTOR = """(?s)\\begin\{lstlisting}\s*([^\\]*)\s*\\end\{lstlisting}"""
+    private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*""" + SOLFIN_BODY_EXTRACTOR + """)"""
     private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
     // \testsol
     private val TEST_SOL_EXTRACTOR = """((?:\\testsol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
@@ -154,13 +155,20 @@ object QuizExtractor {
 
     def artifactsFromTexTextString(s: String): Artifact = TextArtifact(if (s.trim.nonEmpty) Some(s) else None)
 
-    /** Translates a `\solfin` string into a question string and an artifact. */
+    /** Translates a `\solfin` body string (content of lstlisting) into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {
       val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER)).mkString(",")
       val artifact = artifactsFromKyxString(answerStrings)
       var i = 0
       val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; "#" + i }).trim
       (question, artifact)
+    }
+
+    /** Translates a `solfin` string (including lstlsting) into a question string and an artifact. */
+    def solfinArtifactsFromLstList(s: String): (String, Artifact) = {
+      val body = SOLFIN_BODY_EXTRACTOR.r(SOLFIN).findAllMatchIn(s).map(_.group(SOLFIN)).toList
+      require(body.size == 1, "Expected a single solfin \\begin{lstlisting}...\\end{lstlsting}, but got " + s)
+      solfinArtifactsFromString(body.head)
     }
 
     def argsFromString(args: Option[String]): Map[String, String] = {
