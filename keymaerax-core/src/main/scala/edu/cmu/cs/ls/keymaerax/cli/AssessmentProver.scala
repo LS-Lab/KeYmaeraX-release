@@ -445,7 +445,13 @@ object AssessmentProver {
   }
 
   /** Compares terms `a` and `b` for having the same real values. */
-  def valueEquality(a: Term, b: Term): ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(a, b))
+  def valueEquality(a: Term, b: Term): ProvableSig = {
+    val p = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(a, b))
+    p.conclusion match {
+      case Sequent(IndexedSeq(), IndexedSeq(Equiv(Equal(pa, pb), True))) if pa==a && pb==b => p
+      case _ => ProvableSig.startProof(False)
+    }
+  }
 
   /** Compares terms in lists `a` and `b` pairwise for the same real value. */
   def valueEquality(a: List[Term], b: List[Term]): ProvableSig = {
@@ -712,17 +718,21 @@ object AssessmentProver {
           msgStream.print("Grading question " + prompt.id + "...")
           answerArtifact match {
             case Some(a) => grader.check(a) match {
-              case Left(_) =>
-                msgStream.println("PASSED")
-                (prompt, prompt.points)
+              case Left(p) =>
+                if (p.isProved) {
+                  msgStream.println("PASSED")
+                  (prompt, prompt.points)
+                } else {
+                  msgStream.println("FAILED:Incorrect answer")
+                  (prompt, 0.0)
+                }
               case Right(hint) =>
                 msgStream.print("FAILED:")
                 msgStream.println(hint)
                 (prompt, 0.0)
             }
             case None =>
-              msgStream.print("FAILED:")
-              msgStream.println("No answer")
+              msgStream.println("FAILED:No answer")
               (prompt, 0.0)
           }
         })
