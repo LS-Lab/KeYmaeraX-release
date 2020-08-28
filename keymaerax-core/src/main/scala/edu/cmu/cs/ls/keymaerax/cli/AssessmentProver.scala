@@ -309,13 +309,7 @@ object AssessmentProver {
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
               val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
-              run(() => ProvableSig.proveArithmetic(BigDecimalQETool, GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2))))) match {
-                case Left(p) => p.conclusion match {
-                  case Sequent(IndexedSeq(), IndexedSeq(Equiv(_, True))) => Left(p)
-                  case _ => Left(ProvableSig.startProof(False))
-                }
-                case r => r
-              }
+              run(() => bigdecimalQE(GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2)))))
             case (TextArtifact(None), _) => Right("No answer")
             case _ => Right("Answer must be an explanation, but got " + have.hintString)
           }
@@ -449,20 +443,19 @@ object AssessmentProver {
   }
 
   /** Compares terms `a` and `b` for having the same real values. */
-  def valueEquality(a: Term, b: Term): ProvableSig = {
-    val p = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(a, b))
-    p.conclusion match {
-      case Sequent(IndexedSeq(), IndexedSeq(Equiv(Equal(pa, pb), True))) if pa==a && pb==b => p
-      case _ => ProvableSig.startProof(False)
-    }
-  }
+  def valueEquality(a: Term, b: Term): ProvableSig = bigdecimalQE(Equal(a, b))
 
   /** Compares terms in lists `a` and `b` pairwise for the same real value. */
   def valueEquality(a: List[Term], b: List[Term]): ProvableSig = {
     require(a.nonEmpty && a.length == b.length, "Same-length non-empty lists expected, but got " + a.mkString(",") + " vs. " + b.mkString(","))
-    val p = ProvableSig.proveArithmetic(BigDecimalQETool, a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+    bigdecimalQE(a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+  }
+
+  /** Invokes the BigDecimalQETool but returns an open proof if statement `fml` is false. */
+  private def bigdecimalQE(fml: Formula): ProvableSig = {
+    val p = ProvableSig.proveArithmetic(BigDecimalQETool, fml)
     p.conclusion match {
-      case Sequent(IndexedSeq(), IndexedSeq(Equiv(_, True))) => p
+      case Sequent(IndexedSeq(), IndexedSeq(Equiv(f, True))) if fml == f => p
       case _ => ProvableSig.startProof(False)
     }
   }
