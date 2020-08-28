@@ -1437,7 +1437,7 @@ object ODEInvariance {
     val (fml1,propt1) = try {
       semiAlgNormalize(post)
     } catch {
-      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition to semi-algebraic set")
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition to semi-algebraic set", ex)
     }
 
     val (fml,propt2) = try {
@@ -1448,7 +1448,7 @@ object ODEInvariance {
 
     val propt = compose_equiv(propt1,propt2)
 
-    require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
+    if (!fml.isInstanceOf[GreaterEqual]) throw new TacticInapplicableFailure("Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 

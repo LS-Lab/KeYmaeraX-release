@@ -59,6 +59,11 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), v=0\n  ==>  [{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
   }
 
+  it should "prove a double integrator with events" in withMathematica { _ =>
+    val s = "x()>=0, A()>0, B()>0, y<=x()|(y-x())^2<=2*B()*(i-j), x()>=0, y>=0, A()>0, B()>0, j<=i, y<=x()|(y-x())^2<=4*B()*(i-j) ==> [{j'=y,y'=A(),i'=x()&y>=0&!(y<=x()|(y-x())^2<=2*B()*(i-j))}]((x()>=0&y>=0&A()>0&B()>0&j<=i)&(y<=x()|(y-x())^2<=2*B()*(i-j)))".asSequent
+    proveBy(s, ODE(1)) shouldBe 'proved
+  }
+
   it should "prove a barrier certificate" in withQE { _ =>
     val fml =
       """
