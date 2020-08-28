@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{OutputStream, PrintStream}
-import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
@@ -13,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, P
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
-import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.{AnyChoiceQuestion, AskQuestion, AskTFQuestion, OneChoiceQuestion, Problem}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
@@ -380,7 +378,7 @@ object AssessmentProver {
           case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
             val mainArtifact = as.last
             grader.args.get("ifCorrect") match {
-              case Some(checkEarlier) =>
+              case Some(_) =>
                 val prereqAnsweredCorrectly = earlier.zip(as.dropRight(1)).forall({ case ((_, g), a) => g.check(a) match {
                   case Left(p) => p.isProved
                   case _ => false
@@ -460,8 +458,77 @@ object AssessmentProver {
   }
 
   /** Proves polynomial equality of `a` and `b`. */
-  def polynomialEquality(a: Term, b: Term): ProvableSig = {
-    KeYmaeraXProofChecker(5000)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(a, b))))
+  def polynomialEquality(a: Term, b: Term): ProvableSig = (a, b) match {
+    case (Pair(al, ar), Pair(bl, br)) =>
+      if (polynomialEquality(al, bl).isProved) polynomialEquality(ar, br)
+      else throw new IllegalArgumentException("Pair left-hand sides not equal")
+    case (_: Pair, _) => throw new IllegalArgumentException("Unable to compare pair to non-pair term")
+    case (_, _: Pair) => throw new IllegalArgumentException("Unable to compare pair to non-pair term")
+    case _ =>
+      val expa = encodeNonConstPolynomials(a)
+      val expb = encodeNonConstPolynomials(b)
+      //@todo extend PolynomialArithV2.equate
+      val funca = extractFunctions(expa).
+        map({ case FuncOf(fn@Function(name, idx, _, _, _), args) =>
+          (fn, StaticSemantics.freeVars(args).toSet) -> (BaseVariable(name + nameOf(args) + "_", idx), args) }).toMap
+      val funcb = extractFunctions(expb).
+        map({ case FuncOf(fn@Function(name, idx, _, _, _), args) =>
+          (fn, StaticSemantics.freeVars(args).toSet) -> (BaseVariable(name + nameOf(args) + "_", idx), args) }).toMap
+      require(funca.keys == funcb.keys, "Expected all function symbols to match, but found non-matching symbols " + funca.keys.mkString(",") + " vs. " + funcb.keys.mkString(","))
+      val matchedArgs = funca.map({ case (fn, (_, a)) => (a, funcb(fn)._2) })
+      require(matchedArgs.forall({ case (arga, argb) => polynomialEquality(arga, argb).isProved }),
+        "Expected uninterpreted function arguments to be equal, but not all are.")
+      val encodeda = encodeFunctions(expa, funca.map({ case (fn, (v, _)) => fn -> v }))
+      val encodedb = encodeFunctions(expb, funcb.map({ case (fn, (v, _)) => fn -> v }))
+      KeYmaeraXProofChecker(5000)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
+  }
+
+  private def nameOf(t: Term): String = StaticSemantics.freeVars(t).toSet[Variable].map(_.prettyString.replaceAllLiterally("_", "$u$")).mkString("")
+
+  /** Extracts all function subterms of term `t`. */
+  private def extractFunctions(t: Term): List[Term] = {
+    val fns = ListBuffer.empty[Term]
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case FuncOf(_, Nothing) => Left(None)
+        case fn: FuncOf =>
+          fns.append(fn)
+          Left(None)
+        case _ => Left(None)
+      }
+    }, t)
+    fns.toList
+  }
+
+  private def encodeFunctions(t: Term, encoding: Map[(NamedSymbol, Set[Variable]), Term]): Term = {
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case FuncOf(fn, args) => encoding.get((fn, StaticSemantics.freeVars(args).toSet)) match {
+          case Some(e) => Right(e)
+          case _ => Left(None)
+        }
+        case _ => Left(None)
+      }
+    }, t).get
+  }
+
+  /** Encodes `x^y` and `x/y` for non-constant polynomial exponent as pow(x,y) and div(x,y). */
+  private def encodeNonConstPolynomials(t: Term): Term = {
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case Power(base, exp) =>
+          if (StaticSemantics.freeVars(exp).isEmpty) Left(None)
+          else Right(FuncOf(
+            Function("pow", None, Tuple(Real, Real), Real, interpreted=false),
+            Pair(encodeNonConstPolynomials(base), encodeNonConstPolynomials(exp))))
+        case Divide(a, b) =>
+          if (StaticSemantics.freeVars(b).isEmpty) Left(None)
+          else Right(FuncOf(
+            Function("div", None, Tuple(Real, Real), Real, interpreted=false),
+            Pair(encodeNonConstPolynomials(a), encodeNonConstPolynomials(b))))
+        case _ => Left(None)
+      }
+    }, t).get
   }
 
   /** Collects terms and compares for polynomial equality. Checks parent operators along the way. */
@@ -703,7 +770,7 @@ object AssessmentProver {
         val ARG_PLACEHOLDER = "argPlaceholder"
         val NEG_HASH = """#(-\d+)""".r(ARG_PLACEHOLDER)
         val mergedPrompts = prompts.zipWithIndex.map({
-          case ((p@Submission.SinglePrompt(_, _, _, (t@Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _)) :: Nil), answer), i) =>
+          case ((p@Submission.SinglePrompt(_, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
             val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER).toInt).toList
             if (backRefs.nonEmpty) {
               val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
