@@ -1147,9 +1147,14 @@ object SimplifierV3 {
   private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
 
   // Additional formulas for specialized normalizers
+  private lazy val trueGeqNorm:ProvableSig = remember("true<->1>=0".asFormula,QE,namespace).fact
+  private lazy val falseGeqNorm:ProvableSig = remember("false<->-1>=0".asFormula,QE,namespace).fact
   private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
   private lazy val maxGeqNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
   private lazy val eqNormAbs:ProvableSig = remember("f_() = 0 <-> -abs(f_())>=0".asFormula,QE,namespace).fact
+
+  private lazy val trueGtNorm:ProvableSig = remember("true<->1>0".asFormula,QE,namespace).fact
+  private lazy val falseGtNorm:ProvableSig = remember("false<->-1>0".asFormula,QE,namespace).fact
   private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
   private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
   private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
@@ -1157,23 +1162,22 @@ object SimplifierV3 {
   //Equational normalizers
   private lazy val andEqNorm:ProvableSig = remember("f_()=0 & g_()=0 <-> f_()^2 + g_()^2=0".asFormula,QE,namespace).fact
   private lazy val orEqNorm:ProvableSig = remember( "f_()=0 | g_()=0 <-> f_() * g_() = 0".asFormula,QE,namespace).fact
+  private lazy val trueEqNorm:ProvableSig = remember("true <-> 0=0".asFormula,QE,namespace).fact
+  private lazy val falseEqNorm:ProvableSig = remember( "false <-> 1=0".asFormula,QE,namespace).fact
 
-
-  // Normalizes a formula recursively (under And/Or) to have >=0 on RHS
-  // This is (very) lightly optimized to avoid generating additional 0s
-  // if they are already present which may be annoying
-
+  // Recursively normalize the formula to the form p=0, failing if that is not possible
   private def algNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match {
       case Equal(l, r) => if (r == Number(0)) List() else List(eqNorm)
       case And(l, r) => List(andEqNorm)
       case Or(l, r) => List(orEqNorm)
-      case True => Nil
-      case False => Nil
+      case True => List(trueEqNorm)
+      case False => List(falseEqNorm)
       case _ => throw new IllegalArgumentException("cannot normalize " + f + " to have 0 on RHS (must be a conjunction/disjunction of atomic equations)")
     }
   }
 
+  // Recursively normalize the formula to have all (in)equalities with 0s on RHS, failing if that is not possible
   private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match {
       case LessEqual(l,r) => List(leFlip,leNorm)
@@ -1184,8 +1188,8 @@ object SimplifierV3 {
       case NotEqual(l,r) => if (r == Number(0)) List() else List(neqNorm)
       case And(l,r) =>  Nil
       case Or(l,r) =>  Nil
-      case True => Nil
-      case False => Nil
+      case True => List(trueEqNorm)
+      case False => List(falseEqNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
     }
   }
@@ -1223,8 +1227,8 @@ object SimplifierV3 {
       case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
       case And(l,r) =>  List(minGeqNorm)
       case Or(l,r) =>  List(maxGeqNorm)
-      case True => Nil
-      case False => Nil
+      case True => List(trueGeqNorm)
+      case False => List(falseGeqNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >= 0s or =0s)")
     }
   }
@@ -1235,8 +1239,8 @@ object SimplifierV3 {
       case Greater(l,r:Number) if r.value.toInt == 0 => List()
       case And(l,r) =>  List(minGtNorm)
       case Or(l,r) =>  List(maxGtNorm)
-      case True => Nil
-      case False => Nil
+      case True => List(trueGtNorm)
+      case False => List(falseGtNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >0 normal form (must be a conjunction/disjunction of > 0s)")
     }
   }

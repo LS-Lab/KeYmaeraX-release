@@ -268,16 +268,16 @@ class SimplifierV3Tests extends TacticTestBase {
   }
 
   it should "not fail on true/false" in withMathematica { _ =>
-    semiAlgNormalize("true".asFormula)._1 shouldBe "true".asFormula
-    semiAlgNormalize("false".asFormula)._1 shouldBe "false".asFormula
-    semiAlgNormalize("true -> x>=5".asFormula)._1 shouldBe "false|x-5>=0".asFormula
-    semiAlgNormalize("x>=5 -> false".asFormula)._1 shouldBe "5-x>0|false".asFormula
-    semiAlgNormalize("!x>=5 -> false".asFormula)._1 shouldBe "x-5>=0|false".asFormula
-    semiAlgNormalize("true <-> x>=5".asFormula)._1 shouldBe "(true&x-5>=0)|(false&5-x>0)".asFormula
+    semiAlgNormalize("true".asFormula)._1 shouldBe "0=0".asFormula
+    semiAlgNormalize("false".asFormula)._1 shouldBe "1=0".asFormula
+    semiAlgNormalize("true -> x>=5".asFormula)._1 shouldBe "1=0|x-5>=0".asFormula
+    semiAlgNormalize("x>=5 -> false".asFormula)._1 shouldBe "5-x>0|1=0".asFormula
+    semiAlgNormalize("!x>=5 -> false".asFormula)._1 shouldBe "x-5>=0|1=0".asFormula
+    semiAlgNormalize("true <-> x>=5".asFormula)._1 shouldBe "(0=0&x-5>=0)|(1=0&5-x>0)".asFormula
 
     baseNormalize("false -> true".asFormula)._1 shouldBe "true|true".asFormula
-    algNormalize("true -> x=4".asFormula)._1 shouldBe "false|x-4=0".asFormula
-    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "false|x-5>=0".asFormula
+    algNormalize("true -> x=4".asFormula)._1 shouldBe "1*(x-4)=0".asFormula
+    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max((-1),x-5)>=0".asFormula
   }
 
 }
