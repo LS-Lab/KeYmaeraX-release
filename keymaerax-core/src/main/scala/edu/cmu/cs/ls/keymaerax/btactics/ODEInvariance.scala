@@ -180,7 +180,8 @@ object ODEInvariance {
    * @note uses Dconstify internally instead of an external wrapper because it leaves open goals afterwards
    */
   def lpstep: DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "LP step currently only in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("lpstep: position " + pos + " must point to a top-level succedent position")
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Diamond(ODESystem(o, GreaterEqual(p,_)), _)) => (p, o)
@@ -294,8 +295,9 @@ object ODEInvariance {
     */
   // was "sAIc"
   def sAIclosed : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAIc is only applicable at a top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"sAIc needs an algebra tool (and Mathematica)")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIclosed: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAIclosed needs an algebra tool (and Mathematica)")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
@@ -315,7 +317,8 @@ object ODEInvariance {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to max/min/>=", ex)
     }
 
-    require(fmlMM.isInstanceOf[GreaterEqual], "Normalization failed to reach max/min normal form "+fmlMM)
+    //This is a contract failure of maxMinGeqNormalize
+    if (!fmlMM.isInstanceOf[GreaterEqual]) throw new UnsupportedTacticFeature("Normalization failed to reach max/min normal form "+fml)
 
     // For input formula f
     // tac1 rewrites with semialgebraic normalization
@@ -487,7 +490,9 @@ object ODEInvariance {
     */
   // was "sAIR1"
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIRankOne: position " + pos + " must point to a top-level succedent position")
+
     if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode, dom, post) = seq.sub(pos) match {
@@ -534,7 +539,8 @@ object ODEInvariance {
         }
 
       val reorder = proveBy(Equiv(f2, f3), timeoutQE)
-      assert(reorder.isProved)
+      if(!reorder.isProved)
+        throw new TacticInapplicableFailure("Unable to automatically prove equivalence "+Equiv(f2,f3))
 
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
         useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
@@ -560,7 +566,9 @@ object ODEInvariance {
     * (of course, P should be true initially)
     */
   def timeBound : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("timeBound: position " + pos + " must point to a top-level succedent position")
+
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case Some(e) => throw new TacticInapplicableFailure("timeBound only applicable to box ODEs, but got " + e.prettyString)
@@ -634,7 +642,9 @@ object ODEInvariance {
       , namespace)
 
   def domainStuck : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel, "domain stuck only at top-level")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("domainStuck: position " + pos + " must point to a top-level succedent position")
+
     val (ode, dom, post) = seq.sub(pos) match {
       //needs to be dualized
       case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
@@ -650,7 +660,8 @@ object ODEInvariance {
 
     val (negDom, propt) = semiAlgNormalize(Not(dom))
     //The negated domain is definitely normalizable if not something went wrong
-    assert(propt.isDefined)
+    if(propt.isEmpty)
+      throw new UnsupportedTacticFeature("Unexpected failure in normalization of "+Not(dom))
 
     // set up the time variable
     // commute it to the front to better match with realind/cont
@@ -730,9 +741,12 @@ object ODEInvariance {
   private val two = Number(2)
 
   def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dgVdbx: position " + pos + " must point to a top-level succedent position")
+
     val dim = ps.length
-    require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
+    if(! (Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1))
+      throw new IllFormedTacticApplicationException("dgVdbx: inputs have non-matching dimensions")
 
     val (ode,dom) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
@@ -863,7 +877,8 @@ object ODEInvariance {
     conclusion="Γ |- [x'=f(x) & Q}]p=0, Δ",
     displayLevel="browse")
   val dRI : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dRI only applicable in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dRI: position " + pos + " must point to a top-level succedent position")
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
@@ -888,7 +903,9 @@ object ODEInvariance {
         } catch {
           case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
         }
-        require(f2.isInstanceOf[Equal], "dRI requires only equations in postcondition")
+
+        //This is a contract failure of maxMinGeqNormalize
+        if (!f2.isInstanceOf[Equal]) throw new UnsupportedTacticFeature("Normalization failed to reach an equation "+f2)
         List(f2.asInstanceOf[Equal].left)
       }
     }
@@ -1165,7 +1182,7 @@ object ODEInvariance {
   //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
   private def sym_det (m:List[List[Term]]) : Term = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "sym_det called with non-matching dimensions.")
     if(dim==1) m(0)(0)
     else if(dim==2) //det ((a b)(c d)) = a d - b c
       Minus(Times(m(0)(0),m(1)(1)),Times(m(0)(1),m(1)(0)))
@@ -1178,7 +1195,7 @@ object ODEInvariance {
   //Symbolic trace
   private def sym_trace (m:List[List[Term]]) : Term = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "sym_trace called with non-matching dimensions.")
     List.range(0,dim).map(i=>m(i)(i)).foldLeft[Term](Number(0))(Plus.apply)
   }
 
@@ -1425,8 +1442,9 @@ object ODEInvariance {
     */
   // was "sAIc"
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIclosedPlus: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAIclosedPlus needs an algebra tool (and Mathematica)")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
@@ -1448,7 +1466,9 @@ object ODEInvariance {
 
     val propt = compose_equiv(propt1,propt2)
 
-    if (!fml.isInstanceOf[GreaterEqual]) throw new TacticInapplicableFailure("Normalization failed to reach normal form "+fml)
+    //This is a contract failure of maxMinGeqNormalize
+    if (!fml.isInstanceOf[GreaterEqual]) throw new UnsupportedTacticFeature("Normalization failed to reach normal form "+fml)
+
     val f2 = fml.asInstanceOf[GreaterEqual]
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
@@ -1494,9 +1514,9 @@ object ODEInvariance {
   }
 
   //Computes and returns the sequence m, m^2, ... m^{k-1} if m^{k} = 0
-  def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
+  private def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "nilpotentIndex called with non-matching dimensions.")
 
     var ctr = 1
     //TODO: simplify here or later?
@@ -1620,7 +1640,8 @@ object ODEInvariance {
   val nilpotentSolveTimeVar = "time_".asVariable
 
   def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("nilpotent solve: position " + pos + " must point to a top-level succedent position")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
@@ -1737,7 +1758,8 @@ object ODEInvariance {
   private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
 
   def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "DDC only applicable in top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("diffDivConquer: position " + pos + " must point to a top-level succedent position")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
