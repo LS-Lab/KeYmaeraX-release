@@ -47,21 +47,17 @@ object Submission {
     private val BODY_SRC = "body_src"
 
     implicit val graderCookieJsonFormat: JsonFormat[Submission.GraderCookie] = new RootJsonFormat[Submission.GraderCookie] {
-      private val GRADER = "grader"
-      private val GRADER_EXTRACTOR = "(?s)<p><span>(.*?)</span></p>".r(GRADER)
-
       override def write(grader: GraderCookie): JsValue = {
         JsObject(
           ID -> grader.id.toJson,
           NAME -> grader.name.toJson,
-          BODY -> s"<p><span>${grader.method}</span></p>".toJson
+          BODY -> s"${grader.method}".toJson
         )
       }
 
       override def read(json: JsValue): GraderCookie = {
         json.asJsObject.getFields(ID, NAME, BODY) match {
-          case JsNumber(id) :: JsString(name) :: JsString(body) :: Nil =>
-            val graderMethod = GRADER_EXTRACTOR.findFirstMatchIn(body).map(_.group(GRADER)).getOrElse("")
+          case JsNumber(id) :: JsString(name) :: JsString(graderMethod) :: Nil =>
             GraderCookie(id.toLong, name, graderMethod)
         }
       }
@@ -188,10 +184,10 @@ object Submission {
 
       override def read(json: JsValue): Chapter = {
         val root = json.asJsObject
-        val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
-        val label = root.fields(LABEL) match { case JsString(s) => s }
+        //val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        //val label = root.fields(LABEL) match { case JsString(s) => s }
         val problems = extractProblems(root)
-        Chapter(id, label, problems)
+        Chapter(-1, "", problems)
       }
 
       /** Extract problems from the chapter JSON object `root`. */
