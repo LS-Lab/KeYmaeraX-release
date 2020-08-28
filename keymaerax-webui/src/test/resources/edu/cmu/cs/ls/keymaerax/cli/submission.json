@@ -37,7 +37,7 @@
                         {
                           "id": 500,
                           "name": "\\algog",
-                          "body": "<p><span>valueeq()</span></p>"
+                          "body": "valueeq()"
                         }
                       ],
                       "user_answer" : {
@@ -61,7 +61,7 @@
                       "cookies": [{
                         "id": 501,
                         "name": "\\algog",
-                        "body": "<p><span>polyeq()</span></p>"
+                        "body": "polyeq()"
                       }],
                       "label": "prt-sol::2::a1",
                       "user_answer": {

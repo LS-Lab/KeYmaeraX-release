@@ -570,10 +570,9 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Submission extraction" should "extract answers in the order listed in the file" in {
-    //@todo assumes that there will be information to identify the chapter in the tex source (outermost title, or label)
     val s = Source.fromInputStream(getClass.getResourceAsStream("/edu/cmu/cs/ls/keymaerax/cli/submission.json")).mkString
     import Submission.SubmissionJsonFormat._
-    s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
+    s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(-1, "", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
         Submission.SinglePrompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
           Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """\kyxline"2""""))),
