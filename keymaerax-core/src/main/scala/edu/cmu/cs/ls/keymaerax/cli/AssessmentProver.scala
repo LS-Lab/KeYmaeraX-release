@@ -309,7 +309,13 @@ object AssessmentProver {
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
               val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
-              run(() => ProvableSig.proveArithmetic(BigDecimalQETool, GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2)))))
+              run(() => ProvableSig.proveArithmetic(BigDecimalQETool, GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2))))) match {
+                case Left(p) => p.conclusion match {
+                  case Sequent(IndexedSeq(), IndexedSeq(Equiv(_, True))) => Left(p)
+                  case _ => Left(ProvableSig.startProof(False))
+                }
+                case r => r
+              }
             case (TextArtifact(None), _) => Right("No answer")
             case _ => Right("Answer must be an explanation, but got " + have.hintString)
           }

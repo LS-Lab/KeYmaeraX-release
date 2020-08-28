@@ -441,6 +441,14 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.prgEquivalence("{a;++b;}*".asProgram, "{b;++a;}*".asProgram) shouldBe 'proved
   }
 
+  "Explanation check" should "accept long enough answers" in {
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("An elaborate answer"))).left.value.conclusion shouldBe "==> 19>=20/2 <-> true".asSequent
+  }
+
+  it should "not accept too short answers" in {
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Too short"))).left.value.conclusion shouldBe "==> false".asSequent
+  }
+
   "AnyChoice grading" should "not give points when no answer was selected" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
