@@ -545,17 +545,17 @@ class AssessmentProverTests extends TacticTestBase {
     import Submission.SubmissionJsonFormat._
     s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(11, "ch:qdiffcut", List(
       Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
-        Submission.Prompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
+        Submission.SinglePrompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
           Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """\kyxline"2""""))),
-        Submission.Prompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
+        Submission.SinglePrompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
           Some(Submission.GraderCookie(501, "\\algog", "polyeq()")), "x^2>=+0", """\kyxline"x^2>=0"""")))
       )),
       Submission.Problem(25160, "Problem block 3 (single question)", "prob::3", List(
-        Submission.Prompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
+        Submission.SinglePrompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
           None, "1,2", """${1,2,3}$""")))
       )),
       Submission.Problem(25057, "Problem block in second segment", "prob::4", List(
-        Submission.Prompt(149, "\\onechoice", 1.0, List(
+        Submission.SinglePrompt(149, "\\onechoice", 1.0, List(
           Submission.ChoiceAnswer(150, "prt::seg2block::a1", "\\choice*", None, "Sound", isSelected=true),
           Submission.ChoiceAnswer(151, "prt::seg2block::a2", "\\choice", None, "Unsound", isSelected=false)))
       ))
@@ -727,7 +727,6 @@ class AssessmentProverTests extends TacticTestBase {
       case _: TextArtifact => artifactString(a)
     }
 
-    @tailrec
     def createAnswer(grader: Grader, a: Artifact): List[Submission.Answer] = {
       val graderCookie = createGraderCookie(grader)
       a match {
@@ -751,6 +750,9 @@ class AssessmentProverTests extends TacticTestBase {
                 ("\\solfin", answerText, expectedText)
               case _ => ("\\sol", artifactString(a), artifactSrcString(grader.expected))
             }
+            case MultiAskGrader(main, _) =>
+              val TextAnswer(_, _, name, _, answer, expected) :: Nil = createAnswer(main, a)
+              (name, answer, expected)
           }
           TextAnswer(1, "", name, graderCookie, answer, expected) :: Nil
         case ChoiceArtifact(selected) => selected.map(s => Submission.ChoiceAnswer(1, "",
@@ -787,20 +789,28 @@ class AssessmentProverTests extends TacticTestBase {
         if (answerIncorrectly) createAnswer(grader, incorrect(r.rand.nextInt(incorrect.size)))
         else createAnswer(grader, correct(r.rand.nextInt(correct.size)))
       }
-      val promptName = q match {
-        case _: AskQuestion => "\\ask"
-        case _: AnyChoiceQuestion => "\\anychoice"
-        case _: OneChoiceQuestion => "\\onechoice"
-        case _: AskTFQuestion => "\\asktf"
-        case _: MultiAskQuestion => "\\ask" //@note name of main question
+      q match {
+        case _: AskQuestion => (Submission.SinglePrompt(i, "\\ask", 1.0, answers), !answerIncorrectly)
+        case _: AnyChoiceQuestion => (Submission.SinglePrompt(i, "\\anychoice", 1.0, answers), !answerIncorrectly)
+        case _: OneChoiceQuestion => (Submission.SinglePrompt(i, "\\onechoice", 1.0, answers), !answerIncorrectly)
+        case _: AskTFQuestion => (Submission.SinglePrompt(i, "\\asktf", 1.0, answers), !answerIncorrectly)
+        case _: MultiAskQuestion =>
+          //@note name of main question and mark as multiprompt to adjust correct=true/false according to other subquestions
+          (Submission.MultiPrompt(Submission.SinglePrompt(i, "\\ask", 1.0, answers), Map.empty), !answerIncorrectly)
       }
-      (Submission.Prompt(i, promptName, 1.0, answers), !answerIncorrectly)
     }
 
     def createProblem(p: Problem, i: Int): (Submission.Problem, List[(Submission.Prompt, Boolean)]) = {
       //@note problems have IDs 1000,..., prompts of problem 1000 have IDs 2000,.... etc.
       val answers = p.questions.zipWithIndex.map({ case (q, j) => createPrompt(q, 2000+1000*i+j) })
-      (Submission.Problem(1000 + i, p.name.getOrElse(""), "", answers.map(_._1)), answers)
+      //@note multiprompts only correct if all subprompts are correct
+      val adjustedAnswers = answers.zipWithIndex.map({
+        case (a@(_: Submission.SinglePrompt, _), _) => a
+        case ((Submission.MultiPrompt(main, _), answeredCorrectly), i) =>
+          //@todo so far all multiprompts only use #-1, but will need to inspect multiprompt graders to know which other prompts to consult when adjusting correct=true/false
+          (main, answeredCorrectly && answers(i-1)._2)
+      })
+      (Submission.Problem(1000 + i, p.name.getOrElse(""), "", answers.map(_._1)), adjustedAnswers)
     }
     val submittedProblems = problems.zipWithIndex.map((createProblem _).tupled)
     (Submission.Chapter(1, chapterLabel, submittedProblems.map(_._1)),

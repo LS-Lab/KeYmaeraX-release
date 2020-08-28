@@ -20,7 +20,7 @@ object Submission {
       }
       override def read(json: JsValue): Submission.Prompt = {
         json.asJsObject.getFields(ID, MAX_POINTS) match {
-          case JsNumber(id) :: JsNumber(points) :: Nil => Prompt(id.toLong, "", points.toDouble, Nil)
+          case JsNumber(id) :: JsNumber(points) :: Nil => SinglePrompt(id.toLong, "", points.toDouble, Nil)
         }
       }
     }
@@ -148,7 +148,7 @@ object Submission {
           case JsArray(s) => s.map(_.convertTo[Submission.Answer]).toList
           case _ => List.empty
         }
-        Prompt(id, name, points, answers)
+        SinglePrompt(id, name, points, answers)
       }
     }
 
@@ -231,8 +231,23 @@ object Submission {
   }
   case class TextAnswer(id: Long, label: String, name: String, grader: Option[GraderCookie], answer: String, expected: String) extends Answer
   case class ChoiceAnswer(id: Long, label: String, name: String, grader: Option[GraderCookie], text: String, isSelected: Boolean) extends Answer
+
+  /** A question with submitted answer, name indicates the type of prompt. */
+  trait Prompt {
+    val id: Long
+    val name: String
+    val points: Double
+    val answers: List[Answer]
+  }
   /** A single quiz question with submitted answer. `name` indicates the type of prompt. */
-  case class Prompt(id: Long, name: String, points: Double, answers: List[Answer])
+  case class SinglePrompt(id: Long, name: String, points: Double, answers: List[Answer]) extends Prompt
+  /** An answered quiz question that needs access to answers of earlier questions. */
+  case class MultiPrompt(main: Prompt, earlier: Map[Int, Prompt]) extends Prompt {
+    val id: Long = main.id
+    val name: String = main.name
+    val points: Double = main.points
+    val answers: List[Answer] = main.answers
+  }
   /** A problem segment. */
   case class Problem(id: Long, title: String, label: String, prompts: List[Prompt])
   /** A quiz chapter. */

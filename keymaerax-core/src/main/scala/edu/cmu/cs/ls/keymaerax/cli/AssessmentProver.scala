@@ -693,7 +693,21 @@ object AssessmentProver {
     } else {
       val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (prompts, _)) =>
         msgStream.println("Grading section " + p.title)
-        val graders = prompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
+
+        val ARG_PLACEHOLDER = "argPlaceholder"
+        val NEG_HASH = """#(-\d+)""".r(ARG_PLACEHOLDER)
+        val mergedPrompts = prompts.zipWithIndex.map({
+          case ((p@Submission.SinglePrompt(_, _, _, (t@Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _)) :: Nil), answer), i) =>
+            val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER).toInt).toList
+            if (backRefs.nonEmpty) {
+              val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
+              val answers = answer.map(a => MultiArtifact(backRefs.flatMap(j => prompts(i + j)._2) :+ a))
+              (mergedPrompt, answers)
+            }else (p, answer)
+          case (q, _) => q
+        })
+
+        val graders = mergedPrompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
         val grades = graders.map({ case (prompt, (grader, answerArtifact)) =>
           msgStream.print("Grading question " + prompt.id + "...")
           answerArtifact match {
@@ -774,8 +788,14 @@ object AssessmentProver {
     }
   }
 
-  private def toGrader(p: Submission.Prompt): Grader = {
-    p.name match {
+  private def toGrader(p: Submission.Prompt): Grader = p match {
+    case mp@Submission.MultiPrompt(main, earlier) =>
+      require(mp.name == "\\ask", "Expected text multiprompt") //@note other questions do not have \algog
+      require(mp.answers.size == 1, "Expected exactly 1 answer for text prompt " + mp.id + ", but got " + mp.answers.size)
+      val mainGrader = toGrader(main)
+      val earlierGraders = earlier.map({ case (k, v) => (k, toGrader(v)) }).toList.sortBy(_._1)
+      MultiAskGrader(mainGrader, earlierGraders.toMap)
+    case _: Submission.SinglePrompt => p.name match {
       case "\\ask" =>
         require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
         p.answers.map({
@@ -805,6 +825,7 @@ object AssessmentProver {
           case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\asktf prompt " + p.id)
         }
     }
+    case _ => throw new IllegalArgumentException("Unexpected prompt type " + p.getClass.getSimpleName)
   }
 
   private def reportParseErrors(parsedProblems: List[(Submission.Problem, (List[(Submission.Prompt, Option[Artifact])],
