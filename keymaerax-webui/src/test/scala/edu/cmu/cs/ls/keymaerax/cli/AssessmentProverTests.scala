@@ -600,7 +600,12 @@ class AssessmentProverTests extends TacticTestBase {
     ))
   }
 
-  "Command line grader" should "grade random quiz 3 submissions" in withZ3 { _ =>
+  "Command line grader" should "grade random quiz 2 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffeq") }
+  }
+
+  it should "grade random quiz 3 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qchoicecontrol") }
   }
