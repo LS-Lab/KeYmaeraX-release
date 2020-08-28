@@ -304,6 +304,7 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe 'proved
     AssessmentProver.valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe 'proved
     AssessmentProver.valueEquality("1".asTerm, "2".asTerm) shouldNot be ('proved)
+    AssessmentProver.valueEquality("1".asTerm :: "1".asTerm :: Nil, "2-1".asTerm :: "2-2".asTerm :: Nil) shouldNot be ('proved)
   }
 
   "DI result check" should "prove simple DI examples" in withZ3 { _ =>

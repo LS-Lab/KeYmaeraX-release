@@ -454,7 +454,11 @@ object AssessmentProver {
   /** Compares terms in lists `a` and `b` pairwise for the same real value. */
   def valueEquality(a: List[Term], b: List[Term]): ProvableSig = {
     require(a.nonEmpty && a.length == b.length, "Same-length non-empty lists expected, but got " + a.mkString(",") + " vs. " + b.mkString(","))
-    ProvableSig.proveArithmetic(BigDecimalQETool, a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+    val p = ProvableSig.proveArithmetic(BigDecimalQETool, a.zip(b).map({ case (a, b) => Equal(a, b) }).reduceRight(And))
+    p.conclusion match {
+      case Sequent(IndexedSeq(), IndexedSeq(Equiv(_, True))) => p
+      case _ => ProvableSig.startProof(False)
+    }
   }
 
   /** Proves polynomial equality of `a` and `b`. */
