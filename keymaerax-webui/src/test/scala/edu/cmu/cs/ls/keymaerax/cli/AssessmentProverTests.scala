@@ -449,12 +449,42 @@ class AssessmentProverTests extends TacticTestBase {
     AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Too short"))).left.value.conclusion shouldBe "==> false".asSequent
   }
 
-  "AnyChoice grading" should "not give points when no answer was selected" in withZ3 { _ =>
+  "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
     val graders = anyChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(ChoiceArtifact(Nil)).right.value shouldBe "Incorrect answer"
+      _.check(ChoiceArtifact(Nil)).right.value shouldBe "Missing answer"
+    }
+  }
+
+  it should "not give points for \\onechoice when no answer was selected" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
+    val oneChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[OneChoiceQuestion]))).toList
+    val graders = oneChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
+    forEvery(Table("Grader", graders:_*)) {
+      _.check(ChoiceArtifact(Nil)).right.value shouldBe "Missing answer"
+    }
+  }
+
+  it should "not give points for \\asktf when no answer was selected" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
+    val asktfProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskTFQuestion]))).toList
+    val graders = asktfProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
+    forEvery(Table("Grader", graders:_*)) {
+      _.check(BoolArtifact(None)).right.value shouldBe "Missing answer"
+    }
+  }
+
+  it should "not give points for \\ask when answer is empty" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
+    val askProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskQuestion]))).toList
+    val graders = askProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
+    forEvery(Table("Grader", graders:_*)) {
+      _.check(TextArtifact(None)).right.value shouldBe "Missing answer"
+    }
+    forEvery(Table("Grader", graders:_*)) {
+      _.check(TextArtifact(Some(""))).right.value shouldBe "Missing answer"
     }
   }
 

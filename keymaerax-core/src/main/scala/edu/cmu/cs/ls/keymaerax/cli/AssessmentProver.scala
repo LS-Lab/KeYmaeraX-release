@@ -133,6 +133,10 @@ object AssessmentProver {
     /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
     override def check(have: Artifact): Either[ProvableSig, String] = {
       (have, expected) match {
+        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Right("Missing answer")
+        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Right("Missing answer")
+        case (ListExpressionArtifact(Nil), _) => return Right("Missing answer")
+        case (SequentArtifact(Nil), _) => return Right("Missing answer")
         case (h: ExpressionArtifact, e: ExpressionArtifact) => e.expr match {
           case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
               if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
@@ -310,7 +314,7 @@ object AssessmentProver {
               val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
               run(() => bigdecimalQE(GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2)))))
-            case (TextArtifact(None), _) => Right("No answer")
+            case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.hintString)
           }
         case Modes.BELLE_PROOF =>
@@ -391,8 +395,8 @@ object AssessmentProver {
             val mergedHave = as.reduceRight[Artifact]({
               case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
               case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
-              case (TextArtifact(None), _) => return Right("No answer for prerequisite question")
-              case (_, TextArtifact(None)) => return Right("No answer")
+              case (TextArtifact(None), _) => return Right("Missing answer for prerequisite question")
+              case (_, TextArtifact(None)) => return Right("Missing answer")
             })
             grader.check(mergedHave)
         }
@@ -401,29 +405,30 @@ object AssessmentProver {
 
   case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case h: ChoiceArtifact =>
+      case ChoiceArtifact(Nil) => Right("Missing answer")
+      case ChoiceArtifact(h) =>
         //@note correct if answering with any of the correctly marked solutions
-        if (h.selected.nonEmpty && h.selected.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
+        if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
         else Right("Incorrect answer")
     }
   }
   case class AnyChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case h: ChoiceArtifact =>
+      case ChoiceArtifact(Nil) => Right("Missing answer")
+      case ChoiceArtifact(h) =>
         //@note correct if answering with exactly the correct yes/no pattern (modulo order)
-        if (h.selected.toSet == expected.selected.toSet) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
+        if (h.toSet == expected.selected.toSet) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
         else Right("Incorrect answer")
     }
   }
 
   case class AskTFGrader(expected: BoolArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
+      case BoolArtifact(None) => Right("Missing answer")
       case BoolArtifact(Some(h)) =>
         val ef = if (expected.value.get) True else False
         val hf = if (h) True else False
         run(() => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))))
-      case BoolArtifact(_) =>
-        Right("No answer")
     }
   }
 
@@ -802,7 +807,7 @@ object AssessmentProver {
                 (prompt, 0.0)
             }
             case None =>
-              msgStream.println("FAILED:No answer")
+              msgStream.println("FAILED:Missing answer")
               (prompt, 0.0)
           }
         })
