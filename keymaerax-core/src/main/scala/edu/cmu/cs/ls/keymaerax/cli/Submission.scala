@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
+import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion
 import spray.json._
 
 /** Extracts submission information from a JSON AST.  */
@@ -45,6 +46,7 @@ object Submission {
     private val TEXT = "text"
     private val COOKIES = "cookies"
     private val BODY_SRC = "body_src"
+    private val SOLUTION_PROMPT = "solution_prompt"
 
     implicit val graderCookieJsonFormat: JsonFormat[Submission.GraderCookie] = new RootJsonFormat[Submission.GraderCookie] {
       override def write(grader: GraderCookie): JsValue = {
@@ -81,22 +83,48 @@ object Submission {
               )
             )
           case TextAnswer(id, label, name, grader, answer, expected) =>
-            JsObject(
-              ID -> id.toJson,
-              LABEL -> label.toJson,
-              NAME -> name.toJson,
-              COOKIES -> (grader match {
-                case Some(g) => JsArray(g.toJson)
-                case None => JsArray()
-              }),
-              BODY_SRC -> expected.toJson,
-              USER_ANSWER -> JsObject(
-                TEXT -> answer.toJson,
-                IS_CHECKED -> false.toJson
-              ),
-              IS_CHOICE -> false.toJson,
-              IS_FILL_IN_GAP -> false.toJson //@todo
-            )
+            if (name == "\\sol") {
+              JsObject(
+                ID -> id.toJson,
+                LABEL -> label.toJson,
+                NAME -> name.toJson,
+                COOKIES -> (grader match {
+                  case Some(g) => JsArray(g.toJson)
+                  case None => JsArray()
+                }),
+                BODY_SRC -> expected.toJson,
+                USER_ANSWER -> JsObject(
+                  TEXT -> answer.toJson,
+                  IS_CHECKED -> false.toJson
+                ),
+                IS_CHOICE -> false.toJson,
+                IS_FILL_IN_GAP -> false.toJson
+              )
+            } else if (name == "\\solfin" || name == "\\solfin_ask") {
+              JsObject(
+                ID -> id.toJson,
+                LABEL -> label.toJson,
+                NAME -> "\\solfin_ask".toJson,
+                //@todo fill cookies once JSON format is fixed
+                COOKIES -> JsArray() /*(grader match {
+                  case Some(g) => JsArray(g.toJson)
+                  case None => JsArray()
+                })*/,
+                //@todo remove \\algog from body_src once JSON format is fixed
+                BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, " ") + "\\algog {" + grader.map(_.method) + "}").toJson,
+                SOLUTION_PROMPT -> JsObject(
+                  NAME -> "solfin_sol".toJson,
+                  BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, "~~" + _.group("arg").replaceAllLiterally("\\", "\\\\") + "~~") + "\\algog {" + grader.map(_.method) + "}").toJson,
+                  COOKIES -> JsArray()
+                ),
+                USER_ANSWER -> JsObject(
+                  TEXT -> answer.toJson,
+                  IS_CHECKED -> false.toJson
+                ),
+                IS_CHOICE -> false.toJson,
+                IS_FILL_IN_GAP -> true.toJson
+              )
+            } else throw new IllegalArgumentException("Unknown text question type " + name)
         }
       }
 
@@ -113,16 +141,61 @@ object Submission {
               case a: JsObject => a.fields(IS_CHECKED) match { case JsBoolean(b) => b }
             }
             ChoiceAnswer(id, label, name, grader, text, answer)
-          case (None | Some(JsBoolean(false)), None | Some(JsBoolean(_))) =>
+          case (None | Some(JsBoolean(false)), None | Some(JsBoolean(false))) =>
             val bodySrc = fields(BODY_SRC) match { case JsString(s) =>
-              //@note strip \sol {...} braces
-              s.trim.stripPrefix("{").stripSuffix("}")
+              val trimmed = s.trim
+              //@note tex may mention extra braces (e.g. \solfin {\begin{lstlisting}...} \sol {\kyxline...})
+              //@note careful: always annotate set answers in tex as math and extra braces to be save: \sol {$\{...\}$}
+              if (trimmed.startsWith("{")) trimmed.stripPrefix("{").stripSuffix("}")
+              else trimmed
             }
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match { case JsString(s) => s }
             }
             TextAnswer(id, label, name, grader, answer, bodySrc)
+          case (None | Some(JsBoolean(false)), None | Some(JsBoolean(true))) =>
+            //@note fill_in_the_gap_text contains question with empty placeholders <%% %%>
+            //@note body_src contains question with empty placeholders <%% %%> plus autograder
+            //@note solution_prompt.body_src contains solution without placeholders (but retains ~)! plus autograder
+            //@note user_answers contains user answer filled into placeholders <%% answer %%>
+
+            //val (bodySrcQuestion, bodySrcGrader) = extractQuestionGrader(json.asJsObject) //@note ignored for now
+            val (rawSolPromptQuestion, solPromptGrader) = extractQuestionGrader(fields(SOLUTION_PROMPT).asJsObject)
+            val placeHolderRepl = "~+(.+?)~+".r("arg")
+            val solPromptQuestion = placeHolderRepl.replaceAllIn(rawSolPromptQuestion,
+              AskQuestion.INLINE_SOL_DELIM + _.group("arg").replaceAllLiterally("\\", "\\\\") + AskQuestion.INLINE_SOL_DELIM)
+            //@note prefer grader cookie in case it is present
+            val theGrader = (grader, solPromptGrader) match {
+              case (Some(g), _) => Some(g)
+              case (None, Some(g)) => Some(g)
+              case (None, None) => None
+            }
+            val answer = fields(USER_ANSWER) match {
+              case a: JsObject => a.fields(TEXT) match {
+                case JsString(s) => "<%%(.+?)%%>".r("arg").replaceAllIn(s,
+                  AskQuestion.INLINE_SOL_DELIM + _.group("arg").replaceAllLiterally("\\", "\\\\") + AskQuestion.INLINE_SOL_DELIM)
+              }
+            }
+            TextAnswer(id, label, name, theGrader, answer, solPromptQuestion)
         }
+      }
+    }
+
+    private def extractQuestionGrader(o: JsObject): (String, Option[GraderCookie]) = {
+      o.fields(BODY_SRC) match { case JsString(s) =>
+        val trimmed = s.trim
+        //@note solfin does not yet have grader cookie, grader info is (accidentally?) packed into body_src
+        val (question, bodySrcGrader) = trimmed.split("""\\algog""").toList match {
+          case q :: g :: Nil =>
+            val graderCookie = GraderCookie(-1, "\\algog", g.trim.stripPrefix("{").stripSuffix("}"))
+            (q.trim, Some(graderCookie))
+          case q :: Nil => (q.trim, None)
+        }
+        //@note tex usually does not mention extra braces (e.g. \solfin \begin{lstlisting}...)
+        val trimmedQuestion =
+          if (question.startsWith("{")) question.stripPrefix("{").stripSuffix("}")
+          else question
+        (trimmedQuestion, bodySrcGrader)
       }
     }
 

@@ -785,12 +785,12 @@ class AssessmentProverTests extends TacticTestBase {
                   }
                   exprs.zipWithIndex.foldRight(q)({
                     case ((expr, i), answer) => answer.replaceAllLiterally(s"#${i+1}",
-                      QuizExtractor.AskQuestion.INLINE_SOL_DELIM + expr.prettyString + QuizExtractor.AskQuestion.INLINE_SOL_DELIM)
+                      "<%%" + expr.prettyString + "%%>")
                   })
                 }
                 val answerText = solfinText(a)
                 val expectedText = """{\begin{lstlisting}""" + solfinText(grader.expected) + """\end{lstlisting}}"""
-                ("\\solfin", answerText, expectedText)
+                ("\\solfin_ask", answerText, expectedText)
               case _ => ("\\sol", artifactString(a), artifactSrcString(grader.expected))
             }
             case MultiAskGrader(main, _) =>

@@ -824,7 +824,7 @@ object AssessmentProver {
               if (expected.startsWith(QuizExtractor.AskQuestion.KYXLINE)) Some(QuizExtractor.AskQuestion.artifactsFromKyxString(answer))
               else if (expected.startsWith(QuizExtractor.AskQuestion.MATH_DELIM)) Some(QuizExtractor.AskQuestion.artifactsFromTexMathString(answer))
               else Some(QuizExtractor.AskQuestion.artifactsFromTexTextString(answer))
-            case "\\solfin" =>
+            case "\\solfin" | "\\solfin_ask" =>
               Some(QuizExtractor.AskQuestion.solfinArtifactsFromString(answer)._2)
           }
           case a => throw new IllegalArgumentException("Expected text answer for \\ask, but got " + a.getClass.getSimpleName)
@@ -846,7 +846,7 @@ object AssessmentProver {
         p.answers.map({
           case Submission.TextAnswer(_, _, name, _, _, expected) => name match {
             case "\\sol" => (QuizExtractor.AskQuestion.artifactFromSolContent(expected), Map.empty[String, String])
-            case "\\solfin" =>
+            case "\\solfin" | "\\solfin_ask" =>
               val (question, artifact) = QuizExtractor.AskQuestion.solfinArtifactsFromLstList(expected)
               (Some(artifact), Map("question" -> question))
           }
