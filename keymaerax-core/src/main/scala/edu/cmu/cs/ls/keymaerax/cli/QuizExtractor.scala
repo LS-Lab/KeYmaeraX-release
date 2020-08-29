@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifac
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
+import scala.util.Try
 import scala.util.matching.Regex
 
 /** Extracts assessment information from tex sources. */
@@ -149,7 +150,7 @@ object QuizExtractor {
           )
         })
         if (ivfml.hasNext) TexExpressionArtifact(ivfml.reduceRightOption(Or).getOrElse(False))
-        else throw new IllegalArgumentException("String " + s + " neither parseable as a a list of numbers \\{7,...\\} nor as intervals [l,h) ++ (l,h) ++ [l,h] ++ (l,h] where l is a number and h is a number or \\infty")
+        else Try(artifactsFromKyxString(s)).getOrElse(throw new IllegalArgumentException("String " + s + " neither parseable as a list of numbers \\{7,...\\} nor as intervals [l,h) ++ (l,h) ++ [l,h] ++ (l,h] where l is a number and h is a number or \\infty"))
       }
     }
 

@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException,
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
-import edu.cmu.cs.ls.keymaerax.cli.Submission.TextAnswer
+import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -705,12 +705,27 @@ class AssessmentProverTests extends TacticTestBase {
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qgameproofs") }
   }
 
+  it should "handle empty text answers" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
+    runGrader(problems, 0, "", Some(""))
+  }
+
+  it should "handle n/a text answers" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
+    runGrader(problems, 0, "", Some("n/a"))
+  }
+
+  it should "handle non-parseable text answers" in withZ3 { _ =>
+    val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
+    runGrader(problems, 0, "", Some("x*v+"))
+  }
+
   /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
     * grading information currently missing from problems. Requires `lfcpsgrader.conf` to map `chapterLabel` to
     * an absolute file path pointing to the quiz tex source. */
-  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String): Unit = {
+  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String, uniformAnswer: Option[String] = None): Unit = {
     val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
-    val (submission, expected) = createSubmission(problems, chapterLabel, rand)
+    val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer)
     val json = {
       import Submission.SubmissionJsonFormat._
       submission.toJson
@@ -728,9 +743,13 @@ class AssessmentProverTests extends TacticTestBase {
     val msgs = msgsStream.toString
     print(msgs)
     val msgLines = msgs.lines
+
+    val parsingSucceeded = !msgLines.exists(s => s.startsWith("Parsing problem") && s.endsWith("FAILED"))
     expected.foreach(e =>
       msgLines.find(_.startsWith("Grading question " + e._1.id)) match {
-        case Some(t) => t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue randClue
+        case Some(t) =>
+          if (parsingSucceeded) t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue randClue
+          else t should startWith ("Grading question " + e._1.id + "...SKIPPED") withClue randClue
         case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
       }
     )
@@ -742,15 +761,16 @@ class AssessmentProverTests extends TacticTestBase {
 
     results.foreach({ case (prompt, grade) =>
       expected.find(_._1.id == prompt.id) match {
-        case Some((_, answeredCorrectly)) => (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue randClue
+        case Some((_, answeredCorrectly)) => (if (parsingSucceeded && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue randClue
         case None => fail("Grade for unknown question " + prompt.id + "; " + randClue)
       }
     })
   }
 
-  /** Creates a submission with randomly selected answers from the correct/incorrect sets in `problems`.
+  /** Creates a submission with randomly selected answers from the correct/incorrect sets in `problems`, or with the
+    * `uniformAnswer` provided.
     * Returns the submission and the list of questions with indicator correctly/incorrectly answered. */
-  private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
+  private def createSubmission(problems: List[Problem], chapterLabel: String, r: RepeatableRandom, uniformAnswer: Option[String]): (Submission.Chapter, List[(Submission.Prompt, Boolean)]) = {
     @tailrec
     def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
       case AskGrader(Some(mode), args, _) =>
@@ -857,10 +877,38 @@ class AssessmentProverTests extends TacticTestBase {
     def createPrompt(q: Question, i: Int): (Submission.Prompt, Boolean) = {
       val (grader, correct, incorrect) = toGrader(q)
       //@note some questions may not have incorrect test answers annotated, but all have a correct solution
-      val answerIncorrectly = !r.rand.nextBoolean() && incorrect.nonEmpty
-      val answers = {
-        if (answerIncorrectly) createAnswer(grader, incorrect(r.rand.nextInt(incorrect.size)))
-        else createAnswer(grader, correct(r.rand.nextInt(correct.size)))
+      val (answers, answerIncorrectly) = uniformAnswer match {
+        case Some(s) if q.isInstanceOf[AskQuestion] || q.isInstanceOf[MultiAskQuestion] =>
+          @tailrec
+          def correctString(a: Artifact): String = a match {
+            case ExpressionArtifact(s) => s
+            case ListExpressionArtifact(expr) => expr.map(_.prettyString).mkString(",")
+            case TexExpressionArtifact(expr) => expr.prettyString
+            case TextArtifact(Some(s)) => s
+            case SequentArtifact(_) => ""
+            case MultiArtifact(a) => correctString(a.last)
+          }
+          createAnswer(grader, correct(0)) match {
+            case TextAnswer(id, label, name, grader, _, expected) :: Nil =>
+              if (name == "\\sol") {
+                (TextAnswer(id, label, name, grader, s, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
+              } else if (name == "\\solfin_ask") {
+                val answer = expected.replaceAll("<%%.+?%%>", "<%%" + s + "%%>")
+                (TextAnswer(id, label, name, grader, answer, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
+              } else throw new IllegalArgumentException("Unknown text answer type " + name)
+          }
+        case Some("") =>
+          (createAnswer(grader, correct(0)).map({
+            case ChoiceAnswer(id, label, name, grader, text, _) =>
+              (ChoiceAnswer(id, label, name, grader, text, isSelected=false))
+          }), true)
+        case _ =>
+          val answerIncorrectly = !r.rand.nextBoolean() && incorrect.nonEmpty
+          val answers = {
+            if (answerIncorrectly) createAnswer(grader, incorrect(r.rand.nextInt(incorrect.size)))
+            else createAnswer(grader, correct(r.rand.nextInt(correct.size)))
+          }
+          (answers, answerIncorrectly)
       }
       q match {
         case _: AskQuestion => (Submission.SinglePrompt(i, "\\ask", 1.0, answers), !answerIncorrectly)
