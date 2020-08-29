@@ -104,7 +104,7 @@ class TacticAssertionError(message: => String) extends BelleCriticalException(me
 class InfiniteTacticLoopError(message: => String) extends BelleCriticalException(message)
 
 /**
-  * A Bellerophon exception that consists of two reasons why it is being raised, for example,
+  * A Bellerophon critical exception that consists of two reasons why it is being raised, for example,
   * if two things went wrong out of which it would have sufficed if only one succeeds.
   * @param left Primary reason.
   * @param right Alternate reason.
@@ -167,5 +167,14 @@ case class BelleUnfinished(message: String, p: Provable) extends BelleProofSearc
 
 /** Raised when counterexamples are found in sequent `s`; `cex` contains counterexample values per named symbol. */
 case class BelleCEX(message: String, cex: Map[NamedSymbol, Expression], s: Sequent) extends BelleProofSearchControl(message)
+
+/**
+  * A Bellerophon proof search exception that consists of two reasons why it is being raised, for example,
+  * if two things went wrong out of which it would have sufficed if only one succeeds.
+  * @param left Primary reason.
+  * @param right Alternate reason.
+  */
+class CompoundProofSearchException(val left: BelleThrowable, val right: BelleThrowable)
+  extends BelleProofSearchControl("Left: " + left.getMessage + "\nRight: " + right.getMessage + ")", left)
 
 //</editor-fold>

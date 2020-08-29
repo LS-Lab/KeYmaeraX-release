@@ -648,7 +648,12 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
           })
 
         val errors = results.collect({case Right(r) => r})
-        if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundCriticalException(_, _))
+        // Critical if there is at least one critical
+        if (errors.exists(_.isInstanceOf[BelleCriticalException])) throw errors.reduce[BelleThrowable](new CompoundCriticalException(_, _))
+        else if (errors.nonEmpty)
+          // Otherwise, non-critical exception
+          //todo: add case for user input exception?
+          throw errors.reduce[BelleThrowable](new CompoundProofSearchException(_, _))
 
         // Compute a single provable that contains the combined effect of all the piecewise computations.
         // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
