@@ -147,7 +147,7 @@ object AssessmentProver {
           require(e.map(_.kind).toSet.nonEmpty)
           if (e.map(_.kind).toSet.size > 1) {
             if (e.zip(h).forall({ case (ee, he) => ee.kind == he.kind })) Right("Expected " + e.map(_.kind).mkString + " gut got " + h.map(_.kind).mkString(","))
-          } else if (h.exists(_.kind != e.head.kind)) return Right("Expected a " + e.head.kind + " but got " + h.map(_.kind).mkString(","))
+          } else if (h.exists(_.kind != e.head.kind)) return Right("Expected a list of " + e.headOption.map(_.kind).getOrElse("<unknown>") + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
         case (h, e) =>
           if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got a " + h.hintString)
       }
