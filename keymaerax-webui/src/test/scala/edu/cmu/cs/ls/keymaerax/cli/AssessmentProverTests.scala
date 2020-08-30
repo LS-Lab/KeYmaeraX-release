@@ -423,7 +423,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "reply with expected answer type to wrong answer format" in {
     AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0")).
-      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got a Sequent"
+      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got Sequent"
   }
 
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
@@ -742,7 +742,7 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
     val msgs = msgsStream.toString
     print(msgs)
-    val msgLines = msgs.lines
+    val msgLines = msgs.lines.toList
 
     val parsingSucceeded = !msgLines.exists(s => s.startsWith("Parsing problem") && s.endsWith("FAILED"))
     expected.foreach(e =>
