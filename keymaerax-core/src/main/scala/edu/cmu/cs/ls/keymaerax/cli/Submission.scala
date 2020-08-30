@@ -100,11 +100,11 @@ object Submission {
                 IS_CHOICE -> false.toJson,
                 IS_FILL_IN_GAP -> false.toJson
               )
-            } else if (name == "\\solfin" || name == "\\solfin_ask") {
+            } else if (name == "\\solfin" || name == "\\solfinask") {
               JsObject(
                 ID -> id.toJson,
                 LABEL -> label.toJson,
-                NAME -> "\\solfin_ask".toJson,
+                NAME -> "\\solfinask".toJson,
                 //@todo fill cookies once JSON format is fixed
                 COOKIES -> JsArray() /*(grader match {
                   case Some(g) => JsArray(g.toJson)

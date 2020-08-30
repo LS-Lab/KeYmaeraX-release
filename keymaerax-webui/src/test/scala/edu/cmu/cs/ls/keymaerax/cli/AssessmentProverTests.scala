@@ -840,7 +840,7 @@ class AssessmentProverTests extends TacticTestBase {
                 }
                 val answerText = solfinText(a)
                 val expectedText = """{\begin{lstlisting}""" + solfinText(grader.expected) + """\end{lstlisting}}"""
-                ("\\solfin_ask", answerText, expectedText)
+                ("\\solfinask", answerText, expectedText)
               case _ => ("\\sol", artifactString(a), artifactSrcString(grader.expected))
             }
             case MultiAskGrader(main, _) =>
@@ -892,7 +892,7 @@ class AssessmentProverTests extends TacticTestBase {
             case TextAnswer(id, label, name, grader, _, expected) :: Nil =>
               if (name == "\\sol") {
                 (TextAnswer(id, label, name, grader, s, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
-              } else if (name == "\\solfin_ask") {
+              } else if (name == "\\solfinask") {
                 val answer = expected.replaceAll("<%%.+?%%>", "<%%" + s + "%%>")
                 (TextAnswer(id, label, name, grader, answer, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
               } else throw new IllegalArgumentException("Unknown text answer type " + name)
