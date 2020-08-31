@@ -65,14 +65,14 @@ class AssessmentProverTests extends TacticTestBase {
       """\begin{problem}[1.0]
         |\ask \sol{\kyxline"x>=0"} \algog{syneq()}
         |\ask \sol{\kyxline"y=2"}
-        |\algog{prove(question="#1 -> [{x'=v}]x>=0",
+        |\algog{prove(question="\%1 -> [{x'=v}]x>=0",
         |             tactic="auto")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe
           List(
             AskQuestion(Some("syneq"), Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty),
-            AskQuestion(Some("prove"), Map("question" -> "#1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
+            AskQuestion(Some("prove"), Map("question" -> "\\%1 -> [{x'=v}]x>=0", "tactic" -> "auto"),
               ExpressionArtifact("y=2"), List(ExpressionArtifact("y=2")), List.empty)
           )
     }
@@ -130,7 +130,7 @@ class AssessmentProverTests extends TacticTestBase {
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?#1; x:=x+1;}*@invariant(#2)]x>=0"),
+          List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?\\%1; x:=x+1;}*@invariant(\\%2)]x>=0"),
             ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
             List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
     }
@@ -164,11 +164,11 @@ class AssessmentProverTests extends TacticTestBase {
       """\begin{problem}[1.0]
         |\ask Question 1 \sol{\kyxline"x*y^2=-1"}
         |\ask Question 2 \sol{\kyxline"y'=y/2"}
-        |\algog{prove(question="x<0 -> [{x'=-x}]x<0",tactic="implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done")}
+        |\algog{prove(question="x<0 -> [{x'=-x}]x<0",tactic="implyR(1); dG({`\%1`},{`\%-1`},1); dI(1.0); QE; done")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         val first = AskQuestion(None, Map.empty, ExpressionArtifact("x*y^2=-1"), List(ExpressionArtifact("x*y^2=-1")), List.empty)
-        val second = AskQuestion(Some("prove"), Map("question"->"x<0 -> [{x'=-x}]x<0", "tactic"->"implyR(1); dG({`#1`},{`#-1`},1); dI(1.0); QE; done"),
+        val second = AskQuestion(Some("prove"), Map("question"->"x<0 -> [{x'=-x}]x<0", "tactic"->"implyR(1); dG({`\\%1`},{`\\%-1`},1); dI(1.0); QE; done"),
           ExpressionArtifact("y'=y/2"),
           List(ExpressionArtifact("y'=y/2")), List.empty)
         p.questions shouldBe List(first, MultiAskQuestion(second, Map(-1 -> first)))
@@ -391,7 +391,7 @@ class AssessmentProverTests extends TacticTestBase {
       Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x>2 & y>=1 -> [{x:=x+y;y:=y+2;}*]x>1",
-        "tactic" -> "implyR(1);loop({`#1`},1);auto;done"),
+        "tactic" -> "implyR(1);loop({`\\%1`},1);auto;done"),
       ExpressionArtifact("false")). //@note ignored because question will be used instead
       check(ExpressionArtifact("x>1&y>=0")
     ).left.value shouldBe 'proved
@@ -402,7 +402,7 @@ class AssessmentProverTests extends TacticTestBase {
       Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x>=3 & v>=2 & a>=1 & j>=0 -> [{x'=v,v'=a,a'=j}]x>=3",
-        "tactic" -> "implyR(1); for #i do dC({`#i`},1); <(nil, dI(1); done) endfor; dW(1); QE; done"
+        "tactic" -> "implyR(1); for \\%i do dC({`\\%i`},1); <(nil, dI(1); done) endfor; dW(1); QE; done"
       ),
       ExpressionArtifact("false")). //@note ignored because question will be used instead
       check(ListExpressionArtifact("a>=1".asFormula :: "v>=2".asFormula :: "x>=3".asFormula :: Nil)
@@ -414,7 +414,7 @@ class AssessmentProverTests extends TacticTestBase {
       Some(AskGrader.Modes.BELLE_PROOF),
       Map(
         "question" -> "x<=m & V>=0 -> [{{v:=0; ++ ?Q(m,t,x,T,V);v:=V;};{x'=v,t'=1 & t<=T}}*]x<=m",
-        "tactic" -> "US({`Q(m,t,x,T,V) ~> #1`});implyR(1);loop({`x<=m`},1);auto;done"),
+        "tactic" -> "US({`Q(m,t,x,T,V) ~> \\%1`});implyR(1);loop({`x<=m`},1);auto;done"),
       ExpressionArtifact("false") //@note ignored because question will be used instead
     ).check(
       ExpressionArtifact("x<=m-V*(T-t)")
@@ -827,14 +827,14 @@ class AssessmentProverTests extends TacticTestBase {
           //@note guesses solfin from presence of grader question with placeholders
           val (name, answer, expected) = grader match {
             case AskGrader(_, args, _) => args.get("question") match {
-              case Some(q) if q.contains('#') =>
+              case Some(q) if q.contains(AskQuestion.ARG_PLACEHOLDER) =>
                 def solfinText(artifact: Artifact): String = {
                   val exprs = artifact match {
                     case e: ExpressionArtifact => e.expr :: Nil
                     case ListExpressionArtifact(exprs) => exprs
                   }
                   exprs.zipWithIndex.foldRight(q)({
-                    case ((expr, i), answer) => answer.replaceAllLiterally(s"#${i+1}",
+                    case ((expr, i), answer) => answer.replaceAllLiterally(s"${AskQuestion.ARG_PLACEHOLDER}${i+1}",
                       "<%%" + expr.prettyString + "%%>")
                   })
                 }
@@ -928,7 +928,7 @@ class AssessmentProverTests extends TacticTestBase {
       val adjustedAnswers = answers.zipWithIndex.map({
         case (a@(_: Submission.SinglePrompt, _), _) => a
         case ((Submission.MultiPrompt(main, _), answeredCorrectly), i) =>
-          //@todo so far all multiprompts only use #-1, but will need to inspect multiprompt graders to know which other prompts to consult when adjusting correct=true/false
+          //@todo so far all multiprompts only use \\%-1, but will need to inspect multiprompt graders to know which other prompts to consult when adjusting correct=true/false
           (main, answeredCorrectly && answers(i-1)._2)
       })
       (Submission.Problem(1000 + i, p.name.getOrElse(""), "", answers.map(_._1)), adjustedAnswers)

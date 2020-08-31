@@ -3,6 +3,8 @@ package edu.cmu.cs.ls.keymaerax.cli
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion
 import spray.json._
 
+import scala.util.matching.Regex
+
 /** Extracts submission information from a JSON AST.  */
 object Submission {
 
@@ -114,7 +116,9 @@ object Submission {
                 BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, " ") + "\\algog {" + grader.map(_.method) + "}").toJson,
                 SOLUTION_PROMPT -> JsObject(
                   NAME -> "solfin_sol".toJson,
-                  BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, "~~" + _.group("arg").replaceAllLiterally("\\", "\\\\") + "~~") + "\\algog {" + grader.map(_.method) + "}").toJson,
+                  BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, m =>
+                    Regex.quoteReplacement("~~" + m.group("arg")) + "~~") +
+                    "\\algog {" + grader.map(_.method) + "}").toJson,
                   COOKIES -> JsArray()
                 ),
                 USER_ANSWER -> JsObject(
@@ -163,7 +167,7 @@ object Submission {
             val (rawSolPromptQuestion, solPromptGrader) = extractQuestionGrader(fields(SOLUTION_PROMPT).asJsObject)
             val placeHolderRepl = "~+(.+?)~+".r("arg")
             val solPromptQuestion = placeHolderRepl.replaceAllIn(rawSolPromptQuestion,
-              AskQuestion.INLINE_SOL_DELIM + _.group("arg").replaceAllLiterally("\\", "\\\\") + AskQuestion.INLINE_SOL_DELIM)
+              m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
             //@note prefer grader cookie in case it is present
             val theGrader = (grader, solPromptGrader) match {
               case (Some(g), _) => Some(g)
@@ -173,7 +177,7 @@ object Submission {
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match {
                 case JsString(s) => "<%%(.+?)%%>".r("arg").replaceAllIn(s,
-                  AskQuestion.INLINE_SOL_DELIM + _.group("arg").replaceAllLiterally("\\", "\\\\") + AskQuestion.INLINE_SOL_DELIM)
+                  m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
               }
             }
             TextAnswer(id, label, name, theGrader, answer, solPromptQuestion)

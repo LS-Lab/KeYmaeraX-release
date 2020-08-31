@@ -23,6 +23,7 @@ object QuizExtractor {
     val KYXLINE = """\kyxline"""
     val MATH_DELIM = "$"
     val INLINE_SOL_DELIM = "____"
+    val ARG_PLACEHOLDER = "\\%"
 
     private val GRADER = "grader"
     private val ARGS = "args"
@@ -161,7 +162,7 @@ object QuizExtractor {
       val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER)).mkString(",")
       val artifact = artifactsFromKyxString(answerStrings)
       var i = 0
-      val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; "#" + i }).trim
+      val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; Regex.quoteReplacement(ARG_PLACEHOLDER + i) }).trim
       (question, artifact)
     }
 
@@ -280,12 +281,12 @@ object QuizExtractor {
             AskTFQuestion.firstFromString(rawContent.substring(m.start))
         }
       }).toList
-      val ARG_PLACEHOLDER = "argPlaceholder"
-      val NEG_HASH = """#(-\d+)""".r(ARG_PLACEHOLDER)
+      val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
+      val NEG_HASH = (Regex.quote(AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
       questions.zipWithIndex.map({
         case (q@AskQuestion(_, args, _, _, _), i) =>
           val backRefs = args.map({ case (k, v) =>
-            (k, (v, NEG_HASH.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER).toInt).toList))
+            (k, (v, NEG_HASH.findAllMatchIn(v).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList))
           }).values.flatMap(_._2).toList
           if (backRefs.nonEmpty) MultiAskQuestion(q, backRefs.map(j => (j, questions(i+j))).toMap)
           else q
