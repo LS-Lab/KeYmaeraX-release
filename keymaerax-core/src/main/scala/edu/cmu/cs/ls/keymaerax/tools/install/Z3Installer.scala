@@ -88,8 +88,18 @@ object Z3Installer extends Logging {
     } else {
       throw new Exception("Z3 solver is currently not supported in your operating system.")
     }
-    if (resource == null)
-      throw new Exception("Could not find Z3 in classpath jar bundle: " + System.getProperty("user.dir"))
+    if (resource == null) {
+      val z3 = new File(z3TempDir + File.separator + "z3")
+      if (!z3.exists) throw new Exception("Could not find Z3 in classpath jar bundle: " + System.getProperty("user.dir"))
+      else {
+        val z3AbsPath = z3.getAbsolutePath
+        val permissionCmd =
+          if (osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
+          else "chmod u+x " + z3AbsPath
+        Runtime.getRuntime.exec(permissionCmd)
+        return z3.getAbsolutePath
+      }
+    }
     val z3Source = Channels.newChannel(resource)
     val z3Temp = {
       if (osName.contains("windows")) {

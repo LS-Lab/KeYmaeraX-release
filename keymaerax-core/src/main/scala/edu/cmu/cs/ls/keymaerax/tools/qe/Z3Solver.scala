@@ -34,11 +34,14 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   private var queryIndex = 0
 
   /** The expected version and hash code */
-  private val version :: hash :: Nil =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream("/z3/VERSION")).getLines().toList
+  private val version :: hash :: Nil = {
+    val resource = getClass.getResourceAsStream("/z3/VERSION")
+    if (resource != null) scala.io.Source.fromInputStream(resource).getLines().toList
+    else "-1" :: "-1" :: Nil //@note ignore version check if KeYmaera X jar does not ship Z3
+  }
 
   /** Lightweight check that we are communicating with Z3 in the expected version and build hash. */
-  insist({
+  insist(version == "-1" && hash == "-1" || {
     val versionOutput = runZ3(z3Path + " -version", -1)
     versionOutput.startsWith("Z3 version " + version) && versionOutput.endsWith(hash)
   }, "Z3 not of the expected version and build hash")

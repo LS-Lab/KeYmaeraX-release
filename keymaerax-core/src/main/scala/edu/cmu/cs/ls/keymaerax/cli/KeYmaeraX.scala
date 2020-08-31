@@ -64,13 +64,18 @@ object KeYmaeraX {
     //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
     options.get('mode) match {
       case Some(Modes.GRADE) =>
+        print("Initializing prover...")
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
+        println("done")
+        print("Grading...")
         AssessmentProver.grade(options, usage)
+        println("done")
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
       case Some(Modes.SETUP) =>
         println("Initializing lemma cache...")
+        initializeBackend(options, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
       case Some(Modes.STRIPHINTS) =>
@@ -82,13 +87,7 @@ object KeYmaeraX {
 
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
   def initializeProver(options: OptionMap, usage: String): Unit = {
-    options.getOrElse('tool, "z3") match {
-      case Tools.MATHEMATICA => initMathematica(options, usage)
-      case Tools.WOLFRAMENGINE => initWolframEngine(options, usage)
-      case Tools.WOLFRAMSCRIPT => initWolframScript(options, usage)
-      case Tools.Z3 => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
-    }
+    initializeBackend(options, usage)
 
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
@@ -97,6 +96,17 @@ object KeYmaeraX {
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
+  }
+
+  /** Initializes the backend solvers. */
+  def initializeBackend(options: OptionMap, usage: String): Unit = {
+    options.getOrElse('tool, "z3") match {
+      case Tools.MATHEMATICA => initMathematica(options, usage)
+      case Tools.WOLFRAMENGINE => initWolframEngine(options, usage)
+      case Tools.WOLFRAMSCRIPT => initWolframScript(options, usage)
+      case Tools.Z3 => initZ3(options)
+      case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
+    }
   }
 
   /** Shuts down the backend solver and invariant generator. */
@@ -133,6 +143,9 @@ object KeYmaeraX {
       case "-prove" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('mode -> Modes.PROVE, 'in -> value), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
+      case "-grade" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.GRADE, 'in -> value), tail, usage)
+        else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-savept" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('ptOut -> value), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
