@@ -975,9 +975,8 @@ object AssessmentProver {
   }
 
   private def printJSONGrades(grades: List[(Submission.Prompt, Double)], out: OutputStream): Unit = {
-    import spray.json.DefaultJsonProtocol._
-    import Submission.GradeJsonFormat._
-    out.write(grades.toJson.compactPrint.getBytes("UTF-8"))
+    val jsonGrades = JsObject("scores" -> JsObject(grades.map({ case (p, s) => p.id.toString -> JsNumber(s) }).toMap))
+    out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }
 
   /** Converts list of `expected` subgoals and list of `actual` subgoals into a formula,
