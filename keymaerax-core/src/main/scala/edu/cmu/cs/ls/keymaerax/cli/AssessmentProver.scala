@@ -806,7 +806,7 @@ object AssessmentProver {
     if (parsedProblems.exists(_._2._2.nonEmpty)) {
       // report parse errors
       reportParseErrors(parsedProblems, msgStream)
-      val allGrades = parsedProblems.flatMap({ case (_, (prompts, _)) => prompts.map({ case (p, _) => p -> 0.0 }) })
+      val allGrades = parsedProblems.flatMap({ case (_, (prompts, _)) => prompts.map({ case (p, _) => p -> -1.0 }) })
       printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (prompts, _)) =>
