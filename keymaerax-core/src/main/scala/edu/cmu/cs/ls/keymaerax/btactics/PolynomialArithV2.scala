@@ -307,7 +307,7 @@ object PolynomialArithV2Helpers {
   }
   def anyArgify(ax: DerivedAxiomInfo): ProvableSig = anyArgify(ax.provable)
 
-  val equalReflex = anyArgify(Ax.equalReflexive.provable)
+  lazy val equalReflex = anyArgify(Ax.equalReflexive.provable)
   val spat = "s_(||)".asTerm
   def equalReflex(t: Term) : ProvableSig = equalReflex(USubst(Seq(SubstitutionPair(spat, t))))
 
@@ -396,11 +396,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   val constLd = constR("ld_")
   val constRn = constR("rn_")
   val constRd = constR("rd_")
-  val coefficientTimesPrv = anyArgify(Ax.coefficientTimesPrv)
-  val coefficientPlusPrv = anyArgify(Ax.coefficientPlusPrv)
-  val coefficientNegPrv = anyArgify(Ax.coefficientNegPrv)
+  lazy val coefficientTimesPrv = anyArgify(Ax.coefficientTimesPrv)
+  lazy val coefficientPlusPrv = anyArgify(Ax.coefficientPlusPrv)
+  lazy val coefficientNegPrv = anyArgify(Ax.coefficientNegPrv)
 
-  val coefficientBigDecimalPrv = anyArgify(Ax.coefficientBigDecimalPrv)
+  lazy val coefficientBigDecimalPrv = anyArgify(Ax.coefficientBigDecimalPrv)
 
   /**
   * prv: lhs = rhs
@@ -534,14 +534,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  val identityTimes = anyArgify(Ax.identityTimes)
-  val timesIdentity = anyArgify(Ax.timesIdentity)
-  val divideIdentity = anyArgify(Ax.divideIdentity)
+  lazy val identityTimes = anyArgify(Ax.identityTimes)
+  lazy val timesIdentity = anyArgify(Ax.timesIdentity)
+  lazy val divideIdentity = anyArgify(Ax.divideIdentity)
 
-  val plusTimes = anyArgify(Ax.plusTimes)
-  val negTimes = anyArgify(Ax.negTimes)
+  lazy val plusTimes = anyArgify(Ax.plusTimes)
+  lazy val negTimes = anyArgify(Ax.negTimes)
 
-  val powerLemma = anyArgify(Ax.powerLemma)
+  lazy val powerLemma = anyArgify(Ax.powerLemma)
   private def mkConstN(s: String, i: Int) = s + i.toString + "_"
   private def mkConst(s: String, i: Int) = FuncOf(Function(mkConstN(s, i), None, Unit, Real), Nothing)
 
@@ -553,15 +553,15 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * ->
     * l*r=c*xs
     * */
-  val monomialTimesLemma = anyArgify(Ax.monomialTimesLemma.provable)
+  lazy val monomialTimesLemma = anyArgify(Ax.monomialTimesLemma.provable)
 
-  val timesPowersBoth = anyArgify(Ax.timesPowersBoth.provable)
+  lazy val timesPowersBoth = anyArgify(Ax.timesPowersBoth.provable)
 
-  val timesPowersLeft = anyArgify(Ax.timesPowersLeft.provable)
+  lazy val timesPowersLeft = anyArgify(Ax.timesPowersLeft.provable)
 
-  val timesPowersRight = anyArgify(Ax.timesPowersRight.provable)
-  val timesPowers1Right = anyArgify(Ax.timesPowers1Right.provable)
-  val timesPowers1Left = anyArgify(Ax.timesPowers1Left.provable)
+  lazy val timesPowersRight = anyArgify(Ax.timesPowersRight.provable)
+  lazy val timesPowers1Right = anyArgify(Ax.timesPowers1Right.provable)
+  lazy val timesPowers1Left = anyArgify(Ax.timesPowers1Left.provable)
 
   val constF = anyR("f_")
   val constX = anyR("x_")
@@ -789,102 +789,102 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  val zez = anyArgify(Ax.zez.provable)
+  lazy val zez = anyArgify(Ax.zez.provable)
 
-  val emptySprout = anyArgify(Ax.emptySprout.provable)
+  lazy val emptySprout = anyArgify(Ax.emptySprout.provable)
 
   // Lemmas for insert (i.e., add monomial)
 
   // @todo: should these be constructed more systematically?! e.g., define common subformulas only once. would make the code more robust...
-  val branch2Left  = anyArgify(Ax.branch2Left .provable)
-  val branch2Value = anyArgify(Ax.branch2Value.provable)
-  val branch2Right = anyArgify(Ax.branch2Right.provable)
+  lazy val branch2Left  = anyArgify(Ax.branch2Left .provable)
+  lazy val branch2Value = anyArgify(Ax.branch2Value.provable)
+  lazy val branch2Right = anyArgify(Ax.branch2Right.provable)
 
   /** @note for the Left case, could actually just use [[branch2Left]] */
-  val branch2GrowLeft =  anyArgify(Ax.branch2GrowLeft.provable)
-  val branch2GrowRight = anyArgify(Ax.branch2GrowRight.provable)
+  lazy val branch2GrowLeft =  anyArgify(Ax.branch2GrowLeft.provable)
+  lazy val branch2GrowRight = anyArgify(Ax.branch2GrowRight.provable)
 
-  val branch3Left = anyArgify(Ax.branch3Left.provable)
-  val branch3Value1 = anyArgify(Ax.branch3Value1.provable)
-  val branch3Mid =    anyArgify(Ax.branch3Mid.provable)
-  val branch3Value2 = anyArgify(Ax.branch3Value2.provable)
-  val branch3Right =  anyArgify(Ax.branch3Right.provable)
+  lazy val branch3Left = anyArgify(Ax.branch3Left.provable)
+  lazy val branch3Value1 = anyArgify(Ax.branch3Value1.provable)
+  lazy val branch3Mid =    anyArgify(Ax.branch3Mid.provable)
+  lazy val branch3Value2 = anyArgify(Ax.branch3Value2.provable)
+  lazy val branch3Right =  anyArgify(Ax.branch3Right.provable)
 
-  val branch3GrowLeft = anyArgify(Ax.branch3GrowLeft.provable)
+  lazy val branch3GrowLeft = anyArgify(Ax.branch3GrowLeft.provable)
 
-  val branch3GrowMid = anyArgify(Ax.branch3GrowMid.provable)
-  val branch3GrowRight = anyArgify(Ax.branch3GrowRight.provable)
+  lazy val branch3GrowMid = anyArgify(Ax.branch3GrowMid.provable)
+  lazy val branch3GrowRight = anyArgify(Ax.branch3GrowRight.provable)
 
   // Lemmas for Add
-  val plusEmpty = anyArgify(Ax.plusEmpty.provable)
-  val plusBranch2 = anyArgify(Ax.plusBranch2.provable)
-  val plusBranch3 = anyArgify(Ax.plusBranch3.provable)
+  lazy val plusEmpty = anyArgify(Ax.plusEmpty.provable)
+  lazy val plusBranch2 = anyArgify(Ax.plusBranch2.provable)
+  lazy val plusBranch3 = anyArgify(Ax.plusBranch3.provable)
 
   // Lemmas for Minus
-  val minusEmpty = anyArgify(Ax.minusEmpty.provable)
-  val minusBranch2 = anyArgify(Ax.minusBranch2.provable)
-  val minusBranch3 = anyArgify(Ax.minusBranch3.provable)
+  lazy val minusEmpty = anyArgify(Ax.minusEmpty.provable)
+  lazy val minusBranch2 = anyArgify(Ax.minusBranch2.provable)
+  lazy val minusBranch3 = anyArgify(Ax.minusBranch3.provable)
 
   // Lemmas for Minus Monomial
-  val plusMinus = anyArgify(Ax.plusMinus.provable)
+  lazy val plusMinus = anyArgify(Ax.plusMinus.provable)
 
   // Lemmas for Times Monomial
-  val monTimesZero = anyArgify(Ax.monTimesZero.provable)
-  val monTimesBranch2 = anyArgify(Ax.monTimesBranch2.provable)
-  val monTimesBranch3 = anyArgify(Ax.monTimesBranch3.provable)
+  lazy val monTimesZero = anyArgify(Ax.monTimesZero.provable)
+  lazy val monTimesBranch2 = anyArgify(Ax.monTimesBranch2.provable)
+  lazy val monTimesBranch3 = anyArgify(Ax.monTimesBranch3.provable)
 
   // Lemmas for Times
-  val timesEmpty = anyArgify(Ax.timesEmpty.provable)
-  val timesBranch2 = anyArgify(Ax.timesBranch2.provable)
-  val timesBranch3 = anyArgify(Ax.timesBranch3.provable)
+  lazy val timesEmpty = anyArgify(Ax.timesEmpty.provable)
+  lazy val timesBranch2 = anyArgify(Ax.timesBranch2.provable)
+  lazy val timesBranch3 = anyArgify(Ax.timesBranch3.provable)
 
   // Lemmas for Power
-  val powerZero = anyArgify(Ax.powerZero.provable)
-  val powerOne = anyArgify(Ax.powerOne.provable)
-  val powerEven = anyArgify(Ax.powerEven.provable)
-  val powerOdd = anyArgify(Ax.powerOdd.provable)
-  val powerPoly = anyArgify(Ax.powerPoly.provable)
+  lazy val powerZero = anyArgify(Ax.powerZero.provable)
+  lazy val powerOne = anyArgify(Ax.powerOne.provable)
+  lazy val powerEven = anyArgify(Ax.powerEven.provable)
+  lazy val powerOdd = anyArgify(Ax.powerOdd.provable)
+  lazy val powerPoly = anyArgify(Ax.powerPoly.provable)
 
   // Lemmas for division
-  val divideNumber = anyArgify(Ax.divideNumber.provable)
-  val divideRat = anyArgify(Ax.divideRat.provable)
-  val divideNeg = anyArgify(Ax.divideNeg.provable)
+  lazy val divideNumber = anyArgify(Ax.divideNumber.provable)
+  lazy val divideRat = anyArgify(Ax.divideRat.provable)
+  lazy val divideNeg = anyArgify(Ax.divideNeg.provable)
 
   // Lemmas for negation
-  val negateEmpty = anyArgify(Ax.negateEmpty.provable)
-  val negateBranch2 = anyArgify(Ax.negateBranch2.provable)
-  val negateBranch3 = anyArgify(Ax.negateBranch3.provable)
+  lazy val negateEmpty = anyArgify(Ax.negateEmpty.provable)
+  lazy val negateBranch2 = anyArgify(Ax.negateBranch2.provable)
+  lazy val negateBranch3 = anyArgify(Ax.negateBranch3.provable)
 
 
   // Lemmas for normalization
-  val normalizeCoeff0 = anyArgify(Ax.normalizeCoeff0.provable)
-  val normalizeCoeff1 = anyArgify(Ax.normalizeCoeff1.provable)
+  lazy val normalizeCoeff0 = anyArgify(Ax.normalizeCoeff0.provable)
+  lazy val normalizeCoeff1 = anyArgify(Ax.normalizeCoeff1.provable)
 
-  val normalizeMonom0 = anyArgify(Ax.normalizeMonom0.provable)
-  val normalizeMonomCS = anyArgify(Ax.normalizeMonomCS.provable)
-  val normalizeMonomNCS = anyArgify(Ax.normalizeMonomNCS.provable)
+  lazy val normalizeMonom0 = anyArgify(Ax.normalizeMonom0.provable)
+  lazy val normalizeMonomCS = anyArgify(Ax.normalizeMonomCS.provable)
+  lazy val normalizeMonomNCS = anyArgify(Ax.normalizeMonomNCS.provable)
 
-  val normalizePowers1V = anyArgify(Ax.normalizePowers1V.provable)
-  val normalizePowers1R = anyArgify(Ax.normalizePowers1R.provable)
-  val normalizePowersC1 = anyArgify(Ax.normalizePowersC1.provable)
-  val normalizePowersCV = anyArgify(Ax.normalizePowersCV.provable)
-  val normalizePowersCP = anyArgify(Ax.normalizePowersCP.provable)
-  val normalizePowersRV = anyArgify(Ax.normalizePowersRV.provable)
-  val normalizePowersRP = anyArgify(Ax.normalizePowersRP.provable)
+  lazy val normalizePowers1V = anyArgify(Ax.normalizePowers1V.provable)
+  lazy val normalizePowers1R = anyArgify(Ax.normalizePowers1R.provable)
+  lazy val normalizePowersC1 = anyArgify(Ax.normalizePowersC1.provable)
+  lazy val normalizePowersCV = anyArgify(Ax.normalizePowersCV.provable)
+  lazy val normalizePowersCP = anyArgify(Ax.normalizePowersCP.provable)
+  lazy val normalizePowersRV = anyArgify(Ax.normalizePowersRV.provable)
+  lazy val normalizePowersRP = anyArgify(Ax.normalizePowersRP.provable)
 
-  val normalizeBranch2 = anyArgify(Ax.normalizeBranch2.provable)
-  val normalizeBranch3 = anyArgify(Ax.normalizeBranch3.provable)
+  lazy val normalizeBranch2 = anyArgify(Ax.normalizeBranch2.provable)
+  lazy val normalizeBranch3 = anyArgify(Ax.normalizeBranch3.provable)
 
-  val reassocRight0 = anyArgify(Ax.reassocRight0.provable)
-  val reassocRightPlus = anyArgify(Ax.reassocRightPlus.provable)
-  val reassocLeft0RightConst = anyArgify(Ax.reassocLeft0RightConst.provable)
-  val reassocRightConst = anyArgify(Ax.reassocRightConst.provable)
+  lazy val reassocRight0 = anyArgify(Ax.reassocRight0.provable)
+  lazy val reassocRightPlus = anyArgify(Ax.reassocRightPlus.provable)
+  lazy val reassocLeft0RightConst = anyArgify(Ax.reassocLeft0RightConst.provable)
+  lazy val reassocRightConst = anyArgify(Ax.reassocRightConst.provable)
 
   // lemmas to prove equality
-  val equalityBySubtraction = anyArgify(Ax.equalityBySubtraction.provable)
+  lazy val equalityBySubtraction = anyArgify(Ax.equalityBySubtraction.provable)
 
   // Lemmas for partition
-  val partition2 = anyArgify(Ax.partition2.provable)
+  lazy val partition2 = anyArgify(Ax.partition2.provable)
 
   // Lemmas for splitting coefficients
   @inline
@@ -893,11 +893,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   def splitCoefficientNumericCondition(n: Term, d: Term, n1: Term, d1: Term, n2: Term, d2: Term) =
     And(Equal(Times(Times(n, d1), d2), Times(d, Plus(Times(d1, n2), Times(d2, n1)))), And(nz(d), And(nz(d1), nz(d2))))
 
-  val splitCoefficient = anyArgify(Ax.splitCoefficient.provable)
-  val splitMonomial = anyArgify(Ax.splitMonomial.provable)
-  val splitEmpty  = anyArgify(Ax.splitEmpty .provable)
-  val splitBranch2  = anyArgify(Ax.splitBranch2 .provable)
-  val splitBranch3  = anyArgify(Ax.splitBranch3 .provable)
+  lazy val splitCoefficient = anyArgify(Ax.splitCoefficient.provable)
+  lazy val splitMonomial = anyArgify(Ax.splitMonomial.provable)
+  lazy val splitEmpty  = anyArgify(Ax.splitEmpty .provable)
+  lazy val splitBranch2  = anyArgify(Ax.splitBranch2 .provable)
+  lazy val splitBranch3  = anyArgify(Ax.splitBranch3 .provable)
 
 
   /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
@@ -959,7 +959,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   final case class UnknownPolynomialImplementationException(other: Polynomial) extends
     RuntimeException("only TreePolynomials are supported, but got " + other)
 
-  val equalReflexive = Ax.equalReflexive.provable
+  lazy val equalReflexive = Ax.equalReflexive.provable
 
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
@@ -1602,8 +1602,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   /** trust that wellformedness (wf) properties of [[SparsePowerProduct]] are maintained */
   private def wfPowerProduct(seq: Seq[(Term, Int)]) = SparsePowerProduct(seq)
 
-  val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
-  val varLemma = anyArgify(Ax.varLemma.provable)
+  lazy val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
+  lazy val varLemma = anyArgify(Ax.varLemma.provable)
   def Var(term: Term) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, 1))), None), Empty(None),
       Some(varLemma(substAny("v_", term))))
@@ -1611,8 +1611,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, power))), None), Empty(None),
       Some(useDirectly(varPowerLemma, Seq(("v_", term), ("n_", Number(power))), Seq())))
 
-  val constLemma = anyArgify(Ax.constLemma.provable)
-  val rationalLemma = anyArgify(Ax.rationalLemma.provable)
+  lazy val constLemma = anyArgify(Ax.constLemma.provable)
+  lazy val rationalLemma = anyArgify(Ax.rationalLemma.provable)
   def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(num, denom, None), wfPowerProduct(Seq()), None), Empty(None),
       Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
@@ -1682,7 +1682,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   def normalize(term: Term) : ProvableSig = ofTerm(term).prettyRepresentation
 
-  private val eqNormalize = Ax.eqNormalize.provable
+  lazy private val eqNormalize = Ax.eqNormalize.provable
   val normalizeAt : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
@@ -1696,16 +1696,16 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
   }
 
-  private val ratFormAdd = anyArgify(Ax.ratFormAdd.provable)
-  private val ratFormMinus = anyArgify(Ax.ratFormMinus.provable)
-  private val ratFormTimes = anyArgify(Ax.ratFormTimes.provable)
-  private val ratFormDivide = anyArgify(Ax.ratFormDivide.provable)
-  private val ratFormPower = anyArgify(Ax.ratFormPower.provable)
-  private val ratFormNeg = anyArgify(Ax.ratFormNeg.provable)
+  lazy private val ratFormAdd = anyArgify(Ax.ratFormAdd.provable)
+  lazy private val ratFormMinus = anyArgify(Ax.ratFormMinus.provable)
+  lazy private val ratFormTimes = anyArgify(Ax.ratFormTimes.provable)
+  lazy private val ratFormDivide = anyArgify(Ax.ratFormDivide.provable)
+  lazy private val ratFormPower = anyArgify(Ax.ratFormPower.provable)
+  lazy private val ratFormNeg = anyArgify(Ax.ratFormNeg.provable)
 
-  private val powerDivide0 = anyArgify(Ax.powerDivide0.provable)
-  private val powerDivideEven = anyArgify(Ax.powerDivideEven.provable)
-  private val powerDivideOdd = anyArgify(Ax.powerDivideOdd.provable)
+  lazy private val powerDivide0 = anyArgify(Ax.powerDivide0.provable)
+  lazy private val powerDivideEven = anyArgify(Ax.powerDivideEven.provable)
+  lazy private val powerDivideOdd = anyArgify(Ax.powerDivideOdd.provable)
 
   private def provePowerDivideLemma(n: Int, maxCache: Int, cache: Int=>ProvableSig) : ProvableSig = n match {
     case n if n <= maxCache => cache(n)
