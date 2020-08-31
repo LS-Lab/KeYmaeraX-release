@@ -68,7 +68,7 @@ object KeYmaeraX {
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         println("done")
         print("Grading...")
-        AssessmentProver.grade(options, usage)
+        AssessmentProver.grade(options, System.out, System.out, usage)
         println("done")
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
