@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{OutputStream, PrintStream}
+import java.io.{BufferedOutputStream, FileOutputStream, OutputStream, PrintStream, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
@@ -748,8 +748,36 @@ object AssessmentProver {
     *
     * @param options The prover options:
     *                - 'in (mandatory) identifies the file to grade
-    *                - 'msgOut (mandatory) message output stream
-    *                - 'resultOut (mandatory) result output stream
+    *                - 'res (optional) result file
+    *                - 'msg (optional) message file
+    */
+  def grade(options: OptionMap, usage: String): Unit = {
+    val inputFileName = options('in).toString
+    val resultFileName = options.getOrElse('res, inputFileName + ".res.json").toString
+    val msgFileName = options.getOrElse('msg, inputFileName + ".log").toString
+    val resultOut = new BufferedOutputStream(new FileOutputStream(resultFileName))
+    val msgOut = new BufferedOutputStream(new FileOutputStream(msgFileName))
+    try {
+      grade(options, msgOut, resultOut, usage)
+    } catch {
+      case ex: Throwable =>
+        msgOut.flush()
+        val writer = new PrintWriter(msgOut)
+        ex.printStackTrace(writer)
+        writer.flush()
+        writer.close()
+    } finally {
+      msgOut.flush()
+      msgOut.close()
+      resultOut.flush()
+      resultOut.close()
+    }
+  }
+
+  /** Grades a submission.
+    *
+    * @param options The prover options:
+    *                - 'in (mandatory) identifies the file to grade
     */
   def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
     require(options.contains('in), usage)
