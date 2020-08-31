@@ -64,12 +64,8 @@ object KeYmaeraX {
     //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
     options.get('mode) match {
       case Some(Modes.GRADE) =>
-        print("Initializing prover...")
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
-        println("done")
-        print("Grading...")
         AssessmentProver.grade(options, System.out, System.out, usage)
-        println("done")
       case Some(Modes.PROVE) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         KeYmaeraXProofChecker.prove(options, usage)
