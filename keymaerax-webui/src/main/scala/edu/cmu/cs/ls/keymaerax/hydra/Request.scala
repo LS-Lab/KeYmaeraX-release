@@ -118,7 +118,8 @@ abstract class UserRequest(userId: String, dataPermission: String => Boolean) ex
 }
 
 /** A proof session storing information between requests. */
-case class ProofSession(proofId: String, invGenerator: Generator[GenProduct], defs: KeYmaeraXArchiveParser.Declaration)
+case class ProofSession(proofId: String, invGenerator: Generator[GenProduct], var invSupplier: Generator[GenProduct],
+                        defs: KeYmaeraXArchiveParser.Declaration)
 
 abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: String)
   //@todo faster query for model user
@@ -1504,8 +1505,8 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
-          session += proofId -> ProofSession(proofId, generator, problem.defs)
-          TactixInit.invSupplier = generator //@todo should not store invariant generator globally for all users
+          session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
+          //TactixInit.invSupplier = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }
@@ -2211,6 +2212,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
               val tacticString = fullExpr(sequent)
+              //@note sequential interpreter may change TactixInit.invSupplier:
+              // see [[updateProofSessionDefinitions]] for proofSession.invSupplier update when tactic is finished
+              TactixInit.invSupplier = proofSession.invSupplier
               // elaborate all variables to function/predicate symbols, but never auto-expand
               val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator), proofSession.defs, expandAll=false)
 
@@ -2916,7 +2920,8 @@ object RequestHelper {
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
     }).toMap
-    proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs))
+    proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),
+      invSupplier = TactixInit.invSupplier)
   }
 
 }
