@@ -47,7 +47,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      }
 
      $scope.uploadContent = function(startProof) {
-       var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
+       var url =  "user/" + sessionService.getUser() + "/modelupload/" + encodeURIComponent($scope.model.modelName);
        upload(url, $scope.model.content,
          startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0);
      }
