@@ -221,11 +221,11 @@ object AssessmentProver {
         case Modes.PROP => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
-              case (hf: Formula, ef: Formula) => run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(hf, ef))), prop))
+              case (hf: Formula, ef: Formula) => run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(hf, ef))), prop & done))
               case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
             }
           case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
-            run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), prop))
+            run(() => prove(Sequent(IndexedSeq(), IndexedSeq(Equiv(h, e))), prop & done))
           case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
         }
         case Modes.DI_PREMISE =>
