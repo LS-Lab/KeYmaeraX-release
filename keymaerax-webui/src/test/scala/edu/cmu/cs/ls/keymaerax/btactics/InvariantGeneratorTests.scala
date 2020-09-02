@@ -38,18 +38,20 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   "Loop invariants" should "be generated from pre and postconditions" in withTactics {
     InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
-      contain theSameElementsAs(("[x:=x+1;]x>=2".asFormula, None) :: ("x>=1".asFormula, None) ::Nil)
+      contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("[x:=x+1;]x>=2".asFormula, None) :: ("[x:=x+1;]x>=2 & x>=1".asFormula, None) :: Nil)
   }
 
-  it should "not include implied postcondition conjuncts if it has a counterexample tool" in withMathematica { _ =>
-    //@todo also filter last element (post)?
+  it should "not include equivalent postcondition conjuncts if it has a counterexample tool" in withMathematica { _ =>
+    //@todo some conjuncts are redundant
     InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2 & y>=3)".asSequent, SuccPos(0)).toList should
-      contain theSameElementsAs(("x>=3".asFormula, None) :: ("x>=3&y>=3".asFormula, None) :: ("x>=1&x>=2&y>=3".asFormula, None) ::Nil)
+      contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3".asFormula, None) ::
+      ("x>=1 & x>=2 & y>=3 & x>=3".asFormula, None) :: ("x>=1 & x>=2 & y>=3".asFormula, None) :: Nil)
   }
 
   it should "not fail on missing counterexample tool" in withTactics {
     InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2)".asSequent, SuccPos(0)).toList should
-      contain theSameElementsAs(("x>=3".asFormula, None) :: ("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3&x>=1&x>=2".asFormula, None) :: ("x>=1&x>=2".asFormula, None) ::Nil)
+      contain theSameElementsInOrderAs(("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3".asFormula, None) ::
+        ("x>=1&x>=2&x>=3".asFormula, None) :: ("x>=1&x>=2".asFormula, None) :: Nil)
   }
 
   it should "not fail on non-FOL postcondition" in withMathematica { _ =>
@@ -337,6 +339,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with default DiffSat strategy, not using depedencies" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    // No Subsystem Splitting
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
@@ -373,6 +376,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with default DiffSat strategy, no cut minimize" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    // No Auto-Reduction
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
@@ -409,6 +413,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with DiffSat strategy without heuristics" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    // No Heuristic Search
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
@@ -445,6 +450,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with default DiffSat strategy, and prove without proof hints" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    // No Proof Hints
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
@@ -481,6 +487,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with default DiffSat strategy and strict method timeouts" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    // No Budget Redistribution
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",

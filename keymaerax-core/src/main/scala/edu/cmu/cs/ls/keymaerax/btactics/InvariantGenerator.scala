@@ -167,18 +167,19 @@ object InvariantGenerator extends Logging {
       val combined = anteConjuncts.
         filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
       val anteInvCandidate = combined.reduceRightOption(And).getOrElse(True)
+      //@todo pre -> post counterexample is not strong enough to indicate what to filter (need to consult loop body).
       if (ToolProvider.cexTool().isDefined) {
-        postConjuncts.filter(fml => fml.isFOL && TactixLibrary.findCounterExample(Imply(anteInvCandidate, fml)).isDefined) match {
+        //@note used to be Imply, now filter only duplicate information
+        postConjuncts.filter(fml => fml.isFOL && TactixLibrary.findCounterExample(Equiv(anteInvCandidate, fml)).isDefined) match {
           case Nil => combined
-          case missingPost => combined ++ missingPost
+          case missingPost => missingPost ++ combined
         }
-      } else combined ++ postConjuncts
+      } else postConjuncts ++ combined
     }
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).distinct.map(_ -> None).toStream.distinct
       case Some(Box(l: Loop, post))      =>
         val combined = combinedAssumptions(l, post).distinct
-        //@todo also filter post that is now added at the end?
         (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
