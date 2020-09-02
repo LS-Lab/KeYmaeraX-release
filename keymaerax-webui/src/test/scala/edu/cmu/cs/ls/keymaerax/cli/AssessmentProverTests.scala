@@ -707,7 +707,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle empty text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some(""))
+    runGrader(problems, 0, "", Some(""), -1.0)
   }
 
   it should "handle n/a text answers" in withZ3 { _ =>
@@ -717,13 +717,13 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle non-parseable text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some("x*v+"))
+    runGrader(problems, 0, "", Some("x*v+"), -1.0)
   }
 
   /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
     * grading information currently missing from problems. Requires `lfcpsgrader.conf` to map `chapterLabel` to
     * an absolute file path pointing to the quiz tex source. */
-  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String, uniformAnswer: Option[String] = None): Unit = {
+  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String, uniformAnswer: Option[String] = None, expectedFailScore: Double = 0.0): Unit = {
     val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
     val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer)
     val json = {
@@ -761,7 +761,7 @@ class AssessmentProverTests extends TacticTestBase {
 
     results.foreach({ case (prompt, grade) =>
       expected.find(_._1.id == prompt.id) match {
-        case Some((_, answeredCorrectly)) => (if (parsingSucceeded && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe 0.0) withClue randClue
+        case Some((_, answeredCorrectly)) => (if (parsingSucceeded && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue randClue
         case None => fail("Grade for unknown question " + prompt.id + "; " + randClue)
       }
     })
@@ -953,7 +953,10 @@ class AssessmentProverTests extends TacticTestBase {
       noAnswers.foreach(t => {
         println("Testing no-sol: " + t)
         val tic = System.nanoTime()
-        grader.check(t) shouldNot be ('left)
+        grader.check(t) match {
+          case Left(l) => l shouldNot be ('proved)
+          case Right(_) => //
+        }
         println("Successfully rejected no-sol")
         val toc = System.nanoTime()
         (toc - tic) should be <= 5000000000L
