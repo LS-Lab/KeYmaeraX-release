@@ -790,7 +790,7 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
-    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, prompts) =>
+    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, prompts) =>
       val parsedAnswers = prompts.map(p => try {
           Left(p -> toAnswerArtifact(p))
         } catch {
@@ -810,12 +810,12 @@ object AssessmentProver {
       printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (prompts, _)) =>
-        msgStream.println("Grading section " + p.title)
+        msgStream.println("Grading section " + p.number + " " + p.title)
 
         val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
         val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
         val mergedPrompts = prompts.zipWithIndex.map({
-          case ((p@Submission.SinglePrompt(_, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
+          case ((p@Submission.SinglePrompt(_, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
             val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
             if (backRefs.nonEmpty) {
               val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
@@ -827,7 +827,7 @@ object AssessmentProver {
 
         val graders = mergedPrompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
         val grades = graders.map({ case (prompt, (grader, answerArtifact)) =>
-          msgStream.print("Grading question " + prompt.id + "...")
+          msgStream.print("Grading question " + p.number + "." + prompt.number + " (" + prompt.id + ")...")
           answerArtifact match {
             case Some(a) => grader.check(a) match {
               case Left(p) =>
@@ -848,7 +848,7 @@ object AssessmentProver {
               (prompt, 0.0)
           }
         })
-        msgStream.println("Done grading section " + p.title)
+        msgStream.println("Done grading section " + p.number + " " + p.title)
         grades
       })
       printJSONGrades(allGrades, resultOut)
@@ -952,23 +952,27 @@ object AssessmentProver {
     case _ => throw new IllegalArgumentException("Unexpected prompt type " + p.getClass.getSimpleName)
   }
 
+  /** Prints a question identifier for the `i`-th question `prompt` in section `problem`. */
+  private def questionIdentifier(problem: Submission.Problem, prompt: Submission.Prompt): String =
+    problem.number + "." + prompt.number + " (" + prompt.id + ")"
+
   private def reportParseErrors(parsedProblems: List[(Submission.Problem, (List[(Submission.Prompt, Option[Artifact])],
                                                                            List[(Submission.Prompt, Throwable)]))],
                                 msgStream: PrintStream): Unit = {
     parsedProblems.foreach({ case (problem, (prompts, errors)) =>
-      msgStream.print("Parsing problem '" + problem.title + "':")
+      msgStream.print("Parsing problem '" + problem.number + " " + problem.title + "':")
       if (errors.nonEmpty) {
         msgStream.println("FAILED")
-        val skipped = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, "Grading question " + p.id + "...SKIPPED") })
+        val skipped = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, "Grading question " + questionIdentifier(problem, p) + "...SKIPPED") })
         val failed = errors.map({
-          case (prompt, ex: ParseException) => (prompt, "Grading question " + prompt.id + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.toString + "\n----------")
-          case (prompt, ex) => (prompt, "Grading question " + prompt.id + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.getMessage + "\n----------")
+          case (prompt, ex: ParseException) => (prompt, "Grading question " + questionIdentifier(problem, prompt) + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.toString + "\n----------")
+          case (prompt, ex) => (prompt, "Grading question " + questionIdentifier(problem, prompt) + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.getMessage + "\n----------")
         })
         msgStream.println((skipped ++ failed).sortBy({ case (p, _) => p.id }).map(_._2).mkString("\n"))
       } else {
         msgStream.println("PASSED")
         msgStream.println(prompts.map({ case (p, _) =>
-          "Grading question " + p.id + "...SKIPPED"
+          "Grading question " + questionIdentifier(problem, p) + "...SKIPPED"
         }).mkString("\n"))
       }
     })

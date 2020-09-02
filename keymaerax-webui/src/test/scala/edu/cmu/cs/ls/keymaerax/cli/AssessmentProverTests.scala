@@ -612,18 +612,18 @@ class AssessmentProverTests extends TacticTestBase {
     val s = Source.fromInputStream(getClass.getResourceAsStream("/edu/cmu/cs/ls/keymaerax/cli/submission.json")).mkString
     import Submission.SubmissionJsonFormat._
     s.parseJson.convertTo[Submission.Chapter] shouldBe Submission.Chapter(-1, "", List(
-      Submission.Problem(25053, "Problem block 1 (2 questions)", "prob::1", List(
-        Submission.SinglePrompt(141, "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
+      Submission.Problem(25053, "2", "Problem block 1 (2 questions)", "prob::1", List(
+        Submission.SinglePrompt(141, "a", "\\ask", 2.0, List(Submission.TextAnswer(142, "prt-sol::1::a1", "\\sol",
           Some(Submission.GraderCookie(500, "\\algog", "valueeq()")), "3", """\kyxline"2""""))),
-        Submission.SinglePrompt(143, "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
+        Submission.SinglePrompt(143, "b", "\\ask", 1.0, List(Submission.TextAnswer(144, "prt-sol::2::a1", "\\sol",
           Some(Submission.GraderCookie(501, "\\algog", "polyeq()")), "x^2>=+0", """\kyxline"x^2>=0"""")))
       )),
-      Submission.Problem(25160, "Problem block 3 (single question)", "prob::3", List(
-        Submission.SinglePrompt(147, "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
+      Submission.Problem(25160, "-1", "Problem block 3 (single question)", "prob::3", List(
+        Submission.SinglePrompt(147, "a", "\\ask", 1.0, List(Submission.TextAnswer(148, "prt::block3::a1", "\\sol",
           None, "1,2", """${1,2,3}$""")))
       )),
-      Submission.Problem(25057, "Problem block in second segment", "prob::4", List(
-        Submission.SinglePrompt(149, "\\onechoice", 1.0, List(
+      Submission.Problem(25057, "5", "Problem block in second segment", "prob::4", List(
+        Submission.SinglePrompt(149, "a", "\\onechoice", 1.0, List(
           Submission.ChoiceAnswer(150, "prt::seg2block::a1", "\\choice*", None, "Sound", isSelected=true),
           Submission.ChoiceAnswer(151, "prt::seg2block::a2", "\\choice", None, "Unsound", isSelected=false)))
       ))
@@ -744,12 +744,14 @@ class AssessmentProverTests extends TacticTestBase {
     print(msgs)
     val msgLines = msgs.lines.toList
 
+    val qr = """Grading question.*?\((\d+)\)""".r("id")
+
     val parsingSucceeded = !msgLines.exists(s => s.startsWith("Parsing problem") && s.endsWith("FAILED"))
     expected.foreach(e =>
-      msgLines.find(_.startsWith("Grading question " + e._1.id)) match {
+      msgLines.find(qr.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id)) match {
         case Some(t) =>
-          if (parsingSucceeded) t should startWith ("Grading question " + e._1.id + "..." + (if (e._2) "PASSED" else "FAILED")) withClue randClue
-          else t should startWith ("Grading question " + e._1.id + "...SKIPPED") withClue randClue
+          if (parsingSucceeded) t.split("""\.\.\.""")(1) should startWith (if (e._2) "PASSED" else "FAILED") withClue randClue
+          else t.split("""\.\.\.""")(1) should startWith ("SKIPPED") withClue randClue
         case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
       }
     )
@@ -910,14 +912,15 @@ class AssessmentProverTests extends TacticTestBase {
           }
           (answers, answerIncorrectly)
       }
+      def charNumber(i: Int): String = (i+'a'.toInt).toChar.toString
       q match {
-        case _: AskQuestion => (Submission.SinglePrompt(i, "\\ask", 1.0, answers), !answerIncorrectly)
-        case _: AnyChoiceQuestion => (Submission.SinglePrompt(i, "\\anychoice", 1.0, answers), !answerIncorrectly)
-        case _: OneChoiceQuestion => (Submission.SinglePrompt(i, "\\onechoice", 1.0, answers), !answerIncorrectly)
-        case _: AskTFQuestion => (Submission.SinglePrompt(i, "\\asktf", 1.0, answers), !answerIncorrectly)
+        case _: AskQuestion => (Submission.SinglePrompt(i, charNumber(i), "\\ask", 1.0, answers), !answerIncorrectly)
+        case _: AnyChoiceQuestion => (Submission.SinglePrompt(i,charNumber(i), "\\anychoice", 1.0, answers), !answerIncorrectly)
+        case _: OneChoiceQuestion => (Submission.SinglePrompt(i, charNumber(i), "\\onechoice", 1.0, answers), !answerIncorrectly)
+        case _: AskTFQuestion => (Submission.SinglePrompt(i, charNumber(i), "\\asktf", 1.0, answers), !answerIncorrectly)
         case _: MultiAskQuestion =>
           //@note name of main question and mark as multiprompt to adjust correct=true/false according to other subquestions
-          (Submission.MultiPrompt(Submission.SinglePrompt(i, "\\ask", 1.0, answers), Map.empty), !answerIncorrectly)
+          (Submission.MultiPrompt(Submission.SinglePrompt(i, charNumber(i), "\\ask", 1.0, answers), Map.empty), !answerIncorrectly)
       }
     }
 
@@ -931,7 +934,7 @@ class AssessmentProverTests extends TacticTestBase {
           //@todo so far all multiprompts only use \\%-1, but will need to inspect multiprompt graders to know which other prompts to consult when adjusting correct=true/false
           (main, answeredCorrectly && answers(i-1)._2)
       })
-      (Submission.Problem(1000 + i, p.name.getOrElse(""), "", answers.map(_._1)), adjustedAnswers)
+      (Submission.Problem(1000 + i, i.toString, p.name.getOrElse(""), "", answers.map(_._1)), adjustedAnswers)
     }
     val submittedProblems = problems.zipWithIndex.map((createProblem _).tupled)
     (Submission.Chapter(1, chapterLabel, submittedProblems.map(_._1)),
