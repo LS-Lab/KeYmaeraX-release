@@ -442,11 +442,11 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Explanation check" should "accept long enough answers" in {
-    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("An elaborate answer"))).left.value.conclusion shouldBe "==> 19>=20/2 <-> true".asSequent
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("An elaborate answer"))).left.value.conclusion shouldBe "==> 19>=3/10*20".asSequent
   }
 
   it should "not accept too short answers" in {
-    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Too short"))).left.value.conclusion shouldBe "==> false".asSequent
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Short"))).right.value shouldBe "Please elaborate your explanation"
   }
 
   "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
@@ -756,7 +756,6 @@ class AssessmentProverTests extends TacticTestBase {
       }
     )
     val results = {
-      import DefaultJsonProtocol._
       import Submission.GradeJsonFormat._
       resultsStream.toString.parseJson.convertTo[List[(Submission.Prompt, Double)]]
     }
@@ -902,7 +901,7 @@ class AssessmentProverTests extends TacticTestBase {
         case Some("") =>
           (createAnswer(grader, correct(0)).map({
             case ChoiceAnswer(id, label, name, grader, text, _) =>
-              (ChoiceAnswer(id, label, name, grader, text, isSelected=false))
+              ChoiceAnswer(id, label, name, grader, text, isSelected=false)
           }), true)
         case _ =>
           val answerIncorrectly = !r.rand.nextBoolean() && incorrect.nonEmpty

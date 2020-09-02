@@ -316,7 +316,11 @@ object AssessmentProver {
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
               val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
-              run(() => bigdecimalQE(GreaterEqual(Number(hsTrimmed.length), Divide(Number(esTrimmed.length), Number(2)))))
+              val goal = GreaterEqual(Number(hsTrimmed.length), Times(Divide(Number(3),Number(10)), Number(esTrimmed.length)))
+              val pr = bigdecimalQE(goal)
+              if (pr.isProved) run(() => KeYmaeraXProofChecker(5000)(
+                useAt(Lemma(pr, Nil), PosInExpr(0::Nil))(1) & closeT)(Sequent(IndexedSeq(), IndexedSeq(goal))))
+              else Right("Please elaborate your explanation")
             case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.longHintString)
           }
