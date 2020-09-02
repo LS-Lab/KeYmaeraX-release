@@ -11,20 +11,16 @@ object Submission {
   object GradeJsonFormat {
     import spray.json.DefaultJsonProtocol._
 
-    private val ID = "prompt_id"
-    private val MAX_POINTS = "prompt_max_points"
+    private val SCORES = "scores"
 
-    implicit val promptJsonFormat: JsonFormat[Submission.Prompt] = new RootJsonFormat[Submission.Prompt] {
-      override def write(prompt: Submission.Prompt): JsValue = {
-        JsObject(
-          ID -> prompt.id.toJson,
-          MAX_POINTS -> prompt.points.toJson
-        )
-      }
-      override def read(json: JsValue): Submission.Prompt = {
-        json.asJsObject.getFields(ID, MAX_POINTS) match {
-          case JsNumber(id) :: JsNumber(points) :: Nil => SinglePrompt(id.toLong, "", points.toDouble, Nil)
-        }
+    implicit val scoreJsonFormat: JsonFormat[List[(Submission.Prompt, Double)]] = new RootJsonFormat[List[(Submission.Prompt, Double)]] {
+      override def write(scores: List[(Submission.Prompt, Double)]): JsValue =
+        JsObject(SCORES -> JsObject(scores.map({ case (p, s) => p.id.toString -> s.toJson }).toMap))
+
+      override def read(json: JsValue): List[(Prompt, Double)] = {
+        json.asJsObject.fields(SCORES).asJsObject.fields.map({ case (k, JsNumber(v)) =>
+          (SinglePrompt(k.toLong, "", -1.0, Nil), v.toDouble)
+        }).toList
       }
     }
   }
