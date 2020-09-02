@@ -22,7 +22,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      /** Model data */
      $scope.model = {
        modelName: undefined,
-       content: undefined
+       content: 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
