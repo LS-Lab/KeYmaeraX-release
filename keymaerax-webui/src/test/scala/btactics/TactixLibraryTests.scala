@@ -623,6 +623,16 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(problem2, master()) shouldBe 'proved
   }
 
+  it should "try the postcondition" in withQE { _ =>
+    val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=y; } }*]x<=y".asFormula
+    proveBy(fml, master()) shouldBe 'proved
+  }
+
+  it should "try the preocondition" in withQE { _ =>
+    val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=x-1/(y-x); } }*]x<=y".asFormula
+    proveBy(fml, master()) shouldBe 'proved
+  }
+
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)

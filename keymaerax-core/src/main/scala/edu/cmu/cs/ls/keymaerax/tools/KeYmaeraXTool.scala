@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
@@ -58,7 +58,7 @@ object KeYmaeraXTool extends Tool {
 
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true))))))
     TactixInit.invSupplier = generator
 
     initialized = true
