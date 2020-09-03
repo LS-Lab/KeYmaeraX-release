@@ -913,7 +913,7 @@ object AssessmentProver {
       case "\\ask" =>
         require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
         p.answers.map({
-          case a@Submission.TextAnswer(_, _, name, _, answer, expected) =>
+          case Submission.TextAnswer(_, _, name, _, answer, expected) =>
             if (answer.trim.isEmpty) Some(TextArtifact(None))
             else name match {
               case "\\sol" =>

@@ -709,7 +709,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle empty text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some("", false), 0.0)
+    runGrader(problems, 0, "", Some("", true), 0.0)
   }
 
   it should "handle n/a text answers" in withZ3 { _ =>

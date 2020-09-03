@@ -159,8 +159,10 @@ object QuizExtractor {
 
     /** Translates a `\solfin` body string (content of lstlisting) into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {
-      val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER)).mkString(",")
-      val artifact = artifactsFromKyxString(answerStrings)
+      val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER).trim).toList
+      val artifact =
+        if (answerStrings.isEmpty || answerStrings.exists(_.isEmpty)) TextArtifact(None)
+        else artifactsFromKyxString(answerStrings.mkString(","))
       var i = 0
       val question = SOLFIN_ANSWER_EXTRACTOR.replaceAllIn(s, _ => { i = i+1; Regex.quoteReplacement(ARG_PLACEHOLDER + i) }).trim
       (question, artifact)
