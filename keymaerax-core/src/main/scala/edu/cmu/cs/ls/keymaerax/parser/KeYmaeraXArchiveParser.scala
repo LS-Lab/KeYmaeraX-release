@@ -369,7 +369,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
       parse(tokenStream, stripped, parseTactics).map(e =>
-        if (e.defs.decls.isEmpty) e.copy(defs = declarationsOf(e.model)) else e)
+        if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
     } catch {
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
