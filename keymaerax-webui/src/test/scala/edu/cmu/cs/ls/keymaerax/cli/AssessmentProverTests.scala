@@ -709,7 +709,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle empty text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some(""), -1.0)
+    runGrader(problems, 0, "", Some(""), 0.0)
   }
 
   it should "handle n/a text answers" in withZ3 { _ =>
@@ -719,7 +719,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle non-parseable text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some("x*v+"), -1.0)
+    runGrader(problems, 0, "", Some("x*v+"), 0.0)
   }
 
   /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
