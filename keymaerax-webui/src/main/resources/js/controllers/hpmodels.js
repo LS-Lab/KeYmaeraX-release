@@ -1,22 +1,3 @@
-angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
-  function ($scope, $http, $route, $uibModal, Models, sessionService, spinnerService) {
-    $scope.userId = sessionService.getUser();
-
-    $scope.addModelFromFormula = function(modelName, formula) {
-      $http.post('/user/' + $scope.userId + '/modelFromFormula/' + modelName, formula)
-          .success(function(data) {
-            if(data.errorThrown) {
-              console.log("Could not create the model because " + JSON.stringify(data))
-              showCaughtErrorMessage($uibModal, data, "Model Creation Failed")
-            }
-            else {
-              $route.reload();
-            }
-          })
-    }
-  }
-);
-
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
