@@ -18,9 +18,9 @@ object Submission {
         JsObject(SCORES -> JsObject(scores.map({ case (p, s) => p.id.toString -> s.toJson }).toMap))
 
       override def read(json: JsValue): List[(Prompt, Double)] = {
-        json.asJsObject.fields(SCORES).asJsObject.fields.map({ case (k, JsNumber(v)) =>
+        json.asJsObject.fields(SCORES).asJsObject.fields.toList.map({ case (k, JsNumber(v)) =>
           (SinglePrompt(k.toLong, "-1", "", -1.0, Nil), v.toDouble)
-        }).toList
+        })
       }
     }
   }

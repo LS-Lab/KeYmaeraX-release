@@ -790,6 +790,7 @@ class AssessmentProverTests extends TacticTestBase {
       resultsStream.toString.parseJson.convertTo[List[(Submission.Prompt, Double)]]
     }
 
+    results.map(_._1.id.toString) shouldBe sorted
     results.foreach({ case (prompt, grade) =>
       expected.find(_._1.id == prompt.id) match {
         case Some((p, answeredCorrectly)) => p.name match {
