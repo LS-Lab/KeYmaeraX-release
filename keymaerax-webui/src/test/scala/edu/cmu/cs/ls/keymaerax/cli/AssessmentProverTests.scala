@@ -709,25 +709,26 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "handle empty text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some(""), 0.0)
+    runGrader(problems, 0, "", Some("", false), 0.0)
   }
 
   it should "handle n/a text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some("n/a"))
+    runGrader(problems, 0, "", Some("n/a", true))
   }
 
   it should "handle non-parseable text answers" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex")).toList
-    runGrader(problems, 0, "", Some("x*v+"), 0.0)
+    runGrader(problems, 0, "", Some("x*v+", false), 0.0)
   }
 
-  /** Runs the autograder on the `i`th random submission (list of `problems`); uses `chapterLabel` to look up the
-    * grading information currently missing from problems. Requires `lfcpsgrader.conf` to map `chapterLabel` to
-    * an absolute file path pointing to the quiz tex source. */
-  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String, uniformAnswer: Option[String] = None, expectedFailScore: Double = 0.0): Unit = {
+  /** Runs the autograder on the `i`th random submission (list of `problems`), unless `uniformAnswer`
+    * (text+whether parseable) is provided; uses `chapterLabel` to look up the grading information
+    * currently missing from problems. */
+  private def runGrader(problems: List[Problem], i: Int, chapterLabel: String, uniformAnswer: Option[(String, Boolean)] = None,
+                        expectedFailScore: Double = 0.0): Unit = {
     val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
-    val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer)
+    val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer.map(_._1))
     val json = {
       import Submission.SubmissionJsonFormat._
       submission.toJson
@@ -746,17 +747,44 @@ class AssessmentProverTests extends TacticTestBase {
     print(msgs)
     val msgLines = msgs.lines.toList
 
-    val qr = """.*?\((\d+)\)""".r("id")
+    val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
+    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED))""".r("id")
 
-    val parsingSucceeded = !msgLines.exists(s => s.startsWith("Parsing problem") && s.endsWith("FAILED"))
-    expected.foreach(e =>
-      msgLines.find(qr.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id)) match {
-        case Some(t) =>
-          if (parsingSucceeded) t.split("""\.\.\.""")(1) should startWith (if (e._2) "PASS" else "FAILED") withClue randClue
-          else t.split("""\.\.\.""")(1) should startWith ("SKIPPED") withClue randClue
-        case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
+    expected.foreach(e => {
+      val parseFailedLines = msgLines.filter(parseFailed.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id))
+      val gradedLines = msgLines.filter(graded.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id))
+      parseFailedLines.intersect(gradedLines) shouldBe 'empty
+      uniformAnswer match {
+        case None | Some((_, true)) =>
+          parseFailedLines shouldBe 'empty
+          gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue randClue)
+        case _ =>
+          e._1.name match {
+            case "\\ask" => e._1.answers.map({
+              case Submission.TextAnswer(_, _, name, _, _, expected) => name match {
+                case "\\sol" =>
+                  val trimmed = if (expected.trim.startsWith("{")) expected.stripPrefix("{").stripSuffix("}").trim else expected.trim
+                  if (trimmed.startsWith(QuizExtractor.AskQuestion.KYXLINE) || trimmed.startsWith(QuizExtractor.AskQuestion.MATH_DELIM)) {
+                    //parsed answer
+                    gradedLines shouldBe 'empty
+                    parseFailedLines.size shouldBe 1
+                  } else {
+                    //text answer
+                    parseFailedLines shouldBe 'empty
+                    gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue e._1.id + " " + randClue)
+                  }
+                case "\\solfinask" =>
+                  //parsed answer
+                  gradedLines shouldBe 'empty
+                  parseFailedLines.size shouldBe 1
+              }
+            })
+            case _ =>
+              // other question types do not have free-text input
+              gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue randClue)
+          }
       }
-    )
+    })
     val results = {
       import Submission.GradeJsonFormat._
       resultsStream.toString.parseJson.convertTo[List[(Submission.Prompt, Double)]]
@@ -764,7 +792,12 @@ class AssessmentProverTests extends TacticTestBase {
 
     results.foreach({ case (prompt, grade) =>
       expected.find(_._1.id == prompt.id) match {
-        case Some((_, answeredCorrectly)) => (if (parsingSucceeded && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue randClue
+        case Some((p, answeredCorrectly)) => p.name match {
+          case "\\ask" =>
+            (if (uniformAnswer.forall(_._2) && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
+          case _ =>
+            (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
+        }
         case None => fail("Grade for unknown question " + prompt.id + "; " + randClue)
       }
     })
@@ -891,13 +924,21 @@ class AssessmentProverTests extends TacticTestBase {
             case SequentArtifact(_) => ""
             case MultiArtifact(a) => correctString(a.last)
           }
+          def answeredIncorrectly(grader: Option[Submission.GraderCookie], expected: Artifact, answer: String): Boolean = {
+            grader match {
+              case Some(Submission.GraderCookie(_, _, method)) if method.startsWith(AskGrader.Modes.EXPLANATION_CHECK) =>
+                //@note replicate explanation check grader
+                answer.trim.length < 3.0/10*correctString(expected).length
+              case _ => answer.trim.isEmpty || !correctString(expected).contains(answer)
+            }
+          }
           createAnswer(grader, correct(0)) match {
             case TextAnswer(id, label, name, grader, _, expected) :: Nil =>
               if (name == "\\sol") {
-                (TextAnswer(id, label, name, grader, s, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
+                (TextAnswer(id, label, name, grader, s, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else if (name == "\\solfinask") {
                 val answer = expected.replaceAll("<%%.+?%%>", "<%%" + s + "%%>")
-                (TextAnswer(id, label, name, grader, answer, expected) :: Nil, s.trim.isEmpty || !correctString(correct(0)).contains(s))
+                (TextAnswer(id, label, name, grader, answer, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else throw new IllegalArgumentException("Unknown text answer type " + name)
           }
         case Some("") =>

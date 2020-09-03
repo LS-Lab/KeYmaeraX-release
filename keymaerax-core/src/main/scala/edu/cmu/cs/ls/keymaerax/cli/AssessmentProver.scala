@@ -389,7 +389,10 @@ object AssessmentProver {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
       //@note assumed sorted from earliest to main artifact
       case MultiArtifact(as) =>
-        grader.mode match {
+        if (as.size < 1+earlier.size) {
+          //@note some earlier answers not parseable
+          Right("Ignored explanation for a wrong answer")
+        } else grader.mode match {
           case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
             val mainArtifact = as.last
             grader.args.get("ifCorrect") match {
@@ -806,70 +809,102 @@ object AssessmentProver {
       })
     })
 
+    val skipGradingOnParseError = options.get('skipGradingOnParseError).exists(_.toString.toBoolean)
+
     val msgStream = new PrintStream(msgOut, true)
-    if (parsedProblems.exists(_._2._2.nonEmpty)) {
+    if (skipGradingOnParseError && parsedProblems.exists(_._2._2.nonEmpty)) {
       // report parse errors
-      reportParseErrors(parsedProblems, msgStream)
+      reportParseSummary(parsedProblems, msgStream)
       val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> 0.0 })) })
       printJSONGrades(allGrades, resultOut)
     } else {
-      val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({ case (p, (prompts, _)) =>
-        msgStream.println(p.number + " " + p.title)
+      val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({
+        case (p, (gradablePrompts, unparseablePrompts)) =>
+          msgStream.println(p.number + " " + p.title)
 
-        val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
-        val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
-        val mergedPrompts = prompts.zipWithIndex.map({
-          case ((p@Submission.SinglePrompt(_, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
-            val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
-            if (backRefs.nonEmpty) {
-              val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
-              val answers = answer.map(a => MultiArtifact(backRefs.flatMap(j => prompts(i + j)._2) :+ a))
-              (mergedPrompt, answers)
-            }else (p, answer)
-          case (q, _) => q
-        })
+          val allPromptArtifacts = (gradablePrompts ++ unparseablePrompts.map({ case (p, _) => (p, None) })).sortBy(_._1.id)
+          val graders = extractGraders(allPromptArtifacts)
+          val errors = unparseablePrompts.map({ case (prompt, ex: Throwable) => (prompt, Right(ex)) })
+          val all = (graders ++ errors).sortBy({ case (p, _) => p.id })
+          val grades = all.map({
+            case (prompt, Left((grader, Some(answerArtifact)))) => runGrader(p, prompt, Some(answerArtifact), grader, msgStream)
+            case (prompt, Right(ex)) => reportParseError(p, prompt, ex, msgStream)
+          })
 
-        val graders = mergedPrompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
-        val grades = graders.map({ case (prompt, (grader, answerArtifact)) =>
-          msgStream.print(p.number + "." + prompt.number + " (" + prompt.id + ")...")
-          answerArtifact match {
-            case Some(a) => grader.check(a) match {
-              case Left(p) =>
-                if (p.isProved) {
-                  msgStream.println("PASS")
-                  (prompt, prompt.points)
-                } else {
-                  msgStream.println("FAILED")
-                  (prompt, 0.0)
-                }
-              case Right(hint) =>
-                msgStream.print("FAILED")
-                if (hint.trim.nonEmpty) msgStream.println(":" + hint)
-                else msgStream.println("")
-                (prompt, 0.0)
-            }
-            case None =>
-              msgStream.println("FAILED") // Missing answer
-              (prompt, 0.0)
+          val feedback = graders.headOption.flatMap({ case (_, Left((g, _))) => g match {
+            case AskGrader(_, args, _) => args.get("feedback")
+            case MultiAskGrader(main: AskGrader, _) => main.args.get("feedback")
+            //@todo feedback for other problems?
+            case _ => None
+          } })
+          val percentage = (100*grades.count(_._2 > 0.0))/grades.size
+          msgStream.println(p.number + ") Sum " + percentage + "%")
+          feedback match {
+            case Some(s) => msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
+            case None => // no feedback annotated
           }
-        })
-        val feedback = graders.headOption.flatMap({ case (_, (g, _)) => g match {
-          case AskGrader(_, args, _) => args.get("feedback")
-          case MultiAskGrader(main: AskGrader, _) => main.args.get("feedback")
-          //@todo feedback for other problems?
-          case _ => None
-        } })
-        val percentage = (100*grades.count(_._2 > 0.0))/grades.size
-        msgStream.println(p.number + ") Sum " + percentage + "%")
-        feedback match {
-          case Some(s) => msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
-          case None => // no feedback annotated
-        }
-        (p, feedback, grades)
+          (p, feedback, grades)
       })
       //printSummaryFeedback(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     }
+  }
+
+  /** Extracts graders from prompts, assumes that all prompts (even unparseable ones) are present in this list.
+    * Returns graders for prompts that have answers. */
+  private def extractGraders(prompts: List[(Submission.Prompt, Option[Artifact])]): List[(Submission.Prompt, Either[(Grader, Option[Artifact]), Throwable])] = {
+    val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
+    val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
+    val mergedPrompts = prompts.zipWithIndex.map({
+      case ((p@Submission.SinglePrompt(_, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
+        val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
+        if (backRefs.nonEmpty) {
+          val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
+          val answers = answer.map(a => MultiArtifact(backRefs.flatMap(j => prompts(i + j)._2) :+ a))
+          (mergedPrompt, answers)
+        } else (p, answer)
+      case (q, _) => q
+    })
+
+    mergedPrompts.filter(_._2.isDefined).map({ case (prompt, answerArtifact) => (prompt, Left(toGrader(prompt), answerArtifact)) })
+  }
+
+  private def runGrader(p: Submission.Problem, prompt: Submission.Prompt, answerArtifact: Option[Artifact],
+                        grader: Grader, msgStream: PrintStream): (Submission.Prompt, Double) = {
+    msgStream.print(p.number + "." + prompt.number + " (" + prompt.id + ")...")
+    answerArtifact match {
+      case Some(a) => grader.check(a) match {
+        case Left(p) =>
+          if (p.isProved) {
+            msgStream.println("PASS")
+            (prompt, prompt.points)
+          } else {
+            msgStream.println("FAILED")
+            (prompt, 0.0)
+          }
+        case Right(hint) =>
+          msgStream.print("FAILED")
+          if (hint.trim.nonEmpty) msgStream.println(":" + hint)
+          else msgStream.println("")
+          (prompt, 0.0)
+      }
+      case None =>
+        msgStream.println("FAILED") // Missing answer
+        (prompt, 0.0)
+    }
+  }
+
+  private def reportParseError(problem: Submission.Problem, prompt: Submission.Prompt, ex: Throwable,
+                               msgStream: PrintStream): (Submission.Prompt, Double) = {
+    ex match {
+      case ex: ParseException =>
+        msgStream.println(questionIdentifier(problem, prompt) + "...PARSE ERROR\n  " +
+          ex.toString.replaceAllLiterally("\n", "\n  "))
+      case _ =>
+        msgStream.println(questionIdentifier(problem, prompt) + "...PARSE ERROR\n" +
+          ex.getMessage.replaceAllLiterally("\n", "\n  "))
+    }
+    (prompt, 0.0)
   }
 
   /** Translates a submission prompt into a grader artifact (None if question not answered). */
@@ -878,7 +913,7 @@ object AssessmentProver {
       case "\\ask" =>
         require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
         p.answers.map({
-          case Submission.TextAnswer(_, _, name, _, answer, expected) =>
+          case a@Submission.TextAnswer(_, _, name, _, answer, expected) =>
             if (answer.trim.isEmpty) Some(TextArtifact(None))
             else name match {
               case "\\sol" =>
@@ -973,26 +1008,29 @@ object AssessmentProver {
   private def questionIdentifier(problem: Submission.Problem, prompt: Submission.Prompt): String =
     problem.number + "." + prompt.number + " (" + prompt.id + ")"
 
-  private def reportParseErrors(parsedProblems: List[(Submission.Problem, (List[(Submission.Prompt, Option[Artifact])],
-                                                                           List[(Submission.Prompt, Throwable)]))],
+  private def reportParseSummary(parsedProblems: List[(Submission.Problem, (List[(Submission.Prompt, Option[Artifact])],
+                                                                            List[(Submission.Prompt, Throwable)]))],
                                 msgStream: PrintStream): Unit = {
+    msgStream.println("Parsing Summary")
+    msgStream.println("---------------")
     parsedProblems.foreach({ case (problem, (prompts, errors)) =>
-      msgStream.print("Parsing problem '" + problem.number + " " + problem.title + "':")
+      msgStream.println(problem.number + " " + problem.title)
       if (errors.nonEmpty) {
-        msgStream.println("FAILED")
-        val skipped = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, "Grading question " + questionIdentifier(problem, p) + "...SKIPPED") })
+        val passed = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, questionIdentifier(problem, p) + "...OK") })
         val failed = errors.map({
-          case (prompt, ex: ParseException) => (prompt, "Grading question " + questionIdentifier(problem, prompt) + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.toString + "\n----------")
-          case (prompt, ex) => (prompt, "Grading question " + questionIdentifier(problem, prompt) + "...SKIPPED\n" + prompt.answers.map(a => "Question label '" + a.label + "'").mkString(",") + "\n" + ex.getMessage + "\n----------")
+          case (prompt, ex: ParseException) => (prompt, questionIdentifier(problem, prompt) + "...ERROR\n" + ex.toString + "\n----------")
+          case (prompt, ex) => (prompt, questionIdentifier(problem, prompt) + "...ERROR\n" + ex.getMessage + "\n----------")
         })
-        msgStream.println((skipped ++ failed).sortBy({ case (p, _) => p.id }).map(_._2).mkString("\n"))
+        msgStream.println((passed ++ failed).sortBy({ case (p, _) => p.id }).map(_._2).mkString("\n"))
       } else {
-        msgStream.println("PASSED")
         msgStream.println(prompts.map({ case (p, _) =>
-          "Grading question " + questionIdentifier(problem, p) + "...SKIPPED"
+          questionIdentifier(problem, p) + "...OK"
         }).mkString("\n"))
       }
     })
+    msgStream.println("------------")
+    msgStream.println("Parsing Done")
+    msgStream.println("------------")
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
