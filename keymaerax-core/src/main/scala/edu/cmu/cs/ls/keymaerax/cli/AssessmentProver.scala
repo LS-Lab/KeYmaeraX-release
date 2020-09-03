@@ -33,6 +33,15 @@ import scala.util.{Failure, Success, Try}
 /** Assesses dL terms and formulas for equality, equivalence, implication etc. with restricted automation. */
 object AssessmentProver {
 
+  object Messages {
+    val BLANK = "BLANK"
+    val FAILED = "FAILED"
+    val PASS = "PASS"
+    val OK = "OK"
+    val PARSE_ERROR = "PARSE ERROR"
+    val INSPECT = "INSPECT"
+  }
+
   /** Assessment prover input artifacts (expressions, sequents etc.) */
   abstract class Artifact {
     def hintString: String
@@ -132,14 +141,17 @@ object AssessmentProver {
       val BELLE_PROOF: String = "prove"
     }
   }
+  case class SkipGrader(expected: Artifact, reason: String) extends Grader {
+    override def check(have: Artifact): Either[ProvableSig, String] = Right(reason)
+  }
   case class AskGrader(mode: Option[String], args: Map[String, String], expected: Artifact) extends Grader {
     /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
     override def check(have: Artifact): Either[ProvableSig, String] = {
       (have, expected) match {
-        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Right("Missing answer")
-        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Right("Missing answer")
-        case (ListExpressionArtifact(Nil), _) => return Right("Missing answer")
-        case (SequentArtifact(Nil), _) => return Right("Missing answer")
+        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Right(Messages.BLANK)
+        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Right(Messages.BLANK)
+        case (ListExpressionArtifact(Nil), _) => return Right(Messages.BLANK)
+        case (SequentArtifact(Nil), _) => return Right(Messages.BLANK)
         case (h: ExpressionArtifact, e: ExpressionArtifact) => e.expr match {
           case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
               if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
@@ -410,7 +422,7 @@ object AssessmentProver {
               case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
               case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
               case (TextArtifact(None), _) => return Right("Missing answer for prerequisite question")
-              case (_, TextArtifact(None)) => return Right("Missing answer")
+              case (_, TextArtifact(None)) => return Right(Messages.BLANK)
             })
             grader.check(mergedHave)
         }
@@ -419,7 +431,7 @@ object AssessmentProver {
 
   case class OneChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case ChoiceArtifact(Nil) => Right("Missing answer")
+      case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
         //@note correct if answering with any of the correctly marked solutions
         if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
@@ -428,7 +440,7 @@ object AssessmentProver {
   }
   case class AnyChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case ChoiceArtifact(Nil) => Right("Missing answer")
+      case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
         //@note correct if answering with exactly the correct yes/no pattern (modulo order)
         if (h.toSet == expected.selected.toSet) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
@@ -438,7 +450,7 @@ object AssessmentProver {
 
   case class AskTFGrader(expected: BoolArtifact) extends Grader {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
-      case BoolArtifact(None) => Right("Missing answer")
+      case BoolArtifact(None) => Right(Messages.BLANK)
       case BoolArtifact(Some(h)) =>
         val ef = if (expected.value.get) True else False
         val hf = if (h) True else False
@@ -739,11 +751,11 @@ object AssessmentProver {
       val postEquivLemmas = postEquivs.map({ case (k, v) => k -> v.map(e => e -> Lemma(proveBy(e, prop), Nil)) }).filter(_._2.forall(_._2.fact.isProved))
       succBoxes.flatMap({ case (Box(prg, fml), i) => postEquivLemmas.getOrElse(prg, List.empty).
         find({ case (Equiv(l, r), _) => l==fml || r==fml }).
-        map({ case (Equiv(l, _), pr) => DebuggingTactics.print("Using lemma") & useAt(pr, if (l == fml) PosInExpr(0::Nil) else PosInExpr(1::Nil))(Position(SuccPos(i)) ++ PosInExpr(1::Nil)) & DebuggingTactics.print("Used") }) }).
+        map({ case (Equiv(l, _), pr) => useAt(pr, if (l == fml) PosInExpr(0::Nil) else PosInExpr(1::Nil))(Position(SuccPos(i)) ++ PosInExpr(1::Nil)) }) }).
         reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }
-    KeYmaeraXProofChecker(5000)(DebuggingTactics.print("Start") & chase(1) & prop & OnAll(rephrasePost & prop) &
-      DebuggingTactics.done(""))(Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
+    KeYmaeraXProofChecker(5000)(chase(1) & prop & OnAll(rephrasePost & prop) & DebuggingTactics.done(""))(
+      Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
   }
 
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
@@ -880,20 +892,23 @@ object AssessmentProver {
       case Some(a) => grader.check(a) match {
         case Left(p) =>
           if (p.isProved) {
-            msgStream.println("PASS")
+            msgStream.println(Messages.PASS)
             (prompt, prompt.points)
           } else {
-            msgStream.println("FAILED")
+            msgStream.println(Messages.FAILED)
             (prompt, 0.0)
           }
         case Right(hint) =>
-          msgStream.print("FAILED")
-          if (hint.trim.nonEmpty) msgStream.println(":" + hint)
-          else msgStream.println("")
+          if (hint.nonEmpty && hint == hint.toUpperCase) msgStream.println(hint)
+          else {
+            msgStream.print(Messages.FAILED)
+            if (hint.trim.nonEmpty) msgStream.println(":" + hint)
+            else msgStream.println("")
+          }
           (prompt, 0.0)
       }
       case None =>
-        msgStream.println("FAILED") // Missing answer
+        msgStream.println(Messages.BLANK) // Missing answer
         (prompt, 0.0)
     }
   }
@@ -902,10 +917,10 @@ object AssessmentProver {
                                msgStream: PrintStream): (Submission.Prompt, Double) = {
     ex match {
       case ex: ParseException =>
-        msgStream.println(questionIdentifier(problem, prompt) + "...PARSE ERROR\n  " +
+        msgStream.println(questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n  " +
           ex.toString.replaceAllLiterally("\n", "\n  "))
       case _ =>
-        msgStream.println(questionIdentifier(problem, prompt) + "...PARSE ERROR\n" +
+        msgStream.println(questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n" +
           ex.getMessage.replaceAllLiterally("\n", "\n  "))
     }
     (prompt, 0.0)
@@ -981,31 +996,33 @@ object AssessmentProver {
         p.answers.map({
           case Submission.TextAnswer(_, _, _, grader, _, _) =>
             grader.map(g => QuizExtractor.AskQuestion.graderInfoFromString(g.method)) match {
-              case Some((g, args)) =>
-                toExpectedArtifact(p) match {
+              case Some((g, args)) => toExpectedArtifact(p) match {
                   case (Some(expected), a) => AskGrader(Some(g), args ++ a, expected)
-                  case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\ask prompt " + p.id)
+                  case (None, _) => SkipGrader(null, Messages.INSPECT)
                 }
-              case None => throw new IllegalArgumentException("Missing grader information for \\ask prompt " + p.id)
+              case None => toExpectedArtifact(p) match {
+                case (Some(expected), _) => SkipGrader(expected, Messages.INSPECT)
+                case (None, _) => SkipGrader(null, Messages.INSPECT)
+              }
             }
         }).head
       case "\\onechoice" =>
         toExpectedArtifact(p) match {
           case (Some(expected: ChoiceArtifact), _) => OneChoiceGrader(Map.empty, expected)
-          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\onechoice prompt " + p.id)
+          case (None, _) => SkipGrader(null, Messages.INSPECT)
         }
       case "\\anychoice" =>
         toExpectedArtifact(p) match {
           case (Some(expected: ChoiceArtifact), _) => AnyChoiceGrader(Map.empty, expected)
-          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\anychoice prompt " + p.id)
+          case (None, _) => SkipGrader(null, Messages.INSPECT)
         }
       case "\\asktf" =>
         toExpectedArtifact(p) match {
           case (Some(expected: BoolArtifact), _) => AskTFGrader(expected)
-          case (None, _) => throw new IllegalArgumentException("Missing expected solution for \\asktf prompt " + p.id)
+          case (None, _) => SkipGrader(null, Messages.INSPECT)
         }
     }
-    case _ => throw new IllegalArgumentException("Unexpected prompt type " + p.getClass.getSimpleName)
+    case _ => SkipGrader(null, Messages.INSPECT)
   }
 
   /** Prints a question identifier for the `i`-th question `prompt` in section `problem`. */
@@ -1020,15 +1037,15 @@ object AssessmentProver {
     parsedProblems.foreach({ case (problem, (prompts, errors)) =>
       msgStream.println(problem.number + " " + problem.title)
       if (errors.nonEmpty) {
-        val passed = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, questionIdentifier(problem, p) + "...OK") })
+        val passed = prompts.filter({ case (p, _) => !errors.exists(p == _._1) }).map({ case (p, _) => (p, questionIdentifier(problem, p) + "..." + Messages.OK) })
         val failed = errors.map({
-          case (prompt, ex: ParseException) => (prompt, questionIdentifier(problem, prompt) + "...ERROR\n" + ex.toString + "\n----------")
-          case (prompt, ex) => (prompt, questionIdentifier(problem, prompt) + "...ERROR\n" + ex.getMessage + "\n----------")
+          case (prompt, ex: ParseException) => (prompt, questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n" + ex.toString + "\n----------")
+          case (prompt, ex) => (prompt, questionIdentifier(problem, prompt) + "..." + Messages.PARSE_ERROR + "\n" + ex.getMessage + "\n----------")
         })
         msgStream.println((passed ++ failed).sortBy({ case (p, _) => p.id }).map(_._2).mkString("\n"))
       } else {
         msgStream.println(prompts.map({ case (p, _) =>
-          questionIdentifier(problem, p) + "...OK"
+          questionIdentifier(problem, p) + "..." + Messages.OK
         }).mkString("\n"))
       }
     })

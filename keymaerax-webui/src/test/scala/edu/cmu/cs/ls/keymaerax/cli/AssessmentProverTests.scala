@@ -456,7 +456,7 @@ class AssessmentProverTests extends TacticTestBase {
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
     val graders = anyChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(ChoiceArtifact(Nil)).right.value shouldBe "Missing answer"
+      _.check(ChoiceArtifact(Nil)).right.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -465,7 +465,7 @@ class AssessmentProverTests extends TacticTestBase {
     val oneChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[OneChoiceQuestion]))).toList
     val graders = oneChoiceProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(ChoiceArtifact(Nil)).right.value shouldBe "Missing answer"
+      _.check(ChoiceArtifact(Nil)).right.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -474,7 +474,7 @@ class AssessmentProverTests extends TacticTestBase {
     val asktfProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskTFQuestion]))).toList
     val graders = asktfProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(BoolArtifact(None)).right.value shouldBe "Missing answer"
+      _.check(BoolArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -483,10 +483,10 @@ class AssessmentProverTests extends TacticTestBase {
     val askProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskQuestion]))).toList
     val graders = askProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
     forEvery(Table("Grader", graders:_*)) {
-      _.check(TextArtifact(None)).right.value shouldBe "Missing answer"
+      _.check(TextArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
     }
     forEvery(Table("Grader", graders:_*)) {
-      _.check(TextArtifact(Some(""))).right.value shouldBe "Missing answer"
+      _.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
     }
   }
 
@@ -632,7 +632,11 @@ class AssessmentProverTests extends TacticTestBase {
     ))
   }
 
-  "Command line grader" should "grade random quiz 2 submissions" in withZ3 { _ =>
+  "Command line grader" should "grade quiz 4 submission" in withZ3 { _ =>
+    AssessmentProver.grade(Map('in -> ("/Users/smitsch/Documents/projects/keymaera/github/KeYmaeraX-Collab/KeYmaera4-Collab/keymaerax-webui/src/test/resources" + QUIZ_PATH + "/4/chapter_submission.json")), System.out, System.out, "")
+  }
+
+  it should "grade random quiz 2 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffeq") }
   }
@@ -748,7 +752,15 @@ class AssessmentProverTests extends TacticTestBase {
     val msgLines = msgs.lines.toList
 
     val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
-    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED))""".r("id")
+    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT))""".r("id")
+
+    def checkGradedLines(gradedLines: List[String], expectPass: Boolean) = {
+      gradedLines.loneElement.split("""\.\.\.""")(1) should (
+        if (expectPass) startWith (AssessmentProver.Messages.PASS)
+        else startWith (AssessmentProver.Messages.FAILED) or
+             startWith (AssessmentProver.Messages.BLANK) or
+             startWith (AssessmentProver.Messages.INSPECT)) withClue randClue
+    }
 
     expected.foreach(e => {
       val parseFailedLines = msgLines.filter(parseFailed.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id))
@@ -757,7 +769,7 @@ class AssessmentProverTests extends TacticTestBase {
       uniformAnswer match {
         case None | Some((_, true)) =>
           parseFailedLines shouldBe 'empty
-          gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue randClue)
+          checkGradedLines(gradedLines, e._2)
         case _ =>
           e._1.name match {
             case "\\ask" => e._1.answers.map({
@@ -771,7 +783,7 @@ class AssessmentProverTests extends TacticTestBase {
                   } else {
                     //text answer
                     parseFailedLines shouldBe 'empty
-                    gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue e._1.id + " " + randClue)
+                    checkGradedLines(gradedLines, e._2)
                   }
                 case "\\solfinask" =>
                   //parsed answer
@@ -781,7 +793,7 @@ class AssessmentProverTests extends TacticTestBase {
             })
             case _ =>
               // other question types do not have free-text input
-              gradedLines.foreach(_.split("""\.\.\.""")(1) should startWith(if (e._2) "PASS" else "FAILED") withClue randClue)
+              checkGradedLines(gradedLines, e._2)
           }
       }
     })
