@@ -817,6 +817,7 @@ object AssessmentProver {
       reportParseSummary(parsedProblems, msgStream)
       val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> 0.0 })) })
       printCSVGrades(allGrades, msgStream)
+      printGradeSummary(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({
@@ -848,6 +849,7 @@ object AssessmentProver {
       })
       //printSummaryFeedback(allGrades, msgStream)
       printCSVGrades(allGrades, msgStream)
+      printGradeSummary(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     }
   }
@@ -1035,10 +1037,20 @@ object AssessmentProver {
     msgStream.println("------------")
   }
 
+  private def printGradeSummary(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: PrintStream): Unit = {
+    out.println("-------------")
+    out.println("Score Summary")
+    val (correct, total) = grades.map({ case (_, _, pg) => (pg.count({ case (_, score) => score > 0.0 }), pg.size) }).unzip
+    out.println("Correct: " + correct.sum + "/" + total.sum)
+    out.println("Total score: " + grades.map({ case (_, _, pg) => pg.map({ case (_, score) => score }).sum }).sum)
+    out.println("-------------")
+  }
+
   private def printCSVGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: PrintStream): Unit = {
     val gradeStrings = grades.flatMap({ case (problem, _, pg) => pg.map({ case (prompt, score) =>
       questionIdentifier(problem, prompt) :: prompt.id.toString :: score.toString :: Nil }) })
-    out.println("Score Summary")
+    out.println("-----------")
+    out.println("Score Sheet")
     out.println(gradeStrings.map(_.mkString(",")).mkString("\n"))
   }
 
