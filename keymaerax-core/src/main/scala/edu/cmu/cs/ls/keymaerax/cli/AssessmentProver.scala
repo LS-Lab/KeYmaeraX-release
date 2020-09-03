@@ -816,6 +816,7 @@ object AssessmentProver {
       // report parse errors
       reportParseSummary(parsedProblems, msgStream)
       val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> 0.0 })) })
+      printCSVGrades(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({
@@ -846,6 +847,7 @@ object AssessmentProver {
           (p, feedback, grades)
       })
       //printSummaryFeedback(allGrades, msgStream)
+      printCSVGrades(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     }
   }
@@ -1031,6 +1033,13 @@ object AssessmentProver {
     msgStream.println("------------")
     msgStream.println("Parsing Done")
     msgStream.println("------------")
+  }
+
+  private def printCSVGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: PrintStream): Unit = {
+    val gradeStrings = grades.flatMap({ case (problem, _, pg) => pg.map({ case (prompt, score) =>
+      questionIdentifier(problem, prompt) :: prompt.id.toString :: score.toString :: Nil }) })
+    out.println("Score Summary")
+    out.println(gradeStrings.map(_.mkString(",")).mkString("\n"))
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
