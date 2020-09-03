@@ -126,11 +126,11 @@ class AssessmentProverTests extends TacticTestBase {
         |\begin{lstlisting}
         |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
         |\end{lstlisting}
-        |\algog{loop()}
+        |\algog{loop(feedback="3.4")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe
-          List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?\\%1; x:=x+1;}*@invariant(\\%2)]x>=0"),
+          List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?\\%1; x:=x+1;}*@invariant(\\%2)]x>=0", "feedback" -> "3.4"),
             ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
             List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
     }
@@ -187,13 +187,15 @@ class AssessmentProverTests extends TacticTestBase {
         |\nosol{$[8,9] \cup \lbrack -2,4)$}
         |\nosol{$\{5,6,7\}$}
         |\nosol{ }
-        |\algog{syneq()}
+        |\algog{syneq(feedback="A
+        |very long
+        |feedback.")}
         |\end{problem}""".stripMargin)) {
       case p :: Nil =>
         p.questions shouldBe List(
           AskQuestion(
             grader=Some("syneq"),
-            args=Map.empty,
+            args=Map("feedback" -> "A\nvery long\nfeedback."),
             expected=ExpressionArtifact("3"),
             testSols=List(
               ExpressionArtifact("3"),
@@ -744,13 +746,13 @@ class AssessmentProverTests extends TacticTestBase {
     print(msgs)
     val msgLines = msgs.lines.toList
 
-    val qr = """Grading question.*?\((\d+)\)""".r("id")
+    val qr = """.*?\((\d+)\)""".r("id")
 
     val parsingSucceeded = !msgLines.exists(s => s.startsWith("Parsing problem") && s.endsWith("FAILED"))
     expected.foreach(e =>
       msgLines.find(qr.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id)) match {
         case Some(t) =>
-          if (parsingSucceeded) t.split("""\.\.\.""")(1) should startWith (if (e._2) "PASSED" else "FAILED") withClue randClue
+          if (parsingSucceeded) t.split("""\.\.\.""")(1) should startWith (if (e._2) "PASS" else "FAILED") withClue randClue
           else t.split("""\.\.\.""")(1) should startWith ("SKIPPED") withClue randClue
         case _ => fail("Question " + e._1.id + " was not graded; " + randClue)
       }

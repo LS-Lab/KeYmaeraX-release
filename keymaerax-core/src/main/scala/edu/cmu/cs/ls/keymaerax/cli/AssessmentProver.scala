@@ -179,7 +179,7 @@ object AssessmentProver {
           case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) => Try(Left(valueEquality(h, e))).getOrElse(
             Right(if (h.size < e.size) "Too few values"
                   else if (h.size > e.size) "Too many values"
-                  else "Incorrect answer"))
+                  else ""))
           case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.POLY_EQ => (have, expected) match {
@@ -420,7 +420,7 @@ object AssessmentProver {
       case ChoiceArtifact(h) =>
         //@note correct if answering with any of the correctly marked solutions
         if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
-        else Right("Incorrect answer")
+        else Right("")
     }
   }
   case class AnyChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
@@ -429,7 +429,7 @@ object AssessmentProver {
       case ChoiceArtifact(h) =>
         //@note correct if answering with exactly the correct yes/no pattern (modulo order)
         if (h.toSet == expected.selected.toSet) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
-        else Right("Incorrect answer")
+        else Right("")
     }
   }
 
@@ -449,7 +449,7 @@ object AssessmentProver {
       case Success(p) => Left(p)
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
-      case Failure(_) => Right("Incorrect answer")
+      case Failure(_) => Right("")
     }
   }
 
@@ -740,7 +740,7 @@ object AssessmentProver {
         reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }
     KeYmaeraXProofChecker(5000)(DebuggingTactics.print("Start") & chase(1) & prop & OnAll(rephrasePost & prop) &
-      DebuggingTactics.done("Incorrect answer"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
+      DebuggingTactics.done(""))(Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
   }
 
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
@@ -810,11 +810,11 @@ object AssessmentProver {
     if (parsedProblems.exists(_._2._2.nonEmpty)) {
       // report parse errors
       reportParseErrors(parsedProblems, msgStream)
-      val allGrades = parsedProblems.flatMap({ case (_, (prompts, _)) => prompts.map({ case (p, _) => p -> -1.0 }) })
+      val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> -1.0 })) })
       printJSONGrades(allGrades, resultOut)
     } else {
-      val allGrades: List[(Submission.Prompt, Double)] = parsedProblems.flatMap({ case (p, (prompts, _)) =>
-        msgStream.println("Grading section " + p.number + " " + p.title)
+      val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({ case (p, (prompts, _)) =>
+        msgStream.println(p.number + " " + p.title)
 
         val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
         val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
@@ -831,30 +831,43 @@ object AssessmentProver {
 
         val graders = mergedPrompts.map({ case (prompt, answerArtifact) => (prompt, (toGrader(prompt), answerArtifact)) })
         val grades = graders.map({ case (prompt, (grader, answerArtifact)) =>
-          msgStream.print("Grading question " + p.number + "." + prompt.number + " (" + prompt.id + ")...")
+          msgStream.print(p.number + "." + prompt.number + " (" + prompt.id + ")...")
           answerArtifact match {
             case Some(a) => grader.check(a) match {
               case Left(p) =>
                 if (p.isProved) {
-                  msgStream.println("PASSED")
+                  msgStream.println("PASS")
                   (prompt, prompt.points)
                 } else {
-                  msgStream.println("FAILED:Incorrect answer")
+                  msgStream.println("FAILED")
                   (prompt, 0.0)
                 }
               case Right(hint) =>
-                msgStream.print("FAILED:")
-                msgStream.println(hint)
+                msgStream.print("FAILED")
+                if (hint.trim.nonEmpty) msgStream.println(":" + hint)
+                else msgStream.println("")
                 (prompt, 0.0)
             }
             case None =>
-              msgStream.println("FAILED:Missing answer")
+              msgStream.println("FAILED") // Missing answer
               (prompt, 0.0)
           }
         })
-        msgStream.println("Done grading section " + p.number + " " + p.title)
-        grades
+        val feedback = graders.headOption.flatMap({ case (_, (g, _)) => g match {
+          case AskGrader(_, args, _) => args.get("feedback")
+          case MultiAskGrader(main: AskGrader, _) => main.args.get("feedback")
+          //@todo feedback for other problems?
+          case _ => None
+        } })
+        val percentage = (100*grades.count(_._2 > 0.0))/grades.size
+        msgStream.println(p.number + ") Sum " + percentage + "%")
+        feedback match {
+          case Some(s) => msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
+          case None => // no feedback annotated
+        }
+        (p, feedback, grades)
       })
+      //printSummaryFeedback(allGrades, msgStream)
       printJSONGrades(allGrades, resultOut)
     }
   }
@@ -982,9 +995,37 @@ object AssessmentProver {
     })
   }
 
-  private def printJSONGrades(grades: List[(Submission.Prompt, Double)], out: OutputStream): Unit = {
-    val jsonGrades = JsObject("scores" -> JsObject(grades.map({ case (p, s) => p.id.toString -> JsNumber(s) }).toMap))
+  private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
+    val jsonGrades = JsObject("scores" -> JsObject(grades.flatMap({ case (_, _, pg) => pg.map({ case (p, s) => p.id.toString -> JsNumber(s) }) }).toMap))
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
+  }
+
+  private def printSummaryFeedback(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], msgStream: PrintStream): Unit = {
+    val correct = grades.map({ case (_, _, gp) => gp.count(_._2 > 0.0) }).sum
+    val total = grades.map({ case (_, _, gp) => gp.size }).sum
+    val percentage = (100*correct)/total
+    msgStream.println("\nOverall: " + percentage + "%")
+    grades.foreach({
+      case (problem, Some(feedback), pg) =>
+        val ratio = pg.count(_._2 > 0.0)/pg.size.toDouble
+        if (ratio <= 0.75) msgStream.println(problem.number + " " + problem.title)
+        if (ratio <= 0.25) {
+          msgStream.print(
+            s"""  You have found this problem difficult. Before you proceed with an imperfect understanding and
+               |  risk causing later misunderstandings, you should carefully review the topics in $feedback.""".stripMargin)
+        } else if (ratio <= 0.5) {
+          msgStream.print(
+            s"""  You have demonstrated an understanding of the topics covered in this problem,
+               |  but also had difficulties with some questions. Before you proceed,
+               |  we encourage you to take a closer look at $feedback.""".stripMargin)
+        } else if (ratio <= 0.75) {
+          msgStream.println(
+            s"""  You have shown a good understanding of the topics covered in this problem.
+               |  If you want to learn more about it, refer to $feedback.""".stripMargin)
+        }
+      case _ => // no feedback annotated
+    })
+
   }
 
   /** Converts list of `expected` subgoals and list of `actual` subgoals into a formula,
