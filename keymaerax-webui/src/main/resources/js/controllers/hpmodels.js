@@ -1,32 +1,16 @@
-angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
-  function ($scope, $http, $route, $uibModal, Models, sessionService, spinnerService) {
-    $scope.userId = sessionService.getUser();
-
-    $scope.addModelFromFormula = function(modelName, formula) {
-      $http.post('/user/' + $scope.userId + '/modelFromFormula/' + modelName, formula)
-          .success(function(data) {
-            if(data.errorThrown) {
-              console.log("Could not create the model because " + JSON.stringify(data))
-              showCaughtErrorMessage($uibModal, data, "Model Creation Failed")
-            }
-            else {
-              $route.reload();
-            }
-          })
-    }
-  }
-);
-
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
+     $scope.template = 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
+
      $scope.model = {
        modelName: undefined,
-       content: undefined
+       content: $scope.template
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
+       if (!fileContent || fileContent == '') $scope.model.content = $scope.template;
        if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
@@ -47,7 +31,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      }
 
      $scope.uploadContent = function(startProof) {
-       var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
+       var url =  "user/" + sessionService.getUser() + "/modelupload/" + encodeURIComponent($scope.model.modelName);
        upload(url, $scope.model.content,
          startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0);
      }

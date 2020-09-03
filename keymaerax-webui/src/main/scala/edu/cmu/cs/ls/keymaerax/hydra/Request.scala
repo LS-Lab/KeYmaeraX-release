@@ -967,33 +967,6 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
 // Models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Creates a model from a formula without variable declarations.
-  * Separate from CreateModelRequest so that we don't end up swallowing parse errors or returning the wrong parse error. */
-class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfModel: String, formula: String)
-  extends UserRequest(userId, _ => true) with WriteRequest {
-  private var createdId : Option[String] = None
-
-  def resultingResponses(): List[Response] = try {
-    KeYmaeraXParser(formula) match {
-      case _: Formula =>
-        if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-          BooleanResponse(flag=false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
-        } else {
-          createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(_.toString)
-          BooleanResponse(createdId.isDefined) :: Nil
-        }
-      case t => new ErrorResponse("Expected a formula, but got the " + t.kind + " " + formula) :: Nil
-    }
-  } catch {
-    case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
-  }
-
-  def getModelId: String = createdId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
-  }
-}
-
 class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, name: String, title: String,
                          description: String, content: String)
   extends UserRequest(userId, _ => true) with WriteRequest {
@@ -1006,12 +979,11 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
         BooleanResponse(flag = true) :: Nil
       } else try {
-        KeYmaeraXArchiveParser.parseAsProblemOrFormula(content) match {
-          case fml: Formula =>
-            val newContent = RequestHelper.augmentDeclarations(content, fml)
-            db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(newContent))
+        KeYmaeraXArchiveParser.parse(content) match {
+          case e :: Nil =>
+            db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(e.problemContent))
             BooleanResponse(flag = true) :: Nil
-          case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
+          case e => new ErrorResponse("Expected a single entry, but got " + e.size) :: Nil
         }
       } catch {
         case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
@@ -1998,14 +1970,6 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
                               paramName: String, paramType: String, paramValue: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
 
-  /** Prints a sort as users might expect from other web UI presentations. */
-  private def printSort(s: Sort): String = s match {
-    case Unit => ""
-    case Real => "Real"
-    case Bool => "Bool"
-    case Tuple(l, r) => printSort(l) + "," + printSort(r)
-  }
-
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
     try {
@@ -2814,34 +2778,6 @@ class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request 
 //endregion
 
 object RequestHelper {
-
-  def printDomain(d: Sort): String = d match {
-    case Real => "R"
-    case Bool => "B"
-    case Unit => ""
-    case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
-  }
-
-  def augmentDeclarations(content: String, parsedContent: Formula): String =
-    if (content.contains("Problem")) content //@note determine by mandatory "Problem" block of KeYmaeraXArchiveParser
-    else {
-      val symbols = StaticSemantics.symbols(parsedContent)
-      val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-        if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
-        else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-        else ???
-      ).mkString("\n  ")
-      val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
-      s"""Functions.
-         |  $fnDecls
-         |End.
-         |ProgramVariables.
-         |  $varDecls
-         |End.
-         |Problem.
-         |  $content
-         |End.""".stripMargin
-    }
 
   def jsonDisplayInfoComponents(di: ProvableInfo): JsValue = {
     val keyPos = AxIndex.axiomIndex(di)._1

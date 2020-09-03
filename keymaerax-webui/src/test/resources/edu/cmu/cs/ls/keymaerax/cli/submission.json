@@ -8,10 +8,13 @@
         {
           "type": "segment",
           "not actually": "a segment with questions",
+          "number": "1",
           "point_value": 0.0
         },
         {
           "type": "segment",
+          "title": "The segment title",
+          "number": "2",
           "some intermediate": "segment that does not yet have the question prompt",
           "children": [
             {
@@ -78,6 +81,7 @@
         },
         {
           "type": "segment",
+          "number": "3",
           "this segment": "has prompts but none of them auto-gradable (worth no points)",
           "children": [
             {
@@ -154,6 +158,8 @@
     },
     {
       "type": "segment",
+      "title": "Another section title",
+      "number": "5",
       "point_value": 1.0,
       "children": [
         {

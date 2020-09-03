@@ -135,7 +135,7 @@ object UIIndex {
         val rules = maybeSplit ++ alwaysApplicable ++ ("diamondd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
-          case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
+          case Assign(_: BaseVariable, _) => "assignd" :: rules
           case _: AssignAny => "<:*> assign nondet" :: rules
           case _: Test => "<?> test" :: rules
           case _: Compose => "<;> compose" :: rules

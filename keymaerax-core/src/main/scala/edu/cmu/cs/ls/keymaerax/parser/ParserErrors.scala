@@ -38,10 +38,10 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
           val rem = lines.drop(loc.line-1)
           val count = if (loc.end!=UnknownLocation && loc.line==loc.end.line) Math.max(1,loc.end.column-loc.column+1) else 1
           //assert(!rem.isEmpty, "nonempty number of lines after drop:\n" + input)
-          if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
+          if (rem.nonEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
+    inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>") else "")).asInstanceOf[ParseException]
   }
 
   /** Get more details on the error message in addition to [[getContext]]. */

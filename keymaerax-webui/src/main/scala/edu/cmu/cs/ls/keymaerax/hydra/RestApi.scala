@@ -267,15 +267,6 @@ object RestApi extends Logging {
     }
   }}}
 
-  val userModelFromFormula: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelFromFormula" / Segment) {modelName => {pathEnd {
-    post {
-      entity(as[String]) {formula => {
-        val request = new CreateModelFromFormulaRequest(database, userId, modelName, formula)
-        completeRequest(request, t)
-      }}
-    }
-  }}}}}
-
   val importExampleRepo: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { userId => { pathEnd {
     post {
       entity(as[String]) { repoUrl => {
@@ -1306,7 +1297,6 @@ object RestApi extends Logging {
     modelplexMandatoryVars::
     exportSequent         ::
     testSynthesis         ::
-    userModelFromFormula  ::
     examples              ::
     stepwiseTrace         ::
     updateUserModel       ::

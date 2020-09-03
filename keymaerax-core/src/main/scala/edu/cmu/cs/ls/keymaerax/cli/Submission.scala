@@ -19,7 +19,7 @@ object Submission {
 
       override def read(json: JsValue): List[(Prompt, Double)] = {
         json.asJsObject.fields(SCORES).asJsObject.fields.map({ case (k, JsNumber(v)) =>
-          (SinglePrompt(k.toLong, "", -1.0, Nil), v.toDouble)
+          (SinglePrompt(k.toLong, "-1", "", -1.0, Nil), v.toDouble)
         }).toList
       }
     }
@@ -30,6 +30,7 @@ object Submission {
 
     private val CHILDREN = "children"
     private val POINT_VALUE = "point_value"
+    private val NUMBER = "number"
     private val TITLE = "title"
     private val ID = "id"
     private val LABEL = "label"
@@ -217,19 +218,26 @@ object Submission {
           case JsArray(s) => s.map(_.convertTo[Submission.Answer]).toList
           case _ => List.empty
         }
-        SinglePrompt(id, name, points, answers)
+        SinglePrompt(id, "-1", name, points, answers)
       }
     }
 
     implicit val problemJsonFormat: JsonFormat[Problem] = new RootJsonFormat[Problem] {
       override def write(problem: Problem): JsValue = JsObject(
-        ID -> problem.id.toJson,
-        TITLE -> problem.title.toJson,
-        LABEL -> problem.label.toJson,
-        PROMPTS -> problem.prompts.toJson,
-        TYPE -> "atom".toJson,
-        NAME -> "problem".toJson,
-        POINT_VALUE -> problem.prompts.map(_.points).sum.toJson
+        NUMBER -> problem.number.toJson,
+        TITLE -> problem.title.toUpperCase.toJson,
+        TYPE -> "segment".toJson,
+        POINT_VALUE -> problem.prompts.map(_.points).sum.toJson,
+        CHILDREN -> JsArray(JsObject(
+          ID -> problem.id.toJson,
+          NUMBER -> problem.number.toJson,
+          TITLE -> problem.title.toJson,
+          LABEL -> problem.label.toJson,
+          PROMPTS -> problem.prompts.toJson,
+          TYPE -> "atom".toJson,
+          NAME -> "problem".toJson,
+          POINT_VALUE -> problem.prompts.map(_.points).sum.toJson
+        ))
       )
 
       /** Extracts a problem segment from the `json` problem object (identified by having "name"="problem"). */
@@ -241,10 +249,13 @@ object Submission {
         val title = root.fields(TITLE) match { case JsString(s) => s }
         val label = root.fields(LABEL) match { case JsString(s) => s }
         val prompts = root.fields.get(PROMPTS) match {
-          case Some(JsArray(prompts)) => prompts.map(_.convertTo[Prompt]).toList
+          case Some(JsArray(prompts)) => prompts.map(_.convertTo[Prompt]).toList.zipWithIndex.map({
+            case (p: SinglePrompt, i) => p.copy(number=(i+'a'.toInt).toChar.toString)
+            case (m@MultiPrompt(p: SinglePrompt, _), i) => m.copy(main=p.copy(number=(i+'a'.toInt).toChar.toString))
+          })
           case _ => List.empty
         }
-        Problem(id, title, label, prompts)
+        Problem(id, "-1", title, label, prompts)
       }
     }
 
@@ -259,22 +270,24 @@ object Submission {
         val root = json.asJsObject
         //val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
         //val label = root.fields(LABEL) match { case JsString(s) => s }
-        val problems = extractProblems(root)
+        val problems = extractProblems(root, None)
         Chapter(-1, "", problems)
       }
 
-      /** Extract problems from the chapter JSON object `root`. */
-      private def extractProblems(root: JsObject): List[Problem] = {
+      /** Extract problems from the chapter JSON object `root`, looking for the section number along the way. */
+      private def extractProblems(root: JsObject, sectionNumber: Option[String]): List[Problem] = {
         root.fields.get(CHILDREN) match {
           case Some(JsArray(segments)) =>
             segments.flatMap({
               case s: JsObject =>
+                //@note assumes we have only 1 problem per section, the problems themselves do not have numbers
+                val sn = if (sectionNumber.isEmpty) s.fields.get(NUMBER).map({ case JsString(n) => n.trim }).filter(_.nonEmpty) else sectionNumber
                 //@note only auto-grade those segments that are worth points
                 s.fields.get(POINT_VALUE) match {
                   case Some(JsNumber(n)) if n > 0 => s.fields.get(TYPE) match {
-                    case Some(JsString("segment")) => extractProblems(s)
+                    case Some(JsString("segment")) => extractProblems(s, sn)
                     case Some(JsString("atom")) => s.fields(NAME) match {
-                      case JsString("problem") => Some(s.convertTo[Problem])
+                      case JsString("problem") => Some(s.convertTo[Problem].copy(number=sn.getOrElse("-1")))
                       case _ => None
                     }
                     case _ => None
@@ -304,21 +317,23 @@ object Submission {
   /** A question with submitted answer, name indicates the type of prompt. */
   trait Prompt {
     val id: Long
+    val number: String
     val name: String
     val points: Double
     val answers: List[Answer]
   }
   /** A single quiz question with submitted answer. `name` indicates the type of prompt. */
-  case class SinglePrompt(id: Long, name: String, points: Double, answers: List[Answer]) extends Prompt
+  case class SinglePrompt(id: Long, number: String, name: String, points: Double, answers: List[Answer]) extends Prompt
   /** An answered quiz question that needs access to answers of earlier questions. */
   case class MultiPrompt(main: Prompt, earlier: Map[Int, Prompt]) extends Prompt {
     val id: Long = main.id
+    val number: String = main.number
     val name: String = main.name
     val points: Double = main.points
     val answers: List[Answer] = main.answers
   }
   /** A problem segment. */
-  case class Problem(id: Long, title: String, label: String, prompts: List[Prompt])
+  case class Problem(id: Long, number: String, title: String, label: String, prompts: List[Prompt])
   /** A quiz chapter. */
   case class Chapter(id: Long, label: String, problems: List[Problem])
 }

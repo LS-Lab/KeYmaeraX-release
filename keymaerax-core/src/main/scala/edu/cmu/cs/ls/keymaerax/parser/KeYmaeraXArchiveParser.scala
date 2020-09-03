@@ -368,17 +368,9 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     val stripped = ParserHelper.removeBOM(input).replaceAllLiterally("\t","  ")
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
-      parse(tokenStream, stripped, parseTactics)
+      parse(tokenStream, stripped, parseTactics).map(e =>
+        if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
     } catch {
-      case e: ParseException if e.msg.startsWith("Unexpected archive start") =>
-        // cannot parse as archive, try parse plain formula
-        try {
-          val fml = KeYmaeraXParser(input).asInstanceOf[Formula]
-          ParsedArchiveEntry("<undefined>", "theorem", stripped, stripped, declarationsOf(fml), fml, Nil, List.empty, Map.empty) :: Nil
-        } catch {
-          // cannot parse as plain formula either, throw original exception
-          case _: Throwable => throw e.inInput(stripped, Some(tokenStream))
-        }
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
   }
@@ -1012,7 +1004,8 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
       case None =>
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, elaboratedModel)
     }
-    typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
+    //@note bare formula input without any definitions uses default meaning of symbols
+    if (entry.defs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
     checkUseDefMatch(elaboratedModel, entry.defs)
 
     // analyze and report annotations
