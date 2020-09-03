@@ -20,13 +20,16 @@ angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
+     $scope.template = 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
+
      $scope.model = {
        modelName: undefined,
-       content: 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
+       content: $scope.template
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
+       if (!fileContent || fileContent == '') $scope.model.content = $scope.template;
        if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
