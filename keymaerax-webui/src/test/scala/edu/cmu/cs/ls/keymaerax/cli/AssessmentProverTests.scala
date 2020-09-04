@@ -49,6 +49,12 @@ class AssessmentProverTests extends TacticTestBase {
         p.points should contain (4.0)
         p.questions shouldBe List(AskQuestion(None, Map.empty, TexExpressionArtifact("x=1|x=-2|x=x^2".asFormula), List(TexExpressionArtifact("x=1|x=-2|x=x^2".asFormula)), List.empty))
     }
+    inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask A tex question with missing set elements \sol{$\{1,,x^2,,,\}$} \end{problem}""")) {
+      case p :: Nil =>
+        p.name should contain ("Problem A")
+        p.points should contain (4.0)
+        p.questions shouldBe List(AskQuestion(None, Map.empty, TexExpressionArtifact("x=1|x=x^2".asFormula), List(TexExpressionArtifact("x=1|x=x^2".asFormula)), List.empty))
+    }
     inside (Problem.fromString("""\begin{problem}[4.][Problem A] \ask A tex interval question \sol{$[-2.0,3) \cup (1,\infty)$} \end{problem}""")) {
       case p :: Nil =>
         p.name should contain ("Problem A")

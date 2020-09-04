@@ -128,7 +128,9 @@ object QuizExtractor {
       val x = Variable("x")
       if ((s.startsWith("\\{") || s.startsWith("{")) && s.endsWith("}")) {
         // lists of terms \{1,2,3\} or {1,x,3+4}
-        TexExpressionArtifact(s.stripPrefix("\\").stripPrefix("{").stripSuffix("}").stripSuffix("\\").split(",").
+        TexExpressionArtifact(s.stripPrefix("\\").stripPrefix("{").stripSuffix("}").stripSuffix("\\").
+          split(",").
+          filter(_.trim.nonEmpty).
           map(s => Equal(x, s.asTerm)).reduceRightOption(Or).getOrElse(False))
       } else if (s == "\\infty") {
         TexExpressionArtifact(Number(Long.MaxValue))
