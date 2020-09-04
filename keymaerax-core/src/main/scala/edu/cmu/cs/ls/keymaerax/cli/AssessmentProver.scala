@@ -1094,8 +1094,11 @@ object AssessmentProver {
     out.println("-------------")
     out.println("Score Summary")
     val (correct, total) = grades.map({ case (_, _, pg) => (pg.count({ case (_, score) => score > 0.0 }), pg.size) }).unzip
-    out.println("Correct: " + correct.sum + "/" + total.sum)
-    out.println("Total score: " + grades.map({ case (_, _, pg) => pg.map({ case (_, score) => score }).sum }).sum)
+    out.println("Correct: " + correct.sum + "/" + total.sum + " questions")
+    val score = grades.map({ case (_, _, pg) => pg.map({ case (_, score) => score }).sum }).sum
+    val maxScore = grades.map({ case (_, _, pg) => pg.map({ case (p, _) => p.points }).sum }).sum
+    out.println("Points:  " + score + "/" + maxScore)
+    out.println("Total score: " + ((100*score)/maxScore) + "%")
     out.println("-------------")
   }
 
