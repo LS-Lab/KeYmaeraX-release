@@ -65,6 +65,8 @@ object Submission {
     }
 
     implicit val answerJsonFormat: JsonFormat[Submission.Answer] = new RootJsonFormat[Submission.Answer] {
+      private val argPlaceholder = "(?s)<%%(.*?)%%>".r("arg")
+
       override def write(answer: Answer): JsValue = {
         answer match {
           case ChoiceAnswer(id, label, name, _, text, isSelected) =>
@@ -110,12 +112,12 @@ object Submission {
                   case None => JsArray()
                 })*/,
                 //@todo remove \\algog from body_src once JSON format is fixed
-                BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, " ") + "\\algog {" + grader.map(_.method) + "}").toJson,
+                BODY_SRC -> (argPlaceholder.replaceAllIn(expected, " ") + "\\algog {" + grader.map(_.method).getOrElse("") + "}").toJson,
                 SOLUTION_PROMPT -> JsObject(
                   NAME -> "solfin_sol".toJson,
-                  BODY_SRC -> ("<%%(.+?)%%>".r("arg").replaceAllIn(expected, m =>
+                  BODY_SRC -> (argPlaceholder.replaceAllIn(expected, m =>
                     Regex.quoteReplacement("~~" + m.group("arg")) + "~~") +
-                    "\\algog {" + grader.map(_.method) + "}").toJson,
+                    "\\algog {" + grader.map(_.method).getOrElse("") + "}").toJson,
                   COOKIES -> JsArray()
                 ),
                 USER_ANSWER -> JsObject(
@@ -162,7 +164,7 @@ object Submission {
 
             //val (bodySrcQuestion, bodySrcGrader) = extractQuestionGrader(json.asJsObject) //@note ignored for now
             val (rawSolPromptQuestion, solPromptGrader) = extractQuestionGrader(fields(SOLUTION_PROMPT).asJsObject)
-            val placeHolderRepl = "~+(.+?)~+".r("arg")
+            val placeHolderRepl = "(?s)~+(.+?)~+".r("arg")
             val solPromptQuestion = placeHolderRepl.replaceAllIn(rawSolPromptQuestion,
               m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
             //@note prefer grader cookie in case it is present
@@ -173,7 +175,7 @@ object Submission {
             }
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match {
-                case JsString(s) => "<%%(.+?)%%>".r("arg").replaceAllIn(s,
+                case JsString(s) => argPlaceholder.replaceAllIn(s,
                   m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
               }
             }

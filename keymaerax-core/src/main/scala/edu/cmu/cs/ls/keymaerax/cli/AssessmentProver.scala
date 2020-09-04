@@ -17,7 +17,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -38,6 +39,7 @@ object AssessmentProver {
     val FAILED = "FAILED"
     val PASS = "PASS"
     val OK = "OK"
+    val SKIPPED= "SKIPPED"
     val PARSE_ERROR = "PARSE ERROR"
     val INSPECT = "INSPECT"
   }
@@ -91,6 +93,13 @@ object AssessmentProver {
   case class SequentArtifact(goals: List[Sequent]) extends Artifact {
     override def hintString: String = "Sequent"
   }
+  case class TacticArtifact(s: String, t: BelleExpr) extends Artifact {
+    override def hintString: String = "Tactic"
+  }
+  case class ArchiveArtifact(s: String) extends Artifact {
+    lazy val entries: List[ParsedArchiveEntry] = KeYmaeraXArchiveParser.parse(s, parseTactics=true)
+    override def hintString: String = "Archive"
+  }
   case class ChoiceArtifact(selected: List[String]) extends Artifact {
     override def hintString: String = "Choice"
   }
@@ -139,6 +148,10 @@ object AssessmentProver {
       val EXPLANATION_CHECK = "explanation"
       /** Provable using a tactic. */
       val BELLE_PROOF: String = "prove"
+      /** Check a kyx archive */
+      val CHECK_ARCHIVE: String = "checkArchive"
+      /** Skip grading */
+      val SKIP: String = "skip"
     }
   }
   case class SkipGrader(expected: Artifact, reason: String) extends Grader {
@@ -147,6 +160,7 @@ object AssessmentProver {
   case class AskGrader(mode: Option[String], args: Map[String, String], expected: Artifact) extends Grader {
     /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
     override def check(have: Artifact): Either[ProvableSig, String] = {
+      if (mode.contains(Modes.SKIP)) return Right(Messages.SKIPPED)
       (have, expected) match {
         case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Right(Messages.BLANK)
         case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Right(Messages.BLANK)
@@ -179,6 +193,9 @@ object AssessmentProver {
           case (h: ExpressionArtifact, e: ExpressionArtifact) => run(() => syntacticEquality(h.expr, e.expr))
           case (TexExpressionArtifact(h), TexExpressionArtifact(e)) => run(() => syntacticEquality(h, e))
           case (SequentArtifact(h), SequentArtifact(e)) => run(() => syntacticEquality(h, e))
+          case (TextArtifact(h), TextArtifact(e)) =>
+            if (h == e) run(() => prove(Sequent(IndexedSeq(), IndexedSeq(True)), closeT))
+            else Right("")
           case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.VALUE_EQ =>(have, expected) match {
@@ -309,14 +326,14 @@ object AssessmentProver {
                   case hf: Formula =>
                     var inv: Option[Formula] = None
                     KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                    val m = expand(q, hf :: Nil, KeYmaeraXParser.formulaParser)
+                    val m = expand(q, hf.prettyString :: Nil, KeYmaeraXParser.formulaParser)
                     run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(hf))))
                   case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
                 }
                 case ListExpressionArtifact(h) =>
                   var inv: Option[Formula] = None
                   KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                  val m = expand(q, h, KeYmaeraXParser.formulaParser)
+                  val m = expand(q, h.map(_.prettyString), KeYmaeraXParser.formulaParser)
                   run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))))
                 case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
               }
@@ -342,14 +359,14 @@ object AssessmentProver {
               have match {
                 case h: ExpressionArtifact =>
                   run(() => {
-                    val m = expand(q, h.expr :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
-                    val t = expand(args("tactic"), h.expr :: Nil, BelleParser)
+                    val m = expand(q, h.exprString :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
+                    val t = expand(args("tactic"), h.exprString :: Nil, BelleParser)
                     prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
                   })
                 case ListExpressionArtifact(hs) =>
                   run(() => {
-                    val m = expand(q, hs, KeYmaeraXParser).asInstanceOf[Formula]
-                    val t = expand(args("tactic"), hs, BelleParser)
+                    val m = expand(q, hs.map(_.prettyString), KeYmaeraXParser).asInstanceOf[Formula]
+                    val t = expand(args("tactic"), hs.map(_.prettyString), BelleParser)
                     prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
                   })
                 case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
@@ -376,6 +393,22 @@ object AssessmentProver {
                 case _ => Right("Answer must a KeYmaera X formula or sequent, but got " + have.longHintString)
               }
           }
+        case Modes.CHECK_ARCHIVE =>
+          val question = args.get("question") match {
+            case Some(q) => q
+            case None => return Right(Messages.INSPECT)
+          }
+          //@todo not sure what we could do with a "tactic" argument that is not already possible in the archive, ignore for now
+          val entries = have match {
+            case TacticArtifact(s, _) => expand(question, s :: Nil, KeYmaeraXArchiveParser.parse(_, parseTactics=true))
+            case a: ArchiveArtifact => a.entries
+          }
+          if (entries.count(_.kind == "theorem") != 1) return Right("Unexpected archive content: any number of lemmas allowed, but expected exactly 1 ArchiveEntry|Theorem")
+          val results = entries.map(e => e -> run(() => prove(Sequent(IndexedSeq(), IndexedSeq(e.model.asInstanceOf[Formula])),
+            e.tactics.headOption.map(_._3).getOrElse(skip)))
+          )
+          if (results.forall(_._2.isLeft)) results.find(_._1.kind == "theorem").get._2
+          else Right("Unproved: " + results.filter(_._2.isRight).map(_._1.name).mkString(","))
       }
     }
   }
@@ -841,7 +874,9 @@ object AssessmentProver {
           val errors = unparseablePrompts.map({ case (prompt, ex: Throwable) => (prompt, Right(ex)) })
           val all = (graders ++ errors).sortBy({ case (p, _) => p.id })
           val grades = all.map({
-            case (prompt, Left((grader, Some(answerArtifact)))) => runGrader(p, prompt, Some(answerArtifact), grader, msgStream)
+            case (prompt, Left((grader, Some(answerArtifact)))) =>
+              if (prompt.points > 0.0) runGrader(p, prompt, Some(answerArtifact), grader, msgStream)
+              else runGrader(p, prompt, Some(answerArtifact), SkipGrader(null, Messages.SKIPPED), msgStream)
             case (prompt, Right(ex)) => reportParseError(p, prompt, ex, msgStream)
           })
 
@@ -1128,7 +1163,7 @@ object AssessmentProver {
 
   /** Expands occurrences of \%i in string `s` with arguments from argument list `args`. */
   @tailrec
-  private def expand[T](s: String, args: List[Expression], parser: String=>T): T = {
+  private def expand[T](s: String, args: List[String], parser: String=>T): T = {
     val repTacs = TACTIC_REPETITION_EXTRACTOR.findAllMatchIn(s).toList
     if (repTacs.nonEmpty) {
       val unfolded = repTacs.map(_.group(REPTAC_GROUP)).map(t => {
@@ -1138,7 +1173,7 @@ object AssessmentProver {
       assert(!replaced.contains(QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "i"), "Expected to have replaced all variable-length argument repetitions")
       expand(replaced, args, parser)
     } else {
-      val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replaceAllLiterally(s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i", args(i-1).prettyString) })
+      val ts = (1 to args.size).foldRight(s)({ case (i, s) => s.replaceAllLiterally(s"${QuizExtractor.AskQuestion.ARG_PLACEHOLDER}$i", args(i-1)) })
       require(!ts.contains(QuizExtractor.AskQuestion.ARG_PLACEHOLDER), "Not enough arguments provided for tactic")
       parser(ts)
     }

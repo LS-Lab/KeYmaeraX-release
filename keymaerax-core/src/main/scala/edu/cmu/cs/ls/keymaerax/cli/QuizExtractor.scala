@@ -4,7 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -57,7 +58,8 @@ object QuizExtractor {
     private val NO_SOL_EXTRACTOR = """((?:\\nosol\s*\{\s*""" + solContent("?:") + """}\s*)*)"""
     // \autog
     private val GRADER_NAME = """(\w+)"""
-    private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*"(""" + capture + """[^"]+)""""
+    private def doubleQuotesString(capture: String) = """"(""" + capture + """(?:[^"\\]|\\.)*)"""" //@note double-quotes with nested escaped quotes
+    private def graderArg(capture: String) = "(" + capture + """\w+)\s*=\s*""" + doubleQuotesString(capture)
     private val GRADER_ARG = graderArg("").r(ARG_NAME, ARG_VAL)
     private val GRADER_ARGS = graderArg("?:") + """(?:\s*,\s*""" + graderArg("?:") + """)*"""
     private val GRADER_METHOD = GRADER_NAME + """\((""" + GRADER_ARGS + """)?\)"""
@@ -93,6 +95,7 @@ object QuizExtractor {
       else List.empty
     }
 
+    /** Extracts grader information (`method`, `args`) from raw content. */
     def graderInfoFromString(rawContent: String): (String, Map[String, String]) = {
       GRADER_METHOD.r(GRADER, ARGS).findFirstMatchIn(rawContent).map(m => (m.group(GRADER), Option(m.group(ARGS)))) match {
         case Some((grader, args)) => (grader, argsFromString(args))
@@ -115,11 +118,19 @@ object QuizExtractor {
     def artifactsFromKyxString(s: String): Artifact = {
       if (s.contains(TURNSTILE)) SequentArtifact(s.split(GOAL_SEP).map(_.asSequent).toList)
       else {
-        val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
-        val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
-        val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
-        if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
-        else ExpressionArtifact(s)
+        "ArchiveEntry|Theorem".r.findFirstMatchIn(s) match {
+          case Some(_) => ArchiveArtifact(s)
+          case None =>
+            Try(BelleParser(s)).toOption match {
+              case Some(t) => TacticArtifact(s, t)
+              case None =>
+                val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
+                val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
+                val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
+                if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
+                else ExpressionArtifact(s)
+            }
+        }
       }
     }
 
@@ -177,9 +188,10 @@ object QuizExtractor {
       solfinArtifactsFromString(body.head)
     }
 
+    /** Translates a string `arg1="v1",arg2="v2",arg3="v\"3\"",...` into a map of arguments */
     def argsFromString(args: Option[String]): Map[String, String] = {
       args.map(GRADER_ARG.findAllMatchIn).getOrElse(Iterator.empty).
-        map(m => (m.group(ARG_NAME), m.group(ARG_VAL))).
+        map(m => (m.group(ARG_NAME), m.group(ARG_VAL).replaceAllLiterally("\\\"", "\""))).
         toMap
     }
   }
@@ -264,7 +276,7 @@ object QuizExtractor {
       PROBLEM_EXTRACTOR.findAllMatchIn(s).map(m => Problem(Option(m.group(PROBLEM_NAME)),
           Option(m.group(PROBLEM_LABEL)), questionsFromString(m.group(PROBLEM_CONTENT)),
           pointsFromString(Option(m.group(PROBLEM_POINTS))))).
-        filter(_.points.exists(_ > 0.0)).
+        filter(!_.name.contains("Reflection")).
         toList
     }
 

@@ -5,7 +5,7 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
 import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -24,12 +24,19 @@ class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"
   private val QUIZ_PATH: String = COURSE_PATH + "/diderot/quizzes"
+  private val LAB_PATH: String = COURSE_PATH + "/diderot/labs"
 
   private val RANDOM_TRIALS = 3
   private val rand = RepeatableRandom()
 
   "Extractor" should "extract grading information" in {
-    Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0}" \end{problem}""") shouldBe 'empty
+    inside (Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
+      case p :: Nil =>
+        p.name shouldBe 'empty
+        p.points shouldBe 'empty
+        p.label should contain ("prob:withoutpoints")
+        p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
+    }
     inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
         p.name shouldBe 'empty
@@ -638,11 +645,7 @@ class AssessmentProverTests extends TacticTestBase {
     ))
   }
 
-  "Command line grader" should "grade quiz 4 submission" in withZ3 { _ =>
-    AssessmentProver.grade(Map('in -> ("/Users/smitsch/Documents/projects/keymaera/github/KeYmaeraX-Collab/KeYmaera4-Collab/keymaerax-webui/src/test/resources" + QUIZ_PATH + "/4/chapter_submission.json")), System.out, System.out, "")
-  }
-
-  it should "grade random quiz 2 submissions" in withZ3 { _ =>
+  "Command line grader" should "grade random quiz 2 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qdiffeq") }
   }
@@ -732,6 +735,11 @@ class AssessmentProverTests extends TacticTestBase {
     runGrader(problems, 0, "", Some("x*v+", false), 0.0)
   }
 
+  "Lab Command Line" should "grade random lab 0 submissions" in withZ3 { _ =>
+    val problems = extractProblems(LAB_PATH + "/0/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "lab:0") }
+  }
+
   /** Runs the autograder on the `i`th random submission (list of `problems`), unless `uniformAnswer`
     * (text+whether parseable) is provided; uses `chapterLabel` to look up the grading information
     * currently missing from problems. */
@@ -758,19 +766,25 @@ class AssessmentProverTests extends TacticTestBase {
     val msgLines = msgs.lines.toList
 
     val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
-    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT))""".r("id")
+    val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r("id")
 
     def checkGradedLines(gradedLines: List[String], expectPass: Boolean) = {
       gradedLines.loneElement.split("""\.\.\.""")(1) should (
-        if (expectPass) startWith (AssessmentProver.Messages.PASS)
+        if (expectPass) startWith (AssessmentProver.Messages.PASS) or startWith(AssessmentProver.Messages.SKIPPED)
         else startWith (AssessmentProver.Messages.FAILED) or
              startWith (AssessmentProver.Messages.BLANK) or
-             startWith (AssessmentProver.Messages.INSPECT)) withClue randClue
+             startWith (AssessmentProver.Messages.INSPECT) or
+             startWith (AssessmentProver.Messages.SKIPPED)) withClue randClue
     }
 
+    val gradedLinesById = msgLines.map(l => graded.findFirstMatchIn(l).map(_.group("id").toLong).getOrElse(-1) -> l).
+      groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
+    val parseFailedLinesById = msgLines.map(l => parseFailed.findFirstMatchIn(l).map(_.group("id").toLong).getOrElse(-1) -> l).
+      groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
+
     expected.foreach(e => {
-      val parseFailedLines = msgLines.filter(parseFailed.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id))
-      val gradedLines = msgLines.filter(graded.findFirstMatchIn(_).map(_.group("id")).exists(_.toLong == e._1.id))
+      val parseFailedLines = parseFailedLinesById.getOrElse(e._1.id, List.empty)
+      val gradedLines = gradedLinesById.getOrElse(e._1.id, List.empty)
       parseFailedLines.intersect(gradedLines) shouldBe 'empty
       uniformAnswer match {
         case None | Some((_, true)) =>
@@ -813,7 +827,8 @@ class AssessmentProverTests extends TacticTestBase {
       expected.find(_._1.id == prompt.id) match {
         case Some((p, answeredCorrectly)) => p.name match {
           case "\\ask" =>
-            (if (uniformAnswer.forall(_._2) && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
+            val skipped = gradedLinesById.getOrElse(p.id, List.empty).map(_.split("""\.\.\.""")(1)).forall(_ == AssessmentProver.Messages.SKIPPED)
+            (if (!skipped && uniformAnswer.forall(_._2) && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
           case _ =>
             (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
         }
@@ -829,7 +844,9 @@ class AssessmentProverTests extends TacticTestBase {
     @tailrec
     def createGraderCookie(grader: Grader): Option[Submission.GraderCookie] = grader match {
       case AskGrader(Some(mode), args, _) =>
-        Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({ case (k, v) => k + "=\"" + v + "\""}).mkString(",") + ")"))
+        Some(Submission.GraderCookie(1, "\\algog", mode + "(" + args.map({
+          case (k, v) => k + "=\"" + v.replaceAllLiterally("\"", "\\\"") + "\""
+        }).mkString(",") + ")"))
       case AskGrader(None, _, _) => None
       case MultiAskGrader(main, _) =>
         createGraderCookie(main)
@@ -864,6 +881,7 @@ class AssessmentProverTests extends TacticTestBase {
       }
       case ListExpressionArtifact(exprs) => exprs.map(_.prettyString).mkString(",")
       case SequentArtifact(goals) => goals.map(_.toString).mkString(";;")
+      case TacticArtifact(s, _) => s
       case TextArtifact(text) => text.getOrElse("")
     }
 
@@ -872,25 +890,29 @@ class AssessmentProverTests extends TacticTestBase {
       case _: TexExpressionArtifact => "{$" + artifactString(a) + "$}"
       case _: ListExpressionArtifact => """{\kyxline"""" + artifactString(a) + "\"}"
       case _: SequentArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
+      case _: TacticArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TextArtifact => artifactString(a)
     }
 
     def createAnswer(grader: Grader, a: Artifact): List[Submission.Answer] = {
       val graderCookie = createGraderCookie(grader)
       a match {
-        case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact =>
+        case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact |
+             _: TacticArtifact | _: ArchiveArtifact =>
           //@note guesses solfin from presence of grader question with placeholders
           val (name, answer, expected) = grader match {
             case AskGrader(_, args, _) => args.get("question") match {
               case Some(q) if q.contains(AskQuestion.ARG_PLACEHOLDER) =>
                 def solfinText(artifact: Artifact): String = {
                   val exprs = artifact match {
-                    case e: ExpressionArtifact => e.expr :: Nil
-                    case ListExpressionArtifact(exprs) => exprs
+                    case ExpressionArtifact(s) => s :: Nil
+                    case ListExpressionArtifact(exprs) => exprs.map(_.prettyString)
+                    case TacticArtifact(s, _) => s :: Nil
+                    case ArchiveArtifact(s) => s :: Nil
                   }
                   exprs.zipWithIndex.foldRight(q)({
                     case ((expr, i), answer) => answer.replaceAllLiterally(s"${AskQuestion.ARG_PLACEHOLDER}${i+1}",
-                      "<%%" + expr.prettyString + "%%>")
+                      "<%%" + expr + "%%>")
                   })
                 }
                 val answerText = solfinText(a)
@@ -956,7 +978,7 @@ class AssessmentProverTests extends TacticTestBase {
               if (name == "\\sol") {
                 (TextAnswer(id, label, name, grader, s, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else if (name == "\\solfinask") {
-                val answer = expected.replaceAll("<%%.+?%%>", "<%%" + s + "%%>")
+                val answer = expected.replaceAll("<%%.*?%%>", "<%%" + s + "%%>")
                 (TextAnswer(id, label, name, grader, answer, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else throw new IllegalArgumentException("Unknown text answer type " + name)
           }
