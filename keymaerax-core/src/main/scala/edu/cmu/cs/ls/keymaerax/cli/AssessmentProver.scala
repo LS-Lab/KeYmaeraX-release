@@ -854,7 +854,8 @@ object AssessmentProver {
           val percentage = (100*grades.count(_._2 > 0.0))/grades.size
           msgStream.println(p.number + ") Sum " + percentage + "%")
           feedback match {
-            case Some(s) => msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
+            case Some(s) =>
+              if (percentage <= 75) msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
             case None => // no feedback annotated
           }
           (p, feedback, grades)
