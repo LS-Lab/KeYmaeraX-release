@@ -493,7 +493,7 @@ class AssessmentProverTests extends TacticTestBase {
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 4) ::
+      ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 2) ::
       ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 4) :: Nil
     run(problems)
   }
