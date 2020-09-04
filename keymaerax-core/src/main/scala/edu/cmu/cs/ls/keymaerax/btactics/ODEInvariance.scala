@@ -1093,6 +1093,37 @@ object ODEInvariance {
   }
 
   /**
+    * Implements differential fixed point
+    *
+    * G, x=x0 |- [x'=f(x)& Q & x=x0]P    G|-f(x)=0
+    * --- (dFP)
+    * G |- [x'=f(x)&Q]P
+    *
+    */
+  @Tactic(names="Differential Fixed Point",
+    premises="Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
+    conclusion="Γ |- [x'=f(x) & Q}]P, Δ",
+    displayLevel="browse")
+  val dFP : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dFP: position " + pos + " must point to a top-level succedent position")
+
+    val (sys, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys, post)
+      case Some(e) => throw new TacticInapplicableFailure("dFP only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val vs = atomicListify(sys.ode).map( p => p.xp.x )
+    val olds = vs.map(v => Equal(v,FuncOf(Function("old", None, Real, Real, false),v)))
+
+    dC(olds.reduce(And.apply))(pos) <(
+      skip,
+      dRI(pos)
+    )
+  })
+
+  /**
     * Helper and lemmas
     */
   private val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
