@@ -45,13 +45,7 @@ object BelleParser extends TacticParser with Logging {
                       defs: Declaration = Declaration(Map()), expandAll: Boolean = false): BelleExpr =
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
-      case None => try {
-        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
-      } catch {
-        case e: Throwable =>
-          logger.error("Error parsing\n" + s, e)
-          throw e
-      }
+      case None => parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
     }
 
   /** Non-unicode characters that are allowed in KeYmaera X input files.
