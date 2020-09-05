@@ -701,4 +701,10 @@ class ODEInvarianceTests extends TacticTestBase {
 
   }
 
+  "dfp" should "do dfp" in withMathematica { _ =>
+    val seq = "x=1 , y=2 , z=3 , a=4, B > 0 ==> [{z'=a-z-x, x'=B*(a-z-x)*(z-x-y), a'=x^2*y^2*z^2*(y-2*x)}] (x<z^2+B)".asSequent
+    val pr = proveBy(seq, dFP(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
 }
