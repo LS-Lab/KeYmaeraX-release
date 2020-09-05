@@ -143,6 +143,11 @@ class DLParser extends Parser {
     case f: Parsed.Failure => throw parseException(f)
   })
 
+  /** Parse the input string in the concrete syntax as a ;; separated list fof differential dynamic logic sequents . */
+  val sequentListParser: String => List[Sequent] = (s => fastparse.parse(s, fullSequentList(_)) match {
+    case Parsed.Success(value, index) => value
+    case f: Parsed.Failure => throw parseException(f)
+  })
 
   /** A pretty-printer that can write the output that this parser reads
     *
@@ -185,6 +190,8 @@ class DLParser extends Parser {
   def expression[_: P]: P[Expression] = P( NoCut(formula) | NoCut(term) | program )
 
   def fullSequent[_: P]: P[Sequent]   = P( sequent ~ End )
+
+  def fullSequentList[_: P]: P[List[Sequent]]   = P( sequentList ~ End )
 
   //*****************
   // terminals
@@ -406,9 +413,11 @@ class DLParser extends Parser {
   // sequent parser
   //*****************
 
-  /** sequent `aformula1 , aformula2 , ... , aformulan ==>  sformula1 , sformula2 , ... , sformulam`. */
+  /** sequent ::= `aformula1 , aformula2 , ... , aformulan ==>  sformula1 , sformula2 , ... , sformulam`. */
   def sequent[_: P]: P[Sequent] = P( formula.rep(sep=","./) ~ "==>" ~ formula.rep(sep=","./)).
     map({case (ante, succ) => Sequent(ante.to, succ.to)})
 
+  /** sequentList ::= sequent `;;` sequent `;;` ... `;;` sequent. */
+  def sequentList[_: P]: P[List[Sequent]] = P( sequent.rep(sep=";;"./ )).map(_.toList)
 }
 
