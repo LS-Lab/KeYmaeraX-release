@@ -457,11 +457,18 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   "Explanation check" should "accept long enough answers" in {
-    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("An elaborate answer"))).left.value.conclusion shouldBe "==> 19>=3/10*20".asSequent
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("An elaborate answer"))).
+      left.value.conclusion shouldBe "==> explanation&full<->explanation&full".asSequent
   }
 
   it should "not accept too short answers" in {
-    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Short"))).right.value shouldBe "Please elaborate your explanation"
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer"))).check(TextArtifact(Some("Short"))).
+      right.value shouldBe "Please elaborate your explanation"
+  }
+
+  it should "partially accept medium answers" in {
+    AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer that requires a little more words"))).check(TextArtifact(Some("Medium short"))).
+      left.value.conclusion shouldBe "==> explanation&min<->explanation&min".asSequent
   }
 
   "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
@@ -774,7 +781,8 @@ class AssessmentProverTests extends TacticTestBase {
         else startWith (AssessmentProver.Messages.FAILED) or
              startWith (AssessmentProver.Messages.BLANK) or
              startWith (AssessmentProver.Messages.INSPECT) or
-             startWith (AssessmentProver.Messages.SKIPPED)) withClue randClue
+             startWith (AssessmentProver.Messages.SKIPPED) or
+             startWith (AssessmentProver.Messages.PASS + ":Partial")) withClue randClue
     }
 
     val gradedLinesById = msgLines.map(l => graded.findFirstMatchIn(l).map(_.group("id").toLong).getOrElse(-1) -> l).
@@ -827,8 +835,11 @@ class AssessmentProverTests extends TacticTestBase {
       expected.find(_._1.id == prompt.id) match {
         case Some((p, answeredCorrectly)) => p.name match {
           case "\\ask" =>
-            val skipped = gradedLinesById.getOrElse(p.id, List.empty).map(_.split("""\.\.\.""")(1)).forall(_ == AssessmentProver.Messages.SKIPPED)
-            (if (!skipped && uniformAnswer.forall(_._2) && answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
+            val skipped = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_ == AssessmentProver.Messages.SKIPPED)
+            val partial = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_ == AssessmentProver.Messages.PASS + ":Partial")
+            (if (!skipped && uniformAnswer.forall(_._2) && answeredCorrectly) grade shouldBe 1.0
+             else if (partial) grade shouldBe 0.5
+             else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
           case _ =>
             (if (answeredCorrectly) grade shouldBe 1.0 else grade shouldBe expectedFailScore) withClue p.id + " " + randClue
         }
@@ -969,7 +980,8 @@ class AssessmentProverTests extends TacticTestBase {
             grader match {
               case Some(Submission.GraderCookie(_, _, method)) if method.startsWith(AskGrader.Modes.EXPLANATION_CHECK) =>
                 //@note replicate explanation check grader
-                answer.trim.length < 3.0/10*correctString(expected).length
+                //@todo inspect method
+                answer.trim.length < 8
               case _ => answer.trim.isEmpty || !correctString(expected).contains(answer)
             }
           }

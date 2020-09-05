@@ -345,10 +345,14 @@ object AssessmentProver {
               val trim = """(?:\s|~)*(.*)(?:\s*|~)*""".r("text")
               val hsTrimmed = trim.findFirstMatchIn(hs).map(_.group("text")).getOrElse("")
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
-              val goal = GreaterEqual(Number(hsTrimmed.length), Times(Divide(Number(3),Number(10)), Number(esTrimmed.length)))
-              val pr = bigdecimalQE(goal)
-              if (pr.isProved) run(() => KeYmaeraXProofChecker(5000)(
-                useAt(Lemma(pr, Nil), PosInExpr(0::Nil))(1) & closeT)(Sequent(IndexedSeq(), IndexedSeq(goal))))
+              val minLength = args.getOrElse("minLength", "8").toInt
+              val fracOfSol = args.getOrElse("fracOfSol", "0.3").toDouble
+              if (hsTrimmed.length >= fracOfSol*esTrimmed.length)
+                run(() => KeYmaeraXProofChecker(5000)(byUS(Ax.equivReflexive))(
+                  Sequent(IndexedSeq(), IndexedSeq((Modes.EXPLANATION_CHECK + "&full<->" + Modes.EXPLANATION_CHECK + "&full").asFormula))))
+              else if (hsTrimmed.length >= minLength)
+                run(() => KeYmaeraXProofChecker(5000)(byUS(Ax.equivReflexive))(
+                  Sequent(IndexedSeq(), IndexedSeq((Modes.EXPLANATION_CHECK + "&min<->" + Modes.EXPLANATION_CHECK + "&min").asFormula))))
               else Right("Please elaborate your explanation")
             case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.longHintString)
@@ -928,8 +932,19 @@ object AssessmentProver {
       case Some(a) => grader.check(a) match {
         case Left(p) =>
           if (p.isProved) {
-            msgStream.println(Messages.PASS)
-            (prompt, prompt.points)
+            p.conclusion match {
+              case Sequent(IndexedSeq(), IndexedSeq(Equiv(And(p, q), _))) if p.prettyString.startsWith(Modes.EXPLANATION_CHECK) => q.prettyString match {
+                case "full()" =>
+                  msgStream.println(Messages.PASS)
+                  (prompt, prompt.points)
+                case "min()" =>
+                  msgStream.println(Messages.PASS + ":Partial")
+                  (prompt, prompt.points/2)
+              }
+              case _ =>
+                msgStream.println(Messages.PASS)
+                (prompt, prompt.points)
+            }
           } else {
             msgStream.println(Messages.FAILED)
             (prompt, 0.0)
