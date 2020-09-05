@@ -890,8 +890,8 @@ object AssessmentProver {
             //@todo feedback for other problems?
             case _ => None
           } })
-          val percentage = (100*grades.count(_._2 > 0.0))/grades.size
-          msgStream.println(p.number + ") Sum " + percentage + "%")
+          val percentage = (100.0*grades.count(_._2 > 0.0))/grades.size
+          msgStream.println(f"${p.number} ) Sum $percentage%2.1f%%")
           feedback match {
             case Some(s) =>
               if (percentage <= 75) msgStream.println(s"If you had difficulty with this question you would likely benefit from a review of $s")
@@ -1108,12 +1108,10 @@ object AssessmentProver {
   private def printGradeSummary(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: PrintStream): Unit = {
     out.println("-------------")
     out.println("Score Summary")
-    val (correct, total) = grades.map({ case (_, _, pg) => (pg.count({ case (_, score) => score > 0.0 }), pg.size) }).unzip
-    out.println("Correct: " + correct.sum + "/" + total.sum + " questions")
     val score = grades.map({ case (_, _, pg) => pg.map({ case (_, score) => score }).sum }).sum
     val maxScore = grades.map({ case (_, _, pg) => pg.map({ case (p, _) => p.points }).sum }).sum
-    out.println("Points:  " + score + "/" + maxScore)
-    out.println("Total score: " + ((100*score)/maxScore) + "%")
+    out.println("Total points: " + score + "/" + maxScore)
+    out.println(f"Total score:  ${(100*score)/maxScore}%2.1f%%")
     out.println("-------------")
   }
 
