@@ -725,7 +725,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
                 case _ => false
               })
               val strippedCandidates = if (stripProofHints) stripHints(candidates) else candidates
-              TactixInit.invSupplier = FixedGenerator(strippedCandidates)
+              TactixInit.invSupplier = FixedGenerator(List.empty) //@note invSupplier is for user-provided invariants
               TactixInit.differentialInvGenerator = FixedGenerator(strippedCandidates)
               val checkStart = System.currentTimeMillis()
               //val proof = proveBy(seq, TactixLibrary.master())
