@@ -398,13 +398,12 @@ object AssessmentProver {
               }
           }
         case Modes.CHECK_ARCHIVE =>
-          val question = args.get("question") match {
-            case Some(q) => q
-            case None => return Right(Messages.INSPECT)
-          }
           //@todo not sure what we could do with a "tactic" argument that is not already possible in the archive, ignore for now
           val entries = have match {
-            case TacticArtifact(s, _) => expand(question, s :: Nil, KeYmaeraXArchiveParser.parse(_, parseTactics=true))
+            case TacticArtifact(s, _) => args.get("question") match {
+              case Some(q) => expand(q, s :: Nil, KeYmaeraXArchiveParser.parse(_, parseTactics=true))
+              case None => return Right(Messages.INSPECT)
+            }
             case a: ArchiveArtifact => a.entries
           }
           if (entries.count(_.kind == "theorem") != 1) return Right("Unexpected archive content: any number of lemmas allowed, but expected exactly 1 ArchiveEntry|Theorem")
@@ -989,6 +988,7 @@ object AssessmentProver {
               case "\\sol" =>
                 if (expected.startsWith(QuizExtractor.AskQuestion.KYXLINE)) Some(QuizExtractor.AskQuestion.artifactsFromKyxString(answer))
                 else if (expected.startsWith(QuizExtractor.AskQuestion.MATH_DELIM)) Some(QuizExtractor.AskQuestion.artifactsFromTexMathString(answer))
+                else if (expected.startsWith(QuizExtractor.AskQuestion.LISTING_DELIM)) Some(ArchiveArtifact(answer))
                 else Some(QuizExtractor.AskQuestion.artifactsFromTexTextString(answer))
               case "\\solfin" | "\\solfinask" =>
                 Some(QuizExtractor.AskQuestion.solfinArtifactsFromString(answer)._2)

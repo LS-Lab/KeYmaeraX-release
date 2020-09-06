@@ -37,6 +37,15 @@ class AssessmentProverTests extends TacticTestBase {
         p.label should contain ("prob:withoutpoints")
         p.questions shouldBe List(AskQuestion(None, Map.empty, ExpressionArtifact("x>=0"), List(ExpressionArtifact("x>=0")), List.empty))
     }
+    inside (Problem.fromString("""\begin{problem} \ask \sol{It is a text answer with $x=5$ some math} \end{problem}""")) {
+      case p :: Nil =>
+        p.name shouldBe 'empty
+        p.points shouldBe 'empty
+        p.label shouldBe 'empty
+        p.questions shouldBe List(AskQuestion(None, Map.empty,
+          TextArtifact(Some("It is a text answer with $x=5$ some math")),
+          List(TextArtifact(Some("It is a text answer with $x=5$ some math"))), List.empty))
+    }
     inside (Problem.fromString("""\begin{problem}[1.0]\label{prob:first} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
       case p :: Nil =>
         p.name shouldBe 'empty
@@ -146,6 +155,21 @@ class AssessmentProverTests extends TacticTestBase {
           List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?\\%1; x:=x+1;}*@invariant(\\%2)]x>=0", "feedback" -> "3.4"),
             ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
             List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask
+        |\sol
+        |{\begin{lstlisting}
+        |x>=0 -> [{?true; x:=x+1;}*@invariant(x>=0)]x>=0
+        |\end{lstlisting}}
+        |\algog{checkArchive()}
+        |\end{problem}}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("checkArchive"), Map.empty,
+            ArchiveArtifact("x>=0 -> [{?true; x:=x+1;}*@invariant(x>=0)]x>=0"),
+            List(ArchiveArtifact("x>=0 -> [{?true; x:=x+1;}*@invariant(x>=0)]x>=0")), List.empty))
     }
     inside (Problem.fromString(
       """\begin{problem}[1.0]
@@ -894,6 +918,7 @@ class AssessmentProverTests extends TacticTestBase {
       case SequentArtifact(goals) => goals.map(_.toString).mkString(";;")
       case TacticArtifact(s, _) => s
       case TextArtifact(text) => text.getOrElse("")
+      case ArchiveArtifact(s) => s
     }
 
     def artifactSrcString(a: Artifact): String = a match {
@@ -903,6 +928,7 @@ class AssessmentProverTests extends TacticTestBase {
       case _: SequentArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TacticArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TextArtifact => artifactString(a)
+      case _: ArchiveArtifact => """{\begin{lstlisting}""" + artifactString(a) + """\end{lstlisting}}"""
     }
 
     def createAnswer(grader: Grader, a: Artifact): List[Submission.Answer] = {
