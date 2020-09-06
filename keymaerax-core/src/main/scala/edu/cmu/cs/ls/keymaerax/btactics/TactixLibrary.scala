@@ -545,7 +545,7 @@ object TactixLibrary extends HilbertCalculus
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
       //@todo how to handle multiple archive entries with same dynamics but conflicting annotations?
-      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) | ODEInvariance.dRI(pos)
+      (if (pos.isTopLevel) SaturateTactic(DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) | ODEInvariance.dRI(pos))
        else DifferentialTactics.diffInd()(pos)) &
         Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
