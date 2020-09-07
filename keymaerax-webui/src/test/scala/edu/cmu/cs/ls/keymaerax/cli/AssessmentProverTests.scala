@@ -18,6 +18,7 @@ import org.scalatest.EitherValues._
 import spray.json._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.StringOps
 import scala.io.Source
 
 class AssessmentProverTests extends TacticTestBase {
@@ -794,7 +795,7 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.grade(options, msgsStream, resultsStream, "")
     val msgs = msgsStream.toString
     print(msgs)
-    val msgLines = msgs.lines.toList
+    val msgLines = (msgs:StringOps).lines.toList
 
     val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
     val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r("id")

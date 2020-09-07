@@ -115,7 +115,7 @@ trait UnifyUSCalculus {
   val skip : BelleExpr = anons {(provable: ProvableSig) => provable}
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
-  val nil : BelleExpr = Idioms.ident
+  val nil : BelleExpr = anon { Idioms.ident }
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
