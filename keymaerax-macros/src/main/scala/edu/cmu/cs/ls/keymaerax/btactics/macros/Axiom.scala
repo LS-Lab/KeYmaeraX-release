@@ -17,9 +17,15 @@ import AnnotationCommon._
   * Axiom Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
   * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedAxiom]]
   * or related functions, see [[Ax]] for examples.
-  * @param names Display names to render in the user interface.
-  * @param codeName You almost never need to specify this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
-  *                 `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
+  * @param names Display names to render in the user interface. If two names are given, the first is Unicode and the second ASCII.
+  *              If one ASCII name is given, it is also used as the Unicode name.
+  *              Unicode names are useful for display to end users, ASCII names appear to be better-supported in error messages.
+  *              Optional, defaults to codeName
+  * @param codeName You usually don't need to specify this argument, especially for axioms. Permanent unique code name used to invoke this axiom
+  *                 in tactics as a string and for Lemma storage. `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is usually recommended to be identical to it.
+  *                 The exception is when you wish to have different arguments in the parsed Bellerophon language than does your implementation.
+  *                 In this case it is conventional to write a declaration  val <name>X = <name>(...)  with codeName <name> which converts arguments as needed.
+  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to ASCII display name
   * @param conclusion Formula string displayed for axioms as html with unicode in the user interface
   *  For axioms with (non-position) inputs, the conclusion must mention each input.
   *  Sequent syntax is optionally supported:   A, B |- C, D
@@ -52,6 +58,7 @@ import AnnotationCommon._
   */
 class Axiom(val names: Any,
             val codeName: String = "",
+            val longDisplayName: String = "",
             val conclusion: String = "",
             val unifier: String = "full",
             val displayLevel: String = "internal",
@@ -72,7 +79,7 @@ class AxiomImpl (val c: whitebox.Context) {
   import c.universe._
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "codeName", "conclusion", "unifier", "displayLevel", "inputs", "key", "recursor")
+    val paramNames = List("names", "codeName", "longDisplayName", "conclusion", "unifier", "displayLevel", "inputs", "key", "recursor")
     def getLiteral(t: Tree): String = {
       t match {
         case Literal(Constant(s: String)) => s
@@ -81,11 +88,12 @@ class AxiomImpl (val c: whitebox.Context) {
     }
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
-    def getParams: (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
+    def getParams: (String, String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
           val defaultMap: Map[String, Tree] = Map(
             "codeName" -> Literal(Constant("")),
+            "longDisplayName" -> Literal(Constant("")),
             "conclusion" -> Literal(Constant("")),
             "unifier" -> Literal(Constant("full")),
             "displayLevel" -> Literal(Constant("internal")),
@@ -100,9 +108,10 @@ class AxiomImpl (val c: whitebox.Context) {
             //case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
-          val (concl, inputString, codeName, unifier, displayLevel, keyString, recursorString) =
-            (getLiteral(paramMap("conclusion")), getLiteral(paramMap("inputs")), getLiteral(paramMap("codeName")), getLiteral(paramMap("unifier")),
-              getLiteral(paramMap("displayLevel")), getLiteral(paramMap("key")), getLiteral(paramMap("recursor")))
+          val (concl, inputString, codeName, longDisplayName, unifier, displayLevel, keyString, recursorString) =
+            (getLiteral(paramMap("conclusion")), getLiteral(paramMap("inputs")), getLiteral(paramMap("codeName")),
+              getLiteral(paramMap("longDisplayName")), getLiteral(paramMap("unifier")), getLiteral(paramMap("displayLevel")),
+              getLiteral(paramMap("key")), getLiteral(paramMap("recursor")))
           val inputs: List[ArgInfo] = parseAIs(inputString)(c)
           val key = parsePos(keyString)(c)
           val recursor = parsePoses(recursorString)(c)
@@ -113,11 +122,11 @@ class AxiomImpl (val c: whitebox.Context) {
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
             case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: axioms with inputs must have conclusion specified")
           }
-          (codeName, displayInfo, unifier, displayLevel, key, recursor)
+          (codeName, longDisplayName, displayInfo, unifier, displayLevel, key, recursor)
         case e => c.abort(c.enclosingPosition, "Excepted @Axiom(args), got: " + e)
       }
     }
-    val (codeNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams
+    val (codeNameParam: String, longDisplayNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams
     // Annotation can only be attached to library functions for defining new axioms
     def correctName(t: c.universe.Tree): Boolean = {
       t match {
@@ -158,6 +167,11 @@ class AxiomImpl (val c: whitebox.Context) {
             val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
             if (codeName.toString.exists(c => c =='\"'))
               c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
+            // display name defaults to ascii name if not provided
+            val longDisplayName = Literal(Constant(
+              if(longDisplayNameParam.nonEmpty) longDisplayNameParam
+              else if (display.asciiName.nonEmpty) display.asciiName
+              else codeName.decodedName.toString))
             val storageName = TermName(codeName.toString.toLowerCase)
             // AST for literal strings for the names
             val codeString = Literal(Constant(codeName.decodedName.toString))
@@ -179,9 +193,9 @@ class AxiomImpl (val c: whitebox.Context) {
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
             val info =
               if(isCore)
-                q"""CoreAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
+                q"""CoreAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
               else
-                q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
+                q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, longDisplayName = $longDisplayName, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
             val application = q"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)"
