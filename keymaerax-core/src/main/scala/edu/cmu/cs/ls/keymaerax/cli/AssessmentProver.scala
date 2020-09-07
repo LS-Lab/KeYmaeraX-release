@@ -663,7 +663,7 @@ object AssessmentProver {
   /** Compares sequents for syntactic equality. */
   def syntacticEquality(a: List[Sequent], b: List[Sequent]): ProvableSig = {
     require(b.nonEmpty && a.size == b.size, "Cannot check empty lists of sequents or sequent lists of different size")
-    val fmls = a.zip(b).map({ case (as, bs) =>
+    val fmls = a.sortBy(_.prettyString).zip(b.sortBy(_.prettyString)).map({ case (as, bs) =>
       val edistinct = Sequent(bs.ante.distinct, bs.succ.distinct)
       (sequentToFormula(as, edistinct), edistinct.toFormula)
     })
