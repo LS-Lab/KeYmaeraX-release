@@ -194,7 +194,8 @@ object DebuggingTactics {
   /** assertE is a no-op tactic that raises a tactic assertion error if the provable has not the expected expression at the specified position. */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = assertE(expected, message, new TacticAssertionError(_))
   @Tactic(("Assert", "assert"), codeName = "assert")
-  def assertX(expected: Expression, msg: String): InputTactic = inputanon { DebuggingTactics.assertE(expected, msg) }
+  def assertX(expected: Expression, msg: String): DependentPositionWithAppliedInputTactic  =
+    inputanon { DebuggingTactics.assertE(expected, msg)(_: Position) }
 
 
   /** @see [[TactixLibrary.done]] */

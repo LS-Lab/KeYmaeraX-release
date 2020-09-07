@@ -238,6 +238,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => true, "Succeed") & andL(-1)) shouldBe "(implyR(1)) ; andL(-1)"
   }
 
+  it should "parse simple assert" in {
+    BelleParser("""assert("x>0", "Unexpected", 1)""") shouldBe assertE("x>0".asExpr, "Unexpected")(1)
+  }
+
   //endregion
 
   //region Either combinator
