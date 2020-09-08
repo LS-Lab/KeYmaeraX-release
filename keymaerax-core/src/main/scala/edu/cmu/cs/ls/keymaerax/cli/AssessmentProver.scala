@@ -4,7 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{BufferedOutputStream, FileOutputStream, OutputStream, PrintStream, PrintWriter}
+import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream, FileReader, IOException, OutputStream, PrintStream, PrintWriter}
+import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
@@ -888,7 +889,7 @@ object AssessmentProver {
           msgStream.println(p.number + " " + p.title)
 
           val allPromptArtifacts = (gradablePrompts ++ unparseablePrompts.map({ case (p, _) => (p, None) })).sortBy(_._1.id)
-          val graders = extractGraders(allPromptArtifacts)
+          val graders = extractGraders(p, allPromptArtifacts)
           val errors = unparseablePrompts.map({ case (prompt, ex: Throwable) => (prompt, Right(ex)) })
           val all = (graders ++ errors).sortBy({ case (p, _) => p.id })
           val grades = all.map({
@@ -922,7 +923,8 @@ object AssessmentProver {
 
   /** Extracts graders from prompts, assumes that all prompts (even unparseable ones) are present in this list.
     * Returns graders for prompts that have answers. */
-  private def extractGraders(prompts: List[(Submission.Prompt, Option[Artifact])]): List[(Submission.Prompt, Either[(Grader, Option[Artifact]), Throwable])] = {
+  private def extractGraders(problem: Submission.Problem, prompts: List[(Submission.Prompt, Option[Artifact])]):
+      List[(Submission.Prompt, Either[(Grader, Option[Artifact]), Throwable])] = {
     val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
     val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
     val mergedPrompts = prompts.zipWithIndex.map({
@@ -936,7 +938,7 @@ object AssessmentProver {
       case (q, _) => q
     })
 
-    mergedPrompts.filter(_._2.isDefined).map({ case (prompt, answerArtifact) => (prompt, Left(toGrader(prompt), answerArtifact)) })
+    mergedPrompts.filter(_._2.isDefined).map({ case (prompt, answerArtifact) => (prompt, Left(toGrader(problem, prompt), answerArtifact)) })
   }
 
   private def runGrader(p: Submission.Problem, prompt: Submission.Prompt, answerArtifact: Option[Artifact],
@@ -1049,28 +1051,39 @@ object AssessmentProver {
     }
   }
 
-  private def toGrader(p: Submission.Prompt): Grader = p match {
+  private def toGrader(problem: Submission.Problem, p: Submission.Prompt): Grader = p match {
     case mp@Submission.MultiPrompt(main, earlier) =>
       require(mp.name == "\\ask", "Expected text multiprompt") //@note other questions do not have \algog
       require(mp.answers.size == 1, "Expected exactly 1 answer for text prompt " + mp.id + ", but got " + mp.answers.size)
-      val mainGrader = toGrader(main)
-      val earlierGraders = earlier.map({ case (k, v) => (k, toGrader(v)) }).toList.sortBy(_._1)
+      val mainGrader = toGrader(problem, main)
+      val earlierGraders = earlier.map({ case (k, v) => (k, toGrader(problem, v)) }).toList.sortBy(_._1)
       MultiAskGrader(mainGrader, earlierGraders.toMap)
     case _: Submission.SinglePrompt => p.name match {
       case "\\ask" =>
         require(p.answers.size == 1, "Expected exactly 1 answer for text prompt " + p.id + ", but got " + p.answers.size)
         p.answers.map({
-          case Submission.TextAnswer(_, _, _, grader, _, _) =>
-            grader.map(g => QuizExtractor.AskQuestion.graderInfoFromString(g.method)) match {
-              case Some((g, args)) => toExpectedArtifact(p) match {
-                  case (Some(expected), a) => AskGrader(Some(g), args ++ a, expected)
-                  case (None, _) => SkipGrader(null, Messages.INSPECT)
-                }
-              case None => toExpectedArtifact(p) match {
-                case (Some(expected), _) => SkipGrader(expected, Messages.INSPECT)
+          case Submission.TextAnswer(_, _, _, grader, _, _) => grader match {
+            case Some(g) =>
+              val (gr, args) = QuizExtractor.AskQuestion.graderInfoFromString(g.method)
+              toExpectedArtifact(p) match {
+                case (Some(expected), a) => AskGrader(Some(gr), args ++ a, expected)
                 case (None, _) => SkipGrader(null, Messages.INSPECT)
               }
-            }
+            case None =>
+              // pull grader from file
+              val graderProperties = new Properties()
+              try {
+                graderProperties.load(new FileReader("grader.properties"))
+                val method = graderProperties.getProperty(problem.number + "." + p.number)
+                val (gr, args) = QuizExtractor.AskQuestion.graderInfoFromString(method)
+                toExpectedArtifact(p) match {
+                  case (Some(expected), a) => AskGrader(Some(gr), args ++ a, expected)
+                  case (None, _) => SkipGrader(null, Messages.INSPECT)
+                }
+              } catch {
+                case _: IOException => SkipGrader(null, Messages.INSPECT)
+              }
+          }
         }).head
       case "\\onechoice" =>
         toExpectedArtifact(p) match {
