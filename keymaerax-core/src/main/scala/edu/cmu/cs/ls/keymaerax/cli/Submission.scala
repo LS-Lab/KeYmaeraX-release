@@ -106,19 +106,13 @@ object Submission {
                 ID -> id.toJson,
                 LABEL -> label.toJson,
                 NAME -> "\\solfinask".toJson,
-                //@todo fill cookies once JSON format is fixed
-                COOKIES -> JsArray() /*(grader match {
-                  case Some(g) => JsArray(g.toJson)
-                  case None => JsArray()
-                })*/,
-                //@todo remove \\algog from body_src once JSON format is fixed
-                BODY_SRC -> (argPlaceholder.replaceAllIn(expected, " ") + "\\algog {" + grader.map(_.method).getOrElse("") + "}").toJson,
+                COOKIES -> JsArray(), //@note empty here, but filled in solution_prompt
+                BODY_SRC -> argPlaceholder.replaceAllIn(expected, " ").toJson,
                 SOLUTION_PROMPT -> JsObject(
-                  NAME -> "solfin_sol".toJson,
-                  BODY_SRC -> (argPlaceholder.replaceAllIn(expected, m =>
-                    Regex.quoteReplacement("~~" + m.group("arg")) + "~~") +
-                    "\\algog {" + grader.map(_.method).getOrElse("") + "}").toJson,
-                  COOKIES -> JsArray()
+                  NAME -> "solfinsol".toJson,
+                  BODY_SRC -> argPlaceholder.replaceAllIn(expected, m =>
+                    Regex.quoteReplacement("~~" + m.group("arg")) + "~~").toJson,
+                  COOKIES -> JsArray(grader.map(_.toJson).toList:_*)
                 ),
                 USER_ANSWER -> JsObject(
                   TEXT -> answer.toJson,
@@ -158,47 +152,23 @@ object Submission {
             TextAnswer(id, label, name, grader, answer, bodySrc)
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(true))) =>
             //@note fill_in_the_gap_text contains question with empty placeholders <%% %%>
-            //@note body_src contains question with empty placeholders <%% %%> plus autograder
-            //@note solution_prompt.body_src contains solution without placeholders (but retains ~)! plus autograder
+            //@note body_src contains question with empty placeholders <%% %%>
+            //@note solution_prompt.body_src contains solution without placeholders (but retains ~)!
             //@note user_answers contains user answer filled into placeholders <%% answer %%>
-
-            //val (bodySrcQuestion, bodySrcGrader) = extractQuestionGrader(json.asJsObject) //@note ignored for now
-            val (rawSolPromptQuestion, solPromptGrader) = extractQuestionGrader(fields(SOLUTION_PROMPT).asJsObject)
+            val solutionPrompt = fields(SOLUTION_PROMPT).asJsObject
+            val solfinGrader = solutionPrompt.fields(COOKIES).convertTo[List[GraderCookie]].find(_.name == "\\algog")
+            val rawSolPromptQuestion = solutionPrompt.fields(BODY_SRC) match { case JsString(s) => s}
             val placeHolderRepl = "(?s)~+(.+?)~+".r("arg")
             val solPromptQuestion = placeHolderRepl.replaceAllIn(rawSolPromptQuestion,
               m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
-            //@note prefer grader cookie in case it is present
-            val theGrader = (grader, solPromptGrader) match {
-              case (Some(g), _) => Some(g)
-              case (None, Some(g)) => Some(g)
-              case (None, None) => None
-            }
             val answer = fields(USER_ANSWER) match {
               case a: JsObject => a.fields(TEXT) match {
                 case JsString(s) => argPlaceholder.replaceAllIn(s,
                   m => Regex.quoteReplacement(AskQuestion.INLINE_SOL_DELIM + m.group("arg") + AskQuestion.INLINE_SOL_DELIM))
               }
             }
-            TextAnswer(id, label, name, theGrader, answer, solPromptQuestion)
+            TextAnswer(id, label, name, solfinGrader, answer, solPromptQuestion)
         }
-      }
-    }
-
-    private def extractQuestionGrader(o: JsObject): (String, Option[GraderCookie]) = {
-      o.fields(BODY_SRC) match { case JsString(s) =>
-        val trimmed = s.trim
-        //@note solfin does not yet have grader cookie, grader info is (accidentally?) packed into body_src
-        val (question, bodySrcGrader) = trimmed.split("""\\algog""").toList match {
-          case q :: g :: Nil =>
-            val graderCookie = GraderCookie(-1, "\\algog", g.trim.stripPrefix("{").stripSuffix("}"))
-            (q.trim, Some(graderCookie))
-          case q :: Nil => (q.trim, None)
-        }
-        //@note tex usually does not mention extra braces (e.g. \solfin \begin{lstlisting}...)
-        val trimmedQuestion =
-          if (question.startsWith("{")) question.stripPrefix("{").stripSuffix("}")
-          else question
-        (trimmedQuestion, bodySrcGrader)
       }
     }
 
