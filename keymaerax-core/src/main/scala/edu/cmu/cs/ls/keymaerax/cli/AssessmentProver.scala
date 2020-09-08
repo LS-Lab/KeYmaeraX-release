@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream, FileReader, IOException, OutputStream, PrintStream, PrintWriter}
+import java.io.{BufferedOutputStream, BufferedWriter, File, FileInputStream, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -815,6 +815,24 @@ object AssessmentProver {
     KeYmaeraXProofChecker(5000)(t)(s)
   }
 
+  /** Exports answers from `chapter` to individual files in directory `out`, on for each question (named 1a.txt ... Xy.txt) */
+  def exportAnswers(chapter: Submission.Chapter, out: String): Unit = {
+    val outDir = new File(out)
+    if (!outDir.exists) outDir.mkdirs()
+
+    chapter.problems.foreach(problem =>
+      problem.prompts.foreach({ prompt =>
+        val out = new PrintWriter(new BufferedWriter(new FileWriter(outDir + File.separator + (problem.number + prompt.number) + ".txt")))
+        prompt.answers.foreach({
+          case Submission.ChoiceAnswer(_, _, _, _, text, isSelected) => out.println(text + ":" + isSelected)
+          case Submission.TextAnswer(_, _, _, _, answer, _) => out.println(answer)
+        })
+        out.close()
+      })
+    )
+
+  }
+
   /** Grades a submission.
     *
     * @param options The prover options:
@@ -849,6 +867,8 @@ object AssessmentProver {
     *
     * @param options The prover options:
     *                - 'in (mandatory) identifies the file to grade
+    *                - 'exportanswers (optional) exports answers to text files instead of grading
+    *                - 'skiponparseerror (optional) skips grading on parse errors
     */
   def grade(options: OptionMap, msgOut: OutputStream, resultOut: OutputStream, usage: String): Unit = {
     require(options.contains('in), usage)
@@ -861,19 +881,26 @@ object AssessmentProver {
       input.convertTo[Submission.Chapter]
     }
 
+    if (options.getOrElse('exportanswers, "false").toString.toBoolean) {
+      exportAnswers(chapter, options.getOrElse('out, ".").toString)
+    } else {
+      val skipGradingOnParseError = options.get('skiponparseerror).exists(_.toString.toBoolean)
+      grade(chapter, msgOut, resultOut, skipGradingOnParseError)
+    }
+  }
+
+  private def grade(chapter: Submission.Chapter, msgOut: OutputStream, resultOut: OutputStream, skipGradingOnParseError: Boolean): Unit = {
     val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, prompts) =>
       val parsedAnswers = prompts.map(p => try {
-          Left(p -> toAnswerArtifact(p))
-        } catch {
-          case ex: Throwable => Right(p -> ex)
-        }
+        Left(p -> toAnswerArtifact(p))
+      } catch {
+        case ex: Throwable => Right(p -> ex)
+      }
       )
       (problem, parsedAnswers.partition(_.isLeft) match {
         case (as, pe) => (as.map(_.left.get), pe.map(_.right.get))
       })
     })
-
-    val skipGradingOnParseError = options.get('skipGradingOnParseError).exists(_.toString.toBoolean)
 
     val msgStream = new PrintStream(msgOut, true)
     if (skipGradingOnParseError && parsedProblems.exists(_._2._2.nonEmpty)) {
@@ -904,8 +931,9 @@ object AssessmentProver {
             case MultiAskGrader(main: AskGrader, _) => main.args.get("feedback")
             //@todo feedback for other problems?
             case _ => None
-          } })
-          val percentage = (100.0*grades.count(_._2 > 0.0))/grades.size
+          }
+          })
+          val percentage = (100.0 * grades.count(_._2 > 0.0)) / grades.size
           msgStream.println(f"${p.number} ) Sum $percentage%2.1f%%")
           feedback match {
             case Some(s) =>

@@ -142,6 +142,11 @@ object KeYmaeraX {
       case "-grade" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.GRADE, 'in -> value), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
+      case "-exportanswers" :: tail => nextOption(options ++ Map('exportanswers -> true), tail, usage)
+      case "-skiponparseerror" :: tail => nextOption(options ++ Map('skiponparseerror -> true), tail, usage)
+      case "-out" :: value :: tail =>
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('out -> value), tail, usage)
+        else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-savept" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('ptOut -> value), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
