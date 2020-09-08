@@ -42,9 +42,7 @@ object Kaisar {
         throw exn
     }
 
-  /** Parse and check proof string [[pf]]
-    * @return The formula proved by [[pf]], if any, else raises an exception */
-  def apply(pf: String): Formula = {
+  def result(pf: String): (Statement, Formula) = {
     // Pass name used to print more informative error messages
     var currentPass = "parser"
     try {
@@ -59,7 +57,7 @@ object Kaisar {
         val dt = DeterritorializePass(ssa)
         currentPass = "proofChecker"
         val (s, ff) = ProofChecker(Context.empty, dt)
-        ff
+        (s.s, ff)
       } catch {
         case le: LocatedException =>
           def snippetFor(s: ASTNode) = {
@@ -79,4 +77,12 @@ object Kaisar {
       case kpe: KaisarParseException => throw kpe
     }
   }
+
+  /** Parse and check proof string [[pf]]
+    * @return The formula proved by [[pf]], if any, else raises an exception */
+  def apply(pf: String): Formula = result(pf)._2
+
+  /** Parse and check proof string [[pf]]
+    * @return The (proved) Kaisar statement resulting from proof [[pf]], if any, else raises an exception */
+  def statementProved(pf: String): Statement = result(pf)._1
 }
