@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -94,6 +95,21 @@ private object ProofRuleTactics extends Logging {
         )
         TactixLibrary.CEat(side)(pos)
     }}
+
+  /** Bound renaming at a position (must point to universal quantifier or assignment). */
+  @Tactic("BRat",
+    premises = "Γ |- ∀y Q(y), Δ",
+    conclusion = "Γ |- ∀x Q(x), Δ", inputs = "y:variable", displayLevel = "browse")
+  def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
+    sequent.sub(pos) match {
+      case Some(Forall(v :: Nil, _)) => boundRename(v, repl)(pos)
+      case Some(Box(Assign(v, _), _)) => boundRename(v, repl)(pos)
+      case Some(Box(AssignAny(v), _)) => boundRename(v, repl)(pos)
+      case Some(Diamond(Assign(v, _), _)) => boundRename(v, repl)(pos)
+      case Some(Diamond(AssignAny(v), _)) => boundRename(v, repl)(pos)
+      case ex => throw new TacticInapplicableFailure("Expected quantifier or assignment at position " + pos.prettyString + ", but got " + ex.map(_.prettyString))
+    }
+  }
 
   private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = anon { (provable: ProvableSig, pos: Position) => {
     requireOneSubgoal(provable, "BoundRenaming(" + what + "~~>" + repl + ")")
