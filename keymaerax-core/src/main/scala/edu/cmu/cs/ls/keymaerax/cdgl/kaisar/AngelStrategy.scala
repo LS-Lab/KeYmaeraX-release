@@ -94,7 +94,6 @@ object AngelStrategy {
         val solAssign = Composed(xfs.map({ case (x, f) => DAssign(x, f) }))
         Composed(setT :: dc :: solAssign :: Nil)
     }
-    //DODE(pode.asODESystem)
   }
 
   private def body(pf: Statement): AngelStrategy = {
@@ -116,12 +115,9 @@ object AngelStrategy {
 
   def apply(pf: Statement): AngelStrategy = {
     val fv = VariableSets(pf).freeVars
-    println("Free variables: " + fv)
     val main = body(pf)
-    // @TODO: Need tight freevar computation
-    //val inits = fv.toList.map(NDAssign)
-    //val strat = inits.foldRight(main)(DCompose)
-    //println("Angel strat: " + strat)
-    main
+    val inits = fv.toList.map(NDAssign)
+    val strat = Composed(inits.:+(main))
+    strat
   }
 }

@@ -22,10 +22,10 @@ class ProofPlexShimTests extends TacticTestBase {
     val env = new Environment()
     val demon = new EssentialsSafeCar1DShim(env)
     demon.init()
-    val goal = env.state(Variable("d"))
     // @TODO: Braking case test v >= B/T eventually fails after reaching destination
     a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
     println("Final state: " + env.state)
+    val goal = env.state(Variable("d"))
     (env.state(Variable("x")) >=  (goal * 0.8)) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }
@@ -72,16 +72,10 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     }
   }
 
-  // populate initial environments
-  override def init(): Unit = {
-    initValues.foreach({case (k, v) => env.set(k, v)})
-  }
-
   override def readAssign(xSSA: Ident): Play.number = {
     val x = plainVar(xSSA)
     // initialization
     if(!env.contains(x)) return valFor(x)
-    // @TODO: Check assignments are in dependency order, else need smarter solution logic
     // differential equation has been reduced to * assignments
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))

@@ -261,8 +261,8 @@ case class Context(s: Statement) {
       case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
       case While(_, _, body) => reapply(body).searchAll(f, tabooProgramVars)
       case BoxLoop(body, ih) =>
-        val matchHere = ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
-        matchHere ++ reapply(body).searchAll(f, tabooProgramVars)
+        // only allowed to find IH
+        ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
       case BoxLoopProgress(BoxLoop(bl, Some((ihVar, ihFml))), progress) =>
         val ihMatch = if(fAdmiss(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
         ihMatch ++ reapply(progress).searchAll(f, tabooProgramVars)

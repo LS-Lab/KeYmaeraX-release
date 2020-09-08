@@ -14,39 +14,52 @@ import edu.cmu.cs.ls.keymaerax.core._
 /** Stores results of variable set computations for Kaisar proofs
   *
   * @param boundVars All program variables which are bound at some point in the proof, except Phi assignments
-  * @param freeVars All program variables which are bound at some point in the proof
+  * @param mustBoundVars All program variables which are bound on every path in proof.
+  * @param freeVars All program variables which appear free in proof without surrounding must-binder
   * @param tabooVars All program variables which are taboo (not allowed to be referenced), usually because they are ghosts
   * @param tabooFunctions All function symbols which are taboo to reference, usually because they are inverse ghosts
   * @param tabooFacts All fact variables which are taboo to reference, usually because they are inverse ghosts
   */
-case class VariableSets (boundVars: Set[Variable], freeVars: Set[Variable], tabooVars: Set[Variable], tabooFunctions: Set[Ident], tabooFacts: Set[Ident]) {
-  def addFreeVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, freeVars.++(v), tabooVars, tabooFunctions, tabooFacts)
-  def addTabooVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, freeVars, tabooVars.++(v), tabooFunctions, tabooFacts)
-  def addTabooFuncs(f: Set[Ident]): VariableSets = VariableSets(boundVars, freeVars, tabooVars, tabooFunctions.++(f), tabooFacts)
-  def addTabooFacts(p: Set[Ident]): VariableSets = VariableSets(boundVars, freeVars, tabooVars, tabooFunctions, tabooFacts.++(p))
-  def forgetBound: VariableSets = VariableSets(Set(), freeVars, tabooVars, tabooFunctions, tabooFacts)
+case class VariableSets (boundVars: Set[Variable], mustBoundVars: Set[Variable], freeVars: Set[Variable], tabooVars: Set[Variable], tabooFunctions: Set[Ident], tabooFacts: Set[Ident]) {
+  def addFreeVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars.++(v), tabooVars, tabooFunctions, tabooFacts)
+  def addTabooVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars, tabooVars.++(v), tabooFunctions, tabooFacts)
+  def addTabooFuncs(f: Set[Ident]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars, tabooVars, tabooFunctions.++(f), tabooFacts)
+  def addTabooFacts(p: Set[Ident]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars, tabooVars, tabooFunctions, tabooFacts.++(p))
+  def forgetBound: VariableSets = VariableSets(Set(), mustBoundVars, freeVars, tabooVars, tabooFunctions, tabooFacts)
   def allVars: Set[Variable] = freeVars ++ boundVars
   /** Set union  */
   def ++(other: VariableSets): VariableSets =
-    VariableSets(boundVars.++(other.boundVars), freeVars.++(other.freeVars), tabooVars.++(other.tabooVars), tabooFunctions.++(other.tabooFunctions), tabooFacts.++(other.tabooFacts))
+    VariableSets(boundVars.++(other.boundVars), mustBoundVars.++(other.mustBoundVars), freeVars.++(other.freeVars), tabooVars.++(other.tabooVars), tabooFunctions.++(other.tabooFunctions), tabooFacts.++(other.tabooFacts))
+  /** Combine alternative branches. Like ++ but must-bound is intersected  */
+  def choice(other: VariableSets): VariableSets =
+    VariableSets(boundVars.++(other.boundVars), mustBoundVars.intersect(other.mustBoundVars), freeVars.++(other.freeVars), tabooVars.++(other.tabooVars), tabooFunctions.++(other.tabooFunctions), tabooFacts.++(other.tabooFacts))
+
+  /** Combine sequential steps. Allows tighter free-variables computation  */
+  def andThen(other: VariableSets): VariableSets = {
+    val otherFree = other.freeVars -- mustBoundVars
+    VariableSets(boundVars.++(other.boundVars), mustBoundVars.++(other.mustBoundVars), freeVars.++(otherFree), tabooVars.++(other.tabooVars), tabooFunctions.++(other.tabooFunctions), tabooFacts.++(other.tabooFacts))
+  }
+
+  /** Clear must-bound variables for optional statements  */
+  def option: VariableSets = choice(VariableSets.empty)
 }
 
 object VariableSets {
-  val empty: VariableSets = VariableSets(Set(), Set(), Set(), Set(), Set())
+  val empty: VariableSets = VariableSets(Set(), Set(), Set(), Set(), Set(), Set())
 
   /** Set of taboo fact variables
     * @param isInverseGhost Was the context where the facts were defined enclosed by an inverse-ghost?
     * */
   private def ofFacts(vars: Set[Variable], fml: Formula, isInverseGhost: Boolean) = {
     val fv = StaticSemantics(fml).fv.toSet
-    VariableSets(boundVars = Set(), fv, tabooVars = Set(), tabooFunctions = Set(), tabooFacts = if (isInverseGhost) vars else Set())
+    VariableSets(boundVars = Set(), mustBoundVars = Set(), fv, tabooVars = Set(), tabooFunctions = Set(), tabooFacts = if (isInverseGhost) vars else Set())
   }
 
   /** Set of bound program variables
     * @param isGhost Was the context where the program variables were defined enclosed by a ghost?
     * */
-  private def ofBound(vars: Set[Variable], isGhost: Boolean) =
-    VariableSets(boundVars = vars, freeVars = Set(), tabooVars = if(isGhost) vars else Set(), Set(), Set())
+  private def ofMustBound(vars: Set[Variable], isGhost: Boolean) =
+    VariableSets(boundVars = vars, mustBoundVars = vars, freeVars = Set(), tabooVars = if(isGhost) vars else Set(), Set(), Set())
 
   /** Set of taboo function symbols
     * @param isInverseGhost Was the context where the functions were defined enclosed by an inverse-ghost?
@@ -56,7 +69,7 @@ object VariableSets {
       case f: Term => StaticSemantics(f).toSet
     }
     val free = bodyFree.--(args.toSet)
-    VariableSets(boundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
+    VariableSets(boundVars = Set(), mustBoundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 
   /** Compute static semantic variables sets for a given Kaisar [[statement]], depending on the context in which
@@ -74,23 +87,23 @@ object VariableSets {
     case Assert(pat: Term, f, m) => ofFacts(StaticSemantics(pat).toSet, f, kc.isInverseGhost)
     case mod: Modify =>
         mod.asgns.foldLeft[VariableSets](VariableSets.empty){
-          case (acc, (p, x, Some(f))) => acc ++ ofBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
-          case (acc, (p, x, None)) => acc ++ ofBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost))
+          case (acc, (p, x, Some(f))) => acc.andThen(ofMustBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet))
+          case (acc, (p, x, None)) => acc.andThen(ofMustBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)))
         }
     case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), kc.isInverseGhost)
     case LetFun(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
-    case Match(pat: Term, e) => ofBound(StaticSemantics(pat).toSet, kc.isGhost)
-    case Block(ss) => ss.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)((l, r) => l.++(r))
+    case Match(pat: Term, e) => ofMustBound(StaticSemantics(pat).toSet, kc.isGhost)
+    case Block(ss) => ss.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)((l, r) => l.andThen(r))
     case Switch(scrutinee, pats) =>
       pats.map({ case (x: Term, fml: Formula, s) => {
         val t = apply(kc.reapply(s))
         val tt = t.++(ofFacts(Set(), fml, kc.isInverseGhost))
         if (kc.isInverseGhost) tt.addTabooFacts(StaticSemantics(x).toSet) else tt
       }
-      }).reduce((l, r) => l.++(r))
-    case BoxChoice(left, right) => apply(kc.reapply(left)).++(apply(kc.reapply(right)))
-    case While(x: Term, j, s) => apply(kc.reapply(s)).addTabooFacts(StaticSemantics(x).toSet)
-    case BoxLoop(s, _) => apply(kc.reapply(s))
+      }).reduce((l, r) => l.choice(r))
+    case BoxChoice(left, right) => apply(kc.reapply(left)).choice(apply(kc.reapply(right)))
+    case While(x: Term, j, s) => apply(kc.reapply(s)).addTabooFacts(StaticSemantics(x).toSet).option
+    case BoxLoop(s, _) => apply(kc.reapply(s)).option
     case ProveODE(ds, dc) => apply(kc, ds).++(apply(kc, dc))
     case m: Phi => apply(m.asgns).forgetBound
     // @TODO: Are there ever cases where we want to check _bl instead?
@@ -108,7 +121,7 @@ object VariableSets {
     * @return All bound and taboo variables of statement
     */
   def apply(kc: Context, diffStatement: DiffStatement): VariableSets = diffStatement match {
-    case AtomicODEStatement(dp, _) => ofBound(Set(dp.xp.x), kc.isGhost).addFreeVars(StaticSemantics(dp.e).toSet)
+    case AtomicODEStatement(dp, _) => ofMustBound(Set(dp.xp.x), kc.isGhost).addFreeVars(StaticSemantics(dp.e).toSet.+(dp.xp.x))
     case DiffProductStatement(l, r) => apply(kc, l).++(apply(kc, r))
     case DiffGhostStatement(ds) => apply(kc.withGhost, ds)
     case InverseDiffGhostStatement(ds) => apply(kc.withInverseGhost, ds)
@@ -125,7 +138,7 @@ object VariableSets {
     case DomAssume(x: Term, f) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomAssert(x: Term, f, child) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomWeak(dc: DomainStatement) => apply(kc.withInverseGhost, dc)
-    case DomModify(x, f) => ofBound(Set(x), kc.isGhost).++(ofFacts(Set(x), True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+    case DomModify(x, f) => ofMustBound(Set(x), kc.isGhost).++(ofFacts(Set(x), True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
     case DomAnd(l, r) => apply(kc, l).++(apply(kc, r))
   }
 }
