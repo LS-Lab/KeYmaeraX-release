@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /** Test synthesized Angel strategies against handwritten do-nothing Demon strategies */
 // @TODO: variable naming conventions for current vs historical state. Make SSA always use x_i so x can be current state
+// @TODO: Convenience wrapper for easier Demon strategy writing
+// @TODO: Augment strategies with unique node identifiers, add debugging data lookup by ID to Environment structure
 class ProofPlexShimTests extends TacticTestBase {
   val check: String => Statement = Kaisar.statementProved
 

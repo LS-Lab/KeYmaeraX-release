@@ -335,6 +335,56 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe discreteFml
   }
 
+  val pp = ProofParser
+  val kp = KaisarKeywordParser
+
+  def p[T](s: String, parser: P[_] => P[T]): T =
+    parse(s, parser) match {
+      case x: Success[T] => x.value
+      case x: Failure => throw new Exception(x.trace().toString)
+    }
+
+  // @TODO: Improve language so examples work
+  it should "parse and prove all thesis examples" in withMathematica { _ =>
+    var parseErrors: List[(String, Throwable)] = Nil
+    var checkErrors: List[(String, Throwable)] = Nil
+    SharedModels.thesisExamples.foreach(s =>
+      try {
+        p(s, pp.statement(_))
+      } catch { case t: Throwable =>
+        parseErrors = (s, t) :: parseErrors
+      }
+    )
+    val provedConclusions =
+      SharedModels.thesisExamples.flatMap(s =>
+        try {
+          List((s, check(s)))
+        } catch { case t: Throwable =>
+          checkErrors = (s, t) :: checkErrors;
+          Nil
+        }
+      )
+    val short = true
+    println("\n\n\n")
+    if(parseErrors.nonEmpty) {
+      if (short)
+        println(s"${parseErrors.length} EXAMPLES FAIL TO PARSE")
+      else
+        println("The following examples failed to parse: " + parseErrors.mkString("\n\n"))
+    }
+    if(checkErrors.nonEmpty) {
+      if (short)
+        println(s"${checkErrors.length} EXAMPLES FAIL TO CHECK")
+      else
+        println("The following examples failed to prove: " + checkErrors.mkString("\n\n"))
+    }
+    if (short)
+      println(s"${provedConclusions.length} PROOFS SUCCEED")
+    else
+      println("The conclusions of each successful proof are as follows: " + provedConclusions.mkString("\n\n"))
+    (parseErrors ++ checkErrors).nonEmpty shouldBe true
+  }
+
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
     val pfStr =
       """?xInit:(x:=0); ?vInit:(v:=0); ?acc:(A > 0); ?brk:(B > 0); ?tstep:(T > 0); ?separate: (x < d)
