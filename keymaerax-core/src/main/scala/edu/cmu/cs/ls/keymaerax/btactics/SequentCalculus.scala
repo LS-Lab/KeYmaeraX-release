@@ -274,8 +274,9 @@ trait SequentCalculus {
     conclusion = "Γ |- ∀x p(x), Δ")
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   @Tactic("∀Ri",
-    premises = "Γ |- ∀x p(x), Δ",
-    conclusion = "Γ |- p(x), Δ", displayLevel = "browse")
+    inputs = "f:term;;x[x]:option[variable]",
+    premises = "Γ |- ∀x p(f(x)), Δ",
+    conclusion = "Γ |- p(f(y)), Δ", displayLevel = "browse")
   def allRi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.universalGen(x, t)(_: Position) }
   /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
