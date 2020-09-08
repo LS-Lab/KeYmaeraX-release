@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import java.io.{ByteArrayOutputStream, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, TacticInapplicableFailure}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, InapplicableUnificationKeyFailure, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
@@ -398,14 +398,17 @@ class AssessmentProverTests extends TacticTestBase {
     AssessmentProver.syntacticEquality(
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent),
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe 'proved
-    the [IllFormedTacticApplicationException] thrownBy AssessmentProver.syntacticEquality(
+    AssessmentProver.syntacticEquality(
       List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent),
-      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) should have message
-        """Unable to create dependent tactic 'equivReflexive', cause: requirement failed: Conclusion of fact
-          |ElidingProvable(Provable(  ==>  (y>0->y>=0)&(x>0->x>=0)<->(y>0->y>=0)&(x>0->x>=0) proved))
-          |must match sole open goal in
-          |ElidingProvable(Provable(  ==>  (y>0->y>=0)&(x>0->x>=0)<->(x>0->x>=0)&(y>0->y>=0)
-          |  from     ==>  (y>0->y>=0)&(x>0->x>=0)<->(x>0->x>=0)&(y>0->y>=0)))""".stripMargin
+      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent)) shouldBe 'proved
+    the [InapplicableUnificationKeyFailure] thrownBy AssessmentProver.syntacticEquality(
+      List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent, "z>0 ==> z>0".asSequent),
+      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent, "y>0 ==> y>0".asSequent)) should have message
+        "No substitution found by unification, fix axiom key or try to patch locally with own substitution"
+    the [IllegalArgumentException] thrownBy AssessmentProver.syntacticEquality(
+      List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent),
+      List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent, "y>0 ==> y>0".asSequent)) should have message
+        "requirement failed: Cannot check empty lists of sequents or sequent lists of different size"
   }
 
   "Differential invariant checker" should "prove simple examples" in withZ3 { _ =>
@@ -947,6 +950,7 @@ class AssessmentProverTests extends TacticTestBase {
                     case ListExpressionArtifact(exprs) => exprs.map(_.prettyString)
                     case TacticArtifact(s, _) => s :: Nil
                     case ArchiveArtifact(s) => s :: Nil
+                    case SequentArtifact(s) => s.map(_.toString).mkString(";;") :: Nil
                   }
                   exprs.zipWithIndex.foldRight(q)({
                     case ((expr, i), answer) => answer.replaceAllLiterally(s"${AskQuestion.ARG_PLACEHOLDER}${i+1}",
@@ -1017,7 +1021,7 @@ class AssessmentProverTests extends TacticTestBase {
               if (name == "\\sol") {
                 (TextAnswer(id, label, name, grader, s, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else if (name == "\\solfinask") {
-                val answer = expected.replaceAll("<%%.*?%%>", "<%%" + s + "%%>")
+                val answer = expected.replaceAll("(?s)<%%.*?%%>", "<%%" + s + "%%>")
                 (TextAnswer(id, label, name, grader, answer, expected) :: Nil, answeredIncorrectly(grader, correct(0), s))
               } else throw new IllegalArgumentException("Unknown text answer type " + name)
           }
