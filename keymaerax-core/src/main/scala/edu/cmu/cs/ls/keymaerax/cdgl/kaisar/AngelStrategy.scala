@@ -11,7 +11,8 @@ case class DTest(f: Formula) extends SimpleStrategy
 case class DAssign(x: Ident, f: Term) extends SimpleStrategy
 case class NDAssign(x: Ident) extends SimpleStrategy
 case class DLoop(s: AngelStrategy) extends SimpleStrategy
-case class DCompose(l: AngelStrategy, r: AngelStrategy) extends SimpleStrategy
+// Note: binary compose is better for backend execution, but n-ary composition looks much nicer in debugger.
+case class DCompose(children: List[AngelStrategy]) extends SimpleStrategy
 case class DChoice(l: AngelStrategy, r: AngelStrategy) extends SimpleStrategy
 case class DODE(ode: ODESystem) extends AngelStrategy
 
@@ -19,18 +20,50 @@ case class ALoop(conv: Formula, body: AngelStrategy) extends AngelStrategy
 case class ASwitch(branches: List[(Formula, AngelStrategy)]) extends AngelStrategy
 case class AODE(ode: ODESystem, dur: Term) extends AngelStrategy
 
+/** Smart constructors for DCompose */
+object Composed {
+  def apply(children: List[AngelStrategy]): AngelStrategy = {
+    // Careful: Should distinguish "real" ?true from no-ops which should be eliminated
+    // @TODO: flatten
+    val filtered = children.filter({case DTest(True) => false case _ => true})
+    filtered match {
+      case Nil => DTest(True)
+      case as :: Nil => as
+      case _ => DCompose(filtered)
+    }
+  }
+  def apply(l: AngelStrategy, r: AngelStrategy): AngelStrategy = {
+    apply(l :: r :: Nil)
+  }
+
+  def apply(children: List[SimpleStrategy]): SimpleStrategy = {
+    // @TODO: Careful: Should distinguish "real" ?true from no-ops which should be eliminated
+    // Note: flattening DCompose's would give more minimal trees, but the unflattened shape is nice in practice:
+    // SSA blocks are kept together and can be easily collapsed in debugger
+    val filtered = children.filter({case DTest(True) => false case _ => true})
+    filtered match {
+      case Nil => DTest(True)
+      case as :: Nil => as
+      case _ => DCompose(filtered)
+    }
+  }
+  def apply(l: SimpleStrategy, r: SimpleStrategy): SimpleStrategy = {
+    apply(l :: r :: Nil)
+  }
+}
+
 object SimpleStrategy {
   def apply(fs: AngelStrategy): SimpleStrategy = {
     fs match {
       case DLoop(s) => DLoop(apply(s))
-      case DCompose(l, r) => DCompose(apply(l), apply(r))
+      case DCompose(children) => DCompose(children.map(apply))
       case DChoice(l, r) => DChoice(apply(l), apply(r))
       // @TODO: Need better negation of formulas, need more info in Kaisar data structure for that
-      case ALoop(conv, body) => DCompose(DLoop(DCompose(DTest(conv), apply(body))), DTest(Not(conv)))
-      case ASwitch(branches) => branches.map({case (f, fs) => DCompose(DTest(f), apply(fs))}).reduceRight(DChoice)
+      case ALoop(conv, body) => Composed(DLoop(Composed(DTest(conv), apply(body))), DTest(Not(conv)))
+      case ASwitch(branches) => branches.map({case (f, fs) => Composed(DTest(f), apply(fs))}).reduceRight(DChoice)
       // @TODO: Proof rule somewhere should check duration variable binding side conditions
-      //case AODE(ode, dur) => DODE(ode)
       case ss: SimpleStrategy => ss
+      case _: AODE | _: DODE => throw new Exception("ODEs should be eliminated before SimpleStrategy conversion")
     }
   }
 }
@@ -47,19 +80,19 @@ object AngelStrategy {
     val invs = (coll.assumptions.toList.map(_.f) ++ coll.assertions.map(_.f)).reduceRight[Formula](And)
     pode.solutions match {
       case None =>
-        val assignX = pode.ds.atoms.map(_.dp.xp.x).toList.map(NDAssign).reduceRight(DCompose)
-        val assignDX = pode.ds.atoms.map(_.dp).toList.map({ case AtomicODE(xp, e) => DAssign(xp, e) }).reduceRight(DCompose)
+        val assignX = pode.ds.atoms.map(_.dp.xp.x).toList.map(NDAssign)
+        val assignDX = pode.ds.atoms.map(_.dp).toList.map({ case AtomicODE(xp, e) => DAssign(xp, e) })
         val conds = pode.timeVar match {
           case Some(t) if !pode.isAngelic => And(GreaterEqual(t, Number(0)), invs)
           case _ => invs
         }
-        DCompose(assignT, DCompose(assignX, DCompose(assignDX, DTest(conds))))
+        Composed(assignT :: (assignX ++ assignDX.+:(DTest(conds))))
       case Some(xfs) =>
-        val setT = DCompose(NDAssign(tv), DTest(GreaterEqual(tv, Number(0))))
+        val setT = Composed(NDAssign(tv), DTest(GreaterEqual(tv, Number(0))))
         // @TODO: Should test all 0 <= s <= T  but c'est la vie
         val dc = DTest(if (pode.isAngelic) assms else invs)
-        val solAssign = xfs.map({ case (x, f) => DAssign(x, f) }).reduceRight(DCompose)
-        DCompose(setT, DCompose(dc, solAssign))
+        val solAssign = Composed(xfs.map({ case (x, f) => DAssign(x, f) }))
+        Composed(setT :: dc :: solAssign :: Nil)
     }
     //DODE(pode.asODESystem)
   }
@@ -67,12 +100,11 @@ object AngelStrategy {
   private def body(pf: Statement): AngelStrategy = {
     pf match {
       case Assume(pat, f) => DTest(f)
-      case BoxChoice(left, right) => DCompose(body(left), body(right))
+      case BoxChoice(left, right) => Composed(body(left), body(right))
       case InverseGhost(s) => body(s)
       case Modify(ids, mods) =>
-        mods.map({ case (x, None) => NDAssign(x) case (x, Some(f)) => DAssign(x, f) })
-          .reduceRight(DCompose)
-      case Block(ss) => ss.map(body).reduceRight(DCompose)
+        Composed(mods.map({ case (x, None) => NDAssign(x) case (x, Some(f)) => DAssign(x, f) }))
+      case Block(ss) => Composed(ss.map(body))
       case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b)) }))
       case While(x, j, s) => ALoop(j, body(s))
       case BoxLoop(s, ih) => DLoop(body(s))

@@ -113,10 +113,9 @@ object Play {
         while(ds.readLoop) {
           apply(env, s, ds)
         }
-      case DCompose(l, r) =>
-        // in-place update
-        apply(env, l, ds)
-        apply(env, r, ds)
+      case DCompose(children) =>
+        // in-place update of env
+        children.foreach(x => apply(env, x, ds))
       case DChoice(l, r) =>
         if (ds.readChoice)
           apply(env, l, ds)
