@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 import java.io.{BufferedOutputStream, FileOutputStream, OutputStream, PrintStream, PrintWriter}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, OnAll, SaturateTactic, TacticInapplicableFailure}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
@@ -348,31 +348,46 @@ object AssessmentProver {
               val minLength = args.getOrElse("minLength", "8").toInt
               val fracOfSol = args.getOrElse("fracOfSol", "0.3").toDouble
               if (hsTrimmed.length >= fracOfSol*esTrimmed.length)
-                run(() => KeYmaeraXProofChecker(5000)(byUS(Ax.equivReflexive))(
-                  Sequent(IndexedSeq(), IndexedSeq((Modes.EXPLANATION_CHECK + "&full<->" + Modes.EXPLANATION_CHECK + "&full").asFormula))))
+                run(() => prove(("==> " + Modes.EXPLANATION_CHECK + "&full<->" + Modes.EXPLANATION_CHECK + "&full").asSequent,
+                  byUS(Ax.equivReflexive)))
               else if (hsTrimmed.length >= minLength)
-                run(() => KeYmaeraXProofChecker(5000)(byUS(Ax.equivReflexive))(
-                  Sequent(IndexedSeq(), IndexedSeq((Modes.EXPLANATION_CHECK + "&min<->" + Modes.EXPLANATION_CHECK + "&min").asFormula))))
+                run(() => prove(("==> " + Modes.EXPLANATION_CHECK + "&min<->" + Modes.EXPLANATION_CHECK + "&min").asSequent,
+                  byUS(Ax.equivReflexive)))
               else Right("Please elaborate your explanation")
             case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.longHintString)
           }
         case Modes.BELLE_PROOF =>
+          @tailrec
+          def lastStep(t: BelleExpr): BelleExpr = t match {
+            case SeqTactic(_, right) => lastStep(right)
+            case _ => t
+          }
+
+          def runBelleProof(question: String, answers: List[String]): Either[ProvableSig, String] = {
+            run(() => {
+              val m = expand(question, answers, KeYmaeraXParser).asInstanceOf[Formula]
+              val t = expand(args("tactic"), answers, BelleParser)
+              val p = prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
+              // tactics that end in assert are checking whether or not the proof ends in a certain state; all others
+              // are expected to be proved
+              if (!p.isProved) {
+                lastStep(t) match {
+                  case n: NamedBelleExpr if n.name == "assert" =>
+                    prove(("==> " + Modes.BELLE_PROOF + "&byassert<->" + Modes.BELLE_PROOF + "&byassert").asSequent,
+                      byUS(Ax.equivReflexive))
+                  case _ => p
+                }
+              } else p
+            })
+          }
+
           args.get("question") match {
             case Some(q) =>
               have match {
-                case h: ExpressionArtifact =>
-                  run(() => {
-                    val m = expand(q, h.exprString :: Nil, KeYmaeraXParser).asInstanceOf[Formula]
-                    val t = expand(args("tactic"), h.exprString :: Nil, BelleParser)
-                    prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
-                  })
-                case ListExpressionArtifact(hs) =>
-                  run(() => {
-                    val m = expand(q, hs.map(_.prettyString), KeYmaeraXParser).asInstanceOf[Formula]
-                    val t = expand(args("tactic"), hs.map(_.prettyString), BelleParser)
-                    prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
-                  })
+                case h: ExpressionArtifact => runBelleProof(q, h.exprString :: Nil)
+                case ListExpressionArtifact(hs) => runBelleProof(q, hs.map(_.prettyString))
+                case SequentArtifact(goals) => runBelleProof(q, goals.map(_.toFormula).map(_.prettyString))
                 case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
               }
             case None =>
