@@ -59,7 +59,7 @@ object Submission {
       override def read(json: JsValue): GraderCookie = {
         json.asJsObject.getFields(ID, NAME, BODY).toList match {
           case JsNumber(id) :: JsString(name) :: JsString(graderMethod) :: Nil =>
-            GraderCookie(id.toLong, name, graderMethod)
+            GraderCookie(id.toLong, name, graderMethod.replaceAll("""(?<!\\)%""", Regex.quoteReplacement("\\%")))
         }
       }
     }
