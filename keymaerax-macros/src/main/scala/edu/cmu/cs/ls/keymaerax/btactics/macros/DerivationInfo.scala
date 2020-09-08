@@ -137,7 +137,7 @@ object DerivationInfo {
   def ofBuiltinName(name: String): Option[DerivationInfo] = {
     val expandPattern = "(expand(?!All).*)|(expandAllDefs)".r
     name match {
-      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name)))
+      case expandPattern(_*) => Some(new BuiltinInfo(name, name, SimpleDisplayInfo(name, name)))
       case _ => None
     }
   }
@@ -172,6 +172,9 @@ sealed trait DerivationInfo {
   val display: DisplayInfo
   /** The unique alphanumeric identifier for this inference step. Cannot contain spaces or special characters. */
   val codeName: String
+  /** Used on longer menus where descriptive phrases are desired. Usually contains spaces and is a grammatical
+    * English phrase. Defaults to short ASCII display name */
+  val longDisplayName: String = display.asciiName
 
   /** Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the UI. */
   val inputs: List[ArgInfo] = Nil
@@ -253,6 +256,7 @@ trait AxiomInfo extends ProvableInfo
 case class CoreAxiomInfo(  override val canonicalName:String
                          , override val display: DisplayInfo
                          , override val codeName: String
+                         , override val longDisplayName: String
                          , override val unifier: Symbol
                          , val theExpr: Unit => Any
                          , override val displayLevel: Symbol = 'internal
@@ -272,6 +276,7 @@ case class CoreAxiomInfo(  override val canonicalName:String
 case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val display: DisplayInfo
                             , override val codeName: String
+                            , override val longDisplayName: String
                             , override val unifier: Symbol
                             , theExpr: Unit => Any
                             , override val displayLevel: Symbol = 'internal
@@ -290,6 +295,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[DerivedRuleInfo]] */
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String
+                             , override val longDisplayName: String
                              , override val unifier: Symbol
                              , theExpr: Unit => Any
                              , val displayLevel: Symbol = 'internal
@@ -314,6 +320,7 @@ object AxiomaticRuleInfo {
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[AxiomaticRuleInfo]] */
 case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String
+                           , override val longDisplayName: String
                            , override val unifier: Symbol
                            , val theExpr: Unit => Any
                            , val displayLevel: Symbol = 'internal
@@ -330,6 +337,7 @@ case class DerivedRuleInfo(override val canonicalName:String, override val displ
 
 /** Meta-information on builtin tactic expressions (expand etc.). */
 class BuiltinInfo(  override val codeName: String
+                  , override val longDisplayName: String
                   , override val display: DisplayInfo
                   , override val displayLevel: Symbol = 'internal
                   , override val needsGenerator: Boolean = false
@@ -340,6 +348,7 @@ class BuiltinInfo(  override val codeName: String
 
 /** Meta-information on a tactic performing a proof step (or more) */
 class TacticInfo(  override val codeName: String
+                 , override val longDisplayName: String
                  , override val display: DisplayInfo
                  , val theExpr: Unit => Any
                  , override val displayLevel: Symbol = 'internal
@@ -350,32 +359,34 @@ class TacticInfo(  override val codeName: String
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val theExpr: Unit => Any,
+case class PositionTacticInfo(override val codeName: String, override val longDisplayName: String,
+                              override val display: DisplayInfo, override val theExpr: Unit => Any,
                               override val displayLevel: Symbol = 'internal,
                               override val needsGenerator: Boolean = false,
                               override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val theExpr: Unit => Any, override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator) {
+case class TwoPositionTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val theExpr: Unit => Any, override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _],
+case class InputTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _],
                            override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps)
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps)
 
-case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo,
+case class InputPositionTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo,
                                    override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_,_],
                                    override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, displayLevel, needsGenerator) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val longDisplayName: String
+                                      , override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator) {
   override val numPositionArgs = 2
 }
 

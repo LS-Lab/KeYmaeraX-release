@@ -26,6 +26,25 @@ object BelleExpr {
     val filtered = args.filter{case (_: Generator[_]) => false case _ => true}
     flattenArgs(filtered)
   }
+
+  private[bellerophon] def prettyArgs(inputs: Seq[Any]): String = {
+    persistable(inputs).flatMap(printOne) match {
+      case Nil => ""
+      case args => "(" + args.mkString(",") + ")"
+    }
+  }
+
+  @tailrec private[bellerophon] def printOne(x: Any): Option[String] = {
+    x match {
+      case None => None
+      case Some(y) => printOne(y)
+      case input: Expression => Some("\"" + input.prettyString + "\"")
+      case input: USubst => Some(input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(","))
+      case input: SubstitutionPair => Some("\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\"")
+      case input: String => Some("\"" + input + "\"")
+      case input => Some("\"" + input.toString + "\"")
+    }
+  }
 }
 
 /**
@@ -570,13 +589,9 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
 }
 abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
+
   override def prettyString: String =
-    s"$name(${BelleExpr.persistable(inputs).map({
-      case input: Expression => "\"" + input.prettyString + "\""
-      case input: USubst => input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(",")
-      case input: SubstitutionPair => "\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\""
-      case input: String => "\"" + input + "\""
-      case input => "\"" + input.toString + "\""}).mkString(",")})"
+    s"$name${BelleExpr.prettyArgs(inputs)}"
 
   override def equals(other: Any): Boolean = other match {
     case o: InputTactic => name == o.name && inputs == o.inputs
@@ -596,7 +611,7 @@ abstract class StringInputTactic(override val name: String, val inputs: Seq[Stri
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: Seq[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
   //@note non-serializable pretty-string, only applied tactic is serializable. @see AppliedDependendPositionTacticWithAppliedInput
-  override def prettyString: String = super.prettyString + "(" + BelleExpr.persistable(inputs).mkString(",") + ")"
+  override def prettyString: String = super.prettyString + BelleExpr.prettyArgs(inputs)
 
   override def equals(other: Any): Boolean = other match {
     case o: DependentPositionWithAppliedInputTactic => o.n == n && o.inputs == inputs
@@ -606,8 +621,10 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
-    if (pt.inputs.nonEmpty) s"${pt.name}(${BelleExpr.persistable(pt.inputs).map({ case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")},${locator.prettyString})"
-    else pt.name + "(" + locator.prettyString + ")"
+    if (pt.inputs.nonEmpty) {
+      val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne)
+      s"${pt.name}(${each.mkString(", ")}, ${locator.prettyString})"
+    } else pt.name + "(" + locator.prettyString + ")"
 
   override def equals(other: Any): Boolean = other match {
     case o: AppliedDependentPositionTactic => o.pt == pt && o.locator == locator

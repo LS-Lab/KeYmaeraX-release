@@ -464,7 +464,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "try until one succeeds" in withMathematica { _ =>
     val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, (implyR(1)&done)::prop::Nil, 1000)
     result shouldBe 'proved
-    recorded should contain theSameElementsInOrderAs("(implyR(1);done())" :: "prop" :: Nil)
+    recorded should contain theSameElementsInOrderAs("(implyR(1);done)" :: "prop" :: Nil)
   }
 
   it should "stop trying on timeout" in withMathematica { _ =>

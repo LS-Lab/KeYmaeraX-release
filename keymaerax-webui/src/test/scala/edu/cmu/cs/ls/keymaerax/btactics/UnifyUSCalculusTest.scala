@@ -193,7 +193,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
 
   it should "chase games" in {
     proveBy("==> <a;--b;>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> <a;>P() & <b;>P()".asSequent
-    proveBy("==> <a;b;--c;>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> <a;><b;>P() & <b;>P()".asSequent
+    proveBy("==> <a;b;--c;>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> <a;><b;>P() & <c;>P()".asSequent
     proveBy("==> <{{a;^@}*}^@>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> [{a;^@}*]P()".asSequent
   }
 

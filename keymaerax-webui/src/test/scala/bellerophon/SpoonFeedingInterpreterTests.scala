@@ -1195,6 +1195,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |(andL('Llast) ; (dC("g>0&1>=c&c>=0&r>=0",1) ; <( DW(1) ; G(1), V('Rlast) ; prop )))))))))""".stripMargin)
   }}
 
+  // @TODO: Broken because there's no printer for assertProvableSize
   it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<0 -> x>=0"
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
