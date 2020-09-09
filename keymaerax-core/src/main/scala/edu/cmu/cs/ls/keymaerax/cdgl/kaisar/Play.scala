@@ -8,9 +8,9 @@ import edu.cmu.cs.ls.keymaerax.core
 import spire.math._
 import edu.cmu.cs.ls.keymaerax.core._
 
-case class UnsimpleException() extends Exception
-case class ValuelessException() extends Exception
-case class TestFailureException() extends Exception
+case class UnsimpleException(nodeID: Int) extends Exception
+case class ValuelessException(nodeID: Int = -1) extends Exception
+case class TestFailureException(nodeID: Int) extends Exception
 
 class Environment {
   var state: Play.state = Map()
@@ -97,31 +97,41 @@ object Play {
   def apply(env: Environment, as: AngelStrategy, ds: DemonStrategy[number]): Unit = {
     as match {
       case DTest(f) =>
-        if (!env.holds(f)) {
-          println(s"""Test \"$f\" failed in state ${env.state}""")
-          throw TestFailureException()
+        try {
+          if (!env.holds(f)) {
+            println(s"""Test \"$f\" failed in state ${env.state}""")
+            throw TestFailureException(as.nodeID)
+          }
+        } catch {
+          case v: ValuelessException => throw ValuelessException(as.nodeID)
         }
       case DAssign(x, f) =>
-        val v = env.eval(f)
-        ds.writeAssign(x, v)
-        env.set(x, v)
+        try {
+          val v = env.eval(f)
+          ds.writeAssign(as.nodeID, x, v)
+          //println(s"Interpreter assigned $x -> $v")
+          env.set(x, v)
+        } catch {
+          case v: ValuelessException => throw ValuelessException(as.nodeID)
+        }
       case NDAssign(x) =>
-        val v = ds.readAssign(x)
+        val v = ds.readAssign(as.nodeID, x)
+        //println(s"Interpreter star-assigned $x -> $v")
         env.set(x, v)
       case DLoop(s) =>
         // in-place update
-        while(ds.readLoop) {
+        while(ds.readLoop(as.nodeID)) {
           apply(env, s, ds)
         }
       case DCompose(children) =>
         // in-place update of env
         children.foreach(x => apply(env, x, ds))
       case DChoice(l, r) =>
-        if (ds.readChoice)
+        if (ds.readChoice(as.nodeID))
           apply(env, l, ds)
         else
           apply(env, r, ds)
-      case _ => throw UnsimpleException()
+      case _ => throw UnsimpleException(as.nodeID)
     }
   }
 }

@@ -3,7 +3,32 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
 import edu.cmu.cs.ls.keymaerax.core._
 
-sealed trait AngelStrategy
+
+// @TODO: Massive memory leak, use local data structure instead
+object IDCounter {
+  // Tracks every allocated ID associated to its node
+  var idMap: Map[Int, AngelStrategy] = Map()
+  // For nodes which arise from a demonization translation, track the original Angel node corresponding to each ID
+  var originMap: Map[Int, AngelStrategy] = Map()
+  var count: Int = 0
+  def next(as: AngelStrategy): Int = {
+    val res = count
+    count = count + 1
+    idMap = idMap.+(res -> as)
+    res
+  }
+  def contains(n: Int): Boolean = idMap.contains(n)
+  def hasOriginal(n: Int): Boolean = originMap.contains(n)
+  def get(n: Int): Option[AngelStrategy] = idMap.get(n)
+  def apply(n: Int): AngelStrategy = idMap(n)
+  def getOriginal(n: Int): Option[AngelStrategy] = originMap.get(n)
+  def original(n: Int): AngelStrategy = originMap(n)
+  def setOriginal(n: Int, as: AngelStrategy): Unit = (originMap = originMap.+(n -> as))
+}
+
+sealed trait AngelStrategy {
+  val nodeID: Int = IDCounter.next(this)
+}
 sealed trait SimpleStrategy extends AngelStrategy
 
 //case object Skip extends DemonStrategy
@@ -32,6 +57,7 @@ object Composed {
       case _ => DCompose(filtered)
     }
   }
+
   def apply(l: AngelStrategy, r: AngelStrategy): AngelStrategy = {
     apply(l :: r :: Nil)
   }
@@ -47,6 +73,7 @@ object Composed {
       case _ => DCompose(filtered)
     }
   }
+
   def apply(l: SimpleStrategy, r: SimpleStrategy): SimpleStrategy = {
     apply(l :: r :: Nil)
   }
@@ -59,8 +86,21 @@ object SimpleStrategy {
       case DCompose(children) => DCompose(children.map(apply))
       case DChoice(l, r) => DChoice(apply(l), apply(r))
       // @TODO: Need better negation of formulas, need more info in Kaisar data structure for that
-      case ALoop(conv, body) => Composed(DLoop(Composed(DTest(conv), apply(body))), DTest(Not(conv)))
-      case ASwitch(branches) => branches.map({case (f, fs) => Composed(DTest(f), apply(fs))}).reduceRight(DChoice)
+      case ALoop(conv, body) =>
+        val loop = DLoop(Composed(DTest(conv), apply(body)))
+        IDCounter.setOriginal(loop.nodeID, fs)
+        Composed(loop, DTest(Not(conv)))
+      case ASwitch(branches) =>
+        val branchStrats = branches.map({case (f, fs) => Composed(DTest(f), apply(fs))})
+        val pairs = branchStrats.zip(branches)
+        val (xs, x) = (pairs.dropRight(1), pairs.last)
+        val (choice, _) = xs.foldLeft[(SimpleStrategy, ASwitch)]((x._1, ASwitch(x._2 :: Nil)))({case ((accStrat, accOrig), (thisStrat, thisOrig)) =>
+          val fullOrig = ASwitch(thisOrig :: accOrig.branches)
+          val choice = DChoice(thisStrat, accStrat)
+          IDCounter.setOriginal(choice.nodeID, fullOrig)
+          (choice, fullOrig)
+        })
+        choice
       // @TODO: Proof rule somewhere should check duration variable binding side conditions
       case ss: SimpleStrategy => ss
       case _: AODE | _: DODE => throw new Exception("ODEs should be eliminated before SimpleStrategy conversion")
@@ -96,26 +136,41 @@ object AngelStrategy {
     }
   }
 
-  private def body(pf: Statement): AngelStrategy = {
+  private def body(pf: Statement, isPhi: Boolean): AngelStrategy = {
     pf match {
       case Assume(pat, f) => DTest(f)
-      case BoxChoice(left, right) => Composed(body(left), body(right))
-      case InverseGhost(s) => body(s)
+      case BoxChoice(left, right) => Composed(body(left, isPhi), body(right, isPhi))
+      case InverseGhost(s) => body(s, isPhi)
       case Modify(ids, mods) =>
-        Composed(mods.map({ case (x, None) => NDAssign(x) case (x, Some(f)) => DAssign(x, f) }))
-      case Block(ss) => Composed(ss.map(body))
-      case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b)) }))
-      case While(x, j, s) => ALoop(j, body(s))
-      case BoxLoop(s, ih) => DLoop(body(s))
-      case pode: ProveODE => ofODE(pode)
-      case Phi(s) => body(s)
+        Composed(mods.map({
+          case (x, None) => NDAssign(x)
+          case (x, Some(f)) =>
+            val res = DAssign(x, f)
+            if(isPhi)
+              IDCounter.setOriginal(res.nodeID, DTest(True))
+            res
+        }))
+      case Block(ss) => Composed(ss.map(body(_, isPhi)))
+      case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) }))
+      case While(x, j, s) => ALoop(j, body(s, isPhi))
+      case BoxLoop(s, ih) => DLoop(body(s, isPhi))
+      case pode: ProveODE =>
+        val ode = ofODE(pode)
+        // ODE does not have an "original" strategy, but we put it in map to indicate that it "was once an ODE"
+        //if (pode.isAngelic)
+        IDCounter.setOriginal(ode.nodeID, ode)
+        ode
+      case Phi(s) =>
+        val block = body(s, isPhi = true)
+        // Phi block does not have an "original" strategy, but we put it in map to indicate that it "is special"
+        block
       case _: MetaNode | _: Note | _: Match | _: LetFun | _: Triv | _: Assert | _: Label | _: Ghost => DTest(True)
     }
   }
 
   def apply(pf: Statement): AngelStrategy = {
     val fv = VariableSets(pf).freeVars
-    val main = body(pf)
+    val main = body(pf, isPhi = false)
     val inits = fv.toList.map(NDAssign)
     val strat = Composed(inits.:+(main))
     strat
