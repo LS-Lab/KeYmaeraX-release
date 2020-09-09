@@ -116,7 +116,8 @@ object ForwardProofChecker {
         con.getHere(s) match {
           case Some(fml) =>
             fml
-          case None => throw ProofCheckException(s"Undefined proof variable $s", node = pt)
+          case None =>
+            throw ProofCheckException(s"Undefined proof variable $s", node = pt)
         }
       case fullPt@ProofApp(pt, ProofInstance(e)) =>
         apply(con, pt) match {

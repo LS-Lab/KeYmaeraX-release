@@ -11,7 +11,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Subscript
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, Subscript}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -122,8 +122,11 @@ case class Snapshot (private val m: Map[String, Subscript])  {
 
 object Snapshot {
   val empty: Snapshot = new Snapshot(Map())
+  def initial(v: Set[Ident]): Snapshot = new Snapshot(v.map(v => (v.name, Some(0))).toMap)
   def ofContext(c: Context): Snapshot = {
-    var snap = Snapshot.empty
+    val vs = VariableSets(c)
+    val vars = vs.freeVars ++ vs.boundVars
+    var snap = Snapshot.initial(vars)
     val tf = new TraversalFunction {
       override def postS(kc: Context, s: Statement): Statement = {
         s match {

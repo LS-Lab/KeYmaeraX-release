@@ -29,13 +29,13 @@ class SSAPassTests extends TacticTestBase {
 
   "SSA pass" should "transform assignment" in {
     val pfStr = "x:=x+1;"
-    pssa(pfStr) shouldBe Modify(Nil, List((Variable("x", Some(0)), Some(Plus(Variable("x"), Number(1))))))
+    pssa(pfStr) shouldBe Modify(Nil, List((Variable("x", Some(1)), Some(Plus(Variable("x", Some(0)), Number(1))))))
   }
 
   it should "check fancy assignments" in {
     val pfStr = "x := *; x := x^2; "
     val (ss, ff) = checkSSA(pfStr)
-    ff shouldBe "[x_0:=*; x_1:=x_0^2;]true".asFormula
+    ff shouldBe "[x_1:=*; x_2:=x_1^2;]true".asFormula
   }
 
 

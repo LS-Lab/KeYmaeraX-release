@@ -60,13 +60,13 @@ class WrappedDemonStrategy (bds: BasicDemonStrategy)(val env: Environment) exten
     }
 
   override def readAssign(id: NodeID, x: Ident): number = {
-    if (!env.contains(x) && initState.contains(x)) {
-      //println(s"Wrapper read-assigned $x -> ${initState(x)}")
-      env.set(x, initState(x))
-      return initState(x)
-    }
     val base = x match {case bv: BaseVariable => BaseVariable(bv.name) case ds: DifferentialSymbol => DifferentialSymbol(BaseVariable(ds.name))}
     val name = base match {case bv: BaseVariable => bv.name case ds: DifferentialSymbol => ds.name + "'"}
+    if (!env.contains(x) && initState.contains(base)) {
+      //println(s"Wrapper read-assigned $x -> ${initState(x)}")
+      env.set(x, initState(base))
+      return initState(base)
+    }
     val res = bds.readDemonAssign(id, name, x.index)
     //println(s"Wrapper star-assigned $base -> $res")
     env.set(base, res)

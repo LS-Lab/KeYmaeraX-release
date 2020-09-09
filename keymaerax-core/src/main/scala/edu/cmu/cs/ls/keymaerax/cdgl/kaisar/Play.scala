@@ -17,7 +17,11 @@ class Environment {
 
   def contains(x: Ident): Boolean = state.contains(x)
 
-  def set(x: Ident, v: Play.number): Unit = (state = state.+(x -> v))
+  // Unindexed variable x always represents "current value," but indexed "x_i" also remembered for history. So set both.
+  def set(x: Ident, v: Play.number): Unit = {
+    val base = x match {case bv: BaseVariable => Variable(bv.name) case ds: DifferentialSymbol => DifferentialSymbol(Variable(ds.name))}
+    (state = state.+(x -> v).+(base -> v))
+  }
 
   def get(x: Ident): Play.number = state(x)
 

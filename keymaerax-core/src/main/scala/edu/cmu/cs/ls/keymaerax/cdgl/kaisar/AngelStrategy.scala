@@ -49,7 +49,6 @@ case class AODE(ode: ODESystem, dur: Term) extends AngelStrategy
 object Composed {
   def apply(children: List[AngelStrategy]): AngelStrategy = {
     // Careful: Should distinguish "real" ?true from no-ops which should be eliminated
-    // @TODO: flatten
     val filtered = children.filter({case DTest(True) => false case _ => true})
     filtered match {
       case Nil => DTest(True)

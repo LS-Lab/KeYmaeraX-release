@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 
 /** Test synthesized Angel strategies against handwritten do-nothing Demon strategies */
-// @TODO: variable naming conventions for current vs historical state. Make SSA always use x_i so x can be current state
 class ProofPlexShimTests extends TacticTestBase {
   val check: String => Statement = Kaisar.statementProved
 
@@ -40,7 +39,7 @@ class ProofPlexShimTests extends TacticTestBase {
     // @TODO: Braking case test v >= B/T eventually fails after reaching destination
     a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
     println("Final state: " + env.state)
-    val goal = env.state(Variable("d"))
+    val goal = env.get(Variable("d"))
     (env.state(Variable("x")) >=  (goal * 0.8)) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }

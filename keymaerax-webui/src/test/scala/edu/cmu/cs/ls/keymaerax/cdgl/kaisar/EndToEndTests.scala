@@ -20,7 +20,7 @@ class EndToEndTests extends TacticTestBase {
   "full proof checker" should "check box loop" in withMathematica { _ =>
       val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto;"
       val ff = check(pfStr)
-      ff shouldBe "[?x>=1;x_0:=x;{x_1:=x_0+1; {?x_1>=1;}^@ x_0:=x_1;}*{?x_0>=0;}^@]true".asFormula
+      ff shouldBe "[?x_0>=1;x_1:=x_0;{x_2:=x_1+1; {?x_2>=1;}^@ x_1:=x_2;}*{?x_1>=0;}^@]true".asFormula
   }
 
   it should "resolve lets in assertions" in withMathematica { _ =>
@@ -32,13 +32,13 @@ class EndToEndTests extends TacticTestBase {
   it should "support let inside @" in withMathematica { _ =>
     val pfStr = "let square(x) = x*x; !eq:(square(x)@last = 4) by auto; x:= 1; x:=3; x:=2; last:"
     val ff = check(pfStr)
-    ff shouldBe "[{?(2 * 2 = 4);}^@ x_0 := 1; x_1 := 3; x_2 := 2;]true".asFormula
+    ff shouldBe "[{?(2 * 2 = 4);}^@ x_1 := 1; x_2 := 3; x_3 := 2;]true".asFormula
   }
 
   it should "support @ inside of let" in withMathematica { _ =>
     val pfStr = "let square(x) = (x*x)@last; !eq:(square(x) = 4) by auto; x:= 1; x:=3; x:=2; last:"
     val ff = check(pfStr)
-    ff shouldBe "[{?(2 * 2 = 4);}^@ x_0 := 1; x_1 := 3; x_2 := 2;]true".asFormula
+    ff shouldBe "[{?(2 * 2 = 4);}^@ x_1 := 1; x_2 := 3; x_3 := 2;]true".asFormula
   }
 
   it should "resolve simple backward state labels:" in withMathematica { _ =>
@@ -51,7 +51,7 @@ class EndToEndTests extends TacticTestBase {
         "}*" +
         "!final:(x >= 0) using xZero IH by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[?x>=1;{?x>=x;}^@ x_0:=x;{x_1:=x_0+1;  {?x_1>=x_0;}^@ {?x_1>=x;}^@ x_0:=x_1;}*{?x_0>=0;}^@]true".asFormula
+    ff shouldBe "[?x_0>=1;{?x_0>=x_0;}^@ x_1:=x_0;{x_2:=x_1+1;  {?x_2>=x_1;}^@ {?x_2>=x_0;}^@ x_1:=x_2;}*{?x_1>=0;}^@]true".asFormula
   }
 
   it should "support straight-line forward label" in withMathematica { _ =>
@@ -62,7 +62,7 @@ class EndToEndTests extends TacticTestBase {
       "x := x + 3;" +
       "final: !result:(x > 3) using xLater by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[{?(0 + 1 + 3 = 4);}^@ x_0:= 0; x_1 := x_0 + 1; x_2 := x_1 + 3; {?(x_2>3);}^@]true".asFormula
+    ff shouldBe "[{?(0 + 1 + 3 = 4);}^@ x_1:= 0; x_2 := x_1 + 1; x_3 := x_2 + 3; {?(x_3>3);}^@]true".asFormula
   }
 
   it should "support straight-line nondeterministic forward label" in withMathematica { _ =>
@@ -74,7 +74,7 @@ class EndToEndTests extends TacticTestBase {
       "final(y):" +
       "!last:(y = z -> x = 10) using xLater by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
+    ff shouldBe "[{z_1:=5; {?(z_1 + z_1 = 10);}^@ y_1 :=*; x_1 := z_1 + y_1; {?(y_1=z_1-> x_1=10);}^@}]true".asFormula
   }
 
   it should "support forward label separated by irrelevant choice " in withMathematica { _ =>
@@ -87,7 +87,7 @@ class EndToEndTests extends TacticTestBase {
         "final(y):" +
         "!last:(y = z -> x = 10) using xLater by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; {k_0 := 0; ++ k_0 := 1;} x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
+    ff shouldBe "[{z_1:=5; {?(z_1 + z_1 = 10);}^@ y_1 :=*; {k_1 := 0; ++ k_1 := 1;} x_1 := z_1 + y_1; {?(y_1=z_1-> x_1=10);}^@}]true".asFormula
   }
 
   it should "support forward label separated by irrelevant choice inside of loop " in withMathematica { _ =>
@@ -103,17 +103,17 @@ class EndToEndTests extends TacticTestBase {
       "!istep:(true) by auto;" +
       "}*"
     val ff = check(pfStr)
-    ff shouldBe ("[z_0:=5; " +
+    ff shouldBe ("[z_1:=5; " +
       "{?(true);}^@ " +
-      "{y_0 := y; k_0 := k; x_0 := x;}" +
+      "{x_1 := x_0; y_1 := y_0; k_1 := k_0;}" +
       "{" +
-      "  {?(z_0 + z_0 = 10);}^@ " +
-      "  y_1 :=*; " +
-      "  {k_1 := 0; ++ k_1 := 1;} " +
-      "  x_1 := z_0 + y_1; " +
-      "  {?(y_1=z_0-> x_1=10);}^@ " +
+      "  {?(z_1 + z_1 = 10);}^@ " +
+      "  y_2 :=*; " +
+      "  {k_2 := 0; ++ k_2 := 1;} " +
+      "  x_2 := z_1 + y_2; " +
+      "  {?(y_2=z_1-> x_2=10);}^@ " +
       "  {?(true);}^@" +
-      "  {y_0 := y_1; k_0 := k_1; x_0 := x_1;}" +
+      "  {x_1 := x_2; y_1 := y_2; k_1 := k_2;}" +
       "}*]true").asFormula
   }
 
@@ -128,43 +128,43 @@ class EndToEndTests extends TacticTestBase {
         "final(y):" +
         "!last:(y = z -> x = 10) using xLater by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[{z_0:=5; {?(z_0 + z_0 = 10);}^@ y_0 :=*; {?(true);}^@ k_0:=k; {{k_1 := 0; ++ k_1 := 1;}{?(true);}^@k_0:=k_1;}* x_0 := z_0 + y_0; {?(y_0=z_0-> x_0=10);}^@}]true".asFormula
+    ff shouldBe "[{z_1:=5; {?(z_1 + z_1 = 10);}^@ y_1 :=*; {?(true);}^@ k_1:=k_0; {{k_2 := 0; ++ k_2 := 1;}{?(true);}^@k_1:=k_2;}* x_1 := z_1 + y_1; {?(y_1=z_1-> x_1=10);}^@}]true".asFormula
   }
 
   it should "support forward label going outside box choice" in withMathematica { _ =>
     val pfStr = "x:=0; {!foo:(x@final > 0) by auto; ++ x:=1;} x:=1; final:"
     val ff = check(pfStr)
-    ff shouldBe "[x_0:=0; {{{?(1 > 0);}^@x_1:=x_0; } ++ x_1 := 1;} x_2:=1;]true".asFormula
+    ff shouldBe "[x_1:=0; {{{?(1 > 0);}^@x_2:=x_1; } ++ x_2 := 1;} x_3:=1;]true".asFormula
   }
 
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
     val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
     val ff = check(pfStr)
-    ff shouldBe "[t_0:=0; x_0:= 1; {t_1 := t_0;x_1:=x_0;}{t_1' = 1, x_1' = -1 & x_1>=0}]true".asFormula
+    ff shouldBe "[t_1:=0; x_1:= 1; {t_2 := t_1;x_2:=x_1;}{t_2' = 1, x_2' = -1 & x_2>=0}]true".asFormula
   }
 
   it should "automatically find base case assumption in diffcut" in withMathematica { _ =>
     val pfStr = "?(y>=0); {y' = 1 & !dc:(y >= 0) by induction};"
     val ff = check(pfStr)
-    ff shouldBe "[?(y>=0); y_0:=y;{y_0' = 1}]true".asFormula
+    ff shouldBe "[?(y_0>=0); y_1:=y_0;{y_1' = 1}]true".asFormula
   }
 
   it should "allow solution to be looked up later as assumption" in withMathematica { _ =>
     val pfStr = "?xInit:(x:=0); ?tInit:(t:=0); {t' = 1, xSol: x' = 2}; !xFin:(x = 2*t) using xInit tInit xSol by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[x_0 := 0; t_0:=0; {x_1 := x_0; t_1 := t_0;};{t_1' = 1, x_1' = 2}; {?(x_1 = 2*t_1);}^@]true".asFormula
+    ff shouldBe "[x_1 := 0; t_1:=0; {x_2 := x_1; t_2 := t_1;};{t_2' = 1, x_2' = 2}; {?(x_2 = 2*t_2);}^@]true".asFormula
   }
 
   it should "include duration info when looking any solution" in withMathematica { _ =>
     val pfStr = "?xInit:(x:=0); ?tInit:(t:=0); {t' = 1, xSol: x' = 2}; !xFin:(x >= 0) using xInit tInit xSol by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[x_0 := 0; t_0:=0; {x_1 := x_0; t_1 := t_0;};{t_1' = 1, x_1' = 2}; {?(x_1 >= 0);}^@]true".asFormula
+    ff shouldBe "[x_1 := 0; t_1:=0; {x_2 := x_1; t_2 := t_1;};{t_2' = 1, x_2' = 2}; {?(x_2 >= 0);}^@]true".asFormula
   }
 
   it should "prove diffcut" in withMathematica { _ =>
     val pfStr = "?yZero:(y:=0); ?xZero:(x:=1); x' = y & !dc:(x > 0) using xZero yZero by solution;"
     val ff = check(pfStr)
-    ff shouldBe "[y_0:=0; x_0:=1;x_1:=x_0;{x_1' = y_0}]true".asFormula
+    ff shouldBe "[y_1:=0; x_1:=1;x_2:=x_1;{x_2' = y_1}]true".asFormula
   }
 
   it should "catch bad diffcut" in withMathematica { _ =>
@@ -175,7 +175,7 @@ class EndToEndTests extends TacticTestBase {
   it should "prove dc-assign" in withMathematica { _ =>
     val pfStr = "?(T >= 0); t:= 0; {t' = 1, x' = y & t := T};"
     val ff = check(pfStr)
-    ff shouldBe "[?(T>=0); t_0:= 0; {t_1 := t_0; x_0 := x;}{{t_1' = 1, x_0' = y}; ?(t_1= T);}^@]true".asFormula
+    ff shouldBe "[?(T_0>=0); t_1:= 0; {x_1 := x_0; t_2 := t_1;}{{t_2' = 1, x_1' = y_0}; ?(t_2= T_0);}^@]true".asFormula
   }
 
   it should "catch unbound fact reference in provable proof" in withMathematica { _ =>
@@ -186,19 +186,19 @@ class EndToEndTests extends TacticTestBase {
   it should "prove and then use dc-assign" in withMathematica { _ =>
     val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[?(T>=0); t_0:= 0; x_0 := 0; {t_1:=t_0;x_1:=x_0;}{{t_1' = 1, x_1' = 2 & t_1<=T}; ?(t_1=T);}^@{?(x_1=2*T);}^@]true".asFormula
+    ff shouldBe "[?(T_0>=0); t_1:= 0; x_1 := 0; {t_2:=t_1;x_2:=x_1;}{{t_2' = 1, x_2' = 2 & t_2<=T_0}; ?(t_2=T_0);}^@{?(x_2=2*T_0);}^@]true".asFormula
   }
 
   it should "prove renamed dc-assign" in withMathematica { _ =>
     val pfStr = "?(T>=0); timer:= 0; {timer' = 1, x' = y & timer := T};"
     val ff = check(pfStr)
-    ff shouldBe "[?(T>=0); timer_0:= 0; {timer_1:=timer_0;x_0:=x;}{{timer_1' = 1, x_0' = y}; ?(timer_1 = T);}^@]true".asFormula
+    ff shouldBe "[?(T_0>=0); timer_1:= 0; {x_1:=x_0;timer_2:=timer_1;}{{timer_2' = 1, x_1' = y_0}; ?(timer_2 = T_0);}^@]true".asFormula
   }
 
   it should "prove diamond assertion " in withMathematica { _ =>
     val pfStr = "?(T>=0); t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by induction};"
     val ff = check(pfStr)
-    ff shouldBe "[?(T>=0);t_0:=0; {t_1:=t_0;x_0:=x;}{{t_1'=1, x_0'=y & t_1>=0}; ?(t_1=T);}^@]true".asFormula
+    ff shouldBe "[?(T_0>=0);t_1:=0; {x_1:=x_0;t_2:=t_1;}{{t_2'=1, x_1'=y_0 & t_2>=0}; ?(t_2=T_0);}^@]true".asFormula
   }
 
   it should "prove triple induction " in withMathematica { _ =>
@@ -209,7 +209,7 @@ class EndToEndTests extends TacticTestBase {
       "& !xInv:(x >= 0) using xInit zInv by induction" +
       "};"
     val ff = check(pfStr)
-    ff shouldBe "[x_0:=0; y_0:=0;z_0:=0;{x_1:=x_0;y_1:=y_0;z_1:=z_0;}{x_1'=z_1, y_1'=1, z_1'=y_1}]true".asFormula
+    ff shouldBe "[x_1:=0; y_1:=0;z_1:=0;{x_2:=x_1;y_2:=y_1;z_2:=z_1;}{x_2'=z_2, y_2'=1, z_2'=y_2}]true".asFormula
   }
 
   it should "catch invalid dc-assign 3: wrong clock" in withMathematica { _ =>
@@ -225,7 +225,7 @@ class EndToEndTests extends TacticTestBase {
   it should "prove another simple diffghost" in withMathematica { _ =>
     val pfStr = "/++ x:= 0; ++/ y' = y^2, /++ x' = y ++/;"
     val ff = check(pfStr)
-    ff shouldBe "[{x_1:=x_0;y_0:=y;} {y_0'=y_0^2&true}]true".asFormula
+    ff shouldBe "[{y_1:=y_0;x_2:=x_1;} {y_1'=y_1^2&true}]true".asFormula
   }
 
   it should "prove simple ghost ODE" in withMathematica { _ =>
@@ -236,7 +236,7 @@ class EndToEndTests extends TacticTestBase {
       "{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction;}" +
       "!nonZero:(x > 0) using inv by auto;"
     val ff = check(pfStr)
-    ff shouldBe "[x_0:=1; {x_1:=x_0;y_1:=y_0;}{x_1' = -x_1};{?(x_1>0);}^@]true".asFormula
+    ff shouldBe "[x_1:=1; {x_2:=x_1;y_2:=y_1;}{x_2' = -x_2};{?(x_2>0);}^@]true".asFormula
   }
 
   it should "catch ODE ghost scope escaping" in withMathematica { _ =>
@@ -252,7 +252,7 @@ class EndToEndTests extends TacticTestBase {
 
   it should "allow ghost references in later ghosts" in withMathematica { _ =>
     val pfStr = "/++ x := 1; ++/ y := 2; /++ x := x + 2; !xVal:(x=3) by auto; ++/"
-    check(pfStr) shouldBe "[y_0:= 2;]true".asFormula
+    check(pfStr) shouldBe "[y_1:= 2;]true".asFormula
   }
 
   /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
@@ -261,31 +261,31 @@ class EndToEndTests extends TacticTestBase {
     val pfStr = SharedModels.essentialsSafeCar1D
     val ff = check(pfStr)
     val discreteFml =
-      ("[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;" +
-        "{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@" +
-        "{x_1:=x_0;v_1:=v_0;a_0:=a;t_0:=t;}" +
-        "{{{?(v_1+T*A)^2/(2*B)+1>=d-(x_1+v_1*T+A*T^2/2);" +
-          "a_1:=-B;?v_1>=B*T;" +
-          "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
-          "{?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=-B&v_1>=B*T;}^@}" +
+      ("[x_1:=0;v_1:=0;?A_0>0;?B_0>0;?T_0>0;?x_1 < d_0;" +
+        "{?v_1^2/(2*B_0)<=d_0-x_1&v_1>=0;}^@" +
+        "{x_2:=x_1;t_1:=t_0;a_1:=a_0;v_2:=v_1;}" +
+        "{{{?(v_2+T_0*A_0)^2/(2*B_0)+1>=d_0-(x_2+v_2*T_0+A_0*T_0^2/2);" +
+          "a_2:=-B_0;?v_2>=B_0*T_0;" +
+          "{?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2);}^@" +
+          "{?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2)&a_2=-B_0&v_2>=B_0*T_0;}^@}" +
         "^@++" +
-        "{?(v_1+T*A)^2/(2*B)<=d-(x_1+v_1*T+A*T^2/2);" +
-        "  a_1:=A;" +
-        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2);}^@" +
-        "  {?(v_1+T*a_1)^2/(2*B)<=d-(x_1+v_1*T+a_1*T^2/2)&a_1=A;}^@}^@}^@" +
-        "t_1:=0;" +
-        "{x_2:=x_1;v_2:=v_1;t_2:=t_1;}" +
-        "{x_2'=v_2,v_2'=a_1,t_2'=1&t_2<=T&v_2>=0}" +
-        "{?v_2^2/(2*B)<=d-x_2&v_2>=0;}^@" +
-        "x_1:=x_2;v_1:=v_2;a_0:=a_1;t_0:=t_2;}*" +
-      "{?x_1<=d&v_1>=0;}^@]true").asFormula
+        "{?(v_2+T_0*A_0)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+A_0*T_0^2/2);" +
+        "  a_2:=A_0;" +
+        "  {?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2);}^@" +
+        "  {?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2)&a_2=A_0;}^@}^@}^@" +
+        "t_2:=0;" +
+        "{x_3:=x_2;t_3:=t_2;v_3:=v_2;}" +
+        "{x_3'=v_3,v_3'=a_2,t_3'=1&t_3<=T_0&v_3>=0}" +
+        "{?v_3^2/(2*B_0)<=d_0-x_3&v_3>=0;}^@" +
+        "x_2:=x_3;t_1:=t_3;a_1:=a_2;v_2:=v_3;}*" +
+      "{?x_2<=d_0&v_2>=0;}^@]true").asFormula
     ff shouldBe discreteFml
   }
 
   it should "support tuple patterns" in withMathematica { _ =>
     val pfStr = "?(xInit, vInit):(x := 0; v := 0;); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);"
     val ff = check(pfStr)
-    ff shouldBe "[x_0:= 0; v_0 := 0; ?(A > 0); ?(B > 0); ?(T > 0); ?(x_0 < d);]true".asFormula
+    ff shouldBe "[x_1:= 0; v_1 := 0; ?(A_0 > 0); ?(B_0 > 0); ?(T_0 > 0); ?(x_1 < d_0);]true".asFormula
   }
 
 
@@ -314,24 +314,24 @@ class EndToEndTests extends TacticTestBase {
     val ff = check(pfStr)
 
     val discreteFml =
-      ("[x_0:=0;v_0:=0;?A>0;?B>0;?T>0;?x_0 < d;" +
-        "{?v_0^2/(2*B)<=d-x_0&v_0>=0;}^@" +
-        "{x_1:=x_0;v_1:=v_0;a_0:=a;t_0:=t;}" +
-        "{{{?(A*T+v_1)^2/(2*B)+1>=d-(A*(T^2/2)+v_1*T+x_1);" +
-        "a_1:=-B;?v_1>=B*T;" +
-        "{?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1);}^@" +
-        "{?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1)&a_1=-B&v_1>=B*T;}^@}" +
+      ("[x_1:=0;v_1:=0;?A_0>0;?B_0>0;?T_0>0;?x_1 < d_0;" +
+        "{?v_1^2/(2*B_0)<=d_0-x_1&v_1>=0;}^@" +
+        "{x_2:=x_1;t_1:=t_0;a_1:=a_0;v_2:=v_1;}" +
+        "{{{?(A_0*T_0+v_2)^2/(2*B_0)+1>=d_0-(A_0*(T_0^2/2)+v_2*T_0+x_2);" +
+        "a_2:=-B_0;?v_2>=B_0*T_0;" +
+        "{?(a_2*T_0+v_2)^2/(2*B_0)<=d_0-(a_2*(T_0^2/2)+v_2*T_0+x_2);}^@" +
+        "{?(a_2*T_0+v_2)^2/(2*B_0)<=d_0-(a_2*(T_0^2/2)+v_2*T_0+x_2)&a_2=-B_0&v_2>=B_0*T_0;}^@}" +
         "^@++" +
-        "{?(A*T+v_1)^2/(2*B)<=d-(A*(T^2/2)+v_1*T+x_1);" +
-        "  a_1:=A;" +
-        "  {?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1);}^@" +
-        "  {?(a_1*T+v_1)^2/(2*B)<=d-(a_1*(T^2/2)+v_1*T+x_1)&a_1=A;}^@}^@}^@" +
-        "t_1:=0;" +
-        "{x_2:=x_1;v_2:=v_1;t_2:=t_1;}" +
-        "{x_2'=v_2,v_2'=a_1,t_2'=1&t_2<=T&v_2>=0}" +
-        "{?v_2^2/(2*B)<=d-x_2&v_2>=0;}^@" +
-        "x_1:=x_2;v_1:=v_2;a_0:=a_1;t_0:=t_2;}*" +
-        "{?x_1<=d&v_1>=0;}^@]true").asFormula
+        "{?(A_0*T_0+v_2)^2/(2*B_0)<=d_0-(A_0*(T_0^2/2)+v_2*T_0+x_2);" +
+        "  a_2:=A_0;" +
+        "  {?(a_2*T_0+v_2)^2/(2*B_0)<=d_0-(a_2*(T_0^2/2)+v_2*T_0+x_2);}^@" +
+        "  {?(a_2*T_0+v_2)^2/(2*B_0)<=d_0-(a_2*(T_0^2/2)+v_2*T_0+x_2)&a_2=A_0;}^@}^@}^@" +
+        "t_2:=0;" +
+        "{x_3:=x_2;t_3:=t_2;v_3:=v_2;}" +
+        "{x_3'=v_3,v_3'=a_2,t_3'=1&t_3<=T_0&v_3>=0}" +
+        "{?v_3^2/(2*B_0)<=d_0-x_3&v_3>=0;}^@" +
+        "x_2:=x_3;t_1:=t_3;a_1:=a_2;v_2:=v_3;}*" +
+        "{?x_2<=d_0&v_2>=0;}^@]true").asFormula
     ff shouldBe discreteFml
   }
 

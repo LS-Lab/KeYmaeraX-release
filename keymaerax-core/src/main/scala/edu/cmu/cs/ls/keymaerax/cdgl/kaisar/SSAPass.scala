@@ -272,6 +272,9 @@ object SSAPass {
 
   /** Apply SSA translation pass to Kaisar statement */
   def apply(s: Statement): Statement = {
-    ssa(s, Snapshot.empty)._1
+    val vs = VariableSets(s)
+    val vars = vs.freeVars ++ vs.boundVars
+    val snap = Snapshot.initial(vars)
+    ssa(s, snap)._1
   }
 }

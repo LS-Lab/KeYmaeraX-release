@@ -332,10 +332,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     else {
       val ode = asODESystem
       val result = Integrator(xys.toMap, timeVar.get, ode)
-      val resultMap = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
-      val theTimeVar: Variable = if (result.size < xys.size) { xys.filter({case (x, f) => !resultMap.contains(x)}).head._1} else timeVar.get
+      val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
+      val resultMap = resultAlist.toMap
+      val theTimeVar: Variable =
+        if (result.size < xys.size) {
+          xys.filter({case (x, f) => !resultMap.contains(x)}).head._1
+        } else timeVar.get
       val (timeX, timeF) = duration match {case Some((x, f)) => (x -> f) case None => (theTimeVar -> theTimeVar)}
-      Some((timeX, timeF) :: resultMap)
+      Some((timeX, timeF) :: resultAlist)
     }
   }
 
@@ -352,10 +356,12 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
 
   /** Get true solution of ODE. Only works if proof is in SSA form */
   lazy val solutions: Option[List[(Variable, Term)]] = {
-    val xys: Set[(Variable, Term)] =
-      StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
+    val ode = asODESystem
+    val bvs = StaticSemantics(ode).bv.toSet
+    val xys: Set[(Variable, Term)] = bvs.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
     try {
-      solutionsFrom(xys.toMap)
+      val sols = solutionsFrom(xys.toMap)
+      sols
     } catch { case (m: MatchError) => None } // Throws if not in SSA form
   }
 

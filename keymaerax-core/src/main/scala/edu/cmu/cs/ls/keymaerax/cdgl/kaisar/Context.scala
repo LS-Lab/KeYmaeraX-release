@@ -129,7 +129,10 @@ case class Context(s: Statement) {
           Context(bc.left) -- Context(bcPr.progress)
         else
           Context(bc.right) -- Context(bcPr.progress)
-      case (l, r) => if (l == r) Context.empty else fail
+      case (l, r) =>
+        if (l == r) Context.empty
+        else
+          fail
     }
   }
 
@@ -263,9 +266,12 @@ case class Context(s: Statement) {
       case BoxLoop(body, ih) =>
         // only allowed to find IH
         ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
-      case BoxLoopProgress(BoxLoop(bl, Some((ihVar, ihFml))), progress) =>
-        val ihMatch = if(fAdmiss(ihVar, ihFml, false)) List((ihVar, ihFml)) else List()
+      case BoxLoopProgress(BoxLoop(bl, ihOpt), progress) => {
+        val ihMatch = ihOpt.map({
+          case ((ihVar, ihFml)) if(fAdmiss(ihVar, ihFml, false)) => List((ihVar, ihFml))
+          case _ => List()}).getOrElse(Nil)
         ihMatch ++ reapply(progress).searchAll(f, tabooProgramVars)
+      }
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
