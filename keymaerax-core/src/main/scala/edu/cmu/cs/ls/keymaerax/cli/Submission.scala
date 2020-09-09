@@ -140,7 +140,11 @@ object Submission {
             ChoiceAnswer(id, label, name, grader, text, answer)
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(false))) =>
             val bodySrc = fields(BODY_SRC) match { case JsString(s) =>
-              val trimmed = s.trim
+              //@note sometimes ~ and \testsol and \nosols show up
+              val trimmed = s.replaceAllLiterally("~", " ").trim.linesWithSeparators.filter(l => {
+                val ltrimmed = l.trim
+                !ltrimmed.startsWith("\\testsol") && !ltrimmed.startsWith("\\nosol")
+              }).mkString.trim
               //@note tex may mention extra braces (e.g. \solfin {\begin{lstlisting}...} \sol {\kyxline...})
               //@note careful: always annotate set answers in tex as math and extra braces to be save: \sol {$\{...\}$}
               if (trimmed.startsWith("{")) trimmed.stripPrefix("{").stripSuffix("}")
