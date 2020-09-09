@@ -59,8 +59,18 @@ object Submission {
       override def read(json: JsValue): GraderCookie = {
         json.asJsObject.getFields(ID, NAME, BODY).toList match {
           case JsNumber(id) :: JsString(name) :: JsString(graderMethod) :: Nil =>
-            GraderCookie(id.toLong, name, graderMethod.replaceAll("""(?<!\\)%""", Regex.quoteReplacement("\\%")))
+            GraderCookie(id.toLong, name, sanitizeGraderMethod(graderMethod))
         }
+      }
+
+      private def sanitizeGraderMethod(m: String): String = {
+        //@note \%1 is %1 in JSON
+        val m1 = m.replaceAll("""(?<!\\)%""", Regex.quoteReplacement("\\%")).
+          replaceAllLiterally("\n", " ")
+        //@note {` `} become \u2018 in JSON
+        var i = 0
+        val m2 = "\u2018".r.replaceAllIn(m1, m => { i=i+1; if (i%2 == 1) "{`" else "`}" })
+        m2
       }
     }
 
