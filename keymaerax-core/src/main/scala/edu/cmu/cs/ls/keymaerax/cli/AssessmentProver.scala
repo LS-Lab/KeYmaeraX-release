@@ -990,7 +990,13 @@ object AssessmentProver {
                 (prompt, prompt.points)
             }
           } else {
-            msgStream.println(Messages.FAILED)
+            msgStream.print(Messages.FAILED)
+            val msg = prompt.answers.map({
+              case Submission.TextAnswer(_, _, _, _, answer, _) => answer
+              case _: Submission.ChoiceAnswer => ""
+            }).filter(_.nonEmpty).mkString(",")
+            if (msg.nonEmpty) msgStream.println(":" + msg)
+            else msgStream.println()
             (prompt, 0.0)
           }
         case Right(hint) =>
