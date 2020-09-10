@@ -64,12 +64,18 @@ class QETests extends TacticTestBase {
     proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool)).subgoals.loneElement shouldBe " ==> false".asSequent
   }
 
-  it should "not choke on predicates" in withMathematica { tool =>
+  it should "not choke on irrelevant predicates" in withMathematica { tool =>
     proveBy("p_() & q_() -> 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
   it should "close predicates if possible" in withMathematica { tool =>
     proveBy("p_() & q_() -> p_() | 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
+  it should "not branch to be clever with predicates" in withMathematica { tool =>
+    //@note otherwise may split too extensively; master makes up for it with autoMP
+    the [IllFormedTacticApplicationException] thrownBy proveBy("(2<3->p(x)) -> p(x)".asFormula,ToolTactics.fullQE(tool)) should
+      have message "Unable to create dependent tactic 'ANON', cause: Don't know how to convert p(x) of class class edu.cmu.cs.ls.keymaerax.core.PredOf"
   }
 
   it should "not fail when already proved" in withMathematica { tool =>
