@@ -122,17 +122,37 @@ private object PropositionalTactics extends Logging {
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
-  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("ANON") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
-      //@note adapted to use implyL instead of implyLOld
-      implyL(implication) <(
-        closeId(p, SuccPos(sequent.succ.length))
-        //cohide2(p, SuccPos(sequent.succ.length)) & close
-        //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
-        ,
-        Idioms.ident
-        )
+  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = anon { seq: Sequent =>
+    val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
+    //@note adapted to use implyL instead of implyLOld
+    implyL(implication) <(
+      closeId(p, SuccPos(seq.succ.length))
+      //cohide2(p, SuccPos(sequent.succ.length)) & close
+      //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
+      ,
+      Idioms.ident
+      )
+  }
+
+  /** Automated modus ponens for p->q ==> ; tries to automatically prove p from the rest of the assumptions. */
+  private[btactics] val autoMP = anon { (pos: Position, seq: Sequent) => seq(pos.checkAnte.checkTop) match {
+      case Imply(p, _) =>
+        val pi = seq.ante.indexWhere(_ == p)
+        if (pi >= 0) modusPonens(AntePos(pi), pos.checkAnte.checkTop)
+        else {
+          val notsuccs = seq.succ.map(Not).map(SimplifierV3.formulaSimp(_, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1)
+          val antes = seq.ante.patch(pos.index0, List.empty, 1)
+          val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
+          val mpShow = Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
+          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & prop & OnAll(QE))
+
+          if (mpLemma.isProved) {
+            cut(p) < (
+              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop),
+              useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & prop & done)
+          } else throw new TacticInapplicableFailure("Failed to prove assumptions")
+        }
+      case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
     }
   }
 

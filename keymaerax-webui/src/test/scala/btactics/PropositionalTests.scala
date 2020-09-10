@@ -38,6 +38,16 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y>0, x>0 ==> ".asSequent
   }
 
+  it should "automatically simplify assumptions" in withQE { _ =>
+    val s = "x>0->y>0, z=1, x>0 ==> y>0".asSequent
+    proveBy(s, autoMP(-1)).subgoals.loneElement shouldBe "y>0, z=1, x>0 ==> y>0".asSequent
+  }
+
+  it should "automatically cut and use hidden assumptions" in withQE { _ =>
+    val s = "Y>y, X>y, y<x&x<=Y->P(x) ==>  y<x&x<=min(X,Y)->P(x)".asSequent
+    proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x), y<x&x<=Y ==> y<x&x<=min(X,Y)->P(x)".asSequent
+  }
+
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)), implyRi)
     result.subgoals.loneElement shouldBe " ==> x>0 -> y>0".asSequent
