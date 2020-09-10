@@ -150,7 +150,7 @@ object Augmentors {
 
     /** Indicates whether the formula is FOL without uninterpreted predicate symbols. */
     def isPredicateFreeFOL: Boolean = fml.isFOL &&
-      StaticSemantics.signature(fml).forall({ case Function(_, _, _, Real, false) => true case _ => false })
+      StaticSemantics.signature(fml).forall({ case Function(_, _, _, Bool, false) => false case _ => true })
 
     /** Returns the universal closure of formula `fml`. */
     def universalClosure: Formula = {
@@ -214,6 +214,7 @@ object Augmentors {
     }
     /** Returns true if all formulas in the sequent are FOL, false otherwise. */
     def isFOL: Boolean = seq.ante.forall(_.isFOL) && seq.succ.forall(_.isFOL)
+    def isPredicateFreeFOL: Boolean = seq.ante.forall(_.isPredicateFreeFOL) && seq.succ.forall(_.isPredicateFreeFOL)
     /** Returns a copy without the position `pos`. */
     def without(pos: SeqPos): Sequent =
       if (pos.isAnte) Sequent(seq.ante.patch(pos.getIndex, Nil, 1), seq.succ)
