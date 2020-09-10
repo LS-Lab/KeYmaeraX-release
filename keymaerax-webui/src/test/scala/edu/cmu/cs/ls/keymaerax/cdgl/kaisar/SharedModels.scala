@@ -19,7 +19,7 @@ object SharedModels {
     "t:= 0;" +
     "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
     "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " +
-    "using xSol vSol tSol safeAcc inv dc acc brk tstep ... by auto;" +
+    "using xSol vSol tSol safeAcc inv dc acc brk tstep by auto;" +
     "}*" +
     "!safe:(x <= d & v >= 0) using inv brk  by auto;"
 

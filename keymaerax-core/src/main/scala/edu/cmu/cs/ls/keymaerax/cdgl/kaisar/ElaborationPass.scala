@@ -100,8 +100,8 @@ class ElaborationPass() {
         if(combineAssmsCandidates.isEmpty && use != List(DefaultSelector))
           throw ElaborationException("Non-default selector should select at least one fact.", node = m)
         val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
-        val freePtCandidates = allFree.toList.map(ProgramVar)
-        val freePt = freePtCandidates.filter(x => mentionedVars.contains(x.x))
+        val freePtCandidates = allFree.toList.map(ProgramAssignments(_))
+        val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
         val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
         val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)

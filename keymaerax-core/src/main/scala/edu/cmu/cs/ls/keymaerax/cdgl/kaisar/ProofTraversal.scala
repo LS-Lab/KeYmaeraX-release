@@ -137,6 +137,7 @@ object ProofTraversal {
       case None =>
         val mid = pt match {
           case ProgramVar(x) => ProgramVar(x)
+          case ProgramAssignments(x, ssa) => ProgramAssignments(x, ssa)
           case ProofVar(x: Ident) => ProofVar(x)
           case ProofInstance(e) => ProofInstance(e)
           case ProofApp(m, n) => ProofApp(traverse(kc, m, tf), traverse(kc, n, tf))

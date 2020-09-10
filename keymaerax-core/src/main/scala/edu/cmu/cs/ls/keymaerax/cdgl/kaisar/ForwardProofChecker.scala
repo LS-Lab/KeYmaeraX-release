@@ -106,6 +106,12 @@ object ForwardProofChecker {
           throw ProofCheckException(s"No assumptions found for program variable $x", node = pt)
         }
         mentions.reduce(And)
+      case ProgramAssignments(x, onlySSA) =>
+        val asgns = con.getAssignments(x)
+        if (asgns.isEmpty) {
+          throw ProofCheckException(s"No assignments found for program variable $x", node = pt)
+        }
+        asgns.reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case app@ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1), app)
       case app@ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>

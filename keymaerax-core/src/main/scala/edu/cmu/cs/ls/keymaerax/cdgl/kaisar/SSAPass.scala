@@ -107,7 +107,8 @@ object SSAPass {
       pt match {
         /* SSA doesn't re-index fact variable names, just program variables */
         case ProofVar(x) => ProofVar(x)
-        /* ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
+        /* ProgramAssignments / ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
+        case ProgramAssignments(x, ssa) => ProgramAssignments(x, ssa)
         case ProgramVar(x) => ProgramVar(x)
         case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
         case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))

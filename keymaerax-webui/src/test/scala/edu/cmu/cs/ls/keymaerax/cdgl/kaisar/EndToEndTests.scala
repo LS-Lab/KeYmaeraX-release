@@ -308,7 +308,7 @@ class EndToEndTests extends TacticTestBase {
         "t:= 0;" +
         "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
         "ode(a, t):" +
-        "!invStep: (SB() <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol ... by auto;" +
+        "!invStep: (SB() <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol by auto;" +
         "}*" +
         "!safe:(x <= d & v >= 0) using inv brk  by auto;"
     val ff = check(pfStr)

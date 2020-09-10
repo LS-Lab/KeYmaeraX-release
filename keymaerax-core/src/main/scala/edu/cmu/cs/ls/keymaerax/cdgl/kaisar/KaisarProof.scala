@@ -203,6 +203,8 @@ sealed trait ProofTerm extends ASTNode
 case class ProofVar(x: Ident) extends ProofTerm {}
 // Looks up all assumptions corresponding to program variable
 case class ProgramVar(x: Variable) extends ProofTerm {}
+// Looks up assignments corresponding to a program variable
+case class ProgramAssignments(x: Variable, onlySSA: Boolean = false) extends ProofTerm {}
 
 // Term used to instantiatiate a universal quantifier. Should only ever appear on the right-hand side of an application,
 // but parsing is simpler when terms are a standalone constructor
