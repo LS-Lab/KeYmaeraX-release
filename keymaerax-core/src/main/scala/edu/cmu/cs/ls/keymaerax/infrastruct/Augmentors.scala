@@ -148,6 +148,10 @@ object Augmentors {
       result
     }
 
+    /** Indicates whether the formula is FOL without uninterpreted predicate symbols. */
+    def isPredicateFreeFOL: Boolean = fml.isFOL &&
+      StaticSemantics.signature(fml).forall({ case Function(_, _, _, Real, false) => true case _ => false })
+
     /** Returns the universal closure of formula `fml`. */
     def universalClosure: Formula = {
       assert(fml.isFOL, "Universal closure on FOL formulas only")
