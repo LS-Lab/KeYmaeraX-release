@@ -12,6 +12,7 @@ import fastparse._
 import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofParser.atomicStatement
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse.Parsed.TracedFailure
@@ -20,9 +21,9 @@ import fastparse.internal.Msgs
 import scala.collection.immutable.StringOps
 
 object ParserCommon {
-  val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
-    "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
-    "or", "print", "for", "while", "true", "false")
+  val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "let", "match", "print", "for", "while", "true", "false")
+  // @TODO: Error messages for unexpected keywords
+  // "left", "right", "ghost", "solve", "induct", "domain", "duration", "yield" "cases", "or", , "assert", "assume", "have", , "either"
 
   def identOrKeyword[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
@@ -207,6 +208,8 @@ object ProofParser {
   def rcf[_: P]: P[RCF] = P("by" ~ ws ~ Index ~ "RCF").map(i => locate(RCF(), i))
   def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
   def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
+  def hypothesis[_: P]: P[Hypothesis] = P("by" ~ ws ~ Index ~ "hypothesis").map(i => locate(Hypothesis(), i))
+
   def solution[_: P]: P[Solution] = P("by" ~ ws ~ Index ~ "solution").map(i => locate(Solution(), i))
   def diffInduction[_: P]: P[DiffInduction] = P("by" ~ ws ~ Index ~ "induction").map(i => locate(DiffInduction(), i))
   def using[_: P]: P[Using] = (Index ~ P("using") ~ selector.rep  ~ rawMethod).
@@ -221,9 +224,13 @@ object ProofParser {
   def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
-  def rawMethod[_: P]: P[Method] = rcf | auto | prop | solution | diffInduction | exhaustive | using | byProof
+  def rawMethod[_: P]: P[Method] = auto | rcf |  prop | hypothesis | solution | diffInduction | exhaustive | using | byProof
   // If method has no selectors, then insert the "default" heuristic selection method
-  def method[_: P]: P[Method] = rawMethod.map({case u: Using => u case m => Using(List(DefaultSelector), m)})
+  // If terminator ; is seen instead of method, default to auto method
+  def method[_: P]: P[Method] = (P(";").map(_ => None) | (rawMethod ~/ ";").map(Some(_))).map({
+    case None => Using(List(DefaultSelector), Auto())
+    case Some(u: Using) => u
+    case Some(m) => Using(List(DefaultSelector), m)})
 
   def wildPat[_: P]: P[WildPat] = (Index ~  CharIn("_*")).map(i => locate(WildPat(), i))
   def tuplePat[_: P]: P[AsgnPat] = (Index ~ "(" ~ idPat.rep(sep=",") ~ ")").map({case (i, ss) =>
@@ -264,13 +271,15 @@ object ProofParser {
     Modify(fullIds, vars.zip(terms))
   }
 
-  def assume[_: P]: P[Statement] = (Index ~ "?" ~  exPat ~ "(" ~ expression ~ ")" ~ ";").map({
+  // If someone writes  ?foo(fml), report error  (note exPat silently succeeds because identifier is optional anyway)
+  //private def catchMissingColon[_: P](): P[Unit] = (ident.?.flatMap(_ => Fail) | P(""))
+  def assume[_: P]: P[Statement] = (Index ~ "?" ~/  exPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
     case (i, pat, fml: Formula) => locate(Assume(pat, fml), i)
     case (i, pat, hp: Program) =>  locate(assembleMod(pat, hp), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })
 
-  def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ "(" ~ formula ~ ")" ~ method ~ ";").map({
+  def assert[_: P]: P[Assert] = (Index ~ "!" ~/ exPat  ~/ "(" ~/ formula ~ ")" ~/ method.opaque("; or <method>")).map({
     case (i, pat, fml, method) => locate(Assert(pat, fml, method), i)})
 
   private def zipAssign(lhs: Term, rhs: Option[Term]): List[(Option[Ident], Variable, Option[Term])] = {
@@ -314,11 +323,11 @@ object ProofParser {
   }
 
 
-  def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep(1) ~ "}" ~ P(";").?).map({case (i, ss) => locate(block(ss.toList), i)})
+  def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~/ statement.rep(1) ~ "}" ~ P(";").?).map({case (i, ss) => locate(block(ss.toList), i)})
   def boxLoop[_: P]: P[BoxLoop] = (Index ~ statement.rep ~ "*").map({case (i, ss) => locate(BoxLoop(block(ss.toList)), i)})
   def ghost[_: P]: P[Statement] = (Index ~ "/++" ~ statement.rep ~ "++/").map({case (i, ss) => locate(KaisarProof.ghost(block(ss.toList)), i)})
   def inverseGhost[_: P]: P[Statement] = (Index ~ "/--" ~ statement.rep ~ "--/").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
-  def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
+  def parseWhile[_: P]: P[While] = (Index ~ "while" ~/ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
   def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_))
@@ -327,7 +336,7 @@ object ProofParser {
     ~ "=" ~ expression ~ ";").
     map({case (i, Left((f, xs)), e) => locate(LetFun(f, xs.toList, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
 
-  def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
+  def note[_: P]: P[Note] = (Index ~ "note" ~/ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
   def atomicODEStatement[_: P]: P[AtomicODEStatement] = (idExPat ~ atomicOde).map({case (id, ode) => AtomicODEStatement(ode, id)})
   def ghostODE[_: P]: P[DiffStatement] = (Index ~ "/++" ~ diffStatement ~ "++/").
@@ -339,21 +348,28 @@ object ProofParser {
     (Index ~ terminalODE.rep(sep = ",", min = 1)).
     map({case (i, dps)=> locate(dps.reduceRight(DiffProductStatement), i)})
 
-  def domAssume[_: P]: P[DomAssume] = (Index ~ "?" ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
-  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
-  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(id, f), i)})
-  def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
-  def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
+  // @TODO: Special error message for missing ?(); maybe
+  def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  exPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
+    case (i, pat, fml: Formula) => locate(DomAssume(pat, fml), i)
+    case (i, pat, hp: Assign) =>  locate(DomModify(hp.x, hp.e), i)
+    case (a,b,c) => throw new Exception("Unexpected assumption syntax")
+  })}
+
+  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~/ exPat ~ "(" ~ formula ~ ")" ~ method.opaque("; or <method>")).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
+//  included under "assume" case
+//  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(id, f), i)})
+  def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~/ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
+  def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak /*|  domModify*/ | domAssume
   def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).
     map({case (i, da) => locate(da.reduceRight(DomAnd), i)})
 
   def proveODE[_: P]: P[ProveODE] =
-    (Index ~ diffStatement ~ ("&" ~ domainStatement).?.
+    (Index ~ diffStatement ~ ("&" ~/ domainStatement).?.
         map({case Some(v) => v case None => DomAssume(Nothing, True)})
       ~ P(";").?
     ).map({case(i, ds, dc) => locate(ProveODE(ds, dc), i)})
 
-  def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~ literal ~ ";").
+  def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~/ literal ~ ";").
     map({case (i, pg) => locate(PrintGoal(pg), i)})
 
   def atomicStatement[_: P]: P[Statement] =
@@ -361,7 +377,8 @@ object ProofParser {
 
   def postfixStatement[_: P]: P[Statement] =
     // line label syntax can collide with ODE label syntax, check labels last.
-    ((atomicStatement | proveODE  | label) ~ Index ~ "*".!.rep).
+    // try ODEs before other atoms because ambiguous ghost parse should try ODE first
+    ((/*NoCut*/(proveODE) | atomicStatement | label) ~ Index ~ "*".!.rep).
       map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) =>
         BoxLoop(acc, Context(acc).lastFact)
       }), i)})
@@ -374,7 +391,8 @@ object ProofParser {
       .map({case (i, ss: Seq[List[Statement]]) => locate(block(ss.reduceRight((l, r) => List(BoxChoice(block(l), block(r))))), i)})
   }
 
-  def statement[_: P]: P[Statement] = boxChoice
+  // catch any trailing whitespace too
+  def statement[_: P]: P[Statement] = boxChoice ~ ws.?
   def statements[_: P]: P[List[Statement]] = statement.rep.map(ss => flatten(ss.toList))
   def proof[_: P]: P[Statements] = boxChoice.map(ss => List(ss))
 }

@@ -15,9 +15,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
 
 object KaisarKeywordParser {
-  val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
-  "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
-    "or", "print", "for")
+  val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "let", "match", "print", "for")
+  // "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "or", "assert", "assume", "have", "either", "cases",
 
   def identString[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.

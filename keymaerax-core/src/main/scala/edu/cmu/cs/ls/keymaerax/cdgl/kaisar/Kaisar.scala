@@ -15,7 +15,8 @@ object Kaisar {
   private val MAX_CHAR = 80 - "...".length
 
   // Parse string [[s]] as a Kaisar proof, with additional error pretty-printing / locating
-  private def parseProof(s: String): Statement =
+  // @TODO: Factor into parser. Public-ish for testing reasons
+  private[keymaerax] def parseProof(s: String): Statement =
     parse(s, ProofParser.statement(_), verboseFailures = true) match {
       case x: Success[Statement] =>
         if (x.index < s.length) {
@@ -26,17 +27,16 @@ object Kaisar {
           println("Displaying nested error message, error location not meaningful.")
           print("Nested ") // prints as "Nested Parse error"
           try {
-            x.toString()
             val rest = s.drop(x.index)
             parseProof(rest)
-            throw new Exception(msg)
+            throw KaisarParseException(msg = msg)
           } catch {
-            case e: Throwable => throw new Exception(msg, e)
+            case e: Throwable => throw KaisarParseException(msg = msg)
           }
         }
         x.value
       case x: Failure =>
-        val exn = KaisarParseException(Some(x.extra.trace(enableLogging = true)))
+        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)))
         println("Parse error: " + exn.toString)
         println("\n")
         throw exn

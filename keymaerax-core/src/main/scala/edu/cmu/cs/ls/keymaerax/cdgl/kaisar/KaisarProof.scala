@@ -51,7 +51,7 @@ object KaisarProof {
     extends LocatedException(msg)
   case class ODEAdmissibilityException(vars: Set[Variable], override val node: ASTNode = Triv())
     extends LocatedException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
-  case class KaisarParseException(trace: Option[TracedFailure] = None, override val node: ASTNode = Triv())
+  case class KaisarParseException(override val msg: String = "", trace: Option[TracedFailure] = None, override val node: ASTNode = Triv())
     extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get))
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
@@ -177,6 +177,8 @@ case class Auto() extends Method
 case class Prop() extends Method
 // solve differential equation (can only be used in ODE)
 case class Solution() extends Method
+// Hypothesis rule looks up in context
+case class Hypothesis() extends Method
 // differential induction (can only be used in ODE)
 case class DiffInduction() extends Method
 // check whether conclusion is an exhaustive disjunction for case analysis

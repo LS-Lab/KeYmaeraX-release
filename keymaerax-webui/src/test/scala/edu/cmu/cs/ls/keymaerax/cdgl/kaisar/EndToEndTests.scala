@@ -138,13 +138,13 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
-    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0) & !tRange:(t <= 1) using xInit tInit xRange by solution};"
+    val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit tInit xRange by solution;};"
     val ff = check(pfStr)
     ff shouldBe "[t_1:=0; x_1:= 1; {t_2 := t_1;x_2:=x_1;}{t_2' = 1, x_2' = -1 & x_2>=0}]true".asFormula
   }
 
   it should "automatically find base case assumption in diffcut" in withMathematica { _ =>
-    val pfStr = "?(y>=0); {y' = 1 & !dc:(y >= 0) by induction};"
+    val pfStr = "?(y>=0); {y' = 1 & !dc:(y >= 0) by induction;};"
     val ff = check(pfStr)
     ff shouldBe "[?(y_0>=0); y_1:=y_0;{y_1' = 1}]true".asFormula
   }
@@ -173,7 +173,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove dc-assign" in withMathematica { _ =>
-    val pfStr = "?(T >= 0); t:= 0; {t' = 1, x' = y & t := T};"
+    val pfStr = "?(T >= 0); t:= 0; {t' = 1, x' = y & ?(t := T);};"
     val ff = check(pfStr)
     ff shouldBe "[?(T_0>=0); t_1:= 0; {x_1 := x_0; t_2 := t_1;}{{t_2' = 1, x_1' = y_0}; ?(t_2= T_0);}^@]true".asFormula
   }
@@ -184,19 +184,19 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "prove and then use dc-assign" in withMathematica { _ =>
-    val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & t := T & !max:t<=T by solution}; !final:(x = 2*T) using max ... by auto;"
+    val pfStr = "?(T>=0);t := 0; x:= 0; {t' = 1, x' = 2 & ?(t := T); & !max:(t<=T) by solution;}; !final:(x = 2*T) using max ... by auto;"
     val ff = check(pfStr)
     ff shouldBe "[?(T_0>=0); t_1:= 0; x_1 := 0; {t_2:=t_1;x_2:=x_1;}{{t_2' = 1, x_2' = 2 & t_2<=T_0}; ?(t_2=T_0);}^@{?(x_2=2*T_0);}^@]true".asFormula
   }
 
   it should "prove renamed dc-assign" in withMathematica { _ =>
-    val pfStr = "?(T>=0); timer:= 0; {timer' = 1, x' = y & timer := T};"
+    val pfStr = "?(T>=0); timer:= 0; {timer' = 1, x' = y & ?(timer := T);};"
     val ff = check(pfStr)
     ff shouldBe "[?(T_0>=0); timer_1:= 0; {x_1:=x_0;timer_2:=timer_1;}{{timer_2' = 1, x_1' = y_0}; ?(timer_2 = T_0);}^@]true".asFormula
   }
 
   it should "prove diamond assertion " in withMathematica { _ =>
-    val pfStr = "?(T>=0); t:= 0; {t' = 1, x' = y & t := T & !dc:(t >= 0) by induction};"
+    val pfStr = "?(T>=0); t:= 0; {t' = 1, x' = y & ?(t := T); & !dc:(t >= 0) by induction;};"
     val ff = check(pfStr)
     ff shouldBe "[?(T_0>=0);t_1:=0; {x_1:=x_0;t_2:=t_1;}{{t_2'=1, x_1'=y_0 & t_2>=0}; ?(t_2=T_0);}^@]true".asFormula
   }
@@ -204,21 +204,21 @@ class EndToEndTests extends TacticTestBase {
   it should "prove triple induction " in withMathematica { _ =>
     val pfStr = "?xInit:(x:=0); ?yInit:(y:=0); ?zInit:(z:=0); " +
       "{x'=z, y' = 1, z' = y " +
-      "& !yInv:(y >= 0) using yInit  by induction" +
-      "& !zInv:(z >= 0) using zInit yInv by induction" +
-      "& !xInv:(x >= 0) using xInit zInv by induction" +
+      "& !yInv:(y >= 0) using yInit  by induction;" +
+      "& !zInv:(z >= 0) using zInit yInv by induction;" +
+      "& !xInv:(x >= 0) using xInit zInv by induction;" +
       "};"
     val ff = check(pfStr)
     ff shouldBe "[x_1:=0; y_1:=0;z_1:=0;{x_2:=x_1;y_2:=y_1;z_2:=z_1;}{x_2'=z_2, y_2'=1, z_2'=y_2}]true".asFormula
   }
 
   it should "catch invalid dc-assign 3: wrong clock" in withMathematica { _ =>
-    val pfStr = "t:= 0; {t' = 2, x' = y & t := T};"
+    val pfStr = "t:= 0; {t' = 2, x' = y & ?(t := T);};"
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
   it should "catch invalid dc-assign 4: negative duration" in withMathematica { _ =>
-    val pfStr = "t:= 0; {t' = 1, x' = y & t := T};"
+    val pfStr = "t:= 0; {t' = 1, x' = y & ?(t := T);};"
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
   }
 
@@ -306,7 +306,7 @@ class EndToEndTests extends TacticTestBase {
         "  note safeAcc = andI(safe2, andI(accB, fast));" +
         "}}" +
         "t:= 0;" +
-        "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0)};" +
+        "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
         "ode(a, t):" +
         "!invStep: (SB() <= (d - x) & v>= 0) using safeAcc inv dc acc brk tstep xSol vSol tSol ... by auto;" +
         "}*" +
@@ -346,13 +346,18 @@ class EndToEndTests extends TacticTestBase {
 
   // @TODO: Improve language so examples work
   it should "parse and prove all thesis examples" in withMathematica { _ =>
+    val STOP_AFTER_FIRST = true
     var parseErrors: List[(String, Throwable)] = Nil
     var checkErrors: List[(String, Throwable)] = Nil
     SharedModels.thesisExamples.foreach(s =>
       try {
-        p(s, pp.statement(_))
+        Kaisar.parseProof(s)
       } catch { case t: Throwable =>
         parseErrors = (s, t) :: parseErrors
+        if (STOP_AFTER_FIRST) {
+          println("Could not parse: " + s)
+          throw t
+        }
       }
     )
     val provedConclusions =
@@ -361,6 +366,8 @@ class EndToEndTests extends TacticTestBase {
           List((s, check(s)))
         } catch { case t: Throwable =>
           checkErrors = (s, t) :: checkErrors;
+          if (STOP_AFTER_FIRST)
+            throw t
           Nil
         }
       )

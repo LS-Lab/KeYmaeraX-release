@@ -17,7 +17,7 @@ object SharedModels {
     "  note safeAcc = andI(safe2, andI(accB, fast));" +
     "}}" +
     "t:= 0;" +
-    "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0)};" +
+    "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
     "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " +
     "using xSol vSol tSol safeAcc inv dc acc brk tstep ... by auto;" +
     "}*" +
@@ -57,7 +57,7 @@ object SharedModels {
 
   /** Carefully check speed. Should use simple prop proof, not slow QE */
   val propSkipsQE: String =
-    """?a:(x = 0 => y=1);
+    """?a:(x = 0 -> y=1);
       |?b:(x = 0 &  ((z - x*w^2/(2 - w))^42 >= 6));
       |!c: ( y=1) using a b by prop;
       |""".stripMargin
@@ -71,7 +71,7 @@ object SharedModels {
 
   val demonicLoop: String =
     """?yZero:(y := 0);
-      |?xZero(x := 0);
+      |?xZero:(x := 0);
       |!inv: (x >= 0);
       |{x:=x+1;
       | !inductiveStep: (x >= 0) using inv by auto;
@@ -81,35 +81,35 @@ object SharedModels {
 
   val straightODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0)};
+      |{x' = 2, y' = -1 & ?dc:(y >= 0);};
       |!xFinal:(x <= 4);
       |""".stripMargin
 
   val assertODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0) & !xEq:(x =  2*(2 - y))};
+      |{x' = 2, y' = -1 & ?dc:(y >= 0); & !xEq:(x =  2*(2 - y))};
       |!xFinal:(x >= 0) using xEq dc by auto;
       |""".stripMargin
 
   val inductODE: String =
     """x := 0; y := 1;
-      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
+      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction;};
       |""".stripMargin
 
   val inductODEBC: String =
     """x := 0; y := 1;
       |!bc:(x^2 + y^2 = 1);
-      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
+      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction;};
       |""".stripMargin
 
   val durationODE: String =
     """?(T > 0); ?accel:(acc > 0);
       |x:= 0; v := 0; t := 0;
       |{t' = 1, x' = v, v' = acc
-      |  & !vel:(v >= 0) using accel by induction
-      |  & !vSol: (v = t * acc) by solution
-      |  & !xSol:(x = acc*(t^2)/2)) by induction
-      |  & ?dur:(t := T)};
+      |  & !vel:(v >= 0) using accel by induction;
+      |  & !vSol: (v = t * acc) by solution;
+      |  & !xSol:(x = acc*(t^2)/2) by induction;
+      |  & ?dur:(t := T);};
       |!finalV:(x = acc*(t^2)/2) using dur xSol by auto;
       |""".stripMargin
 
@@ -119,7 +119,7 @@ object SharedModels {
       |  !xZero: (x = 0 -> abs(x) = x);
       |  !xPos: (x > 0 -> abs(x) = x);
       |++/
-      |!absEq:(abs(x) = x)  using orE(xSign, xZero, xPos) by id;
+      |!absEq:(abs(x) = x)  using orE(xSign, xZero, xPos) by hypothesis;
       |""".stripMargin
 
   val ghostAssign: String =
@@ -146,16 +146,16 @@ object SharedModels {
 
   val inverseGhostODE: String =
     """z := 0;
-      |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution;};
+      |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution;}
       |""".stripMargin
 
   val basicReachAvoid: String =
     """?(eps > 0 & B > 0 & x = 0 & T > 0);
-      |while (x + eps < goal)) {
+      |while (x + eps < goal) {
       |  vel := (goal - x)/B;
       |  t := 0;
-      |  {t' = 1, x' = vel & t <= T};
-      |  /-- !safe:(x >= 0)  --/
+      |  {t' = 1, x' = vel & ?(t <= T);};
+      |  /-- !safe:(x >= 0);  --/
       |  ?(t >= T/2);
       |  !live:(x + eps < goal);
       |}
@@ -178,7 +178,7 @@ object SharedModels {
 
   val labelOld: String =
     """old:
-      |{x' = 1 & !greater:(x >= x@old)}
+      |{x' = 1 & !greater:(x >= x@old);}
       |""".stripMargin
 
   val unwindBlock: String =
@@ -206,14 +206,14 @@ object SharedModels {
       |""".stripMargin
 
   val forwardHypothetical: String =
-    """?(T > 0 & A > 0 & B > 0)
+    """?(T > 0 & A > 0 & B > 0);
       |let SB() = v^2/(2*B);
       |let safe() <-> SB <= (d-x);
       |?initSafe:(safe());
       |{
       |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
       |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & t <= T & v >= 0};
+      |  {t' = 1, x' = v, v' = acc & ?(t <= T) & ?(v >= 0)};
       |ode(t):
       |   !step:(safe()) using env ... by auto;
       |}*
@@ -230,8 +230,9 @@ object SharedModels {
       |ode(t):
       |""".stripMargin
 
+  // @TODO: Implement <-> let for formulas and @ for formulas
   val sandboxExample: String =
-    """?(T > 0 & A > 0 & B > 0)
+    """?(T > 0 & A > 0 & B > 0);
       |let SB() = v^2/(2*B);
       |let safe() <-> SB <= (d-x);
       |?initSafe:(safe());
@@ -248,7 +249,7 @@ object SharedModels {
       |       !predictSafe:(safe()@ode(T, acc)) using initSafe by auto;
       |   }
       |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & t <= T & v >= 0};
+      |  {t' = 1, x' = v, v' = acc & ?(t <= T) & ?(v >= 0)};
       |ode(t, acc):
       |   !step:(safe()) using predictSafe ... by auto;
       |}*
