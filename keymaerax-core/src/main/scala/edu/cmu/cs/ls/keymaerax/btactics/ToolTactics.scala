@@ -88,7 +88,14 @@ private object ToolTactics {
         assertT(_.isFOL, "QE on FOL only") &
         allTacticChase()(notL, andL, notR, implyR, orR, allR) &
           Idioms.doIf(!_.isProved)(
-            close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
+            close | hidePredicates &
+              Idioms.doIfElse(_.subgoals.forall(_.isPredicateFreeFOL))(
+                // if
+                EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
+                ,
+                // else
+                throw new TacticInapplicableFailure("Uninterpreted predicate symbols not supported in QE")
+              ))
         ),
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName

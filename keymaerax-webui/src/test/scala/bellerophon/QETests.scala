@@ -74,8 +74,8 @@ class QETests extends TacticTestBase {
 
   it should "not branch to be clever with predicates" in withMathematica { tool =>
     //@note otherwise may split too extensively; master makes up for it with autoMP
-    the [IllFormedTacticApplicationException] thrownBy proveBy("(2<3->p(x)) -> p(x)".asFormula,ToolTactics.fullQE(tool)) should
-      have message "Unable to create dependent tactic 'ANON', cause: Don't know how to convert p(x) of class class edu.cmu.cs.ls.keymaerax.core.PredOf"
+    the [TacticInapplicableFailure] thrownBy proveBy("(2<3->p(x)) -> p(x)".asFormula,ToolTactics.fullQE(tool)) should
+      have message "Uninterpreted predicate symbols not supported in QE"
   }
 
   it should "not fail when already proved" in withMathematica { tool =>
