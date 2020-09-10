@@ -115,6 +115,7 @@ class DefaultTacticIndex extends TacticIndex {
     }) :: Nil
     case TactixLibrary.ODE => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
     case TactixLibrary.solve => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case PropositionalTactics.autoMP => /* todo */ Nil
     // default position: stop searching
     case _ => Nil
   }
@@ -156,7 +157,7 @@ class DefaultTacticIndex extends TacticIndex {
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)
       case And(_, _) => (TactixLibrary.andL::Nil, TactixLibrary.andR::Nil)
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)
-      case Imply(_, _) => (TactixLibrary.implyL::Nil, TactixLibrary.implyR::Nil)
+      case Imply(_, _) => (PropositionalTactics.autoMP::TactixLibrary.implyL::Nil, TactixLibrary.implyR::Nil)
       case Equiv(_, _) => (TactixLibrary.equivL::Nil, TactixLibrary.equivR::Nil)
       case True => (Nil, ProofRuleTactics.closeTrue::Nil)
       case False => (ProofRuleTactics.closeFalse::Nil, Nil)

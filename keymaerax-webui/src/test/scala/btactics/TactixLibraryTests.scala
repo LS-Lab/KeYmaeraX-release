@@ -381,6 +381,21 @@ class TactixLibraryTests extends TacticTestBase {
     result.subgoals(1) shouldBe "y>0 ==> y>=-1".asSequent
   }
 
+  it should "unfold non-predicatefree-FOL formulas" in withQE { _ =>
+    val f = "(y>0->p(x)) -> p(y)".asFormula
+    val result = proveBy(f, normalize)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe " ==> p(y), y>0".asSequent
+    result.subgoals(1) shouldBe "p(x) ==> p(y)".asSequent
+  }
+
+  it should "auto modus ponens" in withQE { _ =>
+    val f = "(y>0->p(x)) -> (y>0 -> p(y))".asFormula
+    //@todo chase first traverse into autoMP in antecedent before working on implyR, so autoMP creates an additional
+    // y>0 since it is not available verbatim yet
+    proveBy(f, normalize).subgoals.loneElement shouldBe "p(x), y>0, y>0 ==> p(y)".asSequent
+  }
+
   it should "unfold in succedent and antecedent" in {
     val result = proveBy(
       """v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw(), A()>0, B()>=b(), b()>0, ep()>0, lw()>0
@@ -637,6 +652,11 @@ class TactixLibraryTests extends TacticTestBase {
     // provable with safeabstraction, which is an anon tactic; triggers master autoTacticIndex comparison with loop and
     // returns wrong recursor if autoTacticIndex comparison bug
     proveBy("x>=0 -> [y:=2;]x>=0".asFormula, master()) shouldBe 'proved
+  }
+
+  it should "use auto modus ponens" in withQE { _ =>
+    val s = "Y>y, X>y, y < x&x<=Y->P(x) ==>  y < x&x<=min(X,Y)->P(x)".asSequent
+    proveBy(s, master()) shouldBe 'proved
   }
 
   "useLemmaAt" should "apply at provided key" in withQE { _ =>

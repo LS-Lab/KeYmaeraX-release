@@ -121,15 +121,17 @@ object TactixLibrary extends HilbertCalculus
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by allTacticChase(
     new DefaultTacticIndex {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case f@Not(_)      if f.isFOL => (Nil, Nil)
-        case f@And(_, _)   if f.isFOL => (andL::Nil, Nil)
-        case f@Or(_, _)    if f.isFOL => (Nil, orR::Nil)
-        case f@Imply(_, _) if f.isFOL => (Nil, implyR::Nil)
-        case f@Equiv(_, _) if f.isFOL => (Nil, Nil)
+        case f@Not(_)      if f.isPredicateFreeFOL => (Nil, Nil)
+        case f@And(_, _)   if f.isPredicateFreeFOL => (andL::Nil, Nil)
+        case f@Or(_, _)    if f.isPredicateFreeFOL => (Nil, orR::Nil)
+        case f@Imply(_, _) =>
+          if (f.isPredicateFreeFOL) (Nil, implyR::Nil)
+          else (PropositionalTactics.autoMP::implyL::Nil, implyR::Nil)
+        case f@Equiv(_, _) if f.isPredicateFreeFOL => (Nil, Nil)
         case _ => super.tacticsFor(expr)
       }
     }
-  )(notL::andL::notR::implyR::orR::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+  )(notL::andL::notR::implyR::orR::PropositionalTactics.autoMP::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   @Tactic(codeName = "unfold", revealInternalSteps = true)
@@ -279,13 +281,15 @@ object TactixLibrary extends HilbertCalculus
       }
 
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(l: Loop, p) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
-        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
-        case f@Not(_)      if f.isFOL => (Nil, Nil)
-        case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
-        case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
-        case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
-        case f@Equiv(_, _) if f.isFOL => (Nil, Nil)
+        case Box(_: Loop, _) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
+        case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
+        case f@Not(_)      if f.isPredicateFreeFOL => (Nil, Nil)
+        case f@And(_, _)   if f.isPredicateFreeFOL => (TactixLibrary.andL::Nil, Nil)
+        case f@Or(_, _)    if f.isPredicateFreeFOL => (Nil, TactixLibrary.orR::Nil)
+        case f@Imply(_, _) =>
+          if (f.isPredicateFreeFOL) (Nil, TactixLibrary.implyR::Nil)
+          else (PropositionalTactics.autoMP::implyL::Nil, implyR::Nil)
+        case f@Equiv(_, _) if f.isPredicateFreeFOL => (Nil, Nil)
         case _ => super.tacticsFor(expr)
       }
     }
