@@ -123,7 +123,7 @@ object ProofTraversal {
             case DomAssume(x, f) => DomAssume(x, f)
             case DomAssert(x, f, child) => DomAssert(x, f, traverse(kc, child, tf))
             case DomWeak(dc) => DomWeak(traverse(kc.withInverseGhost, dc, tf))
-            case DomModify(x, f) => DomModify(x, f)
+            case DomModify(id, x, f) => DomModify(id, x, f)
             case DomAnd(l, r) => DomAnd(traverse(kc, l, tf), traverse(kc, r, tf))
           }
         locate(tf.postDomS(kc, locate(mid, ds)), ds)

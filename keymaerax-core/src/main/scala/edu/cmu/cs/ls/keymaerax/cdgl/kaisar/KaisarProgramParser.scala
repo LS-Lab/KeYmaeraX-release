@@ -369,7 +369,7 @@ object ProofParser {
   // @TODO: Special error message for missing ?(); maybe
   def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  exPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
     case (i, pat, fml: Formula) => locate(DomAssume(pat, fml), i)
-    case (i, pat, hp: Assign) =>  locate(DomModify(hp.x, hp.e), i)
+    case (i, pat, hp: Assign) =>  locate(DomModify(pat, hp.x, hp.e), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })}
 

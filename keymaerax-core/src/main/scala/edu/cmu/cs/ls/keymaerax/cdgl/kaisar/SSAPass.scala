@@ -260,9 +260,9 @@ object SSAPass {
         DomWeak(dc1)
       // note: final subscript of time variable t was already precomputed in snapshot. Don't use ssa(mod: Modify)
       // since it would doubly increment the subscript
-      case DomModify(x, f) =>
+      case DomModify(id, x, f) =>
         val xt = ssa(x, snapshot).asInstanceOf[Variable]
-        DomModify(xt, ssa(f, snapshot))
+        DomModify(id, xt, ssa(f, snapshot))
       case DomAnd(l, r) =>
         val l1 = ssa(l, snapshot)
         val r1 = ssa(r, snapshot)

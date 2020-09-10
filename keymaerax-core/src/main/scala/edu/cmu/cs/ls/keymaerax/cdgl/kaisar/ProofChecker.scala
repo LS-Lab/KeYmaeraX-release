@@ -19,9 +19,16 @@ object ProofChecker {
   private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
       case DefaultSelector =>
+        // @TODO: deduplicate defaultselector implementation
+        //val fv = StaticSemantics(goal).fv
+        //val res = fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
+        //res
         val fv = StaticSemantics(goal).fv
-        val res = fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
-        res
+        val candidates = fv.toSet.toList.map((v: Variable) => ProgramVar(Variable(v.name)))
+        val mentionedVars = VariableSets(con).allVars.map((v:Variable) => v.name)
+        // Keep all variables mentioned in assertions or assignments of context (for example)
+        candidates.filter(x => mentionedVars.contains(x.x.name)).map(x => ForwardProofChecker(con, x))
+
       case ForwardSelector(pt) => List(ForwardProofChecker(con, pt))
       case PatternSelector(e) => con.unify(e).toList.map(_._2)
     }
@@ -352,7 +359,7 @@ object ProofChecker {
     else if (mod.isEmpty) return dom
     if(dom.nonEmpty && !dom.get.isAssertive)
       throw ProofCheckException(s"ODE with duration specification ${mod.toList.head} must prove all domain constraint assumptions, but domain was ${dom.get}", node = dom.get)
-    val oneMod@DomModify(ap, rhs) = mod.toList.head
+    val oneMod@DomModify(id, ap, rhs) = mod.toList.head
     val durFact = GreaterEqual(rhs, Number(0))
     if(!kc.containsFact(durFact)) {
       try {
@@ -419,7 +426,7 @@ object ProofChecker {
       (x.name == y.name && x.index.contains(0)  && y.index.isEmpty) || // if SSA vars 1
       (x.name == y.name && x.index.isDefined  && y.index.contains(x.index.get-1))// if SSA vars 1
     }
-    theMod.foreach({case DomModify(x, f) =>
+    theMod.foreach({case DomModify(id, x, f) =>
       val asgn = con.getAssignments(x)
       if (!asgn.exists({case Equal(y: Variable, Number(n)) if n.toInt == 0 && sameTimeVar(x, y) => true case _ => false}))
         throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE", node = inODE)

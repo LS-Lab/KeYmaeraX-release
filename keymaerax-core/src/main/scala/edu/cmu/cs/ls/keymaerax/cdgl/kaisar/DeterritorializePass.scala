@@ -190,7 +190,7 @@ case class DeterritorializePass(tt: TimeTable) {
         ds match {
           case DomAssume(x, f) =>  DomAssume(x, translate(kc, f, ds))
           case DomAssert(x, f, child) => DomAssert(x, translate(kc, f, ds), child)
-          case DomModify(x, f) => DomModify(x, translate(kc, f, node = ds))
+          case DomModify(id, x, f) => DomModify(id, x, translate(kc, f, node = ds))
           case _: DomAnd | _: DomWeak => ds
         }
       }

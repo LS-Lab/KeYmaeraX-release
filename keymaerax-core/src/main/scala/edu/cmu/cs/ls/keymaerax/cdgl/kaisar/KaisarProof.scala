@@ -281,7 +281,10 @@ case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extend
     }
 }
 object Modify {
-  def apply(dm: DomModify): Modify = Modify(Nil, (dm.x, Some(dm.f)) :: Nil)
+  def apply(dm: DomModify): Modify = {
+    val ids = dm.id match {case Nothing => Nil case x: Variable => List(x) case _ => throw ProofCheckException("DomModify has unexpected identifier: " + dm.id)}
+    Modify(ids, (dm.x, Some(dm.f)) :: Nil)
+  }
   def apply(lst: List[(Option[Ident], Variable, Option[Term])]): Modify = {
     val (a, b, c) = unzip3(lst)
     Modify(a.filter(_.isDefined).map(_.get), b.zip(c))
@@ -405,7 +408,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   }
 
   lazy val duration: Option[(Variable, Term)] = {
-    modifier.flatMap({case DomModify(x, f) => Some(x, f) case _ => None})
+    modifier.flatMap({case DomModify(id, x, f) => Some(x, f) case _ => None})
   }
 
   lazy val conclusion: Formula = {
@@ -495,8 +498,8 @@ sealed trait DiffStatement extends ASTNode {
     this match {
       case AtomicODEStatement(dp, _solIdent) =>
         (mod, dp.e) match {
-          case (Some(DomModify(durvar, _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
-          case (Some(DomModify(durvar, _)), rhs) if (dp.xp.x == durvar) =>
+          case (Some(DomModify(id, durvar, _)), Number(n)) if (dp.xp.x == durvar && n.toInt == 1) => ()
+          case (Some(DomModify(id, durvar, _)), rhs) if (dp.xp.x == durvar) =>
             throw ProofCheckException(s"ODE duration variable/clock $durvar must change at rate 1, got $rhs", node = this)
           case _ => ()
         }
@@ -567,7 +570,7 @@ sealed trait DomainStatement extends ASTNode {
       case DomAssume(x, f) => Some(f)
       case DomAssert(x, f, child) if (isAngelic) => Some(f)
       case DomAssert(x, f, child) => None
-      case DomModify(x, f) => None
+      case DomModify(id, x, f) => None
       case DomWeak(dc) => dc.asFormula(isAngelic)
       case DomAnd(l, r) =>
         (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
@@ -650,7 +653,7 @@ case class DomAssert(x: IdentPat, f:Formula, child: Method) extends DomainFact
 // proof, which is weakened before continuing proof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
-case class DomModify(x: Variable, f: Term) extends DomainStatement {
+case class DomModify(id: IdentPat, x: Variable, f: Term) extends DomainStatement {
   lazy val asEquals: Equal = {
     Equal(x, f)
   }

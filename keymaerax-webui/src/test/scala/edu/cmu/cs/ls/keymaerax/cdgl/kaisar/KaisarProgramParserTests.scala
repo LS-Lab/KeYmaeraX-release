@@ -427,14 +427,14 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse dc-assign" in {
     p("x' = y & t := T;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
-    , DomModify(Variable("t"), Variable("T")))
+    , DomModify(Nothing, Variable("t"), Variable("T")))
   }
 
   it should "parse conjunction" in {
     p("x' = y & t := T & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
-          DomModify(Variable("t"), Variable("T")),
+          DomModify(Nothing, Variable("t"), Variable("T")),
           DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
   }
 

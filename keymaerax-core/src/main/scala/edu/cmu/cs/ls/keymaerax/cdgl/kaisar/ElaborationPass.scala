@@ -126,7 +126,7 @@ class ElaborationPass() {
           throw ElaborationException(s"Non-scalar fact patterns not allowed in domain constraint assertion ${dc}", node = dc)
         val meth = disambiguate(kc, m, f)
         locate(DomAssert(x, kc.elaborateFunctions(f, dc), meth), dc)
-      case DomModify(x, f) => locate(DomModify(x, kc.elaborateFunctions(f, dc)), dc)
+      case DomModify(id, x, f) => locate(DomModify(id, x, kc.elaborateFunctions(f, dc)), dc)
       case DomWeak(dc) => locate(DomWeak(dc), dc)
     }
   }
