@@ -1126,20 +1126,20 @@ object ODEInvariance {
   /**
     * Helper and lemmas
     */
-  private val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
-  private val lemTrans = remember("a() <= b() -> b() <= c() -> a() <= c()".asFormula,QE).fact
-  private val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
-  private val lemUb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE)
-  private val lemLb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE)
+  private lazy val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
+  private lazy val lemTrans = remember("a() <= b() -> b() <= c() -> a() <= c()".asFormula,QE).fact
+  private lazy val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
+  private lazy val lemUb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE).fact
+  private lazy val lemLb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE).fact
 
-  private val lemSq = proveBy("2*a() <= a()*a() + 1".asFormula,QE)
-  private val lemAdd1 = proveBy("a() <= b() -> a() +1 <= b() + 1".asFormula,QE)
-  private val lemAffinecomb = proveBy("a() <= d()*x() -> b() <= c()*x() + 1 -> a() + b() <= (d()+c()) * x() +1 ".asFormula,QE)
+  private lazy val lemSq = remember("2*a() <= a()*a() + 1".asFormula,QE).fact
+  private lazy val lemAdd1 = remember("a() <= b() -> a() +1 <= b() + 1".asFormula,QE).fact
+  private lazy val lemAffinecomb = remember("a() <= d()*x() -> b() <= c()*x() + 1 -> a() + b() <= (d()+c()) * x() +1 ".asFormula,QE).fact
 
   // Specialized lemma to rearrange the ghosts
-  private val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
-  private val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
-  private val leftMultId = remember("1*f() = f()".asFormula,QE)
+  private lazy val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
+  private lazy val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
+  private lazy val leftMultId = remember("1*f() = f()".asFormula,QE)
 
   // Symbolic matrix and vector products, assuming that the dimensions all match up
   def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
@@ -1236,7 +1236,7 @@ object ODEInvariance {
 
   //Various conversion rewrites for CE in corresponding max/min lemmas
   private lazy val minLem =
-  remember("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE,namespace)
+    remember("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE,namespace)
   private lazy val maxLemL =
     remember("f()>=0 -> max((f(),g()))>=0".asFormula,QE,namespace)
   private lazy val maxLemR =
