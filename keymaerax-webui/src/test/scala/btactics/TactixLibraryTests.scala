@@ -633,6 +633,12 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, master()) shouldBe 'proved
   }
 
+  it should "apply safeabstraction and find the correct recursors" in withQE { _ =>
+    // provable with safeabstraction, which is an anon tactic; triggers master autoTacticIndex comparison with loop and
+    // returns wrong recursor if autoTacticIndex comparison bug
+    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, master()) shouldBe 'proved
+  }
+
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)

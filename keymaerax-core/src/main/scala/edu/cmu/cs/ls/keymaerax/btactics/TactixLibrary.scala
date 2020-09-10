@@ -182,7 +182,7 @@ object TactixLibrary extends HilbertCalculus
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => DebuggingTactics.assertProvableSize(r.length, new TacticInapplicableFailure(_)) &
+      case r => DebuggingTactics.assertProvableSize(r.length, new IllFormedTacticApplicationException(_)) &
         BranchTactic(r.map(applyBranchRecursor))
     }
 
@@ -216,11 +216,13 @@ object TactixLibrary extends HilbertCalculus
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
     Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(
+        onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))) &
     Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(
+        onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     })))
   )
 
@@ -265,13 +267,17 @@ object TactixLibrary extends HilbertCalculus
              keepQEFalse: Boolean): BelleExpr = anon {
     /** Tactic index that hands out loop tactics and configurable ODE tactics. */
     val autoTacticIndex = new DefaultTacticIndex {
-      override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
-        if (tactic == loop) {
+      override def tacticRecursors(tactic: BelleExpr): TacticRecursors = {
+        //@note BEWARE! .eq for true reference comparison! needed since anon tactic factories create indistinguishable
+        // case classes (all have the same name, none mentions the concrete tactic instance)
+        if (tactic.eq(loop)) {
           //@todo positions? what to expect there?
           ((_: Sequent, p: Position) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
-        } else if (tactic == odeR) {
+        } else if (tactic.eq(odeR)) {
           ((_: Sequent, p: Position) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
+      }
+
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(l: Loop, p) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
         case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
