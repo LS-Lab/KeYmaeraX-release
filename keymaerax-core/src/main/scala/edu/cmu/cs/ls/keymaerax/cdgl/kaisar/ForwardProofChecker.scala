@@ -101,11 +101,11 @@ object ForwardProofChecker {
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
       case ProgramVar(x) =>
-        val asgns = con.getMentions(x)
-        if (asgns.isEmpty) {
+        val mentions = con.getMentions(x)
+        if (mentions.isEmpty) {
           throw ProofCheckException(s"No assumptions found for program variable $x", node = pt)
         }
-        asgns.reduce(And)
+        mentions.reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case app@ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1), app)
       case app@ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>

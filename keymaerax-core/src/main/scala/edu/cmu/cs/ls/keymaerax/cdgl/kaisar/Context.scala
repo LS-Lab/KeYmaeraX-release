@@ -193,7 +193,12 @@ case class Context(s: Statement) {
       }, Set()).map(_._2)
   // Return all facts which mention any SSA-variant of x
   def getMentions(x: Variable): List[Formula] =
-    withOuter.searchAll({case (_, fml, _) => StaticSemantics(fml).fv.toSet.map((v:Variable) => v.name).contains(x.name)}, Set()).map(_._2)
+    withOuter.searchAll({case (_, fml, _) =>
+      val set = StaticSemantics(fml).fv.toSet.map((v:Variable) => v.name)
+      val contained = set.contains(x.name)
+      contained
+    }
+      , Set()).map(_._2)
 
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
@@ -226,22 +231,18 @@ case class Context(s: Statement) {
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
               left ++ iter(ss, ff, taboos)
             case s :: ss =>
-              val left =
-                reapply(s).searchAll(f, tabooProgramVars) match {
-                  case ((yx, yf)) :: _ =>
-                    val surrounding = Block(ss.reverse)
-                    val t = VariableSets(surrounding)
-                    val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
-                    // Prevent ghost variables from escaping scope, unless we're turning off soundness checks or we
-                    // are also a ghost.
-                    if (inter.nonEmpty && !isElaborationContext && !isGhost) {
-                      throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
-                    }
-                    List((yx, yf))
-                  case Nil => Nil
-                }
+              val leftMatches = reapply(s).searchAll(f, tabooProgramVars)
+              val surrounding = Block(ss.reverse)
+              val t = VariableSets(surrounding)
+              leftMatches.foreach({ case ((yx, yf)) =>
+                val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
+                // Prevent ghost variables from escaping scope, unless we're turning off soundness checks or we
+                // are also a ghost.
+                if (inter.nonEmpty && !isElaborationContext && !isGhost) {
+                  throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
+                }})
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              left ++ iter(ss, f, taboos)
+              leftMatches ++ iter(ss, f, taboos)
           }
         }
         iter(ss.reverse, f, tabooProgramVars)

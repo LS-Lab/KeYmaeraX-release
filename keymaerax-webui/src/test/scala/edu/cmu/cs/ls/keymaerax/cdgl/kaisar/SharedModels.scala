@@ -74,7 +74,7 @@ object SharedModels {
       |?xZero:(x := 0);
       |!inv: (x >= 0);
       |{x:=x+1;
-      | !inductiveStep: (x >= 0) using inv by auto;
+      | !inductiveStep: (x >= 0);
       |}*
       |!geq:(x >= y) using inv yZero by auto;
       |""".stripMargin
