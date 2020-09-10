@@ -304,8 +304,9 @@ object ProofChecker {
     val DomAssert(x, f, m) = assertion
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
     val dSet = proveODE.ds.atoms
-    val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(Nil, List((dx, Some(e))))})
-    val ihCon = (discreteAssumps ++ discreteAssigns).foldLeft[Context](baseCon)(_.:+(_))
+    // assignments not needed because they're already handled during lieDerivative
+    //val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(Nil, List((dx, Some(e))))})
+    val ihCon = (discreteAssumps /*++ discreteAssigns*/).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
     val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
@@ -315,7 +316,8 @@ object ProofChecker {
       case (true, _) =>
       case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
         case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f", node = assertion)
-        case None => apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()), assertion)
+        case None =>
+          apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()), assertion)
       }
     }
     /* Prove inductive case */
@@ -521,8 +523,12 @@ object ProofChecker {
   def apply(con: Context, s: Statement): (Context, Formula) = {
     s match {
       case Assert(x , f, m) =>
+        val taboo: Set[Variable] = if (con.isGhost) Set() else VariableSets(con).tabooVars
         val elabF = con.elaborateStable(f)
         apply(con, elabF, m, s)
+        val conflict = taboo.intersect(StaticSemantics(elabF).fv.toSet)
+        if (conflict.nonEmpty)
+          throw ProofCheckException(s"Assertion ${f.prettyString} must not mention taboo variables")
         (Context(s), Box(Dual(Test(elabF)), True))
       case Note(x , pt,  conclusion) =>
         val res = ForwardProofChecker(con, pt)

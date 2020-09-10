@@ -234,13 +234,13 @@ case class Context(s: Statement) {
               val leftMatches = reapply(s).searchAll(f, tabooProgramVars)
               val surrounding = Block(ss.reverse)
               val t = VariableSets(surrounding)
+              // @TODO: Finder needs to be able to specify verbosity level, leave out some error messages
+              // @TODO: Careful that it's really okay to look up ghost assignments. Think it is okay here, needs checked elsewhere
               leftMatches.foreach({ case ((yx, yf)) =>
-                val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
-                // Prevent ghost variables from escaping scope, unless we're turning off soundness checks or we
-                // are also a ghost.
-                if (inter.nonEmpty && !isElaborationContext && !isGhost) {
-                  throw ProofCheckException(s"Fact $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
-                }})
+                if(t.tabooFacts.contains(yx) && !isElaborationContext && !isInverseGhost)
+                  throw ProofCheckException(s"Inverse ghost fact $yx inaccessible outside of other inverse ghosts", node = s)
+                })
+               //throw ProofCheckException(s"Fact(s) $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
               leftMatches ++ iter(ss, f, taboos)
           }
@@ -250,8 +250,10 @@ case class Context(s: Statement) {
       case switch@Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>
-            if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names", node = switch)
-            else if (v1 == v2) (k1, v1) // optimize identical branches
+            // @TODO: happens because of ghosts on different branches. think more cleverly what to do about it
+            /*if (k1 != k2) throw ProofCheckException(s"recursive call found formula twice with different names: $k1 and $k2", node = switch)
+            else*/
+            if (v1 == v2) (k1, v1) // optimize identical branches
             else (k1, Or(v1, v2))
         }
         val fmls = pats.flatMap({ case (v, e, s) => reapply(s).searchAll(f, tabooProgramVars) })
