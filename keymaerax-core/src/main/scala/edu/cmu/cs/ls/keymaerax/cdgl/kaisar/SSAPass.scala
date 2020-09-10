@@ -198,11 +198,11 @@ object SSAPass {
         val mm = ssa(m, snapshot)
         (Assert(pat, ff, mm), snapshot)
       case Note(x, proof, annotation) => (Note(x, ssa(proof, snapshot), annotation.map(ssa(_, snapshot))), snapshot)
-      case LetFun(f, args, e) => {
+      case LetSym(f, args, e) => {
         // Don't SSA parameters, only state variables
         val bound = args.toSet
         val local = snapshot.filter({case (k, v) => !bound.contains(Variable(k))})
-        (LetFun(f, args, ssa(e, local)), snapshot)
+        (LetSym(f, args, ssa(e, local)), snapshot)
       }
       case Ghost(s) =>
         val (ss, snap) = ssa(s, snapshot)

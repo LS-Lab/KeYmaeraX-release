@@ -209,7 +209,7 @@ case class DeterritorializePass(tt: TimeTable) {
           case Assert(pat, f, m) => Assert(pat, translate(kc, f, s), m)
           case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
           case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation, s)))
-          case LetFun(f, args, e: Term) => LetFun(f, args, translate(kc, e, localVars = args))
+          case LetSym(f, args, e: Term) => LetSym(f, args, translate(kc, e, localVars = args))
           case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, s))
           case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, bs) => (e1, translatePat(kc, e2, s), bs)}))
           case While(x, j, bs) => While(x, translate(kc, j, s), bs)

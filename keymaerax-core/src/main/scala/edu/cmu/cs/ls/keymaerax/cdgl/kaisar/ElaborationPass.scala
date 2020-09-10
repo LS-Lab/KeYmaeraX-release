@@ -229,7 +229,7 @@ class ElaborationPass() {
         s match {
           case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f, s))
           // Elaborate all functions that are defined *before* f
-          case LetFun(f, args, e: Term) => LetFun(f, args, kc.elaborateFunctions(e, s))
+          case LetSym(f, args, e: Term) => LetSym(f, args, kc.elaborateFunctions(e, s))
           case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e, s))
           case While(x, j, body) => While(x, kc.elaborateFunctions(j, s), body)
           case BoxLoop(body, Some((ihk, ihv))) => BoxLoop(body, Some((ihk, kc.elaborateFunctions(ihv, s))))

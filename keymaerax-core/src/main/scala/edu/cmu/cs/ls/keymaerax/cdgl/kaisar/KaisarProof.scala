@@ -70,6 +70,11 @@ object KaisarProof {
     FuncOf(Function("at", None, Tuple(Real, Unit), Real, interpreted = true), Pair(f, labelFun))
   }
 
+  def makeAt(f: Formula, lr: LabelRef): Formula = {
+    val labelFml = PredOf(Function(lr.label, None, rN(lr.args.length), Bool, interpreted = true), termsToTuple(lr.args))
+    PredicationalOf(Function("at", None, Bool, Bool), And(f, labelFml))
+  }
+
   private val atFunction: Function = Function("at", None, Tuple(Real, Unit), Real, true)
 
   // Pattern match a located term  f@L
@@ -290,11 +295,14 @@ case class Label(st: LabelDef, snapshot: Option[Snapshot] = None) extends Statem
 // elaboration for performance reasons
 // @TODO: x should be Expression for pattern fun
 case class Note(x: Ident, proof: ProofTerm, var annotation: Option[Formula] = None) extends Statement
-// Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
+// Introduces a lexically-scoped defined function or predicate [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
-// definition site of the function. Scope is lexical and functions must not be recursive for soundness.
-case class  LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement {
-  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Real)
+// definition site of the function/predicate. Scope is lexical and functions/predicates must not be recursive for soundness.
+case class LetSym(f: Ident, args: List[Ident], e: Expression) extends Statement {
+  val isFunction: Boolean = e.isInstanceOf[Term]
+  val isPredicate: Boolean = !isFunction
+  val returnSort: Sort = if(isFunction) Real else Bool
+  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = returnSort)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
 case class Match(pat: Term, e: Expression) extends Statement
@@ -420,7 +428,11 @@ sealed trait MetaNode extends Statement {
 }
 
 // Debugging functionality: print [[msg]] with proof context
-case class PrintGoal(msg: String) extends MetaNode {
+sealed trait Printable
+case class PrintString(msg: String) extends Printable
+case class PrintExpr(e: Expression) extends Printable
+
+case class PrintGoal(printable: Printable) extends MetaNode {
   override val children: List[Statement] = Nil
 }
 // Debugging feature. Equivalent to "now" in all respects, annotated with the fact that it was once "was"

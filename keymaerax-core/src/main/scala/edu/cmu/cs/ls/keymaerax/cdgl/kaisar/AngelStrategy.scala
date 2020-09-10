@@ -163,7 +163,7 @@ object AngelStrategy {
         val block = body(s, isPhi = true)
         // Phi block does not have an "original" strategy, but we put it in map to indicate that it "is special"
         block
-      case _: MetaNode | _: Note | _: Match | _: LetFun | _: Triv | _: Assert | _: Label | _: Ghost => DTest(True)
+      case _: MetaNode | _: Note | _: Match | _: LetSym | _: Triv | _: Assert | _: Label | _: Ghost => DTest(True)
     }
   }
 

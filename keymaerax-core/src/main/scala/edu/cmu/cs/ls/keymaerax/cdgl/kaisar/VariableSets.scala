@@ -91,7 +91,7 @@ object VariableSets {
           case (acc, (p, x, None)) => acc.andThen(ofMustBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)))
         }
     case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), kc.isInverseGhost)
-    case LetFun(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
+    case LetSym(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
     case Match(pat: Term, e) => ofMustBound(StaticSemantics(pat).toSet, kc.isGhost)
     case Block(ss) => ss.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)((l, r) => l.andThen(r))
     case Switch(scrutinee, pats) =>

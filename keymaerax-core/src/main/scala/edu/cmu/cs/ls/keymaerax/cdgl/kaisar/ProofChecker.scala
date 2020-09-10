@@ -156,9 +156,9 @@ object ProofChecker {
     }
   }
 
-  /**  @return unit only if [[LetFun]] statement is admissible (does not violate soundness conditions) */
-  private def admitLetFun(con: Context, lf: LetFun): Unit = {
-    val LetFun(f, args, body) = lf
+  /**  @return unit only if [[LetSym]] statement is admissible (does not violate soundness conditions) */
+  private def admitLetFun(con: Context, lf: LetSym): Unit = {
+    val LetSym(f, args, body) = lf
     val sigBody = StaticSemantics.signature(body)
     val sig = con.signature.keySet
     val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig)
@@ -589,7 +589,7 @@ object ProofChecker {
         (Context(x), y)
 
       // @TODO: LetFun and Match should be checked in earlier passes?
-      case lf: LetFun => admitLetFun(con, lf); (Context(lf), True)
+      case lf: LetSym => admitLetFun(con, lf); (Context(lf), True)
       case mtch@Match(pat, e) =>
         try {
           UnificationMatch(pat, e);

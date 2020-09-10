@@ -183,19 +183,35 @@ object ExpressionParser {
   def exists[_: P]: P[Formula] = ("\\exists" ~ variable  ~ prefixTerminal).map({case (x, p) => Exists(List(x), p)})
   def box[_: P]: P[Formula] = (("[" ~ program  ~ "]" ~ prefixTerminal)).map({case (l, r) => Box(l ,r)})
   def diamond[_: P]: P[Formula] = (("<" ~ !P("->"))  ~ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
+  def predicate[_: P]: P[PredOf] =
+  // note: user-specified let definitions can have 0 args
+    (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
+      val fn = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Bool)
+      PredOf(fn, args.foldRight[Term](Nothing)(Pair))
+    })
+
 
   def prefixTerminal[_: P]: P[Formula] =
-    ((verumFalsum | not | forall | exists | box | diamond  | infixTerminal | parenFormula ) ~ ("'".!.?)).
+    // predicate vs infixTerminal (with function term)  is ambiguous
+    ((verumFalsum | not | forall | exists | box | diamond   | NoCut(infixTerminal) | predicate | parenFormula ) ~ ("'".!.?)).
       map({case (f, None) => f case (f, Some(_)) => DifferentialFormula(f)})
 
-  def and[_: P]: P[Formula] = (prefixTerminal ~ ("&"  ~ prefixTerminal).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
+  def atFml[_: P]: P[Formula] = {
+    (prefixTerminal ~ (CharIn("@") ~ labelRef).?).map({
+      case (e, None) => e
+      case (e, Some(lr:LabelRef)) => makeAt(e, lr)
+    })
+  }
+
+  def and[_: P]: P[Formula] = (atFml ~ ("&"  ~ atFml).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
   def or[_: P]: P[Formula] = (and ~ ("|"  ~ and).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Or)})
   def imply[_: P]: P[Formula] = (or ~ ("->"  ~ or).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Imply)})
   def equiv[_: P]: P[Formula] = (imply ~ ("<->"  ~ imply).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Equiv)})
 
   def formula[_: P]: P[Formula] = equiv
   // Term has to be last because of postfix operators
-  def expression[_: P]: P[Expression] =  program | formula | term
+  // NoCut for infix comparisons and also predicate vs function
+  def expression[_: P]: P[Expression] =  program | NoCut(formula) | term
 }
 
 object ProofParser {
@@ -311,14 +327,14 @@ object ProofParser {
   }
 
   def branch[_: P]: P[(Term, Formula, Statement)] = {
-    ("case" ~ exPat ~ formula ~ "=>" ~ statement.rep).map({case (exp, fml, ss: Seq[Statement]) =>
+    ("case" ~/ (!P("?")).opaque("no ?") ~/ exPat ~/ formula ~/ "=>" ~/ statement.rep).map({case (exp, fml, ss: Seq[Statement]) =>
       (exp, fml, block(ss.toList))})
   }
 
   def switch[_: P]: P[Switch] = {
-    (Index ~ "switch" ~ CharIn("{(").!).flatMap({
-      case (i, "{") => (branch.rep ~ "}").map(branches => locate(Switch(None, branches.toList), i))
-      case (i, "(") => (selector ~ ")" ~ "{" ~ branch.rep ~ "}").
+    (Index ~ "switch" ~/ CharIn("{(").!).flatMap({
+      case (i, "{") => (branch.rep ~/ "}").map(branches => locate(Switch(None, branches.toList), i))
+      case (i, "(") => (selector ~/ ")" ~/ "{" ~/ branch.rep ~ "}").
         map({case (sel, branches) => locate(Switch(Some(sel), branches.toList), i)})})
   }
 
@@ -330,11 +346,13 @@ object ProofParser {
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~/ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
-  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_))
+  def let[_: P]: P[Statement] = (Index ~ "let" ~/ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_))
            | term.map(Right(_)))
-           // @TODO: Unsupported for now| ("(" ~ (formula | program) ~ ")").map(Right(_))) // formulas and programs should have parens to deconfuse
-    ~ "=" ~ expression ~ ";").
-    map({case (i, Left((f, xs)), e) => locate(LetFun(f, xs.toList, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
+    ~ ("=" | "<->").!).flatMap({
+     case (i, Left((f, xs)), "=") => term.map(e => locate(LetSym(f, xs.toList, e), i))
+     case (i, Right(pat), "=") => expression.map(e => locate(Match(pat, e), i))
+     case (i, Left((f, xs)), "<->") => formula.map(e => locate(LetSym(f, xs.toList, e), i))
+  }) ~/ ";"
 
   def note[_: P]: P[Note] = (Index ~ "note" ~/ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
@@ -369,7 +387,7 @@ object ProofParser {
       ~ P(";").?
     ).map({case(i, ds, dc) => locate(ProveODE(ds, dc), i)})
 
-  def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~/ literal ~ ";").
+  def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~/  "(" ~ (literal.map(PrintString) |  expression.map(PrintExpr))  ~ ")" ~ ";").
     map({case (i, pg) => locate(PrintGoal(pg), i)})
 
   def atomicStatement[_: P]: P[Statement] =

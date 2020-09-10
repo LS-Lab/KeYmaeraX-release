@@ -213,7 +213,7 @@ object SharedModels {
       |{
       |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
       |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & ?(t <= T) & ?(v >= 0)};
+      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
       |ode(t):
       |   !step:(safe()) using env ... by auto;
       |}*
@@ -223,10 +223,10 @@ object SharedModels {
     """?(B > 0);
       |let ST = v / B;
       |!stopTime:(v@ode(ST) = 0);
-      |let safe() = x@ode(ST) <= d;
+      |let safe() <-> x@ode(ST) <= d;
       |print(safe());
       |t:= 0;
-      |{t' = 1, x' = v, v' = -B  & v >= 0};
+      |{t' = 1, x' = v, v' = -B  & ?(v >= 0);};
       |ode(t):
       |""".stripMargin
 
@@ -241,7 +241,7 @@ object SharedModels {
       |   let admiss() <->  -B <= accCand & accCand <= A;
       |   let env() <-> admiss () & safe()@ode(T, accCand);
       |   switch {
-      |     case ?inEnv:(env()) =>
+      |     case inEnv:(env()) =>
       |       acc := accCand;
       |       !predictSafe:(safe()@ode(T, acc)) using inEnv by auto;
       |     case true =>
@@ -249,7 +249,7 @@ object SharedModels {
       |       !predictSafe:(safe()@ode(T, acc)) using initSafe by auto;
       |   }
       |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & ?(t <= T) & ?(v >= 0)};
+      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
       |ode(t, acc):
       |   !step:(safe()) using predictSafe ... by auto;
       |}*

@@ -325,8 +325,8 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse letfun" in {
-    p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square".asVariable,  List("x".asVariable), Times(Variable("x"), Variable("x")))
-    p("let prod(x,z) = x*z;", pp.statement(_)) shouldBe LetFun("prod".asVariable,  List("x".asVariable, "z".asVariable), Times(Variable("x"), Variable("z")))
+    p("let square(x) = x*x;", pp.statement(_)) shouldBe LetSym("square".asVariable,  List("x".asVariable), Times(Variable("x"), Variable("x")))
+    p("let prod(x,z) = x*z;", pp.statement(_)) shouldBe LetSym("prod".asVariable,  List("x".asVariable, "z".asVariable), Times(Variable("x"), Variable("z")))
   }
 
   it should "parse match" in {
@@ -372,7 +372,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse print-goal" in {
-    p("print \"hello\";", pp.statement(_)) shouldBe PrintGoal("hello")
+    p("print \"hello\";", pp.statement(_)) shouldBe PrintGoal(PrintString("hello"))
   }
 
   // ODE proofs

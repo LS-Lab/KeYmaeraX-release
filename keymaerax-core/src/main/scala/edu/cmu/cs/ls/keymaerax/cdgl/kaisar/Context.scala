@@ -160,9 +160,9 @@ case class Context(s: Statement) {
 
   /** The set of function symbols defined in a statement. This includes proofs which are defined under a branch or under
     * a binder. */
-  def signature: Map[Function, LetFun] = {
+  def signature: Map[Function, LetSym] = {
     s match {
-      case lf: LetFun => Map(lf.asFunction -> lf)
+      case lf: LetSym => Map(lf.asFunction -> lf)
       case Block(ss) => ss.flatMap(s => Context(s).signature).toMap
       case BoxChoice(l, r) => Context(l).signature ++ Context(r).signature
       case Switch(sel, pats) => pats.map(_._3).flatMap(Context(_).signature).toMap
@@ -261,7 +261,7 @@ case class Context(s: Statement) {
       case InverseGhost(s) => Nil
       case po: ProveODE => findAll(po, po.ds, f) ++ findAll(po.dc, f)
       case Was(now, was) => reapply(was).searchAll(f, tabooProgramVars)
-      case _: Label | _: LetFun | _: Match | _: PrintGoal => Nil
+      case _: Label | _: LetSym | _: Match | _: PrintGoal => Nil
       case While(_, _, body) => reapply(body).searchAll(f, tabooProgramVars)
       case BoxLoop(body, ih) =>
         // only allowed to find IH
