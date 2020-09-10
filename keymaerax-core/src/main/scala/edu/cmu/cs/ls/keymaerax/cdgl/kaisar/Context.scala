@@ -191,7 +191,10 @@ case class Context(s: Statement) {
       case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx  => true
      case _ => false
       }, Set()).map(_._2)
-  
+  // Return all facts which mention any SSA-variant of x
+  def getMentions(x: Variable): List[Formula] =
+    withOuter.searchAll({case (_, fml, _) => StaticSemantics(fml).fv.toSet.map((v:Variable) => v.name).contains(x.name)}, Set()).map(_._2)
+
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
   def searchAll(f: Finder, tabooProgramVars: Set[Variable]): List[(Ident, Formula)] = {

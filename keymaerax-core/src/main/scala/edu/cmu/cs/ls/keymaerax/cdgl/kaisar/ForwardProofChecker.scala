@@ -101,7 +101,7 @@ object ForwardProofChecker {
   def apply(con: Context, pt: ProofTerm): Formula = {
     pt match {
       case ProgramVar(x) =>
-        val asgns = con.getAssignments(x)
+        val asgns = con.getMentions(x)
         if (asgns.isEmpty) {
           throw ProofCheckException(s"No assumptions found for program variable $x", node = pt)
         }

@@ -344,12 +344,11 @@ class EndToEndTests extends TacticTestBase {
       case x: Failure => throw new Exception(x.trace().toString)
     }
 
-  // @TODO: Improve language so examples work
-  it should "parse and prove all thesis examples" in withMathematica { _ =>
+  private def testExampleSet(examples: List[String]): Unit = {
     val STOP_AFTER_FIRST = true
     var parseErrors: List[(String, Throwable)] = Nil
     var checkErrors: List[(String, Throwable)] = Nil
-    SharedModels.thesisExamples.foreach(s =>
+    examples.foreach(s =>
       try {
         Kaisar.parseProof(s)
       } catch { case t: Throwable =>
@@ -361,13 +360,15 @@ class EndToEndTests extends TacticTestBase {
       }
     )
     val provedConclusions =
-      SharedModels.thesisExamples.flatMap(s =>
+      examples.flatMap(s =>
         try {
           List((s, check(s)))
         } catch { case t: Throwable =>
           checkErrors = (s, t) :: checkErrors;
-          if (STOP_AFTER_FIRST)
+          if (STOP_AFTER_FIRST) {
+            println("Failed while checking proof: " + s)
             throw t
+          }
           Nil
         }
       )
@@ -389,7 +390,16 @@ class EndToEndTests extends TacticTestBase {
       println(s"${provedConclusions.length} PROOFS SUCCEED")
     else
       println("The conclusions of each successful proof are as follows: " + provedConclusions.mkString("\n\n"))
-    (parseErrors ++ checkErrors).nonEmpty shouldBe true
+    (parseErrors ++ checkErrors).isEmpty shouldBe true
+  }
+
+  // @TODO: Improve language so examples work
+  it should "parse and prove all thesis examples" in withMathematica { _ =>
+    testExampleSet(SharedModels.thesisExamples)
+  }
+
+  it should "parse and prove specific thesis examples" in withMathematica { _ =>
+    testExampleSet(SharedModels.demonicLoop :: Nil)
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>

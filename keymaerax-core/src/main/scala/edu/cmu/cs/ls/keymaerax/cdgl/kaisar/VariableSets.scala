@@ -108,7 +108,10 @@ object VariableSets {
     case m: Phi => apply(m.asgns).forgetBound
     // @TODO: Are there ever cases where we want to check _bl instead?
     case BoxLoopProgress(_bl, progress) => apply(kc.reapply(progress))
-    case SwitchProgress(switch, onBranch, progress) => apply(kc.reapply(progress))
+    case SwitchProgress(switch, onBranch, progress) =>
+      val thisBranch = ofFacts(StaticSemantics(switch.pats(onBranch)._1).toSet, switch.pats(onBranch)._2, isInverseGhost = false)
+      val body = apply(kc.reapply(progress))
+      thisBranch ++ body
     case BoxChoiceProgress(bc, onBranch, progress) => apply(kc.reapply(progress))
     case m: MetaNode => m.children.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)(_.++(_))
   }

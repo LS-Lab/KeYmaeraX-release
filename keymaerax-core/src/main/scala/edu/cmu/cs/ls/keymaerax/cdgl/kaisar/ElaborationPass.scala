@@ -57,7 +57,9 @@ class ElaborationPass() {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
-        candidates.filter(x => kc.getAssignments(x.x).nonEmpty).map(x => locate(ForwardSelector(x), sel))
+        val mentionedVars = VariableSets(kc).allVars
+        // Keep all variables mentioned in assertions or assignments of context (for example)
+        candidates.filter(x => mentionedVars.contains(x.x)).map(x => locate(ForwardSelector(x), sel))
       case ForwardSelector(pt) => List(locate(ForwardSelector(disambiguate(kc, pt)), sel))
       case sel => List(sel)
     }
@@ -69,9 +71,9 @@ class ElaborationPass() {
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
-        // Program is not yet SSA-form, so don't filter out program variables that get bound twice.
-        val eachAssigns = candidates.map(x => (x, kc.getAssignments(x.x)))
-        eachAssigns.filter(_._2.nonEmpty).map(_._1)
+        val mentionedVars = VariableSets(kc).allVars
+        // Keep all variables mentioned in assertions or assignments of context (for example)
+        candidates.filter(x => mentionedVars.contains(x.x)).map(x => locate(x, sel))
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
         kc.unify(pat).map({case (x, _) => locate(ProofVar(x), sel)}).toList
@@ -90,6 +92,8 @@ class ElaborationPass() {
   private def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
     m match {
       case Using(use, m) =>
+        // @TODO: Duplicate check
+        val mentionedVars = VariableSets(kc).allVars
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
         val combineAssmsCandidates = useAssms ++ assms
@@ -97,7 +101,7 @@ class ElaborationPass() {
           throw ElaborationException("Non-default selector should select at least one fact.", node = m)
         val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramVar)
-        val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
+        val freePt = freePtCandidates.filter(x => mentionedVars.contains(x.x))
         val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
         val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)
