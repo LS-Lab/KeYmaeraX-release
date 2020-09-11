@@ -79,7 +79,7 @@ object SSAPass {
   def ssa(m: Method, snapshot: Snapshot): Method = {
     val node =
       m match {
-        case _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => m
+        case _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => m
         case Using(sels, m) =>
           Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
         // @TODO: This means variable indices which are used in ss can be reused elsewhere. Is this what we want?

@@ -35,6 +35,7 @@ class ElaborationPass() {
   /** Determine which variables in [[pt]] are fact variables vs. program variables when resolved in context [[kc]]. */
   private def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
     pt match {
+      case ProofVar(x) if ForwardProofChecker.allBuiltins.contains(x.name) => ProofVar(x)
       case ProofVar(x) =>
         // If x is not found as a fact variable, assume it's a program variable
         val got = kc.get(x)
@@ -102,11 +103,11 @@ class ElaborationPass() {
         val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramAssignments(_))
         val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
-        val combineAssms = combineAssmsCandidates.filter(!_.isInstanceOf[ProgramVar])
+        val combineAssms = combineAssmsCandidates//.filter(!_.isInstanceOf[ProgramVar])
         val dedupAssms = freePt ++ combineAssms
         (dedupAssms, meth)
       case ByProof(pf) => (List(), locate(ByProof(apply(locate(Block(pf), m)) :: Nil), m))
-      case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive => (List(), m)
+      case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => (List(), m)
     }
   }
 

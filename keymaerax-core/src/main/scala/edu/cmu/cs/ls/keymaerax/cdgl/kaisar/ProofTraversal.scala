@@ -152,7 +152,7 @@ object ProofTraversal {
       case Some(outM) => locate(outM, m)
       case None =>
         val mid = m match {
-          case _ : RCF | _ : Auto | _ : Prop | _: Triv | _: Solution | _: DiffInduction | _: Exhaustive => m
+          case _ : RCF | _ : Auto | _ : Prop | _: Triv | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => m
           case Using(uses, m) => Using(uses.map(traverse(kc, _, tf)), traverse(kc, m, tf))
           case ByProof(ss) => ByProof(ss.map(traverse(kc, _, tf)))
         }
