@@ -364,7 +364,9 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   private lazy val dummySolutions: Option[List[(Variable, Term)]] = {
     val dummyXys: Set[(Variable, Term)] =
       StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
-    solutionsFrom(dummyXys.toMap)
+    try {
+      solutionsFrom(dummyXys.toMap)
+    } catch { case (m: MatchError) => None }
   }
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
