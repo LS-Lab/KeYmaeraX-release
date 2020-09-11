@@ -292,7 +292,8 @@ object ProofChecker {
   private def solveAssertion(discreteCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, f, m) = assertion
     val methAssumps = m.selectors
-    val sols = proveODE.solutions.get
+    val fullSols = proveODE.solutions.get
+    val sols = fullSols.filter({case ((x, f)) => !proveODE.timeVar.contains(x) })
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
     val baseCon = subContext.foldLeft(discreteCon.c)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
