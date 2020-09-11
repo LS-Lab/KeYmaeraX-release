@@ -94,6 +94,7 @@ private object DLBySubst {
   })
 
   /** Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
+  @Tactic()
   val safeabstractionb: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     // internal automation support
     seq.sub(pos) match {

@@ -135,7 +135,8 @@ private object PropositionalTactics extends Logging {
   }
 
   /** Automated modus ponens for p->q ==> ; tries to automatically prove p from the rest of the assumptions. */
-  private[btactics] val autoMP = anon { (pos: Position, seq: Sequent) => seq(pos.checkAnte.checkTop) match {
+  @Tactic()
+  private[btactics] val autoMP: DependentPositionTactic = anon { (pos: Position, seq: Sequent) => seq(pos.checkAnte.checkTop) match {
       case Imply(p, _) =>
         val pi = seq.ante.indexWhere(_ == p)
         if (pi >= 0) modusPonens(AntePos(pi), pos.checkAnte.checkTop)
