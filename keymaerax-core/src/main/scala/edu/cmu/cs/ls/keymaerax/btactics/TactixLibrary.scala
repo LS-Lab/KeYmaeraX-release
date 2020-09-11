@@ -8,12 +8,12 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{BranchRecursor, TacticRecursor, TacticRecursors}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
@@ -131,7 +131,9 @@ object TactixLibrary extends HilbertCalculus
         case _ => super.tacticsFor(expr)
       }
     }
-  )(notL::andL::notR::implyR::orR::PropositionalTactics.autoMP::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+  )(notL::andL::notR::implyR::orR::PropositionalTactics.autoMP::allR::TacticIndex.allLStutter::
+    existsL::TacticIndex.existsRStutter::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::
+    ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   @Tactic(codeName = "unfold", revealInternalSteps = true)
@@ -176,12 +178,12 @@ object TactixLibrary extends HilbertCalculus
     })
 
     /** Do all the tactics of a branch in sequence. */
-    def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr =
+    def applyBranchRecursor(rec: BranchRecursor): BelleExpr =
       //@note onAll tries on too many branches, but optional atOrSearch compensates for this
-      rec.map(r => onAll(?(atOrSearch(r)))).reduce(_&_)
+      rec.positions.map(r => onAll(?(atOrSearch(r)))).reduce(_&_)
 
     /** Turn branches (if any) into a branching tactic. */
-    def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
+    def applyRecursor(rec: TacticRecursor): BelleExpr = rec.branches match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
       case r => DebuggingTactics.assertProvableSize(r.length, new IllFormedTacticApplicationException(_)) &
@@ -190,15 +192,22 @@ object TactixLibrary extends HilbertCalculus
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
-      val recursors = tacticIndex.tacticRecursors(t).map(_(s, pos)).filter(_.nonEmpty)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & Idioms.doIf(!_.isProved)(recursors.map(r =>
-        DebuggingTactics.assertOnAll(_ != s ||
-          //@note allow recursing on subposition after no-op steps that supply recursors
-          r.exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
-          "No progress, stopping recursion", new BelleNoProgress(_)) &
-        applyRecursor(r)
-      ).reduce(_&_))
-      else t(new Fixed(pos))
+      //@note tactic recursors also check top-level vs. non-toplevel tactic applicability
+      tacticIndex.tacticRecursors(t)(s, pos) match {
+        case Left(r@TacticRecursor(branches)) =>
+          //@note Left(recursors) execute tactic then recurse;
+          // if recursor continues working on the same position: insist that t made progress
+          val tactic =
+            if (branches.exists(_.positions.exists({ case Fixed(pp, _, _) => pp == pos case _ => false }))) must(t(new Fixed(pos)))
+            else t(new Fixed(pos))
+          if (branches.nonEmpty) tactic & Idioms.doIf(!_.isProved)(applyRecursor(r))
+          else tactic
+        case Right(r@TacticRecursor(branches)) =>
+          //@note skip tactic, recurse right away
+          if (branches.exists(_.positions.exists({ case Fixed(pp, _, _) => pp == pos case _ => false })))
+            throw new IllegalArgumentException("Tactic index error: skip recursor must not point to original position")
+          else applyRecursor(r)
+      }
     }
 
     seq.sub(pos) match {
@@ -274,9 +283,12 @@ object TactixLibrary extends HilbertCalculus
         // case classes (all have the same name, none mentions the concrete tactic instance)
         if (tactic.eq(loop)) {
           //@todo positions? what to expect there?
-          ((_: Sequent, p: Position) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
+          (_: Sequent, p: Position) => Left(TacticRecursor(
+            BranchRecursor(Fixed(p) :: Nil) ::
+            BranchRecursor(Fixed(p) :: Nil) ::
+            BranchRecursor(Fixed(p) :: Nil) :: Nil))
         } else if (tactic.eq(odeR)) {
-          ((_: Sequent, p: Position) => (new Fixed(p)::Nil)::Nil) :: Nil
+          (_: Sequent, p: Position) => Left(TacticRecursor(BranchRecursor(Fixed(p) :: Nil) :: Nil))
         } else super.tacticRecursors(tactic)
       }
 

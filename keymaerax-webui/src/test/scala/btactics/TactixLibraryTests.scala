@@ -396,6 +396,18 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(f, normalize).subgoals.loneElement shouldBe "p(x), y>0, y>0 ==> p(y)".asSequent
   }
 
+  it should "not fail when trying to chase non-toplevel" in {
+    val f = "X>x&\\forall a (x<a&a<=X->a<=Y) -> \\exists a (a>x&a<=Y)".asFormula
+    //@note master does not yet instantiate quantifiers, but tries to chase inside
+    proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
+  }
+
+  it should "chase non-toplevel" in {
+    val f = "X>x&\\forall a ([x:=2;]x<a&a<=X->[z:=Y;]a<=z) -> \\exists a (a>x&a<=Y)".asFormula
+    //@note master does not yet instantiate quantifiers, but tries to chase inside
+    proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (2<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
+  }
+
   it should "unfold in succedent and antecedent" in {
     val result = proveBy(
       """v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw(), A()>0, B()>=b(), b()>0, ep()>0, lw()>0
@@ -594,8 +606,10 @@ class TactixLibraryTests extends TacticTestBase {
   }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
-    val problem = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
-      """  x < -4
+    val problem = KeYmaeraXArchiveParser(
+      """Theorem ""
+        |Problem
+        |x < -4
         |  ->
         |  [
         |     t := 0;
@@ -603,7 +617,9 @@ class TactixLibraryTests extends TacticTestBase {
         |     {x' = v, t' = 1 & t <= 1};
         |     a := 8/x;
         |     {x' = v, v' = a & v >= 0}
-        |  ] x <= 0""".stripMargin)
+        |  ] x <= 0
+        |End.
+        |End.""".stripMargin).head.model.asInstanceOf[Formula]
 
     proveBy(problem, master()) shouldBe 'proved
   }
@@ -657,6 +673,12 @@ class TactixLibraryTests extends TacticTestBase {
   it should "use auto modus ponens" in withQE { _ =>
     val s = "Y>y, X>y, y < x&x<=Y->P(x) ==>  y < x&x<=min(X,Y)->P(x)".asSequent
     proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "not fail when trying to chase non-toplevel" in withQE { _ =>
+    val f = "\\exists X (X>x&\\forall a (x<a&a<=X->P(a)))->\\exists a (a>x&P(a))".asFormula
+    //@note master does not yet instantiate quantifiers
+    proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
   }
 
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
