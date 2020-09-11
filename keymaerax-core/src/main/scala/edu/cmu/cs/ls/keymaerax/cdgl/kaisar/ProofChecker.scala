@@ -224,7 +224,8 @@ object ProofChecker {
     val LetSym(f, args, body) = lf
     val sigBody = StaticSemantics.signature(body)
     val sig = con.signature.keySet
-    val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig)
+    // @TODO: better check where we allow line labels but catch other undefined terms. must allow forward def.
+    val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig).filter({case (fn: Function) => !fn.interpreted  case _ => true})
     if (sig.contains(lf.asFunction)) {
       throw ProofCheckException(s"Multiply-defined function definition ${f.name}", node = lf)
     } else if (unboundFunctions.nonEmpty) {
@@ -287,6 +288,7 @@ object ProofChecker {
             // Even collect ghost facts because ghost proof might need them
             case Ghost(Assert(x: Variable, f, m)) => acc.addFact(Some(x), f)
             case Ghost(Assume(x: Variable, f)) => acc.addFact(Some(x), f)
+            case _: PrintGoal => acc
           }
         })
         ODEContext(c, header)

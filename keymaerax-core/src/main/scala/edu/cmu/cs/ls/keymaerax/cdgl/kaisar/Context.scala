@@ -272,7 +272,11 @@ case class Context(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, f) ++ findAll(po.dc, f)
       case Was(now, was) => reapply(was).searchAll(f, tabooProgramVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal => Nil
-      case While(_, _, body) => reapply(body).searchAll(f, tabooProgramVars)
+      case While(_, _, body) =>
+        //@TODO
+        // only allowed to find IH
+        //reapply(body).searchAll(f, tabooProgramVars)
+        Nil
       case BoxLoop(body, ih) =>
         // only allowed to find IH
         ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}

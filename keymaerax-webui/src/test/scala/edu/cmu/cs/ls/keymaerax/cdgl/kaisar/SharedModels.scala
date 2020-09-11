@@ -194,28 +194,34 @@ object SharedModels {
       |final:
       |""".stripMargin
 
+  // @TODO: More obvious / better errors for match vs letfun
   val printSolution: String =
     """?(B > 0);
-      |let ST = v / B;
-      |!stopTime:(v@ode(ST) = 0);
-      |let safe() <-> x@ode(ST) <= d;
+      |let ST() = v / B;
+      |!stopTime:(v@ode(ST()) = 0);
+      |let safe() <-> x@ode(ST()) <= d;
       |print(safe());
       |t:= 0;
       |{t' = 1, x' = v, v' = -B  & ?(v >= 0);};
       |ode(t):
       |""".stripMargin
 
+
+  // @TODO: Fails because we need to look up IH during While() checking, which requires WhileProgress constructor
   val basicReachAvoid: String =
-    """?(eps > 0 & B > 0 & x = 0 & T > 0);
-      |while (x + eps < goal) {
-      |  vel := (goal - x)/B;
+    """?(eps > 0 &  x = 0 & T > 0);
+      |while (x + eps <= goal) {
+      |  vel := (goal - (x + eps))/T;
       |  t := 0;
-      |  {t' = 1, x' = vel & ?(t <= T);};
+      |  {t' = 1, x' = vel & ?time:(t <= T);};
       |  /-- !safe:(x >= 0);  --/
       |  ?(t >= T/2);
-      |  !live:(x + eps < goal);
+      |  !live:(x + eps <= goal) using time ... by auto;
       |}
       |""".stripMargin
+
+  // @TODO: something is super fucking unsound with x1 = x0
+
 
   val forwardHypothetical: String =
     """?(T > 0 & A > 0 & B > 0);
@@ -261,7 +267,7 @@ object SharedModels {
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
     ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
-    intoChoice, outOfChoice, printSolution, basicReachAvoid, forwardHypothetical, sandboxExample)
+    intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid)
 
 
   // @TODO implement file format

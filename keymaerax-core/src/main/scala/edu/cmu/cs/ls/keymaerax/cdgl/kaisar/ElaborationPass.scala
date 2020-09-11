@@ -60,7 +60,7 @@ class ElaborationPass() {
         val candidates = fv.toSet.toList.map(ProgramVar)
         val mentionedVars = VariableSets(kc).allVars
         // Keep all variables mentioned in assertions or assignments of context (for example)
-        candidates.filter(x => mentionedVars.contains(x.x)).map(x => locate(ForwardSelector(x), sel))
+        candidates.filter(x => mentionedVars.contains(x.x) && kc.getMentions(x.x).nonEmpty).map(x => locate(ForwardSelector(x), sel))
       case ForwardSelector(pt) => List(locate(ForwardSelector(disambiguate(kc, pt)), sel))
       case sel => List(sel)
     }
@@ -74,7 +74,7 @@ class ElaborationPass() {
         val candidates = fv.toSet.toList.map(ProgramVar)
         val mentionedVars = VariableSets(kc).allVars
         // Keep all variables mentioned in assertions or assignments of context (for example)
-        candidates.filter(x => mentionedVars.contains(x.x)).map(x => locate(x, sel))
+        candidates.filter(x => mentionedVars.contains(x.x) && kc.getMentions(x.x).nonEmpty).map(x => locate(x, sel))
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
         kc.unify(pat).map({case (x, _) => locate(ProofVar(x), sel)}).toList

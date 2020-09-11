@@ -72,6 +72,14 @@ object VariableSets {
     VariableSets(boundVars = Set(), mustBoundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 
+  private def ofPred(vars: Set[Variable], args: List[Ident], e: Expression,  isInverseGhost: Boolean): VariableSets = {
+    val bodyFree = e match {
+      case f: Formula => StaticSemantics(f).fv.toSet
+    }
+    val free = bodyFree.--(args.toSet)
+    VariableSets(boundVars = Set(), mustBoundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
+  }
+
   /** Compute static semantic variables sets for a given Kaisar [[statement]], depending on the context in which
     * [[statement]] appears
     *
@@ -91,7 +99,8 @@ object VariableSets {
           case (acc, (p, x, None)) => acc.andThen(ofMustBound(Set(x), kc.isGhost).++(ofFacts(p.toSet, True, kc.isInverseGhost)))
         }
     case Note(x, proof, ann) => ofFacts(Set(x), ann.getOrElse(True), kc.isInverseGhost)
-    case LetSym(f, args, e) => ofFunc(Set(f), args, e, kc.isInverseGhost)
+    case LetSym(f, args, e: Term) => ofFunc(Set(f), args, e, kc.isInverseGhost)
+    case LetSym(f, args, e: Formula) => ofPred(Set(f), args, e, kc.isInverseGhost)
     case Match(pat: Term, e) => ofMustBound(StaticSemantics(pat).toSet, kc.isGhost)
     case Block(ss) => ss.map(s => apply(kc.reapply(s))).foldLeft(VariableSets.empty)((l, r) => l.andThen(r))
     case Switch(scrutinee, pats) =>
@@ -141,7 +150,7 @@ object VariableSets {
     case DomAssume(x: Term, f) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomAssert(x: Term, f, child) => ofFacts(StaticSemantics(x).toSet, f, kc.isInverseGhost)
     case DomWeak(dc: DomainStatement) => apply(kc.withInverseGhost, dc)
-    case DomModify(x, f) => ofMustBound(Set(x), kc.isGhost).++(ofFacts(Set(x), True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
+    case DomModify(id, x, f) => ofMustBound(Set(x), kc.isGhost).++(ofFacts(Set(x), True, kc.isInverseGhost)).addFreeVars(StaticSemantics(f).toSet)
     case DomAnd(l, r) => apply(kc, l).++(apply(kc, r))
   }
 }
