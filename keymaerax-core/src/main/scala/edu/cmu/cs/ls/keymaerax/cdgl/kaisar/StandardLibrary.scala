@@ -8,12 +8,13 @@ object StandardLibrary {
   // Vectorial type real^n
   def rN(n: Int): Sort = {
     if(n == 0) Unit
+    else if (n == 1) Real
     else Tuple(Real, rN(n-1))
   }
 
   /** Tuple containing terms [[fs]] */
    def termsToTuple(fs: List[Term]): Term = {
-    fs.foldRight[Term](Nothing)(Pair)
+    fs match {case Nil => Nothing case _ => fs.reduceRight[Term](Pair)}
   }
 
   /** List of elements conjoined in (possibly) tuple f */
@@ -21,6 +22,7 @@ object StandardLibrary {
     f match {
       case Nothing => Nil
       case Pair(l, r) => l :: tupleToTerms(r, node)
+      case f => f :: Nil
       case _ => throw ProofCheckException("Expected list argument to label reference, but got: " + f, node = node)
     }
   }

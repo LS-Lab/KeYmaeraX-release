@@ -69,12 +69,14 @@ object ExpressionParser {
   def wild[_: P]: P[FuncOf] = (Index ~ P("*")).
     map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
 
+  private def nargs(args: Seq[Term]): Term = args match {case Nil => Nothing case _ => args.reduceRight[Term](Pair)}
+  private def ntypes(args: Seq[Sort]): Sort = args match {case Nil => Unit case _ => args.reduceRight[Sort](Tuple)}
   def funcOf[_: P]: P[FuncOf] =
     // note: user-specified let definitions can have 0 args
     (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
       val builtins = Set("min", "max", "abs")
-      val fn = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Real, interpreted = builtins.contains(f.name))
-      FuncOf(fn, args.foldRight[Term](Nothing)(Pair))
+      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real, interpreted = builtins.contains(f.name))
+      FuncOf(fn, nargs(args))
     })
 
   def parenTerm[_: P]: P[Term] = (("(" ~ term.rep(sep = ",", min = 1) ~ ")")).map(ss =>
@@ -186,8 +188,8 @@ object ExpressionParser {
   def predicate[_: P]: P[PredOf] =
   // note: user-specified let definitions can have 0 args
     (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
-      val fn = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = Bool)
-      PredOf(fn, args.foldRight[Term](Nothing)(Pair))
+      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Bool)
+      PredOf(fn, nargs(args))
     })
 
 

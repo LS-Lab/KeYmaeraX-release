@@ -307,7 +307,8 @@ case class LetSym(f: Ident, args: List[Ident], e: Expression) extends Statement 
   val isFunction: Boolean = e.isInstanceOf[Term]
   val isPredicate: Boolean = !isFunction
   val returnSort: Sort = if(isFunction) Real else Bool
-  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).foldRight[Sort](Unit)(Tuple), sort = returnSort)
+  private def nsort (sorts: List[Sort]): Sort = sorts match {case Nil => Unit case _ => sorts.reduceRight[Sort](Tuple)}
+  val asFunction: Function = Function(f.name, domain = nsort(args.map(_ => Real)), sort = returnSort)
 }
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
 case class Match(pat: Term, e: Expression) extends Statement
