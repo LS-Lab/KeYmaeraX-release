@@ -561,8 +561,8 @@ object Context {
     * @return the set of fact bindings introduced by an assumption statement */
   private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): Map[Ident, Formula] = {
     e match {
-      // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name.
-      case Nothing => Map()
+      // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name, but can be searched by program-vars.
+      case Nothing => Map(Variable("unnamed") -> f)
       case BaseVariable(x, _, _) => Map(Variable(x) -> f)
       case p: Pair =>
         val bindings = StandardLibrary.factBindings(e, f)
