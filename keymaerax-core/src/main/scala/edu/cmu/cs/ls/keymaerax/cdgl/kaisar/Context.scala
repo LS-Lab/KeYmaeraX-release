@@ -413,7 +413,8 @@ case class Context(s: Statement) {
         res.map(Phi)
       case Ghost(s) =>
         val res = reapply(s).lastStatements(taboos)
-        res.map({case g: Ghost => g case s: Statement => Ghost(s)})
+        val mapped = res.map({case g: Ghost => g case s: Statement => Ghost(s)})
+        mapped
       case Block(ss) =>
         ss.foldRight[(List[Statement], Set[Variable], Boolean)]((List(), taboos, false))({case (s, (acc, taboos, done)) =>
           if (done) (acc, taboos, done)
@@ -440,12 +441,17 @@ case class Context(s: Statement) {
   def lastFact: Option[(Ident, Formula)] = {
     def unwind(wound: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
       wound match {
+          // unnamedVar
         case Assert(x: Variable, f, _) :: _ => (Some((x, f)), Nil)
         case Assume(x: Variable, f) :: _ => (Some((x, f)), Nil)
+        case Assert(Nothing, f, _) :: _ => (Some((unnamedVar, f)), Nil)
+        case Assume(Nothing, f) :: _ => (Some((unnamedVar, f)), Nil)
         case (phi: Phi) :: rest =>
           val (fml, phis) = unwind(rest)
           (fml, phi :: phis)
-        case  s :: ss => unwind(ss)
+        // looking up forward-ghost facts is ok
+        case Ghost(s) :: ss => unwind(s :: ss)
+        case s :: ss => unwind(ss)
         case Nil => (None, Nil)
       }
     }
@@ -535,6 +541,8 @@ object Context {
   // fact identifier, fact formula, whether fact is from an assignment
   type Finder = ((Ident, Formula, Boolean)) => Boolean
 
+  val unnamedVar: BaseVariable = BaseVariable("unnamedVar")
+
   sealed trait GhostMode
   case object NonGhostMode extends GhostMode
   case object ForwardGhostMode extends GhostMode
@@ -562,7 +570,7 @@ object Context {
   private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): Map[Ident, Formula] = {
     e match {
       // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name, but can be searched by program-vars.
-      case Nothing => Map(Variable("unnamed") -> f)
+      case Nothing => Map(unnamedVar -> f)
       case BaseVariable(x, _, _) => Map(Variable(x) -> f)
       case p: Pair =>
         val bindings = StandardLibrary.factBindings(e, f)
