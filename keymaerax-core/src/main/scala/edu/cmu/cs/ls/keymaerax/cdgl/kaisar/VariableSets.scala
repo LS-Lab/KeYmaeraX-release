@@ -51,7 +51,9 @@ object VariableSets {
     * @param isInverseGhost Was the context where the facts were defined enclosed by an inverse-ghost?
     * */
   private def ofFacts(vars: Set[Variable], fml: Formula, isInverseGhost: Boolean) = {
-    val fv = StaticSemantics(fml).fv.toSet
+    val plainFml = KaisarProof.forgetAt(fml)
+    val setlattice = StaticSemantics(plainFml).fv
+    val fv = StaticSemantics(plainFml).fv.toSet
     VariableSets(boundVars = Set(), mustBoundVars = Set(), fv, tabooVars = Set(), tabooFunctions = Set(), tabooFacts = if (isInverseGhost) vars else Set())
   }
 

@@ -245,21 +245,21 @@ object SharedModels {
       |let safe() <-> SB <= (d-x);
       |?initSafe:(safe());
       |{
-      |   accCand := *;
-      |   let admiss() <->  -B <= accCand & accCand <= A;
-      |   let env() <-> admiss () & safe()@ode(T, accCand);
-      |   switch {
-      |     case inEnv:(env()) =>
-      |       acc := accCand;
-      |       !predictSafe:(safe()@ode(T, acc)) using inEnv by auto;
-      |     case true =>
-      |       acc := -B;
-      |       !predictSafe:(safe()@ode(T, acc)) using initSafe by auto;
-      |   }
-      |   t:= 0;
+      |  accCand := *;
+      |  let admiss() <-> -B <= accCand & accCand <= A;
+      |  let env()    <-> admiss () & safe()@ode(T, accCand);
+      |  switch {
+      |    case inEnv:(env()) =>
+      |      acc := accCand;
+      |      !predictSafe:(safe()@ode(T, acc)) using inEnv by auto;
+      |    case true =>
+      |      acc := -B;
+      |      !predictSafe:(safe()@ode(T, acc)) using initSafe by auto;
+      |  }
+      |  t:= 0;
       |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
       |ode(t, acc):
-      |   !step:(safe()) using predictSafe ... by auto;
+      |  !step:(safe()) using predictSafe ... by auto;
       |}*
       |""".stripMargin
 

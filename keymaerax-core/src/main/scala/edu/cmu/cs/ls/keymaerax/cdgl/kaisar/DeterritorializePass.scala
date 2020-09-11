@@ -8,10 +8,11 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.DeterritorializePass.TimeTable
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef, TimeIdent, TransformationException}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef, TimeIdent, TransformationException, getAt}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper}
 
 object DeterritorializePass {
   val DEBUG: Boolean = false
@@ -38,7 +39,7 @@ object DeterritorializePass {
 
 case class DeterritorializePass(tt: TimeTable) {
   /** reindex f based on snapshot, except some set of variables */
-  private def reindex(snapshot: Snapshot, f: Term, except: Set[Ident]): Term = {
+  private def reindex(snapshot: Snapshot, f: Expression, except: Set[Ident]): Expression = {
     val reindexOne: Term => Option[Term] = ({case BaseVariable(name, _, sort) =>
       // rename program variables but not function arguments
       // Insert "stable" function to indicate that proofchecking should never change the index on this variable -
@@ -53,19 +54,19 @@ case class DeterritorializePass(tt: TimeTable) {
 
 
   /** Eliminate [[stable]] marker in terms */
-  private def destabilize(f: Term): Term = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
+  private def destabilize(f: Expression): Expression = SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
   /** Return a term equivalent to [[f@lr]] which only uses terms that are defined at the beginning of [[conDiff]] */
-  private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Term, except: Set[Ident], node: ASTNode): Term = {
+  private def rewind(conDiff: Context, labelSnap: Snapshot, lr: LabelRef, f: Expression, except: Set[Ident], node: ASTNode): Expression = {
     val (_, _, ld) = tt(lr.label)
     if (lr.args.length != ld.args.length) throw TransformationException(s"Label ${ld.label} referenced with arguments ${lr.args} but expects ${ld.args.length} arguments", node = node)
     val argMap = ld.args.zip(lr.args).foldLeft[Map[Variable, Term]](Map())({case (acc, (k, v)) => acc.+(k -> v)})
     val termAcc = destabilize(reindex(labelSnap, f, except))
     if (DeterritorializePass.DEBUG) println(s"Rewinding from ${termAcc.prettyString}")
     def fail = throw TransformationException(s"Value of $f@$lr is ill-defined", node = node)
-    def traverse(s: Statement, f: Term): Term = {
+    def traverse(s: Statement, f: Expression): Expression = {
       s match {
         case mod: Modify =>
-          mod.mods.foldRight[Term](f){
+          mod.mods.foldRight[Expression](f){
             case ((x, Some(rhs)), acc) =>
               if (DeterritorializePass.DEBUG) println(s"Replace $x = $rhs in $acc")
               val res = SubstitutionHelper.replaceFree(acc)(x, rhs)
@@ -87,7 +88,7 @@ case class DeterritorializePass(tt: TimeTable) {
           val res = SubstitutionHelper.replacesFree(f)({case x: BaseVariable => fullMap.get(x) case _ => None})
           if (DeterritorializePass.DEBUG) println(s"Replacing to: $res")
           res
-        case Block(ss) => ss.foldRight[Term](f)(traverse)
+        case Block(ss) => ss.foldRight[Expression](f)(traverse)
         case BoxChoice(l, r) =>
           // Note: This can lead to surprising behavior, this will allow a user to prove some p(x@l) and then
           // be disappointed that p(x@l) is a weaker statement than they had hoped.
@@ -112,7 +113,7 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
   /** Reindex [[f]] according to [[label]] if it is legal to do so. */
-  private def renameAdmissible(kc: Context, label: LabelRef, f: Term, except: Set[Ident], node: ASTNode): Option[Term] = {
+  private def renameAdmissible(kc: Context, label: LabelRef, f: Expression, except: Set[Ident], node: ASTNode): Option[Expression] = {
     tt.get(label.label) match {
       case None => throw TransformationException(s"Undefined line label: $label", node = node)
       case Some((labelSnap, labelCon, _labelDef)) =>
@@ -131,36 +132,51 @@ case class DeterritorializePass(tt: TimeTable) {
   }
 
   // Rename individual atomic terms
-  private def transHelper(kc: Context, local: Set[Ident], node: ASTNode = Triv()): Term => Option[Term] = (f: Term) =>
+  /*private def transHelper(kc: Context, local: Set[Ident], node: ASTNode = Triv()): Term => Option[Term] = (f: Term) =>
     KaisarProof.getAt(f, node) match {
       case Some((e, label)) => renameAdmissible(kc, label, e, local, node)
       case None => None
+    }*/
+
+  def etf(kc: Context, local: Set[Ident], node: ASTNode = Triv()): ExpressionTraversalFunction = new ExpressionTraversalFunction {
+    override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
+      getAt(e, Triv()) match {
+        case Some((f, label)) => Right(renameAdmissible(kc, label, f, local, node).getOrElse(f).asInstanceOf[Formula])
+        case None => Right(e)
+      }
     }
+    override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+      getAt(e) match {
+        case Some((f, label)) => Right(renameAdmissible(kc, label, f, local, node).getOrElse(f).asInstanceOf[Term])
+        case None => Right(e)
+      }
+    }
+  }
 
   /** Translate a term [[t]], but leave parameters [[localVars]] intact */
   private def translate(kc: Context, t: Term, localVars: List[Ident] = Nil, node: ASTNode = Triv()): Term = {
-    SubstitutionHelper.replacesFree(t)(transHelper(kc, localVars.toSet, node))
+    ExpressionTraversal.traverse(etf(kc, localVars.toSet, node), t).getOrElse(t)
   }
 
   /** Translate a formula [[fml]] */
-  private def translate(kc: Context, fml: Formula, node: ASTNode): Formula = {
-    SubstitutionHelper.replacesFree(fml)(transHelper(kc, Set(), node))
+  private def translate(kc: Context, fml: Formula, localVars: List[Ident], node: ASTNode): Formula = {
+    ExpressionTraversal.traverse(etf(kc, localVars.toSet, node), fml).getOrElse(fml)
   }
 
   /** Translate an expression [[e]] */
-  private def translate(kc: Context, e: Expression, node: ASTNode): Expression = {
-    SubstitutionHelper.replacesFree(e)(transHelper(kc, Set(), node))
+  private def translate(kc: Context, e: Expression, localVars: List[Ident], node: ASTNode): Expression = {
+    e match {case f: Term => translate (kc, f, localVars, node) case fml: Formula => translate (kc, fml, localVars, node)}
   }
 
   /** Translate an expression pattern [[pat]], where already-bound variables are not renamed */
-  private def translatePat(kc: Context, pat: Term, node: ASTNode): Term = {
+  private def translatePat(kc: Context, pat: Term,  node: ASTNode): Term = {
     val boundVars = VariableSets(kc).boundVars
-    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars, node))
-  }
+    ExpressionTraversal.traverse(etf(kc, boundVars, node), pat).getOrElse(pat)
 
+  }
   private def translatePat(kc: Context, pat: Formula, node: ASTNode): Formula = {
     val boundVars = VariableSets(kc).boundVars
-    SubstitutionHelper.replacesFree(pat)(transHelper(kc, boundVars, node))
+    ExpressionTraversal.traverse(etf(kc, boundVars, node), pat).getOrElse(pat)
   }
 
   /** Translate away label references in a statement which must be in SSA form. */
@@ -177,7 +193,7 @@ case class DeterritorializePass(tt: TimeTable) {
       // translate named references in atoms
       override def postPT(kc: Context, pt: ProofTerm): ProofTerm = {
         pt match {
-          case ProofInstance(e) => ProofInstance(translate(kc, e, pt))
+          case ProofInstance(e) => ProofInstance(translate(kc, e, List(), pt))
           case _ => pt
         }
       }
@@ -191,8 +207,8 @@ case class DeterritorializePass(tt: TimeTable) {
 
       override def postDomS(kc: Context, ds: DomainStatement): DomainStatement = {
         ds match {
-          case DomAssume(x, f) =>  DomAssume(x, translate(kc, f, ds))
-          case DomAssert(x, f, child) => DomAssert(x, translate(kc, f, ds), child)
+          case DomAssume(x, f) =>  DomAssume(x, translate(kc, f, List(), ds))
+          case DomAssert(x, f, child) => DomAssert(x, translate(kc, f, List(), ds), child)
           case DomModify(id, x, f) => DomModify(id, x, translate(kc, f, node = ds))
           case _: DomAnd | _: DomWeak => ds
         }
@@ -208,14 +224,14 @@ case class DeterritorializePass(tt: TimeTable) {
       // translate named references in atoms
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) => Assume(pat, translate(kc, f, s))
-          case Assert(pat, f, m) => Assert(pat, translate(kc, f, s), m)
+          case Assume(pat, f) => Assume(pat, translate(kc, f, List(), s))
+          case Assert(pat, f, m) => Assert(pat, translate(kc, f, List(), s), m)
           case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
-          case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation, s)))
+          case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation, List(), s)))
           case LetSym(f, args, e: Term) => LetSym(f, args, translate(kc, e, localVars = args))
-          case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, s))
+          case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, List(), s))
           case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, bs) => (e1, translatePat(kc, e2, s), bs)}))
-          case While(x, j, bs) => While(x, translate(kc, j, s), bs)
+          case While(x, j, bs) => While(x, translate(kc, j, List(), s), bs)
           // Filter out no-op'd labels
           case BoxChoice(Ghost(Triv()), right) => right
           case BoxChoice(left, Ghost(Triv())) => left

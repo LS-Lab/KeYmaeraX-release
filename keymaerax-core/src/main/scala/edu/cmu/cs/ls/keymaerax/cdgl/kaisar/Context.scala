@@ -25,8 +25,9 @@ import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context.Finder
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ProofCheckException
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
 case class Context(s: Statement) {
   import Context._
@@ -208,7 +209,8 @@ case class Context(s: Statement) {
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
   def searchAll(f: Finder, tabooProgramVars: Set[Variable]): List[(Ident, Formula)] = {
     val fAdmiss: Finder = ({case (x, y, b) =>
-      val admissible = isElaborationContext || StaticSemantics(y).fv.toSet.intersect(tabooProgramVars).isEmpty
+      val free = StaticSemantics(KaisarProof.forgetAt(y)).fv
+      val admissible = isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty
       admissible && f(x, y,b)})
     s match {
       case _: Triv => Nil
@@ -505,9 +507,49 @@ case class Context(s: Statement) {
     }
   }
 
+  private def replacePreds(t: Formula, node: ASTNode = Triv()): Option[Formula] = {
+    t match {
+      case f: PredOf =>
+        signature.get(f.func) match {
+          case Some(lf) =>
+            val elabChild = elaborateFunctions(f.child, node)
+            val elabArgs = StandardLibrary.tupleToTerms(elabChild, node)
+            if (elabArgs.length != lf.args.length)
+              throw ElaborationException(s"Predicate ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}", node = node)
+            val argMap = lf.args.zip(elabArgs).toMap
+            Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Formula])
+          case None =>
+            KaisarProof.getAt(f, node) match {
+              case Some((trm, lr)) =>
+                Some(KaisarProof.makeAt(elaborateFunctions(trm, node), LabelRef(lr.label, lr.args.map(x => elaborateFunctions(x, node)))))
+              case None =>
+                if (KaisarProof.isBuiltinFunction(f.func)) {
+                  val elabChild = elaborateFunctions(f.child, node)
+                  Some(PredOf(f.func, elabChild))
+                } else
+                  throw ElaborationException(s"Predicate function ${f.func}", node = node)
+            }
+        }
+      case _ => None
+    }
+  }
+
+  def elabFunctionETF(node: ASTNode): ExpressionTraversalFunction = new ExpressionTraversalFunction {
+    override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], IdentPat] =
+      replaceFunctions(e, node) match {
+        case Some(f) => Right(f)
+        case None => Left(None)
+      }
+    override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
+      replacePreds(e, node) match {
+        case Some(f) => Right(f)
+        case None => Left(None)
+      }
+  }
+
   /** Elaborate user-defined functions in an expression*/
-  def elaborateFunctions(f: Term, node: ASTNode): Term = SubstitutionHelper.replacesFree(f)(f => replaceFunctions(f, node))
-  def elaborateFunctions(fml: Formula, node: ASTNode): Formula = SubstitutionHelper.replacesFree(fml)(f => replaceFunctions(f, node))
+  def elaborateFunctions(f: Term, node: ASTNode): Term = ExpressionTraversal.traverse(elabFunctionETF(node), f).getOrElse(f)
+  def elaborateFunctions(fml: Formula, node: ASTNode): Formula = ExpressionTraversal.traverse(elabFunctionETF(node), fml).getOrElse(fml)
 
 
   /** Does the context contain a fact named [[id]]? */

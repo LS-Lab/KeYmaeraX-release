@@ -13,9 +13,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Integrator
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper, UnificationMatch}
 import fastparse.Parsed.TracedFailure
 import StandardLibrary._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
@@ -85,6 +86,33 @@ object KaisarProof {
       case _ => None
     }
   }
+
+  def getAt(t: Formula, node: ASTNode): Option[(Formula, LabelRef)] = {
+    t match {
+      case PredicationalOf(atFunction, And(e, PredOf(Function(label, _, _, _, _), args))) =>
+        Some(e, LabelRef(label, tupleToTerms(args, node)))
+      case _ => None
+    }
+  }
+
+  private val forgetTF = new ExpressionTraversalFunction {
+    override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
+      getAt(e, Triv()) match {
+        case Some((f, _)) => Right(f)
+        case None => Right(e)
+      }
+    }
+    override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+      getAt(e) match {
+        case Some((f, _)) => Right(f)
+        case None => Right(e)
+      }
+    }
+  }
+
+  // This is usually not what you want. Totally forgets @ exists, rather than expanding @.
+  def forgetAt(e: Term): Term = ExpressionTraversal.traverse(forgetTF, e).getOrElse(e)
+  def forgetAt(e: Formula): Formula  = ExpressionTraversal.traverse(forgetTF, e).getOrElse(e)
 
   // Pattern match a stabilized term stable(f)
   def getStable(t: Term): Option[Term] = {

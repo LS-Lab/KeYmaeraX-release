@@ -24,7 +24,10 @@ class ElaborationPass() {
   private def freeVarsPT(con: Context, pt: ProofTerm): Set[Variable] = {
     pt match {
       case ProgramVar(x) => Set(x)
-      case ProofVar(x) => StaticSemantics(con.get(x).getOrElse(True)).fv.toSet
+      case ProofVar(x) =>
+        val fml = con.get(x).getOrElse(True)
+        val plainFml = KaisarProof.forgetAt(fml)
+        StaticSemantics(plainFml).fv.toSet
       case ProofInstance(e: Formula) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Program) => StaticSemantics(e).fv.toSet
       case ProofInstance(e: Term) => StaticSemantics(e).toSet
