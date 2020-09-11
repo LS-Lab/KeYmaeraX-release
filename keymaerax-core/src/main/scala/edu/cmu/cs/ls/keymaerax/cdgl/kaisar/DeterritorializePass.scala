@@ -116,8 +116,11 @@ case class DeterritorializePass(tt: TimeTable) {
     tt.get(label.label) match {
       case None => throw TransformationException(s"Undefined line label: $label", node = node)
       case Some((labelSnap, labelCon, _labelDef)) =>
-        // @TODO: This is slow
-        val hereSnap = Snapshot.ofContext(kc)
+        // labelSnap has all SSA variables defined, even initial index of 0 for variables that kc hasn't seen yet.
+        // So start defaults at 0
+        val zeroSnap = Snapshot.initial(labelSnap.asMap.keySet.map(Variable(_)))
+        // @TODO: ofContext is slow
+        val hereSnap = Snapshot.ofContext(kc) ++ zeroSnap
         if (!(labelSnap <= hereSnap)) {
           val conDiff = labelCon -- kc
           val res = rewind(conDiff, labelSnap, label, f, except, node)
