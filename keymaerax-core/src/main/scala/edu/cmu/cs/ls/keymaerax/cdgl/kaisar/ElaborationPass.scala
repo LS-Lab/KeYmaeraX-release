@@ -213,7 +213,9 @@ class ElaborationPass() {
             val assertion = locate(Assert(e, kc.elaborateFunctions(f, sel), finalMeth), sel)
             Some(locate(Block(notes.:+(assertion)), sel))
           case ProveODE(ds, dc) =>
-            val dom = collectPts(kc, dc)
+            // Context should include ODE during collection, because we want to know about domain constraint fmls and we may
+            // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
+            val dom = collectPts(kc.:+(sel), dc)
             Some(ProveODE(ds, dom))
           case _ => None
         }

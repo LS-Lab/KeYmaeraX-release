@@ -345,13 +345,18 @@ object ProofChecker {
 
   private def solveFml(sols: List[(Variable, Term)], f: Formula): Formula = sols.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
   private def solveAssertion(discreteCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val DomAssert(x, f, m) = assertion
+    val DomAssert(x, plainF, m) = assertion
+    val f = discreteCon.c.elaborateStable(plainF)
     val methAssumps = m.selectors
     val fullSols = proveODE.solutions.get
     val sols = fullSols.filter({case ((x, f)) => !proveODE.timeVar.contains(x) })
     val subSol = solveFml(sols, f)
-    val subContext = odeContext.map({case DomAssume(x ,f) => DomAssume(x, solveFml(sols, f)) case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, f), m)})
-    val baseCon = subContext.foldLeft(discreteCon.c)({case (acc, DomAssume(x, f)) => acc.:+(Assume(x, f)) case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, f, m))})
+    val subContext = odeContext.map({
+      case DomAssume(x ,f) => DomAssume(x, solveFml(sols, discreteCon.c.elaborateStable(f)))
+      case DomAssert(x, f, m) => DomAssert(x, solveFml(sols, discreteCon.c.elaborateStable(f)), m)})
+    val baseCon = subContext.foldLeft(discreteCon.c)({
+      case (acc, DomAssume(x, f)) => acc.:+(Assume(x, discreteCon.c.elaborateStable(f)))
+      case (acc, DomAssert(x, f, m)) => acc.:+(Assert(x, discreteCon.c.elaborateStable(f), m))})
     val timeFml = proveODE.duration match {
       case None => GreaterEqual(proveODE.timeVar.get, Number(0))
       case Some((_, dur)) => And(GreaterEqual(proveODE.timeVar.get, Number(0)), GreaterEqual(dur, proveODE.timeVar.get))
@@ -363,9 +368,10 @@ object ProofChecker {
   }
 
   private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val baseCon = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.asStatement)})
-    val DomAssert(x, f, m) = assertion
-    val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, f)})
+    val baseCon = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
+    val DomAssert(x, plainF, m) = assertion
+    val f = odeCon.c.elaborateStable(plainF)
+    val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, odeCon.c.elaborateStable(f))})
     val dSet = proveODE.ds.atoms
     // assignments not needed because they're already handled during lieDerivative
     //val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(Nil, List((dx, Some(e))))})
@@ -392,8 +398,11 @@ object ProofChecker {
     val DomAssert(x, f, m) = assertion
     m.atom match {
       case Solution() => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
+      case Auto() if proveODE.hasTrueSolution => solveAssertion(baseCon, odeContext, proveODE, assertion, coll)
       case DiffInduction() => inductAssertion(baseCon, odeContext, proveODE, assertion, coll)
-      case _ => throw ProofCheckException("ODE assertions should use methods \"induction\" or \"solution\"", node = assertion)
+      case Auto() if !proveODE.hasTrueSolution => inductAssertion(baseCon, odeContext, proveODE, assertion, coll)
+      // should this be handled at an earlier stage?
+      case _ => throw ProofCheckException("ODE assertions should only use methods \"induction\" or \"solution\"", node = assertion)
     }
   }
 

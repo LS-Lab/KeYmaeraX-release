@@ -43,6 +43,8 @@ case class Context(s: Statement) {
   // proofs that might not succeed.
   private var _isElaborationContext: Boolean = false
 
+  def isEmpty: Boolean = (s == Triv())
+
   /** Remember the current context as the [[outer]] context before a recursive traversal */
   def withOuter: Context = {
     val x = clone
@@ -107,6 +109,8 @@ case class Context(s: Statement) {
     * An exception is thrown if the difference does not exist. */
   def --(other: Context): Context = {
     def fail = throw TransformationException(s"Context $other is not a prefix of $this", node = s)
+    if (this.s == other.s) Context.empty
+    else
     (this.s, other.s) match {
       case (s, Triv()) => Context(s)
       case (Block(ss1), Block(ss2)) =>
@@ -119,7 +123,10 @@ case class Context(s: Statement) {
             lrStatement.:+(Block(ss1.drop(ss2.length)))
           else lrStatement
         }
-      case (Block(l), r) if l.nonEmpty && l.head == r => Context(Block(l.tail))
+      case (Block(l), r) if l.nonEmpty  =>
+        val diff = Context(l.head) -- Context(r)
+        if (diff.isEmpty) Context(Block(l.tail))
+        else Context(KaisarProof.block(diff.s :: l.tail))
       // Only works if "other" is making progress on *this* switch statement
       case (switch: Switch, switchPr: SwitchProgress) if switch == switchPr.switch =>
         // Subtract the progress of r from the branch where progress is being made.
@@ -129,10 +136,7 @@ case class Context(s: Statement) {
           Context(bc.left) -- Context(bcPr.progress)
         else
           Context(bc.right) -- Context(bcPr.progress)
-      case (l, r) =>
-        if (l == r) Context.empty
-        else
-          fail
+      case (l, r) => fail
     }
   }
 

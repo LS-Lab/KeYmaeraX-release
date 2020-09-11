@@ -642,6 +642,13 @@ sealed trait DomainFact extends DomainStatement {
       case (DomAssert(x, f, m)) => Assert(x, f, m)
     }
   }
+
+  def mapF(f: Formula => Formula): DomainFact = {
+    this match {
+      case DomAssume(x, fml) => DomAssume(x, f(fml))
+      case DomAssert(x, fml, m) => DomAssert(x, f(fml), m)
+    }
+  }
 }
 
 // x is an identifier pattern in assume and assert

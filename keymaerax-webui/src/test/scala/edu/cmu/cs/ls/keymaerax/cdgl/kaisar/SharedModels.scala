@@ -183,29 +183,15 @@ object SharedModels {
     """x := 0;
       |y := x@mid;
       |init:
-      |     { x := x + 3; mid: x := x * x;}
-      |++ { x := 5;}
+      |     {{ x := x + 3; mid: x := x * x;}
+      |++ { x := 5;}}
       |""".stripMargin
 
   val outOfChoice: String =
-    """{     { y:= x@final; x := 2;}
-      | ++ { x := 5;}}
+    """{      y:= x@final; x := 2;
+      | ++  x := 5;}
       |x := x + 1;
       |final:
-      |""".stripMargin
-
-  val forwardHypothetical: String =
-    """?(T > 0 & A > 0 & B > 0);
-      |let SB() = v^2/(2*B);
-      |let safe() <-> SB <= (d-x);
-      |?initSafe:(safe());
-      |{
-      |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
-      |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
-      |ode(t):
-      |   !step:(safe()) using env ... by auto;
-      |}*
       |""".stripMargin
 
   val printSolution: String =
@@ -230,6 +216,21 @@ object SharedModels {
       |  !live:(x + eps < goal);
       |}
       |""".stripMargin
+
+  val forwardHypothetical: String =
+    """?(T > 0 & A > 0 & B > 0);
+      |let SB() = v^2/(2*B);
+      |let safe() <-> SB <= (d-x);
+      |?initSafe:(safe());
+      |{
+      |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
+      |   t:= 0;
+      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
+      |ode(t):
+      |   !step:(safe()) using env ... by auto;
+      |}*
+      |""".stripMargin
+
 
   // @TODO: Implement <-> let for formulas and @ for formulas
   val sandboxExample: String =
@@ -260,7 +261,7 @@ object SharedModels {
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
     ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
-    intoChoice, outOfChoice, forwardHypothetical, printSolution, basicReachAvoid, sandboxExample)
+    intoChoice, outOfChoice, printSolution, basicReachAvoid, forwardHypothetical, sandboxExample)
 
 
   // @TODO implement file format
