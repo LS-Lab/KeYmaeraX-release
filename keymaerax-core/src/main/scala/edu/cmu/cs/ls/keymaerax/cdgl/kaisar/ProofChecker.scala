@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.cdgl.Hyp
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper, UnificationMatch}
 import StandardLibrary._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
@@ -41,7 +42,7 @@ object ProofChecker {
         val assms = sels.flatMap(methodAssumptions(con, _, goal))
         val (assm, meth) = methodAssumptions(con, m, goal)
         (assms ++ assm, meth)
-      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof | _: Exhaustive => (List(), m)
+      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof | _: Exhaustive | _: Hypothesis => (List(), m)
     }
   }
 
@@ -56,9 +57,62 @@ object ProofChecker {
     }
   }
 
+  private def freshVar(vs: Set[Variable]): Variable = {
+    var num = 0
+    while (vs.contains(Variable("ghostVar", Some(num)))) {
+      num = num + 1
+    }
+    Variable("ghostVar", Some(num))
+  }
+
+  // @TODO: Soundness, check bound variables
+  // @TODO: Soundness, check constructivity of definitions, hmm...
+  private def functionGhost(f: FuncOf, vs: Set[Variable]): (Variable, Formula) = {
+    val fresh = freshVar(vs)
+    val fml =
+      (f.func.name, f.child) match {
+        case ("abs", e) => Or(And(GreaterEqual(e, Number(0)), Equal(fresh, e)), And(LessEqual(e, Number(0)), Equal(fresh, Neg(e))))
+        case ("min", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, r)), And(LessEqual(l, r), Equal(fresh, l)))
+        case ("max", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, l)), And(LessEqual(l, r), Equal(fresh, r)))
+      }
+    (fresh, fml)
+  }
+
+  private def sequentFml(assms: Set[Formula], f: Formula): Formula = {
+    if (assms.isEmpty) f
+    else Imply(assms.reduce(And), f)
+  }
+
+  // Note: functions have to get interpreted before prop/auto blasting because resulting goals have Or() in assumptions,
+  // aren't constructively QE'able
+  private def interpretFunctions(assms: Set[Formula], f: Formula): (Set[Formula], Formula) = {
+    val naiveFormula = sequentFml(assms, f)
+    var alreadyGhosted: Set[Term] = Set()
+    var ghostEqs: Set[Formula] = Set()
+    var substs: Map[Term, Term] = Map()
+    var taboo: Set[Variable] = StaticSemantics(naiveFormula).fv.toSet
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case fo@FuncOf(fn: Function, child: Term) if KaisarProof.builtin.contains(fn) && !alreadyGhosted.contains(fo) =>
+          val (fresh, eq) = functionGhost(fo, taboo)
+          alreadyGhosted = alreadyGhosted.+(fo)
+          taboo = taboo.+(fresh)
+          ghostEqs = ghostEqs.+(eq)
+          substs = substs.+((fo -> fresh))
+          Left(None)
+        case _ => Left(None)
+      }
+    }, naiveFormula)
+    def applySubsts(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(t => substs.get(t))
+    val fullAssms = ghostEqs ++ assms.map(applySubsts)
+    val fullF = applySubsts(f)
+    (fullAssms, fullF)
+  }
+
+
   /* Implement rcf (real-closed fields) method */
   private def rcf(assms: Set[Formula], f: Formula): Boolean = {
-    edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(Imply(assms.foldLeft[Formula](True)(And), f))
+    edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
   }
 
   /* implement heuristic "auto" method, which combines propositional and QE reasoning */
@@ -119,15 +173,17 @@ object ProofChecker {
   /** @return unit if f proves by method [[m]], else throw. */
   private def apply(con: Context, f: Formula, m: Method, outerStatement: ASTNode = Triv()): Unit = {
     val (assms, meth) = methodAssumptions(con, m, f)
+    val (interpAssums, interpF) = interpretFunctions(assms.toSet, f)
     meth match {
-      case RCF() => qeAssert(rcf(assms.toSet, f), assms, f, m, outerStatement)
+      case Hypothesis() => qeAssert(hyp(interpAssums, interpF), assms, f, m, outerStatement)
+      case RCF() => qeAssert(rcf(interpAssums, interpF), assms, f, m, outerStatement)
       // general-purpose auto heuristic
-      case Auto() => qeAssert(auto(assms.toSet, f), assms, f, m, outerStatement)
+      case Auto() => qeAssert(auto(interpAssums, interpF), assms, f, m, outerStatement)
       // propositional steps
-      case Prop() => qeAssert(prop(assms.toSet, f), assms, f, m, outerStatement)
+      case Prop() => qeAssert(prop(interpAssums, interpF), assms, f, m, outerStatement)
       // case exhaustiveness
       case Exhaustive() =>
-        val branches = disjoin(f, 0, outerStatement)
+        val branches = disjoin(interpF, 0, outerStatement)
         qeAssert (exhaustive(branches), assms, f, m, outerStatement)
       // discharge goal with structured proof
       case ByProof(proof: Statements) => apply(con, proof)
