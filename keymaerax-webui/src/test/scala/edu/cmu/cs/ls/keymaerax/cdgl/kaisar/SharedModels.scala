@@ -149,17 +149,6 @@ object SharedModels {
       |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution;}
       |""".stripMargin
 
-  val basicReachAvoid: String =
-    """?(eps > 0 & B > 0 & x = 0 & T > 0);
-      |while (x + eps < goal) {
-      |  vel := (goal - x)/B;
-      |  t := 0;
-      |  {t' = 1, x' = vel & ?(t <= T);};
-      |  /-- !safe:(x >= 0);  --/
-      |  ?(t >= T/2);
-      |  !live:(x + eps < goal);
-      |}
-      |""".stripMargin
 
   val superfluousGhost: String =
     """x:=0; /-- y := 25; z := -10; --/
@@ -230,6 +219,18 @@ object SharedModels {
       |ode(t):
       |""".stripMargin
 
+  val basicReachAvoid: String =
+    """?(eps > 0 & B > 0 & x = 0 & T > 0);
+      |while (x + eps < goal) {
+      |  vel := (goal - x)/B;
+      |  t := 0;
+      |  {t' = 1, x' = vel & ?(t <= T);};
+      |  /-- !safe:(x >= 0);  --/
+      |  ?(t >= T/2);
+      |  !live:(x + eps < goal);
+      |}
+      |""".stripMargin
+
   // @TODO: Implement <-> let for formulas and @ for formulas
   val sandboxExample: String =
     """?(T > 0 & A > 0 & B > 0);
@@ -258,8 +259,8 @@ object SharedModels {
 
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE, basicReachAvoid, superfluousGhost, labelInit, labelOld, unwindBlock,
-    intoChoice, outOfChoice, forwardHypothetical, printSolution, sandboxExample)
+    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
+    intoChoice, outOfChoice, forwardHypothetical, printSolution, basicReachAvoid, sandboxExample)
 
 
   // @TODO implement file format

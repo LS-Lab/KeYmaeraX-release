@@ -332,14 +332,13 @@ object ProofChecker {
   }
 
   // @TODO: Should be fine without admissibility check, at least for safety, but maybe not for liveness.
-  private def applyInverseGhosts(kc: ODEContext, core: Option[DiffStatement], ds: Set[AtomicODEStatement]): Option[DiffStatement] = {
-    val iGhosts: Option[DiffStatement] = None
-    val res = ds.foldLeft[Option[DiffStatement]](iGhosts){{case (acc, ds) =>
-      ds match {
-        case AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _) if admissibleGhost(x1, rhs) =>
-          accum(core, ds)
-        case _: AtomicODEStatement => throw ProofCheckException(s"Inadmissible ghost in $ds", node = ds)
-        case _ => throw ProofCheckException(s"Unexpected statement $ds when checking ghosts", node = ds)
+  private def applyInverseGhosts(kc: ODEContext, core: Option[DiffStatement], igs: Set[AtomicODEStatement]): Option[DiffStatement] = {
+    val res = igs.foldLeft[Option[DiffStatement]](None){{case (maybeAcc, aode) =>
+      (maybeAcc, aode) match {
+        case (_, AtomicODEStatement(AtomicODE(DifferentialSymbol(x1), rhs), _)) if admissibleGhost(x1, rhs) =>
+          accum(maybeAcc, aode)
+        case (Some(_), _: AtomicODEStatement) => throw ProofCheckException(s"Inadmissible ghost in $aode", node = aode)
+        case _ => throw ProofCheckException(s"Unexpected statement $aode when checking inverse ODE ghosts", node = aode)
       }}}
     res.map(accum(core, _)).getOrElse(core)
   }
