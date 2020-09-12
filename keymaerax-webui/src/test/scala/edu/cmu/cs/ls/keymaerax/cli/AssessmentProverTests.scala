@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.LoneElement._
@@ -21,6 +22,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.StringOps
 import scala.io.Source
 
+@IgnoreInBuildTest
 class AssessmentProverTests extends TacticTestBase {
 
   private val COURSE_PATH: String = "/Course-current"
