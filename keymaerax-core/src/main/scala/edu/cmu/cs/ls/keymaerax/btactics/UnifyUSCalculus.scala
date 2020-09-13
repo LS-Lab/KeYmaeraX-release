@@ -112,7 +112,7 @@ trait UnifyUSCalculus {
     * Identical to [[nil]] but different name
     * @see [[TactixLibrary.done]] */
   @Tactic()
-  val skip : BelleExpr = anons {(provable: ProvableSig) => provable}
+  val skip : BelleExpr = anon { Idioms.ident }
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
   val nil : BelleExpr = anon { Idioms.ident }
