@@ -55,7 +55,7 @@ object DebuggingTactics {
 
   import TacticFactory._
   @Tactic(("Debug", "debug"), codeName = "debug")
-  def debugX(msg: String): InputTactic = inputanon { debug(msg) }
+  def debugX(msg: String): InputTactic = inputanonnoop { debug(msg) }
 
   /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
   def print(message: => String): BuiltInTactic = debug(message, doPrint=true)
@@ -63,7 +63,7 @@ object DebuggingTactics {
     * regardless of DEBUG being true or false */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
   @Tactic(("Print", "print"), codeName = "print")
-  def printX(msg: String): InputTactic = inputanon { printIndexed(msg) }
+  def printX(msg: String): InputTactic = inputanonnoop { printIndexed(msg) }
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") with NoOpTactic {
@@ -240,7 +240,7 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable}
+  lazy val nil: BelleExpr = anonnoop {(provable: ProvableSig) => provable}
 
   /** no-op nil */
   lazy val ident: BelleExpr = nil
@@ -339,14 +339,10 @@ object Idioms {
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
-  def must(t: BelleExpr): BelleExpr = new DependentTactic("ANON") {
-    override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
-      override def result(after: ProvableSig): ProvableSig = {
-        if (before == after) throw new BelleNoProgress("Tactic " + t + " did not result in mandatory change")
-        after
-      }
-    }
-  }
+  def must(t: BelleExpr): BelleExpr = anons { (before: ProvableSig) => t & anonnoop { (after: ProvableSig) => {
+    if (before == after) throw new BelleNoProgress("Tactic " + t + " did not result in mandatory change")
+    after
+  }}}
 
   def atSubgoal(subgoalIdx: Int, t: BelleExpr): DependentTactic = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -461,7 +457,10 @@ object TacticFactory {
     def forward(t: BuiltInTwoPositionTactic): BuiltInTwoPositionTactic = by ((ps: ProvableSig, posOne: Position, posTwo: Position) => t.computeResult(ps, posOne, posTwo))
     // @TODO: implement
     //def forward(t: AppliedBuiltinTwoPositionTactic): AppliedBuiltinTwoPositionTactic = "ANON" by t
-    def forward(t: InputTactic): InputTactic = byWithInputs(t.inputs, t)
+    def forward(t: InputTactic): InputTactic = {
+      if (t.isInstanceOf[NoOpTactic]) byWithInputsNoop(t.inputs, t)
+      else byWithInputs(t.inputs, t)
+    }
 
     def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
@@ -539,6 +538,9 @@ object TacticFactory {
 
     /** A named tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
+      override def computeExpr(): BelleExpr = t
+    }
+    def byWithInputsNoop(inputs: Seq[Any], t: => BelleExpr): InputTactic with NoOpTactic = new InputTactic(name, inputs) with NoOpTactic {
       override def computeExpr(): BelleExpr = t
     }
 
@@ -714,6 +716,9 @@ object TacticFactory {
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
   def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
   def anons(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" bys t
+  def anonnoop(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
+    @inline override def result(provable: ProvableSig): ProvableSig = t(provable)
+  }
   def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
@@ -738,6 +743,7 @@ object TacticFactory {
   def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)
   def inputanonR(t: ((ProvableSig, SuccPosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsR(Nil:Seq[Any], t)
   def inputanonL(t: ((ProvableSig, AntePosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsL(Nil:Seq[Any], t)
-  def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs( Nil, t)
+  def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanonnoop(t: => BelleExpr): InputTactic = "ANON" byWithInputsNoop(Nil, t)
 
 }
