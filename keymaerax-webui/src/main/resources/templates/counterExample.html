@@ -81,3 +81,10 @@
         Please go to <mark>KeYmaera&#160;X &rarr; Preferences</mark> and configure Mathematica as backend tool.
     </p>
 </div>
+<div ng-if="result === 'cex.wrongshape'" class="modal-body">
+    <p>
+    Sequent shape is not supported yet. Please undo automated proof steps and use manual steps until all assumptions are
+        on the left-hand side of the turnstile <code>&#8866;</code> and only a single box modality <code>[a]p</code>
+        appears on the right-hand side.
+    </p>
+</div>

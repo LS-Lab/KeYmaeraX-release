@@ -321,20 +321,25 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
               }
             }
           } else {
-            val fml = sequent.toFormula
-            /* TODO: Case on this instead */
-            val qeTool: QETacticTool = ToolProvider.qeTool().get
-            val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
-            val search = new BoundedDFS(10)
-            try {
-              search(snode) match {
-                case None => nonfoError(sequent)
-                case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
-              }
-            } catch {
-              // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
-              // When that happens, just tell the user they need to simplify the formula more.
-              case _ : NotImplementedError => nonfoError(sequent)
+            ToolProvider.qeTool() match {
+              case Some(qeTool) =>
+                val fml = sequent.toFormula
+                Try(ProgramSearchNode(fml)(qeTool)).toOption match {
+                  case Some(snode) =>
+                    val search = new BoundedDFS(10)
+                    try {
+                      search(snode) match {
+                        case None => nonfoError(sequent)
+                        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                      }
+                    } catch {
+                      // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+                      // When that happens, just tell the user they need to simplify the formula more.
+                      case _ : NotImplementedError => nonfoError(sequent)
+                    }
+                  case None => new CounterExampleResponse("cex.wrongshape") :: Nil
+                }
+              case None => new CounterExampleResponse("cex.notool") :: Nil
             }
           }
         }
