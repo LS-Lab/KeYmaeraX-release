@@ -371,8 +371,8 @@ private object DLBySubst {
                   /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
                       label(initCase),
-                      (andR(pos) & Idioms.<(closeIdWith(pos), ident))*constAntes.size &
-                        (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), ident))*(constSuccs.size-1) &
+                      (andR(pos) & Idioms.<(closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                        (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                         (if (constSuccs.nonEmpty) notR(pos) else skip) &
                         close & done),
                     cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
