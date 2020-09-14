@@ -178,6 +178,7 @@ case class Context(s: Statement) {
       case BoxLoopProgress(bl, progress) => Context(progress).signature
       case BoxChoiceProgress(bl, i, progress) => Context(progress).signature
       case SwitchProgress(bl, i, progress) => Context(progress).signature
+      case Phi(s) => Context(s).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
            | _: Label | _: Match => Map()
     }
@@ -281,11 +282,15 @@ case class Context(s: Statement) {
         Nil
       case BoxLoop(body, ih) =>
         // only allowed to find IH
-        ih match {case Some((ihVar, ihFml)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml)) case _ => Nil}
+        ih match {
+          case Some((ihVar, _oldIhFml, Some(ihFml))) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
+          case Some((ihVar, ihFml, None)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
+          case _ => Nil}
       case BoxLoopProgress(BoxLoop(bl, ihOpt), progress) => {
         val ihMatch = ihOpt.map({
-          case ((ihVar, ihFml)) if(fAdmiss(ihVar, ihFml, false)) => List((ihVar, ihFml))
-          case _ => List()}).getOrElse(Nil)
+          case ((ihVar, _oldIhFml, Some(ihFml))) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
+          case ((ihVar, ihFml, None)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
+          case _ => Nil}).getOrElse(Nil)
         ihMatch ++ reapply(progress).searchAll(f, tabooProgramVars)
       }
       case SwitchProgress(switch, onBranch, progress) =>
@@ -447,11 +452,9 @@ case class Context(s: Statement) {
     * appear ghosted or unghosted.  */
   def lastBlock: Block = Block(lastStatements())
 
-  /** The most recently proven fact in a context */
-  def lastFact: Option[(Ident, Formula)] = {
+  private def collectLastFact: (Option[(Ident, Formula)], List[Phi]) = {
     def unwind(wound: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
       wound match {
-          // unnamedVar
         case Assert(x: Variable, f, _) :: _ => (Some((x, f)), Nil)
         case Assume(x: Variable, f) :: _ => (Some((x, f)), Nil)
         case Assert(Nothing, f, _) :: _ => (Some((unnamedVar, f)), Nil)
@@ -465,9 +468,22 @@ case class Context(s: Statement) {
         case Nil => (None, Nil)
       }
     }
-    val (fml, phis) = unwind(lastStatements().reverse)
-    val mapped = fml.map({case ((k,fact)) => (k, phis.foldLeft(fact)((fml, phi) => Context.substPhi(phi, fml)))})
-    mapped.map({case (k, v) => (k, destabilize(v))})
+    unwind(lastStatements().reverse)
+  }
+
+  private def finishFact(f: Formula, phis: List[Phi]): Formula = destabilize(phis.foldLeft(f)((fml, phi) => Context.substPhi(phi, fml)))
+
+  /** The most recently proven fact in a context.
+    * Fact is returned as (ident, unelaboratedFml, elaboratedFml) */
+  def lastFact: Option[(Ident, Formula, Formula)] = {
+    val (kFml, phis) = collectLastFact
+    val triple = kFml.map({case (k, fml) => (k, fml, elaborateFunctions(fml, Triv()))})
+    triple.map({case ((k,fact, elab)) => (k, finishFact(fact, phis), finishFact(elab, phis))})
+  }
+
+  def rawLastFact: Option[(Ident, Formula)] = {
+    val (kFml, phis) = collectLastFact
+    kFml.map({case ((k,fact)) => (k, finishFact(fact, phis))})
   }
 
   /** Elaborate the "stable" term tag once it is no longer needed */
@@ -509,6 +525,13 @@ case class Context(s: Statement) {
 
   private def replacePreds(t: Formula, node: ASTNode = Triv()): Option[Formula] = {
     t match {
+      case f: PredicationalOf =>
+        KaisarProof.getAt(f, node) match {
+          case Some((trm, lr)) =>
+            Some(KaisarProof.makeAt(elaborateFunctions(trm, node), LabelRef(lr.label, lr.args.map(x => elaborateFunctions(x, node)))))
+          case None =>
+            throw ElaborationException(s"Predicational functions ${f.func} should only be used for internal data structures", node = node)
+        }
       case f: PredOf =>
         signature.get(f.func) match {
           case Some(lf) =>
@@ -517,30 +540,28 @@ case class Context(s: Statement) {
             if (elabArgs.length != lf.args.length)
               throw ElaborationException(s"Predicate ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}", node = node)
             val argMap = lf.args.zip(elabArgs).toMap
-            Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Formula])
+            val elabBody = elaborateFunctions(lf.e, node)
+            Some(SubstitutionHelper.replacesFree(elabBody)({ case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Formula])
           case None =>
-            KaisarProof.getAt(f, node) match {
-              case Some((trm, lr)) =>
-                Some(KaisarProof.makeAt(elaborateFunctions(trm, node), LabelRef(lr.label, lr.args.map(x => elaborateFunctions(x, node)))))
-              case None =>
-                if (KaisarProof.isBuiltinFunction(f.func)) {
-                  val elabChild = elaborateFunctions(f.child, node)
-                  Some(PredOf(f.func, elabChild))
-                } else
-                  throw ElaborationException(s"Predicate function ${f.func}", node = node)
-            }
+            if (KaisarProof.isBuiltinFunction(f.func)) {
+              val elabChild = elaborateFunctions(f.child, node)
+              Some(PredOf(f.func, elabChild))
+            } else
+              throw ElaborationException(s"Unknown predicate function ${f.func}", node = node)
         }
       case _ => None
     }
   }
 
   def elabFunctionETF(node: ASTNode): ExpressionTraversalFunction = new ExpressionTraversalFunction {
-    override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], IdentPat] =
+    // note: preorder traversal ensures that when processing  at(x,label()), we see "at(x, label())" first and replace it,
+    // rather than seeing just "label()" and getting confused
+    override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], IdentPat] =
       replaceFunctions(e, node) match {
         case Some(f) => Right(f)
         case None => Left(None)
       }
-    override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
+    override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
       replacePreds(e, node) match {
         case Some(f) => Right(f)
         case None => Left(None)
@@ -550,6 +571,7 @@ case class Context(s: Statement) {
   /** Elaborate user-defined functions in an expression*/
   def elaborateFunctions(f: Term, node: ASTNode): Term = ExpressionTraversal.traverse(elabFunctionETF(node), f).getOrElse(f)
   def elaborateFunctions(fml: Formula, node: ASTNode): Formula = ExpressionTraversal.traverse(elabFunctionETF(node), fml).getOrElse(fml)
+  def elaborateFunctions(e: Expression, node: ASTNode): Expression = e match {case f: Term => elaborateFunctions(f, node) case fml: Formula => elaborateFunctions(fml, node)}
 
 
   /** Does the context contain a fact named [[id]]? */

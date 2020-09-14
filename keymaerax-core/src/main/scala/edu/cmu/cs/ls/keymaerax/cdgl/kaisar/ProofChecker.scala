@@ -215,6 +215,7 @@ object ProofChecker {
       case (GreaterEqual(l1, r1: Number) :: Less(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
       case (Greater(l1, r1: Number) :: LessEqual(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
       case (GreaterEqual(l1, r1: Number) :: LessEqual(l2, r2: Number) :: Nil) => l1 == l2 && r1.value < r2.value
+      case ((fml: Formula) :: True :: _) if isExecutable(fml) => true
       case _ => false
     }
   }
@@ -225,7 +226,7 @@ object ProofChecker {
     val sigBody = StaticSemantics.signature(body)
     val sig = con.signature.keySet
     // @TODO: better check where we allow line labels but catch other undefined terms. must allow forward def.
-    val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig).filter({case (fn: Function) => !fn.interpreted  case _ => true})
+    val unboundFunctions = sigBody.--(KaisarProof.builtin ++ sig).filter({case (fn: Function) => !fn.interpreted && fn.name != "at"  case _ => true})
     if (sig.contains(lf.asFunction)) {
       throw ProofCheckException(s"Multiply-defined function definition ${f.name}", node = lf)
     } else if (unboundFunctions.nonEmpty) {
@@ -649,17 +650,17 @@ object ProofChecker {
       case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {
           case None => throw ProofCheckException(s"No invariant found in $con", node = bl)
-          case Some((kName, kFml)) =>
-            val progCon = BoxLoopProgress(BoxLoop(s, Some((kName, kFml))), Triv())
+          case Some((kName, kFml, kElab)) =>
+            val progCon = BoxLoopProgress(BoxLoop(s, Some((kName, kFml, Some(kElab)))), Triv())
             val (ss, f) = apply(con.:+(progCon), s)
             val Box(a,p) = asBox(f)
-            val res = BoxLoop(ss.s, Some((kName, kFml)))
+            val res = BoxLoop(ss.s, Some((kName, kFml, Some(kElab))))
             val ff = Box(Loop(a), p)
             val lookup = ss.lastFact
             lookup match {
               case None => throw ProofCheckException(s"Inductive step does not prove invariant", node = bl)
-              case Some((kName2, kFml2)) if kFml != kFml2 =>
-                throw ProofCheckException(s"Inductive step $kFml2 and invariant $kFml differ", node = bl)
+              case Some((kName2, kFml2, kElab2)) if kElab != kElab2 =>
+                throw ProofCheckException(s"Inductive step $kElab2 and invariant $kElab differ (after expanding to $kFml2 and $kFml)", node = bl)
               case Some(kFml2) =>
                 (Context(res), ff)
             }

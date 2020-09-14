@@ -400,7 +400,8 @@ object ProofParser {
     // try ODEs before other atoms because ambiguous ghost parse should try ODE first
     ((/*NoCut*/(proveODE) | atomicStatement | label) ~ Index ~ "*".!.rep).
       map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) =>
-        BoxLoop(acc, Context(acc).lastFact)
+        // NB: rawLastFact will not try to elaborate lastFact because we know we don't have all function definitions yet.
+        BoxLoop(acc, Context(acc).rawLastFact.map({case ((x, y)) => (x, y, None)}))
       }), i)})
 
   def sequence[_: P]: P[Statements] =

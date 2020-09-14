@@ -360,7 +360,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse boxloop" in {
     p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe
       BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(Nil, List(("x".asVariable, Some(Minus(Variable("x"), Number(1)))))))),
-        Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))))))
+        Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))), None)))
   }
 
   it should "parse ghost" in {

@@ -398,9 +398,8 @@ class EndToEndTests extends TacticTestBase {
     testExampleSet(SharedModels.thesisExamples)
   }
 
-  //@TODO durationODE example: assertion needs to be proved at every time t, not just duration time T.
   it should "parse and prove specific thesis examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.durationODE :: Nil)
+    testExampleSet(SharedModels.basicReachAvoid :: Nil)
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>

@@ -105,6 +105,7 @@ object ProofChecker {
 
   /** @param p formula of first-order constructive arithmetic
     * @return whether formula is constructively valid */
+  // @TODO: More detailed error handling
   def qeValid(p: Formula): Boolean = {
     val t: QETacticTool = ToolProvider.provider.qeTool().get
     val (pre, post) = p match {
@@ -112,13 +113,15 @@ object ProofChecker {
       case p => (True, p)
     }
     // Is formula classically valid?
-    val fact = t.qe(Imply(pre, post)).fact
+    val freevars = StaticSemantics(Imply(pre, post)).fv.toSet
+    val closure = freevars.foldLeft[Formula](Imply(pre,post))({case (acc, x) => Forall(collection.immutable.Seq(x), acc)})
+    val fact = t.qe(closure).fact
     val conclusion = fact.conclusion
     val isFormula = conclusion.ante.isEmpty && conclusion.succ.length == 1
     fact.conclusion.succ.headOption match {
       // If formula is conjunctive, then classical and constructive truth agree
       case Some(Equiv(_, True)) => isFormula && isConjunctive(pre) && isConjunctive(post) && fact.isProved
-      case _ => false
+      case proved => false
     }
   }
 

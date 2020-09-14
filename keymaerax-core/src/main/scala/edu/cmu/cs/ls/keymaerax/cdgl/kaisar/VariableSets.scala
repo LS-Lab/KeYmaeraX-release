@@ -67,18 +67,15 @@ object VariableSets {
     * @param isInverseGhost Was the context where the functions were defined enclosed by an inverse-ghost?
     * */
   private def ofFunc(vars: Set[Variable], args: List[Ident], e: Expression,  isInverseGhost: Boolean): VariableSets = {
-    val bodyFree = e match {
-      case f: Term => StaticSemantics(f).toSet
-    }
-    val free = bodyFree.--(args.toSet)
+    val bodyFree = StaticSemantics(KaisarProof.forgetAt(e.asInstanceOf[Term]))
+    val free = bodyFree.toSet--(args.toSet)
     VariableSets(boundVars = Set(), mustBoundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 
   private def ofPred(vars: Set[Variable], args: List[Ident], e: Expression,  isInverseGhost: Boolean): VariableSets = {
-    val bodyFree = e match {
-      case f: Formula => StaticSemantics(f).fv.toSet
-    }
-    val free = bodyFree.--(args.toSet)
+    val elabBody = KaisarProof.forgetAt(e.asInstanceOf[Formula])
+    val bodyFree = StaticSemantics(elabBody).fv
+    val free = bodyFree.toSet--(args.toSet)
     VariableSets(boundVars = Set(), mustBoundVars = Set(), freeVars = free, tabooVars = Set(), tabooFunctions = if (isInverseGhost) vars else Set(), tabooFacts = Set())
   }
 

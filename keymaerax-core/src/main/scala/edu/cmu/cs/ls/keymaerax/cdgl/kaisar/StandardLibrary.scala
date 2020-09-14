@@ -46,6 +46,17 @@ object StandardLibrary {
     }
   }
 
+  /** @return whether formula can easily be evaluated for truth in a state */
+  def isExecutable(fml: Formula): Boolean = fml match {
+    case _: Less | _: LessEqual | _: Greater | _: GreaterEqual | _: Equal | _: NotEqual | True | False => true
+    case Not(f) => isExecutable(f)
+    case Or(l, r) => isExecutable(l) && isExecutable(r)
+    case And(l, r) => isExecutable(l) && isExecutable(r)
+    case Imply (l, r) => isExecutable(l) && isExecutable(r)
+    case Equiv (l, r) => isExecutable(l) && isExecutable(r)
+    case _ => false
+  }
+
   /** Elaborate fact binding patterns as in assertions ?pat:(fml); Vectorial patterns ?(x, y):(p & q) become lists of bindings. */
   def factBindings(lhs: Expression, rhs: Formula, node: ASTNode = Triv()): List[(Term, Formula)] = {
     def loop(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {

@@ -96,23 +96,27 @@ object KaisarProof {
   }
 
   private val forgetTF = new ExpressionTraversalFunction {
-    override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
+    override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
       getAt(e, Triv()) match {
         case Some((f, _)) => Right(f)
-        case None => Right(e)
+        case None => Left(None)
       }
     }
-    override def postT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+    override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
       getAt(e) match {
         case Some((f, _)) => Right(f)
-        case None => Right(e)
+        case None => Left(None)
       }
     }
   }
 
   // This is usually not what you want. Totally forgets @ exists, rather than expanding @.
   def forgetAt(e: Term): Term = ExpressionTraversal.traverse(forgetTF, e).getOrElse(e)
-  def forgetAt(e: Formula): Formula  = ExpressionTraversal.traverse(forgetTF, e).getOrElse(e)
+  def forgetAt(e: Formula): Formula  =
+    ExpressionTraversal.traverse(forgetTF, e) match {
+      case Some(z) => z
+      case None => e
+    }
 
   // Pattern match a stabilized term stable(f)
   def getStable(t: Term): Option[Term] = {
@@ -354,7 +358,7 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
 case class While(x: IdentPat, j: Formula, s: Statement) extends Statement
 // Repeat [[s]] nondeterministically any number of times
-case class BoxLoop(s: Statement, ih: Option[(Ident, Formula)] = None) extends Statement
+case class BoxLoop(s: Statement, ih: Option[(Ident, Formula, Option[Formula])] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
 // For example, Ghost(Modify(_)) is a discrete ghost assignment
 case class Ghost(s: Statement) extends Statement

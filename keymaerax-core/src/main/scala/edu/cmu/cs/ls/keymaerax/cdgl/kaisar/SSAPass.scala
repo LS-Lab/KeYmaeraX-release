@@ -28,9 +28,27 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRe
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ASTNode._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper}
 
 object SSAPass {
+  private def snapRenameETF(snapshot: Snapshot): ExpressionTraversalFunction = new ExpressionTraversalFunction {
+    override def preF(p: PosInExpr, fml: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
+      (KaisarProof.getAt(fml, node = Triv()), fml) match {
+        case (Some((trm, LabelRef(name, args))), _) =>
+          Right(KaisarProof.makeAt(trm, LabelRef(name, args.map(ssa(_, snapshot)))))
+        case _ => Left(None)
+      }
+
+    override def preT(p: PosInExpr, f: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] =
+      (KaisarProof.getAt(f), f) match {
+        case (Some((trm, LabelRef(name, args))), _) =>
+          Right(KaisarProof.makeAt(trm, LabelRef(name, args.map(ssa(_, snapshot)))))
+        case (None, bv: BaseVariable) => Right(BaseVariable(bv.name, opt(snapshot.getOpt(bv.name)), bv.sort))
+        case (None, dv: DifferentialSymbol) => Right(DifferentialSymbol(BaseVariable(dv.x.name, opt(snapshot.getOpt(dv.x.name)), dv.sort)))
+        case _ => Left(None)
+      }
+  }
   // Substitution helper function which re-indexes SSA variables according to a snapshot
   private def renameUsingSnapshot(snapshot: Snapshot): (Term => Option[Term]) = ((f: Term) => {
     // f@x(args) is not eliminated during SSA (it has a separate pass), but the arguments are evaluated at the current
@@ -46,33 +64,37 @@ object SSAPass {
 
   /**  SSA translation of a term */
   def ssa(f: Term, snapshot: Snapshot): Term = {
-    SubstitutionHelper.replacesFree(f)(renameUsingSnapshot(snapshot))
+    ExpressionTraversal.traverse(snapRenameETF(snapshot), f).getOrElse(f)
   }
 
   /**  SSA translation of a hybrid program/game.
     *  We assume for simplicity that the hybrid program does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences in [[hp]] */
   def ssa(hp: Program, snapshot: Snapshot): Program = {
-    SubstitutionHelper.replacesFree(hp)(renameUsingSnapshot(snapshot))
+    ExpressionTraversal.traverse(snapRenameETF(snapshot), hp).getOrElse(hp)
   }
 
   /**  SSA translation of a differential program
     *  We assume for simplicity that the program does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences */
   def ssa(dp: DifferentialProgram, snapshot: Snapshot): DifferentialProgram = {
-    SubstitutionHelper.replacesFree(dp)(renameUsingSnapshot(snapshot)).asInstanceOf[DifferentialProgram]
+    ExpressionTraversal.traverse(snapRenameETF(snapshot), dp).getOrElse(dp)
   }
 
   /**  SSA translation of a formula
     *  We assume for simplicity that the formula does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences */
   def ssa(fml: Formula, snapshot: Snapshot): Formula = {
-    SubstitutionHelper.replacesFree(fml)(renameUsingSnapshot(snapshot))
+    ExpressionTraversal.traverse(snapRenameETF(snapshot), fml).getOrElse(fml)
   }
 
   /**  SSA translation of a hybrid program/game */
   def ssa(exp: Expression, snapshot: Snapshot): Expression = {
-    SubstitutionHelper.replacesFree(exp)(renameUsingSnapshot(snapshot))
+    exp match {
+      case e: Term => ssa(e, snapshot)
+      case e: Formula => ssa(e, snapshot)
+      case e: Program => ssa(e, snapshot)
+    }
   }
 
   /**  SSA translation of a proof method */

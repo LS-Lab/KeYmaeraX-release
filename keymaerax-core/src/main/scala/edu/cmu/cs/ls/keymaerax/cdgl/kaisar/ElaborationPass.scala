@@ -242,7 +242,7 @@ class ElaborationPass() {
           case LetSym(f, args, e: Term) => LetSym(f, args, kc.elaborateFunctions(e, s))
           case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e, s))
           case While(x, j, body) => While(x, kc.elaborateFunctions(j, s), body)
-          case BoxLoop(body, Some((ihk, ihv))) => BoxLoop(body, Some((ihk, kc.elaborateFunctions(ihv, s))))
+          case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kc.elaborateFunctions(ihv, s), None)))
           // dc was elaborated in preS
           case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, ds), dc)
           case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kc.elaborateFunctions(f, s), b)}))

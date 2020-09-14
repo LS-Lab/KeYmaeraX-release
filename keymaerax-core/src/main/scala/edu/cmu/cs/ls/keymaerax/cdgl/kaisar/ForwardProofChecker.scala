@@ -105,13 +105,13 @@ object ForwardProofChecker {
         if (mentions.isEmpty) {
           throw ProofCheckException(s"No assumptions found for program variable $x", node = pt)
         }
-        mentions.reduce(And)
+        mentions.map(fml => con.elaborateFunctions(fml, pt)).reduce(And)
       case ProgramAssignments(x, onlySSA) =>
         val asgns = con.getAssignments(x)
         if (asgns.isEmpty) {
           throw ProofCheckException(s"No assignments found for program variable $x", node = pt)
         }
-        asgns.reduce(And)
+        asgns.map(fml => con.elaborateFunctions(fml, pt)).reduce(And)
       case ProofVar(s) if nullaryBuiltin.contains(s.name) => nullaryBuiltin(s.name)
       case app@ProofApp(ProofVar(s), pt1) if unaryBuiltin.contains(s.name) => unary(s.name, ptToForwardArg(con, pt1), app)
       case app@ProofApp(ProofApp(ProofVar(s), pt1), pt2) if binaryBuiltin.contains(s.name) =>
@@ -121,7 +121,7 @@ object ForwardProofChecker {
       case ProofVar(s) =>
         con.getHere(s) match {
           case Some(fml) =>
-            fml
+            con.elaborateFunctions(fml, pt)
           case None =>
             throw ProofCheckException(s"Undefined proof variable $s", node = pt)
         }

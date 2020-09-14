@@ -220,49 +220,51 @@ object SharedModels {
       |}
       |""".stripMargin
 
-  // @TODO: something is super fucking unsound with x1 = x0
+  // @TODO: something is super unsound with x1 = x0
 
 
+  // @TODO: Check SB() vs SB parenthesis... hmm...
+  // @TODO: DefaultSelector needs to be smarter when mixed with defined symbols like safe()
   val forwardHypothetical: String =
-    """?(T > 0 & A > 0 & B > 0);
+    """?init:(T > 0 & A > 0 & B > 0);
       |let SB() = v^2/(2*B);
-      |let safe() <-> SB <= (d-x);
+      |let safe() <-> SB() <= (d-x);
       |?initSafe:(safe());
       |{
       |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
       |   t:= 0;
-      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
+      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(t <= T); & ?vel:(v >= 0);};
       |ode(t):
-      |   !step:(safe()) using env ... by auto;
+      |   !step:(safe()) using env init time vel xSol vSol tSol by auto;
       |}*
       |""".stripMargin
 
 
-  // @TODO: Implement <-> let for formulas and @ for formulas
+  // @TODO: use less assumptions because I was just guessing at the end
   val sandboxExample: String =
-    """?(T > 0 & A > 0 & B > 0);
+    """?init:(T > 0 & A > 0 & B > 0);
       |let SB() = v^2/(2*B);
-      |let safe() <-> SB <= (d-x);
+      |let safe() <-> SB() <= (d-x) & v >= 0;
       |?initSafe:(safe());
       |{
       |  accCand := *;
       |  let admiss() <-> -B <= accCand & accCand <= A;
-      |  let env()    <-> admiss () & safe()@ode(T, accCand);
+      |  let env()    <->  safe()@ode(T, accCand);
       |  switch {
       |    case inEnv:(env()) =>
-      |      acc := accCand;
-      |      !predictSafe:(safe()@ode(T, acc)) using inEnv by auto;
+      |      ?theAcc:(acc := accCand);
+      |      !predictSafe:(safe()@ode(T, acc)) using inEnv theAcc init by auto;
       |    case true =>
-      |      acc := -B;
-      |      !predictSafe:(safe()@ode(T, acc)) using initSafe by auto;
+      |      ?theAcc:(acc := -B);
+      |      ?fast:(v@ode(T, acc) >= 0);
+      |      !predictSafe:(safe()@ode(T, acc)) using initSafe fast init theAcc by auto;
       |  }
       |  t:= 0;
-      |  {t' = 1, x' = v, v' = acc & ?(t <= T); & ?(v >= 0);};
+      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(0 <= t & t <= T); & ?vel:(v >= 0);};
       |ode(t, acc):
-      |  !step:(safe()) using predictSafe ... by auto;
+      |  !step:(safe()) using predictSafe init initSafe tSol xSol vSol time vel by auto;
       |}*
       |""".stripMargin
-
 
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
