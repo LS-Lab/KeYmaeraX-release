@@ -119,14 +119,19 @@ object QuizExtractor {
 
     /** Translates `\sol` into an artifact. */
     def artifactFromSolContent(s: String): Option[Artifact] = {
-      solContent("").r(KYX_SOL, TEX_MATH_SOL, LISTINGS_SOL, TEXT_SOL).findFirstMatchIn(s).
+      val artifacts = solContent("").r(KYX_SOL, TEX_MATH_SOL, LISTINGS_SOL, TEXT_SOL).findAllMatchIn(s).
         map(m => (Option(m.group(KYX_SOL)), Option(m.group(TEX_MATH_SOL)), Option(m.group(LISTINGS_SOL)), Option(m.group(TEXT_SOL)))).
         map({
           case (Some(s), None, None, None) => artifactsFromKyxString(s)
           case (None, Some(s), None, None) => artifactsFromTexMathString(s)
           case (None, None, Some(s), None) => ArchiveArtifact(s)
           case (None, None, None, Some(s)) => artifactsFromTexTextString(s)
-        })
+        }).toList.filter(_ != TextArtifact(None))
+      artifacts match {
+        case Nil => Some(TextArtifact(None))
+        case a :: Nil => Some(a)
+        case a => Some(AnyOfArtifact(a))
+      }
     }
 
     /** Translates `\kyxline` string into an artifact. */
