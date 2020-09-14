@@ -64,6 +64,7 @@ object ProofTraversal {
           case SwitchProgress(switch, onBranch, progress) => SwitchProgress(switch, onBranch, traverse(kc, progress, tf))
           case BoxChoiceProgress(bc, onBranch, progress) => BoxChoiceProgress(bc, onBranch, traverse(kc, progress, tf))
           case BoxLoopProgress(bl, prog) => BoxLoopProgress(bl, traverse(kc, prog, tf))
+          case WhileProgress(wh, prog) => WhileProgress(wh, traverse(kc, prog, tf))
           case Phi(asgns) => Phi(traverse(kc, asgns, tf))
           case Was(now: Statement, was: Statement) =>
             Was(traverse(kc, now, tf), was)

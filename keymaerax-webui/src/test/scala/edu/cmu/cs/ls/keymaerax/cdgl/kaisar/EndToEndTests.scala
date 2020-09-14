@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 // @TODO: Test end-to-end angelic loop proofs with nominals etc
 // @TODO: New-and-improved context query interface for great happiness
 // @TODO: Smart-QE for efficiency
+// @TODO: for loops with proper termination metrics not just while loops
+// @TODO: get rid of unsound extra ODE SSA assignments
 
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.apply
@@ -137,7 +139,7 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[x_1:=0; {{{?(1 > 0);}^@x_2:=x_1; } ++ x_2 := 1;} x_3:=1;]true".asFormula
   }
 
-  it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
+  it should "prove solution cut that requires  domain constraint assumption" in withMathematica { _ =>
     val pfStr = "?tInit:(t:= 0); ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit tInit xRange by solution;};"
     val ff = check(pfStr)
     ff shouldBe "[t_1:=0; x_1:= 1; {t_2 := t_1;x_2:=x_1;}{t_2' = 1, x_2' = -1 & x_2>=0}]true".asFormula

@@ -508,6 +508,11 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
   override val children: List[Statement] = List(block(boxLoop :: progress :: Nil))
 }
 
+// meta node for in-progress while loop.
+case class WhileProgress(whilst: While, progress: Statement) extends MetaNode {
+  override val children: List[Statement] = List(progress)
+}
+
 // Meta node for switch in progress. onBranch indicates which branch was taken, 0-indexed
 case class SwitchProgress(switch: Switch, onBranch: Int, progress: Statement) extends MetaNode {
   override val children: List[Statement] = List(progress)

@@ -641,9 +641,11 @@ object ProofChecker {
         val p = unifyFmls(ps).getOrElse(throw ProofCheckException("Switch branches failed to unify", node = switch))
         (Context(Switch(sel, zip3(patterns, conds,cons.map(_.s), switch))), Box(Dual(as.reduceRight(Choice)), p))
       case While(x , j, s) =>
-        val kc = con.:+(Assume(x, j))
+        val jElab = con.elaborateFunctions(j, Triv())
+        val prog = WhileProgress(While(x, jElab, s), Triv())
+        val kc = con.:+(prog)
         val (Context(sa), fa) = apply(kc, s)
-        val ss = While(x, j, sa)
+        val ss = While(x, jElab, sa)
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)

@@ -148,6 +148,7 @@ case class Context(s: Statement) {
       /* We are processing "pr" and simply remembering the loop "bl" while we do so.
        * the newly-processed "s" should be part of "pr". */
       case BoxLoopProgress(bl, pr) => reapply(BoxLoopProgress(bl, reapply(pr).:+(other).s))
+      case WhileProgress(wh, pr) => reapply(WhileProgress(wh, reapply(pr).:+(other).s))
       case SwitchProgress(switch, onBranch, pr) => reapply(SwitchProgress(switch, onBranch, reapply(pr).:+(other).s))
       case BoxChoiceProgress(bc, onBranch, pr) => reapply(BoxChoiceProgress(bc, onBranch, reapply(pr).:+(other).s))
       case Block(ss) =>
@@ -176,6 +177,7 @@ case class Context(s: Statement) {
       case While(_, _, body) => Context(body).signature
       case BoxLoop(body, _) => Context(body).signature
       case BoxLoopProgress(bl, progress) => Context(progress).signature
+      case WhileProgress(wh, prog) => Context(prog).signature
       case BoxChoiceProgress(bl, i, progress) => Context(progress).signature
       case SwitchProgress(bl, i, progress) => Context(progress).signature
       case Phi(s) => Context(s).signature
@@ -293,6 +295,9 @@ case class Context(s: Statement) {
           case _ => Nil}).getOrElse(Nil)
         ihMatch ++ reapply(progress).searchAll(f, tabooProgramVars)
       }
+      case WhileProgress(While(x, j, s), prog) =>
+        val convMatch = Context.matchAssume(x, j, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
+        convMatch ++ reapply(prog).searchAll(f, tabooProgramVars)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
