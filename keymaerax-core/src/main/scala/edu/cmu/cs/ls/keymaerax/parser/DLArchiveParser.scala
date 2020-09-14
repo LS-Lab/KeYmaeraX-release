@@ -8,10 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
 import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
-import KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry, parseProblem}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
-import edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable._
 
@@ -38,7 +36,7 @@ import scala.collection.immutable._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   * @see [[KeYmaeraXArchiveParser]]
   */
-object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
+object DLArchiveParser extends ArchiveParser {
 
   /** Which formula/term/program parser this archive parser uses. */
   val expParser = DLParser
@@ -53,8 +51,12 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   /** Parse an archive file string into a list of archive entries, same as [[apply()]] */
   def parse(input: String) : List[ParsedArchiveEntry] = archiveParser(input)
 
+  override def parse(input: String, parseTactics: Boolean): List[ParsedArchiveEntry] = parse(input)
+
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
-  def parseAsProblemOrFormula(input: String): Formula = problemOrFormulaParser(input)
+  override def parseAsFormula(input: String): Formula = problemOrFormulaParser(input)
+
+  override def parseFromFile(file: String): List[ParsedArchiveEntry] = ???
 
   val archiveParser: String => List[ParsedArchiveEntry] = input => fastparse.parse(input, archiveEntries(_)) match {
     case Parsed.Success(value, index) => (if (value.length==1)

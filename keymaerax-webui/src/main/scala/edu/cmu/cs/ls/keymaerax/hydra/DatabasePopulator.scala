@@ -1,12 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.net.URLEncoder
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 import spray.json._
@@ -43,9 +42,9 @@ object DatabasePopulator extends Logging {
   /** Reads a .kyx archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKyx(url: String): List[TutorialEntry] = {
     val entries = url.split('#').toList match {
-      case contentUrl :: Nil => KeYmaeraXArchiveParser.parse(loadResource(contentUrl))
+      case contentUrl :: Nil => ArchiveParser.parse(loadResource(contentUrl))
       case contentUrl :: entryName :: Nil =>
-        KeYmaeraXArchiveParser.getEntry(entryName, loadResource(contentUrl)).
+        ArchiveParser.getEntry(entryName, loadResource(contentUrl)).
           getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
       case _ => throw new IllegalArgumentException("Entry URLs are allowed to contain at most 1 '#', but got " + url)
     }
@@ -53,7 +52,7 @@ object DatabasePopulator extends Logging {
   }
 
   /** Converts a parsed archive entry into a tutorial entry as expected by this importer. */
-  def toTutorialEntry(entry: KeYmaeraXArchiveParser.ParsedArchiveEntry): TutorialEntry = {
+  def toTutorialEntry(entry: ParsedArchiveEntry): TutorialEntry = {
     TutorialEntry(entry.name, entry.fileContent, entry.info.get("Description"), entry.info.get("Title"),
       entry.info.get("Link"), entry.tactics.map({ case (tname, tacticContent, _) => (tname, tacticContent, true) }),
       entry.kind)
@@ -131,8 +130,8 @@ object DatabasePopulator extends Logging {
     * if the entry already exists verbatim in the database, true otherwise. */
   private def backupPriorModel(db: DBAbstraction, user: String, oldEntry: ModelPOJO, newEntry: TutorialEntry): Boolean = {
     val backupName = db.getUniqueModelName(user, newEntry.name)
-    val oldContent :: Nil = KeYmaeraXArchiveParser.parse(oldEntry.keyFile, parseTactics=false)
-    val newContent :: Nil = KeYmaeraXArchiveParser.parse(newEntry.model, parseTactics=false)
+    val oldContent :: Nil = ArchiveParser.parse(oldEntry.keyFile, parseTactics=false)
+    val newContent :: Nil = ArchiveParser.parse(newEntry.model, parseTactics=false)
     // update only on change
     if (oldContent.defs.exhaustiveSubst(oldContent.model) != newContent.defs.exhaustiveSubst(newContent.model) ||
       oldContent.tactics != newContent.tactics) {
@@ -165,7 +164,7 @@ object DatabasePopulator extends Logging {
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(model))))
+    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }
 

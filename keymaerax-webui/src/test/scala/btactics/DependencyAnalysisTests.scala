@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
@@ -335,8 +335,8 @@ class DependencyAnalysisTests extends TacticTestBase {
   "DependencyAnalysis" should "analyse dependencies for labs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
-    val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
-    val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
+    val archiveL2 :: Nil = ArchiveParser.parse(l2)
+    val archiveL3 :: Nil = ArchiveParser.parse(l3)
 
     val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
     val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
@@ -352,7 +352,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "record time to re-prove lab 2" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
-    val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
+    val archiveL2 :: Nil = ArchiveParser.parse(l2)
 
     val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
 
@@ -386,7 +386,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "record time to re-prove lab 3" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
-    val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
+    val archiveL3 :: Nil = ArchiveParser.parse(l3)
 
     val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
 

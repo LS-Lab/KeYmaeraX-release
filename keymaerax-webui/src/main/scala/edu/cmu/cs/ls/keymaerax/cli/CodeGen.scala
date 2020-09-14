@@ -8,8 +8,8 @@ import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, exit}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Compose, Formula, Imply, Loop, StaticSemantics, Test}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 
 import scala.compat.Platform
 import scala.reflect.io.File
@@ -32,7 +32,7 @@ object CodeGen {
       if (inputFileName.contains("#")) File(inputFileName.substring(0, inputFileName.lastIndexOf("#")))
       else File(inputFileName)
 
-    val inputFormulas = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
+    val inputFormulas = ArchiveParser.parseFromFile(inputFileName)
     var outputFile = inputFile.changeExtension("c")
     if (options.contains('out)) outputFile = File(options('out).toString)
 

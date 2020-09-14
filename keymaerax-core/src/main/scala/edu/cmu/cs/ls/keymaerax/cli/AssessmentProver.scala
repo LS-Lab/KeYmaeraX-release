@@ -18,8 +18,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -98,7 +97,7 @@ object AssessmentProver {
     override def hintString: String = "Tactic"
   }
   case class ArchiveArtifact(s: String) extends Artifact {
-    lazy val entries: List[ParsedArchiveEntry] = KeYmaeraXArchiveParser.parse(s, parseTactics=true)
+    lazy val entries: List[ParsedArchiveEntry] = ArchiveParser.parse(s, parseTactics=true)
     override def hintString: String = "Archive"
   }
   case class ChoiceArtifact(selected: List[String]) extends Artifact {
@@ -283,7 +282,7 @@ object AssessmentProver {
         case Modes.DI =>
           args.get("question") match {
             case Some(q) =>
-              KeYmaeraXParser.programParser(q) match {
+              Parser.parser.programParser(q) match {
                 case ode: ODESystem => have match {
                   case h: ExpressionArtifact => h.expr match {
                     case hf: Formula => run(() => dICheck(ode, hf))
@@ -328,22 +327,22 @@ object AssessmentProver {
             }
         }
         case Modes.LOOP =>
-          val invArg = args.get("inv").map(KeYmaeraXParser.formulaParser)
+          val invArg = args.get("inv").map(Parser.parser.formulaParser)
           args.get("question") match {
             case Some(q) =>
               have match {
                 case h: ExpressionArtifact => h.expr match {
                   case hf: Formula =>
                     var inv: Option[Formula] = None
-                    KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                    val m = expand(q, hf.prettyString :: Nil, KeYmaeraXParser.formulaParser)
+                    Parser.parser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+                    val m = expand(q, hf.prettyString :: Nil, Parser.parser.formulaParser)
                     run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(hf))))
                   case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
                 }
                 case ListExpressionArtifact(h) =>
                   var inv: Option[Formula] = None
-                  KeYmaeraXParser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
-                  val m = expand(q, h.map(_.prettyString), KeYmaeraXParser.formulaParser)
+                  Parser.parser.setAnnotationListener({ case (_: Loop, f) => inv = Some(f) case _ => })
+                  val m = expand(q, h.map(_.prettyString), Parser.parser.formulaParser)
                   run(() => loopCheck(m, invArg.getOrElse(inv.getOrElse(h.headOption.map(_.asInstanceOf[Formula]).getOrElse(False)))))
                 case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
               }
@@ -376,7 +375,7 @@ object AssessmentProver {
 
           def runBelleProof(question: String, answers: List[String]): Either[ProvableSig, String] = {
             run(() => {
-              val m = expand(question, answers, KeYmaeraXParser).asInstanceOf[Formula]
+              val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
               val t = expand(args("tactic"), answers, BelleParser)
               val p = prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
               // tactics that end in assert are checking whether or not the proof ends in a certain state; all others
@@ -426,7 +425,7 @@ object AssessmentProver {
           //@todo not sure what we could do with a "tactic" argument that is not already possible in the archive, ignore for now
           val entries = have match {
             case TacticArtifact(s, _) => args.get("question") match {
-              case Some(q) => expand(q, s :: Nil, KeYmaeraXArchiveParser.parse(_, parseTactics=true))
+              case Some(q) => expand(q, s :: Nil, ArchiveParser.parse(_, parseTactics=true))
               case None => return Right(Messages.INSPECT)
             }
             case a: ArchiveArtifact => a.entries

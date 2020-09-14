@@ -8,9 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, SubstitutionPair, Trafo, Tuple, USubst, USubstOne, Unit}
-import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
@@ -23,7 +21,7 @@ import org.scalatest.matchers.{MatchResult, Matcher}
 class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMethodTester {
   private val parser = KeYmaeraXArchiveParser
 
-  private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
+  private def parse(input: String): List[ParsedArchiveEntry] =
     parser.parse(input)
 
   private def beDecl(right: Declaration) =
@@ -378,7 +376,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
-    entry.defs.decls shouldBe empty
+    entry.defs.decls shouldBe Map(("abs", None) -> (Some(Real), Real, None, None, UnknownLocation))
     entry.model shouldBe "abs(-5)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -438,10 +436,10 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
-  it should "parse a plain formula" in {
-    val input = "x>y -> x>=y"
+  it should "parse an entry without definitions" in {
+    val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
     val entry = parse(input).loneElement
-    entry.name shouldBe "<undefined>"
+    entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
     entry.defs should beDecl(
@@ -1228,8 +1226,8 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     }))
 
     val parse = PrivateMethod[List[ParsedArchiveEntry]]('parse)
-    KeYmaeraXArchiveParser invokePrivate parse(tokens, text, true) // should not fail
-    the [ParseException] thrownBy (KeYmaeraXArchiveParser invokePrivate parse(wrongTokens, text, true)) should
+    parser invokePrivate parse(tokens, text, true) // should not fail
+    the [ParseException] thrownBy (parser invokePrivate parse(wrongTokens, text, true)) should
       have message """<somewhere> Even though archive parses, extracted problem does not parse (try reformatting):
                      |ArchiveEntry "Entry 1"
                      |ProgramVariables
@@ -1313,11 +1311,11 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
-      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemma("Entry 1", None))::Nil
+      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
-  it should "add to all entries but not auto-expand if tactic expands" in {
+  it should "add to all entries but not auto-expand if tactic expands" in withTactics {
     val input =
       """SharedDefinitions.
         | B gt(R,R) <-> ( ._0 > ._1 ).
@@ -1390,7 +1388,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
-      Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
+      Expand("gt".asNamedSymbol, SubstitutionPair("gt(._0,._1)".asFormula, "._0>._1".asFormula)) &
         TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
@@ -1595,10 +1593,6 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.model shouldBe "false".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
-  }
-
-  "Convenience wrappers" should "parse a plain formula" in {
-    parser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
   }
 
   "Archive parser error message" should "report an invalid meta info key" in {

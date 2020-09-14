@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
@@ -122,7 +122,7 @@ class InMemoryDB extends DBAbstraction {
                                    tactic: Option[String]): Int = synchronized {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(models(modelId).keyFile)
+    val model = ArchiveParser.parseAsFormula(models(modelId).keyFile)
     val provable = ProvableSig.startProof(model)
     provables(provableId) = provable
     proofs(proofId) = (provable, new ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,

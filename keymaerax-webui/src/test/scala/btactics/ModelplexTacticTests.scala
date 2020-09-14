@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -48,7 +48,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/simple.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("x"))
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
@@ -74,7 +74,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "chase away a loop by updateCalculus implicationally" in withTactics {
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
+    val model = ArchiveParser.parseAsFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("x"))
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
@@ -101,7 +101,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -126,7 +126,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor condition" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
@@ -203,7 +203,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor condition by chase" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
@@ -214,7 +214,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in withTactics {
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val s = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
@@ -231,7 +231,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "find correct controller monitor condition by chase" in withMathematica { tool =>
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val model = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
 
@@ -253,7 +253,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "chase controller monitor condition to tests" in withMathematica { tool =>
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val model = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
     val Imply(_, Box(prg, _)) = model
@@ -339,7 +339,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor condition from model file" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
@@ -356,7 +356,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor condition without intermediate Optimization 1" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1) & ModelPlex.optimizationOne()(1)
     val result = proveBy(model, tactic)
 
@@ -382,7 +382,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val expectedFileContent = "(-1<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+    Parser(actualFileContent) shouldBe expectedFileContent
   }
 
 //
@@ -419,7 +419,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
   "Local lane control modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
     val result = proveBy(model, tactic)
 
@@ -457,7 +457,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
   it should "find correct controller monitor from model" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
 
@@ -475,7 +475,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
 
@@ -501,7 +501,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "Fixedwing" should "find correct controller monitor" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fixedwing_simple_nobound.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("a"), Variable("w"), Variable("xo"), Variable("theta"), Variable("dxy"), Variable("y"), Variable("t"), Variable("v"), Variable("dx"), Variable("w"), Variable("yo"), Variable("dz"), Variable("x"), Variable("dy"))
 
@@ -528,7 +528,7 @@ class ModelplexTacticTests extends TacticTestBase {
   // works but is super-slow (46min vs. 2s next with chase)
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1)
     val result = proveBy(model, tactic)
     result.subgoals should have size 1
@@ -540,7 +540,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 //  ignore should "find correct controller monitor condition from model" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/icfem08/safetylemma.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
 //      Variable("state"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
 //      Variable("a"))
@@ -558,7 +558,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
       Variable("state"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
       Variable("a"))
@@ -585,7 +585,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -617,7 +617,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally with Z3" in withZ3 { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -645,7 +645,7 @@ class ModelplexTacticTests extends TacticTestBase {
   // works but is super-slow
   it should "find the correct controller monitor condition from the input model" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -674,12 +674,12 @@ class ModelplexTacticTests extends TacticTestBase {
     val expectedFileContent = "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&tpost=0)".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+    Parser(actualFileContent) shouldBe expectedFileContent
   }
 
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("a"), Variable("r"),
       Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
       Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t"), Variable("v"), Variable("talpha"),
@@ -707,7 +707,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety curve straight" should "find correct controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -734,7 +734,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor test program" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -748,7 +748,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety curve straight curvature" should "find correct controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("k"), Variable("t"))
@@ -772,7 +772,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 //  ignore should "extract the correct controller monitor" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("a"), Variable("r"),
 //      Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
 //      Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t"), Variable("v"), Variable("talpha"),
@@ -794,7 +794,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
   "Hybrid quadcopter" should "extract the correct controller monitor" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("href"), Variable("v"), Variable("h"))
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
@@ -811,7 +811,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("href"), Variable("v"), Variable("h"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -835,7 +835,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "VSL modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
     val result = proveBy(model, tactic)
 
@@ -852,7 +852,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor condition from input file" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
 
@@ -871,7 +871,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
 
@@ -917,7 +917,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("a"), Variable("t"))
 
@@ -936,7 +936,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign with direct v control" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("t"))
 
@@ -954,7 +954,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
@@ -972,7 +972,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("a"), Variable("t"))
 
@@ -989,7 +989,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor for stopsign with direct v control" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("t"))
 
@@ -1005,7 +1005,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
@@ -1022,14 +1022,14 @@ class ModelplexTacticTests extends TacticTestBase {
   "PLDI17" should "prove velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.model.asInstanceOf[Formula]
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("d"), Variable("v"), Variable("t"))
@@ -1043,14 +1043,14 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove controller monitor correctness" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ => withDatabase { db =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
@@ -1077,27 +1077,27 @@ class ModelplexTacticTests extends TacticTestBase {
       ParsedArchiveEntry(name, "lemma", "", "", defs(fml), fml,
       (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)})
     val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
-    checkArchiveEntries(KeYmaeraXArchiveParser.parse(lemmaTempArchive))
+    checkArchiveEntries(ArchiveParser.parse(lemmaTempArchive))
 
     val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", "", defs(sandbox),
       sandbox, (entry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)
 
     val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
-    checkArchiveEntries(KeYmaeraXArchiveParser.parse(archive))
+    checkArchiveEntries(ArchiveParser.parse(archive))
   }}
 
   it should "prove fallback preserves controller monitor" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "check all archive entries" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entries = KeYmaeraXArchiveParser(s"$baseDir/velocitycar_dist.kyx")
+    val entries = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx")
     checkArchiveEntries(entries)
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Safety"))
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Plant Preserves Invariant"))
@@ -1107,7 +1107,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "generate a quantitative monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ctrlMonitorStateVars = List(Variable("d"), Variable("v"), Variable("t"))
@@ -1135,7 +1135,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "Waypoint navigation" should "generate a controller monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
     val model = entry.model.asInstanceOf[Formula]
     val Imply(_, Box(prg, _)) = model
 
@@ -1155,7 +1155,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "generate monitors from plant overapproximation" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
     val model = entry.model.asInstanceOf[Formula]
     val Imply(_, Box(Loop(Compose(prg, _)), _)) = model
 
@@ -1274,7 +1274,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 //  "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("h"), Variable("v"), Variable("kp"),
 //      Variable("kd"), Variable("href"))
 //
@@ -1295,7 +1295,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 ////  private def compareControllerMonitorTactics(modelFile: String, vars: Variable*) = {
 ////    val in = getClass.getResourceAsStream(modelFile)
-////    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+////    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 ////    val modelplexInput = createMonitorSpecificationConjecture(model, vars:_*)
 ////
 ////    val chaseTime = config(

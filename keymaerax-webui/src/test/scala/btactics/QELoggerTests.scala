@@ -3,10 +3,9 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.core.{Box, Formula}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
@@ -67,7 +66,7 @@ class QELoggerTests extends TacticTestBase {
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString //Avoid committing the solution to cse repo
     enableLogging((10,"L2"))
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
-    val archiveL2::Nil = KeYmaeraXArchiveParser.parse(l2)
+    val archiveL2::Nil = ArchiveParser.parse(l2)
 
     val (l2f,l2t) = (archiveL2.model.asInstanceOf[Formula],archiveL2.tactics.head._3)
 
@@ -80,7 +79,7 @@ class QELoggerTests extends TacticTestBase {
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString //Avoid committing the solution to cse repo
     enableLogging((10,"L3"))
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
-    val archiveL3::Nil = KeYmaeraXArchiveParser.parse(l3)
+    val archiveL3::Nil = ArchiveParser.parse(l3)
 
     val (l3f,l3t) = (archiveL3.model.asInstanceOf[Formula],archiveL3.tactics.head._3)
 

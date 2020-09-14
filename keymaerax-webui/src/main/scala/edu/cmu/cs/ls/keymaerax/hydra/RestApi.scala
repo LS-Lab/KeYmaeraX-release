@@ -12,7 +12,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, Route, StandardRoute}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -1155,7 +1155,7 @@ object RestApi extends Logging {
   val validateProof: Route = path("validate") { pathEnd {
     post {
       entity(as[String]) { archiveFileContents => {
-        val entries = KeYmaeraXArchiveParser.parse(archiveFileContents)
+        val entries = ArchiveParser.parse(archiveFileContents)
 
         if(entries.length != 1)
           complete(completeResponse(new ErrorResponse(s"Expected exactly one model in the archive but found ${entries.length}") :: Nil))

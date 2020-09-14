@@ -11,8 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint,
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -263,7 +262,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
     TactixInit.invSupplier = generator
     // reinitialize with empty caches for test case separation
@@ -406,7 +405,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
   def checkArchiveEntry(archive: String, entryName: String, tacticName: Option[String] = None): Unit = {
-    val entry = KeYmaeraXArchiveParser.getEntry(entryName, io.Source.fromInputStream(
+    val entry = ArchiveParser.getEntry(entryName, io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString).get
 
     val tactic = tacticName match {
@@ -444,7 +443,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Checks all entries from a bundled archive. */
   def checkArchiveEntries(archive: String): Unit = {
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+    val entries = ArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
     checkArchiveEntries(entries)
   }

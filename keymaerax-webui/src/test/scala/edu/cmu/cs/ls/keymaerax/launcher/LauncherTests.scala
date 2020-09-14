@@ -7,13 +7,12 @@ import java.nio.file.{Files, Paths}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import resource._
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import org.scalatest.LoneElement._
 
 class LauncherTests extends TacticTestBase {
@@ -36,7 +35,7 @@ class LauncherTests extends TacticTestBase {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-notac.kyx"
-    val conjecture = KeYmaeraXArchiveParser.parseFromFile(conjectureFileName).head
+    val conjecture = ArchiveParser.parseFromFile(conjectureFileName).head
 
     val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-conjecture", conjectureFileName, "-out", outputFileName)
     exitVal shouldBe 0
@@ -46,8 +45,8 @@ class LauncherTests extends TacticTestBase {
     exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
     val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
       exported._3.loneElement.asInstanceOf[ToolEvidence].info
-    KeYmaeraXArchiveParser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
-    tactic shouldBe "master()"
+    ArchiveParser.parser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
+    tactic shouldBe "master"
     proof shouldBe empty // proof term not exported
   }
 
@@ -74,7 +73,7 @@ class LauncherTests extends TacticTestBase {
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
       KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
     ))
-    val sourceEntries = List.fill(3)(KeYmaeraXArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
+    val sourceEntries = List.fill(3)(ArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil))
@@ -87,14 +86,14 @@ class LauncherTests extends TacticTestBase {
 
     val outputFileNames = sourceEntries.map(e => outputFileName.stripSuffix(".kyp") +
       "-" + inputFile.getName + "-" + e.name.replaceAll("\\W", "_") + ".kyp")
-    val conjectures = KeYmaeraXArchiveParser.parseFromFile(conjectureFileName)
+    val conjectures = ArchiveParser.parseFromFile(conjectureFileName)
     outputFileNames.zipWithIndex.foreach({ case (o, i) =>
       val exported = KeYmaeraXExtendedLemmaParser(managed(scala.io.Source.fromFile(o)).apply(_.mkString))
       val conjecture = conjectures(i)
       exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
       val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
         exported._3.loneElement.asInstanceOf[ToolEvidence].info
-      val entry = KeYmaeraXArchiveParser(model).loneElement
+      val entry = ArchiveParser.parser(model).loneElement
       entry.name shouldBe conjecture.name
       entry.expandedModel shouldBe conjecture.expandedModel
       tactic shouldBe "master()"
@@ -109,7 +108,7 @@ class LauncherTests extends TacticTestBase {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = File.createTempFile("bouncing-ball-notac", ".kyx").getAbsolutePath
 
-    val sourceEntries = List.fill(3)(KeYmaeraXArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
+    val sourceEntries = List.fill(3)(ArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil)).take(2)
@@ -133,7 +132,7 @@ class LauncherTests extends TacticTestBase {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = File.createTempFile("bouncing-ball-notac", ".kyx").getAbsolutePath
 
-    val sourceEntries = List.fill(3)(KeYmaeraXArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
+    val sourceEntries = List.fill(3)(ArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(e => e.copy(name = e.name + "Mismatch", tactics = Nil))

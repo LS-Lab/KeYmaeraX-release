@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequenti
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 import scala.collection.immutable.Map
 
@@ -38,7 +38,7 @@ object KeYmaeraXTool extends Tool {
   override def init(config: Map[String,String]): Unit = {
     //@note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
     if (initialized) shutdown()
-    if (KeYmaeraXParser.LAX_MODE)
+    if (Configuration(Configuration.Keys.LAX) == "true")
       //@note Careful, this disables contract checking in printing!
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter.pp)
     else
@@ -57,7 +57,7 @@ object KeYmaeraXTool extends Tool {
     }
 
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true))))))
     TactixInit.invSupplier = generator
 

@@ -40,15 +40,16 @@ import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import scala.io.Source
 import scala.collection.immutable._
 import scala.collection.mutable
-import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, Name, ParsedArchiveEntry, Signature}
-import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, WolframScript, Z3}
+import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signature}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import org.apache.logging.log4j.scala.Logging
@@ -119,7 +120,7 @@ abstract class UserRequest(userId: String, dataPermission: String => Boolean) ex
 
 /** A proof session storing information between requests. */
 case class ProofSession(proofId: String, invGenerator: Generator[GenProduct], var invSupplier: Generator[GenProduct],
-                        defs: KeYmaeraXArchiveParser.Declaration)
+                        defs: Declaration)
 
 abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: String)
   //@todo faster query for model user
@@ -980,11 +981,11 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   def resultingResponses(): List[Response] = {
     val modelInfo = db.getModel(modelId)
     if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
-      if (KeYmaeraXArchiveParser.isExercise(content)) {
+      if (ArchiveParser.isExercise(content)) {
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
         BooleanResponse(flag = true) :: Nil
       } else try {
-        KeYmaeraXArchiveParser.parse(content) match {
+        ArchiveParser.parse(content) match {
           case e :: Nil =>
             db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(e.problemContent))
             BooleanResponse(flag = true) :: Nil
@@ -1001,7 +1002,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
   extends UserRequest(userId, _ => true) with WriteRequest {
   def resultingResponses(): List[Response] = {
     try {
-      val parsedArchiveEntries = KeYmaeraXArchiveParser.parse(archiveText)
+      val parsedArchiveEntries = ArchiveParser.parse(archiveText)
 
       //@note archive parser augments a plain formula with definitions and flags it with name '<undefined>'
       val archiveEntries =
@@ -1090,7 +1091,7 @@ class AddModelTacticRequest(db: DBAbstraction, userId: String, modelId: String, 
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
   }
 }
@@ -1100,7 +1101,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                        additionalVars: List[String]) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
       filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
 
@@ -1272,7 +1273,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
   def resultingResponses(): List[Response]  = {
     logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
@@ -1454,7 +1455,7 @@ class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) 
       })
       //@note check non-existent or outdated lemmas
       val unprovedLemmas = lemmaProofs.filter(e => LemmaDBFactory.lemmaDB.get("user" + File.separator + e._1.name) match {
-        case Some(l) => l.fact.conclusion == Sequent(IndexedSeq(), IndexedSeq(KeYmaeraXArchiveParser(e._1.keyFile).head.model.asInstanceOf[Formula]))
+        case Some(l) => l.fact.conclusion == Sequent(IndexedSeq(), IndexedSeq(ArchiveParser.parser(e._1.keyFile).head.model.asInstanceOf[Formula]))
         case None => true
       })
       (unprovedLemmas.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
@@ -1479,9 +1480,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
           val generator = new ConfigurableGenerator[GenProduct]()
-          KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+          Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
-          val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
+          val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
           session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
           //TactixInit.invSupplier = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -1976,7 +1977,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
-  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
+  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
     try {
       input match {
         case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
@@ -1987,7 +1988,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) => checkExpressionInput(arg, value.split(",").map(KeYmaeraXParser).toList, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) => checkExpressionInput(arg, value.split(",").map(Parser.parser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
@@ -1996,7 +1997,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
   /** Checks expression inputs. */
   private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
-                                                    defs: KeYmaeraXArchiveParser.Declaration) = {
+                                                    defs: Declaration) = {
     val sortMismatch: Option[String] = (arg, exprs) match {
       case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
       case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
@@ -2034,7 +2035,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
   /** Checks substitution inputs. */
   private def checkSubstitutionInput(arg: ArgInfo, exprs: List[SubstitutionPair], sequent: Sequent,
-                                     defs: KeYmaeraXArchiveParser.Declaration) = {
+                                     defs: Declaration) = {
     //@note parsed as substitution pair is all we check for now
     BooleanResponse(flag=true)
   }
@@ -2470,7 +2471,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val entry = KeYmaeraXArchiveParser.parse(model.keyFile, parseTactics=false).head
+    val entry = ArchiveParser.parse(model.keyFile, parseTactics=false).head
 
     // proof may have expanded some definitions itself and used lemmas that expanded some definitions
     val provable = tree.root.provable
@@ -2641,10 +2642,10 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 
 object ArchiveEntryPrinter {
   def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
-    KeYmaeraXArchiveParser(modelInfo.keyFile) match {
-      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
+    ArchiveParser.parser(modelInfo.keyFile) match {
+      case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
         new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
-      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
+      case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
         new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
     }
   }
@@ -2856,7 +2857,7 @@ object RequestHelper {
   def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
     val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
     val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s))
-    val newDefs: Map[KeYmaeraXArchiveParser.Name, KeYmaeraXArchiveParser.Signature] = undefined.map({
+    val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen

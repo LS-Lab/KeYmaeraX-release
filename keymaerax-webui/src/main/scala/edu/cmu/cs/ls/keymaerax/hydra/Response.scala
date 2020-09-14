@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import org.apache.logging.log4j.scala.Logging
@@ -105,7 +105,7 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
     "numAllProofSteps" -> JsNumber(modelpojo.numAllProofSteps),
-    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile)),
+    "isExercise" -> JsBoolean(ArchiveParser.isExercise(modelpojo.keyFile)),
     "folder" -> (if (modelpojo.name.contains("/")) JsString(modelpojo.name.substring(0, modelpojo.name.indexOf('/'))) else JsNull)
   ))
 
@@ -163,7 +163,7 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
 class GetModelResponse(model: ModelPOJO) extends Response {
 
   private def illustrationLinks(): List[String] = {
-    KeYmaeraXArchiveParser(model.keyFile).flatMap(_.info.get("Illustration"))
+    ArchiveParser.parser(model.keyFile).flatMap(_.info.get("Illustration"))
   }
 
   def getJson = JsObject(
@@ -178,7 +178,7 @@ class GetModelResponse(model: ModelPOJO) extends Response {
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse("")),
     "numAllProofSteps" -> JsNumber(model.numAllProofSteps),
-    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(model.keyFile))
+    "isExercise" -> JsBoolean(ArchiveParser.isExercise(model.keyFile))
   )
 }
 

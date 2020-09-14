@@ -6,8 +6,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
@@ -459,7 +459,7 @@ class ScriptedRequestTests extends TacticTestBase {
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = BelleParser(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value)
-            val entry = KeYmaeraXArchiveParser.parse(db.db.getModel(id).keyFile).head
+            val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
         }
         println("Done")

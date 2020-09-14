@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -48,7 +48,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "prove FM tutorial 4" in withMathematica { _ => withDatabase { db =>
-    val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
+    val modelContent = ArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
@@ -268,7 +268,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "prove cheat sheet example" in withQE { _ => {
-    val f = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val f = ArchiveParser.parseAsFormula(
       """
         |/* Example from KeYmaera X Cheat Sheet */
         |Functions.        /* function symbols cannot change their value */

@@ -109,7 +109,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  val parser: KeYmaeraXParser.type = KeYmaeraXParser
+  val parser: Parser = Parser.parser
   val fullPrinter: (Expression => String) = this
 
 
@@ -223,7 +223,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  lazy val parser: KeYmaeraXParser.type = KeYmaeraXParser
+  lazy val parser: Parser = Parser.parser
   val fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /** Pretty-print term to a string but without contract checking! */

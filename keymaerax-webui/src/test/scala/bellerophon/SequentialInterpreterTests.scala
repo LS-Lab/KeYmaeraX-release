@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.time.SpanSugar._
@@ -15,7 +15,6 @@ import testHelper.KeYmaeraXTestTags.SlowTest
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.language.postfixOps
-
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
@@ -634,7 +633,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Tactics with delayed substitution" should "replay expandAll" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser(
+    val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution"
         |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
         |ProgramVariables Real x; Real y; End.
@@ -655,7 +654,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "replay when expanded on branches" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser(
+    val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution"
         |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
         |ProgramVariables Real x; Real y; End.
@@ -684,7 +683,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "replay when expanded only on some branches" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser(
+    val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution"
         |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
         |ProgramVariables Real x; Real y; End.

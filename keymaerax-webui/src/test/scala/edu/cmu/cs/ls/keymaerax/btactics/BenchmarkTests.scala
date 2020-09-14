@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
@@ -82,7 +82,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
   private val content = DatabasePopulator.loadResource(url)
 
   it should "export KeYmaera X legacy format" ignore withTactics {
-    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val entries = ArchiveParser.parse(content, parseTactics = false)
     val printer = new KeYmaeraXLegacyArchivePrinter()
     val printedContent = entries.map(printer(_)).mkString("\n\n")
 
@@ -97,7 +97,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
   it should "export KeYmaera X stripped" ignore withTactics {
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
-    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val entries = ArchiveParser.parse(content, parseTactics = false)
     val printer = new KeYmaeraXArchivePrinter()
     val printedStrippedContent = entries.map(stripEntry).map(printer(_)).mkString("\n\n")
 
@@ -110,7 +110,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 
   it should "export KeYmaera 3 format" in withTactics {
     val printer = KeYmaera3PrettyPrinter
-    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val entries = ArchiveParser.parse(content, parseTactics = false)
     val printedEntries = entries.map(e =>
       e.name.replaceAll("[ :\\/\\(\\)]", "_") -> (
         try {
@@ -305,7 +305,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, KeYmaeraXArchiveParser.Declaration), tactic: Option[String]): BenchmarkResult = {
+  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, Declaration), tactic: Option[String]): BenchmarkResult = {
     beforeEach()
     //@note connect to mathematica over TCPIP for better control over shutting down kernel
     withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
@@ -355,26 +355,26 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   /** Parse model and add proof hint annotations to invariant generator. */
-  private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
+  private def parseWithHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    val entry = KeYmaeraXArchiveParser(modelContent).head
+    val entry = ArchiveParser.parser(modelContent).head
     TactixInit.invSupplier = generator
     TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
     TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
-    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
   /** Parse model but ignore all proof hints. */
-  private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
+  private def parseStripHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
     TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
-    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
-    val entry = KeYmaeraXArchiveParser(modelContent).head
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {})
+    val entry = ArchiveParser.parser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 

@@ -5,15 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, StringConverter}
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 /**
  * Automatic Propositional Prover tests.
@@ -77,7 +73,7 @@ class PropositionalProver extends TacticTestBase  {
 
   "prop" should "prove list of simple propositional tautologies" in withTactics {
     for (s <- propFacts) {
-      val fact = KeYmaeraXParser.formulaParser(s)
+      val fact = Parser.parser.formulaParser(s)
       TactixLibrary.proveBy(fact, prop) shouldBe 'proved
     }
   }

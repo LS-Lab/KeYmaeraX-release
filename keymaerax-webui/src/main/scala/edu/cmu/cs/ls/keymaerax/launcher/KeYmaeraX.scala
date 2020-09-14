@@ -20,7 +20,8 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.util.Random
@@ -136,14 +137,14 @@ object KeYmaeraX {
   }
 
   private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
-    varNames.map(vn => KeYmaeraXParser(vn) match {
+    varNames.map(vn => Parser.parser(vn) match {
       case v: BaseVariable => v
       case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
     })
   }
 
   @tailrec
-  private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+  def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
       case "-help" :: _ => println(usage); exit(1)
@@ -151,11 +152,11 @@ object KeYmaeraX {
       case "-sandbox" :: tail =>
         nextOption(map ++ Map('sandbox -> true), tail)
       case "-modelplex" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
         else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
       case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
       case "-codegen" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
       case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
@@ -165,19 +166,19 @@ object KeYmaeraX {
         if (model.nonEmpty  && !model.toString.startsWith("-"))
           nextOption(newMap ++ Map('mode -> Modes.REPL, 'model -> model), restArgs)
         else { Usage.optionErrorReporter("-repl", usage); exit(1) }
-      case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> Modes.UI)
+      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map ++ Map('mode -> Modes.UI), tail)
       // action options
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
         else { Usage.optionErrorReporter("-out", usage); exit(1) }
       case "-fallback" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
         else { Usage.optionErrorReporter("-fallback", usage); exit(1) }
       case "-vars" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else { Usage.optionErrorReporter("-vars", usage); exit(1) }
       case "-monitor" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
+        if(value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
         else { Usage.optionErrorReporter("-monitor", usage); exit(1) }
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
       // aditional options
@@ -213,7 +214,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val inputEntry = KeYmaeraXArchiveParser.parseFromFile(in).head
+    val inputEntry = ArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.model.asInstanceOf[Formula]
 
     val verifyOption: Option[ProvableSig => Unit] =
@@ -312,8 +313,8 @@ object KeYmaeraX {
   }
 
   private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: OptionMap): Unit = {
-    val output = KeYmaeraXPrettyPrinter(fml)
-    val reparse = KeYmaeraXParser(output)
+    val output = PrettyPrinter(fml)
+    val reparse = Parser(output)
     assert(reparse == fml, "parse of print is identity")
     val pw = new PrintWriter(outputFileName)
     pw.write(EvidencePrinter.stampHead(options))
@@ -347,13 +348,13 @@ object KeYmaeraX {
     val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, "ISO-8859-1")).apply(_.mkString)
     val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
     val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
-    val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
+    val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
+    val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) ("-" + Modes.UI) +: args else args
     if (LAUNCH) Main.main("-launch" +: augmentedArgs)
     else Main.main(augmentedArgs)
   }

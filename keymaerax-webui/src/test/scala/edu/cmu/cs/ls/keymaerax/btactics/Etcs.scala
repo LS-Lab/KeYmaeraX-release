@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -129,12 +129,12 @@ class Etcs extends TacticTestBase {
   }
 
   it should "prove safety with detailed brake model" in withQE { _ =>
-    val entry = KeYmaeraXArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")).mkString).head
+    val entry = ArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")).mkString).head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe 'proved
   }
 
   it should "prove safety with detailed brake model, no air resistance" in withQE { _ =>
-    val entry = KeYmaeraXArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx")).mkString).head
+    val entry = ArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx")).mkString).head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe 'proved
   }
 

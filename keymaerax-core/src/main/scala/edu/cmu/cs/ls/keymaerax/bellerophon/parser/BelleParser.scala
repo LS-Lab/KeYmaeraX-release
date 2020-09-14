@@ -9,7 +9,7 @@ import BelleLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -33,7 +33,7 @@ object BelleParser extends TacticParser with Logging {
   }
 
   override val tacticParser: String => BelleExpr = this
-  override val expressionParser: Parser = KeYmaeraXParser
+  override val expressionParser: Parser = Parser.parser
   override val printer: BelleExpr => String = BellePrettyPrinter
 
   /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */

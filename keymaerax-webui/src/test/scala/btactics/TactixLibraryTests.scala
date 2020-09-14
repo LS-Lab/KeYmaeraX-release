@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -606,7 +606,7 @@ class TactixLibraryTests extends TacticTestBase {
   }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
-    val problem = KeYmaeraXArchiveParser(
+    val problem = ArchiveParser.parser(
       """Theorem ""
         |Problem
         |x < -4
@@ -625,7 +625,7 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
-    val problem = KeYmaeraXArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
+    val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kya")).mkString).get.model.asInstanceOf[Formula]
     proveBy(problem, master()) shouldBe 'proved
   }

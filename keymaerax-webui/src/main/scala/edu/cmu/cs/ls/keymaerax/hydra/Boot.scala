@@ -10,20 +10,14 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
-import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutor
 import scala.language.postfixOps
 
@@ -151,7 +145,7 @@ object HyDRAInitializer extends Logging {
 
   /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
   def apply(args: Array[String], database: DBAbstraction): String = {
-    val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+    val options = KeYmaeraX.nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
@@ -207,16 +201,6 @@ object HyDRAInitializer extends Logging {
           }
         } else ""
     }
-  }
-
-  @tailrec
-  def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
-    case Nil => map
-    case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
-    case "-ui" :: tail => nextOption(map, tail)
-    case "-launch" :: tail => nextOption(map, tail)
-    case "-open" :: value :: tail => nextOption(map ++ Map('open -> value), tail)
-    case option :: tail => logger.warn("[Warning] Unknown option " + option + "\n\n" /*+ usage*/); nextOption(map, tail)
   }
 
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {

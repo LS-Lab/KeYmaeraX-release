@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, Stopw
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Parser}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -51,7 +51,7 @@ object CoasterXMain {
     BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
     TactixInit.invSupplier = generator
     ToolProvider.setProvider(new NoneToolProvider())
@@ -192,7 +192,7 @@ object CoasterXMain {
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[GenProduct]()
     TactixInit.invSupplier = generator
-    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
+    Parser.parser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 
     println("Connecting to arithmetic tools...")

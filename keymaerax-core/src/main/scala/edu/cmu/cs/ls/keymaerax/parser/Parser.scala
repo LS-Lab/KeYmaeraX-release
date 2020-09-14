@@ -9,6 +9,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -39,27 +40,27 @@ trait Parser extends (String => Expression) {
   /** Parse the input string in the concrete syntax as a differential dynamic logic term.
     * @throws ParseException whenever its `input` is not a well-formed term of differential dynamic logic or differential game logic.
     */
-  val termParser: (String => Term)
+  val termParser: String => Term
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula.
     * @throws ParseException whenever its `input` is not a well-formed formula of differential dynamic logic or differential game logic.
     */
-  val formulaParser: (String => Formula)
+  val formulaParser: String => Formula
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic program.
     * @throws ParseException whenever its `input` is not a well-formed program of differential dynamic logic or game of differential game logic.
     */
-  val programParser: (String => Program)
+  val programParser: String => Program
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program.
     * @throws ParseException whenever its `input` is not a well-formed differential program of differential dynamic logic or differential game of differential game logic.
     */
-  val differentialProgramParser: (String => DifferentialProgram)
+  val differentialProgramParser: String => DifferentialProgram
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic sequent.
     * @throws ParseException whenever its `input` is not a well-formed sequent of differential dynamic logic or differential game logic.
     */
-  val sequentParser: (String => Sequent)
+  val sequentParser: String => Sequent
 
 //  /** Parse the input string in the concrete syntax as a differential dynamic logic inference.
 //    * @return A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
@@ -73,6 +74,25 @@ trait Parser extends (String => Expression) {
     */
   val printer: PrettyPrinter
 
+  /** Sets a listener to be informed when parsing annotations. */
+  def setAnnotationListener(listener: (Program,Formula) => Unit): Unit = {}
+}
+
+object Parser extends (String => Expression) {
+  /* @note mutable state for switching out the default parser. */
+  private[this] var p: Parser = Configuration.get[String](Configuration.Keys.PARSER) match {
+    case Some("KeYmaeraXParser") | None => KeYmaeraXParser.parser
+    case Some("DLParser") => DLParser
+  }
+
+  /** The parser that is presently used per default. */
+  def parser: Parser = p
+
+  /** Set a new parser. */
+  def setParser(parser: Parser): Unit = { p = parser }
+
+  /** Parses `input`. */
+  override def apply(input: String): Expression = parser(input)
 }
 
 /**
@@ -96,16 +116,16 @@ trait TokenParser {
   def parse(input: TokenStream): Expression
 
   /** Parse the input tokens in the concrete syntax as a differential dynamic logic term */
-  val termTokenParser: (TokenStream => Term)
+  val termTokenParser: TokenStream => Term
 
   /** Parse the input tokens in the concrete syntax as a differential dynamic logic formula */
-  val formulaTokenParser: (TokenStream => Formula)
+  val formulaTokenParser: TokenStream => Formula
 
   /** Parse the input tokens in the concrete syntax as a differential dynamic logic program */
-  val programTokenParser: (TokenStream => Program)
+  val programTokenParser: TokenStream => Program
 
   /** Parse the input tokens in the concrete syntax as a differential dynamic logic differential program */
-  val differentialProgramTokenParser: (TokenStream => DifferentialProgram)
+  val differentialProgramTokenParser: TokenStream => DifferentialProgram
 }
 
 object ParserHelper {

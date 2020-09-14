@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint,
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
@@ -767,11 +767,11 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   /** Parse model but ignore all proof hints. */
-  private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
+  private def parseStripHints(modelContent: String): (Formula, Declaration) = {
     TactixInit.invSupplier = FixedGenerator(Nil)
     TactixInit.differentialInvGenerator = FixedGenerator(Nil)
-    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
-    val entry = KeYmaeraXArchiveParser(modelContent).head
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {})
+    val entry = ArchiveParser.parser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 

@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 */
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -35,8 +36,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0" :: Nil
 
     for (e <- exprs) {
-      val expected = KeYmaeraXParser(e)
-      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+      val expected = Parser(e)
+      Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -50,8 +51,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
         Nil
 
     for (e <- exprs) {
-      val expected = KeYmaeraXParser(e)
-      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+      val expected = Parser(e)
+      Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -64,8 +65,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       "[{x:=1; ++ x:=2;}++x:=3;]x>0" :: Nil
 
     for (e <- exprs) {
-      val expected = KeYmaeraXParser(e)
-      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+      val expected = Parser(e)
+      Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -75,8 +76,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0" :: Nil
 
     for (e <- exprs) {
-      val expected = KeYmaeraXParser(e)
-      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+      val expected = Parser(e)
+      Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
@@ -89,7 +90,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
                 Nil
     for(e <- exprs) {
       try {
-        KeYmaeraXParser(e)
+        Parser(e)
         assert(false, "Should've thrown an exception")
       } catch {
         case e : Throwable => //ok.
@@ -108,16 +109,16 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y" ::
         Nil
     for (e <- exprs) {
-      val expected = KeYmaeraXParser(e)
-      KeYmaeraXParser(KeYmaeraXPrettyPrinter(expected)) shouldBe expected
+      val expected = Parser(e)
+      Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "print and parse small decimals without scientific notation" in {
     val expr = "0.00000001"
-    val expected = KeYmaeraXParser(expr)
-    val printed = KeYmaeraXPrettyPrinter(expected)
-    val reparsed = KeYmaeraXParser(printed)
+    val expected = Parser(expr)
+    val printed = PrettyPrinter(expected)
+    val reparsed = Parser(printed)
     reparsed shouldBe expected
   }
 
@@ -125,7 +126,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
     for (i <- 1 to randomTrials) {
 		  val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
       // asFormula runs the parser, but declares the variables occurring in the formula
-      KeYmaeraXPrettyPrinter(expected).asFormula shouldBe expected
+      PrettyPrinter(expected).asFormula shouldBe expected
     }
   }
 

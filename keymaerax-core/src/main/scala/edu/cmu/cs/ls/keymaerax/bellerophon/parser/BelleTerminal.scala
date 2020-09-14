@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 import scala.util.matching.Regex
 
@@ -149,7 +149,7 @@ private case class EXPRESSION(exprString: String, delimiters: (String, String)) 
     //Remove delimiters and parse the expression.
     val exprs = undelimitedExprString.split("~>")
     assert(1 <= exprs.size && exprs.size <= 2, "Expected either single expression or substitution pair of expressions, but got " + undelimitedExprString)
-    if (exprs.size == 1) Left(KeYmaeraXParser(exprs.head))
+    if (exprs.size == 1) Left(Parser.parser(exprs.head))
     else {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       Right(undelimitedExprString.asSubstitutionPair)

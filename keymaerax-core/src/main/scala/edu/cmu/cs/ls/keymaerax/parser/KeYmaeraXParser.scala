@@ -316,7 +316,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     *
     * @todo this design is suboptimal.
     */
-  def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
+  override def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
     this.annotationListener = listener
 
   /** Report an @invariant @annotation to interested parties */

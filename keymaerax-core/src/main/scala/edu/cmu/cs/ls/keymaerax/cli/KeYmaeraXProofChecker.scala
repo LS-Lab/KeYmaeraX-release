@@ -15,11 +15,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, DependentTactic, IOListeners, LazySequentialInterpreter, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
-import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, USubst, insist}
+import edu.cmu.cs.ls.keymaerax.core.{False, Formula, PrettyPrinter, Sequent, USubst, insist}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXExtendedLemmaParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.MarkerManager
@@ -89,7 +88,7 @@ object KeYmaeraXProofChecker {
         assert(witness.subgoals.isEmpty)
         val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
         //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-        insist(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
+        insist(Parser.parser(PrettyPrinter.printer(input)) == input, "parse of print is identity")
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
         insist(witness.proved == expected, "Expected to have proved the original problem and not something else, but proved witness deviates from input")
         //@note check that proved conclusion is what we actually wanted to prove
@@ -177,12 +176,12 @@ object KeYmaeraXProofChecker {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
     val inFiles = findFiles(inputFileName)
-    val archiveContent = inFiles.map(p => p -> KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
+    val archiveContent = inFiles.map(p => p -> ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
 
     val conjectureFileName = options.get('conjecture).map(_.toString)
     val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
-    val conjectureContent = conjectureFiles.flatMap(p => KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
+    val conjectureContent = conjectureFiles.flatMap(p => ArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
       filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)).toMap
     val duplicateConjectures = conjectureContent.filter(_._2.size > 1)
     // conjectures must have unique names across files

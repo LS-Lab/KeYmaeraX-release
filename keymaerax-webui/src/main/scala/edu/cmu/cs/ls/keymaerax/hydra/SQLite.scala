@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Parser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -354,10 +354,10 @@ object SQLite {
     final override def getInvariants(modelId: Int): Map[Expression, Formula] = {
       val model = getModel(modelId)
       var invariants: Map[Expression, Formula] = Map.empty
-      KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
+      Parser.parser.setAnnotationListener{case (program, formula) =>
         invariants = invariants.+((program, formula))
       }
-      KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
+      ArchiveParser.parseAsFormula(model.keyFile)
       invariants
     }
 
@@ -524,7 +524,7 @@ object SQLite {
     /** Initializes the proof by creating a provable from the model, returns the provable ID and optional substituted tactic. */
     private[this] def initializeProofForModel(modelId: Int, tactic: Option[String]): (Int, Option[String]) = {
       val model = getModel(modelId)
-      val entry = KeYmaeraXArchiveParser.parseProblem(model.keyFile, parseTactics=false)
+      val entry = ArchiveParser.parseProblem(model.keyFile, parseTactics=false)
       val d = entry.defs
       val problem = entry.model.asInstanceOf[Formula]
 

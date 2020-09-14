@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
@@ -54,7 +54,7 @@ class ContinuousInvariantTests extends TacticTestBase {
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica { tool =>
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+    val entries = ArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invSupplier match {
       case gen: ConfigurableGenerator[GenProduct] => gen
@@ -98,7 +98,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   it should "fast-check invariants with LZZ" taggedAs SlowTest in withMathematica { tool =>
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "-1")) {
-      val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      val entries = ArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
       val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
         case gen: ConfigurableGenerator[GenProduct] => gen
@@ -125,7 +125,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   it should "consider constants when fast-checking invariants with LZZ" in withMathematica { tool =>
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "5")) {
-      val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
+      val entry = ArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
 
       a[MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
@@ -145,7 +145,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
       Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "60")) {
-      val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      val entries = ArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
       forEvery(Table(("Name", "Model"), entries.map(e => (e.name, e.model)):_*)) {
         (name, model) =>

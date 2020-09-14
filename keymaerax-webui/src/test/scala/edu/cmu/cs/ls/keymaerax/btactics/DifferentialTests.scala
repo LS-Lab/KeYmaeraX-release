@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
@@ -391,7 +391,7 @@ class DifferentialTests extends TacticTestBase {
                   |End.
                   |""".stripMargin
 
-    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
+    proveBy(ArchiveParser.parseAsFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
   }
 
   it should "prove with and without frame constraint y'=0" in withQE { _ =>

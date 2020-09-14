@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -668,7 +668,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   private lazy val dbProofInfo = db.getProofInfo(proofId)
 
   private lazy val dbSubsts = {
-    info.modelId.map(db.getModel).map(m => KeYmaeraXArchiveParser(m.keyFile)) match {
+    info.modelId.map(db.getModel).map(m => ArchiveParser.parser(m.keyFile)) match {
       case Some(e :: Nil) => e.defs.substs
       case _ => Nil
     }

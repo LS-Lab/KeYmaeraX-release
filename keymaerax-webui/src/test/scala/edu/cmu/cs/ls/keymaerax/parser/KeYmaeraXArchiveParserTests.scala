@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, SeqTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, DotTerm, Function, Greater, Number, Pair, Plus, PredOf, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside.inside
 import org.scalatest.LoneElement._
@@ -28,7 +27,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     KeYmaeraXArchiveParser
 //  DLArchiveParser
 
-  private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
+  private def parse(input: String): List[ParsedArchiveEntry] =
     parser.parse(input)
 
   private def beDecl(right: Declaration) =
@@ -721,7 +720,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
-    entry.defs.decls shouldBe empty
+    entry.defs.decls shouldBe Map(("abs", None) -> (Some(Real), Real, None, None, UnknownLocation))
     entry.model shouldBe "abs(-5)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -782,10 +781,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a plain formula" in {
-    val input = "x>y -> x>=y"
+  it should "parse a problem without declarations" in {
+    val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
     val entry = parse(input).loneElement
-    entry.name shouldBe "<undefined>"
+    entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
@@ -1613,8 +1612,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     }))
 
     val parse = PrivateMethod[List[ParsedArchiveEntry]]('parse)
-    KeYmaeraXArchiveParser invokePrivate parse(tokens, text, true) // should not fail
-    the [ParseException] thrownBy (KeYmaeraXArchiveParser invokePrivate parse(wrongTokens, text, true)) should
+    parser invokePrivate parse(tokens, text, true) // should not fail
+    the [ParseException] thrownBy (parser invokePrivate parse(wrongTokens, text, true)) should
       have message """<somewhere> Even though archive parses, extracted problem does not parse (try reformatting):
                      |ArchiveEntry "Entry 1"
                      |ProgramVariables
@@ -1989,10 +1988,6 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
         |End.""".stripMargin
-  }
-
-  "Convenience wrappers" should "parse a plain formula" in {
-    parser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
   }
 
   "Archive parser error message" should "report an invalid meta info key" in {

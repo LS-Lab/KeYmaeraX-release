@@ -161,7 +161,7 @@ class DLParser extends Parser {
     *
     * @todo this design is suboptimal.
     */
-  def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
+  override def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
     this.annotationListener = listener
 
   // internals

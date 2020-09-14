@@ -11,11 +11,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser, KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
 import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.btactics.{Generator, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 
@@ -37,7 +37,7 @@ class DLBelleParser extends TacticParser {
 
   //@todo fill both vals with life
   private val generator: Option[Generator.Generator[GenProduct]] = None
-  private val defs: KeYmaeraXArchiveParser.Declaration = KeYmaeraXArchiveParser.Declaration(Map.empty)
+  private val defs: Declaration = Declaration(Map.empty)
 
   /** Which formula/term/program parser this archive parser uses. */
   val expParser = DLParser

@@ -11,8 +11,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 
@@ -136,6 +136,9 @@ object KeYmaeraX {
         //@note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
         initializeProver(options, usage)
         if (parseProblemFile(value)) exit(0) else exit(-1)
+      case "-parserClass" :: value :: tail =>
+        Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
+        nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('mode -> Modes.PROVE, 'in -> value), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
@@ -264,9 +267,9 @@ object KeYmaeraX {
   private def parseProblemFile(fileName: String): Boolean = {
     println("Parsing " + fileName + "...")
     try {
-      KeYmaeraXArchiveParser.parseFromFile(fileName).foreach(e => {
+      ArchiveParser.parseFromFile(fileName).foreach(e => {
         println(e.name)
-        println(KeYmaeraXPrettyPrinter(e.model))
+        println(PrettyPrinter(e.model))
         println("Parsed file successfully")
       })
       true
@@ -302,7 +305,7 @@ object KeYmaeraX {
     require(options.contains('in) && options.contains('out), usage)
 
     val kyxFile = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(kyxFile)
+    val archiveContent = ArchiveParser.parseFromFile(kyxFile)
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note fully expand model and remove all definitions too, those might be used as proof hints

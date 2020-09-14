@@ -17,31 +17,31 @@ object StringConverter {
 }
 
 class StringConverter(val s: String) {
-  def asExpr: Expression = KeYmaeraXParser(s)
+  def asExpr: Expression = Parser(s)
 
-  def asTerm: Term = KeYmaeraXParser.termParser(s)
+  def asTerm: Term = Parser.parser.termParser(s)
 
-  def asNamedSymbol: NamedSymbol = KeYmaeraXParser(s) match {
+  def asNamedSymbol: NamedSymbol = Parser(s) match {
     case ns: NamedSymbol => ns
     case _ => throw new IllegalArgumentException("Input " + s + " is not a named symbol")
   }
 
-  def asVariable: Variable = KeYmaeraXParser.termParser(s) match {
+  def asVariable: Variable = Parser.parser.termParser(s) match {
     case v: Variable => v
     case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
   }
 
-  def asFunction: Function = KeYmaeraXParser.termParser(s) match {
+  def asFunction: Function = Parser.parser.termParser(s) match {
     case v: Variable  => Function(v.name, v.index, Unit, Real, interpreted=false)
     case FuncOf(f, _) => f
     case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
   }
 
-  def asFormula: Formula = KeYmaeraXParser.formulaParser(s)
+  def asFormula: Formula = Parser.parser.formulaParser(s)
 
-  def asProgram: Program = KeYmaeraXParser.programParser(s)
+  def asProgram: Program = Parser.parser.programParser(s)
 
-  def asDifferentialProgram: DifferentialProgram = KeYmaeraXParser.differentialProgramParser(s)
+  def asDifferentialProgram: DifferentialProgram = Parser.parser.differentialProgramParser(s)
 
   def asTactic : BelleExpr = BelleParser(s)
 
@@ -51,25 +51,23 @@ class StringConverter(val s: String) {
     ls match {
       case Nil =>
         if (acc!="")
-          List(KeYmaeraXParser.formulaParser(acc))
+          List(Parser.parser.formulaParser(acc))
         else
           Nil
-      case (l::lss) =>
-        if(l == "") smartFmlSplit(acc,lss)
+      case l::lss =>
+        if (l == "") smartFmlSplit(acc,lss)
         else {
           try {
-            KeYmaeraXParser.formulaParser(acc + l) :: smartFmlSplit("", lss)
-          }
-          catch {
-            case e: ParseException =>
-              smartFmlSplit(acc + l + ",", lss)
+            Parser.parser.formulaParser(acc + l) :: smartFmlSplit("", lss)
+          } catch {
+            case _: ParseException => smartFmlSplit(acc + l + ",", lss)
           }
         }
     }
   }
 
   def asSequent: Sequent = {
-    val (ante::succ::Nil) = s.split("==>").map(_.trim()).toList
+    val ante::succ::Nil = s.split("==>").map(_.trim()).toList
     //println("parsing",ante,succ)
     val res = Sequent(
       smartFmlSplit("",ante.split(",(?![^{]*})").toList).toIndexedSeq,
@@ -84,11 +82,11 @@ class StringConverter(val s: String) {
       if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>")
       else s.split("~>")
     assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
-    val repl = KeYmaeraXParser(exprs(1))
+    val repl = Parser(exprs(1))
     val what =
-      if (repl.kind == FormulaKind) KeYmaeraXParser.formulaParser(exprs(0))
-      else if (repl.kind == TermKind) KeYmaeraXParser.termParser(exprs(0))
-      else KeYmaeraXParser.programParser(exprs(0))
+      if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
+      else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
+      else Parser.parser.programParser(exprs(0))
     UnificationMatch(what, repl).usubst.subsDefsInput.head
   }
 }

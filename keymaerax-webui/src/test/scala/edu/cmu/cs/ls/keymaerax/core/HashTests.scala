@@ -5,15 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.KeYmaeraXTestTags.SlowTest
 
-import scala.collection.{LinearSeqLike, immutable}
-import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests hash code and some collection expectations such as lookup and adds and removes.

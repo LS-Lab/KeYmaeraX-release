@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -416,7 +416,7 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
     checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
   }}
 
@@ -453,7 +453,7 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
     checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
   }}
 
@@ -490,7 +490,7 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
     checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
   }}
 
@@ -537,7 +537,7 @@ class ProofTreeTests extends TacticTestBase {
         |End.
         |""".stripMargin
 
-    val lemma :: theorem :: Nil = KeYmaeraXArchiveParser(modelContent)
+    val lemma :: theorem :: Nil = ArchiveParser.parser(modelContent)
 
     val lemmaId = db.createProof(lemma.fileContent)
     val provedLemma = checkProvedTree(db.db, lemmaId, lemma.tactics.head._3, "==> x>y*y -> x>y*y".asSequent)
@@ -594,7 +594,7 @@ class ProofTreeTests extends TacticTestBase {
         |End.
         |""".stripMargin
 
-    val lemma :: theorem :: Nil = KeYmaeraXArchiveParser(modelContent)
+    val lemma :: theorem :: Nil = ArchiveParser.parser(modelContent)
 
     val lemmaId = db.createProof(lemma.fileContent)
     val provedLemma = checkProvedTree(db.db, lemmaId, lemma.tactics.head._3, "==> gt(x,y*y) -> gt(x,y*y)".asSequent)

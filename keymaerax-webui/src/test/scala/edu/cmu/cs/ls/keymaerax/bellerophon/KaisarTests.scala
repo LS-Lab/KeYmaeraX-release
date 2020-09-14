@@ -3,14 +3,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.{BRule, _}
 import edu.cmu.cs.ls.keymaerax.btactics.{Kaisar, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
+import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
 
 /**
   * Created by bbohrer on 12/3/16.

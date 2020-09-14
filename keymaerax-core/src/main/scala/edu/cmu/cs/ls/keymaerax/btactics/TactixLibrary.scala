@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{BranchRecursor, TacticRecur
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -1023,7 +1023,7 @@ object TactixLibrary extends HilbertCalculus
             val model = info.find(_._1 == "model")
             (model, tactic) match {
               case (Some(model), Some(tactic)) =>
-                val defs = KeYmaeraXArchiveParser(model._2).head.defs
+                val defs = ArchiveParser.parser(model._2).head.defs
                 if (tactic.contains("expandAllDefs")) {
                   defs.substs
                 } else {

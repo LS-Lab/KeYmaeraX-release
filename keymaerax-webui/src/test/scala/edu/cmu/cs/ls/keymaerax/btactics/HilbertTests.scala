@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
@@ -559,7 +559,7 @@ class HilbertTests extends TacticTestBase {
 
   "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in withTactics {
     useFor(Ax.Dskipd, PosInExpr(0::Nil),
-      (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), KeYmaeraXParser.differentialProgramParser("x'=2"))))
+      (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), Parser.parser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))
