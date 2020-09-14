@@ -4,12 +4,12 @@
   */
 package edu.cmu.cs.ls.keymaerax.cli
 
-import java.io.{BufferedOutputStream, BufferedWriter, File, FileInputStream, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
+import java.io.{BufferedOutputStream, BufferedWriter, File, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
@@ -658,6 +658,34 @@ object AssessmentProver {
 
   /** Collects terms and compares for polynomial equality. Checks parent operators along the way. */
   def polynomialEquality(a: Formula, b: Formula, normalize: Boolean): ProvableSig = {
+    if (FormulaTools.atomicFormulas(a).forall(_.isInstanceOf[Equal]) && FormulaTools.atomicFormulas(b).forall(_.isInstanceOf[Equal])) {
+      groebnerBasisEquality(a, b, normalize)
+    } else generalPolynomialEquality(a, b, normalize)
+  }
+
+  /** Polynomial equality by Groebner basis comparison for formulas whose atoms are all equalities. */
+  private def groebnerBasisEquality(a: Formula, b: Formula, normalize: Boolean): ProvableSig = {
+    val at = SimplifierV3.algNormalize(a)._1 match { case Equal(l, Number(n)) if n == 0 => l }
+    val bt = SimplifierV3.algNormalize(b)._1 match { case Equal(l, Number(n)) if n == 0 => l }
+    ToolProvider.algebraTool() match {
+      case Some(tool) =>
+        val gba = tool.groebnerBasis(at :: Nil)
+        tool.polynomialReduce(bt, gba) match {
+          case (_, Number(n)) if n == 0 =>
+            val gbb = tool.groebnerBasis(bt :: Nil)
+            tool.polynomialReduce(at, gbb) match {
+              case (_, Number(n)) if n == 0 => prove(Sequent(IndexedSeq(), IndexedSeq(True)), closeT)
+              case _ => ProvableSig.startProof(False)
+            }
+          case _ => ProvableSig.startProof(False)
+        }
+      case None => generalPolynomialEquality(a, b, normalize)
+    }
+  }
+
+  /** Approximates polynomial equality for general formulas by comparing program/formula operators and term polynomial
+    * equality on the resulting leafs. Not able to handle commutativity and other simple differences. */
+  private def generalPolynomialEquality(a: Formula, b: Formula, normalize: Boolean): ProvableSig = {
     val terms = ListBuffer.empty[(PosInExpr, Equal)]
     val doNormalize = new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
