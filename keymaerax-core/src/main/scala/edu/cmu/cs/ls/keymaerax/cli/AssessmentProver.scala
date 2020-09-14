@@ -110,8 +110,13 @@ object AssessmentProver {
   case class TextArtifact(value: Option[String]) extends Artifact {
     override def hintString: String = "Text"
   }
+  /** Artifacts from multiple questions. */
   case class MultiArtifact(artifacts: List[Artifact]) extends Artifact {
     override def hintString: String = "<unknown>"
+  }
+  /** Any of the artifacts is correct. */
+  case class AnyOfArtifact(artifacts: List[Artifact]) extends Artifact {
+    override def hintString: String = artifacts.map(_.hintString).distinct.reduceOption(_ + "/" + _).getOrElse("<unknown>")
   }
 
   abstract class Grader {
@@ -162,33 +167,29 @@ object AssessmentProver {
     /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
     override def check(have: Artifact): Either[ProvableSig, String] = {
       if (mode.contains(Modes.SKIP)) return Right(Messages.SKIPPED)
-      (have, expected) match {
-        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Right(Messages.BLANK)
-        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Right(Messages.BLANK)
-        case (ListExpressionArtifact(Nil), _) => return Right(Messages.BLANK)
-        case (SequentArtifact(Nil), _) => return Right(Messages.BLANK)
-        case (h: ExpressionArtifact, e: ExpressionArtifact) => e.expr match {
-          case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
-              if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
-            return run(() => syntacticEquality(h.expr, e.expr))
-          case _ => if (h.expr.kind != e.expr.kind) return Right("Expected a " + e.expr.kind + " but got " + h.expr.kind + " " + h.exprString)
-        }
-        case (h: ExpressionArtifact, ListExpressionArtifact(exprs)) =>
-          if (exprs.exists(_.kind != h.expr.kind)) return Right("Expected a " + exprs.head.kind + " but got " + h.expr.kind + " " + h.exprString)
-        case (ListExpressionArtifact(h), e: ExpressionArtifact) =>
-          if (h.exists(_.kind != e.expr.kind)) return Right("Expected a " + e.expr.kind + " but got "  + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
-        case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
-          require(e.map(_.kind).toSet.nonEmpty)
-          if (e.map(_.kind).toSet.size > 1) {
-            if (e.zip(h).forall({ case (ee, he) => ee.kind == he.kind })) Right("Expected " + e.map(_.kind).mkString + " gut got "  + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
-          } else if (h.exists(_.kind != e.head.kind)) return Right("Expected a list of " + e.headOption.map(_.kind).getOrElse("<unknown>") + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
-        case (h, e) =>
-          if (!e.getClass.isAssignableFrom(h.getClass)) return Right("Expected a " + e.hintString + " but got " + h.longHintString)
+      checkArtifactKind(have, expected) match {
+        case Some(toReturn) => return toReturn
+        case None => // continue
       }
       have.checkShape(args.get("shape")) match {
         case Some(e) => return Right(e)
         case None => // shape check passed
       }
+
+      expected match {
+        case AnyOfArtifact(exp) =>
+          for (e <- exp) {
+            check(have, e) match {
+              case Left(p) => return Left(p)
+              case _ => // continue
+            }
+          }
+          Right("")
+        case _ => check(have, expected)
+      }
+    }
+
+    private def check(have: Artifact, expected: Artifact): Either[ProvableSig, String] = {
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) => run(() => syntacticEquality(h.expr, e.expr))
@@ -208,8 +209,8 @@ object AssessmentProver {
           case (TexExpressionArtifact(h: Term), TexExpressionArtifact(e: Term)) => run(() => valueEquality(h, e))
           case (ListExpressionArtifact(h: List[Term]), ListExpressionArtifact(e: List[Term])) => Try(Left(valueEquality(h, e))).getOrElse(
             Right(if (h.size < e.size) "Too few values"
-                  else if (h.size > e.size) "Too many values"
-                  else ""))
+            else if (h.size > e.size) "Too many values"
+            else ""))
           case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.POLY_EQ => (have, expected) match {
@@ -219,6 +220,14 @@ object AssessmentProver {
               case (hf: Formula, ef: Formula) => run(() => polynomialEquality(hf, ef, normalize=false))
               case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
             }
+          case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+            run(() => {
+              val checkResults = h.sortBy(_.prettyString).zip(e.sortBy(_.prettyString)).map({
+                case (ht: Term, et: Term) => polynomialEquality(ht, et)
+                case (hf: Formula, ef: Formula) => polynomialEquality(hf, ef, args.getOrElse("normalize", "false").toBoolean)
+              })
+              checkResults.find(!_.isProved).getOrElse(checkResults.head)
+            })
           case (TexExpressionArtifact(h: Term), TexExpressionArtifact(e: Term)) => run(() => polynomialEquality(h, e))
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
@@ -429,6 +438,36 @@ object AssessmentProver {
           if (results.forall(_._2.isLeft)) results.find(_._1.kind == "theorem").get._2
           else Right("Unproved: " + results.filter(_._2.isRight).map(_._1.name).mkString(","))
       }
+    }
+
+    private def checkArtifactKind(have: Artifact, expected: Artifact): Option[Either[ProvableSig, String]] = {
+      (have, expected) match {
+        case (_, AnyOfArtifact(artifacts)) =>
+          val anyOfResults = artifacts.map(checkArtifactKind(have, _))
+          if (!anyOfResults.exists(_.isEmpty)) return anyOfResults.head
+        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Some(Right(Messages.BLANK))
+        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Some(Right(Messages.BLANK))
+        case (ListExpressionArtifact(Nil), _) => return Some(Right(Messages.BLANK))
+        case (SequentArtifact(Nil), _) => return Some(Right(Messages.BLANK))
+        case (h: ExpressionArtifact, e: ExpressionArtifact) => e.expr match {
+          case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
+            if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
+            return Some(run(() => syntacticEquality(h.expr, e.expr)))
+          case _ => if (h.expr.kind != e.expr.kind) return Some(Right("Expected a " + e.expr.kind + " but got " + h.expr.kind + " " + h.exprString))
+        }
+        case (h: ExpressionArtifact, ListExpressionArtifact(exprs)) =>
+          if (exprs.exists(_.kind != h.expr.kind)) return Some(Right("Expected a " + exprs.head.kind + " but got " + h.expr.kind + " " + h.exprString))
+        case (ListExpressionArtifact(h), e: ExpressionArtifact) =>
+          if (h.exists(_.kind != e.expr.kind)) return Some(Right("Expected a " + e.expr.kind + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")))
+        case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+          require(e.map(_.kind).toSet.nonEmpty)
+          if (e.map(_.kind).toSet.size > 1) {
+            if (e.zip(h).forall({ case (ee, he) => ee.kind == he.kind })) Right("Expected " + e.map(_.kind).mkString + " gut got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
+          } else if (h.exists(_.kind != e.head.kind)) return Some(Right("Expected a list of " + e.headOption.map(_.kind).getOrElse("<unknown>") + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")))
+        case (h, e) =>
+          if (!e.getClass.isAssignableFrom(h.getClass)) return Some(Right("Expected a " + e.hintString + " but got " + h.longHintString))
+      }
+      None
     }
   }
   /** A grader that has access to multiple answers. */

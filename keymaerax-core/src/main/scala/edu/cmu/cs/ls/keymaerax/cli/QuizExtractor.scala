@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyOfArtifact, ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -86,12 +86,18 @@ object QuizExtractor {
           case (Some(s), None, None, None, None) => (artifactsFromKyxString(s), Map.empty)
           case (None, Some(s), None, None, None) => (artifactsFromTexMathString(s), Map.empty)
           case (None, None, Some(s), None, None) => (ArchiveArtifact(s), Map.empty)
-          case (None, None, None, Some(s), None) => (artifactsFromTexTextString(s), Map.empty)
+          case (None, None, None, Some(s), None) =>
+            val anyOfKyxSols = kyxlineExtractor("").r(KYX_SOL).findAllMatchIn(s).map(_.group(KYX_SOL)).toList
+            if (anyOfKyxSols.isEmpty) (artifactsFromTexTextString(s), Map.empty)
+            else (AnyOfArtifact(anyOfKyxSols.map(artifactsFromKyxString)), Map.empty)
           case (None, None, None, None, Some(s)) =>
             val (question, artifact) = solfinArtifactsFromString(s)
             (artifact, Map("question" -> question))
         }
-        val testSolArtifacts = expectedArtifact +: artifactsFromNSolContents(testsol, "\\\\testsol")
+        val testSolArtifacts = expectedArtifact match {
+          case AnyOfArtifact(artifacts) => artifacts ++ artifactsFromNSolContents(testsol, "\\\\testsol")
+          case _ => expectedArtifact +: artifactsFromNSolContents(testsol, "\\\\testsol")
+        }
         val noSolArtifacts = artifactsFromNSolContents(nosol, "\\\\nosol")
         AskQuestion(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
