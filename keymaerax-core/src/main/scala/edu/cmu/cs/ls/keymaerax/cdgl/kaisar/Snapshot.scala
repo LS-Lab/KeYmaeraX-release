@@ -144,7 +144,7 @@ object Snapshot {
 
       override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
         s match {
-          case DomModify(x, f) => snap = snap.revisit(x); s
+          case DomModify(_id, x, f) => snap = snap.revisit(x); s
           case _ => s
         }
       }
