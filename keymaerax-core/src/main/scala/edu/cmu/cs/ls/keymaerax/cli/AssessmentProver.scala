@@ -1059,7 +1059,9 @@ object AssessmentProver {
           } else {
             msgStream.print(Messages.FAILED)
             val msg = prompt.answers.map({
-              case Submission.TextAnswer(_, _, _, _, answer, _) => answer
+              case Submission.TextAnswer(_, _, _, _, answer, _) =>
+                if (answer.length <= 100) answer
+                else answer.substring(0, 95) + "[...]"
               case _: Submission.ChoiceAnswer => ""
             }).filter(_.nonEmpty).mkString(",")
             if (msg.nonEmpty) msgStream.println(":" + msg)
