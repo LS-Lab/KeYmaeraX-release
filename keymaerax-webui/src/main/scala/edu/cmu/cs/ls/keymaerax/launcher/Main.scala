@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion, UpdateChecker, core}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version, UpdateChecker, core}
 import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
 
@@ -96,21 +96,6 @@ object Main {
 
     launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
 
-
-//    try {
-////      throw new LemmbaDatabaseInitializationException("")
-////      LemmaDatabaseInitializer.initializeFromJAR
-//    }
-//    catch {
-//      case e: LemmbaDatabaseInitializationException => {
-//        println("!!! ERROR: Could not initialize database !!!)")
-//        e.printStackTrace()
-//        println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
-//        edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
-////        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
-//      }
-//    }
-
     if (System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
     } else {
@@ -139,7 +124,7 @@ object Main {
       val cacheVersion = source.mkString.replace("\n", "")
       source.reader().close() //Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
-        if (StringToVersion(cacheVersion) != StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
+        if (Version(cacheVersion) != Version(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
           assert(cacheVersionFile.delete(), s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath }")
           clearCache(cacheDirectory)
         }

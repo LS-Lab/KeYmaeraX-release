@@ -14,10 +14,11 @@ import scala.collection.immutable
   * Created by bbohrer on 4/24/16.
   */
 object ProgramSearchNode {
-  def apply(fml:Formula)(implicit qeTool: QETacticTool):ProgramSearchNode = {
+  def apply(fml: Formula)(implicit qeTool: QETacticTool): ProgramSearchNode = {
     fml match {
-      case (Imply(pre, Box(prog, post))) => ProgramSearchNode(pre,prog,post)
-      case (Imply(a, Imply(b, c))) => apply(Imply(And(a,b), c))
+      case Imply(pre, Box(prog, post)) => ProgramSearchNode(pre,prog,post)
+      case Imply(a, Imply(b, c)) => apply(Imply(And(a,b), c))
+      case b: Box => apply(Imply(True, b))
       case _ => throw new IllegalArgumentException("ProgramSearchNode expects formula of shape P -> [a] Q")
     }
   }

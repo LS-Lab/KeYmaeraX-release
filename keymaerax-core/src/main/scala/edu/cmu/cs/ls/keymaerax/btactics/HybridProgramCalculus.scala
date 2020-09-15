@@ -6,6 +6,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+
 
 import scala.collection.immutable._
 
@@ -30,8 +34,9 @@ object HybridProgramCalculus extends HybridProgramCalculus
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
   * @see [[HilbertCalculus]]
+  * @Tactic complete
   */
 trait HybridProgramCalculus {
 
@@ -51,20 +56,28 @@ trait HybridProgramCalculus {
     *          G |- [a]B, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   genUseLbl:        genShowLbl:
     *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
     *   ------------------------------------generalize("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
-    * @example{{{
+    * @example {{{
     *   genUseLbl:                      genShowLbl:
     *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
     *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
     * }}}
     */
-  def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
+  @Tactic(
+    names = "MR",
+    codeName = "MR", //@todo code name on cheat sheet is generalize
+    premises =      "Γ |- [a]Q, Δ ;; Q |- P",
+    // Monotonicity ------------------------
+    conclusion =    "Γ |- [a]P, Δ",
+    inputs = "Q:formula",
+    revealInternalSteps = true)
+  def generalize(C: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos:Position) => DLBySubst.generalize(C)(pos) }
 
   /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
     * Wipes conditions that contain bound variables of the loop.
@@ -75,13 +88,13 @@ trait HybridProgramCalculus {
     *   G |- [{a}*]p, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   use:          init:         step:
     *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
     *   ------------------------------------------------I("x>1".asFormula)(1)
     *   x>2 |- [{x:=x+1;}*]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *   use:               init:              step:
     *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
     *   ---------------------------------------------------------------I("x>1".asFormula)(1)
@@ -89,8 +102,12 @@ trait HybridProgramCalculus {
     * }}}
     * @param invariant The loop invariant `I`.
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
+    * @note Beware that the order of premises for hybrid games is use, step, init.
     */
-  def loop(invariant: Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
+  @Tactic(premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
+    conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true,
+    inputs = "J:formula", displayLevel = "full")
+  def loop(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.loop(invariant)(pos) }
 
   /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
     * {{{
@@ -98,12 +115,12 @@ trait HybridProgramCalculus {
     *   ------------------iG (where y is new)
     *        G |- p(x), D
     * }}}
-    * @example{{{
+    * @example {{{
     *         |- [y_0:=y;]x>0
     *         ----------------discreteGhost("y".asTerm)(1)
     *         |- x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *         |- [z:=2;][y:=5;]x>0
     *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
     *         |- [z:=2;]x>0

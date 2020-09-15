@@ -1,10 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.hydra.BelleParserLinker
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
+@SlowTest
 class SCUBATests extends TacticTestBase {
   "tApprox" should "prove with statistics" in withMathematica(_ => {
     val modelString = """ProgramVariables.
@@ -93,7 +94,7 @@ class SCUBATests extends TacticTestBase {
                   |)]t>0
                   |End.""".stripMargin
 
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelString)
+    val model = ArchiveParser.parseAsFormula(modelString)
 
 //    val tacticDefns = scala.io.Source.fromFile("/home/nfulton/dev/scuba-release/tApprox/human_readable.kyt").mkString
 //    val tactic = BelleParserLinker(tacticDefns, "main").asTactic

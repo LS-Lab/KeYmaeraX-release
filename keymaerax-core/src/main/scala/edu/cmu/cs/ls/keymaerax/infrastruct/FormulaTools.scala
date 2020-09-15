@@ -100,6 +100,7 @@ object FormulaTools extends Logging {
       case LessEqual(a,b) => Greater(a,b)
       case True => False
       case False => True
+      case _: PredOf => formula
       case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Not(g:CompositeFormula) => g match {
@@ -111,6 +112,10 @@ object FormulaTools extends Logging {
         And(negationNormalForm(p), negationNormalForm(Not(q))),
         And(negationNormalForm(Not(p)), negationNormalForm(q))
       )
+      case Forall(vs, p) => Exists(vs, negationNormalForm(Not(p)))
+      case Exists(vs, p) => Forall(vs, negationNormalForm(Not(p)))
+      case Box(prg, p) => Box(prg, negationNormalForm(Not(p)))
+      case Diamond(prg, p) => Diamond(prg, negationNormalForm(Not(p)))
       case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Imply(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(q))
@@ -319,6 +324,15 @@ object FormulaTools extends Logging {
     case Compose(a, b)   => dualFree(a) && dualFree(b)
     case Loop(a)         => dualFree(a)
     case Dual(a)         => false
+  }
+
+  /** Check whether given `program` contains literal [[Dual]]. */
+  def literalDualFree(program: Program): Boolean = program match {
+    case Dual(a) => false
+    case Choice(a, b)    => literalDualFree(a) && literalDualFree(b)
+    case Compose(a, b)   => literalDualFree(a) && literalDualFree(b)
+    case Loop(a)         => literalDualFree(a)
+    case _       => true
   }
 
   /** Returns all terms {{{b^e}}} such that e is not a natural number occurring in given formula .

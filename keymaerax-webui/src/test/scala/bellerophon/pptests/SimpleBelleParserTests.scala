@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Region, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -26,7 +26,7 @@ import org.scalatest.matchers.MatchResult
   * @author Nathan Fulton
   */
 @UsualTest
-class SimpleBelleParserTests extends TacticTestBase {
+class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")) {
   private object round {
     def trip(t: BelleExpr): BelleExpr = { roundTrip(t) shouldBe t; t }
     def roundTrip(t: BelleExpr): BelleExpr = BelleParser(BellePrettyPrinter(t))
@@ -68,7 +68,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   
   it should "accept id as well as closeId" in {
     BelleParser("closeId") shouldBe (round trip TactixLibrary.closeId)
-    BelleParser("id") shouldBe (round trip TactixLibrary.closeId)
+    BelleParser("id") shouldBe (round trip TactixLibrary.id)
   }
 
   it should "parse a built-in tactic with arguments" in {
@@ -129,7 +129,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
-    BelleParser("diffInvariant({`1=1`}, 1)") shouldBe (round trip TactixLibrary.diffInvariant(Seq("1=1".asFormula) : _*)(1))
+    BelleParser("diffInvariant({`1=1`}, 1)") shouldBe (round trip TactixLibrary.diffInvariant("1=1".asFormula)(1))
   }
 
   it should "Parse a loop tactic and print it back out" in {
@@ -238,6 +238,10 @@ class SimpleBelleParserTests extends TacticTestBase {
     BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => true, "Succeed") & andL(-1)) shouldBe "(implyR(1)) ; andL(-1)"
   }
 
+  it should "parse simple assert" in {
+    BelleParser("""assert("x>0", "Unexpected", 1)""") shouldBe assertE("x>0".asExpr, "Unexpected")(1)
+  }
+
   //endregion
 
   //region Either combinator
@@ -291,65 +295,6 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse e | b & c" in {
     val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
-  }
-
-  //endregion
-
-  //region After combinator
-
-  "After parser" should "parse e > e" in {
-    val result = BelleParser("andR(1) > andR(2)").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right shouldBe TactixLibrary.andR(2)
-  }
-
-  it should "parse after right-associative -- e > e > e parses to e > (e > e)" in {
-    val result = BelleParser("andR(1) > andR(2) > andR(3)").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
-  }
-
-  it should "parse after right-associative when there are a bunch of parens" in {
-    val result = BelleParser("(andR(1)) > (andR(2)) > (andR(3))").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
-  }
-
-  it should "parse e > (e > e)" in {
-    val result = BelleParser("andR(1) > (andR(2) > andR(3))").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
-  }
-
-  it should "parse (e > e) > e" in {
-    val result = BelleParser("(andR(1) > andR(2)) > andR(3)").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
-  }
-
-  it should "parse e & b > c" in {
-    val result = BelleParser("andR(1) & andR(2) > andR(3)").asInstanceOf[AfterTactic]
-    result shouldBe (round trip result)
-    result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
-  }
-
-  it should "parse e > b & c" in {
-    val result = BelleParser("andR(1) > andR(2) & andR(3)").asInstanceOf[AfterTactic]
     result shouldBe (round trip result)
     result.left shouldBe TactixLibrary.andR(1)
     result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
@@ -453,28 +398,29 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {
-    val tactic = BelleParser("doall(closeId)")
-    tactic shouldBe (round trip OnAll(TactixLibrary.closeId))
+    val tactic = BelleParser("doall(id)")
+    tactic shouldBe (round trip OnAll(TactixLibrary.id))
   }
 
   it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
-    val tactic = BelleParser("doall(closeId | closeTrue | andL(1))")
-    tactic shouldBe (round trip OnAll(TactixLibrary.closeId | (TactixLibrary.closeT | TactixLibrary.andL(1))))
+    val tactic = BelleParser("doall(id | closeT | andL(1))")
+    tactic shouldBe (round trip OnAll(TactixLibrary.id | (TactixLibrary.closeT | TactixLibrary.andL(1))))
   }
 
   "Optional combinator" should "parse ?(closeId)" in {
-    val tactic = BelleParser("?(closeId)")
-    tactic shouldBe (round trip Idioms.?(TactixLibrary.closeId))
+    val tactic = BelleParser("?(id)")
+    TactixLibrary.nil
+    tactic shouldBe (round trip Idioms.?(TactixLibrary.id))
   }
 
   it should "bind stronger than seq. combinator" in {
-    val tactic = BelleParser("andR(1) & ?(closeId)")
-    tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId)))
+    val tactic = BelleParser("andR(1) & ?(id)")
+    tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
   it should "bind stronger than alt. combinator" in {
-    val tactic = BelleParser("andR(1) | ?(closeId)")
-    tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId)))
+    val tactic = BelleParser("andR(1) | ?(id)")
+    tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
   it should "bind stronger than saturation" in {
@@ -484,8 +430,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "work in the beginning of a branch" in {
-    val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR(1)))")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR(1))))
+    val tactic = BelleParser("andR(1) & <(?(id), ?(orR(1)))")
+    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id), Idioms.?(TactixLibrary.orR(1))))
   }
 
 
@@ -556,8 +502,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   //region Done tactics
 
   "done tactic parser" should "parse closeId & done" in {
-    val tactic = BelleParser("closeId & done")
-    tactic shouldBe (round trip TactixLibrary.closeId & TactixLibrary.done)
+    val tactic = BelleParser("id & done")
+    tactic shouldBe (round trip TactixLibrary.id & TactixLibrary.done)
   }
 
   it should "parse done" in {
@@ -581,8 +527,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse in a branch" in {
-    val tactic = BelleParser("andR(1) & <(closeId & done, done)")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done))
+    val tactic = BelleParser("andR(1) & <(id & done, done)")
+    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
   }
 
   //endregion
@@ -607,8 +553,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse let as part of a larger tactic" in {
-    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; closeId")
-    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.closeId))
+    val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; id")
+    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.nil) & TactixLibrary.id))
   }
 
   "def tactic parser" should "parse a simple example" in {
@@ -657,33 +603,119 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   "Expand" should "parse a simple definition expand" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
-      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)))))
+      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation)))))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Function("f", None, Unit, Real), "f() ~> 3*2".asSubstitutionPair)
+  }
+
+  it should "elaborate variables to functions" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
+      )
+    ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))
+    ))
+  }
+
+  it should "elaborate variables to functions per declarations" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, None, Some("g".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
+      )
+      ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      FuncOf(Function("f", None, Unit, Real), Nothing), FuncOf(Function("g", None, Unit, Real), Nothing)
+    ))
+  }
+
+  it should "elaborate functions to predicates per declarations" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Bool, None, Some("g".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
+      )
+      ))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
+      PredOf(Function("f", None, Unit, Bool), Nothing), PredOf(Function("g", None, Unit, Bool), Nothing)
+    ))
   }
 
   "ExpandAll" should "expand multiple definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, Some("4".asTerm), UnknownLocation))
+        //@note locations just so that parser knows the definitions are supposed to originate from a file
+        (("f", None), (Some(Unit), Real, None, Some("3*2".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) => defs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
     }
   }
 
+  it should "expand proof definitions with US and model definitions after with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note UnknownLocation identifies proof definitions, known locations identify model definitions
+        (("f", None), (Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
+      )))
+    tactic shouldBe TactixLibrary.uniformSubstitute(
+      USubst(SubstitutionPair(FuncOf(Function("f", None, Unit, Real), Nothing),
+             Times(FuncOf(Function("g", None, Unit, Real), Nothing), Number(2))) :: Nil)) &
+        ExpandAll(SubstitutionPair(FuncOf(Function("g", None, Unit, Real), Nothing), Number(4)) :: Nil)
+  }
+
+  it should "expand and elaborate proof definitions with US and model definitions after with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note UnknownLocation identifies proof definitions, known locations identify model definitions
+        (("f", None), (Some(Real), Bool, None, Some("g(.)".asExpr), UnknownLocation)),
+        (("g", None), (Some(Real), Bool, None, Some(".>0".asExpr), Region(0, 0, 0, 0)))
+      )))
+    tactic shouldBe TactixLibrary.uniformSubstitute(USubst(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), PredOf(Function("g", None, Real, Bool), DotTerm())) :: Nil)) &
+      ExpandAll(SubstitutionPair(PredOf(Function("g", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(0))) :: Nil)
+  }
+
+  it should "default expand and elaborate model definitions with expandAllDefs" in {
+    val tactic = BelleParser.parseWithInvGen("""dC("f(x)", 1)""", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note Known locations identify model definitions
+        (("f", None), (Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+      )), expandAll = true)
+    tactic shouldBe ExpandAll(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
+      TactixLibrary.dC("x>g()".asFormula)(1)
+  }
+
+  it should "default expand and elaborate model definitions with expandAllDefs and in tactics" in {
+    val tactic = BelleParser.parseWithInvGen("""dC("x>g", 1)""", None,
+      Declaration(scala.collection.immutable.Map(
+        //@note Known locations identify model definitions
+        (("f", None), (Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+      )), expandAll = true)
+    tactic shouldBe ExpandAll(
+      SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
+      TactixLibrary.dC("x>g()".asFormula)(1)
+  }
+
   it should "topologically sort definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
-        (("h", None), (Some(Unit), Real, Some("g()*2".asTerm), UnknownLocation)),
-        (("i", None), (Some(Unit), Real, Some("1".asTerm), UnknownLocation)),
-        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, Some("f()+4".asTerm), UnknownLocation)),
-        (("j", None), (Some(Unit), Trafo, Some("x:=g()+i();".asProgram), UnknownLocation))
+        (("h", None), (Some(Unit), Real, None, Some("g()*2".asTerm), Region(0, 0, 0, 0))),
+        (("i", None), (Some(Unit), Real, None, Some("1".asTerm), Region(0, 0, 0, 0))),
+        (("f", None), (Some(Unit), Real, None, Some("3*2".asTerm), Region(0, 0, 0, 0))),
+        (("g", None), (Some(Unit), Real, None, Some("f()+4".asTerm), Region(0, 0, 0, 0))),
+        (("j", None), (Some(Unit), Trafo, None, Some("x:=g()+i();".asProgram), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) =>
-        defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j; ~> x:=g()+i();".asSubstitutionPair ::
+        defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j{|^@|}; ~> x:=g()+i();".asSubstitutionPair ::
           "i() ~> 1".asSubstitutionPair :: "g() ~> f()+4".asSubstitutionPair :: "f() ~> 3*2".asSubstitutionPair :: Nil)
         val hi = defs.indexOf("h() ~> g()*2".asSubstitutionPair)
         val ji = defs.indexOf("j; ~> x:=g()+i();".asSubstitutionPair)
@@ -701,7 +733,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   //region argument parser
 
   "Tactic argument parser" should "parse string arguments" in {
-    BelleParser("print({`a message`})") shouldBe (round trip DebuggingTactics.print("a message"))
+    BelleParser("print({`a message`})") shouldBe (round trip DebuggingTactics.printX("a message"))
   }
 
   it should "parse formula arguments" in {
@@ -713,8 +745,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse substitution arguments" in {
-    BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.uniformSubstitute(
-      RenUSubst(("init(.)".asFormula, ".=0".asFormula) :: Nil).usubst))
+    BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.USX(
+      SubstitutionPair("init(.)".asFormula, ".=0".asFormula)))
   }
 
   it should "parse mixed arguments" in {
@@ -733,14 +765,14 @@ class SimpleBelleParserTests extends TacticTestBase {
     }
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
-        Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+        Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), adpt: AppliedDependentPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
@@ -749,14 +781,14 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "expand definitions in the middle of parsing only when asked to" in {
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
       case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), SeqTactic(_, adpt: AppliedDependentPositionTactic)) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
@@ -769,12 +801,12 @@ class SimpleBelleParserTests extends TacticTestBase {
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-        Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+        Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
@@ -787,12 +819,12 @@ class SimpleBelleParserTests extends TacticTestBase {
     }
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
@@ -821,18 +853,12 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   //region New dG syntax
 
-  "new dG syntax" should "work" in {
-    val f = "x>1 -> [{x'=-x}]x>0".asFormula
-    val t = "implyR(1) ; dG({`y'=1/2*y`}, {`x*y^2=1`}, 1) ; dI(1.0) ".asTactic
-  }
-
-  it should "round trip ghosts" in {
-    //@todo should be on tactics is meaningless (compares names, but not arguments)
-    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1}\", 1)") and (reparse fromPrint))
-    "dG({`y'=1`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
-    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=0*y+1}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1/2*y}\", 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+  "new dG syntax" should "round trip ghosts" in {
+    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asFormula, None)(1)) and (print as "dG(\"y'=1\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1}`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
+    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asFormula, None)(1)) and (print as "dG(\"y'=1/2*y\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
   }
 
   //endregion

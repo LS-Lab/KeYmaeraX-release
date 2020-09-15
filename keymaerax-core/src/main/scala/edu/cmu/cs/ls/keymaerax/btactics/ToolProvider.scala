@@ -37,8 +37,11 @@ object ToolProvider extends ToolProvider with Logging {
     */
   def setProvider(provider: ToolProvider): Unit = {
     if (provider != this) {
-      if (provider != f) f.shutdown()
-      f = provider
+      if (provider != f) {
+        f.shutdown()
+        f = provider
+        f.init()
+      }
     } else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
 
@@ -64,23 +67,26 @@ object ToolProvider extends ToolProvider with Logging {
 
   def simulationTool(): Option[SimulationTool] = f.simulationTool()
 
+  def sosSolveTool(): Option[SOSsolveTool] = f.sosSolveTool()
+
+  def init(): Boolean = f.init()
+
   def shutdown(): Unit = f.shutdown()
 
   def tools(): List[Tool] = f.tools()
 
-  def initFallbackZ3(p: => ToolProvider, toolName: String): ToolProvider = {
-    //@note p is call-by-name to catch exceptions here instead of on allocation of p outside initFallback,
-    //      but use lazy val tp to not initialize multiple times when accessing p
+  def initFallbackZ3(p: ToolProvider, toolName: String): ToolProvider = {
     try {
-      lazy val tp = p
-      if (!tp.tools().forall(_.isInitialized)) {
+      if (p.init()) {
+        MultiToolProvider(p :: new Z3ToolProvider :: Nil)
+      } else {
         val msg =
           s"""Unable to connect to $toolName, switching to Z3
              |Please check your $toolName configuration in KeYmaera X->Preferences
             """.stripMargin
         logger.info(msg)
         new Z3ToolProvider
-      } else new MultiToolProvider(tp :: new Z3ToolProvider :: Nil)
+      }
     } catch {
       case ex: Throwable =>
         val msg =
@@ -135,6 +141,12 @@ trait ToolProvider {
   /** Returns a simulation tool. */
   def simulationTool(): Option[SimulationTool]
 
+  /** Returns a SOSsolve tool. */
+  def sosSolveTool(): Option[SOSsolveTool]
+
+  /** Initializes the tools. */
+  def init(): Boolean
+
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out None only. */
   def shutdown(): Unit
 }
@@ -144,7 +156,7 @@ trait ToolProvider {
   * @author Stefan Mitsch
   */
 class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends ToolProvider {
-  require(toolPreferences != null && toolPreferences.nonEmpty && toolPreferences.forall(_.isInitialized), "Initialized tool expected")
+  require(toolPreferences != null && toolPreferences.nonEmpty, "Non-empty list of tools expected")
 
   private[this] lazy val qe: Option[Tool with QETacticTool] = toolPreferences.find(_.isInstanceOf[QETacticTool]).map(_.asInstanceOf[Tool with QETacticTool])
   private[this] lazy val invgen: Option[Tool with InvGenTool] = toolPreferences.find(_.isInstanceOf[InvGenTool]).map(_.asInstanceOf[Tool with InvGenTool])
@@ -155,6 +167,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences.find(_.isInstanceOf[SimulationTool]).map(_.asInstanceOf[Tool with SimulationTool])
   private[this] lazy val solver: Option[Tool with EquationSolverTool] = toolPreferences.find(_.isInstanceOf[EquationSolverTool]).map(_.asInstanceOf[Tool with EquationSolverTool])
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
+  private[this] lazy val sossolve: Option[Tool with SOSsolveTool] = toolPreferences.find(_.isInstanceOf[SOSsolveTool]).map(_.asInstanceOf[Tool with SOSsolveTool])
 
   override def tools(): List[Tool] = toolPreferences
   override def defaultTool(): Option[Tool] = toolPreferences.headOption
@@ -173,6 +186,8 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def simulationTool(): Option[SimulationTool] = ensureInitialized(simulator)
   override def solverTool(): Option[EquationSolverTool] = ensureInitialized(solver)
   override def algebraTool(): Option[AlgebraTool] = ensureInitialized(algebra)
+  override def sosSolveTool(): Option[SOSsolveTool] = ensureInitialized(sossolve)
+  override def init(): Boolean = false /* override to initialize tools in more specialized providers */
   override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
 
   /** Ensures that the tool `t` is initialized (= not yet shutdown) before returning it; returns None for uninitialized tools. */
@@ -180,6 +195,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
     case Some(t) if t.isInitialized => tool
     case _ => None
   }
+
 }
 
 /** A tool provider without tools.
@@ -197,27 +213,35 @@ class NoneToolProvider extends ToolProvider {
   override def simulationTool(): Option[SimulationTool] = None
   override def solverTool(): Option[EquationSolverTool] = None
   override def algebraTool(): Option[AlgebraTool] = None
+  override def sosSolveTool(): Option[SOSsolveTool] = None
+  override def init(): Boolean = true
   override def shutdown(): Unit = {}
 }
 
 /** Combines multiple tool providers. */
-class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProvider(providers.flatMap(_.tools())) {
+case class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProvider(providers.flatMap(_.tools())) {
   // wolfram tool providers know alternative names to supply named tools
   override def qeTool(name: Option[String]): Option[QETacticTool] = providers.flatMap(_.qeTool(name)).headOption
   override def invGenTool(name: Option[String]): Option[InvGenTool] = providers.flatMap(_.invGenTool(name)).headOption
+  override def init(): Boolean = providers.forall(_.init())
+  override def shutdown(): Unit = providers.foreach(_.shutdown())
 }
 
 /** Base class for Wolfram tools with alternative names. */
-abstract class WolframToolProvider(tool: Tool, alternativeNames: List[String]) extends PreferredToolProvider(tool :: Nil) {
-  protected def alternativeTool[T](name: Option[String], factory: Option[String] => Option[T]): Option[T] = factory(name) match {
+abstract class WolframToolProvider[T <: Tool](val tool: T, config: Configuration, alternativeNames: List[String]) extends PreferredToolProvider(tool :: Nil) {
+  protected def alternativeTool[S](name: Option[String], factory: Option[String] => Option[S]): Option[S] = factory(name) match {
     case None => name match {
-      case Some(t) if alternativeNames.contains(t) => defaultTool().filter(_.isInstanceOf[T]).map(_.asInstanceOf[Tool with T])
+      case Some(t) if alternativeNames.contains(t) => defaultTool().filter(_.isInstanceOf[S]).map(_.asInstanceOf[Tool with S])
       case _ => None
     }
     case t => t
   }
   override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = alternativeTool(name, super.invGenTool)
+  override def init(): Boolean = {
+    if (!tool.isInitialized) tool.init(config)
+    tool.isInitialized
+  }
 }
 
 
@@ -225,34 +249,45 @@ abstract class WolframToolProvider(tool: Tool, alternativeNames: List[String]) e
   * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
-class MathematicaToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); m }, "WolframEngine" :: "WolframScript" :: "M" :: Nil) {
-  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+case class MathematicaToolProvider(config: Configuration) extends WolframToolProvider(
+  new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"),
+  config,
+  "WolframEngine" :: "WolframScript" :: "M" :: Nil) {
+
 }
 
 /** A tool provider that initializes tools to Wolfram Engine.
   * @author Stefan Mitsch
   */
-class WolframEngineToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink("WolframEngine"), "WolframEngine"); m.init(config); m }, "Mathematica" :: "WolframScript" :: "M" :: Nil) {
-  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+case class WolframEngineToolProvider(config: Configuration) extends WolframToolProvider(
+  new Mathematica(new JLinkMathematicaLink("WolframEngine"), "WolframEngine"),
+  config,
+  "Mathematica" :: "WolframScript" :: "M" :: Nil) {
+
 }
 
 /** A tool provider that initializes tools to Wolfram Script backend.
   * @author Stefan Mitsch
   */
-class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathematica(new WolframScript, "WolframScript"); m.init(Map.empty); m}, "Mathematica" :: "WolframEngine" :: "M" :: Nil) {
-  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+case class WolframScriptToolProvider(config: Configuration) extends WolframToolProvider(
+  new Mathematica(new WolframScript, "WolframScript"),
+  config,
+  "Mathematica" :: "WolframEngine" :: "M" :: Nil) {
+
 }
 
 /** A tool provider that provides Z3 as QE tool and our own bundled algebra tool and diff. solution tool, everything else is None.
   * Initializes the Z3 installation and updates the Z3 binary on version updates.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends PreferredToolProvider[Tool]({
-    val z = new Z3; z.init(Map("z3Path" -> Z3Installer.z3Path))
-    val algebra = new RingsAlgebraTool(); algebra.init(Map.empty)
-    val ode = new IntegratorODESolverTool; ode.init(Map.empty)
-    z :: algebra :: ode :: Nil}) {
-
+case class Z3ToolProvider(config: Configuration = Map("z3Path" -> Z3Installer.z3Path)) extends PreferredToolProvider[Tool](new Z3 :: new RingsAlgebraTool() :: new IntegratorODESolverTool :: Nil) {
   /** Returns the main Z3 tool. */
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
+  override def init(): Boolean = {
+    val z3 :: algebra :: ode :: Nil = tools()
+    z3.init(config)
+    algebra.init(Map.empty)
+    ode.init(Map.empty)
+    z3.isInitialized && algebra.isInitialized && ode.isInitialized
+  }
 }

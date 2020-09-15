@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
@@ -29,13 +30,14 @@ import scala.collection.immutable.{Map, Seq}
 class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends Tool
     with QETacticTool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
-    with PDESolverTool with ToolOperationManagement {
+    with PDESolverTool with SOSsolveTool with ToolOperationManagement {
 
   /** Indicates whether the tool is initialized. */
   private var initialized = false
 
   private val mQE: MathematicaQEToolBridge[Lemma] = new MathematicaQEToolBridge[Lemma](link)
   private val mPegasus = new MathematicaInvGenTool(link)
+  private val mSOSsolve = new MathematicaSOSsolveTool(link)
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODESolverTool(link)
   private val mPDE = new MathematicaPDESolverTool(link)
@@ -48,17 +50,30 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
   private var qeMaxTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
 
-  private val memoryLimit: Long = Configuration.getOption(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
+  private val memoryLimit: Long = Configuration.get[String](Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
 
   override def init(config: Map[String,String]): Unit = {
     mQE.memoryLimit = memoryLimit
     mPegasus.memoryLimit = memoryLimit
+    mSOSsolve.memoryLimit = memoryLimit
     mCEX.memoryLimit = memoryLimit
     mODE.memoryLimit = memoryLimit
+    mPDE.memoryLimit = memoryLimit
     mSim.memoryLimit = memoryLimit
     mSolve.memoryLimit = memoryLimit
     mAlgebra.memoryLimit = memoryLimit
     mSimplify.memoryLimit = memoryLimit
+
+    // initialze tool thread pools
+    mQE.init()
+    mPegasus.init()
+    mCEX.init()
+    mODE.init()
+    mPDE.init()
+    mSim.init()
+    mSolve.init()
+    mAlgebra.init()
+    mSimplify.init()
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
@@ -82,6 +97,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def shutdown(): Unit = {
     mQE.shutdown()
     mPegasus.shutdown()
+    mSOSsolve.shutdown()
     mCEX.shutdown()
     mODE.shutdown()
     mPDE.shutdown()
@@ -150,7 +166,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
-    mCEX.timeout = Integer.parseInt(Configuration.getOption(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
+    mCEX.timeout = Integer.parseInt(Configuration.get[String](Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
     mCEX.findCounterExample(formula)
   }
 
@@ -190,6 +206,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
+  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): Result = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
 
 
   /** Restarts the MathKernel with the current configuration */

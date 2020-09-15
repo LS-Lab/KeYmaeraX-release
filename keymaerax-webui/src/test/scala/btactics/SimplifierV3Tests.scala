@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
 
@@ -76,7 +76,7 @@ class SimplifierV3Tests extends TacticTestBase {
     //Force any =0s to be rewritten
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,TactixLibrary.QE)
     //Get rid of deMorgan once
-    val custom2 = DerivedAxioms.notNotEqual.fact
+    val custom2 = Ax.notNotEqual.provable
 
     val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
     val result = proveBy(fml,
@@ -265,6 +265,19 @@ class SimplifierV3Tests extends TacticTestBase {
     semires._1 shouldBe "x*y = 0 & ((x-5>=0|y>=0)|0-x>=0&f+g+1.0-(1+z)>=0)".asFormula
 
     maxminres._1 shouldBe "min((-abs(x*y),max((max((x-5,y)),min((0-x,f+g+1.0-(1+z)))))))>=0".asFormula
+  }
+
+  it should "not fail on true/false" in withMathematica { _ =>
+    semiAlgNormalize("true".asFormula)._1 shouldBe "0=0".asFormula
+    semiAlgNormalize("false".asFormula)._1 shouldBe "1=0".asFormula
+    semiAlgNormalize("true -> x>=5".asFormula)._1 shouldBe "1=0|x-5>=0".asFormula
+    semiAlgNormalize("x>=5 -> false".asFormula)._1 shouldBe "5-x>0|1=0".asFormula
+    semiAlgNormalize("!x>=5 -> false".asFormula)._1 shouldBe "x-5>=0|1=0".asFormula
+    semiAlgNormalize("true <-> x>=5".asFormula)._1 shouldBe "(0=0&x-5>=0)|(1=0&5-x>0)".asFormula
+
+    baseNormalize("false -> true".asFormula)._1 shouldBe "true|true".asFormula
+    algNormalize("true -> x=4".asFormula)._1 shouldBe "1*(x-4)=0".asFormula
+    maxMinGeqNormalize("false|x-5>=0".asFormula)._1 shouldBe "max((-1),x-5)>=0".asFormula
   }
 
 }

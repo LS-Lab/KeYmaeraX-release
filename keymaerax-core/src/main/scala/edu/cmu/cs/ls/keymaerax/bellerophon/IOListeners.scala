@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 
 /**
@@ -37,7 +37,7 @@ object IOListeners {
         }
       case _ => // do nothing
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
     override def kill(): Unit = {}
   }
 
@@ -61,7 +61,7 @@ object IOListeners {
         start = Some((p, expr), System.currentTimeMillis())
       case _ => // do nothing
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = (input, start) match {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = (input, start) match {
       // do not record time in nested calls
       case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
         recordedDuration += System.currentTimeMillis() - startTime
@@ -77,29 +77,27 @@ object IOListeners {
     private var executionStack = (t->0) :: Nil // branch index =0 except for BranchTactic
     private var start = System.currentTimeMillis()
 
-    private def stepInto(e: BelleExpr): Boolean = stepInto.nonEmpty && (e match {
-      case n: NamedBelleExpr if n.name == "ANON" => true
-      case n: NamedBelleExpr => stepInto.contains(n.name)
+    private def stepInto(e: BelleExpr): Boolean = stepInto.nonEmpty && (stepInto.head == "_ALL" || (e match {
+      case n: NamedBelleExpr => n.name == "ANON" || stepInto.contains(n.name)
       case _ => false
-    })
+    }))
 
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {
       //@todo recursive calls to same tactic may pop from stack prematurely (master? ODE?)
-      if (executionStack.nonEmpty && (expr == executionStack.head._1 || stepInto(executionStack.head._1))) expr match {
+      if (stepInto(executionStack.head._1) && !expr.eq(executionStack.head._1)) executionStack = (expr->0) +: executionStack
+      if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) expr match {
         case SeqTactic(l, _) => executionStack = (l->0) +: executionStack
-        case BranchTactic(b) if b.nonEmpty => executionStack = (b.head->0) +: executionStack
+        case BranchTactic(b) if b.nonEmpty =>
+          executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
         case RepeatTactic(e, i) => executionStack = List.fill(i)(e->0) ++ executionStack
         case EitherTactic(l, _) => executionStack = (l->0) +: executionStack
-        case OnAll(e) => input match {
-          case BelleProvable(p, _) => executionStack = (BranchTactic(Seq.fill(p.subgoals.size)(e))->0) +: executionStack
-          case _ =>
-        }
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
         case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
         case e: NamedBelleExpr if e.name == "ANON" => // always step into ANON
         // avoid duplicate printing of DependentPositionTactic and AppliedDependentPositionTactic
-        case e: NamedBelleExpr if e.getClass == executionStack.head._1.getClass =>
+        case _: DependentPositionTactic =>
+        case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
           start = System.currentTimeMillis()
           printer.print(BellePrettyPrinter(e) + "... ")
           if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
@@ -107,33 +105,71 @@ object IOListeners {
       }
     }
 
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
-      if (executionStack.nonEmpty && expr == executionStack.head._1) {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
+      if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) {
         executionStack = executionStack.tail
-        executionStack.headOption match {
-          case Some((SeqTactic(l, r), _)) if expr == l => executionStack = (r->0) +: executionStack
-          case Some((BranchTactic(b), i)) =>
-            if (i+1 < b.size) executionStack = (b(i+1)->0) +: (BranchTactic(b)->(i+1)) +: executionStack.tail
-          case Some((SaturateTactic(e), _)) if output.isLeft => executionStack = (e->0) +: executionStack
-          case Some((EitherTactic(l, r), _)) if expr == l && output.isRight => executionStack = (r->0) +: executionStack
-          case _ =>
+
+        def parent(stack: List[(BelleExpr, Int)]): List[NamedBelleExpr] = stack.filter({
+          case (n: NamedBelleExpr, _) => n.name != "ANON" && n.name != "done"
+          case _ => false
+        }).map(_._1.asInstanceOf[NamedBelleExpr])
+
+        val parentContinues: List[NamedBelleExpr] = executionStack.headOption match {
+          case Some((SeqTactic(l, r), _)) if expr.eq(l) =>
+            executionStack = (r->0) +: executionStack
+            parent(executionStack.tail)
+          case Some((bt@BranchTactic(b), i)) if i+1 < b.size =>
+            executionStack = (b(i+1)->0) +: (bt->(i+1)) +: executionStack.tail
+            parent(executionStack.tail.tail)
+          case Some((SaturateTactic(e), _)) => output match {
+            // SaturateTactic always succeeds, but will noop if inner failed
+            case Left(outValue) if outValue != input =>
+              executionStack = (e->0) +: executionStack
+              parent(executionStack.tail)
+            case _ => Nil
+          }
+          case Some((EitherTactic(l, r), _)) if expr.eq(l) && output.isRight =>
+            executionStack = (r->0) +: executionStack
+            parent(executionStack.tail)
+          case _ => Nil
         }
 
         val status = output match {
           case Left(BelleProvable(p, _)) =>
             if (p.isProved) "proved"
             else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
-            else "unfinished"
+            else input match {
+              case BelleProvable(q, _) =>
+                if (p.subgoals == q.subgoals) "no progress"
+                else {
+                  val change = p.subgoals.diff(q.subgoals).size - q.subgoals.diff(p.subgoals).size
+                  if (change > 0) "added " + change + " goal(s)"
+                  else if (change == 0) "transformed goal(s)"
+                  else "closed " + change + " goal(s)"
+                }
+              case _ => "Unexpected output provable from input error"
+            }
           case _ => "failed"
         }
 
         expr match {
-          case ApplyDefTactic(DefTactic(name, _)) => printer.println(s"$name done (" + status + ")")
-          case e: AppliedPositionTactic => printer.println("done (" + status + ")")
+          case ApplyDefTactic(DefTactic(name, _)) => printer.println(name + " done (" + status + ")")
+          case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
-            printer.println(s"${e.name} done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
-          case _: NamedBelleExpr => printer.println("done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+            printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+          case n: NamedBelleExpr if n.name != "ANON" => printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
+        }
+
+        if (parentContinues.nonEmpty) println("continuing " + parentContinues.reverse.map(_.name).mkString(" > ") + "...")
+      } else if (executionStack.nonEmpty && stepInto(executionStack.head._1)) {
+        val popTo = executionStack.indexWhere(_._1.eq(expr))
+        //@todo fix root cause of wrong stack
+        if (popTo >= 0) {
+          println("WARNING skipped end of: " + executionStack.take(popTo).map(_._1.prettyString).mkString(","))
+          executionStack = executionStack.drop(popTo).tail
+        } else {
+          println("WARNING end of unrecorded beginning " + expr.prettyString)
         }
       }
     }
@@ -142,14 +178,14 @@ object IOListeners {
   }
 
   /** A progresss listener that collects the top-level tactic progress in a buffer. */
-  case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, BelleThrowable])] = mutable.Buffer.empty) extends IOListener() {
+  case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, Throwable])] = mutable.Buffer.empty) extends IOListener() {
     private var current: Option[(BelleExpr, Long)] = None
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {
       if (current.isEmpty) {
         current = Some(expr, System.currentTimeMillis())
       }
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
       if (current.map(_._1).contains(expr)) {
         progress.append((expr, output))
         current = None

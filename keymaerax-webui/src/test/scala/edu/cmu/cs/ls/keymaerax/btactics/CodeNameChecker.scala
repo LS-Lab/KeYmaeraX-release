@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.NamedBelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Range
@@ -25,7 +27,7 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   //@todo also reflect through all DerivedAxioms to check they've been added to AxiomInfo
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { _ =>
     val all = DerivationInfo.allInfo
-    for (info <- all) {
+    for ((name, info) <- all) {
       //println("Checking " + info.codeName)
       instantiateSomeBelle(info) match {
           // made compile by reflection or generalizing type hierarchy for some BelleExpr
@@ -39,16 +41,16 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   }
 
   "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { _ =>
-    val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
     // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
     val im = mirror.reflect(moduleMirror.instance)
 
     //@note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
     Range(0, fieldMirrors.length-1).foreach(idx => {

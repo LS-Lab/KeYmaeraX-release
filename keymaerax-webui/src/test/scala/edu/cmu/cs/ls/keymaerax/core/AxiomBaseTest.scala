@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -45,7 +45,7 @@ class AxiomBaseTest extends TacticTestBase {
     val pr3 = proveBy("false".asFormula,
       cut("\\exists t \\exists x (t=0&x=1)".asFormula)<(skip,QE) & existsL('L) & existsL('L) &
         cut("<{x'=x^2,t'=1}>t>=1".asFormula) <(
-          useAt("<> diamond",PosInExpr(1::Nil))(-2) & hideR(1) & notL('L) &
+          useAt(Ax.diamond, PosInExpr(1::Nil))(-2) & hideR(1) & notL('L) &
             dC("(x>=1 & x*(1-t)=1)".asFormula)(1) < (dW(1) & QE, implyRi & by(pr2)),
           hideR(1) & implyRi & by (pr)
         )

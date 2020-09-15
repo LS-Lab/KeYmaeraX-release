@@ -8,9 +8,10 @@ import java.lang.Number
 
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, OptionArg}
 import org.apache.logging.log4j.scala.Logger
 
 import scala.annotation.tailrec
@@ -18,7 +19,7 @@ import scala.annotation.tailrec
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
   * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   */
 object UIIndex {
   private val logger = Logger(UIIndex.getClass)
@@ -26,13 +27,13 @@ object UIIndex {
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
     case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
-    case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.isEmpty)
+    case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.forall( p => p.isInstanceOf[OptionArg]))
   }
 
 
 
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
-    find(DerivationInfo(_).inputs.isEmpty)
+    find(DerivationInfo(_).inputs.forall( p => p.isInstanceOf[OptionArg]))
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
@@ -134,7 +135,7 @@ object UIIndex {
         val rules = maybeSplit ++ alwaysApplicable ++ ("diamondd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
-          case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
+          case Assign(_: BaseVariable, _) => "assignd" :: rules
           case _: AssignAny => "<:*> assign nondet" :: rules
           case _: Test => "<?> test" :: rules
           case _: Compose => "<;> compose" :: rules

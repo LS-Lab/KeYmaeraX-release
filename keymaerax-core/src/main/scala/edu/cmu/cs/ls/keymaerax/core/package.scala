@@ -132,7 +132,7 @@ import scala.io.Source
   * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
   * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
   * See [[https://doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]]
-  * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]].
+  * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.Ax]].
   *
   * ===Uniform Substitutions===
   * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] uniformly replace all occurrences of a given predicate p(.) by a formula in (.)

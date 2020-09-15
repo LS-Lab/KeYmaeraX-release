@@ -901,7 +901,9 @@ del {
 }
 
 .k4-sequentRule {
-  width: calc(100% - 2em);
+  width: 100%;
+  padding-left: 2em;
+  padding-right: 2em;
   text-align: center;
 }
 
@@ -913,8 +915,8 @@ del {
   width: 2em;
   display: block;
   position: absolute;
-  left: 0em;
-  top: 50%;
+  left: 1.5em;
+  top: 40%;
 }
 .k4-sequentRule > ul:first-child > li {
   height: 3ex;

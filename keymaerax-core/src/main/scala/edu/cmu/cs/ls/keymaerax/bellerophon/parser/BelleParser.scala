@@ -8,7 +8,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -17,8 +18,9 @@ import scala.annotation.tailrec
   * The Bellerophon parser
   *
   * @author Nathan Fulton
+  * @see [[DLBelleParser]]
   */
-object BelleParser extends (String => BelleExpr) with Logging {
+object BelleParser extends TacticParser with Logging {
   case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
                             parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
@@ -30,6 +32,10 @@ object BelleParser extends (String => BelleExpr) with Logging {
     }
   }
 
+  override val tacticParser: String => BelleExpr = this
+  override val expressionParser: Parser = Parser.parser
+  override val printer: BelleExpr => String = BellePrettyPrinter
+
   /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
@@ -39,13 +45,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
                       defs: Declaration = Declaration(Map()), expandAll: Boolean = false): BelleExpr =
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
-      case None => try {
-        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
-      } catch {
-        case e: Throwable =>
-          logger.error("Error parsing\n" + s, e)
-          throw e
-      }
+      case None => parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
     }
 
   /** Non-unicode characters that are allowed in KeYmaera X input files.
@@ -206,26 +206,6 @@ object BelleParser extends (String => BelleExpr) with Logging {
         }
       //endregion
 
-      //region After combinator
-      case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(AFTER_COMBINATOR, combatinorLoc) => st.input.headOption match {
-        case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(BelleToken(IDENT(_), _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(BelleToken(PARTIAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
-        case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
-      }
-      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(AFTER_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
-        st.input.headOption match {
-          case Some(BelleToken(AFTER_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
-          case Some(BelleToken(SEQ_COMBINATOR | DEPRECATED_SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
-          case _ =>
-            val parsedExpr = left > right
-            parsedExpr.setLocation(combatinorLoc)
-            ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(rightLoc)), st.input)
-        }
-      //endregion
-
       //region Branch combinator
       case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) => st.input.headOption match {
         case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
@@ -333,18 +313,46 @@ object BelleParser extends (String => BelleExpr) with Logging {
             case FuncOf(fn, _) => fn
             case PredOf(fn, _) => fn
             case p: ProgramConst => p
+            case s: SystemConst => s
           }
           defs.substs.find(sp => sp.what match {
             case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
             case ProgramConst(n, _) => n == x.name
+            case SystemConst(n, _) => n == x.name
           }) match {
             case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc)), tail)
             case None => throw ParseException(s"Expression definition not found: '${x.prettyString}'", st)
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
-        ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
+        //@note uses location information to distinguish file definitions from proof definitions (e.g., abstract loop invariant J(x))
+        val (modelDefs, proofDefs) = defs.decls.partition({
+          case (_, (_, _, _, _, UnknownLocation)) => false
+          case _ => true
+        })
+        val modelSubsts = Declaration(modelDefs).substs
+        val modelExpand = if (modelSubsts.nonEmpty) Some(ExpandAll(modelSubsts)) else None
+        // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
+        val proofsExpand = defs.substs.filter(_.what match {
+          case FuncOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case PredOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case ns: ProgramConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case _ => false
+        }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
+        val expand = (modelExpand, proofsExpand) match {
+          case (Some(me), Some(pe)) => Some(pe & me)
+          case (Some(me), None) => Some(me)
+          case (None, Some(pe)) => Some(pe)
+          case (None, None) => None
+        }
+        expand match {
+          case Some(e) => ParserState(r :+ ParsedBelleExpr(e, loc), st.input)
+          case None => st.input match {
+            case BelleToken(SEQ_COMBINATOR, _) :: rest => ParserState(r, rest)
+            case _ => ParserState(r, st.input)
+          }
+        }
       //endregion
 
       //region Stars and Repitition
@@ -509,7 +517,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
       try {
         ReflectiveExpressionBuilder(name, newArgs, g, defs)
       } catch {
-        case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
+        case e: ReflectiveExpressionBuilderExn =>
+          throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
       }
     }
   }
@@ -537,7 +546,9 @@ object BelleParser extends (String => BelleExpr) with Logging {
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
 
-      def expand[T <: Expression](e: T): T = if (expandAll) defs.exhaustiveSubst(e) else defs.elaborateToFunctions(e)
+      def expand[T <: Expression](e: T): T =
+        if (expandAll) defs.elaborateToFunctions(defs.exhaustiveSubst(e))
+        else defs.elaborateToFunctions(e)
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
@@ -546,8 +557,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
         case Nil => Nil
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
-          assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc) match {
+          assert(nonPosArgCount < DerivationInfo(codeName).persistentInputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).persistentInputs.length} but found at least ${nonPosArgCount+1})")
+          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).persistentInputs(nonPosArgCount)))(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case v => v
           }
@@ -610,11 +621,13 @@ object BelleParser extends (String => BelleExpr) with Logging {
         import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
         //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
-        val unwrappedExpectedType = expectedType match {
-          case Some(OptionArg(argType)) => argType
-          case Some(argType) => argType
+        def unwrappedExpectedType(ai: ArgInfo): ArgInfo = ai match {
+          case ListArg(argType) => unwrappedExpectedType(argType)
+          case OptionArg(argType) => unwrappedExpectedType(argType)
+          case argType => argType
         }
-        unwrappedExpectedType match {
+        unwrappedExpectedType(expectedType.get) match {
+          case _:PosInExprArg => Left(PosInExpr(tok.undelimitedExprString.split('.').filter(_ != "").map(_.toInt).toList))
           case _:StringArg => Left(tok.undelimitedExprString)
           case _:SubstitutionArg if tok.expression.isRight => Left(tok.expression.right.get)
           case _:SubstitutionArg => throw ParseException(s"Could not parse ${tok.exprString} as a substitution pair, when a substitution pair was expected.", loc)

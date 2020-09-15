@@ -25,7 +25,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
   *
   * Created by smitsch on 01/04/18.
   */
-class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXArchiveParser.ParsedArchiveEntry => String) {
+class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
   private val ARCHIVE_ENTRY_BEGIN: String = "ArchiveEntry"
   private val LEMMA_BEGIN: String = "Lemma"
   private val THEOREM_BEGIN: String = "Theorem"
@@ -34,7 +34,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
   private val END_BLOCK: String = "End."
 
   /** Prints the `entry`. */
-  def apply(entry: KeYmaeraXArchiveParser.ParsedArchiveEntry): String = {
+  def apply(entry: ParsedArchiveEntry): String = {
     val head = entry.kind match {
       case "lemma" => LEMMA_BEGIN
       case "theorem" => THEOREM_BEGIN
@@ -77,7 +77,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
     }).filter(_.nonEmpty).mkString("\n")
 
     val printedDefs = defs.map({
-      case ((name, idx), (domain, codomain, interpretation, _)) =>
+      case ((name, idx), (domain, codomain, argNames, interpretation, _)) =>
         val printedSort = codomain match {
           case Trafo => "" //@todo program arguments not yet supported
           case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
@@ -116,7 +116,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
        #$END_BLOCK""".stripMargin('#')
 
     val finalPrint = if (withComments) {
-      assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
+      assert(ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
@@ -157,7 +157,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
 
 }
 
-class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXArchiveParser.ParsedArchiveEntry => String) {
+class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
   private val ARCHIVE_ENTRY_BEGIN: String = "ArchiveEntry"
   private val LEMMA_BEGIN: String = "Lemma"
   private val THEOREM_BEGIN: String = "Theorem"
@@ -175,7 +175,7 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (KeYm
   }
 
   /** Prints the `entry`. */
-  def apply(entry: KeYmaeraXArchiveParser.ParsedArchiveEntry): String = {
+  def apply(entry: ParsedArchiveEntry): String = {
     val head = entry.kind match {
       case "lemma" => LEMMA_BEGIN
       case "theorem" => THEOREM_BEGIN
@@ -222,9 +222,9 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (KeYm
       }).filter(_.nonEmpty).mkString("\n")
 
       val printedDefs = defs.map({
-        case ((name, idx), (domain, codomain, interpretation, _)) if codomain == Trafo =>
+        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain == Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)} ${printDef(codomain, interpretation)}."
-        case ((name, idx), (domain, codomain, interpretation, _)) if codomain != Trafo =>
+        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain != Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
         case _ => ""
       }).filter(_.nonEmpty)
@@ -259,7 +259,7 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (KeYm
                        #$END_BLOCK""".stripMargin('#')
 
       if (withComments) {
-        assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
+        assert(ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
           "Expected printed entry and stored problem content to reparse to same model")
 
         """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {

@@ -19,6 +19,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
@@ -119,9 +121,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
       (Diamond(prg, posteqs), nonboundAssumptions)
     }
 
-    fml match {
-      case Imply(assumptions, Box(prg, _)) => conjectureOf(assumptions, prg)
-      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
+    proveBy(fml, SaturateTactic(TactixLibrary.alphaRule)).subgoals match {
+      case IndexedSeq(Sequent(assumptions, alternatives)) =>
+        val (boxes, negAssumptions) = alternatives.partition({ case _: Box => true case _ => false })
+        require(boxes.size == 1, "Expected a single box property, but got " + boxes.mkString(","))
+        val Box(prg, _) = boxes.head
+        conjectureOf((assumptions ++ negAssumptions.map(Not)).reduceRightOption(And).getOrElse(True), prg)
+      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml + "; formula must be propositionally equivalent to A -> [prg;]P")
     }
   }
 
@@ -169,7 +175,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
         case BelleProvable(p, _) =>
           val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
-          p.subgoals.head.sub(t.locator.toPosition(p)) match {
+          p.subgoals.head.sub(t.locator.toPosition(p).getOrElse(throw new IllFormedTacticApplicationException("ModelPlex input proof provides position locator that points to no valid position in the sequent"))) match {
             case Some(Box(ODESystem(_, qq@And(_, prevDi)), _)) if qq != q =>
               //@todo identify branch (e.g., (a=-B -> dC1) & (a=0 -> dC2) & (a=A -> dC3)
               //@todo shared diffcuts before branch
@@ -193,7 +199,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       }
       case _ => // nothing to do
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = expr match {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = expr match {
       case b@BranchTactic(children) if loopBranch.contains(b) => loopBranch = None
       case _ =>
     }
@@ -398,7 +404,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val upsilonConjuncts = FormulaTools.conjuncts(upsilon)
 
     /*@note chase but stop on <ctrl>fallbackUpsilon */
-    val chaseFallback = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    val chaseFallback = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
       case Some(Diamond(prg, _)) if prg == ctrl => nil
       case _ => step(pos) | alphaRule | allR(pos)
     })
@@ -427,12 +433,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
         implyR(1) & cut(Box(ctrl, inv)) & Idioms.<(
           cut(Diamond(ctrl, And(inv, And(upsilon, odeDomain)))) & Idioms.<(
             hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
-            useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+            useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
             notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
             upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
             prop & DebuggingTactics.done("External control passes monitor 1")
             ,
-            useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) &
+            useAt(Ax.Kd2, PosInExpr(1::1::Nil))(2) & onAll(prop) &
             DebuggingTactics.done("External control passes monitor 2")
           ),
           useLemma(name+"_2", Some(prop)) & DebuggingTactics.done("External control passes monitor 3")
@@ -445,14 +451,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
             SaturateTactic(chaseFallback('Llast)) & cut(Box(ctrl, inv)) <(
             cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
-              useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+              useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
               notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).
                 map(c => exhaustiveEqR2L('L, c)).
                 reduce[BelleExpr](_&_) &
               prop & DebuggingTactics.done("Fallback 1")
               ,
-              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
+              useAt(Ax.Kd2, PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
               DebuggingTactics.done("Fallback 2")
             )
             ,
@@ -486,7 +492,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val upsilonConjuncts = FormulaTools.conjuncts(upsilon)
 
     /*@note chase but stop on <ctrl>fallbackUpsilon */
-    val chaseFallback = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    val chaseFallback = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
       case Some(Diamond(prg, _)) if prg == ctrl => nil
       case _ => step(pos) | alphaRule | allR(pos)
     })
@@ -519,13 +525,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
               DebuggingTactics.print("Using external control actuation cuts") &
               chase(1) &
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
-              useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+              useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
               notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
               prop & DebuggingTactics.done("Using external control actuation cuts")
               ,
               DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
-              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) &
+              useAt(Ax.Kd2, PosInExpr(1::1::Nil))(2) & onAll(prop) &
               DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
             )
             ,
@@ -543,13 +549,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
               cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
                 DebuggingTactics.print("Using fallback cuts") &
                 chase(1) & hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
-                useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+                useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
                 notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
                 fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqR2L('L, c)).reduce[BelleExpr](_&_) &
                 prop & DebuggingTactics.done("Using fallback cuts")
                 ,
                 DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
-                useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
+                useAt(Ax.Kd2, PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
                 DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
               )
               ,
@@ -579,13 +585,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * operate on input produced by createMonitorSpecificationConjecture.
     *
     * @see [[createMonitorSpecificationConjecture]]
-   * @example{{{
+   * @example {{{
    *        |- xpost=1
    *        ------------------------------controllerMonitorByChase(1)
    *        |- <{x:=1; {x'=2}}*>xpost=x
    * }}}
    * In order to produce the result above, the tactic performs intermediate steps as follows.
-   * @example{{{
+   * @example {{{
    *        |- xpost=1
    *        ------------------------------true&
    *        |- (true & xpost=1)
@@ -600,10 +606,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
    */
   def controllerMonitorByChase: DependentPositionTactic = chase(3,3, (e:Expression) => e match {
     // remove loops
-    case Diamond(Loop(_), _) => "<*> approx" :: Nil
+    case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
     // remove ODEs for controller monitor
-    case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-    case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+    case Diamond(ODESystem(_, _), _) => Ax.Dskipd :: Nil
+    case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
   })
 
   def chaseToTests(combineTests: Boolean): DependentPositionTactic = {
@@ -620,14 +626,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
 
     chaseI(3,3, (e:Expression) => e match {
-      case Or(_, _) => "| recursor" :: Nil
-      case And(_, _) => "<?> invtest" :: Nil
-      case f: Formula if f.isFOL && f != True => "&true inv" :: Nil
+      case Or(_, _) => Ax.orRecursor :: Nil
+      case And(_, _) => Ax.invtestd :: Nil
+      case f: Formula if f.isFOL && f != True => Ax.andTrueInv:: Nil
       case f: Formula if f == True => Nil
-      case Diamond(Test(_), Diamond(Test(_), _)) if combineTests => "<?> combine" :: Nil
-      case _: Diamond => "<a> stuck" :: Nil
+      case Diamond(Test(_), Diamond(Test(_), _)) if combineTests => Ax.testdcombine :: Nil
+      case _: Diamond => Ax.programStuck:: Nil
       //case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-    }, (_,_) => pr=>pr, _ => us=>us, AxiomIndex.axiomIndex)
+    }, (_,_) => pr=>pr, _ => us=>us, AxIndex.axiomIndex)
   }
 
   /**
@@ -639,28 +645,28 @@ object ModelPlex extends ModelPlexTrait with Logging {
     */
   lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
   def modelMonitorByChase(ode: DependentPositionTactic =
-    "SolveAndChase" by ((pos: Position, seq: Sequent) => {
+    anon ((pos: Position, seq: Sequent) => { // was "SolveAndChase"
       AxiomaticODESolver.axiomaticSolve()(pos) & chase(3, 3, (e:Expression) => e match {
         // remove loops
-        case Diamond(Loop(_), _) => "<*> approx" :: Nil
+        case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
         // keep ODEs, solve later
         case Diamond(ODESystem(_, _), _) => Nil
-        case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+        case _ => println("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
       })(pos ++ PosInExpr(0::1::Nil)) & SimplifierV3.simpTac()(pos ++ PosInExpr(0::1::Nil))
-    })): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+    })): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match { // was "modelMonitor"
     // remove loops and split compositions to isolate differential equations before splitting choices
-    case Diamond(Loop(_), _) => "<*> approx" :: Nil
-    case Diamond(Compose(_, _), _) => AxiomIndex.axiomsFor(e)
+    case Diamond(Loop(_), _) => Ax.loopApproxd:: Nil
+    case Diamond(Compose(_, _), _) => AxIndex.axiomsFor(e)
     case _ => Nil
   })(pos) &
     applyAtAllODEs(ode)(pos) & // solve isolated ODEs once before splitting choices
     // chase and solve remaining
     chase(3,3, (e:Expression) => e match {
       // remove loops
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       // keep ODEs, solve later
       case Diamond(ODESystem(_, _), _) => Nil
-      case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+      case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
     })(pos) &
     applyAtAllODEs(ode)(pos))
 
@@ -674,7 +680,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   })
 
   /** Euler-approximates all atomic ODEs somewhere underneath pos */
-  def eulerAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  def eulerAllIn: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     val eulerAxiom = "<{x_'=f(x_)}>p(x_) <-> \\exists t_ (t_>=0 & \\forall e_ (e_>0 -> \\forall h0_ (h0_>0 -> \\exists h_ (0<h_&h_<h0_&<{x_:=x_+h_*f(x_);}*>(t_>=0 & \\exists y_ (abs(x_-y_) < e_ & p(y_))) ))))".asFormula
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       case (Diamond(_: ODESystem, _), pp) => Some(useAt(ProvableSig.startProof(eulerAxiom), PosInExpr(0::Nil))(pp))
@@ -684,7 +690,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   })
 
   /** Euler-approximates all ODEs somewhere underneath pos. Systematic tactic, but not a proof. */
-  def eulerSystemAllIn: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  def eulerSystemAllIn: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     /** Simultaneous updates of all variables with step size h */
     def createSystemApprox(atoms: List[AtomicODE], h: Term): Program = {
       val initial: Map[Variable, Variable] = atoms.map({ case AtomicODE(DifferentialSymbol(x), _) =>
@@ -733,13 +739,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   /** Unrolls diamond loops */
-  def unrollLoop(n: Int): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  def unrollLoop(n: Int): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     if (n <= 0) skip
     else {
       val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Diamond(_: Loop, _), pp) =>
-          if (n == 1) Some(useAt("<*> approx")(pp))
-          else Some(useAt("<*> iterate", PosInExpr(0 :: Nil))(pp))
+          if (n == 1) Some(useAt(Ax.loopApproxd)(pp))
+          else Some(useAt(Ax.iterated, PosInExpr(0 :: Nil))(pp))
         case _ => None
       })
       positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & unrollLoop(n-1)(pos)
@@ -747,7 +753,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   })
 
   /** Chases remaining assignments. */
-  lazy val chaseEulerAssignments: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  lazy val chaseEulerAssignments: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
       case (Diamond(_, _), pp) => Some(chase(pp))
       case _ => None
@@ -776,12 +782,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @see [[modelMonitorT]]
    */
   def modelplexAxiomaticStyle(useOptOne: Boolean)
-                             (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = "Modelplex In-Place" by ((pos: Position, sequent: Sequent) => {
+                             (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    // was "Modelplex In-Place"
     sequent.sub(pos) match {
       case Some(Diamond(_, _)) =>
         (SaturateTactic(debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))) &
           debug("Done with transformation, now looking for quantifiers") &
           debug("Modelplex done")
+      case Some(e) => throw new TacticInapplicableFailure("Modelplex In-Place only applicable to diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -793,16 +802,17 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @return The tactic.
    */
   def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
-    "Axiomatic controller monitor" by ((pos: Position) =>
+    // was named "Axiomatic controller monitor"
+    anon ((pos: Position) =>
       locateT(
-        useAt("<*> approx", PosInExpr(1::Nil)) ::
-        useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
-        useAt("<;> compose") ::
-        useAt("<++> choice") ::
-        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
-        useAt("<?> test") ::
-        useAt("<:=> assign") ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
+        useAt(Ax.Dskipd, PosInExpr(1::Nil)) ::
+        useAt(Ax.composed) ::
+        useAt(Ax.choiced) ::
+        (anon ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) :: // was "<:*> nondet assign opt. 1"
+        useAt(Ax.testd) ::
+        useAt(Ax.assigndAxiom) ::
+        (anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip))) :: // was "<:=> assign opt. 1"
         Nil)(pos))
 
   /**
@@ -812,16 +822,16 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
-  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = "Axiomatic model monitor" by ((pos: Position) =>
+  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = anon ((pos: Position) => // was "Axiomatic model monitor"
     locateT(
-      useAt("<*> approx", PosInExpr(1::Nil)) ::
+      useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
         AxiomaticODESolver.axiomaticSolve() ::
-        useAt("<;> compose") ::
-        useAt("<++> choice") ::
-        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
-        useAt("<?> test") ::
-        useAt("<:=> assign") ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.composed) ::
+        useAt(Ax.choiced) ::
+        (anon ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) :: // was "<:*> nondet assign opt. 1"
+        useAt(Ax.testd) ::
+        useAt(Ax.assigndAxiom) ::
+        (anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip))) :: // was "<:=> assign opt. 1"
         Nil)(pos))
 
   /**
@@ -830,14 +840,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
     *
     * @return The tactic.
    */
-  def diamondDiffSolve2DT: DependentPositionTactic = "<','> differential solution" by ((pos: Position, sequent: Sequent) => {
+    // was "<','> differential solution"
+  def diamondDiffSolve2DT: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     ??? //(diffIntroduceConstantT & ODETactics.diamondDiffSolve2DT)(p)
   })
 
   /**
    * Returns a modified test tactic for axiom <?H>p <-> H & (H->p)
     *
-    * @example{{{
+    * @example {{{
    *          |- x>0 & (x>0 -> [x'=x]x>0)
    *          ---------------------------diamondTestRetainCondition
    *          |- <?x>0>[x'=x]x>0
@@ -851,7 +862,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
    * taking the outermost such sub-position of p. Formulas only.
     *
-    * @example{{{
+    * @example {{{
    *           |- a=1 & (<x:=2;>x+y>0 & <y:=3;>x+y>0)
    *           ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
    *           |- a=1 & <x:=2; ++ y:=3;>x+y>0
@@ -859,7 +870,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @param tactics The list of tactics.
    * @return The tactic.
    */
-  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = "Modelplex Locate" by ((pos: Position, sequent: Sequent) => {
+  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    // was "Modelplex Locate"
     require(tactics.nonEmpty, "At least 1 tactic required")
     val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)
 
@@ -877,18 +889,19 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
     * somewhere in the quantified formula.
     *
-    * @example{{{
+    * @example {{{
     *           |- xpost>0 & xpost=xpost
     *           ------------------------------optimizationOneWithSearch
     *           |- \exists x x>0 & xpost=x
     * }}}
     * @see[[optimizationOneWithSearchAt]]
     */
-  def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula]): DependentPositionTactic = "Optimization 1 with instance search" by ((pos: Position, sequent: Sequent) => {
+  def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    // was "Optimization 1 with instance search"
     val simplForall1 = proveBy("p(f()) -> \\forall x_ (x_=f() -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
     val simplForall2 = proveBy("p(f()) -> \\forall x_ (f()=x_ -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
 
-    def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = "ANON" by ((pp: Position, seq: Sequent) => {
+    def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = anon ((pp: Position, seq: Sequent) => {
       tool match {
         case None => skip
         case Some(t) =>
@@ -932,7 +945,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
     * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search at" by ((pos: Position, sequent: Sequent) => {
+  private def optimizationOneWithSearchAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    // was "Optimization 1 with instance search at"
     sequent.sub(pos) match {
       case Some(Exists(vars, And(Equal(l, r), _))) if pos.isSucc && vars.contains(l) =>
         // case from deterministic assignments
@@ -984,6 +998,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val equality: Option[Term] = if (postEquality.isDefined) postEquality else synonyms.headOption
 
         optimizationOneAt(equality.map(v -> _))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -993,12 +1009,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * the tactic may be used in intermediate steps of ModelPlex, it uses fresh variants of the post-variable for
    * instantiation, if asked to automatically instantiate.
     *
-    * @example{{{
+    * @example {{{
    *           |- z>0 & xpost=z
    *           -----------------------------------optimizationOne(Some(Variable("x"), Variable("z")))
    *           |- \exists x (x>0 & xpost=x)
    * }}}
-   * @example{{{
+   * @example {{{
    *           |- xpost_0>0 & xpost=xpost_0
    *           -----------------------------------optimizationOne(None)
    *           |- \exists x (x>0 & xpost=x)
@@ -1010,7 +1026,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def optimizationOne(inst: Option[(Variable, Term)] = None): DependentPositionTactic = locateT(optimizationOneAt(inst)::Nil)
 
   /** Opt. 1 at a specific position */
-  private def optimizationOneAt(inst: Option[(Variable, Term)] = None): DependentPositionTactic = "Optimization 1" by ((pos: Position, sequent: Sequent) => {
+  private def optimizationOneAt(inst: Option[(Variable, Term)] = None): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    // was "Optimization 1"
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc => inst match {
           case Some(i) => existsR(i._1, i._2)(pos)
@@ -1026,11 +1043,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
             val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
             allL(v, post)(pos)
         }
+      case Some(e) => throw new TacticInapplicableFailure("Optimization 1 only applicable to quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
   /** Simplifies reflexive comparisons and implications/conjunctions/disjunctions with true. */
-  def simplify(): DependentTactic = "ModelPlex Simplify" by ((sequent: Sequent) => {
+  // was "ModelPlex Simplify"
+  def simplify(): DependentTactic = anon ((sequent: Sequent) => {
     sequent.ante.indices.map(i => SimplifierV2.simpTac(AntePosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
     sequent.succ.indices.map(i => SimplifierV2.simpTac(SuccPosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
@@ -1038,37 +1058,39 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Turns the formula `fml` into a single inequality. */
   def toMetric(fml: Formula): Formula = {
     val cmpNF = chase(3, 3, (e: Expression) => e match {
-      case NotEqual(_, _) => "!= expand"::Nil
-      case Equal(_, _) => "= expand"::Nil
-      case And(_, _) => "& recursor"::Nil
-      case Or(_, _) => "| recursor"::Nil
+      case And(_, _) => Ax.andRecursor::Nil
+      case Or(_, _) => Ax.orRecursor::Nil
+      case NotEqual(_, _) => Ax.notEqualExpand::Nil
+      case Equal(_, _) => Ax.equalExpand::Nil
       case _ => Nil
     })
 
     val arithNF = chase(3, 3, (e: Expression) => e match {
-      case Less(_, r) if r != Number(0) => "metric <"::Nil
-      case LessEqual(_, r) if r != Number(0) => "metric <="::Nil
-      case And(_,_) => "& recursor"::Nil
-      case Or(_,_) => "| recursor"::Nil
+      case And(_,_) => Ax.andRecursor::Nil
+      case Or(_,_) => Ax.orRecursor::Nil
+      case Less(_, r) if r != Number(0) => Ax.metricLt::Nil
+      case LessEqual(_, r) if r != Number(0) => Ax.metricLe::Nil
       case _ => Nil
     })
 
+    def aiTupled(ai: AxiomInfo): (ProvableSig, PosInExpr, List[PosInExpr]) = (ai.provable, ai.key, ai.recursor)
+
     val propNF = chaseCustom({
-      case LessEqual(_, _) => fromAxIndex("<= to <")::Nil
-      case And(Less(_, _), Less(_, _)) => fromAxIndex("metric < & <")::Nil
-      case And(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= & <=")::Nil
-      case And(LessEqual(_, _), Less(_, _)) => fromAxIndex("& recursor")::Nil
-      case And(Less(_, _), LessEqual(_, _)) => fromAxIndex("& recursor")::Nil
-      case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("& recursor")::Nil
-      case And(_: BinaryCompositeFormula, _) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case And(_, _: BinaryCompositeFormula) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
-      case Or(Less(_, _), Less(_, _)) => fromAxIndex("metric < | <")::Nil
-      case Or(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= | <=")::Nil
-      case Or(LessEqual(_, _), Less(_, _)) => fromAxIndex("| recursor")::Nil
-      case Or(Less(_, _), LessEqual(_, _)) => fromAxIndex("| recursor")::Nil
-      case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("| recursor")::Nil
-      case Or(_: BinaryCompositeFormula, _) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case Or(_, _: BinaryCompositeFormula) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case LessEqual(_, _) => aiTupled(Ax.leApprox)::Nil
+      case And(Less(_, _), Less(_, _)) => aiTupled(Ax.metricAndLt)::Nil
+      case And(LessEqual(_, _), LessEqual(_, _)) => aiTupled(Ax.metricAndLe)::Nil
+      case And(LessEqual(_, _), Less(_, _)) => aiTupled(Ax.andRecursor)::Nil
+      case And(Less(_, _), LessEqual(_, _)) => aiTupled(Ax.andRecursor)::Nil
+      case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => aiTupled(Ax.andRecursor)::Nil
+      case And(_: BinaryCompositeFormula, _) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case And(_, _: BinaryCompositeFormula) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case Or(Less(_, _), Less(_, _)) => aiTupled(Ax.metricOrLt)::Nil
+      case Or(LessEqual(_, _), LessEqual(_, _)) => aiTupled(Ax.metricOrLe)::Nil
+      case Or(LessEqual(_, _), Less(_, _)) => aiTupled(Ax.orRecursor)::Nil
+      case Or(Less(_, _), LessEqual(_, _)) => aiTupled(Ax.orRecursor)::Nil
+      case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => aiTupled(Ax.orRecursor)::Nil
+      case Or(_: BinaryCompositeFormula, _) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case Or(_, _: BinaryCompositeFormula) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case _ => Nil
     })
 

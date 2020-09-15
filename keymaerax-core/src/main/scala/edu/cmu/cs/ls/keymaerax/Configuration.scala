@@ -12,6 +12,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 
 import scala.reflect.runtime.universe._
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Map
 
 /** The KeYmaera X configuration.
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
@@ -34,6 +35,7 @@ object Configuration {
     val WOLFRAMENGINE_JLINK_LIB_DIR = "WOLFRAMENGINE_JLINK_LIB_DIR"
     val WOLFRAMENGINE_TCPIP = "WOLFRAMENGINE_TCPIP"
     val LAX = "LAX"
+    val PARSER = "PARSER"
     val LEMMA_COMPATIBILITY = "LEMMA_COMPATIBILITY"
     val LEMMA_CACHE_PATH = "LEMMA_CACHE_PATH"
     val LOG_ALL_FO = "LOG_ALL_FO"
@@ -43,6 +45,10 @@ object Configuration {
     val PORT = "PORT"
     val PROOF_TERM = "PROOF_TERM"
     val QE_LOG_PATH = "QE_LOG_PATH"
+    val SOSSOLVE_LOG_PATH = "SOSSOLVE_LOG_PATH"
+    val SOSSOLVE_LOG_INPUT = "SOSSOLVE_LOG_INPUT"
+    val SOSSOLVE_LOG_TIMEOUT = "SOSSOLVE_LOG_TIMEOUT"
+    val SOSSOLVE_VARIABLE_ORDERING = "SOSSOLVE_VARIABLE_ORDERING"
     val QE_TOOL = "QE_TOOL"
     val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
@@ -55,6 +61,10 @@ object Configuration {
     val QE_ALLOW_INTERPRETED_FNS = "QE_ALLOW_INTERPRETED_FNS"
     val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINALQE"
     val ODE_USE_NILPOTENT_SOLVE = "ODE_USE_NILPOTENT_SOLVE"
+    object SOSsolve {
+      val PATH = "SOSSOLVE_PATH"
+      val MAIN_FILE = "SOSSOLVE_MAIN_FILE"
+    }
     object Pegasus {
       val PATH = "PEGASUS_PATH"
       val MAIN_FILE = "PEGASUS_MAIN_FILE"
@@ -170,6 +180,20 @@ object Configuration {
     if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
   }
 
+  /** Executes `code` with a temporary configuration that gets reset after execution. */
+  def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {
+    val origConfig = tempConfig.keys.map(k => k -> Configuration.get[String](k))
+    try {
+      tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
+      code
+    } finally {
+      origConfig.foreach({
+        case (k, None) => Configuration.remove(k, saveToFile = false)
+        case (k, Some(v)) => Configuration.set(k, v, saveToFile = false)
+      })
+    }
+  }
+
   //<editor-fold desc="Configuration access shortcuts>
 
   /** Pegasus configuration access shortcuts. */
@@ -186,10 +210,10 @@ object Configuration {
       def useDependencies(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES).getOrElse(default)
     }
     object PreservedStateHeuristic {
-      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
     }
     object HeuristicInvariants {
-      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
     }
     object FirstIntegrals {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
@@ -218,6 +242,13 @@ object Configuration {
       def sufficiencyTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
       def dwTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT).getOrElse(default)
     }
+  }
+
+  /** Pegasus configuration access shortcuts. */
+  object SOSsolve {
+    def relativePath: String = apply(Configuration.Keys.SOSsolve.PATH).replaceAllLiterally("/", File.separator)
+    def absolutePath: String = Configuration.path(Configuration.Keys.SOSsolve.PATH)
+    def mainFile(default: String): String = get[String](Configuration.Keys.SOSsolve.MAIN_FILE).getOrElse(default)
   }
 
   //</editor-fold>

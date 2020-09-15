@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Equiv, Formula, Imply, NamedSymbol, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Parser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
@@ -276,7 +276,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "robix" should "generate C code for passivesafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val paramDecls =
       """long double A;
         |  long double B;
@@ -303,7 +303,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafety_renamed" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val paramDecls =
       """long double A;
         |  long double B;
@@ -331,7 +331,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passivesafetyabs" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val vars =
       Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
         Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
@@ -412,7 +412,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "generate C code for passiveorientationsafety" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val paramDecls =
       """long double A;
         |  long double V;
@@ -447,7 +447,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "quadcopter" should "generate C code for hybridquadrotor" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val paramDecls =
       """long double h;
         |  long double kd;
@@ -467,7 +467,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   "Waypoint navigation" should "generate metric C code" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val model = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Theorem 1: Safety").head.model.asInstanceOf[Formula]
+    val model = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Theorem 1: Safety").head.model.asInstanceOf[Formula]
     val Imply(_, Box(prg, _)) = model
 
     val stateVars = ("xg"::"yg"::"v"::"a"::"t"::"vl"::"vh"::"k"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
@@ -620,7 +620,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   it should "approximate robix liveness" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
     val tactic = entry.tactics.head._3
 
     val approx = ModelPlex.createNonlinearModelApprox(entry.name, tactic)(entry.model)
@@ -654,7 +654,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "Compiled controller monitor" should "evaluate boolean correctly" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
-    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val vars =
       ("a"::"dx"::"dy"::"r"::"v"::"w"::"x"::"y"::"xo"::"yo"::"dxo"::"dyo"::"t"::"a_0"::"dxo_0"::"dyo_0"::"r_0"::"w_0"::"xo_0"::"yo_0"::Nil).map(_.asVariable.asInstanceOf[BaseVariable]).toSet
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)

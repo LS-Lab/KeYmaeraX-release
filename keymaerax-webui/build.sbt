@@ -62,6 +62,9 @@ libraryDependencies += "com.typesafe.akka"   %% "akka-slf4j"     % akkaV
 // disable slf4j logging of Akka
 libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.26"
 
+resolvers += Resolver.sonatypeRepo("releases")
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
 //endregion
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,17 +72,17 @@ libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.26"
 // command
 ////////////////////////////////////////////////////////////////////////////////
 
-watchSources <++= baseDirectory map { 
+watchSources ++= {{ baseDirectory map {
   path => ((path / "src/main/resources/partials/") ** "*.html").get 
-}
+}}.value }
 
-watchSources <++= baseDirectory map { 
+watchSources ++= {{ baseDirectory map {
   path => ((path / "src/main/resources/js") ** "*.js").get 
-}
+}}.value }
 
-watchSources <++= baseDirectory map { 
+watchSources ++= {{baseDirectory map {
   path => ((path / "src/main/resources") ** "*.html").get 
-}
+}}.value }
 
 
 ////////////////////////////////////////////////////////////////////////////////

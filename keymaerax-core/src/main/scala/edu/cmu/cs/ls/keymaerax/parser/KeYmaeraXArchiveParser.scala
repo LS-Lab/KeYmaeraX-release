@@ -11,19 +11,20 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, PosInExpr, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.Name
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.annotation.tailrec
+import scala.collection.immutable.StringOps
 import scala.collection.mutable.ListBuffer
 
 /**
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the .kyx format and possibly a (partial) proof tactic.
+  * at least one entry combining a model in the `.kyx`` format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -40,107 +41,10 @@ import scala.collection.mutable.ListBuffer
   *
   * @author Stefan Mitsch
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+  * @see [[DLArchiveParser]]
   */
-object KeYmaeraXArchiveParser {
-  /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */
-  case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, problemContent: String,
-                                defs: Declaration,
-                                model: Expression, tactics: List[(String, String, BelleExpr)],
-                                info: Map[String, String]) {
-    /** True if this entry is an exercise, false otherwise. */
-    def isExercise: Boolean = kind=="exercise"
-    /** The model with all definitions expanded. */
-    def expandedModel: Expression = defs.exhaustiveSubst(model)
-  }
+object KeYmaeraXArchiveParser extends ArchiveParser {
 
-  /** Name is alphanumeric name and index. */
-  type Name = (String, Option[Int])
-  /** Signature is a domain sort, codomain sort, expression used as "interpretation", location that starts the declaration. */
-  type Signature = (Option[Sort], Sort, Option[Expression], Location)
-  /** Input signature as defined in the input file ([[Signature]] is extracted from it). */
-  type InputSignature = (List[NamedSymbol], Option[Expression])
-  /** A parsed declaration, which assigns a signature to names, with `inputDecls` as literally listed in the file */
-  case class Declaration(decls: Map[Name, Signature], inputDecls: Map[Name, InputSignature] = Map.empty) {
-    /** The declarations as topologically sorted substitution pairs. */
-    lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._3.isDefined)).map((declAsSubstitutionPair _).tupled)
-
-    /** Declared names and signatures as [[NamedSymbol]]. */
-    lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _)) => sort match {
-      case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
-      case Real | Bool if domain.isDefined => Function(name, idx, domain.get, sort)
-      case Trafo => assert(idx.isEmpty, "Program constants are not allowed to have an index, but got " + name + "_" + idx); ProgramConst(name)
-    }}).toList
-
-    /** Topologically sorts the names in `decls`. */
-    private def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
-      val sortedNames = DependencyAnalysis.dfs[Name](decls.map({ case (name, (_, _, repl, _)) =>
-        name -> repl.map(StaticSemantics.signature).map(_.map(ns => (ns.name, ns.index))).getOrElse(Set.empty) }))
-      decls.toList.sortBy(s => sortedNames.indexOf(s._1))
-    }
-
-    /** Joins two declarations. */
-    def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls, inputDecls ++ other.inputDecls)
-
-    /** Finds the definition with `name` and index `idx`. */
-    def find(name: String, idx: Option[Int] = None): (Option[Signature], Option[InputSignature]) =
-      (decls.get(name -> idx), inputDecls.get(name -> idx))
-
-    /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
-    def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      arg.exhaustiveSubst(USubst(substs)).asInstanceOf[T]
-    } catch {
-      case ex: SubstitutionClashException =>
-        throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
-    }
-
-    /** Elaborates variable uses of declared functions. */
-    def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
-
-    /** Turns a function declaration (with defined body) into a substitution pair. */
-    private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
-      require(signature._3.isDefined, "Substitution only for defined functions")
-
-      /** Returns the dots used in expression `e`. */
-      def dotsOf(e: Expression): Set[DotTerm] = {
-        val dots = scala.collection.mutable.Set[DotTerm]()
-        val traverseFn = new ExpressionTraversalFunction() {
-          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-            case d: DotTerm => dots += d; Left(None)
-            case _ => Left(None)
-          }
-        }
-        e match {
-          case t: Term => ExpressionTraversal.traverse(traverseFn, t)
-          case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
-          case p: Program => ExpressionTraversal.traverse(traverseFn, p)
-        }
-        dots.toSet
-      }
-
-      val (arg, sig) = signature._1 match {
-        case Some(Unit) => (Nothing, Unit)
-        case Some(s@Tuple(_, _)) => (s.toDots(0)._1, s)
-        case Some(s) => (DotTerm(s), s)
-        case None => (Nothing, Unit)
-      }
-      val what = signature._2 match {
-        case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
-        case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
-        case Trafo =>
-          assert(name._2.isEmpty, "Expected no index in program const name, but got " + name._2)
-          assert(signature._1.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature._1)
-          ProgramConst(name._1)
-      }
-      val repl = elaborateToFunctions(signature._3.get)
-
-      val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
-      if (undeclaredDots.nonEmpty) throw ParseException(
-        "Function/predicate " + what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
-        UnknownLocation)
-
-      SubstitutionPair(what, repl)
-    }
-  }
 
   /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
   private def quantifiedVars(expr : Expression) = {
@@ -163,15 +67,15 @@ object KeYmaeraXArchiveParser {
 
   /**
     * Type analysis of expression according to the given type declarations decls
-    * @param name the entry name
-    * @param d the type declarations known from the context
-    * @param expr the expression parsed
+    * @param name the entry name (for error messages)
+    * @param d the type declarations known from the context (e.g., as parsed from the Definitions and ProgramVariables block of an entry)
+    * @param expr the expression to analyze
     * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
     */
   def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
       case f: Function =>
-        val (declaredDomain, declaredSort, _, loc: Location) = d.decls.get((f.name,f.index)) match {
+        val (declaredDomain, declaredSort, _, _, loc: Location) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
           case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort + "", UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
@@ -186,17 +90,19 @@ object KeYmaeraXArchiveParser {
         }
         else true
       case DifferentialSymbol(v) => d.decls.contains(v.name, v.index) //@note hence it is checked as variable already
-      case x: Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
-        val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
-          case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) =>
-            throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
-          case None => throw ParseException.typeDeclGuessError(name +": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
-            "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+        if (quantifiedVars(expr).contains(x)) true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
+        else {
+          val (declaredSort, declLoc) = d.decls.get((x.name, x.index)) match {
+            case Some((None, sort, _, _, loc)) => (sort, loc)
+            case Some((Some(domain), sort, _, _, loc)) =>
+              throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
+            case None => throw ParseException.typeDeclGuessError(name + ": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
+              "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+          }
+          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
+          x.sort == declaredSort
         }
-        if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
-        x.sort == declaredSort
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
       case _: DotTerm => true //@note needs not be declared
@@ -206,6 +112,7 @@ object KeYmaeraXArchiveParser {
 
   private[parser] trait ArchiveItem extends OtherItem
 
+  /** Internal entry content collected by the parser, to be converted to a ParsedArchiveEntry in post-processing. */
   private[parser] case class ArchiveEntry(name: String, kind: String, loc: Location,
                                           inheritedDefinitions: List[Definition],
                                           definitions: List[Definition],
@@ -217,6 +124,8 @@ object KeYmaeraXArchiveParser {
     def inheritDefs(defs: List[Definition]): ArchiveEntry = {
       ArchiveEntry(name, kind, loc, inheritedDefinitions ++ defs, definitions, vars, problem, annotations, tactics, info)
     }
+
+    def allAnnotations: List[Annotation] = annotations ++ definitions.flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
   }
   private[parser] case class ArchiveEntries(entries: List[ArchiveEntry]) extends ArchiveItem {
     def inheritDefs(defs: List[Definition]): ArchiveEntries = ArchiveEntries(entries.map(_.inheritDefs(defs)))
@@ -279,50 +188,26 @@ object KeYmaeraXArchiveParser {
     val stripped = ParserHelper.removeBOM(input).replaceAllLiterally("\t","  ")
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
-      parse(tokenStream, stripped, parseTactics)
+      parse(tokenStream, stripped, parseTactics).map(e =>
+        if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
     } catch {
-      case e: ParseException if e.msg.startsWith("Unexpected archive start") =>
-        // cannot parse as archive, try parse plain formula
-        try {
-          val fml = KeYmaeraXParser(input).asInstanceOf[Formula]
-          ParsedArchiveEntry("<undefined>", "theorem", stripped, stripped, declarationsOf(fml), fml, Nil, Map.empty) :: Nil
-        } catch {
-          // cannot parse as plain formula either, throw original exception
-          case _: Throwable => throw e.inInput(stripped, Some(tokenStream))
-        }
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
   }
 
-  /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
-  def parseAsProblemOrFormula(input: String): Formula = parseProblem(input, parseTactics=false).model.asInstanceOf[Formula]
-  def parseAsProblemOrFormula(in: InputStream): Formula = parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
-
-  /** Parses a single entry. */
-  def parseProblem(input: String, parseTactics: Boolean = true): ParsedArchiveEntry = {
-    val entries = parse(input, parseTactics)
-    if (entries.size == 1) entries.head
-    else throw ParseException("Expected a single entry, but got " + entries.size, UnknownLocation)
-  }
-
   /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
-  def parseFromFile(file: String): List[ParsedArchiveEntry] = {
+  override def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>
         val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        KeYmaeraXArchiveParser.parse(input)
+        parse(input)
       case fileName :: entryName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        KeYmaeraXArchiveParser.getEntry(entryName, input).
+        val input
+        = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
+        getEntry(entryName, input).
           getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
     }
   }
-
-  /** Reads a specific entry from the archive. */
-  def getEntry(name: String, content: String): Option[ParsedArchiveEntry] = parse(content).find(_.name == name)
-
-  /** Indicates whether or not the model represents an exercise. */
-  def isExercise(model: String): Boolean = model.contains("__________")
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -333,7 +218,7 @@ object KeYmaeraXArchiveParser {
     require(!text.contains('\t'), "Tabs in input not supported, please replace with spaces")
 
     parseLoop(ParseState(Bottom, input), text).stack match {
-      case Bottom :+ Accept(entries) => entries.map(convert(_, text, parseTactics))
+      case Bottom :+ Accept(entries) => entries.map(convert(_, text, parseTactics)).map(elaborate)
       case _ :+ Error(msg, loc, st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
@@ -468,8 +353,8 @@ object KeYmaeraXArchiveParser {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ defs :+ defsBlock)
         case END_BLOCK => shift(st)
         case _ if isReal(la) || isBool(la) || isProgram(la) => shift(st)
-        case _ => throw ParseException("Unexpected definition", st, 
-          Expected.ExpectTerminal(END_BLOCK) :: 
+        case _ => throw ParseException("Unexpected definition", st,
+          Expected.ExpectTerminal(END_BLOCK) ::
           Expected.ExpectTerminal(IDENT("Real")) ::
           Expected.ExpectTerminal(IDENT("Bool")) ::
           Expected.ExpectTerminal(IDENT("HP")) :: Nil)
@@ -635,8 +520,8 @@ object KeYmaeraXArchiveParser {
         case END_BLOCK => shift(st)
         case _ if isReal(la) => shift(st)
         case _ if isBool(la) || isProgram(la) => throw ParseException("Predicate and program definitions only allowed in Definitions block", st, nextTok, "Real")
-        case _ => throw ParseException("Unexpected program variable definition", st, 
-          Expected.ExpectTerminal(END_BLOCK) :: 
+        case _ => throw ParseException("Unexpected program variable definition", st,
+          Expected.ExpectTerminal(END_BLOCK) ::
           Expected.ExpectTerminal(IDENT("Real")) :: Nil)
       }
       case r :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
@@ -784,8 +669,82 @@ object KeYmaeraXArchiveParser {
     ParseState(Bottom :+ Accept(result), input)
   }
 
-  /** Postprocesses parse results. */
-  private def convert(entry: ArchiveEntry, text: String, parseTactics: Boolean): ParsedArchiveEntry = {
+  /** Elaborates problem, annotations, and annotations in definitions in the `entry` according to the entry-specific
+    * and inherited definitions listed in `entry`. */
+  def elaborateEntry(entry: ArchiveEntry): ArchiveEntry = {
+    val (definitions, elaboratables) = elaborateDefinitions(entry)
+
+    entry.copy(
+      inheritedDefinitions = Nil,
+      definitions = definitions.map(elaborateWithDots),
+      //@note replaces all literal occurrences of variable uses with functions and relies on earlier check
+      //      that input does not mix variable and function use of the same symbol.
+      problem = entry.problem match {
+        case Left(problem) => Left(problem.elaborateToFunctions(elaboratables).asInstanceOf[Formula])
+        case r => r
+      },
+      annotations = elaborateAnnotations(entry.annotations, elaboratables)
+      //@note do not elaborate to function symbols etc. in tactics (postponed until tactic execution)
+    )
+  }
+
+  /** Elaborates to functions in annotations.
+    * @param annotations the annotations to elaborate
+    * @param elaboratables lists functions to elaborate to
+    * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
+    * */
+  private def elaborateAnnotations(annotations: List[Annotation], elaboratables: Set[NamedSymbol]): List[Annotation] = {
+    annotations.map({
+      case Annotation(e: Program, a: Formula) =>
+        val substPrg = e.elaborateToFunctions(elaboratables)
+        val substFml = a.elaborateToFunctions(elaboratables)
+        Annotation(substPrg, substFml)
+      case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+      case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+    })
+  }
+
+  /** Checks that uses in `problem` match the declarations.
+    * @throws ParseException on use-def mismatch.
+    */
+  private def checkUseDefMatch(problem: Formula, defs: Declaration): Unit = {
+    // check that definitions and use match
+    val symbols = StaticSemantics.symbols(problem) ++ defs.substs.flatMap(s => StaticSemantics.symbols(s.repl))
+    val defSymbols = defs.substs.map(_.what)
+    val mismatches = defSymbols.map({
+      case n: NamedSymbol => symbols.find(u => u.name == n.name && u.index == n.index && u.kind != n.kind).map(n -> _)
+      case _ => None
+    }).filter(_.isDefined).map(_.get)
+    if (mismatches.nonEmpty) {
+      val mismatchDescription = mismatches.map({ case (defSym, sym) =>
+        "Symbol '" + defSym.prettyString + "' defined as " + defSym.kind +
+          ", but used as " + sym.kind + " in " + sym.prettyString
+      }).mkString("\n")
+      val found = mismatches.map({ case (_, sym) => sym.prettyString }).mkString(", ")
+      val expected = mismatches.map({ case (defSym, _) => defSym.prettyString }).mkString(", ")
+      throw new ParseException("All definitions and uses must match, but found the following mismatches:\n" +
+        mismatchDescription, UnknownLocation, found, expected, "", "")
+    }
+  }
+
+  /** Elaborates argument names in `d`'s interpretation with dots. */
+  private def elaborateWithDots(d: Definition): Definition = d match {
+    case FuncPredDef(name, index, sort, signature, Left(interpretation), loc) =>
+      // backwards compatible dots
+      val dotTerms =
+        if (signature.size == 1) signature.map(v => v -> DotTerm(v.sort, None))
+        else signature.zipWithIndex.map({ case (v, i) => v -> DotTerm(v.sort, Some(i)) })
+      val dottedInterpretation = interpretation.map(d => dotTerms.foldRight(d)({ case ((v, dot), dotted) =>
+        v match {
+          case vv: Variable => dotted.replaceFree(vv, dot)
+          case _ => dotted
+        }
+      }))
+      FuncPredDef(name, index, sort, signature, Left(dottedInterpretation), loc)
+    case _ => d // nothing to do in variables, programs etc.
+  }
+
+  def convert(entry: ArchiveEntry, text: String, parseTactics: Boolean): ParsedArchiveEntry = {
     //@todo report multiple duplicate symbols
     val duplicateDefs = entry.definitions.groupBy(d => (d.name, d.index)).filter({case (_, defs) => defs.size > 1})
     if (duplicateDefs.nonEmpty) throw ParseException("Duplicate symbol '" + duplicateDefs.head._1._1 + "'", duplicateDefs.head._2.last.loc)
@@ -798,74 +757,24 @@ object KeYmaeraXArchiveParser {
     val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
-    val mergedDefinitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).
-      reduceOption(_++_).getOrElse(Declaration(Map.empty, Map.empty))
-    val definitions = mergedDefinitions.copy(decls = mergedDefinitions.decls.map({ case (k,v) => k -> (v._1, v._2, v._3.map(mergedDefinitions.elaborateToFunctions), v._4) }))
+    val definitions = (entry.definitions ++ entry.inheritedDefinitions ++ entry.vars).map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
 
-    val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
-      "SharedDefinitions\n" +
-        entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
-        "\nEnd.\n"
-    } else ""
+    val annotations = entry.annotations ++ (entry.definitions ++ entry.inheritedDefinitions).flatMap(extractAnnotations)
 
-    val entryText = sharedDefsText + (if (entry.loc.begin.line > 0) slice(text, entry.loc) else text)
-    val problemText = sharedDefsText + (
-      if (entry.loc.begin.line > 0) {
-        val tacticStripped = slice(text, entry.loc, entry.tactics.map(_.blockLoc)).trim()
-        if (tacticStripped.trim().endsWith("End.")) {
-          tacticStripped.trim().stripSuffix("End.").trim() + "\nEnd."
-        } else tacticStripped
-      } else text)
+    val (problemText, entryText) = createStandaloneEntryText(entry, text)
 
     entry.problem match {
       case Left(problem) =>
-        KeYmaeraXParser.semanticAnalysis(problem) match {
-          case None =>
-          case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
-        }
-
-        val elaborated = definitions.elaborateToFunctions(problem)
-        typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
-
-        // check that definitions and use match
-        val symbols = StaticSemantics.symbols(problem) ++ definitions.substs.flatMap(s => StaticSemantics.symbols(s.repl))
-        val defSymbols = definitions.substs.map(_.what)
-        val mismatches = defSymbols.map({
-          case n: NamedSymbol => symbols.find(u => u.name == n.name && u.index == n.index && u.kind != n.kind).map(n -> _)
-          case _ => None
-        }).filter(_.isDefined).map(_.get)
-        if (mismatches.nonEmpty) {
-          val mismatchDescription = mismatches.map({ case (defSym, sym) =>
-            "Symbol '" + defSym.prettyString + "' defined as " + defSym.kind +
-              ", but used as " + sym.kind + " in " + sym.prettyString}).mkString("\n")
-          val found = mismatches.map({ case (_, sym) => sym.prettyString}).mkString(", ")
-          val expected = mismatches.map({ case (defSym, _) => defSym.prettyString }).mkString(", ")
-          throw new ParseException("All definitions and uses must match, but found the following mismatches:\n" +
-            mismatchDescription, UnknownLocation, found, expected, "", "")
-        }
-
-        // collect annotations
-        val defAnnotations = (entry.inheritedDefinitions ++ entry.definitions).flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
-
-        // report annotations
-        (defAnnotations ++ entry.annotations).foreach({
-          case Annotation(e: Program, a: Formula) =>
-            val substPrg = definitions.elaborateToFunctions(e)
-            val substFml = definitions.elaborateToFunctions(a)
-            typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
-            KeYmaeraXParser.annotationListener(substPrg, substFml)
-          case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
-          case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
-        })
-
         val tactics =
-          if (parseTactics) entry.tactics.map(convert(_, definitions))
-          else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
+          if (parseTactics) {
+            //@note tactics hard to elaborate later (expandAllDefs must use elaborated symbols to not have substitution clashes)
+            val elaboratedDefinitions = elaborateDefinitions(entry)._1.map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
+            entry.tactics.map(convert(_, elaboratedDefinitions))
+          } else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
         val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"exercise")
 
         // double-check that the extracted problem text still parses
-
         val tokens = KeYmaeraXLexer.inMode(problemText, ProblemFileMode)
         val reparse = try {
           parseLoop(ParseState(Bottom, tokens), text).stack
@@ -880,47 +789,158 @@ object KeYmaeraXArchiveParser {
           case _ => throw new AssertionError("Even though archive parses, extracted problem artifact does not parse: Parser terminated with unexpected stack")
         }
 
-        ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, elaborated, tactics, entry.info)
+        ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, problem, tactics, annotations.map(convert), entry.info)
       case Right(_) =>
-        ParsedArchiveEntry(entry.name, "exercise", entryText.trim(), problemText.trim(), definitions, False, Nil, entry.info)
+        ParsedArchiveEntry(entry.name, "exercise", entryText.trim(), problemText.trim(), definitions, False, Nil, annotations.map(convert), entry.info)
     }
+  }
+
+  /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
+    * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
+  def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
+    // elaborate model and check
+    val elaboratedModel = try {
+      entry.defs.elaborateToSystemConsts(entry.defs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
+    } catch {
+      case ex: AssertionError => throw ParseException(ex.getMessage, ex)
+    }
+    KeYmaeraXParser.semanticAnalysis(elaboratedModel) match {
+      case None =>
+      case Some(error) => throw ParseException("Semantic analysis error\n" + error, elaboratedModel)
+    }
+    //@note bare formula input without any definitions uses default meaning of symbols
+    if (entry.defs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
+    checkUseDefMatch(elaboratedModel, entry.defs)
+
+    // analyze and report annotations
+    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, entry.defs)
+    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, entry.defs), entry.defs)
+    (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
+      case (e: Program, a: Formula) =>
+        typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        KeYmaeraXParser.annotationListener(e, a)
+    })
+
+    entry.copy(
+      model = elaboratedModel,
+      defs = elaborateDefs(entry.defs).elaborateWithDots,
+    )
+  }
+
+  /** Elaborates to functions in annotations.
+    * @param annotations the annotations to elaborate
+    * @param defs lists functions to elaborate to
+    * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
+    * */
+  private def elaborateToFnsInAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+    annotations.map({
+      case (e: Program, a: Formula) =>
+        val substPrg = defs.elaborateToFunctions(e)
+        val substFml = defs.elaborateToFunctions(a)
+        (substPrg, substFml)
+      case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+      case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+    })
+  }
+
+  /** Expands definitions in annotations to create fully expanded annotations. */
+  private def expandAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+    annotations.map({
+      case (e: Program, a: Formula) =>
+        val substPrg = defs.exhaustiveSubst(e)
+        val substFml = defs.exhaustiveSubst(a)
+        (substPrg, substFml)
+      case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+      case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+    })
+  }
+
+  def elaborateDefs(defs: Declaration): Declaration = {
+    defs.copy(decls = defs.decls.map({ case ((name, index), (domain, sort, argNames, interpretation, loc)) =>
+      ((name, index), (domain, sort, argNames, interpretation.map(defs.elaborateToFunctions), loc))
+    }))
+  }
+
+  /** Merges definitions explicitly mentioned in `entry.definitions` and those inherited from other entries
+    * listed in `entry.inheritedDefinitions` into function-elaborated definitions.
+    * @param entry The entry information collected in the parse step.
+    * @return The elaborated definitions and the symbols that can be elaborated to.
+    * @throws ParseException if duplicate definitions or illegal overrides are detected.
+    */
+  private def elaborateDefinitions(entry: ArchiveEntry): (List[Definition], Set[NamedSymbol]) = {
+    //@todo report multiple duplicate symbols
+    val duplicateDefs = entry.definitions.groupBy(d => (d.name, d.index)).filter({case (_, defs) => defs.size > 1})
+    if (duplicateDefs.nonEmpty) throw ParseException("Duplicate symbol '" + duplicateDefs.head._1._1 + "'", duplicateDefs.head._2.last.loc)
+    val duplicateVars = entry.vars.groupBy(d => (d.name, d.index)).filter({case (_, defs) => defs.size > 1})
+    if (duplicateVars.nonEmpty) throw ParseException("Duplicate variable '" + duplicateVars.head._1._1 + "'", duplicateVars.head._2.last.loc)
+
+    val duplicateInheritedDefs = entry.inheritedDefinitions.groupBy(d => (d.name, d.index)).filter({case (_, defs) => defs.size > 1})
+    if (duplicateInheritedDefs.nonEmpty) throw ParseException("Duplicate symbol '" + duplicateInheritedDefs.head._1._1 + "'", duplicateInheritedDefs.head._2.last.loc)
+
+    val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
+    if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
+
+    val mergedDefinitions = entry.inheritedDefinitions ++ entry.definitions ++ entry.vars
+
+    val elaboratables: Set[NamedSymbol] = mergedDefinitions.flatMap({
+      case FuncPredDef(name, index, sort, Nil, Left(None), _) => Some(Function(name, index, Unit, sort))
+      case _ => None
+    }).toSet
+    val elaboratedDefinitions = mergedDefinitions.map({
+      case f@FuncPredDef(_, _, _, _, Left(interpretation), _) => f.copy(definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables))))
+      case p@ProgramDef(_, _, Left(interpretation), annotations, _) => p.copy(
+        definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables).asInstanceOf[Program])),
+        annotations = elaborateAnnotations(annotations, elaboratables)
+      )
+      case d => d
+    })
+
+    (elaboratedDefinitions, elaboratables)
+  }
+
+  private def createStandaloneEntryText(entry: ArchiveEntry, text: String): (String, String) = {
+    val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
+      "SharedDefinitions\n" +
+        entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
+        "\nEnd.\n"
+    } else ""
+
+    val entryText = sharedDefsText + (if (entry.loc.begin.line > 0) slice(text, entry.loc) else text)
+    val problemText = sharedDefsText + (
+      if (entry.loc.begin.line > 0) {
+        val tacticStripped = slice(text, entry.loc, entry.tactics.map(_.blockLoc)).trim()
+        if (tacticStripped.trim().endsWith("End.")) {
+          tacticStripped.trim().stripSuffix("End.").trim() + "\nEnd."
+        } else tacticStripped
+      } else text)
+    (problemText, entryText)
   }
 
   private def convert(d: Definition): Declaration = d match {
     case FuncPredDef(name, index, sort, signature, Left(definition), loc) =>
-      // backwards compatible dots
-      val dotTerms =
-        if (signature.size == 1) signature.map(v => v -> DotTerm(v.sort, None))
-        else signature.zipWithIndex.map({ case (v, i) => v -> DotTerm(v.sort, Some(i)) })
-      val dottedDef = definition.map(d => dotTerms.foldRight(d)({ case ((v, dot), dotted) =>
-        v match {
-          case vv: Variable => dotted.replaceFree(vv, dot)
-          case _ => dotted
-        }
-      }))
-      Declaration(
-        Map((name, index) -> (Some(toSort(signature)), sort, dottedDef, loc)),
-        Map((name, index) -> (signature, definition)))
+      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, Some(signature.map(s => ((s.name, s.index), s.sort))), definition, loc)))
     case FuncPredDef(name, index, sort, signature, Right(_), loc) =>
-      Declaration(
-        Map((name, index) -> (Some(toSort(signature)), sort, None, loc)),
-        Map((name, index) -> (signature, None)))
+      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, Some(signature.map(s => ((s.name, s.index), s.sort))), None, loc)))
     case ProgramDef(name, index, Left(definition), _, loc) =>
-      Declaration(
-        Map((name, index) -> (Some(Unit), Trafo, definition, loc)),
-        Map((name, index) -> (List.empty, definition)))
+      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, definition, loc)))
     case ProgramDef(name, index, Right(_), _, loc) =>
-      Declaration(
-        Map((name, index) -> (Some(Unit), Trafo, None, loc)),
-        Map((name, index) -> (List.empty, None)))
+      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, None, loc)))
     case VarDef(name, index, loc) =>
-      Declaration(Map((name, index) -> (None, Real, None, loc)), Map((name, index) -> (List.empty, None)))
+      Declaration(Map((name, index) -> (None, Real, None, None, loc)))
+  }
+
+  private def extractAnnotations(d: Definition): List[Annotation] = d match {
+    case ProgramDef(_, _, _, annotations, _) => annotations
+    case _: FuncPredDef => Nil
+    case _: VarDef => Nil
   }
 
   private def toSort(signature: List[NamedSymbol]): Sort = {
     if (signature.isEmpty) Unit
     else signature.tail.foldRight[Sort](signature.head.sort)({ case (v, s) => Tuple(v.sort, s) })
   }
+
+  private def convert(a: Annotation): (Expression, Expression) = (a.element, a.annotation)
 
   private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
@@ -936,7 +956,7 @@ object KeYmaeraXArchiveParser {
   }
 
   private def slice(text: String, loc: Location): String = {
-    val lines = text.lines.slice(loc.begin.line - 1, loc.end.line).toList
+    val lines = (text: StringOps).lines.toList.slice(loc.begin.line - 1, loc.end.line).toList
     if (loc.end.line > loc.begin.line) {
       val header = lines.head.drop(loc.begin.column - 1)
       val footer = lines.last.take(loc.end.column)
@@ -958,12 +978,12 @@ object KeYmaeraXArchiveParser {
   private def declarationsOf(parsedContent: Expression): Declaration = {
     val symbols = StaticSemantics.symbols(parsedContent)
     val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-      (fn.name, fn.index) -> (Some(fn.domain), fn.sort, None, UnknownLocation)
-    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
+      (fn.name, fn.index) -> (Some(fn.domain), fn.sort, None, None, UnknownLocation)
+    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)]
     val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v =>
-      (v.name, v.index) -> (None, v.sort, None, UnknownLocation)
-    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
-    Declaration(fnDecls ++ varDecls, Map.empty)
+      (v.name, v.index) -> (None, v.sort, None, None, UnknownLocation)
+    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)]
+    Declaration(fnDecls ++ varDecls)
   }
   
   private def shiftLoc(loc: Location, offset: Location): Location = {

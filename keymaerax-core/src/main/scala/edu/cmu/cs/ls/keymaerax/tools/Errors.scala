@@ -15,6 +15,9 @@ abstract class ToolInternalException(msg: String, cause: Throwable) extends Tool
 /** Errors raised from the external tool. */
 abstract class ToolExternalException(msg: String, cause: Throwable) extends ToolException(msg, cause)
 
+/** Critical errors requiring the external tool or even KeYmaera X to be restarted. */
+abstract class ToolCriticalException(msg: String, cause: Throwable) extends ToolException(msg, cause)
+
 /** Reports internal errors converting to/from a tool. */
 case class ConversionException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
 
@@ -28,12 +31,23 @@ case class ToolExecutionException(msg: String, cause: Throwable = null) extends 
 /** User-triggered abort (e.g., by stopping from the UI). */
 case class MathematicaComputationUserAbortException(msg: String) extends ToolInternalException(msg, null)
 
-/** Abort of external computations (e.g., by TimeConstrained, by $Abort), internal since "planned" command failure. */
-case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
+/** Abort of external computations (e.g., by TimeConstrained, by $Abort). */
+case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+
+/** Abort of external computation due to inapplicable methods. */
+case class MathematicaInapplicableMethodException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
 
 /** Reports external Mathematica computation failures ($Failed). */
 case class MathematicaComputationFailedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
 
+/** Critical Mathlink errors that require restarting Mathematica. */
+case class MathematicaMathlinkException(msg: String, cause: Throwable = null) extends ToolCriticalException(msg, cause)
+
+/** Critical Mathematica exceptions that require restarting due to unknown external cause. */
+case class MathematicaUnknownCauseCriticalException(msg: String) extends ToolCriticalException(msg, null)
 
 /** Reports QE errors from Z3. */
 case class SMTQeException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+
+/** Reports timeouts from Z3. */
+case class SMTTimeoutException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)

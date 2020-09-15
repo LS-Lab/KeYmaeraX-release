@@ -10,6 +10,8 @@ import testHelper.KeYmaeraXTestTags.NotfixedTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import TactixLibrary._
 
 /**
@@ -111,8 +113,8 @@ class PrimeSubstituterTest extends TacticTestBase {
     val result = proveBy(Sequent(ante, succ),
       TactixLibrary.cut("true".asFormula) < (TactixLibrary.implyRi, prop) &
         TactixLibrary.cut("[{x'=1&true}]x'=1".asFormula) < (
-          TactixLibrary.implyRi & byUS("DX differential skip"),
-          TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(DerivedAxioms.equalReflex))
+          TactixLibrary.implyRi & byUS(Ax.DX),
+          TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(Ax.equalReflexive))
     )
     result should not be 'proved
     result.isProved shouldBe false

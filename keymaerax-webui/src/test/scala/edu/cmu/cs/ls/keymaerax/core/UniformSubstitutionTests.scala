@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 
@@ -23,7 +25,7 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 @USubstTest
-class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
+class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
 
   private def V(s: String) = Variable(s, None, Real)
 
@@ -1256,8 +1258,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
   
   // uniform substitution of rules
-  //@todo solve initialization order issue here
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in withMathematica { _ =>
     val conc = Sequent(IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
       SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=0".asFormula) ::

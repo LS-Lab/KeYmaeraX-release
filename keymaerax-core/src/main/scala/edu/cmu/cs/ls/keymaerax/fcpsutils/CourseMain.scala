@@ -6,8 +6,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
@@ -45,16 +45,11 @@ object CourseMain {
     println("Falling back to Z3. Not a big deal but some features won't be available.")
     val provider = new Z3ToolProvider()
     ToolProvider.setProvider(provider)
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     if(provider.tools().forall(_.isInitialized)) println("Initialized Z3!")
-
-
-    //Intialize the printer, the configuration generator, the parser, and the invariant generator.
-    KeYmaeraXTool.init(Map.empty)
-    val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
   }
 
   /** A command-line tool that doesn't contain any of the web UI stuff. Useful because the JAR is considerably smaller, but many features aren't available.
@@ -109,7 +104,7 @@ object CourseMain {
     val archiveFileStr = archiveFile.asInstanceOf[StringValue].s
 
     try {
-      val archiveEntries : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = try {
+      val archiveEntries : List[ParsedArchiveEntry] = try {
         parseArchiveFileOrfail(archiveFile)
       } catch {
         case e : Throwable => {
@@ -202,11 +197,11 @@ object CourseMain {
     }
   }
 
-  private def parseArchiveFileOrfail(v: ArgValue) : List[KeYmaeraXArchiveParser.ParsedArchiveEntry] = {
+  private def parseArchiveFileOrfail(v: ArgValue) : List[ParsedArchiveEntry] = {
     val fileName = fileExistsOrFail(v)
     val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parse(bigString)
+      edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.parse(bigString)
     }
     catch {
       case e : ParseException => {
@@ -228,7 +223,7 @@ object CourseMain {
     val fileName = fileExistsOrFail(v)
     val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      val fml = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parseAsProblemOrFormula(bigString)
+      val fml = edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.parseAsFormula(bigString)
       println(s"Problem file ${fileName} parsed successfully.")
       fml
     }

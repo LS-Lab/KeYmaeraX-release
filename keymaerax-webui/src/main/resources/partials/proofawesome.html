@@ -207,7 +207,7 @@
                                 </li>
                                 <li ng-repeat="d in definitions">
                                     <a ng-if="d.definition.editable">
-                                        <span ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+                                        <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
                                             {{d.definition.what}}
                                         </span>
                                         ~>
@@ -314,16 +314,16 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doTactic(undefined, 'closeTrue')"
-                                       uib-popover-template="fetchRuleHelp('closeTrue')"
+                                <li><a ng-click="doTactic(undefined, 'closeT')"
+                                       uib-popover-template="fetchRuleHelp('closeT')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>True</span><code class="pull-right">closeTrue</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'closeFalse')"
-                                       uib-popover-template="fetchRuleHelp('closeFalse')"
+                                    <span>True</span><code class="pull-right">closeT</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeF')"
+                                       uib-popover-template="fetchRuleHelp('closeF')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                    <span>False</span><code class="pull-right">closeF</code></a></li>
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"
                                   uib-popover-template="fetchRuleHelp('commuteEquivR')"
@@ -618,49 +618,61 @@
                         <div class="col-sm-11" ng-if="$first"
                              data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal' style='margin-left: 30%'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl> </div>"
                              data-position="bottom">
-                            <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
-                            <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
-                            <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
-                                  onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
-                                <small>
-                                    <span>{{taskPrefixLabel(task.id)}}</span>
-                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
-                                          tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
-                                        {{taskPostfixLabel(task.id)}}
-                                    </span>
-                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
-                                </small>
-                                <span ng-bind-html="task.name"></span>
+                            <span ng-if="taskPostfixLabel(task.id).substring(0,5) == 'Lemma'">
+                                <span class="fa fa-cogs"></span>
+                                <a class="btn btn-link" ng-click="openLemmaProof(task.id)">{{taskPostfixLabel(task.id)}}</a>
                             </span>
-                            <span ng-if="!task.isSelected" ng-cloak>
-                                <small>
-                                    <span>{{taskPrefixLabel(task.id)}}</span>
-                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
-                                          tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
-                                        {{taskPostfixLabel(task.id)}}
-                                    </span>
-                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
-                                </small>
-                                <span ng-bind-html="task.name"></span>
+                            <span ng-if="taskPostfixLabel(task.id).substring(0,5) != 'Lemma'">
+                                <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
+                                <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
+                                <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
+                                      onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
+                                    <small>
+                                        <span>{{taskPrefixLabel(task.id)}}</span>
+                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                              tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
+                                            {{taskPostfixLabel(task.id)}}
+                                        </span>
+                                        <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                    </small>
+                                    <span ng-bind-html="task.name"></span>
+                                </span>
+                                <span ng-if="!task.isSelected" ng-cloak>
+                                    <small>
+                                        <span>{{taskPrefixLabel(task.id)}}</span>
+                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                              tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
+                                            {{taskPostfixLabel(task.id)}}
+                                        </span>
+                                        <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                    </small>
+                                    <span ng-bind-html="task.name"></span>
+                                </span>
                             </span>
                         </div>
                         <div class="col-sm-11" ng-if="!$first">
-                            <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
-                            <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
-                            <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
-                                  onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
-                                <small>
-                                    <span>{{taskPrefixLabel(task.id)}}</span>
-                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
-                                          tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
-                                        {{taskPostfixLabel(task.id)}}
-                                    </span>
-                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
-                                </small>
-                                <span ng-bind-html="task.name"></span>
+                            <span ng-if="taskPostfixLabel(task.id).substring(0,5) == 'Lemma'">
+                                <span class="fa fa-cogs"></span>
+                                <a class="btn btn-link" ng-click="openLemmaProof(task.id)">{{taskPostfixLabel(task.id)}}</a>
+                            </span>
+                            <span ng-if="taskPostfixLabel(task.id).substring(0,5) != 'Lemma'">
+                                <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
+                                <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
+                                <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
+                                      onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
+                                    <small>
+                                        <span>{{taskPrefixLabel(task.id)}}</span>
+                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                              tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
+                                            {{taskPostfixLabel(task.id)}}
+                                        </span>
+                                        <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                    </small>
+                                    <span ng-bind-html="task.name"></span>
+                                </span>
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
                                 <small>
@@ -827,7 +839,3 @@
 </div>
 </div>
 </div>
-
-<script type="text/ng-template" id="rulehelp.html">
-    <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
-</script>

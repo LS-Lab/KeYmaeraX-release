@@ -66,6 +66,8 @@ In a nutshell, install the right software and run the following to build `keymae
 
     sbt unidoc
 
+This will generate ScalaDoc into `target/scala-2.12/unidoc/index.html`
+
 Publications
 ============
 

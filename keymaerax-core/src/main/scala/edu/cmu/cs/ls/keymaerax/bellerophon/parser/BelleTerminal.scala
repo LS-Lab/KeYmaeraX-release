@@ -1,8 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Expression, FormulaKind, ProgramKind, TermKind, USubst}
-import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 import scala.util.matching.Regex
 
@@ -41,10 +40,6 @@ private object DEPRECATED_SEQ_COMBINATOR extends BelleTerminal("&") {
 
 private object EITHER_COMBINATOR extends BelleTerminal("|") {
   override def regexp: Regex = "\\|".r
-}
-
-private object AFTER_COMBINATOR extends BelleTerminal(">") {
-  override def regexp: Regex = ">".r
 }
 
 object BRANCH_COMBINATOR extends BelleTerminal("<")
@@ -147,18 +142,17 @@ private case class EXPRESSION(exprString: String, delimiters: (String, String)) 
   lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2)
 
   /** Parses the `exprString` as dL expression. May throw a parse exception. */
-  lazy val expression: Either[Expression, USubst] = {
+  lazy val expression: Either[Expression, SubstitutionPair] = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
       s"EXPRESSION.regexp should ensure delimited expression begin }and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
 
     //Remove delimiters and parse the expression.
     val exprs = undelimitedExprString.split("~>")
     assert(1 <= exprs.size && exprs.size <= 2, "Expected either single expression or substitution pair of expressions, but got " + undelimitedExprString)
-    if (exprs.size == 1) Left(KeYmaeraXParser(exprs.head))
+    if (exprs.size == 1) Left(Parser.parser(exprs.head))
     else {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      val sp = undelimitedExprString.asSubstitutionPair
-      Right(RenUSubst((sp.what, sp.repl) :: Nil).usubst)
+      Right(undelimitedExprString.asSubstitutionPair)
     }
   }
 

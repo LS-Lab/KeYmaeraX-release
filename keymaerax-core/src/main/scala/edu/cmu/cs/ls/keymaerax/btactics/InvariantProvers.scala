@@ -4,24 +4,20 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, _}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Augmentors, DependencyAnalysis, PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
-import scala.collection.mutable
 import util.control.Breaks._
 
 /**
@@ -40,7 +36,7 @@ object InvariantProvers {
     * @see [[loopauto]]
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
-  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val cand: Iterator[Formula] = gen(seq, pos).iterator.map(_._1)
       val bounds: List[Variable] =
@@ -52,15 +48,23 @@ object InvariantProvers {
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
       else
         USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
-      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
+      val jj: Formula = Parser.parser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj :: Nil,
-        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
-        loop(subst(jj))(pos) < (nil, nil, chase(pos) & OnAll(chase(pos ++ PosInExpr(1::Nil)) | skip)),
+        loop(subst(jj))(pos) < (nil, nil, chase(pos) & OnAll(
+          Idioms.doIf(
+            (pr: ProvableSig) => pr.subgoals.headOption.exists(_.sub(pos ++ PosInExpr(1::Nil)) match {
+              case Some(Box(_, _)) => true
+              case _ => false
+            }))(
+            //@todo chase will not always make progress, e.g., in [...][x:=x+1;][x'=2]P
+            chase(pos ++ PosInExpr(1::Nil))
+          )
+        )),
         feedOneAfterTheOther(cand),
         //@todo switch to quickstop mode
         OnAll(master()) & done
       )
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+    case e => throw new TacticInapplicableFailure("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
   private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
@@ -68,13 +72,13 @@ object InvariantProvers {
       if (gen.hasNext)
         gen.next() :: Nil
       else
-        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
+        throw new BelleNoProgress("loopSR ran out of loop invariant candidates")
   }
 
 
 
   /** [[TactixLibrary.loopPostMaster()]]. */
-  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -109,7 +113,7 @@ object InvariantProvers {
         OnAll(ifThenElse(DifferentialTactics.isODE,
           DifferentialTactics.mathematicaODE(pos) |
             // augment loop invariant to local ODE invariant if possible
-            ("ANON" by ((pos: Position, seq: Sequent) => {
+            (anon ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
               //@todo optimize: if the invariant generator were correct, could restrict to its first element
@@ -193,19 +197,26 @@ object InvariantProvers {
               c :: True :: Nil
             case None =>
               if (sawODE)
-                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
+                throw new BelleNoProgress("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
               else
-                throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
+                throw new BelleNoProgress("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
 
       SearchAndRescueAgain(jjl :: jja :: Nil,
-        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
+            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(
+              Idioms.doIf(_.subgoals.headOption.exists(_.sub(pos ++ PosInExpr(1::Nil)) match {
+                case Some(Box(_, _)) => true
+                case _ => false
+              }))(
+                //@todo chase will not always make progress, e.g., in [...][x:=x+1;][x'=2]P
+                chase(pos ++ PosInExpr(1::Nil))
+              ) & ?(QE)
+            )
             ,
             /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
             cohide('Rlast, jja)
@@ -216,7 +227,7 @@ object InvariantProvers {
         finishOff
       )
 
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+    case e => throw new TacticInapplicableFailure("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
 }

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, StringOps}
 import scala.util.matching.Regex
 
 /**
@@ -74,8 +74,8 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     // update location if we encounter whitespace/comments.
     comment -> ((s: String, loc: Location, theComment: String) => {
       val comment = s.substring(0, theComment.length)
-      val lastLineCol = comment.lines.toList.last.length //column of last line.
-      val lineCount = comment.lines.length
+      val lastLineCol = (comment: StringOps).lines.toList.last.length //column of last line.
+      val lineCount = (comment: StringOps).lines.length
       Left((s.substring(theComment.length), loc match {
         case UnknownLocation       => UnknownLocation
         case Region(sl, _, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)
@@ -110,7 +110,6 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEQ_COMBINATOR, loc))),
     DEPRECATED_SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, DEPRECATED_SEQ_COMBINATOR, loc))),
     EITHER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EITHER_COMBINATOR, loc))),
-    AFTER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, AFTER_COMBINATOR, loc))),
     KLEENE_STAR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, KLEENE_STAR, loc))),
     SATURATE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SATURATE, loc))),
     BRANCH_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, BRANCH_COMBINATOR, loc))),

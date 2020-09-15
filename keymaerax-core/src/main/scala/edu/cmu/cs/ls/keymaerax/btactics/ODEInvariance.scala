@@ -20,6 +20,8 @@ import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
 
 /**
@@ -51,20 +53,21 @@ object ODEInvariance {
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
-        implyRi & byUS("Cont continuous existence"),
-        DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
+        implyRi & byUS(Ax.Cont),
+        DW(1) & G(1) & useAt(Ax.flipGreater)(1,0::Nil) &
+          useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
       ), namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
   private lazy val refOrL =
     remember("<{c& p(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   private lazy val refOrR =
     remember("<{c& q(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   //Refine or under box
@@ -176,12 +179,14 @@ object ODEInvariance {
    *
    * @note uses Dconstify internally instead of an external wrapper because it leaves open goals afterwards
    */
-  def lpstep: DependentPositionTactic = "lpstep" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "LP step currently only in top-level succedent")
+  def lpstep: DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("lpstep: position " + pos + " must point to a top-level succedent position")
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Diamond(ODESystem(o, GreaterEqual(p,_)), _)) => (p, o)
-      case e => throw new BelleThrowable("Unknown shape: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpstep only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Maybe pass this as an argument to avoid recomputing
     val lie = lieDer(ode, p)
@@ -195,7 +200,7 @@ object ODEInvariance {
         orL('Llast) <(
           //Strict case
           //DebuggingTactics.print("Cont STEP") &
-          useAt(contAx,PosInExpr(1::Nil))(pos) & closeId,
+          useAt(contAx,PosInExpr(1::Nil))(pos) & id,
           //Integral case
           //DebuggingTactics.print("DI STEP") &
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
@@ -205,8 +210,8 @@ object ODEInvariance {
               //This is a special case where we don't want full DI, because we already have everything
               cohideOnlyR(pos) &
               Dconstify(
-                dI('diffInd)(1) <(
-                  useAt(geq)(1) & orR(1) & closeId,
+                diffInd('diffInd)(1) <(
+                  useAt(geq)(1) & orR(1) & id,
                   cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
                   useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
               ))(1)
@@ -217,12 +222,12 @@ object ODEInvariance {
   // Helper tactic proving p*>0 -> <x'=f(x)& p*>=0>O
   private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
-      useAt(contAx,PosInExpr(1::Nil))(1) & closeId
+      useAt(contAx,PosInExpr(1::Nil))(1) & id
     else //Could also make this fallback to the continuity step for early termination
       //DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1)< (
-        hideL(-2) & useAt(geq)(-1) & closeId,
-        hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
+        hideL(-2) & useAt(geq)(-1) & id,
+        hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound-1))
       )
 
   private def lpclosed(inst:Inst) : BelleExpr = {
@@ -235,7 +240,7 @@ object ODEInvariance {
             useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r))
       case ConjFml(l, r) =>
         DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
-          andL(-3) & useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) & andR(1) < (
+          andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
           hideL(-4) & lpclosed(l),
           hideL(-3) & lpclosed(r)
         )
@@ -248,7 +253,7 @@ object ODEInvariance {
           else {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
-              implyRi()(-2, 1) & useAt("DR<> differential refine", PosInExpr(1 :: Nil))(1) &
+              implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
@@ -260,7 +265,7 @@ object ODEInvariance {
             closeF
           }
           else {
-            implyRi()(-2,1) & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
               dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
@@ -288,20 +293,32 @@ object ODEInvariance {
     *         2) it is not invariant
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIclosed : DependentPositionTactic = "sAIc" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAIc is only applicable at a top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"sAIc needs an algebra tool (and Mathematica)")
+  // was "sAIc"
+  def sAIclosed : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIclosed: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAIclosed needs an algebra tool (and Mathematica)")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (fml,propt1) = semiAlgNormalize(post)
+    val (fml,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
-    val (fmlMM,propt2) = maxMinGeqNormalize(fml)
+    val (fmlMM,propt2) = try {
+      maxMinGeqNormalize(fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to max/min/>=", ex)
+    }
 
-    require(fmlMM.isInstanceOf[GreaterEqual], "Normalization failed to reach max/min normal form "+fmlMM)
+    //This is a contract failure of maxMinGeqNormalize
+    if (!fmlMM.isInstanceOf[GreaterEqual]) throw new UnsupportedTacticFeature("Normalization failed to reach max/min normal form "+fml)
 
     // For input formula f
     // tac1 rewrites with semialgebraic normalization
@@ -319,25 +336,37 @@ object ODEInvariance {
         useAt(pr,PosInExpr(1::Nil))(1,PosInExpr(0::1::Nil)))
     }
 
-    val (pf,inst) = fStar(sys,fml)
+    val (pf,inst) = try {
+      fStar(sys,fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       tac1 & tac2 &
-      useAt("RI& closed real induction >=")(pos) &
-      DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
-      andR(pos)<(
-      //G |- P
-      implyR(pos) & tac21 & ?(closeId) & timeoutQE & done,
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) &
-      //Cut P*
-      cutR(pf)(1)<(
-        hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) & //Don't bother running the rest if QE fails
-      hideL(-1) & DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) &
-      tac23 &
-      //At this point, the sequent should be EXACTLY the following (where P is rewritten back to semialgebraic normal form):
-      //t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
-      lpclosed(inst)
+      //@todo always check with doIfElse or TryCatch instead?
+      Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+        useAt(Ax.RIclosedgeq)(pos) &
+        DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
+        andR(pos) <(
+          //G |- P
+          implyR(pos) & tac21 & ?(id) & timeoutQE & done
+          ,
+          cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          implyR(1) &
+          //Cut P*
+          cutR(pf)(1) <(
+            hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
+            skip
+          ) & //Don't bother running the rest if QE fails
+          hideL(-1) & DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) &
+          tac23 &
+          //At this point, the sequent should be EXACTLY the following (where P is rewritten back to semialgebraic normal form):
+          //t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
+          lpclosed(inst)
+        )
+        ,
+        DebuggingTactics.error("Inapplicable: t_ occurs")
       )
   })
 
@@ -345,11 +374,12 @@ object ODEInvariance {
   //as above, assumes local progress for q is in antecedent (-1) and the progress in succedent (1)
   //additionally, the domain is assumed to be exactly g>0 | t=0
   //Unfortunately, this tactic has to prove the power bounds on the fly but hopefully remember() can store them
-  private def lpgt(bound:Int): DependentTactic = "lpgt" by ((seq: Sequent) => {
+  private def lpgt(bound:Int): DependentTactic = anon ((seq: Sequent) => {
     val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
     val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
-      case e => throw new BelleThrowable("lpgt called with incorrect result at expected position: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpgt only applicable to disjunction of strict inequality and equality, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position does not point to a valid position in sequent " + seq.prettyString)
     }
     //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
@@ -366,7 +396,11 @@ object ODEInvariance {
     f match {
       case cf:ComparisonFormula =>
         //findDbx
-        val (pr, cofactor, rem) = findDbx(ode, dom, cf,false)
+        val (pr, cofactor, rem) = try {
+          findDbx(ode, dom, cf,false)
+        } catch {
+          case ex: ProofSearchFailure => return None
+        }
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -433,7 +467,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (dgDbxAuto(1) | dgBarrier(1)) & done
+      case _ => (diffInd()(1) | dgDbxAuto(1) | dgBarrier(1)) & done
     })
   }
 
@@ -454,15 +488,23 @@ object ODEInvariance {
     *                   The option only applies if doReorder = true
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+  // was "sAIR1"
+  def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIRankOne: position " + pos + " must point to a top-level succedent position")
+
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIR1 only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
-    val (f2, propt) = semiAlgNormalize(post)
+    val (f2, propt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
     val (starter, imm) = propt match {
       case None => (skip, skip)
@@ -486,20 +528,26 @@ object ODEInvariance {
     }
     else {
       val f3 =
-        rankOneFml(ode, dom, f2) match {
-          case None => throw new BelleThrowable("Unable to re-order to recursive rank 1 form: " + f2)
-          case Some(f) => f
+        try {
+          rankOneFml(ode, dom, f2) match {
+            case None => throw new TacticInapplicableFailure("Unable to re-order to recursive rank 1 form: " + f2)
+            case Some(f) => f
+          }
+        } catch {
+          case e: IllegalArgumentException =>
+            throw new TacticInapplicableFailure("Unable to determine whether formula is rank 1 form", e)
         }
 
       val reorder = proveBy(Equiv(f2, f3), timeoutQE)
-      assert(reorder.isProved)
+      if(!reorder.isProved)
+        throw new TacticInapplicableFailure("Unable to automatically prove equivalence "+Equiv(f2,f3))
 
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
         useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
       )
     }
-  })
+  }}
 
   /**
     * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
@@ -517,11 +565,14 @@ object ODEInvariance {
     * t=d requires d to be a constant number, which forces the whole ODE to be frozen
     * (of course, P should be true initially)
     */
-  def timeBound : DependentPositionTactic = "timeBound" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
+  def timeBound : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("timeBound: position " + pos + " must point to a top-level succedent position")
+
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("timeBound only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Check that the domain at least freezes one of the coordinates
     val domConj = flattenConjunctions(dom)
@@ -541,7 +592,7 @@ object ODEInvariance {
       case _ => false})
 
     constRHS match {
-      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
       case Equal(t,d)::_ =>
         //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
         val left = freeAtoms.map(f =>
@@ -550,7 +601,7 @@ object ODEInvariance {
           Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
         dC(LessEqual(left,right))(pos)<(
           dW(pos) & QE & done,
-          dI('full)(pos)
+          diffInd('full)(pos)
         )
     }
   })
@@ -580,23 +631,26 @@ object ODEInvariance {
   private lazy val stuckRefine =
     remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
       implyR(1) & implyR(1) &
-        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt(Ax.box,PosInExpr(1::Nil))(-2) & notL(-2) &
         cutL("<{c&!q(||)|r(||)}>(!r(||) | !p(||))".asFormula)(-1) <( skip , cohideR(3) & implyR(1) & mond & prop) &
-        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        useAt(Ax.box,PosInExpr(1::Nil))(1) & notR(1) &
         cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
-        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        andLi & useAt(Ax.Uniq)(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
-          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
-  def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel, "domain stuck only at top-level")
+  def domainStuck : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("domainStuck: position " + pos + " must point to a top-level succedent position")
+
     val (ode, dom, post) = seq.sub(pos) match {
       //needs to be dualized
       case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
       //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+      case Some(e) => throw new TacticInapplicableFailure("domainStuck only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val tvName = "stuck_"
@@ -606,11 +660,12 @@ object ODEInvariance {
 
     val (negDom, propt) = semiAlgNormalize(Not(dom))
     //The negated domain is definitely normalizable if not something went wrong
-    assert(propt.isDefined)
+    if(propt.isEmpty)
+      throw new UnsupportedTacticFeature("Unexpected failure in normalization of "+Not(dom))
 
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(Ax.commaCommute)(pos)) * odedim &
     cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
       timeBound(pos), //closes assuming P(init)
       useAt(stuckRefine,PosInExpr(1::Nil))(pos) &
@@ -628,7 +683,7 @@ object ODEInvariance {
   */
   def rank(ode:ODESystem, polys:List[Term]) : (Int, List[Term], List[List[Term]]) = {
     if (ToolProvider.algebraTool().isEmpty)
-      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+      throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
 
     val algTool = ToolProvider.algebraTool().get
 
@@ -677,19 +732,27 @@ object ODEInvariance {
     */
   private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
 
-  def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
+  private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
+  /** The ghost variables */
+  private val gvy = Variable("dbxy_")
+  private val gvz = Variable("dbxz_")
+  private val zero = Number(0)
+  private val one = Number(1)
+  private val two = Number(2)
+
+  def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dgVdbx: position " + pos + " must point to a top-level succedent position")
+
     val dim = ps.length
-    require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
+    if(! (Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1))
+      throw new IllFormedTacticApplicationException("dgVdbx: inputs have non-matching dimensions")
 
     val (ode,dom) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
-      case _ => throw new BelleThrowable("dgVdbx only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
-
-    val zero = Number(0)
-    val one = Number(1)
-    val two = Number(2)
 
     // Turns the vector into sum_i p_i^2
     val sump = ps.map(p => Times(p,p)).reduce(Plus)
@@ -712,16 +775,11 @@ object ODEInvariance {
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
     val qco = if (negate) Neg(cofactorPre) else cofactorPre
 
-    /** The ghost variable */
-    val gvy = "dbxy_".asVariable
-    /** Another ghost variable */
-    val gvz = "dbxz_".asVariable
-
     //Construct the diff ghost y' = -qy
     val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
 
     //Diff ghost z' = qz/2
-    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, Number(2)), gvz))
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, two), gvz))
 
     val gtz = Greater(gvy, zero)
     val pcy = And(gtz,
@@ -740,7 +798,7 @@ object ODEInvariance {
     val dpPre = dot_prod(matvec_prod(Gco,ps),ps)
     val dp = replaceODEfree(sump,dpPre,ode)
     if(lie == Number(0))
-      dC(cutp)(pos) <( skip, dI('full)(pos))
+      dC(cutp)(pos) <( skip, diffInd('full)(pos))
 
     else
     //Cuts
@@ -752,7 +810,7 @@ object ODEInvariance {
         dC(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
-            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+            diffWeakenG(pos) & implyR(1) & andL('Llast) & id,
             //QE can't handle this alone: diffInd('full)(pos)
             Dconstify
             (
@@ -761,13 +819,14 @@ object ODEInvariance {
                 //Extra domain constraint from diffInd step
                 hideL('Llast) &
                 //Get rid of dbxy_=1 assumption
-                exhaustiveEqL2R('Llast) &
+                exhaustiveEqL2R(hide=true)('Llast) &
                 // TODO: The next 3 steps do not work with Dconstify
                 //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
                 //DebuggingTactics.debug("First Vdbx QE",true) &
                 //p=0 must be true initially
-                (QE & done | DebuggingTactics.done("Vdbx condition must hold in the beginning")),
+                QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
+                ,
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
@@ -775,7 +834,7 @@ object ODEInvariance {
                   (if(negate) useAt(ghostLem2,PosInExpr(1::Nil))(1)
                   else useAt(ghostLem1,PosInExpr(1::Nil))(1)) &
                   andR(1) <(
-                  prop,
+                    andL('Llast) & close,
                   //Now we need a real rearrangement using Q |- p' = Gp
                   cut(Equal(lie,Times(two,dp))) <(
                     exhaustiveEqL2R('Llast) & hideL('Llast) &
@@ -784,7 +843,7 @@ object ODEInvariance {
                     ,
                     // This is the only "real" use of QE.
                     DebuggingTactics.debug("Second Vdbx QE",debugTactic) &
-                      hideR(1) & (QE & done | DebuggingTactics.done("Vdbx condition must be preserved"))
+                      hideR(1) & QE & DebuggingTactics.done("Vdbx condition must be preserved")
                   )
                 )
               )
@@ -795,12 +854,12 @@ object ODEInvariance {
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
               <(
-              hideL('Llast) & QE,
+              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
               cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
             )
         )
     )
-  })
+  }}
 
   /**
     * Implements (conjunctive) differential radical invariants
@@ -813,23 +872,40 @@ object ODEInvariance {
     * This requires a top-level postcondition which rearranges to be a conjunction of equalities
     * @see Khalil Ghorbal, Andrew Sogokon, and André Platzer. [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
     */
-  def dRI : DependentPositionTactic = "dRI" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dRI only applicable in top-level succedent")
+  @Tactic(names="(Conj.) Differential Radical Invariants",
+    premises="Γ, Q |- p*=0",
+    conclusion="Γ |- [x'=f(x) & Q}]p=0, Δ",
+    displayLevel="browse")
+  val dRI : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dRI: position " + pos + " must point to a top-level succedent position")
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dRI only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (f2, _) = semiAlgNormalize(post)
+    val (f2, _) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
     val conjs = flattenConjunctions(f2)
     val polys = {
       if (conjs.forall(f => f.isInstanceOf[Equal]))
         conjs.map(f => f.asInstanceOf[Equal].left)
       else {
         //TODO: this is not the best way to go about proving this
-        val (f2, _) = algNormalize(post)
-        require(f2.isInstanceOf[Equal], "dRI requires only equations in postcondition")
+        val (f2, _) = try {
+          algNormalize(post)
+        } catch {
+          case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
+        }
+
+        //This is a contract failure of maxMinGeqNormalize
+        if (!f2.isInstanceOf[Equal]) throw new UnsupportedTacticFeature("Normalization failed to reach an equation "+f2)
         List(f2.asInstanceOf[Equal].left)
       }
     }
@@ -1017,22 +1093,53 @@ object ODEInvariance {
   }
 
   /**
+    * Implements differential fixed point
+    *
+    * G, x=x0 |- [x'=f(x)& Q & x=x0]P    G|-f(x)=0
+    * --- (dFP)
+    * G |- [x'=f(x)&Q]P
+    *
+    */
+  @Tactic(names="Differential Fixed Point",
+    premises="Γ, x=x0 |-[x'=f(x) & Q &x=x0}]P, Δ ;; Γ |- f(x) = 0",
+    conclusion="Γ |- [x'=f(x) & Q}]P, Δ",
+    displayLevel="browse")
+  val dFP : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("dFP: position " + pos + " must point to a top-level succedent position")
+
+    val (sys, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys, post)
+      case Some(e) => throw new TacticInapplicableFailure("dFP only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val vs = atomicListify(sys.ode).map( p => p.xp.x )
+    val olds = vs.map(v => Equal(v,FuncOf(Function("old", None, Real, Real, false),v)))
+
+    dC(olds.reduce(And.apply))(pos) <(
+      skip,
+      dRI(pos)
+    )
+  })
+
+  /**
     * Helper and lemmas
     */
-  private val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
-  private val lemTrans = remember("a() <= b() -> b() <= c() -> a() <= c()".asFormula,QE).fact
-  private val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
-  private val lemUb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE)
-  private val lemLb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE)
+  private lazy val lemPosMul = remember("a() >= 0 -> b() <= c() -> b()*a() <= c()*a()".asFormula,QE).fact
+  private lazy val lemTrans = remember("a() <= b() -> b() <= c() -> a() <= c()".asFormula,QE).fact
+  private lazy val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
+  private lazy val lemUb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE).fact
+  private lazy val lemLb = remember("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE).fact
 
-  private val lemSq = proveBy("2*a() <= a()*a() + 1".asFormula,QE)
-  private val lemAdd1 = proveBy("a() <= b() -> a() +1 <= b() + 1".asFormula,QE)
-  private val lemAffinecomb = proveBy("a() <= d()*x() -> b() <= c()*x() + 1 -> a() + b() <= (d()+c()) * x() +1 ".asFormula,QE)
+  private lazy val lemSq = remember("2*a() <= a()*a() + 1".asFormula,QE).fact
+  private lazy val lemAdd1 = remember("a() <= b() -> a() +1 <= b() + 1".asFormula,QE).fact
+  private lazy val lemAffinecomb = remember("a() <= d()*x() -> b() <= c()*x() + 1 -> a() + b() <= (d()+c()) * x() +1 ".asFormula,QE).fact
 
   // Specialized lemma to rearrange the ghosts
-  private val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
-  private val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
-  private val leftMultId = remember("1*f() = f()".asFormula,QE)
+  private lazy val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
+  private lazy val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
+  private lazy val leftMultId = remember("1*f() = f()".asFormula,QE)
 
   // Symbolic matrix and vector products, assuming that the dimensions all match up
   def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
@@ -1091,7 +1198,10 @@ object ODEInvariance {
   private val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
   private val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
   private def prove_sos_positive : BelleExpr = {
-    SaturateTactic(OnAll(andR(1) | byUS(sqPos1) | byUS(sqPos2) | useAt(plusPos,PosInExpr(1::Nil))(1)))
+    SaturateTactic(OnAll(andR(1) |
+    TryCatch(byUS(sqPos1), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos1", ex)) |
+    TryCatch(byUS(sqPos2), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos2", ex)) |
+    useAt(plusPos,PosInExpr(1::Nil))(1)))
   }
 
   /**
@@ -1103,7 +1213,7 @@ object ODEInvariance {
   //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
   private def sym_det (m:List[List[Term]]) : Term = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "sym_det called with non-matching dimensions.")
     if(dim==1) m(0)(0)
     else if(dim==2) //det ((a b)(c d)) = a d - b c
       Minus(Times(m(0)(0),m(1)(1)),Times(m(0)(1),m(1)(0)))
@@ -1116,7 +1226,7 @@ object ODEInvariance {
   //Symbolic trace
   private def sym_trace (m:List[List[Term]]) : Term = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "sym_trace called with non-matching dimensions.")
     List.range(0,dim).map(i=>m(i)(i)).foldLeft[Term](Number(0))(Plus.apply)
   }
 
@@ -1126,7 +1236,7 @@ object ODEInvariance {
 
   //Various conversion rewrites for CE in corresponding max/min lemmas
   private lazy val minLem =
-  remember("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE,namespace)
+    remember("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE,namespace)
   private lazy val maxLemL =
     remember("f()>=0 -> max((f(),g()))>=0".asFormula,QE,namespace)
   private lazy val maxLemR =
@@ -1135,7 +1245,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt("Uniq uniqueness iff")(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt(Ax.UniqIff, PosInExpr(0::Nil))(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =
@@ -1146,12 +1256,12 @@ object ODEInvariance {
   //Refine left/right of max
   private lazy val refMaxL =
     remember("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
       namespace)
 
   private lazy val refMaxR =
     remember("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
       namespace)
 
   /** Given a bound i, generate the local progress formula up to that bound
@@ -1263,7 +1373,7 @@ object ODEInvariance {
               (prop,Darboux(true, cofactor, pr))
             }
             catch {
-              case e: BelleThrowable => (False, Triv())
+              case e: ProofSearchFailure => (False, Triv())
             }
 
           if(context.isDefined)
@@ -1272,7 +1382,7 @@ object ODEInvariance {
             if(prf.isProved)
               (prop, inst, by(prf))
             else
-              throw new BelleThrowable("QE failed")
+              throw new TacticInapplicableFailure("QE failed")
           }
           else
             (prop, inst, timeoutQE)
@@ -1285,9 +1395,8 @@ object ODEInvariance {
             val prop = GreaterEqual(p, Number(0))
             val (pr, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(false, cofactor, pr))
-          }
-          catch {
-            case e: BelleThrowable => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+          } catch {
+            case _: ProofSearchFailure => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
           }
 
         if(context.isDefined)
@@ -1296,7 +1405,7 @@ object ODEInvariance {
           if(prf.isProved)
             (prop, inst, by(prf))
           else
-            throw new BelleThrowable("QE failed")
+            throw new TacticInapplicableFailure("QE failed")
         }
         else
           (prop, inst, QE)
@@ -1311,7 +1420,7 @@ object ODEInvariance {
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
             DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
-            implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
             dgDbx(cofactor)(1)
         case Disj(l,r) =>
           DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
@@ -1362,26 +1471,43 @@ object ODEInvariance {
     *         one of tactic limitations is met
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+  // was "sAIc"
+  def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAIclosedPlus: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAIclosedPlus needs an algebra tool (and Mathematica)")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (fml1,propt1) = semiAlgNormalize(post)
+    val (fml1,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
-    val (fml,propt2) = maxMinGeqNormalize(fml1)
+    val (fml,propt2) = try {
+      maxMinGeqNormalize(fml1)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition", ex)
+    }
 
     val propt = compose_equiv(propt1,propt2)
 
-    require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
+    //This is a contract failure of maxMinGeqNormalize
+    if (!fml.isInstanceOf[GreaterEqual]) throw new UnsupportedTacticFeature("Normalization failed to reach normal form "+fml)
+
     val f2 = fml.asInstanceOf[GreaterEqual]
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
-    val (pf,inst,qetac) = pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    val (pf,inst,qetac) = try {
+      pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to compute p*", ex)
+    }
 
     //println("HOMPLUS:"+pf+" "+inst)
 
@@ -1398,13 +1524,18 @@ object ODEInvariance {
     }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
-      starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-        implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
-        & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
+      //@todo always check with doIfElse vs. trycatch space compatible exception?
+      starter & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+        useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
+        implyR(pos) & r1 & ?(id) & timeoutQE & done, //common case?
+        cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
+          & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
+      )
+      ,
+      DebuggingTactics.error("Inapplicable: t_ occurs")
     )
-  })
+  }}
 
   private def simplify_mat(m:List[List[Term]]) :List[List[Term]] = {
     m.map(ls => ls.map (t => simpWithTool(ToolProvider.simplifierTool(),t)))
@@ -1414,9 +1545,9 @@ object ODEInvariance {
   }
 
   //Computes and returns the sequence m, m^2, ... m^{k-1} if m^{k} = 0
-  def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
+  private def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
     val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
+    require(m.forall(ls => ls.length == dim), "nilpotentIndex called with non-matching dimensions.")
 
     var ctr = 1
     //TODO: simplify here or later?
@@ -1539,28 +1670,29 @@ object ODEInvariance {
   // TODO: hacky communication of global time marker for nilpotentSolve
   val nilpotentSolveTimeVar = "time_".asVariable
 
-  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
+  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("nilpotent solve: position " + pos + " must point to a top-level succedent position")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("nilpotentSolve only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
-      throw new BelleThrowable("nilpotent solve should not be called twice (solution already available from prior call)")
+    if (StaticSemantics.symbols(dom).exists(_.name == nilpotentSolveTimeVar.name))
+      throw new IllFormedTacticApplicationException("nilpotent solve should not be called twice (solution already available from prior call)")
 
-    val t = nilpotentSolveTimeVar //explicitly non-idempotent
-    //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
+    val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)
-    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode + " could not be put into linear form x'=Ax")
+    if (linForm.isEmpty) throw new TacticInapplicableFailure("ODE " + ode + " could not be put into linear form x'=Ax")
     val (m, b, x) = linForm.get
 
     val npopt = nilpotentIndex(m)
 
-    if (npopt.isEmpty) throw new BelleThrowable("Coefficient matrix for " + ode + " is not nilpotent.")
+    if (npopt.isEmpty) throw new TacticInapplicableFailure("Coefficient matrix for " + ode + " is not nilpotent.")
     val np = npopt.get
 
     val bsimp = b.map(t => simpWithTool(ToolProvider.simplifierTool(), t))
@@ -1625,7 +1757,7 @@ object ODEInvariance {
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, dI('full)('Rlast))) & dI('full)('Rlast)
+      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(
@@ -1656,12 +1788,14 @@ object ODEInvariance {
 
   private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
 
-  def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = "diffDivConquer" by ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "DDC only applicable in top-level succedent")
+  def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("diffDivConquer: position " + pos + " must point to a top-level succedent position")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("DDC only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("diffDivConquer only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val zero = Number(0)

@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -19,7 +18,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
     val entry = ParsedArchiveEntry("Entry 1", "theorem",
       "Theorem \"Entry 1\" ProgramVariables Real A; Real b; Real x; End. Problem A>0\n|b>0 -> [x:=1;]x>=0 End. End.",
       "A>0\n|b>0 -> [x:=1;]x>=0", Declaration(Map.empty),
-      "A>0 | b>0 -> [x:=1;]x>=0".asFormula, Nil, Map.empty)
+      "A>0 | b>0 -> [x:=1;]x>=0".asFormula, Nil, Nil, Map.empty)
     new KeYmaeraXArchivePrinter(withComments=true)(entry) shouldBe
       s"""/* Exported from KeYmaera X v${edu.cmu.cs.ls.keymaerax.core.VERSION} */
         #

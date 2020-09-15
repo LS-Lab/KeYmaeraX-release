@@ -9,7 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, lemma}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import edu.cmu.cs.ls.keymaerax.pt._
@@ -57,10 +57,10 @@ object Lemma {
     val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
         TermProvable(ElidingProvable(provable), name match { case Some(n) =>
-          DerivedAxiomInfo.allInfo.find(_.storedName == n) match {
+          DerivedAxiomInfo.allInfo.get(n) match {
             case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
-              if (DerivedRuleInfo.allInfo.exists(_.storedName == n)) RuleTerm(n)
+              if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n)
               else NoProof()
           }
         case None => FOLRConstant(provable.conclusion.succ.head) })
@@ -87,7 +87,7 @@ object Lemma {
   * Lemmas are named Provables, supported by some evidence of how they came about.
   * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
  *
-  * @example{{{
+  * @example {{{
   * // prove a lemma
   * val proved = TactixLibrary.proveBy(
   *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),

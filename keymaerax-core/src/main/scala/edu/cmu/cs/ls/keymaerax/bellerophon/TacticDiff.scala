@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import TacticComparator._
 import edu.cmu.cs.ls.keymaerax.core.Ensures
 
@@ -39,8 +39,8 @@ object TacticComparator {
 class TacticComparator[T <: BelleExpr](val l: T) {
   def ===(r: T): Boolean = (l, r) match {
     case (SeqTactic(ll, lr), SeqTactic(rl, rr)) => ll === rl && lr === rr
-    case (SeqTactic(ll, lr), _) if lr == Idioms.nil => ll === r
-    case (SeqTactic(ll, lr), _) if ll == Idioms.nil => lr === r
+    case (SeqTactic(ll, lr), _) if lr == TactixLibrary.nil => ll === r
+    case (SeqTactic(ll, lr), _) if ll == TactixLibrary.nil => lr === r
     case (BranchTactic(bl), BranchTactic(br)) => bl.size == br.size && bl.zip(br).forall(x => x._1 === x._2)
     case (EitherTactic(ell, elr), EitherTactic(erl, err)) => ell === erl && elr === err
     case (SaturateTactic(sl), SaturateTactic(sr)) => sl === sr
@@ -115,7 +115,7 @@ object TacticDiff {
       case BuiltInTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -124,7 +124,7 @@ object TacticDiff {
       case NamedTactic(n2, c2) if n1 == n2 && c1 == c2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -133,7 +133,7 @@ object TacticDiff {
       case DependentTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -142,7 +142,7 @@ object TacticDiff {
       case AppliedPositionTactic(c2, l2) if c1 == c2 && l1 == l2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -151,7 +151,7 @@ object TacticDiff {
       case AppliedBuiltinTwoPositionTactic(c2, p2L, p2R) if c1 == c2 && p1L == p2L && p1R == p2R => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -160,7 +160,7 @@ object TacticDiff {
       case it2: AppliedDependentPositionTacticWithAppliedInput if it1.pt == it2.pt => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
       case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -169,7 +169,7 @@ object TacticDiff {
       case InputTactic(n2, i2) if n1 == n2 && i1 == i2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
         case SeqTactic(n2l, n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))

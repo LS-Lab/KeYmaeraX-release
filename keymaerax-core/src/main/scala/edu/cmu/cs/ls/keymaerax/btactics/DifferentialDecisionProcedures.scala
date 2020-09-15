@@ -18,7 +18,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 object DifferentialDecisionProcedures {
 
   /** Runs all available decision procedures. */
-  def apply() : DependentPositionTactic =  "DifferentialDecisionProcedures" by ((pos: Position, seq: Sequent) => {
+  // was "DifferentialDecisionProcedures"
+  def apply() : DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     linearSystem(pos)
   })
 

@@ -6,8 +6,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
 
 import scala.collection.immutable.IndexedSeq
@@ -63,12 +64,18 @@ class QETests extends TacticTestBase {
     proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool)).subgoals.loneElement shouldBe " ==> false".asSequent
   }
 
-  it should "not choke on predicates" in withMathematica { tool =>
+  it should "not choke on irrelevant predicates" in withMathematica { tool =>
     proveBy("p_() & q_() -> 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
   it should "close predicates if possible" in withMathematica { tool =>
     proveBy("p_() & q_() -> p_() | 2<3".asFormula,ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
+  it should "not branch to be clever with predicates" in withMathematica { tool =>
+    //@note otherwise may split too extensively; master makes up for it with autoMP
+    the [TacticInapplicableFailure] thrownBy proveBy("(2<3->p(x)) -> p(x)".asFormula,ToolTactics.fullQE(tool)) should
+      have message "Uninterpreted predicate symbols not supported in QE"
   }
 
   it should "not fail when already proved" in withMathematica { tool =>
@@ -114,39 +121,39 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on tool mismatch" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Nil, Some("Z3"))) should have message "[Bellerophon Runtime] QE requires Z3, but got None"
+    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Nil, Some("Z3"))) should have message "QE requires Z3, but got None"
   }
 
   it should "switch between tools" in withDatabase { db =>
-    val provider = new MultiToolProvider(
-      new Z3ToolProvider :: new MathematicaToolProvider(configFileMathematicaConfig) :: Nil)
+    val provider = MultiToolProvider(
+      new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))"),
-      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))")
     interpreter.kill()
   }
 
   it should "use the default tool" in withDatabase { db =>
-    val provider = new MultiToolProvider(
-      new Z3ToolProvider :: new MathematicaToolProvider(configFileMathematicaConfig) :: Nil)
+    val provider = MultiToolProvider(
+      new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
-      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE, QE)")
   }
 
   it should "switch between tools from parsed tactic" in {
-    val provider = new MultiToolProvider(
-      new Z3ToolProvider :: new MathematicaToolProvider(configFileMathematicaConfig) :: Nil)
+    val provider = MultiToolProvider(
+      new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
@@ -157,7 +164,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+    interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE({`7`})")
   }}
 
@@ -166,7 +173,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+    interpreter(QE, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
 
@@ -175,12 +182,12 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(s"QE({`${tool.name}`}, {`7`})")
   }}
 
   it should "complain about the wrong tool" in withZ3 { _ =>
-    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
+    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "QE requires Mathematica, but got None"
   }
 
   "CEX in QE" should "not fail QE when FindInstance fails" in withMathematica { tool =>

@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 /**
   * @author Nathan Fulton
@@ -76,7 +76,7 @@ class ARCHNonlinearBenchmark extends TacticTestBase {
       |(-1+x)^2+(1+y)^2 < 1/4->[{x'=1+x+x^2+x^3+2*y+2*x^2*y,y'=-y+2*x*y+x^2*y+2*x*y^2&true}](!y>=1)
       |x=1/4&y=1/8&z=1/10->[{x'=x^2-x*(x^3+y^3+z^3),y'=y^2-y*(x^3+y^3+z^3),z'=z^2-z*(x^3+y^3+z^3)&true}](!(x>10|y>5|z<=-20))""".stripMargin
       .split("\n")
-      .filter(_ != "").map(KeYmaeraXParser)
+      .filter(_ != "").map(Parser.parser)
 
   "ODE" should "no op" in {}
 

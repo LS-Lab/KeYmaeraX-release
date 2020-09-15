@@ -5,14 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+import testHelper.KeYmaeraXTestTags.SlowTest
 
-import scala.collection.{LinearSeqLike, immutable}
-import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests hash code and some collection expectations such as lookup and adds and removes.
@@ -20,10 +19,11 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
   * @todo more exhaustive tests
  * @author Andre Platzer
  */
+@CheckinTest
 class HashTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 1000
-  val randomComplexity = 30
+  val randomComplexity = 25
   val collectionSize = 2*randomTrials
   val rand = new RandomFormula()
   val cp = new RandomReapplyTests

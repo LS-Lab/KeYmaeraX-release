@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
@@ -20,13 +20,13 @@ import scala.language.postfixOps
 class FMTutorial extends TacticTestBase {
 
   "Example 1" should "be provable with master" in withQE { _ => withDatabase { db =>
-    val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 1", io.Source.fromInputStream(
+    val modelContent = ArchiveParser.getEntry("Formal Methods Tutorial Example 1", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   "Example 2" should "stop in the right place" in withMathematica { _ => withDatabase { db =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 2", io.Source.fromInputStream(
+    val entry = ArchiveParser.getEntry("Formal Methods Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
     val modelContent = entry.fileContent
     val tactic = entry.tactics.head._3
@@ -37,13 +37,13 @@ class FMTutorial extends TacticTestBase {
   }}
 
   "Example 3" should "be provable with master" in withQE { _ => withDatabase { db =>
-    val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 3", io.Source.fromInputStream(
+    val modelContent = ArchiveParser.getEntry("Formal Methods Tutorial Example 3", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   "Example 4" should "be provable with master" in withQE { _ => withDatabase { db =>
-    val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
+    val modelContent = ArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}

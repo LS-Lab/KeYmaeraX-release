@@ -36,8 +36,8 @@ import org.apache.logging.log4j.scala.Logging
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @author Andre Platzer
   * @author Yong Kiam Tan
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   */
 private[core] object AxiomBase extends Logging {
   /**
@@ -320,7 +320,7 @@ End.
 
 /* @todo soundness requires only vectorial x in p(||) */
 Axiom "DI differential invariance"
-  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
+  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
@@ -391,10 +391,23 @@ Axiom "RI& closed real induction >="
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
+Axiom "IVT"
+  <{c&q(||)}>(f(||)>=0&p(||)) -> f(||)<=0 -> <{c&q(||)}> (f(||)=0 & <{c&q(||)}>(f(||)>=0&p(||)))
+  /* @note formal proof IVTaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
+   * soundness requires f(||) to be continuous
+   */
+End.
+
+Axiom "DCC"
+  [{c&r(||)}](p(||)->q(||))<-(([{c&r(||)&p(||)}]q(||)) & ([{c&r(||)}](!p(||)->[{c&r(||)}]!p(||))))
+  /* @note formal proof DCCaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
+   * differential conditional cut (e.g., (40) in https://arxiv.org/abs/1903.00153v1) */
+End.
+
 /** DIFFERENTIAL AXIOMS */
 
 Axiom "c()' derive constant fn"
-  c()' = 0
+  (c())' = 0
 End.
 
 Axiom "x' derive var"
@@ -406,71 +419,71 @@ Axiom "-' derive neg"
 End.
 
 Axiom "+' derive sum"
-  (f(||) + g(||))' = f(||)' + g(||)'
+  (f(||) + g(||))' = (f(||))' + (g(||))'
 End.
 
 Axiom "-' derive minus"
-  (f(||) - g(||))' = f(||)' - g(||)'
+  (f(||) - g(||))' = (f(||))' - (g(||))'
 End.
 
 Axiom "*' derive product"
-  (f(||) * g(||))' = f(||)'*g(||) + f(||)*g(||)'
+  (f(||) * g(||))' = (f(||))'*g(||) + f(||)*(g(||))'
 End.
 
 Axiom "/' derive quotient"
-  (f(||) / g(||))' = (f(||)'*g(||) - f(||)*g(||)') / (g(||)^2)
+  (f(||) / g(||))' = ((f(||))'*g(||) - f(||)*(g(||))') / (g(||)^2)
 End.
 
 Axiom "chain rule"
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = f(y_)' * g(x_)' )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_))' * (g(x_))' )
 End.
 
 Axiom "^' derive power"
-	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- c()!=0
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- c()!=0
 End.
 
 Axiom "=' derive ="
-  (f(||) = g(||))' <-> f(||)' = g(||)'
+  (f(||) = g(||))' <-> ((f(||))' = (g(||))')
 End.
 
 Axiom ">=' derive >="
-  (f(||) >= g(||))' <-> f(||)' >= g(||)'
+  (f(||) >= g(||))' <-> ((f(||))' >= (g(||))')
 End.
 
 Axiom ">' derive >"
-  (f(||) > g(||))' <-> f(||)' >= g(||)'
+  (f(||) > g(||))' <-> ((f(||))' >= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "<=' derive <="
-  (f(||) <= g(||))' <-> f(||)' <= g(||)'
+  (f(||) <= g(||))' <-> ((f(||))' <= (g(||))')
 End.
 
 Axiom "<' derive <"
-  (f(||) < g(||))' <-> f(||)' <= g(||)'
+  (f(||) < g(||))' <-> ((f(||))' <= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "!=' derive !="
-  (f(||) != g(||))' <-> f(||)' = g(||)'
+  (f(||) != g(||))' <-> ((f(||))' = (g(||))')
   /* sic! */
 End.
 
 Axiom "&' derive and"
-  (p(||) & q(||))' <-> p(||)' & q(||)'
+  (p(||) & q(||))' <-> ((p(||))' & (q(||))')
 End.
 
 Axiom "|' derive or"
-  (p(||) | q(||))' <-> p(||)' & q(||)'
+  (p(||) | q(||))' <-> ((p(||))' & (q(||))')
   /* sic! yet <- */
 End.
 
 Axiom "forall' derive forall"
-  (\forall x_ p(||))' <-> \forall x_ p(||)'
+  (\forall x_ p(||))' <-> \forall x_ ((p(||))')
 End.
 
 Axiom "exists' derive exists"
-  (\exists x_ p(||))' <-> \forall x_ p(||)'
+  (\exists x_ p(||))' <-> \forall x_ ((p(||))')
   /* sic! yet <- */
 End.
 

@@ -56,7 +56,7 @@ class ArithmeticTests extends TacticTestBase {
 
   //@todo AdvocatusTest that inserts a broken tool by reflection.
 
-  "fullQE" should "apply equalities, transform to implication, and compute universal closure" in {
+  "fullQE" should "apply equalities, transform to implication, and compute universal closure" in withTactics {
     val tool = new MockTool(
       "\\forall x_0 \\forall v_0 \\forall t \\forall s (-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0&v_0>0&x_0 < s->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
@@ -73,7 +73,7 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "only apply equalities for variables" in {
+  it should "only apply equalities for variables" in withTactics {
     val tool = new MockTool(
       "\\forall y \\forall x \\forall r (x^2+y^2=r^2&r>0->y<=r)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
@@ -86,8 +86,8 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "not support differential symbols" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1".asFormula,
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
+    (the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1".asFormula,
+      TactixLibrary.QE) }).getMessage should include ("Name conversion of differential symbols not allowed: x'")
   }
 
   it should "support differential symbols with Z3" in withZ3 { _ =>
@@ -96,12 +96,12 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
+      TactixLibrary.QE) should have message "Unable to create dependent tactic 'ANON', cause: Name conversion of differential symbols not allowed: x'"
   }
 
   it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
+      TactixLibrary.QE) should have message "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
   }
 
   it should "avoid name clashes with Mathematica" in withMathematica { _ =>
@@ -112,7 +112,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "avoid name clashes with Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE) should have message
-      "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
+      "QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
     proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
@@ -178,31 +178,31 @@ class ArithmeticTests extends TacticTestBase {
   "transform" should "prove a simple example" in withQE { _ =>
     proveBy(
       "a<b ==> b>a".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "prove a simple example with modalities in other formulas" in withQE { _ =>
     proveBy(
       "a<b ==> b>a, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "keep enough context around to prove the transformation" in withQE { _ =>
     proveBy(
       "a+b<c, b>=0&[y:=3;]y=3, y>4 ==> a<c, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "work with division by zero" in withQE { _ =>
     proveBy(
       "a/b<c, b>0 ==> c>a/b".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "work with division by zero even with modalities somewhere" in withQE { _ =>
     proveBy(
       "a/b<c, b>0&[y:=3;]y=3 ==> c>a/b, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   "simulate" should "simulate a simple example" in withMathematica { tool =>

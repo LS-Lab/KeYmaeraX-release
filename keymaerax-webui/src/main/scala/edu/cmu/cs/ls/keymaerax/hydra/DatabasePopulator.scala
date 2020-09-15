@@ -5,12 +5,13 @@ import java.util.Calendar
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /**
@@ -40,14 +41,18 @@ object DatabasePopulator extends Logging {
 
   /** Reads a .kyx archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKyx(url: String): List[TutorialEntry] = {
-    val kyx = loadResource(url)
-    val archiveEntries = KeYmaeraXArchiveParser.parse(kyx, parseTactics = false)
-    archiveEntries.map(toTutorialEntry)
-
+    val entries = url.split('#').toList match {
+      case contentUrl :: Nil => ArchiveParser.parse(loadResource(contentUrl))
+      case contentUrl :: entryName :: Nil =>
+        ArchiveParser.getEntry(entryName, loadResource(contentUrl)).
+          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+      case _ => throw new IllegalArgumentException("Entry URLs are allowed to contain at most 1 '#', but got " + url)
+    }
+    entries.map(toTutorialEntry)
   }
 
   /** Converts a parsed archive entry into a tutorial entry as expected by this importer. */
-  def toTutorialEntry(entry: KeYmaeraXArchiveParser.ParsedArchiveEntry): TutorialEntry = {
+  def toTutorialEntry(entry: ParsedArchiveEntry): TutorialEntry = {
     TutorialEntry(entry.name, entry.fileContent, entry.info.get("Description"), entry.info.get("Title"),
       entry.info.get("Link"), entry.tactics.map({ case (tname, tacticContent, _) => (tname, tacticContent, true) }),
       entry.kind)
@@ -77,43 +82,65 @@ object DatabasePopulator extends Logging {
   }
 
   /** Loads the specified resource, either from the JAR if URL starts with 'classpath:' or from the URL. */
+  @tailrec
   def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       val resource = getClass.getResourceAsStream(url.substring("classpath:".length))
-      if (resource != null) io.Source.fromInputStream(resource).mkString
+      if (resource != null) io.Source.fromInputStream(resource, "ISO-8859-1").mkString
       else if (url.startsWith("classpath:/keymaerax-projects")) loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
       else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
+    } else if (url.startsWith("file://")) {
+      resource.managed(io.Source.fromFile(url.stripPrefix("file://"), "ISO-8859-1")).apply(_.mkString)
     } else {
-      try {
-        val src = io.Source.fromURL(url)
-        val result = src.mkString
-        src.close()
-        result
-      } catch {
-        case _: java.net.MalformedURLException => throw new Exception(s"Malformed URL $url")
-      }
+        resource.managed(io.Source.fromURL(url, "ISO-8859-1")).apply(_.mkString)
     }
 
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`.
     * Returns Left(modelName, ID) on success, Right(modelName) on failure */
   def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Either[(String, Int), String] = {
     val now = Calendar.getInstance()
-    val entryName = db.getUniqueModelName(user, entry.name)
-    logger.info("Importing model " + entryName + "...")
-    val result = db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
-      entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
-      case Some(modelId) =>
-        entry.tactic.foreach({ case (tname, ttext, _) =>
-          logger.info("Importing proof...")
-          val proofId = db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
-          if (prove) executeTactic(db, entry.model, proofId, ttext)
-          logger.info("...done")
-        })
-        Left(entry.name -> modelId)
-      case None => Right(entry.name)
+
+    def doImport(entry: TutorialEntry): Either[(String, Int), String] = {
+      logger.info("Importing model " + entry.name + "...")
+      val result = db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
+        entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
+        case Some(modelId) =>
+          entry.tactic.foreach({ case (tname, ttext, _) =>
+            logger.info("Importing proof...")
+            val proofId = db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
+            if (prove) executeTactic(db, entry.model, proofId, ttext)
+            logger.info("...done")
+          })
+          Left(entry.name -> modelId)
+        case None => Right(entry.name)
+      }
+      logger.info("...done")
+      result
     }
-    logger.info("...done")
-    result
+
+    db.getModelList(user).find(_.name == entry.name) match {
+      case Some(e) =>
+        if (backupPriorModel(db, user, e, entry)) doImport(entry)
+        else Left(e.name -> e.modelId)
+      case None => doImport(entry)
+    }
+  }
+
+  /** Creates a backup if a different model with the same name as `entry` already exists in the database. Returns false
+    * if the entry already exists verbatim in the database, true otherwise. */
+  private def backupPriorModel(db: DBAbstraction, user: String, oldEntry: ModelPOJO, newEntry: TutorialEntry): Boolean = {
+    val backupName = db.getUniqueModelName(user, newEntry.name)
+    val oldContent :: Nil = ArchiveParser.parse(oldEntry.keyFile, parseTactics=false)
+    val newContent :: Nil = ArchiveParser.parse(newEntry.model, parseTactics=false)
+    // update only on change
+    if (oldContent.defs.exhaustiveSubst(oldContent.model) != newContent.defs.exhaustiveSubst(newContent.model) ||
+      oldContent.tactics != newContent.tactics) {
+      db.updateModel(oldEntry.modelId, backupName,
+        if (oldEntry.title != "") Some(oldEntry.title) else None,
+        if (oldEntry.description != "") Some(oldEntry.description) else None,
+        if (oldEntry.keyFile != "") Some(oldEntry.keyFile) else None)
+      true // entry with same name but different model existed, do import
+    } else false // entry exists verbatim in the database, do not re-import
   }
 
   /** Prepares an interpreter for executing tactics. */
@@ -137,7 +164,7 @@ object DatabasePopulator extends Logging {
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(model))))
+    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }
 

@@ -1,14 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.{FormulaArg, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, List}
 import org.scalatest.LoneElement._
 
 /**
@@ -368,6 +372,17 @@ class ProofTreeTests extends TacticTestBase {
     tree.tactic shouldBe cut("y=37".asFormula) <(nil, nil)
   }
 
+  private def checkProvedTree(db: DBAbstraction, proofId: Int, tactic: BelleExpr, expected: Sequent): ProvableSig = {
+    var tree = DbProofTree(db, proofId.toString)
+    tree.openGoals.loneElement.runTactic("guest",
+      LazySequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
+    tree = DbProofTree(db, proofId.toString)
+    val p = tree.root.provable
+    p shouldBe 'proved
+    p.conclusion shouldBe expected
+    p
+  }
+
   "Delayed substitution" should "create a provable with expanded definitions from expand/expandAllDefs" in withDatabase { db => withMathematica { _ =>
     val modelContent =
       """
@@ -401,15 +416,8 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
-
-    var tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.loneElement.runTactic("guest",
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
-    tree = DbProofTree(db.db, proofId.toString)
-    val p = tree.root.provable
-    p shouldBe 'proved
-    p.conclusion shouldBe "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
+    checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
   }}
 
   it should "create a provable with expanded definitions from US tactic" in withDatabase { db => withMathematica { _ =>
@@ -445,15 +453,8 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
-
-    var tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.loneElement.runTactic("guest",
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
-    tree = DbProofTree(db.db, proofId.toString)
-    val p = tree.root.provable
-    p shouldBe 'proved
-    p.conclusion shouldBe "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
+    checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
   }}
 
   it should "create a provable with expanded definitions with the lazy interpreter" in withDatabase { db => withMathematica { _ =>
@@ -489,15 +490,122 @@ class ProofTreeTests extends TacticTestBase {
         |""".stripMargin
     val proofId = db.createProof(modelContent)
 
-    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+    val tactic = ArchiveParser.parser(modelContent).head.tactics.head._3
+    checkProvedTree(db.db, proofId, tactic, "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent)
+  }}
 
-    var tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.loneElement.runTactic("guest",
-      LazySequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
-    tree = DbProofTree(db.db, proofId.toString)
-    val p = tree.root.provable
-    p shouldBe 'proved
-    p.conclusion shouldBe "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent
+  it should "work with lemmas that expand all definitions" in withDatabase { db => withMathematica { _ =>
+    val modelContent =
+      """SharedDefinitions
+        |  Real sq(Real x) = x*x;
+        |  Bool gt(Real x, Real y) <-> x>y;
+        |End.
+        |
+        |Lemma "user/tests/Lemma 1"
+        |
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |
+        |Problem
+        |  gt(x,sq(y)) -> gt(x,sq(y))
+        |End.
+        |
+        |Tactic "Lemma Proof"
+        |  expandAllDefs; implyR(1); id
+        |End.
+        |
+        |End.
+        |
+        |ArchiveEntry "user/tests/Delayed Substitution"
+        |
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |
+        |Problem
+        |  gt(x,sq(y)) -> gt(x,sq(y)) & x>=sq(y)
+        |End.
+        |
+        |Tactic "Delayed Substitution Test with Lemmas: Proof"
+        |implyR(1) ; andR(1) ; <(
+        |  useLemma("tests/Lemma 1", "prop"),
+        |  expand "gt"; abbrv("sq(y)"); hideL('Llast); QE
+        |  )
+        |End.
+        |
+        |End.
+        |""".stripMargin
+
+    val lemma :: theorem :: Nil = ArchiveParser.parser(modelContent)
+
+    val lemmaId = db.createProof(lemma.fileContent)
+    val provedLemma = checkProvedTree(db.db, lemmaId, lemma.tactics.head._3, "==> x>y*y -> x>y*y".asSequent)
+    LemmaDBFactory.lemmaDB.add(Lemma(provedLemma, Lemma.requiredEvidence(provedLemma, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> lemma.fileContent,
+      "tactic" -> lemma.tactics.head._2
+    )) :: Nil), Some("user/tests/Lemma 1")))
+
+    val theoremId = db.createProof(theorem.fileContent)
+    checkProvedTree(db.db, theoremId, theorem.tactics.head._3, "==> x>y*y -> x>y*y & x>=y*y".asSequent)
+  }}
+
+  it should "work with lemmas that partially expand" in withDatabase { db => withMathematica { _ =>
+    val modelContent =
+      """SharedDefinitions
+        |  Real sq(Real x) = x*x;
+        |  Bool gt(Real x, Real y) <-> x>y;
+        |End.
+        |
+        |Lemma "user/tests/Lemma 1"
+        |
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |
+        |Problem
+        |  gt(x,sq(y)) -> gt(x,sq(y))
+        |End.
+        |
+        |Tactic "Lemma Proof"
+        |  implyR(1); expand "sq"; id
+        |End.
+        |
+        |End.
+        |
+        |ArchiveEntry "user/tests/Delayed Substitution"
+        |
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |
+        |Problem
+        |  gt(x,sq(y)) -> gt(x,sq(y)) & x>=sq(y)
+        |End.
+        |
+        |Tactic "Delayed Substitution Test with Lemmas: Proof"
+        |implyR(1) ; andR(1) ; <(
+        |  useLemma("tests/Lemma 1", "prop"),
+        |  expand "gt"; abbrv("sq(y)"); hideL('Llast); QE
+        |  )
+        |End.
+        |
+        |End.
+        |""".stripMargin
+
+    val lemma :: theorem :: Nil = ArchiveParser.parser(modelContent)
+
+    val lemmaId = db.createProof(lemma.fileContent)
+    val provedLemma = checkProvedTree(db.db, lemmaId, lemma.tactics.head._3, "==> gt(x,y*y) -> gt(x,y*y)".asSequent)
+    LemmaDBFactory.lemmaDB.add(Lemma(provedLemma, Lemma.requiredEvidence(provedLemma, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> lemma.fileContent,
+      "tactic" -> lemma.tactics.head._2
+    )) :: Nil), Some("user/tests/Lemma 1")))
+
+    val theoremId = db.createProof(theorem.fileContent)
+    checkProvedTree(db.db, theoremId, theorem.tactics.head._3, "==> x>y*y -> x>y*y & x>=y*y".asSequent)
   }}
 
   "Performance" should "not degrade when doing the usual interaction (without tactic extraction) in a loop" in withDatabase { db =>

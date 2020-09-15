@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, Simplifier}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, Simplifier}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.core.{Box, Imply, Sequent}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
@@ -50,7 +50,7 @@ class SimplifierTests extends TacticTestBase {
 
   "derived axioms" should "work how I think they do" in withMathematica { qeTool =>
     val fml = "0 * x = 0".asFormula
-    val tactic = useAt(DerivedAxioms.zeroTimes)(Position(1, 0::Nil)) & byUS("= reflexive")
+    val tactic = useAt(Ax.zeroTimes)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)
     proveBy(fml, tactic) shouldBe 'proved
   }
 }

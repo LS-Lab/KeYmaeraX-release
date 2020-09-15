@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{Parser, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
@@ -60,14 +60,14 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   /** @inheritdoc */
   override def simplify(expr: Expression, assumptions: List[Formula]): Expression =
     //@note works only for terms, will fail on formulas
-    simplify(expr, assumptions, KeYmaeraXParser)
+    simplify(expr, assumptions, Parser.parser)
 
   /** @inheritdoc */
   //@todo SMTLib formula parser
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula = simplify(expr, assumptions, ???)
 
   /** @inheritdoc */
-  override def simplify(expr: Term, assumptions: List[Formula]): Term = simplify(expr, assumptions, KeYmaeraXParser.termParser)
+  override def simplify(expr: Term, assumptions: List[Formula]): Term = simplify(expr, assumptions, Parser.parser.termParser)
 
   /** Simplifies expression `expr` accounting for `assumptions`, parses the result using `parser`. */
   private def simplify[T<:Expression](expr: T, assumptions: List[Formula], parser: String=>T): T = {

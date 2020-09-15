@@ -34,6 +34,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(SuccPos(0)), 0) (CloseTrue(SuccPos(0)), 0)
     pr shouldBe 'proved
     val str = Provable.toStorageString(pr)
+    println(str)
     // toStorageString stores block quantifier, but fromStorageString reads nested quantifiers from block quantifier string
     val readagain = Provable.fromStorageString(str)
     readagain shouldBe pr

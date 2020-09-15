@@ -28,6 +28,7 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
     * @param context textual description of the context within which this prover exception occurred.
     * @param additionalMessage optional additional information about the situation in which this prover exception occurred, e.g., the state of affairs.
     */
+    //@todo optimizable make arguments lazy for speed?
   def inContext(context: String, additionalMessage : String = ""): ProverException = {
     this.logicalContext  = this.logicalContext + "\nin " + context
     if (additionalMessage != "") this.logicalContext = this.logicalContext + "\n\t(" + additionalMessage + ")"

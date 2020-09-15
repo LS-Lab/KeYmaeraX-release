@@ -50,7 +50,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 2"
-implyR(1); (andL('L)*); loop({`v >= 0`}, 1); <(
+implyR(1); (andL('L)*); loop("v >= 0", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); <(
@@ -61,6 +61,19 @@ implyR(1); (andL('L)*); loop({`v >= 0`}, 1); <(
     )
   )
 )
+End.
+
+Tactic "Proof STTT Tutorial Example 2 with delayed invariant predicate expansion"
+  implyR('R);
+  andL('L)*;
+  loop("J(v)",'R); <(
+    nil,
+    nil,
+    chase('R); prop; doall(solve('R))
+  );
+  US("J(.) ~> .>=0");
+  doall(QE);
+  done
 End.
 
 End.
@@ -100,7 +113,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 3a"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -181,7 +194,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4a"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); doall(
@@ -220,7 +233,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4b"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); assignb(1); ODE(1); QE; done
@@ -261,7 +274,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4c"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); doall(
@@ -307,7 +320,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 5"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -318,6 +331,19 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
     )
   )
 )
+End.
+
+Tactic "Proof STTT Tutorial Example 5 with delayed invariant predicate expansion"
+  implyR(1);
+  andL('L)*;
+  loop("J(v,x,B(),S())",1); <(
+    nil,
+    nil,
+    chase(1); unfold; doall(solve('R))
+  );
+  US("J(._0,._1,._2,._3) ~> ._0>=0 & ._1+._0^2/(2*._2) <= ._3");
+  doall(QE);
+  done
 End.
 
 End.
@@ -357,16 +383,16 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 6"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
     composeb(1) ; testb(1) ; implyR(1) ; composeb(1) ; randomb(1) ; allR(1) ; testb(1) ; implyR(1) ; composeb(1) ;
-    assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done),
+    assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done),
     choiceb(1) ; andR(1) ; <(
-      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done)
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done)
       ,
-      assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done)
+      assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done)
     )
   )
 )
@@ -410,8 +436,8 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 7"
-/* requires QE({`Mathematica`}) */
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*b()) <= S()`}, 1) ; <(
+/* requires QE("Mathematica") */
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*b()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -452,7 +478,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 9a"
-implyR(1); (andL('L)*); dC({`5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()`}, 1); <(
+implyR(1); (andL('L)*); dC("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()", 1); <(
   dW(1); QE; done,
   dI(1); done
 )
@@ -493,21 +519,21 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 9b"
-implyR(1); (andL('L)*); loop({`v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2`}, 1); <(
+implyR(1); (andL('L)*); loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2", 1); <(
   QE; done,
   QE; done,
   (andL('L)*); composeb(1); choiceb(1); andR(1); <(
     composeb(1); assignb(1); composeb(1); assignb(1); testb(1); implyR(1);
-      dC({`xm <= x`}, 1); <(
-        dC({`5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2`}, 1); <(
+      dC("xm <= x", 1); <(
+        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1); <(
           dW(1); QE; done,
           dI(1); done
         ),
         dI(1); done
       ),
     testb(1); implyR(1);
-      dC({`xm <= x`}, 1); <(
-        dC({`5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2`}, 1); <(
+      dC("xm <= x", 1); <(
+        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1); <(
           dW(1); QE; done,
           dI(1); done
         ),
@@ -565,17 +591,17 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 10"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()`}, 1) <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()", 1) <(
   QE ; done,
   QE ; done,
   chase('R) ; normalize ; <(
-    hideL(-15=={`abs(y-ly())+v^2/(2*b()) < lw()`}) ; dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)+a*c`}, 1) ; <(
-          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
+    hideL(-15=="abs(y-ly())+v^2/(2*b()) < lw()") ; dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)+a*c", 1) ; <(
+          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
             (andL('L)*) ; dW(1) ;
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) ;
-            transformEquality({`ep()=c`}, -13=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
+            transformEquality("ep()=c", -13=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()") ;
             prop ; doall(smartQE; done),
             dI(1) ; done
           ),
@@ -585,10 +611,10 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) ; done
       ),
-    dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)`}, 1) ; <(
-          dC({`-c*v <= y - old(y) & y - old(y) <= c*v`}, 1) ; <(
+    dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)", 1) ; <(
+          dC("-c*v <= y - old(y) & y - old(y) <= c*v", 1) ; <(
             (andL('L)*) ; dW(1) ; prop ; doall(smartQE; done),
             dI(1) ; done
             ),
@@ -598,10 +624,10 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) ; done
       ),
-    dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)+a*c`}, 1) ; <(
-          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
+    dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)+a*c", 1) ; <(
+          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
             (andL('L)*) ; dW(1) ; prop ; doall(smartQE; done),
             dI(1) ; done
             ),

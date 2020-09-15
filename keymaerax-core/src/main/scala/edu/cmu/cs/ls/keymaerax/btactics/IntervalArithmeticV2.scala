@@ -9,7 +9,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
@@ -133,6 +134,91 @@ object IntervalArithmeticV2 {
     }
   }
 
+  class StaticSingleAssignmentExpression[E <: Expression](e: E, prefix: String = "ssa") {
+
+    private def nextVar(i: Int) = Variable(prefix + i + "_")
+
+    private def insert(t: Term, m: Map[Term, Variable], nextIndex: Int) : (Variable, Map[Term, Variable], Int) = {
+      m.get(t) match {
+        case Some(v) => (v, m, nextIndex)
+        case None =>
+          val v = nextVar(nextIndex)
+          (v, m.updated(t, v), nextIndex+1)
+      }
+    }
+
+    private def collectSubterms(t: Term, m: Map[Term, Variable], i: Int) : (Variable, Map[Term, Variable], Int) = t match {
+      case b: BinaryCompositeTerm =>
+        val (lv, lm, li) = collectSubterms(b.left, m, i)
+        val (rv, rm, ri) = collectSubterms(b.right, lm, li)
+        insert(b.reapply(lv, rv), rm, ri)
+      case u: UnaryCompositeTerm =>
+        val (cv, cm, ci) = collectSubterms(u.child, m, i)
+        insert(u.reapply(cv), cm, ci)
+      // Binary function, e.g., min/max
+      case FuncOf(f, Pair(l, r)) =>
+        val (lv, lm, li) = collectSubterms(l, m, i)
+        val (rv, rm, ri) = collectSubterms(r, lm, li)
+        insert(FuncOf(f, Pair(lv, rv)), rm, ri)
+      // Unary function, e.g., abs
+      case FuncOf(f, c) if c.sort == Real =>
+        val (cv, cm, ci) = collectSubterms(c, m, i)
+        insert(FuncOf(f, cv), cm, ci)
+      // Constant symbols
+      case FuncOf(f, Nothing) => insert(t, m, i)
+      case a: AtomicTerm => insert(a, m, i)
+    }
+
+    private def collectSubformulas(fml: Formula, m: Map[Term, Variable], i: Int) : (Formula, Map[Term, Variable], Int) = fml match {
+      case b: ComparisonFormula =>
+        val (lv, lm, li) = collectSubterms(b.left, m, i)
+        val (rv, rm, ri) = collectSubterms(b.right, lm, li)
+        (b.reapply(lv, rv), rm, ri)
+      case b: BinaryCompositeFormula =>
+        val (lv, lm, li) = collectSubformulas(b.left, m, i)
+        val (rv, rm, ri) = collectSubformulas(b.right, lm, li)
+        (b.reapply(lv, rv), rm, ri)
+      case u: UnaryCompositeFormula =>
+        val (cv, cm, ci) = collectSubformulas(u.child, m, i)
+        (u.reapply(cv), cm, ci)
+      case a: AtomicFormula => (a, m, i)
+    }
+
+    val (expression : E, abbrev : Map[Term, Variable]) = e match {
+      case t: Term =>
+        val (fml, unm, _) = collectSubterms(t, Map(), 0)
+        (fml, unm)
+      case fml: Formula =>
+        val (fml2, unm, _) = collectSubformulas(fml, Map(), 0)
+        (fml2, unm)
+    }
+
+    val unfoldMap : Map[Variable, Term] = abbrev.map{case (t, v) => (v, t)}
+
+    def unfold(t: Term) : Term = t match {
+      case v: Variable =>
+        unfoldMap.get(v) match {
+          case None => t
+          case Some(b: BinaryCompositeTerm) => b.reapply(unfold(b.left), unfold(b.right))
+          case Some(b: UnaryCompositeTerm) => b.reapply(unfold(b.child))
+          case Some(FuncOf(f, Pair(l, r))) => FuncOf(f, Pair(unfold(l), unfold(r)))
+          case Some(FuncOf(f, c)) if c.sort == Real => FuncOf(f, unfold(c))
+          case Some(a) => a
+          // Constant symbols
+          case _ => t
+      }
+      case t => t
+    }
+
+    def unfold(fml: Formula) : Formula = fml match {
+      case (b: BinaryCompositeFormula) => b.reapply(unfold(b.left), unfold(b.right))
+      case (b: UnaryCompositeFormula) => b.reapply(unfold(b.child))
+      case (b: ComparisonFormula) => b.reapply(unfold(b.left), unfold(b.right))
+      case _ => fml
+    }
+
+  }
+
   /** Populate environment with bounds (only LessEqual are being considered)
     *
     * @param prec decimal precision
@@ -167,25 +253,25 @@ object IntervalArithmeticV2 {
   private lazy val gtBound = proveBy("f_() > g_() ==> g_() <= f_()".asSequent, QE & done)
 
   private lazy val leRefl = proveBy("F_() <= F_()".asFormula,
-    useAt("<= refl", PosInExpr(0::Nil))(1) & prop & done)
+    useAt(Ax.lessEqualRefl, PosInExpr(0::Nil))(1) & prop & done)
   private lazy val negDownSeq = proveBy("f_()<=F_() & (h_()<=-F_()<->true) ==> h_()<=-f_()".asSequent,
-    useAt("<=neg down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownNeg, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val negUpSeq = proveBy("ff_()<=f_() & (-ff_()<=h_()<->true) ==> -f_()<=h_()".asSequent,
-    useAt("neg<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpNeg, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val plusDownSeq = proveBy("(ff_()<=f_() & gg_()<=g_()) & (h_()<=ff_()+gg_()<->true) ==> h_()<=f_()+g_()".asSequent,
-    useAt("<=+ down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownPlus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val plusUpSeq = proveBy("(f_()<=F_() & g_()<=G_()) & (F_()+G_()<=h_()<->true) ==> f_()+g_()<=h_()".asSequent,
-    useAt("+<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpPlus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val minusDownSeq = proveBy("(ff_()<=f_() & g_()<=G_()) & (h_()<=ff_()-G_()<->true) ==> h_()<=f_()-g_()".asSequent,
-    useAt("<=- down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownMinus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val minusUpSeq = proveBy("(f_()<=F_() & gg_()<=g_()) & (F_()-gg_()<=h_()<->true) ==> f_()-g_()<=h_()".asSequent,
-    useAt("-<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpMinus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val multUpSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_())<->true)) ==> f_()*g_()<=h_()".asSequent,
-    useAt("*<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpTimes, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val multDownSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_())<->true)) ==> h_()<=f_()*g_()".asSequent,
-    useAt("<=* down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownTimes, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val divideUpSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
     "((" +
     "  ( G_()<0 & (ff_()>=h_()*gg_() & ff_()>=h_()*G_() & F_()>=h_()*gg_() & F_()>=h_()*G_())) |" +
@@ -197,19 +283,19 @@ object IntervalArithmeticV2 {
     "  ( 0<gg_() & (h_()*gg_()<=ff_() & h_()*G_()<=ff_() & h_()*gg_()<=F_() & h_()*G_()<=F_()))" +
     ")<->true) ==> h_()<=f_()/g_()").asSequent,
     QE & done)
-  private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt("min<= up", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt("<=min down", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt("max<= up", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val maxDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() | h_() <= gg_())<->true))==>h_() <= max(f_(),g_())".asSequent, useAt("<=max down", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt(Ax.intervalUpMin, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt(Ax.intervalDownMin, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt(Ax.intervalUpMax, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() | h_() <= gg_())<->true))==>h_() <= max(f_(),g_())".asSequent, useAt(Ax.intervalDownMax, PosInExpr(1::Nil))(1) & prop & done)
 
 
   // Formulas
   private lazy val leBothSeq = proveBy(
     "((f_()<=F_() & gg_()<=g_()) & (F_() <= gg_()<->true)) ==> f_()<=g_()".asSequent,
-    useAt("<= both", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalLEBoth, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val ltBothSeq = proveBy(
     "((f_()<=F_() & gg_()<=g_()) & (F_() < gg_()<->true)) ==> f_()<g_()".asSequent,
-    useAt("< both", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalLBoth, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val geBothSeq = proveBy(
     "((g_()<=G_() & ff_()<=f_()) & (G_() <= ff_()<->true)) ==> f_()>=g_()".asSequent, QE & done)
   private lazy val gtBothSeq = proveBy(
@@ -280,31 +366,57 @@ object IntervalArithmeticV2 {
   type BoundMap = HashMap[Term, ProvableSig]
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
 
+  /**
+    * prec: numerical precision
+    * qeTool: QETool for ground numerical computations
+    * assms: assumptions on variables - any (in)equality with a variable on one side and a numerical term on the other side
+    * ssaMap: A map of abbreviations for subterms, used as keys, theorems proved with "expanded"
+    * */
   private def recurse(prec: Int)
              (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
-             (lowers: BoundMap, uppers: BoundMap)
-             (t: Term): (BoundMap, BoundMap)
+             (lowers: BoundMap, uppers: BoundMap, ssaMap: Map[Variable, Term])
+             (s: Term): (BoundMap, BoundMap)
   = {
     def unknown_bound(v: Term) : String = "\nCould not find bounds for " + v + ".\n" +
       "Both upper and lower bound are required and need to be separate formulas in the antecedent.\n" +
       "Bounds must be given with a number on one side of one of the comparison operators <,<=,=,>=,>.\n" +
       "Maybe try Propositional->Exhaustive (prop) first?"
-    if (lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) (lowers, uppers)
-    else t match {
-      case v if PolynomialArith.isVar(v) => throw new BelleThrowable (unknown_bound(v))
+    // TODO: if there is more like this, better use an [[ StaticSingleAssignment.unfoldMap]] throughout
+    def intOfTerm(t: Term) : Option[Int] = t match {
+      case Number(n) if n.isValidInt => Some(n.toIntExact)
+      case v: Variable => ssaMap.get(v) match {
+        case Some(Number(n)) => intOfTerm(Number(n))
+        case _ => None
+      }
+      case _ => None
+    }
+    if (lowers.isDefinedAt(s) && uppers.isDefinedAt(s)) (lowers, uppers)
+    else s match {
+      case v : Variable => {
+        ssaMap.get(v) match {
+          case Some(rhs) =>
+            val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(rhs)
+            val ff_prv = lowers2(rhs)
+            val F_prv = uppers2(rhs)
+            (lowers2.updated(v, ff_prv), uppers2.updated(v, F_prv))
+          case None =>
+            throw new InputFormatFailure(unknown_bound(v))
+        }
+      }
       case n: Number =>
         val refl = (ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(n, n))))).
           apply(CoHideRight(SuccPos(0)), 0).
           apply(leRefl.apply(USubst(SubstitutionPair(t_F, n) :: Nil)), 0)
         (lowers.updated(n, refl), uppers.updated(n, refl))
       case Neg(a) =>
-        val f = a
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
-        val ff_prv = lowers2(f)
-        val F_prv = uppers2(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val ff_prv = lowers2(a)
+        val F_prv = uppers2(a)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right // @note: this can be different from [[a]], if a has been further resolved via the [[ssaMap]]
+        val t = Neg(f)
         val ff = ff_fml.left
         val F = F_fml.right
         val (h, _) = eval_ivl_term(prec)(Neg(F))
@@ -333,20 +445,23 @@ object IntervalArithmeticV2 {
           apply(CoHideRight(SuccPos(0)), 1).
           apply(H_le, 1).
           apply(ff_prv, 0)
-        (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+        (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
       case binop: BinaryCompositeTerm =>
-        val f = binop.left
-        val g = binop.right
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
-        val ff_prv = lowers2(f)
-        val gg_prv = lowers2(g)
-        val F_prv = uppers2(f)
-        val G_prv = uppers2(g)
+        val a = binop.left
+        val b = binop.right
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, ssaMap)(b)
+        val ff_prv = lowers2(a)
+        val gg_prv = lowers2(b)
+        val F_prv = uppers2(a)
+        val G_prv = uppers2(b)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val G_fml = G_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right  /* @note: this can be different from [[f0]], if a has been further resolved via the [[ssaMap]] */
+        val g = gg_fml.right /* @note: this can be different from [[g0]], if a has been further resolved via the [[ssaMap]] */
+        val t = binop.reapply(f, g)
         val ff = ff_fml.left
         val gg = gg_fml.left
         val F = F_fml.right
@@ -387,7 +502,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(G_prv, 1).
               apply(F_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Minus =>
             val h = eval_ivl_term(prec)(Minus(ff, G))._1
             val H = eval_ivl_term(prec)(Minus(F, gg))._2
@@ -423,7 +538,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(gg_prv, 1).
               apply(F_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Times =>
             // Bounds
             val bnds = mult_endpoints(prec)(DecimalBounds)(ff, F)(gg, G)
@@ -469,7 +584,7 @@ object IntervalArithmeticV2 {
               apply(CoHideRight(SuccPos(0)), 1).
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Divide =>
             // Bounds
             val bnds = divide_endpoints(prec)(DecimalBounds())(ff, F)(gg, G)
@@ -515,10 +630,10 @@ object IntervalArithmeticV2 {
               apply(CoHideRight(SuccPos(0)), 1).
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
-          case Power(_, i: Number) if i.value.isValidInt =>
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
+          case _ : Power if intOfTerm(b).isDefined =>
             // Lower Bound
-            val n = i.value.toIntExact
+            val n = intOfTerm(b).get
             val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
             val h = mathematicaFriendly(ivl._1)
             val H = mathematicaFriendly(ivl._2)
@@ -552,22 +667,25 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(F_prv, 1).
               apply(ff_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _ =>
-            throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
+            throw new UnsupportedTacticFeature("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
-      case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
-        val ff_prv = lowers2(f)
-        val gg_prv = lowers2(g)
-        val F_prv = uppers2(f)
-        val G_prv = uppers2(g)
+      case FuncOf(m, Pair(a, b)) if m == minF || m == maxF =>
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, ssaMap)(b)
+        val ff_prv = lowers2(a)
+        val gg_prv = lowers2(b)
+        val F_prv = uppers2(a)
+        val G_prv = uppers2(b)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val G_fml = G_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right // @note: this can be different from [[a]], if a has been further resolved via the [[ssaMap]]
+        val g = gg_fml.right  // @note: this can be different from [[b]], if b has been further resolved via the [[ssaMap]]
+        val t = FuncOf(m, Pair(f, g))
         val ff = ff_fml.left
         val gg = gg_fml.left
         val F = F_fml.right
@@ -608,7 +726,7 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(G_prv, 1).
             apply(F_prv, 0)
-          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+          (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
         } else /* max */ {
           val maxDown = maxDownSeq.apply(USubst(
             SubstitutionPair(t_h, h) ::
@@ -642,11 +760,11 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(G_prv, 1).
             apply(F_prv, 0)
-          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+          (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
         }
       case _ =>
-        throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
-          t.getClass.getSimpleName + " not implemented for Interval Arithmetic.")
+        throw new UnsupportedTacticFeature ("\nUnable to compute bound for " + s + "\n" +
+          s.getClass.getSimpleName + " not implemented for Interval Arithmetic.")
     }
   }
 
@@ -655,9 +773,9 @@ object IntervalArithmeticV2 {
       apply(CoHide2(AntePos(index), SuccPos(0)), 0).
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
-  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap)  =
-  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lu: (BoundMap, BoundMap), assmi) =>
-    (lu, assmi) match {
+  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap) =
+  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lue: (BoundMap, BoundMap), assmi) =>
+    (lue, assmi) match {
       case ((lowers, uppers), (assm, i)) =>
         assm match {
           case LessEqual(t, n) if isNumeric(n) =>
@@ -693,7 +811,7 @@ object IntervalArithmeticV2 {
     *
     * @param prec          decimal precision
     * @param qeTool        Tool for QE, it will only be called on formulas without variables and without quantifiers
-    * @param assms         list of constraints on variables
+    * @param assms         list of constraints on variables, equalities can be used to abbreviate terms
     * @param include_assms if assms need to be added to lowers/uppers (False if re-using precomputed bounds)
     * @param lowers0       precomputed bounds (can be used for cacheing results)
     * @param uppers0       dito
@@ -705,32 +823,115 @@ object IntervalArithmeticV2 {
                  (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
-                 (lowers0: BoundMap, uppers0: BoundMap)
+                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: Map[Variable, Term])
                  (terms: Seq[Term]): (BoundMap, BoundMap) = {
     // collect bounds from assms
     val (newlowers: BoundMap, newuppers: BoundMap) =
       if(!include_assms) (lowers0, uppers0)
       else collectBounds(assms)(lowers0, uppers0)
     // recurse over the structure of t and compute new bounds
-    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2)(t))
+    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2, ssaMap)(t))
   }
 
-  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
+  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) : Option[ProvableSig] = {
     val le_prv = qeTool.qe(leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
     le_prv.conclusion.succ(0) match {
-      case Equiv(a, True) =>
-      case _ =>
-        throw new BelleThrowable ("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
-          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
+      case Equiv(a, True) => Some(
+        CutHide(leBoth.conclusion.ante(0))(provable).
+          apply(AndRight(SuccPos(0)), 1).
+          apply(CoHideRight(SuccPos(0)), 2).
+          apply(le_prv, 2).
+          apply(AndRight(SuccPos(0)), 1).
+          apply(bound2, 2).
+          apply(bound1, 1).
+          apply(leBoth, 0)
+      )
+      case _ => None
     }
-    CutHide(leBoth.conclusion.ante(0))(provable).
-      apply(AndRight(SuccPos(0)), 1).
-      apply(CoHideRight(SuccPos(0)), 2).
-      apply(le_prv, 2).
-      apply(AndRight(SuccPos(0)), 1).
-      apply(bound2, 2).
-      apply(bound1, 1).
-      apply(leBoth, 0)
+  }
+
+  def proveComparison(prec: Int)
+                 (qeTool: QETacticTool)
+                 (assms: IndexedSeq[Formula])
+                 (include_assms: Boolean)
+                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: Map[Variable, Term])
+                 (fml: ComparisonFormula): (BoundMap, BoundMap, Option[ProvableSig]) =
+  {
+    val a = fml.left
+    val b = fml.right
+    val (lowers, uppers) = proveBounds(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssaMap)(List(a, b))
+    val ff_prv = lowers(a)
+    val gg_prv = lowers(b)
+    val F_prv = uppers(a)
+    val G_prv = uppers(b)
+    val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val F_fml = F_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val G_fml = G_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val f = ff_fml.right
+    val g = gg_fml.right
+    val ff = ff_fml.left
+    val gg = gg_fml.left
+    val F = F_fml.right
+    val G = G_fml.right
+    val provable = ProvableSig.startProof(Sequent(assms, IndexedSeq(fml.reapply(f, g))))
+    (lowers, uppers,
+      fml match {
+        case _: LessEqual =>
+          proveCompBoth(qeTool,
+            leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            provable, F_prv, gg_prv)
+        case _: Less =>
+          proveCompBoth(qeTool,
+            ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            provable, F_prv, gg_prv)
+        case _: GreaterEqual =>
+          proveCompBoth(qeTool,
+            geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            provable, G_prv, ff_prv)
+        case _: Greater =>
+          proveCompBoth(qeTool,
+            gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            provable, G_prv, ff_prv)
+      })
+  }
+
+  def proveBool(prec: Int)
+               (qeTool: QETacticTool)
+               (assms: IndexedSeq[Formula])
+               (include_assms: Boolean)
+               (lowers0: BoundMap, uppers0: BoundMap, ssa: StaticSingleAssignmentExpression[Formula])
+               (fml: Formula): (BoundMap, BoundMap, Option[ProvableSig]) = fml match {
+    case And(a, b) =>
+      val (lowers1, uppers1, prv1o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa)(a)
+      val (lowers2, uppers2, prv2o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers1, uppers1, ssa)(b)
+      (prv1o, prv2o) match {
+        case (Some(prv1), Some(prv2)) =>
+          val fml1 = prv1.conclusion.succ(0)
+          val fml2 = prv2.conclusion.succ(0)
+          (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(And(fml1, fml2))))(AndRight(SuccPos(0)), 0)(prv2, 1)(prv1, 0)))
+        case _ => (lowers2, uppers2, None)
+      }
+    case Or(a, b) =>
+      val (lowers1, uppers1, prv1o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa)(a)
+      prv1o match {
+        case Some(prv1) =>
+          val fml1 = prv1.conclusion.succ(0)
+          val fml2 = ssa.unfold(b)
+          (lowers1, uppers1, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(1)), 0)(prv1, 0)))
+        case None =>
+          val (lowers2, uppers2, prv2o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers1, uppers1, ssa)(b)
+          prv2o match {
+            case Some(prv2) =>
+              val fml1 = ssa.unfold(a)
+              val fml2 = prv2.conclusion.succ(0)
+              (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(0)), 0)(prv2, 0)))
+          }
+      }
+    case cfml: ComparisonFormula =>
+      proveComparison(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa.unfoldMap)(cfml)
+    case _ =>
+      throw new TacticInapplicableFailure("intervalArithmeticBool requires conjunction, disjunction, or comparison")
   }
 
   private def requireOneSubgoal(prv: ProvableSig, who: String) : Unit =
@@ -739,63 +940,14 @@ object IntervalArithmeticV2 {
   private def requireOneSucc(seq: Sequent, who: String) : Unit =
     require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
 
-  private def intervalArithmeticComparison(precision: Int, qeTool: QETacticTool) = new BuiltInTactic("ANON") {
-    val notSupportedMessage = "intervalArithmetic requires either of <=,<,>,=> in the succedent"
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, "intervalArithmeticComparison")
-      val sequent = provable.subgoals(0)
-      requireOneSucc(sequent, "intervalArithmeticComparison")
-      sequent.succ(0) match {
-        case fml: ComparisonFormula =>
-          val f = fml.left
-          val g = fml.right
-          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap())(List(f, g))
-          val ff_prv = lowers(f)
-          val gg_prv = lowers(g)
-          val F_prv = uppers(f)
-          val G_prv = uppers(g)
-          val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val F_fml = F_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val G_fml = G_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val ff = ff_fml.left
-          val gg = gg_fml.left
-          val F = F_fml.right
-          val G = G_fml.right
-          fml match {
-            case _: LessEqual =>
-              proveCompBoth(qeTool,
-                leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
-                provable, F_prv, gg_prv)
-            case _: Less =>
-              proveCompBoth(qeTool,
-                ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
-                provable, F_prv, gg_prv)
-            case _: GreaterEqual =>
-              proveCompBoth(qeTool,
-                geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
-                provable, G_prv, ff_prv)
-            case _: Greater =>
-              proveCompBoth(qeTool,
-                gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
-                provable, G_prv, ff_prv)
-            case _ =>
-              throw new BelleThrowable(notSupportedMessage)
-          }
-        case _ =>
-          throw new BelleThrowable(notSupportedMessage)
-      }
-    }
-  }
-
   private lazy val equivIff = proveBy("(p()<->q())<->(p()&q())|(!p()&!q())".asFormula, prop & done)
   private lazy val equalIff = proveBy("(f()=g())<->f()<=g()&f()>=g()".asFormula, QE & done)
   private lazy val notEqual = proveBy("(!f()=g())<->f()<g()|f()>g()".asFormula, QE & done)
 
-  private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = "intervalArithmeticPreproc" by { (pos: Position, seq: Sequent) =>
-    def unsupportedError(e: Expression) = throw new BelleThrowable("Interval Arithmetic does not support " + e.getClass.getSimpleName)
+  private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    def unsupportedError(e: Expression) = throw new TacticInapplicableFailure("Interval Arithmetic does not support " + e.getClass.getSimpleName)
     seq.sub(pos) match {
-      case Some(e: Expression) =>
+      case Some(e) =>
         e match {
           case And(f, g) =>
             intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
@@ -804,7 +956,7 @@ object IntervalArithmeticV2 {
             intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
               intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
           case Imply(f, g) =>
-            useAt("-> expand", PosInExpr(0 :: Nil))(pos) &
+            useAt(Ax.implyExpand, PosInExpr(0 :: Nil))(pos) &
               intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
               intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
           case Equiv(f, g) =>
@@ -816,34 +968,34 @@ object IntervalArithmeticV2 {
           case Not(fml) =>
             fml match {
               case And(f, g) =>
-                useAt(DerivedAxioms.notAnd, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notAnd, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Or(f, g) =>
-                useAt(DerivedAxioms.notOr, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notOr, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Imply(f, g) =>
-                useAt(DerivedAxioms.notImply, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notImply, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Equiv(f, g) =>
-                useAt(DerivedAxioms.notEquiv, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notEquiv, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Not(f) =>
-                useAt(DerivedAxioms.doubleNegationAxiom, PosInExpr(0::Nil))(pos) &
+                useAt(Ax.doubleNegation, PosInExpr(0::Nil))(pos) &
                   intervalArithmeticPreproc(pos)
               case Equal(f, g) =>
                 useAt(notEqual, PosInExpr(0 :: Nil))(pos)
               case Less(a, b) =>
-                useAt(DerivedAxioms.notLess, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notLess, PosInExpr(0 :: Nil))(pos)
               case LessEqual(a, b) =>
-                useAt(DerivedAxioms.notLessEqual, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(pos)
               case Greater(a, b) =>
-                useAt(DerivedAxioms.notGreater, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notGreater, PosInExpr(0 :: Nil))(pos)
               case GreaterEqual(a, b) =>
-                useAt(DerivedAxioms.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
               case _ => unsupportedError(fml)
             }
           case Less(a, b) => nil
@@ -852,24 +1004,38 @@ object IntervalArithmeticV2 {
           case GreaterEqual(a, b) => nil
           case e => unsupportedError(e)
         }
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
-  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
-    requireOneSucc(seq, "intervalArithmeticBool")
-    seq.succ(0) match {
-      case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
-      case Or(a, b) => orR(1) & ((hideR(2) & intervalArithmeticBool(precision, qeTool)) | (hideR(1) & intervalArithmeticBool(precision, qeTool)))
-      case _: ComparisonFormula => intervalArithmeticComparison(precision, qeTool)
-      case _ => throw new IllegalArgumentException("intervalArithmeticBool requires conjunction, disjunction, or comparison")
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool, doSSA: Boolean = true) : BuiltInRightTactic =
+    anon { (prv: ProvableSig, pos: SuccPosition) =>
+      requireOneSubgoal(prv, "intervalArithmeticBool")
+      pos.checkTop
+      val seq = prv.subgoals(0)
+      requireOneSucc(seq, "intervalArithmeticBool")
+      val (ssa, fml) = if (doSSA) {
+        val s = new StaticSingleAssignmentExpression(seq.succ(0))
+        (s, s.expression)
+      } else {
+        (new StaticSingleAssignmentExpression[Formula](True), seq.succ(0))
+      }
+      proveBool(precision)(qeTool)(seq.ante)(true)(BoundMap, BoundMap, ssa)(fml) match {
+        case (_, _, Some(prvIa)) =>
+          prv(Cut(prvIa.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(prvIa, 1)(Close(AntePos(seq.ante.length), SuccPos(0)), 0)
+        case _ =>
+          throw new TacticInapplicableFailure("Interval Arithmetic cannot close the goal.")
+      }
     }
-  }
 
-  lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
-    val precision = 15
-    SaturateTactic(orRi) &
+  @Tactic("Interval Arithmetic",
+    displayLevel = "menu"
+  )
+  lazy val intervalArithmetic: BelleExpr = anon {
+    val precision = 15 // @todo: precision as (optional) argument?
+    SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
-      intervalArithmeticBool(precision, ToolProvider.qeTool().get)
+      intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
@@ -879,7 +1045,7 @@ object IntervalArithmeticV2 {
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap())(terms)
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -892,7 +1058,14 @@ object IntervalArithmeticV2 {
     }
   }
 
-  def intervalCutTerms(terms: Term*): InputTactic = "intervalCutTerms" byWithInputs (terms.toList, intervalCutTerms(terms.toList))
+  @Tactic("Interval Arithmetic Cut",
+    codeName = "intervalCutTerms" /* @todo old codeName */,
+    // @TODO: closed premise
+    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
+    conclusion = "Γ |- Δ",
+    displayLevel = "menu"
+  )
+  def intervalCutTerm(t: Term): InputTactic = inputanon { intervalCutTerms(Seq(t)) }
 
   private def terms_of(fml: Formula) : List[Term] = fml match {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
@@ -903,11 +1076,17 @@ object IntervalArithmeticV2 {
     case _ => List()
   }
 
-  val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
+  @Tactic("Interval Arithmetic Cut",
+    premises = "Γ, lower(t)<=t, t<=upper(t) |- Δ",
+    conclusion = "Γ |- Δ",
+    displayLevel = "internal"
+  )
+  val intervalCut : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
-      case Some(t: Term) => intervalCutTerms(List(t))
-      case _ => throw new BelleThrowable("intervalCut needs to be called on a Formula or a Term")
+      case Some(t: Term) => intervalCutTerms(Seq(t))
+      case Some(e) => throw new TacticInapplicableFailure("intervalCut only applicable to formulas or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -920,7 +1099,7 @@ object IntervalArithmeticV2 {
     val assms = IndexedSeq((l1, i1), (i1, u1), (l2, i2), (i2, u2)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1, i2)
     // @todo: could be more efficient in caching bounds for context
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), Map())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -952,7 +1131,7 @@ object IntervalArithmeticV2 {
     val i1 = BaseVariable("i1_")
     val assms = IndexedSeq((l1, i1), (i1, u1)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1)
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), Map())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -985,49 +1164,52 @@ object IntervalArithmeticV2 {
     }
 
     def negDown(bound: Term) =
-      useAt("<=neg down", usubst_append((t_F, bound) :: Nil)(_))(1)
+      useAt(Ax.intervalDownNeg, PosInExpr(1::Nil), usubst_append((t_F, bound) :: Nil)(_))(1)
 
     def negUp(bound: Term) =
-      useAt("neg<= up", usubst_append((t_ff, bound) :: Nil)(_))(1)
+      useAt(Ax.intervalUpNeg, PosInExpr(1::Nil), usubst_append((t_ff, bound) :: Nil)(_))(1)
 
     def plusDown(bound1: Term, bound2: Term) =
-      useAt("<=+ down", usubst_append((t_ff, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalDownPlus, PosInExpr(1::Nil), usubst_append((t_ff, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def plusUp(bound1: Term, bound2: Term) =
-      useAt("+<= up", usubst_append((t_F, bound1) :: (t_G, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalUpPlus, PosInExpr(1::Nil), usubst_append((t_F, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusDown(bound1: Term, bound2: Term) =
-      useAt("<=- down", usubst_append((t_ff, bound1) :: (t_G, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalDownMinus, PosInExpr(1::Nil), usubst_append((t_ff, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusUp(bound1: Term, bound2: Term) =
-      useAt("-<= up", usubst_append((t_F, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalUpMinus, PosInExpr(1::Nil), usubst_append((t_F, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def timesDown(ff: Term, F: Term, gg: Term, G: Term) =
-      useAt("<=* down",
+      useAt(Ax.intervalDownTimes, PosInExpr(1::Nil),
         usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def timesUp(ff: Term, F: Term, gg: Term, G: Term) =
-      useAt("*<= up",
+      useAt(Ax.intervalUpTimes, PosInExpr(1::Nil),
         usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def leBoth(F: Term, gg: Term) =
-      useAt("<= both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
+      useAt(Ax.intervalLEBoth, PosInExpr(1::Nil), usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
     def lessBoth(F: Term, gg: Term) =
-      useAt("< both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
+      useAt(Ax.intervalLBoth, PosInExpr(1::Nil), usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
-    def eqL2R_dep = "eqL2R_last" by { (pos: Position) =>
+    //Note: Tactic previously named eqL2R_last
+    def eqL2R_dep = anon { (pos: Position) =>
       eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
     }
 
-    val intervalArithmetic = "slowIntervalArithmetic" by { seq: Sequent =>
+    //Note: Tactic previously slowIntervalArithmetic
+    val intervalArithmetic = anon { seq: Sequent =>
       requireOneSucc (seq, "slowIntervalArithmetic")
       val prec = 5
       val bounds = collect_bounds(prec,DecimalBounds(), seq.ante)
 
       // TODO: should be cacheing bounds for subterms, but it seems we can easily afford excessive BigDecimal computations
       // recurse to find a lower bound for the expression on the rhs
-      def recurseLower: BelleExpr = "slowIntervalArithmetic.recurseLower" by {
+      // Note: previously named "slowIntervalArithmetic.recurseLower"
+      def recurseLower: BelleExpr = anon {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(_, Plus(a, b)) =>
@@ -1049,11 +1231,12 @@ object IntervalArithmeticV2 {
                 QE() & done)
             case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
             case LessEqual(_, n) if isNumeric(n) => QE() & done
-            case _ => throw new BelleThrowable("recurseLower went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseLower went wrong")
           }
       }
       // recurse to find an upper bound for the expression on the lhs
-      def recurseUpper: BelleExpr = "slowIntervalArithmetic.recurseUpper" by {
+      // Note: Previously named "slowIntervalArithmetic.recurseUpper"
+      def recurseUpper: BelleExpr = anon {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(Plus(a, b), _) =>
@@ -1076,10 +1259,11 @@ object IntervalArithmeticV2 {
                 QE() & done)
             case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
             case LessEqual(n, _) if isNumeric(n) => QE() & done
-            case _ => throw new BelleThrowable("recurseUpper went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseUpper went wrong")
           }
       }
-      def recurseFormula: BelleExpr = "slowIntervalArithmetic.recurseFormula" by {
+      // Note: previously named "slowIntervalArithmetic.recurseFormula"
+      def recurseFormula: BelleExpr = anon {
         (seq: Sequent) =>
           (seq.succ(0) match {
             case And(_, _) => andR(1) & Idioms.<(recurseFormula, recurseFormula)
@@ -1091,7 +1275,7 @@ object IntervalArithmeticV2 {
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
               lessBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
-            case _ => throw new BelleThrowable("recurseFormula went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseFormula went wrong")
           })
       }
       recurseFormula

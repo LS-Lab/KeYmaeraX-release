@@ -1,0 +1,211 @@
+{"id": 11,
+  "label": "ch:qdiffcut",
+  "children": [
+    {
+      "type": "segment",
+      "otherStuff": [ { "lots": "of", "it": "?" }],
+      "children": [
+        {
+          "type": "segment",
+          "not actually": "a segment with questions",
+          "number": "1",
+          "point_value": 0.0
+        },
+        {
+          "type": "segment",
+          "title": "The segment title",
+          "number": "2",
+          "some intermediate": "segment that does not yet have the question prompt",
+          "children": [
+            {
+              "type": "atom",
+              "name": "problem",
+              "id": 25053,
+              "label": "prob::1",
+              "point_value": 3.0,
+              "title": "Problem block 1 (2 questions)",
+              "prompts": [
+                {
+                  "point_value": 2.0,
+                  "name": "\\ask",
+                  "id": 141,
+                  "children": [
+                    {
+                      "id": 142,
+                      "name": "\\sol",
+                      "point_value": 2.0,
+                      "label": "prt-sol::1::a1",
+                      "body_src": "{\\kyxline\"2\"}",
+                      "cookies": [
+                        {
+                          "id": 500,
+                          "name": "\\algog",
+                          "body": "valueeq()"
+                        }
+                      ],
+                      "user_answer" : {
+                        "text": "3",
+                        "is_checked": false
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "\\ask",
+                  "body": "This question has an answer with a syntax error",
+                  "point_value": 1.0,
+                  "id": 143,
+                  "children": [
+                    {
+                      "id": 144,
+                      "name": "\\sol",
+                      "point_value": 1.0,
+                      "body_src": "{\\kyxline\"x^2>=0\"}",
+                      "cookies": [{
+                        "id": 501,
+                        "name": "\\algog",
+                        "body": "polyeq()"
+                      }],
+                      "label": "prt-sol::2::a1",
+                      "user_answer": {
+                        "text": "x^2>=+0",
+                        "is_checked": false
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "point_value": 3.0
+        },
+        {
+          "type": "segment",
+          "number": "3",
+          "this segment": "has prompts but none of them auto-gradable (worth no points)",
+          "children": [
+            {
+              "type": "segment",
+              "point_value": 0.0
+            },
+            {
+              "type": "atom",
+              "name": "problem",
+              "label": "prob::2",
+              "title": "Problem block 2 (one non-autogradable question)",
+              "id": 17218,
+              "prompts": [
+                {
+                  "id": 145,
+                  "name": "\\ask",
+                  "body": "This is the question",
+                  "children": [
+                    {
+                      "id": 146,
+                      "name": "\\sol",
+                      "label": "prt::block2::a1",
+                      "body_src": "{Expecting a short answer}",
+                      "cookies": [],
+                      "user_answer": {
+                        "text": "Here is an answer",
+                        "is_checked": false
+                      },
+                      "and": "other stuff"
+                    }
+                  ],
+                  "point_value": 0.0
+                }
+              ],
+              "point_value": 0.0
+            }
+          ],
+          "point_value": 0.0
+        },
+        {
+          "point_value": 1.0,
+          "type": "atom",
+          "name": "problem",
+          "label": "prob::3",
+          "id": 25160,
+          "title": "Problem block 3 (single question)",
+          "this entry": "has one question",
+          "prompts": [
+            {
+              "id": 147,
+              "name": "\\ask",
+              "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
+              "children": [
+                {
+                  "name": "\\sol",
+                  "label": "prt::block3::a1",
+                  "is_choice": false,
+                  "is_fill_in_the_gap": false,
+                  "body_src": "{${1,2,3}$}",
+                  "cookies": [],
+                  "user_answer": {
+                    "text": "1,2",
+                    "is_checked": false
+                  },
+                  "id": 148
+                }
+              ],
+              "point_value": 1.0
+            }
+          ]
+        }
+      ],
+      "point_value": 4.0
+    },
+    {
+      "type": "segment",
+      "title": "Another section title",
+      "number": "5",
+      "point_value": 1.0,
+      "children": [
+        {
+          "type": "atom",
+          "name": "problem",
+          "label": "prob::4",
+          "id": 25057,
+          "title": "Problem block in second segment",
+          "point_value": 1.0,
+          "prompts": [
+            {
+              "body": " A question in the second segment",
+              "id": 149,
+              "name": "\\onechoice",
+              "point_value": 1.0,
+              "is_question_any_choice": false,
+              "children": [
+                {
+                  "id": 150,
+                  "name": "\\choice*",
+                  "label": "prt::seg2block::a1",
+                  "cookies": [],
+                  "user_answer": {
+                    "text": "",
+                    "is_checked": true
+                  },
+                  "body": "Sound",
+                  "is_choice": true
+                },
+                {
+                  "id": 151,
+                  "name": "\\choice",
+                  "label": "prt::seg2block::a2",
+                  "body": "Unsound",
+                  "cookies": [],
+                  "user_answer": {
+                    "is_checked": false,
+                    "text": ""
+                  },
+                  "is_choice": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

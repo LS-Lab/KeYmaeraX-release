@@ -1,20 +1,17 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion}
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Parser}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.launcher._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer}
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
@@ -54,9 +51,9 @@ object CoasterXMain {
     BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
+    TactixInit.invSupplier = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
 
@@ -65,7 +62,7 @@ object CoasterXMain {
     if(!haveStuffed){ beforeStuff ; haveStuffed=true}
     val provider = new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
-    testcode(provider.tool())
+    testcode(provider.tool)
   }
 
   def proveComponent(name: String, doFormula:Boolean, doTactic:Boolean, willDoStats:Boolean, numRuns:Int, debugLevel:Int):Unit = {
@@ -194,8 +191,8 @@ object CoasterXMain {
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[GenProduct]()
-    TactixLibrary.invGenerator = generator
-    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
+    TactixInit.invSupplier = generator
+    Parser.parser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 
     println("Connecting to arithmetic tools...")
@@ -219,10 +216,10 @@ object CoasterXMain {
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
       val cacheVersion = LemmaDBFactory.lemmaDB.version()
-      if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
+      if (Version(cacheVersion) < Version(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
-      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      DerivationInfoRegistry.init()
     } catch {
       case e : Exception =>
         println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
@@ -243,10 +240,10 @@ object CoasterXMain {
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => new MathematicaToolProvider(config)
-      case "wolframengine" => new WolframEngineToolProvider(config)
-      case "wolframscript" => new WolframScriptToolProvider
-      case "z3" => new Z3ToolProvider
+      case "mathematica" => MathematicaToolProvider(config)
+      case "wolframengine" => WolframEngineToolProvider(config)
+      case "wolframscript" => WolframScriptToolProvider(config)
+      case "z3" => Z3ToolProvider()
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
     ToolProvider.setProvider(provider)

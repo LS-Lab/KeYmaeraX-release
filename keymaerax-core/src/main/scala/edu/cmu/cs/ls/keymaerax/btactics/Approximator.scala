@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -42,8 +43,12 @@ object Approximator extends Logging {
     * @param n The number of terms to expand the series/
     * @return The relevant tactic.
     */
-  def autoApproximate(n: Number) = new DependentPositionWithAppliedInputTactic("autoApproximate", n::Nil) {
-    override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic("Approximate",
+    conclusion = "Γ |- [{X'=F}], Δ",
+    premises = "Γ |- [{X'=F & Α(n)}], Δ"
+  )
+  def autoApproximate(n: Number) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, sequent: Sequent) =>
+    sequent.sub(pos) match {
       case Some(m:Modal) if(m.program.isInstanceOf[ODESystem]) => {
         val system = m.program.asInstanceOf[ODESystem]
         val t = timeVar(system.ode)
@@ -52,12 +57,13 @@ object Approximator extends Logging {
           case Some(v) => expApproximate(v, n)(pos)
           case None    => DifferentialHelper.hasSinCos(system.ode) match {
             case Some((cos,sin)) => circularApproximate(sin, cos, n)(pos)
-            case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
+            case None => throw new TacticInapplicableFailure("Could not find a system to approximate.")
           }
         }
       }
-      case _ => throw new BelleFriendlyUserMessage(s"approximate should only be called on positions of form [{ODE}]P")
-    })
+      case Some(e) => throw new TacticInapplicableFailure("autoApproximate only applicable on positions of form [{ODE}]P, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
   }
 
 
@@ -65,9 +71,12 @@ object Approximator extends Logging {
   //endregion
 
   //region Approximation for {{{e'=e}}}
-
-  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-      "expApproximate" byWithInputs(e::n::Nil, (pos: Position, sequent: Sequent) => {
+  @Tactic("e'=e Approximation",
+    conclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
+    premises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
+    inputs = "exp:variable;;n:number"
+  )
+  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     val N = n.value.toInt
@@ -98,12 +107,15 @@ object Approximator extends Logging {
     }
 
     DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) & cutTactics.reduce(_ & _)
-  })
+  }
 
-  /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
+  /** Cuts in Taylor approximations for circular dynamics {{{x'=y,y'=-x}}}.
     * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
-  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-      "circularApproximate" byWithInputs(s::c::n::Nil, (pos: Position, sequent: Sequent) => {
+  @Tactic("Circular Dynamics Approximation",
+    conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
+    premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
+    inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number")
+  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     //Get the number of terms we should expand.
@@ -150,7 +162,7 @@ object Approximator extends Logging {
       )
 
     DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) & isOnCircle & cutTactics.reduce(_ & _)
-  })
+  }
 
   //region Definitions of series.
 
@@ -210,13 +222,13 @@ object Approximator extends Logging {
       TactixLibrary.proveBy(fact,
         DebuggingTactics.debug(s"Trying to prove lemma $fact", DEBUG) &
         TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(1) <(
-          DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
+          DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & TactixLibrary.id & DebuggingTactics.done,
           DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", DEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
         ) & DebuggingTactics.debug(s"Successfully proved lemma $fact", DEBUG)
       )
 
     }
-    case _ => throw new BelleUserGeneratedError(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
+    case _ => throw new TacticInapplicableFailure(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
   }
 
   /** Does a CEat with extendEvDomAndProve. */
@@ -254,15 +266,15 @@ object Approximator extends Logging {
   }
 
   private def timeVarInModality(e:Option[Expression]) = e match {
-    case None => throw new BelleFriendlyUserMessage("Approximator was given a non-existent position.")
+    case None => throw new IllFormedTacticApplicationException("Approximator was given a non-existent position.")
     case Some(m) if m.isInstanceOf[Modal] => m.asInstanceOf[Modal].program match {
       case ODESystem(ode,child) => timeVar(ode) match {
         case Some(t) => t
-        case None => throw new BelleFriendlyUserMessage("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
+        case None => throw new TacticInapplicableFailure("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
       }
-      case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities containing ODEs in the top level")
+      case _ => throw new TacticInapplicableFailure("Approximation tactics should only be applied to modalities containing ODEs in the top level")
     }
-    case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities")
+    case _ => throw new TacticInapplicableFailure("Approximation tactics should only be applied to modalities")
   }
 
   //endregion
