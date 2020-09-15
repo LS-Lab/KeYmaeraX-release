@@ -330,7 +330,7 @@ class ODELivenessTests extends TacticTestBase {
 
   it should "support semialgebraic dV auto (disjunctive)" in withMathematica { _ =>
     val pr = proveBy("v!=0 -> v=0 | <{x'=v}> (x>100 | x < 100)".asFormula,
-      implyR(1) & orR(1) & semialgdVAuto(2)
+      implyR(1) & orR(1) & semialgdVAuto()(2)
     )
 
     println(pr)

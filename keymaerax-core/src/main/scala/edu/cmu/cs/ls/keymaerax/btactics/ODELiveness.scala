@@ -652,7 +652,8 @@ object ODELiveness {
     * @return reduces away all irrelevant ODEs
     */
   def odeReduce(strict: Boolean = true, hints: List[Formula]) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "odeReduce is only applicable at a top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("odeReduce is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -763,8 +764,15 @@ object ODELiveness {
     * ---
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
     */
+  @Tactic(names="compatCuts",
+    codeName="compatCuts",
+    longDisplayName="Compatible cuts",
+    premises="Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
+    conclusion="Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
+    displayLevel="browse")
   def compatCuts : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "compatCuts is only applicable at a top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("compatCuts is only applicable at a top-level succedent")
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
@@ -837,7 +845,7 @@ object ODELiveness {
     displayLevel="all")
   // was kDomD
   def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
-    if(!pos.isTopLevel && pos.isSucc)
+    if(!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("kDomD is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -868,11 +876,11 @@ object ODELiveness {
   @Tactic(names="dDR",
     codeName="dDR",
     longDisplayName="Diamond Differential Refinement",
-    premises="Γ |- <x'=f(x)&R> P, Δ ;; Γ |- [x'=f(x)&R] Q, Δ",
-    conclusion="Γ |- <x'=f(x)&Q> P, Δ",
-    displayLevel="browse")
+    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- [x'=f(x)&R] Q, Δ",
+    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    displayLevel="all")
   def dDR(R: Formula):DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
-    if(!pos.isTopLevel && pos.isSucc)
+    if(!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("dDR is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -907,7 +915,8 @@ object ODELiveness {
     * @return the sequent with ghosts added in requested position
     */
   def vDG(ghost: DifferentialProgram): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "vDG is only applicable at a top-level position")
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("vDG is only applicable at a top-level position")
 
     val (sys,post,isBox) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
@@ -1078,7 +1087,8 @@ object ODELiveness {
 
   // A more "auto"matic but slower/less flexible version of dV
   def dVAuto(autoqe:Boolean=true) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1156,7 +1166,8 @@ object ODELiveness {
 
   // Semialgebraic dV
   def semialgdV(bnd: Term): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1216,7 +1227,8 @@ object ODELiveness {
         odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt)) ), // existence
       dC(inv)(pos) <(
         DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
-        DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
+        DifferentialTactics.DconstV(pos) & sAIclosed(pos) & done | //ODE does a boxand split, which is specifically a bad idea here
+        skip
       )
 
     )
@@ -1224,8 +1236,9 @@ object ODELiveness {
   }}
 
   // Semialgebraic dV
-  def semialgdVAuto : DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+  def semialgdVAuto(autoqe:Boolean=true) : DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1273,7 +1286,7 @@ object ODELiveness {
     val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
     val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,eps)).usubst
 
-    val axren = exRWgt.fact(unifODE)(unify)(URename(timevar,"t".asVariable,semantic=true))
+    val axren = exRWgt.fact(URename(timevar,"t".asVariable,semantic=true))(unifODE)(unify)
 
     val inv = mkFml(property)
     val sim = proveBy(
@@ -1308,14 +1321,11 @@ object ODELiveness {
     //\\exists e (e > 0 & \\forall x (dom -> p' >= e))
     val qe = Exists(eps::Nil, And(eg0,quantliecheck))
 
-    val pr = proveBy(simseq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
-
-    if(!pr.isProved)
-      throw new TacticInapplicableFailure("semialgdVAuto failed to prove arithmetic condition: " + qe)
+    val tac = ToolTactics.hideNonFOL &  (if(autoqe) QE else skip)
 
     starter & timetac &
       cutR(qe)(pos) <(
-        by(pr)
+        tac
         ,
       implyR(pos) & existsL('Llast) & andL('Llast) &
       cut(Exists(List(oldp),inv)) <(
@@ -1414,7 +1424,8 @@ object ODELiveness {
     * @return two subgoals, shown above
     */
   def higherdV(bnds: List[Term]): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "Higher dV is only applicable at a top-level succedent")
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("Higher dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1484,7 +1495,8 @@ object ODELiveness {
     * G |- <ODE & Q> P
     */
   def saveBox : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "saveBox is only applicable at a top-level succedent")
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("saveBox is only applicable at a top-level succedent")
 
     val (tarsys, tarpost) = seq.sub(pos) match {
       case Some(Diamond(sys: ODESystem, post)) => (sys, post)
@@ -1519,8 +1531,16 @@ object ODELiveness {
     *
     * @todo: succeeds but probably unexpectedly when Q is not closed. Best to error instead.
     */
-  def closedRef(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "closedRef is only applicable at a top-level succedent")
+
+  @Tactic(names="closedRef",
+    codeName="closedRef",
+    longDisplayName="Closed Domain Refinement",
+    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- p>0 && [x'=f(x)&R & !P & p>=0] p > 0, Δ",
+    conclusion="Γ |- < x'=f(x)&p>=0 > P, Δ",
+    displayLevel="browse")
+  def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("closedRef is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1529,7 +1549,7 @@ object ODELiveness {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    saveBox(pos) & dDR(target)(pos) < (
+    saveBox(pos) & dDR(R)(pos) < (
       // Remove the saveBox to reduce clutter
       hideL('Llast),
       DifferentialTactics.dCClosure(pos)<(
@@ -1680,4 +1700,16 @@ object ODELiveness {
     }
   )
 
+  @Tactic(names="dValt",
+    codeName="dValt",
+    longDisplayName="Differential Variant",
+    premises=" Γ |- e() > 0 & [x:'=f(x)] (Q-> (P)' >= e()), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
+    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    displayLevel="all")
+  def dValt(e:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
+    e match {
+      case None => semialgdVAuto(false)(pos)
+      case Some(ee) => semialgdV(ee)(pos)
+    }
+  )
 }
