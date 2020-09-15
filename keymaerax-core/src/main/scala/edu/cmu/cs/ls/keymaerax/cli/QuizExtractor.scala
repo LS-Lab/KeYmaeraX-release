@@ -47,7 +47,7 @@ object QuizExtractor {
     private def solfinBodyExtractor(capture: String) = """(?s)\\begin\{lstlisting}\s*(""" + capture + """.*?)\s*\\end\{lstlisting}"""
     private val SOLFIN_BODY_EXTRACTOR = solfinBodyExtractor("")
     private val SOLFIN_EXTRACTOR = """(?:\\solfin\s*\{?\s*""" + SOLFIN_BODY_EXTRACTOR + """\s*}?)"""
-    private val SOLFIN_ANSWER_EXTRACTOR = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
+    private val SOLFIN_ANSWER_EXTRACTOR: Regex  = ("(?s)" + INLINE_SOL_DELIM + "\\s*" + TEX_NO_BREAK_SPACE + "*" + "(.*?)" + TEX_NO_BREAK_SPACE + "*" + "\\s*" + INLINE_SOL_DELIM).r(ANSWER)
     // \sol
     private def kyxlineExtractor(capture: String) = """\""" + KYXLINE + """\s*"(""" + capture + """[^"]+)""""
     //@note nested {} up to level 2
@@ -190,9 +190,12 @@ object QuizExtractor {
 
     def artifactsFromTexTextString(s: String): Artifact = TextArtifact(if (s.trim.nonEmpty) Some(s) else None)
 
+    /** Extracts the answers enclosed in `____` from `s`. */
+    def extractSolfinAnswers(s: String): List[String] = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER).trim).toList
+
     /** Translates a `\solfin` body string (content of lstlisting) into a question string and an artifact. */
     def solfinArtifactsFromString(s: String): (String, Artifact) = {
-      val answerStrings = SOLFIN_ANSWER_EXTRACTOR.findAllMatchIn(s).map(_.group(ANSWER).trim).toList
+      val answerStrings = extractSolfinAnswers(s)
       val artifact =
         if (answerStrings.isEmpty || answerStrings.exists(_.isEmpty)) TextArtifact(None)
         else artifactsFromKyxString(answerStrings.mkString(","))
