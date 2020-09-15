@@ -1043,7 +1043,11 @@ object AssessmentProver {
     def failedMessage(prompt: Submission.Prompt): String = {
       val msg = prompt.answers.map({
         case Submission.TextAnswer(_, _, _, _, answer, _) =>
-          val shortened = extractSolfinAnswers(answer).map(a => {
+          val solfinAnswers = extractSolfinAnswers(answer)
+          val sanitizedAnswers =
+            if (solfinAnswers.nonEmpty) solfinAnswers
+            else answer :: Nil
+          val shortened = sanitizedAnswers.map(a => {
             if (a.length <= 100) a
             else a.substring(0, 95) + "[...]"
           })
@@ -1065,7 +1069,7 @@ object AssessmentProver {
                   msgStream.println(Messages.PASS)
                   (prompt, prompt.points)
                 case "min()" =>
-                  msgStream.println(Messages.PASS + ":Partial")
+                  msgStream.println(Messages.PASS + ":Partial (please elaborate your explanation)")
                   (prompt, prompt.points/2)
               }
               case _ =>
