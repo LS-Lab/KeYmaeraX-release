@@ -164,7 +164,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) 
   it should "prove 'linear" in withZ3 { qetool => check(Dlinear)}
   it should "prove 'linear right" in withZ3 { qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
-  it should "prove DX diamond differential skip" in {check(Dskipd)}
+  it should "prove DX diamond differential skip" in {check(dDX)}
   it should "prove 0*" in withZ3 { qeTool => check(zeroTimes)}
   it should "prove 0+" in withZ3 { qeTool => check(zeroPlus)}
   it should "prove +0" in withZ3 { qeTool => check(plusZero)}

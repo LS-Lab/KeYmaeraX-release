@@ -58,7 +58,7 @@ class ModelplexTacticTests extends TacticTestBase {
       // remove loops
       case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       // remove ODEs for controller monitor
-      case Diamond(ODESystem(_, _), _) => Ax.Dskipd :: Nil
+      case Diamond(ODESystem(_, _), _) => Ax.dDX :: Nil
       case _ => AxIndex.axiomsFor(e)
     })
 

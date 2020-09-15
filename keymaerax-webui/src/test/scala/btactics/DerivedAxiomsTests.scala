@@ -235,7 +235,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
   it should "prove 'linear right" in withMathematica(initLibrary =  false, testcode =  { _ => check(DlinearRight)})
   it should "prove Uniq uniqueness iff" in {check(UniqIff)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
-  it should "prove DX diamond differential skip" in {check(Dskipd)}
+  it should "prove DX diamond differential skip" in {check(dDX)}
   it should "prove DBX>" in withMathematica(initLibrary =  false, testcode =  {_ => check(DBXgt)})
   it should "prove DBX> open" in withMathematica(initLibrary =  false, testcode =  {_ => check(DBXgtOpen)})
   it should "prove 0*" in withMathematica(initLibrary =  false, testcode =  { _ => check(zeroTimes)})

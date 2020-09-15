@@ -608,7 +608,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     // remove loops
     case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
     // remove ODEs for controller monitor
-    case Diamond(ODESystem(_, _), _) => Ax.Dskipd :: Nil
+    case Diamond(ODESystem(_, _), _) => Ax.dDX :: Nil
     case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
   })
 
@@ -806,7 +806,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     anon ((pos: Position) =>
       locateT(
         useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
-        useAt(Ax.Dskipd, PosInExpr(1::Nil)) ::
+        useAt(Ax.dDX, PosInExpr(1::Nil)) ::
         useAt(Ax.composed) ::
         useAt(Ax.choiced) ::
         (anon ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) :: // was "<:*> nondet assign opt. 1"

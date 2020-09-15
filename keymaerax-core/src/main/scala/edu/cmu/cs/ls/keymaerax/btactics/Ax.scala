@@ -2964,9 +2964,9 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("DX", conclusion = "Q∧P → <x'=f(x)&Q>P",
+  @Axiom("dDX", conclusion = "Q∧P → <x'=f(x)&Q>P",
     key = "1", recursor = "1", unifier = "surjlinear")
-  lazy val Dskipd: DerivedAxiomInfo = derivedAxiom("DX diamond differential skip",
+  lazy val dDX: DerivedAxiomInfo = derivedAxiom("DX diamond differential skip",
     Sequent(IndexedSeq(), IndexedSeq("<{c&q(||)}>p(||) <- q(||)&p(||)".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(notAnd)(1, 0::0::Nil) &
