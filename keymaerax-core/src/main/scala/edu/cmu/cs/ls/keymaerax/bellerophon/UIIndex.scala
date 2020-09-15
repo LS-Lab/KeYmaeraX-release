@@ -142,7 +142,12 @@ object UIIndex {
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
           case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "diamondd"
-          case _: ODESystem => "solve" :: "dC" :: rules
+          case ODESystem(_, _) =>
+            if (pos.forall(_.isSucc)) {
+              if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "gEx" :: Nil)
+              else ("solve" :: Nil) //todo
+            }
+            else ("solve" :: Nil) //todo
           case ProgramConst(name, _) => s"""expand "$name"""" :: rules
           case _ => rules
         }

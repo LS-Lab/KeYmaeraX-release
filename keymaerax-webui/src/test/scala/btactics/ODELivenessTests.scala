@@ -260,11 +260,11 @@ class ODELivenessTests extends TacticTestBase {
   it should "work on simple examples (1) automatically" in withQE { _ =>
 
     val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
-      dVAuto(1)
+      dVAuto()(1)
     )
 
     val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
-      dVAuto(2)
+      dVAuto()(2)
     )
 
     println(pr)
@@ -274,7 +274,7 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
-    val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto(1))
+    val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto()(1))
     println(pr)
     pr shouldBe 'proved
   }
@@ -283,7 +283,7 @@ class ODELivenessTests extends TacticTestBase {
     val pr = proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula,
       implyR(1) &
         existsR("b".asTerm)(1) &
-        andR(1) <( QE , dVAuto(1))
+        andR(1) <( QE , dVAuto()(1))
     )
     println(pr)
     pr shouldBe 'proved
@@ -294,7 +294,7 @@ class ODELivenessTests extends TacticTestBase {
       implyR(1) &
         allR(1) &
         existsR("b".asTerm)(1) &
-        andR(1) <( QE , dVAuto(1)))
+        andR(1) <( QE , dVAuto()(1)))
     println(pr)
     pr shouldBe 'proved
   }
@@ -358,7 +358,7 @@ class ODELivenessTests extends TacticTestBase {
         // Another helpful cut (could be just old(.) for the RHS)
         cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
           // dV("1".asTerm)(1),
-          dVAuto(1),
+          dVAuto()(1),
           hideL(-2) & hideR(1) & ODE(1)
         )
     )
@@ -575,7 +575,7 @@ class ODELivenessTests extends TacticTestBase {
     val tac = implyR(1) &
       // Replace the postcondition
       kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
-        dVAuto(1), //dV("1/2".asTerm)(1)
+        dVAuto()(1), //dV("1/2".asTerm)(1)
         ODE(1)
       )
 
@@ -660,7 +660,7 @@ class ODELivenessTests extends TacticTestBase {
       // "Assume" for contradiction that goal is not reached
       saveBox(1) &
       cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) < (
-        dVAuto(1), //dV("3/2".asTerm)(1)
+        dVAuto()(1), //dV("3/2".asTerm)(1)
         hideL(-2) & cohideOnlyR(2) & ODE(1)
       ) &
       gEx("2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula::Nil)(1)
@@ -772,7 +772,7 @@ class ODELivenessTests extends TacticTestBase {
       // Use a progress function
       kDomainDiamond(Less(p1, Number(0)))(1) <(
         //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
-        dVAuto(1),
+        dVAuto()(1),
         dW(1) & QE
       ) &
     gEx("2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula :: Nil)(1)
@@ -803,7 +803,7 @@ class ODELivenessTests extends TacticTestBase {
       // Use a progress function
       kDomainDiamond(Less(p2, Number(0)))(1) <(
         //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
-        dVAuto(1),
+        dVAuto()(1),
         dW(1) & QE
       ) &
       gEx("2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula :: Nil)(1)
@@ -831,12 +831,11 @@ class ODELivenessTests extends TacticTestBase {
       kDomainDiamond("x2 - x1 >=0".asFormula)(1) <(
         saveBox(1) &
           // dV("1".asTerm)(1) &
-          dVAuto(1) &
+          dVAuto()(1) &
           // Proving bound on derivative
           //todo: cut needs to support old(.) directly
-          hideL(-4) &
           cut("\\exists oldv oldv = x2-x1".asFormula) <(
-            existsL(-6),
+            existsL(-5),
             cohideR(2) & QE
           ) &
           cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
@@ -901,7 +900,7 @@ class ODELivenessTests extends TacticTestBase {
           hideR(1) & compatCuts(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
         ) &
         // dV("2*oldv*oldhalfy".asTerm)(1)
-        dVAuto(1)
+        dVAuto()(1)
 
     val pr = proveBy(seq, tac)
 
@@ -932,7 +931,7 @@ class ODELivenessTests extends TacticTestBase {
                 ODE(1)
               ) &
               // dV("A".asTerm)(1)
-              dVAuto(1)
+              dVAuto()(1)
           ),
           orL('Llast) <(
             //a=0
@@ -948,9 +947,10 @@ class ODELivenessTests extends TacticTestBase {
               ) &
                 closedRef("true".asFormula)(1) <(
                   //dV("B".asTerm)(1),
-                  dVAuto(1),
+                  dVAuto()(1),
                   QE,
-                  ODE(1)
+                  //todo: fix ODE so that DconstV correctly calculates const assms to keep
+                  dWPlus(1) & QE
                 )
             )
           )

@@ -594,14 +594,6 @@ object ODELiveness {
     val ddg = ddgpre(ddgsubst)
     val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::1::Nil)).get
 
-//    println("hint ", hint)
-//    println("vdgasm ", vdgasm)
-//    println(UnificationMatch.unifiable(vdgasm,hint))
-
-//    println("hint ", hint)
-//    println("ddgasm ", ddgasm)
-//    println(UnificationMatch.unifiable(ddgasm,hint))
-
     val finalrwopt = UnificationMatch.unifiable(vdgasm,hint) match {
       case Some(res) => Some(vdg(res.usubst))
       case None =>
@@ -842,10 +834,11 @@ object ODELiveness {
     codeName="kDomainDiamond",
     premises="Γ |- < x'=f(x)&Q > R, Δ ;; Γ |- [ x'=f(x)&Q&!P ] !R, Δ",
     conclusion="Γ |- < x'=f(x)&Q > P, Δ",
-    displayLevel="browse")
+    displayLevel="all")
   // was kDomD
   def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "kDomD is only applicable at a top-level succedent")
+    if(!pos.isTopLevel && pos.isSucc)
+      throw new IllFormedTacticApplicationException("kDomD is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -866,19 +859,21 @@ object ODELiveness {
     *
     * G |- <ODE & R> P
     * G |- [ODE & R] Q
-    * ---- (kDomD)
+    * ---- (dDR)
     * G |- <ODE & Q> P
     *
     * @param R the formula R to refine the domain constraint
     * @return two premises, as shown above when applied to a top-level succedent diamond
     */
-  @Tactic(names="Diamond Differential Refinement",
+  @Tactic(names="dDR",
     codeName="dDR",
-    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- [ x'=f(x)&R ] Q, Δ",
-    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    longDisplayName="Diamond Differential Refinement",
+    premises="Γ |- <x'=f(x)&R> P, Δ ;; Γ |- [x'=f(x)&R] Q, Δ",
+    conclusion="Γ |- <x'=f(x)&Q> P, Δ",
     displayLevel="browse")
   def dDR(R: Formula):DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dDR is only applicable at a top-level succedent")
+    if(!pos.isTopLevel && pos.isSucc)
+      throw new IllFormedTacticApplicationException("dDR is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1011,7 +1006,8 @@ object ODELiveness {
     * @return closes (or partially so)
     */
   def dV(bnd: Term, manual:Boolean = false): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
-    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+    if(!pos.isTopLevel)
+      throw new IllFormedTacticApplicationException("dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
@@ -1020,9 +1016,8 @@ object ODELiveness {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    require (StaticSemantics.boundVars(sys).intersect(StaticSemantics.freeVars(bnd)).isEmpty,
-      "Bound " + bnd +" must be constant for ODE " + sys.ode +"."
-    )
+    if(!StaticSemantics.boundVars(sys).intersect(StaticSemantics.freeVars(bnd)).isEmpty)
+      throw new IllFormedTacticApplicationException("Bound " + bnd +" must be constant for ODE " + sys.ode +".")
 
     val (property, propt) = ineqNormalize(post)
 
@@ -1048,11 +1043,12 @@ object ODELiveness {
     val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
 
     val ax = property match {
-      case Greater(_, _) => DVgt.fact(unifODE) (unify)
-      case GreaterEqual(_, _) => DVgeq.fact(unifODE) (unify)
+      case Greater(_, _) => DVgt.fact
+      case GreaterEqual(_, _) => DVgeq.fact
       case _ => ??? //impossible
     }
-    val axren = ax(URename(timevar,"t".asVariable,semantic=true))
+
+    val axren = ax(URename(timevar,"t".asVariable,semantic=true))(unifODE) (unify)
 
     val ex = property match {
       case Greater(_, _) => Ax.TExgt
@@ -1069,18 +1065,19 @@ object ODELiveness {
       andR(pos) <(
         andR(pos) <(
         ToolTactics.hideNonFOL & QE &
-          DebuggingTactics.done("Unable to prove "+ bnd + "strictly positive."), //G |- e() > 0
+          DebuggingTactics.done("Unable to prove "+ bnd + " strictly positive."), //G |- e() > 0
         odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
-        (compatCuts(pos) & dI('full)(pos) |
-          DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +"."))
+        (compatCuts(pos) & dI('full)(pos) & done |
+          skip)
+          //DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +".")
         // derivative lower bound
       )
     )
   }}
 
-  // was "dV"
-  def dVAuto: DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
+  // A more "auto"matic but slower/less flexible version of dV
+  def dVAuto(autoqe:Boolean=true) : DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -1124,18 +1121,22 @@ object ODELiveness {
     //\\exists e (e > 0 & \\forall x (dom -> p' >= e))
     val qe = Exists(eps::Nil, And(eg0,quantliecheck))
 
-    val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
+    val tac = ToolTactics.hideNonFOL &  (if(autoqe) QE else skip)
 
-    if(!pr.isProved)
-      throw new TacticInapplicableFailure("dVAuto failed to prove arithmetic condition: " + qe)
+    //val pr = proveBy(seq.updated(pos.checkTop,qe), )
+
+    //if(!pr.isProved)
+    //  throw new TacticInapplicableFailure("dVAuto failed to prove arithmetic condition: " + qe)
 
     cutR(qe)(pos) <(
-      by(pr),
+      tac ,
       implyR(pos) & existsL('Llast) & andL('Llast) & dV(eps,true)(pos) &
         andR(pos) <(
           andR(pos) <(
             id,
-            odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
+            //hide the eps assumptions
+            hideL(-(seq.ante.length+1)) & hideL(-(seq.ante.length+1)) &
+              odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
           compatCuts(pos) &
             dR(lie,false)(pos) <(
                   cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
@@ -1630,8 +1631,9 @@ object ODELiveness {
     dBDGInternal(p, dim)(pos, sequent)
   )
 
-  @Tactic(names="Bounded Diff Ghost",
+  @Tactic(names="dBDG",
     codeName="dBDG",
+    longDisplayName="Bounded Diff Ghost",
     premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- < x'=f(x)&Q > P, Δ",
     conclusion="Γ |- < y'=g(x,y),x'=f(x)& Q > P, Δ",
     displayLevel="internal")
@@ -1639,8 +1641,9 @@ object ODELiveness {
     dBDGInternal(p, 1)(pos, sequent)
   )
 
-  @Tactic(names="Differentially-bounded Diff Ghost",
+  @Tactic(names="dDDG",
     codeName="dDDG",
+    longDisplayName="Differentially-bounded Diff Ghost",
     premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- < x'=f(x)&Q > P, Δ",
     conclusion="Γ |- < y'=g(x,y),x'=f(x)&Q > P, Δ",
     displayLevel="internal")
@@ -1648,28 +1651,33 @@ object ODELiveness {
     dDDGInternal(L, M, 1)(pos, sequent)
   )
 
-  // Convenient wrapper for GEx
-  // todo: make this use default "nil"
-  @Tactic(names="Global Existence",
-    codeName="gEx",
-    premises="* (hints)",
-    conclusion="Γ |- < x'=f(x),t'=1 > t > s, Δ",
-    displayLevel="all")
-  def gEx(hints: List[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
-    odeReduce(strict = true, hints)(pos) & cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done
+  // Convenient wrappers for GEx
+  def gEx(hints: List[Formula]) : DependentPositionTactic = anon ((pos : Position,seq:Sequent) =>
+    odeReduce(strict = true, hints)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done)
   )
 
-  @Tactic(names="Differential Variant",
+  //todo: currently limited to one hint, but we actually need more than that!
+  @Tactic(names="gEx",
+    codeName="gEx",
+    longDisplayName="Global Existence",
+    premises="* (hint)",
+    conclusion="Γ |- < x'=f(x),t'=1 > t > s(), Δ",
+    displayLevel="all")
+  def gEx(hint: Option[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
+    odeReduce(strict = true, hint.toList)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done)
+  )
+
+  @Tactic(names="dV",
     codeName="dV",
-    premises="Γ |- [x'=f(x) & Q] p'-q' >= e(), Δ ;; Γ |- e() > 0, Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
+    longDisplayName="Differential Variant",
+    premises=" Γ |- e() > 0 & [x:'=f(x)] (Q->p'-q' >= e()), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
     conclusion="Γ |- < x'=f(x)&Q > p >= q, Δ",
-    inputs = "e():option[term]",
     displayLevel="all")
   def dV(e:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     e match {
-      case None => dVAuto(pos)
-      case Some(ee) => dV(ee,false)(pos)
+      case None => dVAuto(false)(pos)
+      case Some(ee) => dV(ee)(pos)
     }
-   )
+  )
 
 }
