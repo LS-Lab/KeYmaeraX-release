@@ -817,10 +817,10 @@ object Helpers {
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]): JsValue = {
     val belleTerm = ruleName.split("\\(")(0)
-    val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
-      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, ruleName,
+    val (name, codeName, asciiName, longName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
+      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, di.longDisplayName, ruleName,
           ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
-      case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
+      case None => (ruleName, ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
     JsObject(
@@ -828,6 +828,7 @@ object Helpers {
       "name" -> JsString(name),
       "codeName" -> JsString(codeName),
       "asciiName" -> JsString(asciiName),
+      "longName" -> JsString(longName),
       "maker" -> JsString(maker),
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
@@ -961,6 +962,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
+      "longName" -> JsString(info.longDisplayName),
       "defaultKeyPos" -> (info match {
         case pi: ProvableInfo =>
           val key = AxIndex.axiomIndex(pi)._1
@@ -1024,6 +1026,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "name" -> new JsString(derivationInfo.display.name),
       "asciiName" -> new JsString(derivationInfo.display.asciiName),
       "codeName" -> new JsString(derivationInfo.codeName),
+      "longName" -> new JsString(derivationInfo.longDisplayName),
       "derivation" -> derivation
     )
   }
