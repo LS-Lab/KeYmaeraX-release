@@ -112,7 +112,7 @@ trait ProofTreeNode {
       // single-position tactics
       goal.map(g => (g, g.sub(pos))) match {
         case Some((goal, Some(subFormula))) =>
-          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal)).map(axiom =>
+          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal), proof.substs).map(axiom =>
             (DerivationInfo(axiom), UIIndex.comfortOf(axiom).map(DerivationInfo(_))))
         case _ => Nil
       }
