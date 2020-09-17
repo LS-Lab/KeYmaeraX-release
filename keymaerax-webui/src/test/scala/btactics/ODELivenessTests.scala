@@ -129,12 +129,24 @@ class ODELivenessTests extends TacticTestBase {
     //The first and last assumptions are compatible and can be automatically added
     val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1,a'=b}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> a > 0, [{x'=1,v'=2,a'=a^2+x+v^2 & x < 5}]1+1=2".asSequent
 
-    val pr = proveBy(seq, compatCuts(2))
+    val pr = proveBy(seq, odeUnify(2))
 
     println(pr)
 
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  a > 0, [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
+  }
+
+  it should "introduce compatible cuts" in withQE { _ =>
+    //Adds compatible cut in any position left/right, box or diamond
+    val seq = "<{x'=1}>x=1, [{x'=1}]x=1 ==> <{x'=1}>x=1,[{x'=1}]x=1 ".asSequent
+    val pr = proveBy(seq, compatCut("1=1".asFormula)(1) <(
+      compatCut("1=1".asFormula)(-2),
+      compatCut("1=1".asFormula)(2)
+    ))
+
+    pr.subgoals.length shouldBe 4
+    proveBy(pr, prop) shouldBe 'proved
   }
 
   "odeReduce" should "detect nonlinear ode" in withQE { _ =>
@@ -305,8 +317,8 @@ class ODELivenessTests extends TacticTestBase {
       // Should be old(x), etc.
       higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
       // This is manual by design, although this is probably the main way to do it
-      dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
-      dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+      dC("a>=2*coeff2+6*coeff3*t".asFormula)(1) <( skip, dI('full)(1) ) &
+      dC("v>=coeff1+2*coeff2*t+3*coeff3*t^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
     )
 
     println(pr)
@@ -355,8 +367,7 @@ class ODELivenessTests extends TacticTestBase {
           skip,
           dW(1) & QE //using compatible cut
         ) &
-        // Another helpful cut (could be just old(.) for the RHS)
-        cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
+        compatCut("x^2+y^2 >= 1/2".asFormula)(1) <(
           // dV("1".asTerm)(1),
           dVAuto()(1),
           hideL(-2) & hideR(1) & ODE(1)
@@ -838,11 +849,10 @@ class ODELivenessTests extends TacticTestBase {
             existsL(-5),
             cohideR(2) & QE
           ) &
-          cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
-            skip,
+          compatCut("x2-x1>=oldv".asFormula)(1) <(
+            gEx("2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula :: Nil)(1),
             cohideOnlyR(2) & hideL(-2) & ODE(1)
-          ) &
-          gEx("2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula :: Nil)(1)
+          )
         ,
         ODE(1)
       )
@@ -897,7 +907,7 @@ class ODELivenessTests extends TacticTestBase {
         // As long as the goal is not yet reached, y will stay positive
         cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
           skip,
-          hideR(1) & compatCuts(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
+          hideR(1) & odeUnify(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
         ) &
         // dV("2*oldv*oldhalfy".asTerm)(1)
         dVAuto()(1)
@@ -963,5 +973,7 @@ class ODELivenessTests extends TacticTestBase {
     println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
+
+
 
 }

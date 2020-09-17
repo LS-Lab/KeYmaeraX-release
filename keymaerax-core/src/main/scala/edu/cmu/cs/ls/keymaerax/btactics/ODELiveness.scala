@@ -616,7 +616,7 @@ object ODELiveness {
         cutL(concl)(pos) < (cont,
           cohideOnlyR('Rlast) &
             useAt(finalrw, PosInExpr(1 :: Nil))(1) &
-            compatCuts(1) &
+            odeUnify(1) &
             hideNonFOLLeft & ODE(1) & done
         )
       }
@@ -754,29 +754,31 @@ object ODELiveness {
     }
   }
 
-  /** Adds compatible box modalities from the assumptions to the domain constraint
-    * [x'=f(x)&A]B is compatible for [x'=f(x)&Q]P
-    * if A implies Q
+  /** Adds compatible (ODE unifiable) box modalities from the assumptions to the domain constraint
+    * e.g.
+    * [x'=f(x)&A]B is compatible for [x'=f(x)&Q]P if A implies Q
     *
-    * For compatible assumptions, the rule adds them by diff cut:
+    * [z'=g(z)&Q]P is compatible for [x'=f(x)&Q]P if z'=g(z) contains a subset of ODEs of x'=f(x)
+    *
+    * For compatible assumptions, the rule adds them by diff cut, e.g.:
     *
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q&B]P
     * ---
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
     */
-  @Tactic(names="compatCuts",
-    codeName="compatCuts",
-    longDisplayName="Compatible cuts",
+  @Tactic(names="odeUnify",
+    codeName="odeUnify",
+    longDisplayName="ODE Unify",
     premises="Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q&B]P, Δ ;; A |- Q",
     conclusion="Γ, [x'=f(x)&A]B |- [x'=f(x),y'=g(y)&Q]P, Δ",
     displayLevel="browse")
-  def compatCuts : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
+  def odeUnify : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
-      throw new IllFormedTacticApplicationException("compatCuts is only applicable at a top-level succedent")
+      throw new IllFormedTacticApplicationException("odeUnify is only applicable at a top-level succedent")
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case Some(e) => throw new TacticInapplicableFailure("compatCuts only applicable to box ODEs, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("odeUnify only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
@@ -827,17 +829,44 @@ object ODELiveness {
     )
   })
 
-  /** Implements K<&> rule
-    * Note: uses auto cuts for the later premise
+  /** A tiny wrapper around cut.
+    * This introduces a cut that is compatible for the ODE at a given position
+    * (regardless of modality and position, although most useful for diamond ODEs)
     *
-    * G |- <ODE & Q> R
-    * G |- [ODE & Q & !P] !R
-    * ---- (kDomD)
-    * G |- <ODE & Q> P
-    *
-    * @param R the formula R to refine the postcondition
-    * @return two premises, as shown above when applied to a top-level succedent diamond
+    * G, [x'=f(x)&Q]R |- C([x'=f(x)&Q]P)   G|-[x'=f(x)&Q]R
+    * --- compatCut
+    * G |- C([x'=f(x)&Q]P)
     */
+  @Tactic(names="compatCut",
+    codeName="compatCut",
+    longDisplayName="Compatible ODE Cut",
+    premises="Γ, [x'=f(x)&Q]R |- C(< x'=f(x)&Q >P), Δ ;; Γ |- [x'=f(x)&Q]R, Δ",
+    conclusion="Γ |- C(< x'=f(x)&Q >P), Δ",
+    displayLevel="all",
+    inputs = "R:formula")
+  def compatCut(R:Formula) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("compatCut only applies to box/diamond of ODEs but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    cut(Box(sys,R))
+  }}
+
+  /** Implements K<&> rule
+  * Note: uses auto cuts for the later premise
+  *
+  * G |- <ODE & Q> R
+  * G |- [ODE & Q & !P] !R
+  * ---- (kDomD)
+  * G |- <ODE & Q> P
+  *
+  * @param R the formula R to refine the postcondition
+  * @return two premises, as shown above when applied to a top-level succedent diamond
+  */
   @Tactic(names="K<&>",
     codeName="kDomainDiamond",
     premises="Γ |- < x'=f(x)&Q > R, Δ ;; Γ |- [ x'=f(x)&Q&!P ] !R, Δ",
@@ -858,7 +887,7 @@ object ODELiveness {
 
     cutR(newfml)(pos) <(
       skip,
-      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & odeUnify(pos)
     )
   }}
 
@@ -893,7 +922,7 @@ object ODELiveness {
 
     cutR(newfml)(pos) <(
       skip,
-      useAt(Ax.DRd,PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.DRd,PosInExpr(1::Nil))(pos) & odeUnify(pos)
     )
   }}
 
@@ -1036,7 +1065,7 @@ object ODELiveness {
     }
 
     //support for old
-    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
 
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
@@ -1077,7 +1106,7 @@ object ODELiveness {
           DebuggingTactics.done("Unable to prove "+ bnd + " strictly positive."), //G |- e() > 0
         odeReduce(strict = false, Nil)(pos) &
         Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
-        (compatCuts(pos) & dI('full)(pos) & done |
+        (odeUnify(pos) & dI('full)(pos) & done |
           skip)
           //DebuggingTactics.done("Unable to prove derivative lower bound using "+ bnd +".")
         // derivative lower bound
@@ -1102,7 +1131,7 @@ object ODELiveness {
       case _ => throw new TacticInapplicableFailure("dVAuto only applicable to concrete ODEs")
     }
 
-    val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
+    val eps = TacticHelper.freshNamedSymbol("eps".asVariable, seq)
     val bvs = odels.map(_._1.x)
 
     // e > 0
@@ -1113,7 +1142,7 @@ object ODELiveness {
       case GreaterEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(l,r),None),eps)
       case Less(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
       case LessEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
-      case _ => throw new TacticInapplicableFailure("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
+      case _ => throw new TacticInapplicableFailure("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent (try semialgdV)")
     }
 
     // (Q & p < 0 -> p' >= e)
@@ -1123,7 +1152,7 @@ object ODELiveness {
     // val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
 
     // This more accurately finds the compatible cuts by simulating it in action
-    val prpre = proveBy(seq, dV(Number(0),true)(pos) & andR(pos) <(skip, compatCuts(pos)))
+    val prpre = proveBy(seq, dV(Number(0),true)(pos) & andR(pos) <(skip, odeUnify(pos)))
     val dom = prpre.subgoals(1).sub(pos++PosInExpr(0::1::Nil)).get.asInstanceOf[Formula]
     // (dom (with compat cuts) -> p' >= e)
     val liecheck = Imply(dom,lie)
@@ -1147,7 +1176,7 @@ object ODELiveness {
             //hide the eps assumptions
             hideL(-(seq.ante.length+1)) & hideL(-(seq.ante.length+1)) &
               odeReduce(strict = false, Nil)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
-          compatCuts(pos) &
+          odeUnify(pos) &
             dR(lie,false)(pos) <(
                   cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
             // add the quantified assumption manually
@@ -1184,7 +1213,7 @@ object ODELiveness {
     }
 
     //support for old
-    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
 
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
@@ -1214,7 +1243,7 @@ object ODELiveness {
     val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
     val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
 
-    val axren = exRWgt.fact(unifODE)(unify)(URename(timevar,"t".asVariable,semantic=true))
+    val axren = exRWgt.fact(URename(timevar,"t".asVariable,semantic=true))(unifODE)(unify)
 
     starter & timetac &
     cut(Exists(List(oldp),inv)) <(
@@ -1255,7 +1284,7 @@ object ODELiveness {
     }
 
     //support for old
-    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
 
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
@@ -1264,7 +1293,7 @@ object ODELiveness {
       cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
         vDG(timer)(pos)
 
-    val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
+    val eps = TacticHelper.freshNamedSymbol("eps".asVariable, seq)
     val eg0 = Greater(eps,Number(0))
 
     //Symbolic lower bound
@@ -1442,7 +1471,7 @@ object ODELiveness {
     }
 
     //support for old
-    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
     // Introduces the time variable in a mildly gross way so that it is set to 0 initially
@@ -1535,8 +1564,8 @@ object ODELiveness {
   @Tactic(names="closedRef",
     codeName="closedRef",
     longDisplayName="Closed Domain Refinement",
-    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- p>0 && [x'=f(x)&R & !P & p>=0] p > 0, Δ",
-    conclusion="Γ |- < x'=f(x)&p>=0 > P, Δ",
+    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- g>0 && [x'=f(x)&R & !P & g>=0] g>0, Δ",
+    conclusion="Γ |- < x'=f(x)& g>=0 > P, Δ",
     displayLevel="browse")
   def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
@@ -1553,7 +1582,7 @@ object ODELiveness {
       // Remove the saveBox to reduce clutter
       hideL('Llast),
       DifferentialTactics.dCClosure(pos)<(
-        hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
+        hideL('Llast) & skip , odeUnify(pos) & hideL('Llast) )
     )
   }}
 
@@ -1690,26 +1719,32 @@ object ODELiveness {
   @Tactic(names="dV",
     codeName="dV",
     longDisplayName="Differential Variant",
-    premises=" Γ |- e() > 0 & [x:'=f(x)] (Q->p'-q' >= e()), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
-    conclusion="Γ |- < x'=f(x)&Q > p >= q, Δ",
-    displayLevel="all")
-  def dV(e:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
-    e match {
-      case None => dVAuto(false)(pos)
-      case Some(ee) => dV(ee)(pos)
-    }
-  )
-
-  @Tactic(names="dValt",
-    codeName="dValt",
-    longDisplayName="Differential Variant",
-    premises=" Γ |- e() > 0 & [x:'=f(x)] (Q-> (P)' >= e()), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
+    premises=" Γ |- eps() > 0 & [x'=f(x)&Q] (P)' >= eps(), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
     conclusion="Γ |- < x'=f(x)&Q > P, Δ",
     displayLevel="all")
-  def dValt(e:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
-    e match {
-      case None => semialgdVAuto(false)(pos)
-      case Some(ee) => semialgdV(ee)(pos)
+  def dV(eps:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) => {
+    // Check if the postcondition is an atomic inequality
+    // Note: ill-formed applications are caught in the sub-tactics
+    val atomic = sequent.sub(pos) match {
+      case Some(Diamond(_,pred)) =>
+        pred.isInstanceOf[GreaterEqual] ||
+          pred.isInstanceOf[Greater] ||
+          pred.isInstanceOf[LessEqual] ||
+          pred.isInstanceOf[Less]
+      case _ => false
     }
-  )
+    if(atomic) {
+      eps match {
+        case None => dVAuto(false)(pos)
+        case Some(ee) => dV(ee)(pos)
+      }
+    }
+    else {
+      eps match {
+        case None => semialgdVAuto(false)(pos)
+        case Some(ee) => semialgdV(ee)(pos)
+      }
+    }
+  })
+
 }
