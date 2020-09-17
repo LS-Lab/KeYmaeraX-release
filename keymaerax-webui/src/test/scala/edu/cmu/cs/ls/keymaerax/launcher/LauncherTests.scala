@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import resource._
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
@@ -15,6 +16,7 @@ import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
 
+@IgnoreInBuildTest
 class LauncherTests extends TacticTestBase {
 
   "Launcher" should "prove the bouncing ball from command line" in {
@@ -208,7 +210,7 @@ class LauncherTests extends TacticTestBase {
 
   it should "have usage information, formatted to 80 characters width" in {
     val usage = KeYmaeraX.usage
-    (usage: StringOps).lines.foreach({case l: String => withClue(l) { l.length should be <= 80 }})
+    (usage: StringOps).lines.foreach(l => withClue(l) { l.length should be <= 80 })
   }
 
   it should "report a parsable model with exit value 0" in {

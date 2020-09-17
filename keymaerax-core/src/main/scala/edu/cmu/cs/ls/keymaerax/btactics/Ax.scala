@@ -4493,6 +4493,23 @@ object Ax extends Logging {
   @Axiom("notEqualExpand")
   lazy val notEqualExpand: DerivedAxiomInfo = derivedAxiom("!= expand", Sequent(IndexedSeq(), IndexedSeq("f_()!=g_() <-> f_()<g_()|g_()<f_()".asFormula)), QE & done)
 
+  /**
+    * {{{Axiom ">= neg".
+    *   f_()>=g_() <-> -f_()<=-g_()
+    * End.
+    * }}}
+    */
+  @Axiom("geNeg")
+  lazy val geNeg: DerivedAxiomInfo = derivedAxiom(">= neg", Sequent(IndexedSeq(), IndexedSeq("f_()>=g_() <-> -f_()<=-g_()".asFormula)), QE & done)
+
+  /**
+    * {{{Axiom "> neg".
+    *   f_()>g_() <-> -f_() < -g_()
+    * End.
+    * }}}
+    */
+  @Axiom("gtNeg")
+  lazy val gtNeg: DerivedAxiomInfo = derivedAxiom("> neg", Sequent(IndexedSeq(), IndexedSeq("f_()>g_() <-> -f_() < -g_()".asFormula)), QE & done)
 
   /**
     * {{{Axiom "<= to <".

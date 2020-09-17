@@ -8,18 +8,19 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
  * Created by smitsch on 1/8/15.
  * @author Stefan Mitsch
  */
-class ParsePrintParseTests extends FlatSpec with Matchers {
-
-    val randomTrials = 20
-    val randomComplexity = 25
-    val rand = new RandomFormula()
+class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+  val randomTrials = 20
+  val randomComplexity = 25
+  val rand = new RandomFormula()
   //val rand = new RandomFormula(2784046900084013503L)
+
+  override protected def beforeEach(): Unit = PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 
   // type declaration header for tests
   def makeInput(program : String) : String = {

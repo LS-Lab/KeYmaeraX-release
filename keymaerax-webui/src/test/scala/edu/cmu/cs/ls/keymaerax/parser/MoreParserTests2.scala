@@ -215,11 +215,11 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "refuse primed variables in evolution domain constraint" in {
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should have message
-      """1:13 No differentials can be used in evolution domain contains
+      """1:13 No differentials can be used in evolution domain constraints
         |Found:    v'>0 at 1:13 to 1:19
         |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should have message
-      """1:13 No differentials can be used in evolution domain contains
+      """1:13 No differentials can be used in evolution domain constraints
         |Found:    (x+v)'>0 at 1:13 to 1:23
         |Expected: In an evolution domain constraint, instead of the primed variables use their right-hand sides.""".stripMargin
   }

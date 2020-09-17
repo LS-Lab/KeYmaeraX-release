@@ -5,12 +5,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
@@ -62,9 +61,10 @@ private object DLBySubst {
   @Tactic(
     names = "GVR",
     codeName = "GV", //@todo code name on cheat sheet is abstract
-    premises =       "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
-    // Gödel Vacuous --------------------------------------------
-    conclusion =     "Γ |- [a]P, Δ",
+    longDisplayName = "Gödel Generalization",
+    premises   = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
+    //       GVR --------------------------------------------
+    conclusion = "Γ |- [a]P, Δ",
     displayLevel = "all",
     revealInternalSteps = true)
   val abstractionb: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
@@ -124,6 +124,7 @@ private object DLBySubst {
     */
   @Tactic(
     names = "[:=]",
+    longDisplayName = "Introduce Self-Assign",
     premises =   "Γ |- [x:=x]P, Δ",
     //      [:=] ------------------
     conclusion = "Γ |- P, Δ",
@@ -222,6 +223,7 @@ private object DLBySubst {
     */
   @Tactic(
     names = "[:=]=",
+    longDisplayName = "Assign Equality",
     premises =   "Γ, x=e |- P, Δ",
     //    [:=]=  ------------------
     conclusion = "Γ |- [x:=e]P, Δ",
@@ -249,6 +251,7 @@ private object DLBySubst {
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
   @Tactic(
     names = "<:=>=",
+    longDisplayName = "Assign Equality",
     premises =   "Γ, x=e |- P, Δ",
     //     <:=>= -----------------
     conclusion = "Γ |- ⟨x:=e⟩P, Δ",
@@ -326,6 +329,7 @@ private object DLBySubst {
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   @Tactic(
+    longDisplayName = "Cut in Postcondition",
     premises =   "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
     //   postCut -------------------------------
     conclusion = "Γ |- [a]P, Δ",
@@ -443,6 +447,7 @@ private object DLBySubst {
     * @param invariant The invariant.
     */
   @Tactic(
+    longDisplayName = "Loop Rule",
     premises =   "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
     //  loopRule -----------------------------------
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
@@ -464,6 +469,7 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.throughout]] */
   @Tactic(
+    longDisplayName = "Loop Throughout Invariant",
     premises =    "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
     // throughout ------------------------------------------------
     conclusion =  "Γ |- [{a;b}<sup>*</sup>]P, Δ",
@@ -485,7 +491,7 @@ private object DLBySubst {
 
   /** [[TactixLibrary.con()]] */
   @Tactic(
-    names = "Loop Convergence",
+    longDisplayName = "Loop Convergence",
     premises =          "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // Loop Convergence -----------------------------------------------------------
     conclusion =        "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
@@ -556,6 +562,7 @@ private object DLBySubst {
     * @example The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
     */
   @Tactic(
+    longDisplayName = "Loop Convergence Rule",
     premises =   "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // conRule   -----------------------------------------------------------
     conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
@@ -582,6 +589,7 @@ private object DLBySubst {
   /** @see [[TactixLibrary.discreteGhost()]] */
   @Tactic(
     names = "iG",
+    longDisplayName = "Discrete Ghost",
     premises =   "Γ |- [x:=e]P, Δ",
     //        iG ------------------
     conclusion = "Γ |- P, Δ",
@@ -661,6 +669,7 @@ private object DLBySubst {
   @Tactic(
     names = "[:=] assign exists",
     codeName = "assignbExistsRule",
+    longDisplayName = "Translate Quantifier to Assignment",
     premises =            "Γ |- [t:=e][x:=t]P, Δ",
     // [:=] assign exists -----------------------
     conclusion =          "Γ |- ∃t [x:=t]P, Δ",
@@ -690,6 +699,7 @@ private object DLBySubst {
   @Tactic(
     names = "[:=] assign all",
     codeName = "assignbAllRule",
+    longDisplayName = "Translate Quantifier to Assignment",
     premises =         "Γ, [t:=e][x:=t]P |- Δ",
     // [:=] assign all -----------------------
     conclusion =       "Γ, ∀t [x:=t]P |- Δ",
@@ -711,7 +721,7 @@ private object DLBySubst {
     * ----------------------------------- boxElim(pos)
     * Γ1, [a]Q, Γ2  |- Δ1, pos: [a]P, Δ2
     * */
-  @Tactic("boxElim", premises = "Q |- P", conclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2")
+  @Tactic("boxElim", longDisplayName = "Eliminate Matching Modalities", premises = "Q |- P", conclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2")
   val boxElim: DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
       case Some(Box(prg, _)) =>

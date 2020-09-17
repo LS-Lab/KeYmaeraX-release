@@ -106,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic()
+  @Tactic(longDisplayName = "Program Step")
   val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
@@ -115,7 +115,7 @@ object TactixLibrary extends HilbertCalculus
     |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
-  @Tactic("normalize", revealInternalSteps = true)
+  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
   lazy val normalize: BelleExpr =  normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by allTacticChase(
@@ -136,7 +136,7 @@ object TactixLibrary extends HilbertCalculus
     ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
-  @Tactic(codeName = "unfold", revealInternalSteps = true)
+  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)
   val unfoldProgramNormalize: BelleExpr = anon {normalize(andR)}
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
@@ -237,7 +237,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  @Tactic("chaseAt", codeName = "chaseAt")
+  @Tactic("chaseAt", longDisplayName = "Recursively Decompose", codeName = "chaseAt")
   def chaseAtX: DependentPositionTactic = chaseAt()(
     TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
     TactixLibrary.existsL, TacticIndex.existsRStutter,
@@ -263,12 +263,12 @@ object TactixLibrary extends HilbertCalculus
     }
   })
 
-  @Tactic(revealInternalSteps = true)
+  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
   val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  @Tactic(revealInternalSteps = true)
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
 
   /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
@@ -368,17 +368,18 @@ object TactixLibrary extends HilbertCalculus
   /**
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
-  @Tactic(codeName = "master")
+  @Tactic(codeName = "master", longDisplayName = "Unfold Automatically")
   def masterX(generator: Generator[GenProduct]): InputTactic = inputanon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
-  @Tactic()
-  def auto: DependentTactic = anons { (_: ProvableSig) => master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done }
+  @Tactic(longDisplayName = "Prove Automatically")
+  def auto: DependentTactic = anons { (_: ProvableSig) =>
+    master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
-  @Tactic("explore", revealInternalSteps = true)
+  @Tactic("explore", longDisplayName = "Explore Provability", revealInternalSteps = true)
   def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
       logger.info("Explore uses loop with annotated invariant")
@@ -462,7 +463,7 @@ object TactixLibrary extends HilbertCalculus
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
-  @Tactic("loopAuto", codeName = "loopAuto", conclusion = "Γ |- [a*]P, Δ")
+  @Tactic("loopAuto", codeName = "loopAuto", longDisplayName = "Loop with Invariant Automation", conclusion = "Γ |- [a*]P, Δ")
   def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
@@ -560,7 +561,7 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  @Tactic("Auto", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
@@ -599,6 +600,7 @@ object TactixLibrary extends HilbertCalculus
     * @see [[odeInvariant]]
     */
   @Tactic("ODE Invariant Complete", codeName = "odeInvC",
+    longDisplayName = "ODE Invariant Complete",
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
     displayLevel="browse")
@@ -609,11 +611,11 @@ object TactixLibrary extends HilbertCalculus
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
-  @Tactic()
+  @Tactic(longDisplayName = "Auto Differential Ghost")
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
   @Tactic(
-    names = ("differential conditional cut", "dCC"),
+    longDisplayName = "Differential Conditional Cut",
     premises = "Γ |- [x'=f(x)&R&P]Q ;; Γ, R, !P |- [x'=f(x)&R]!P",
     conclusion = "Γ |- [x'=f(x)&R](P -> Q)"
   )
@@ -710,6 +712,7 @@ object TactixLibrary extends HilbertCalculus
     */
   @Tactic(names="Partial QE",
     codeName="pQE",
+    longDisplayName = "Partial QE",
     premises="Γ |- Δ",
     //    pQE -----------
     conclusion="Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
@@ -750,8 +753,9 @@ object TactixLibrary extends HilbertCalculus
 
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
-    names = ("Abbreviate", "abbrv"),
+    names = "abbrv",
     codeName = "abbrv", //@todo name clash with abbrv above (response from BB: not a name clash if only one is annotated. This
+    longDisplayName = "Abbreviate",
     // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
@@ -772,7 +776,7 @@ object TactixLibrary extends HilbertCalculus
   def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
   def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
   /** eXternal wrapper for eqL2R */
-  @Tactic("Apply equality", codeName = "L2R", conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
+  @Tactic(codeName = "L2R", longDisplayName = "Apply Equality", conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
     premises = "Γ, x=y, P(y) |- Q(y), Δ")
   val eqL2RX: DependentTwoPositionTactic = anon ({(pr:ProvableSig, ante: Position, pos: Position) => {
     if (!pos.isAnte)
@@ -784,7 +788,7 @@ object TactixLibrary extends HilbertCalculus
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  @Tactic(names = "L=R all", codeName = "allL2R")
+  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities")
   val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -797,7 +801,7 @@ object TactixLibrary extends HilbertCalculus
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  @Tactic(names = "R=L all", codeName = "allR2L")
+  @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse")
   val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -836,12 +840,12 @@ object TactixLibrary extends HilbertCalculus
     * }}}
     * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
-  @Tactic("trafo", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
+  @Tactic("trafo", longDisplayName = "Transform Expression", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
   def transform(Q: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.transform(Q)(pos) }
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
-  @Tactic("edit")
+  @Tactic("edit", longDisplayName = "Edit Expression")
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.edit(to)(pos) }
 
   //
@@ -998,7 +1002,7 @@ object TactixLibrary extends HilbertCalculus
    */
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
-  @Tactic("useLemma", codeName = "useLemma")
+  @Tactic("useLemma", codeName = "useLemma", longDisplayName = "Use Lemma")
   def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser)) }
 
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
@@ -1055,7 +1059,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
-  @Tactic("useLemmaAt")
+  @Tactic("useLemmaAt", longDisplayName = "Use Lemma at Position")
   def useLemmaAt(lemma: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = inputanon (
     (pos: Position, _: Sequent) => {
       val userLemmaName = "user" + File.separator + lemma //@todo FileLemmaDB + multi-user environment

@@ -641,7 +641,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       //      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
       //        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
-        if (StaticSemantics.isDifferential(f1)) throw new ParseException("No differentials can be used in evolution domain contains", tok2.loc.spanTo(tok3.loc), printer.stringify(f1), "In an evolution domain constraint, instead of the primed variables use their right-hand sides.", "", "")
+        if (StaticSemantics.isDifferential(f1)) throw new ParseException("No differentials can be used in evolution domain constraints", tok2.loc.spanTo(tok3.loc), printer.stringify(f1), "In an evolution domain constraint, instead of the primed variables use their right-hand sides.", "", "")
         else reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1, lax), r)
 
       // elaboration special pattern case to DifferentialProgram

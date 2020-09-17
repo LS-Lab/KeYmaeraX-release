@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
@@ -1068,8 +1067,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val arithNF = chase(3, 3, (e: Expression) => e match {
       case And(_,_) => Ax.andRecursor::Nil
       case Or(_,_) => Ax.orRecursor::Nil
-      case Less(_, r) if r != Number(0) => Ax.metricLt::Nil
-      case LessEqual(_, r) if r != Number(0) => Ax.metricLe::Nil
+      case Less(Number(n), _) if n == 0 => Ax.metricLt::Nil
+      case LessEqual(Number(n), _) if n == 0 => Ax.metricLe::Nil
+      case Greater(_, _) => Ax.gtNeg::Nil
+      case GreaterEqual(_, _) => Ax.geNeg::Nil
       case _ => Nil
     })
 
@@ -1094,9 +1095,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case _ => Nil
     })
 
-    val (nnf, _) = IsabelleSyntax.normalise(fml)
-    val result = proveBy(nnf, cmpNF(1) & arithNF(1) &
-      Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
+    val normTactic = SimplifierV3.semiAlgNormalizeUnchecked(fml) match {
+      case (_, Some(p)) => useAt(p, PosInExpr(0::Nil))(1)
+      case (_, None) => skip
+    }
+    val result = proveBy(fml, normTactic & cmpNF(1) & arithNF(1) &
+      SimplifierV3.simplify(1) & Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
     assert(result.subgoals.length == 1 && result.subgoals.head.ante.isEmpty && result.subgoals.head.succ.length == 1)
     result.subgoals.head.succ.head
   }

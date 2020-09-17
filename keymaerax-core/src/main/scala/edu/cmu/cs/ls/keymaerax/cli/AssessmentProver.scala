@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, P
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
+import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor.AskQuestion.extractSolfinAnswers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
@@ -1038,6 +1039,26 @@ object AssessmentProver {
   private def runGrader(p: Submission.Problem, prompt: Submission.Prompt, answerArtifact: Option[Artifact],
                         grader: Grader, msgStream: PrintStream): (Submission.Prompt, Double) = {
     msgStream.print(p.number + "." + prompt.number + " (" + prompt.id + ")...")
+
+    def failedMessage(prompt: Submission.Prompt): String = {
+      val msg = prompt.answers.map({
+        case Submission.TextAnswer(_, _, _, _, answer, _) =>
+          val solfinAnswers = extractSolfinAnswers(answer)
+          val sanitizedAnswers =
+            if (solfinAnswers.nonEmpty) solfinAnswers
+            else answer :: Nil
+          val shortened = sanitizedAnswers.map(a => {
+            if (a.length <= 100) a
+            else a.substring(0, 95) + "[...]"
+          })
+          if (shortened.length > 1) shortened.mkString("\n  ", "\n  ", "")
+          else shortened.headOption.getOrElse("")
+        case _: Submission.ChoiceAnswer => ""
+      }).filter(_.nonEmpty).mkString(",")
+      if (msg.nonEmpty) ":" + msg
+      else msg
+    }
+
     answerArtifact match {
       case Some(a) => grader.check(a) match {
         case Left(p) =>
@@ -1048,7 +1069,7 @@ object AssessmentProver {
                   msgStream.println(Messages.PASS)
                   (prompt, prompt.points)
                 case "min()" =>
-                  msgStream.println(Messages.PASS + ":Partial")
+                  msgStream.println(Messages.PASS + ":Partial (please elaborate your explanation)")
                   (prompt, prompt.points/2)
               }
               case _ =>
@@ -1056,22 +1077,14 @@ object AssessmentProver {
                 (prompt, prompt.points)
             }
           } else {
-            msgStream.print(Messages.FAILED)
-            val msg = prompt.answers.map({
-              case Submission.TextAnswer(_, _, _, _, answer, _) =>
-                if (answer.length <= 100) answer
-                else answer.substring(0, 95) + "[...]"
-              case _: Submission.ChoiceAnswer => ""
-            }).filter(_.nonEmpty).mkString(",")
-            if (msg.nonEmpty) msgStream.println(":" + msg)
-            else msgStream.println()
+            msgStream.println(Messages.FAILED + failedMessage(prompt))
             (prompt, 0.0)
           }
         case Right(hint) =>
           if (hint.nonEmpty && hint == hint.toUpperCase) msgStream.println(hint)
           else {
-            msgStream.print(Messages.FAILED)
-            if (hint.trim.nonEmpty) msgStream.println(":" + hint)
+            msgStream.print(Messages.FAILED + failedMessage(prompt))
+            if (hint.trim.nonEmpty) msgStream.println(" (hint: " + hint + ")")
             else msgStream.println("")
           }
           (prompt, 0.0)

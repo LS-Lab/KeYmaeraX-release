@@ -67,13 +67,19 @@ class StringConverter(val s: String) {
   }
 
   def asSequent: Sequent = {
-    val ante::succ::Nil = s.split("==>").map(_.trim()).toList
-    //println("parsing",ante,succ)
-    val res = Sequent(
-      smartFmlSplit("",ante.split(",(?![^{]*})").toList).toIndexedSeq,
-      smartFmlSplit("",succ.split(",(?![^{]*})").toList).toIndexedSeq
+    val splitter = ",(?![^{]*})"
+    val turnStileIdx = s.indexOf(TURNSTILE.img)
+    val ante::succ::Nil =
+      if (turnStileIdx >= 0) {
+        val (ante, succ) = s.splitAt(turnStileIdx)
+        List(
+          ante.trim.split(splitter).filter(_.nonEmpty).toList,
+          succ.trim.stripPrefix(TURNSTILE.img).trim.split(splitter).filter(_.nonEmpty).toList)
+      } else throw new IllegalArgumentException("String " + s + " is not a sequent (must contain turnstile ==>)")
+    Sequent(
+      smartFmlSplit("",ante).toIndexedSeq,
+      smartFmlSplit("",succ).toIndexedSeq
     )
-    res
   }
 
   /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
