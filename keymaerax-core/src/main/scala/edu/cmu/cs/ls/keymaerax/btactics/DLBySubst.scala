@@ -61,7 +61,7 @@ private object DLBySubst {
   @Tactic(
     names = "GVR",
     codeName = "GV", //@todo code name on cheat sheet is abstract
-    longDisplayName = "Gödel Generalization",
+    longDisplayName = "Gödel Vacuous",
     premises   = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     //       GVR --------------------------------------------
     conclusion = "Γ |- [a]P, Δ",
