@@ -16,7 +16,7 @@ import AnnotationCommon._
   *                 `codeName`` will be inferred from the val that is annotated by this `@Tactic` and is usually recommended to be identical to it.
   *                 The exception is when you wish for your tactic to have different arguments in the parsed Bellerophon language than does your implementation.
   *                 In this case it is conventional to write a declaration  val <tacticName>X = <tacticName>(...)  with codeName <tacticName> which converts arguments as needed.
-  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to ASCII display name
+  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode display name
   * @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
   *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
   *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
@@ -121,7 +121,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val longDisplayName = paramMap("longDisplayName") match {
         case Literal(Constant(s: String)) => s
-        case Literal(Constant(false)) => simpleDisplay.asciiName
+        case Literal(Constant(false)) => simpleDisplay.name
       }
       val displayInfo = (inputs, premisesString, conclusionString) match {
         case (Nil, "", "") => simpleDisplay
