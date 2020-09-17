@@ -72,6 +72,7 @@ trait HybridProgramCalculus {
   @Tactic(
     names = "MR",
     codeName = "MR", //@todo code name on cheat sheet is generalize
+    longDisplayName = "Monotonicity",
     premises =      "Γ |- [a]Q, Δ ;; Q |- P",
     // Monotonicity ------------------------
     conclusion =    "Γ |- [a]P, Δ",
