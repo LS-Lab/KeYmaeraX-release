@@ -25,7 +25,7 @@ import AnnotationCommon._
   *                 in tactics as a string and for Lemma storage. `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is usually recommended to be identical to it.
   *                 The exception is when you wish to have different arguments in the parsed Bellerophon language than does your implementation.
   *                 In this case it is conventional to write a declaration  val <name>X = <name>(...)  with codeName <name> which converts arguments as needed.
-  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to ASCII display name
+  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode name
   * @param conclusion Formula string displayed for axioms as html with unicode in the user interface
   *  For axioms with (non-position) inputs, the conclusion must mention each input.
   *  Sequent syntax is optionally supported:   A, B |- C, D
@@ -170,7 +170,7 @@ class AxiomImpl (val c: whitebox.Context) {
             // display name defaults to ascii name if not provided
             val longDisplayName = Literal(Constant(
               if(longDisplayNameParam.nonEmpty) longDisplayNameParam
-              else if (display.asciiName.nonEmpty) display.asciiName
+              else if (display.name.nonEmpty) display.name
               else codeName.decodedName.toString))
             val storageName = TermName(codeName.toString.toLowerCase)
             // AST for literal strings for the names
