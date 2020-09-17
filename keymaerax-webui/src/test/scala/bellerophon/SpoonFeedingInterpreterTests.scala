@@ -79,6 +79,36 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.loneElement.makerShortName shouldBe Some("""pending("andR(1)")""")
   }}
 
+  it should "FEATURE_REQUEST apply print to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & DebuggingTactics.printX("Two goals"),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; print(\"Two goals\")")
+    db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
+      "implyR(1)" :: "andR(1)" :: "print(\"Two goals\")" :: Nil
+  }}
+
+  it should "FEATURE_REQUEST: apply nil to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & nil,
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; nil")
+    db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
+      "implyR(1)" :: "andR(1)" :: "nil" :: Nil
+  }}
+
   "Sequential tactic" should "be split into atomics before being fed to inner" in withDatabase { db => withMathematica { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)

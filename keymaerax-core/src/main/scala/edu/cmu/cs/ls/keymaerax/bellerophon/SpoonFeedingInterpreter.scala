@@ -428,7 +428,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 case _ =>
                   if (provable.subgoals.size > 1) {
                     //@note tactic operating on multiple subgoals without OnAll
-                    throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    //@note tactic annotations do not retain NoOpTactic type, so on e.g. andR(1);print/nil/... we get into
+                    // this case; workaround: execute without recording and check that nothing changed
+                    runningInner = inner(Nil)
+                    val result = (runningInner(tactic, goal), ctx)
+                    runningInner = null
+                    if (result._1 != goal) throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
+                    else result
                   } else {
                     assert(tactic.prettyString != "ANON", "Unable to record anonymous tactic without name")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
