@@ -337,7 +337,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   def coHideL(is:List[Int], pr:ProvableSig):BelleExpr = {val anteSize = pr.subgoals.head.ante.length
-    List.tabulate(anteSize)(j => j + 1).filter(j => !is.contains(j)).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
+    List.tabulate(anteSize)(j => j + 1).filter(j => !is.contains(j)).map(j => hideL(-j)).foldLeft[BelleExpr](nil)((acc,e) => e & acc)
   }
 
   def coHideLPr(i : Int, pr:ProvableSig):ProvableSig = {
@@ -533,7 +533,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val Jstart = yDefStart + nYs + 4
     val hideJs = {
       val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
-      js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+      js.map(i => hideL(-i)).foldLeft[BelleExpr](nil)((acc, e) => e & acc)
     }
     // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
     val pr4 = selectSection(iSection,nSections,pr)
@@ -545,7 +545,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val dcPos = 6
     def coHideL(i : Int, pr:ProvableSig) = {
       val anteSize = pr.subgoals.head.ante.length
-      List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
+      List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft[BelleExpr](nil)((acc,e) => e & acc)
     }
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr8 = interpret(allL(Variable("t_"))(-dcPos) & implyL(-dcPos) <(coHideL(dcPos - 1, pr7) & hideR(1) & QE, nil), pr7)
@@ -1105,7 +1105,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   def hideYsAfter(iSection:Int, nSections:Int, yDefStart:Int = 2):(BelleExpr, Int) = {
     val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => j > iSection + yDefStart + 1)
-    val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+    val e = js.map(i => hideL(-i)).foldLeft[BelleExpr](nil)((acc, e) => e & acc)
     (e, nSections - js.length)
   }
 
@@ -1125,7 +1125,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val Jstart = yDefStart + nYs
     val hideJs = {
       val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
-      js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+      js.map(i => hideL(-i)).foldLeft[BelleExpr](nil)((acc, e) => e & acc)
     }
     //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
     val pr4 = interpret(hideJs, pr3)
@@ -1387,7 +1387,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // localConsts,globalConst,initState   |-
     val pr1c = if (nSections > 1) interpret(andL(-1), pr1b) else rotAnte(pr1b)
     // globalConst,initState, lc1, &_2^n {lc_i}   |-
-    val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft(nil)((acc,e) => acc & e)
+    val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft[BelleExpr](nil)((acc,e) => acc & e)
     val pr1e = interpret(unpackLocalConsts, pr1c)
     val inv = invariant(align,env)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)

@@ -171,7 +171,7 @@ object SOSSolve {
         case (_, Some(prv)) => useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(pos) & useAt(prv, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
         case _ => throw new RuntimeException("this should not happen because we expect baseNormalize to get rid of negations.")
       }
-    }).foldLeft(skip)(_ & _) & SaturateTactic(notR('R))
+    }).foldLeft[BelleExpr](skip)(_ & _) & SaturateTactic(notR('R))
   }
 
   // turns a ~ b into a - b ~ 0 in the antecedent
@@ -187,7 +187,7 @@ object SOSSolve {
         case NotEqual(_, _) => useAt(Ax.neNormalize)(pos)
         case _ => throw new TacticInapplicableFailure("normalizeZeroRhs expects only comparisonFormulas in the antecedent")
       }
-    }.reduceLeftOption(_ & _).getOrElse(skip)
+    }.reduceLeftOption[BelleExpr](_ & _).getOrElse(skip)
   }
 
   private def definedOrElse[T](x: Option[T], f: => Option[T]) : Option[T] = x match {

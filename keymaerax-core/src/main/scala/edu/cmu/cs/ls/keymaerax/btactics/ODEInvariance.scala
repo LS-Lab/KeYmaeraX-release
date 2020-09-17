@@ -1757,7 +1757,7 @@ object ODEInvariance {
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
+      cuts.foldLeft[BelleExpr](skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(

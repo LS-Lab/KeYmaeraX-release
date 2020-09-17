@@ -254,7 +254,7 @@ object SimplifierV2 {
         }
     )
     proveBy(Sequent(ctx, IndexedSeq(Equal(t, rest))),
-      ctx.zipWithIndex.foldRight(ident)(
+      ctx.zipWithIndex.foldRight[BelleExpr](ident)(
         (f: (Formula, Int), tac: BelleExpr) =>
           f match {
             case (Equal(l, n: Number), i) =>
@@ -898,7 +898,7 @@ object SimplifierV2 {
         cutAt(ff)(pos) < (
           ident,
           cohideOnlyR(pos) & equivifyR(1) & commuteEquivR(1) &
-          positions.foldLeft(ident)(
+          positions.foldLeft[BelleExpr](ident)(
               (tac: BelleExpr,i:Integer) =>
                 implyRi(keep=true)(AntePos(i),SuccPos(0)) & tac) & cohideR(1) & implyR(1)*positions.length & by(pr)
           )

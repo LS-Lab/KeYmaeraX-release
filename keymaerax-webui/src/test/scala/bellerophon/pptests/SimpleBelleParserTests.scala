@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Region, UnknownLocation}
@@ -733,6 +733,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   //region argument parser
 
   "Tactic argument parser" should "parse string arguments" in {
+    BelleParser("debug({`a message`})") shouldBe (round trip DebuggingTactics.debugX("a message"))
     BelleParser("print({`a message`})") shouldBe (round trip DebuggingTactics.printX("a message"))
   }
 

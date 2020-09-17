@@ -905,7 +905,7 @@ object PolynomialArith extends Logging {
         implyL('Llast) < (tac & id,ident)&
         notL('Llast) &
           //Run the instructions
-          inst.foldRight(ident)(
+          inst.foldRight[BelleExpr](ident)(
             (h, tac) =>
               implyRi(keep = true)(AntePos(h._1), SuccPos(0))
                 & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
@@ -930,7 +930,7 @@ object PolynomialArith extends Logging {
   lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
     override def computeExpr(seq: Sequent): BelleExpr =
     {
-      seq.succ.zipWithIndex.foldLeft(ident) {(tac: BelleExpr, fi) =>
+      seq.succ.zipWithIndex.foldLeft[BelleExpr](ident) {(tac: BelleExpr, fi) =>
         val ind = fi._2 + 1;
         (fi._1 match {
           case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
@@ -947,7 +947,7 @@ object PolynomialArith extends Logging {
 
   lazy val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
         (fi._1 match {
           case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
@@ -967,7 +967,7 @@ object PolynomialArith extends Logging {
 //  //Relax strict to nonstrict
   lazy val relaxStrict:DependentTactic = new SingleGoalDependentTactic("strict to non") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
         (fi._1 match {
           case Greater(f, g) => useAt(gtAnteZ)(ind)
@@ -980,7 +980,7 @@ object PolynomialArith extends Logging {
 
   lazy val normAnteNeq:DependentTactic = new SingleGoalDependentTactic("norm ante neq") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
         (fi._1 match {
           //case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
@@ -1038,7 +1038,7 @@ object PolynomialArith extends Logging {
   {
     val itopos = ls.map(p => (AntePosition(p._1),p._2,p._3,p._4))
 
-    itopos.foldLeft(ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
+    itopos.foldLeft[BelleExpr](ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
   }
 
   private def printList[A](ls:List[A]) : Unit ={
@@ -1227,7 +1227,7 @@ object PolynomialArith extends Logging {
   //Relax strict to non-strict inequalities, and then hide all the top-level != to the right
   lazy val relaxStrict2:DependentTactic = new SingleGoalDependentTactic("strict to non2") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
         (fi._1 match {
           case Greater(f, g) => useAt(gtAnteZ)(ind)
@@ -1240,7 +1240,7 @@ object PolynomialArith extends Logging {
 
   lazy val hideTopNeq:DependentTactic = new SingleGoalDependentTactic("hide top neq") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
         val ind = -(fi._2 + 1);
         (fi._1 match {
           case NotEqual(f, g) => useAt(doubleNeg)(ind) & notL(ind)

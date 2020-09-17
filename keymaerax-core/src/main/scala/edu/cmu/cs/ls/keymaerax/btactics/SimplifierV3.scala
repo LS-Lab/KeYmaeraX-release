@@ -760,7 +760,7 @@ object SimplifierV3 {
     override def computeExpr(seq: Sequent): BelleExpr = {
       val succ =
         if(simpSuccs)
-          List.range(1,seq.succ.length+1,1).foldRight(ident) ((i:Int,tac:BelleExpr)=> simps(i) & tac)
+          List.range(1,seq.succ.length+1,1).foldRight[BelleExpr](ident) ((i:Int,tac:BelleExpr)=> simps(i) & tac)
         else
           ident
       (if(simpAntes)

@@ -842,9 +842,9 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
 
 private def unsaveVars(pr:Provable, bvs:Set[Variable], rewritePost:Boolean = false, hide:Boolean = true):BelleExpr = {
   val poses = List.tabulate(bvs.size)({case i => AntePosition(bvs.size + pr.subgoals.head.ante.length - i)})
-  poses.foldLeft(nil)({case (acc, pos) =>
+  poses.foldLeft[BelleExpr](nil)({case (acc, pos) =>
     val numRens = pos.index0
-    val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft(nil)({case (acc,e) => acc & e})
+    val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft[BelleExpr](nil)({case (acc,e) => acc & e})
     val doHide = if(hide) {hideL(pos)} else nil
     val renss = if(rewritePost) {rens & DebuggingTactics.debug("Rewriting post " + pos, doPrint = true) & TactixLibrary.eqL2R(pos)(SuccPosition(1))} else rens
     acc & DebuggingTactics.debug("unsaving " + pos, doPrint = true) & /*(TactixLibrary.eqL2R(pos)('L)*)*/ renss & DebuggingTactics.debug("unsave huh " + pos, doPrint = true)& doHide & DebuggingTactics.debug("unsaved " + pos, doPrint = true)})
@@ -904,7 +904,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           assert(pr2.isProved, "Failed to prove subgoal in subproof " + sp(1) + ", left behind provable " + pr2.prettyString)
           val pp1:Provable = saveVars(g,bvs.toSet, invCurrent = false)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
-          val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
+          val e = poses.foldLeft[BelleExpr](nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
           //
           //
           //
@@ -1066,7 +1066,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val upsucc = ifilter({case (x,i) => !hideInds.contains(i)}:((Formula,Int) => Boolean), {case (x,i) => x}:((Formula,Int) => Formula), succ)
       val cxts = upsucc.map(pmatch(expanded,_, c, g.subgoals.head.ante))
       val ccc = cxts.foldLeft(c)({case(acc,x) => x.concat(acc)})
-      val hideTac = hideInds.reverse.foldLeft(TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
+      val hideTac = hideInds.reverse.foldLeft[BelleExpr](TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
       val prIn = interpret(hideTac, g)
       val pr =eval(proof, h, ccc, prIn)
       assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString + "\\n\\n at " + g.prettyString)

@@ -402,7 +402,7 @@ object AxiomaticODESolver {
         }
       })._3
     // The above gives us a chain of equivalences on ODES: piece the chain together.
-    insts.map(pr => HilbertCalculus.useAt(ElidingProvable(pr), PosInExpr(0::Nil))(pos)).foldLeft(TactixLibrary.nil)((acc, e) => e & acc)
+    insts.map(pr => HilbertCalculus.useAt(ElidingProvable(pr), PosInExpr(0::Nil))(pos)).foldLeft[BelleExpr](TactixLibrary.nil)((acc, e) => e & acc)
   }
 
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
@@ -493,7 +493,7 @@ object AxiomaticODESolver {
     val sortedDifferentials = sortAtomicOdes(atomicOdes(system), diffArg).filter(_.xp.x != TIMEVAR).map(_.xp.x)
     val sortedSolutions = solutions.sortWith({case (Equal(a, _), Equal(b, _)) => sortedDifferentials.indexOf(a) < sortedDifferentials.indexOf(b)})
 
-    sortedSolutions.foldRight(nil)((soln, tactic) => cutAndProveFml(soln, odeSize+1)(pos) & tactic)
+    sortedSolutions.foldRight[BelleExpr](nil)((soln, tactic) => cutAndProveFml(soln, odeSize+1)(pos) & tactic)
   })
 
   /** Augment ODE with formula `cut`, consider context of size `contextSize` when proving with DI. */

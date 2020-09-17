@@ -112,10 +112,10 @@ trait UnifyUSCalculus {
     * Identical to [[nil]] but different name
     * @see [[TactixLibrary.done]] */
   @Tactic()
-  val skip : BelleExpr = anon { Idioms.ident }
+  val skip : BuiltInTactic = anonnoop { Idioms.ident.result }
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
-  val nil : BelleExpr = anon { Idioms.ident }
+  val nil : BuiltInTactic = anonnoop { Idioms.nil.result }
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
