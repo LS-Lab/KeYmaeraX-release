@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the archive parser with mostly old archaic outdated file format.
@@ -1184,7 +1185,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator)) :: Nil
+    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator, None)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1238,7 +1239,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
                      |Expected: <unknown>""".stripMargin
   }
 
-  "Global definitions" should "be added to all entries" in {
+  "Global definitions" should "be added to all entries" in withTactics {
     val input =
       """SharedDefinitions.
         | B gt(R,R) <-> ( ._0 > ._1 ).
@@ -1393,7 +1394,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.info shouldBe empty
   }
 
-  it should "add to all entries but not auto-expand if tactic uses US to expand" in {
+  it should "FEATURE_REQUEST: add to all entries but not auto-expand if tactic uses US to expand" taggedAs TodoTest in {
     val input =
       """SharedDefinitions.
         | B gt(R,R) <-> ( ._0 > ._1 ).

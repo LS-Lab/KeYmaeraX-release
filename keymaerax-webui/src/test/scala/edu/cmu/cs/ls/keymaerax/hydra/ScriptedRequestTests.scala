@@ -3,14 +3,15 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import spray.json.{JsArray, JsBoolean, JsString}
@@ -280,7 +281,7 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "master"
-        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"
+        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; applyEqualities ; QE"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
@@ -468,22 +469,28 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
+    def createInputs(name: String, inputs: Seq[Any]): Seq[BelleTermInput] = {
+      val info = DerivationInfo(name)
+      val expectedInputs = info.inputs
+      inputs.zipWithIndex.flatMap({
+        case (in: Expression, i) => Some(BelleTermInput(in.prettyString, Some(expectedInputs(i))))
+        case (_: Generator[GenProduct], _) => None //@todo pass on once supported
+        case (Some(e: Expression), i) => Some(BelleTermInput(e.prettyString, Some(expectedInputs(i))))
+        case (None, _) => None
+        case (in, i) => Some(BelleTermInput(in.toString, Some(expectedInputs(i))))
+      })
+    }
+
     val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
       case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None)
       case t: AppliedDependentPositionTactic => t.pt match {
-        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.isEmpty =>
-          (inner.name, Nil, Some(t.locator), None)
-        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.nonEmpty =>
-          val info = DerivationInfo(t.pt.name)
-          val expectedInputs = info.inputs
-          val inputs = inner.inputs.zipWithIndex.map({
-            case (in: Expression, i) => BelleTermInput(in.prettyString, Some(expectedInputs(i)))
-            case (in, i) => BelleTermInput(in.toString, Some(expectedInputs(i)))
-          })
-          (inner.name, inputs, Some(t.locator), None)
+        case inner: DependentPositionWithAppliedInputTactic =>
+          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None)
+          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None)
         case _ => (t.pt.name, Nil, Some(t.locator), None)
       }
       case NamedTactic(name, _) => (name, Nil, None, None)
+      case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None)
       //@todo extend on demand
     }
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo = true, pos1, pos2, inputs)

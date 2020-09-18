@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -80,7 +80,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   * @author Stefan Mitsch
   */
 case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
-                                   listenerFactory: Int => ((String, Int, Int) => scala.collection.immutable.Seq[IOListener]),
+                                   listenerFactory: Int => (String, Int, Int) => scala.collection.immutable.Seq[IOListener],
                                    inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int = 0,
                                    strict: Boolean = true, convertPending: Boolean = true) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
@@ -230,7 +230,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
-                case e: UnificationException =>
+                case _: UnificationException =>
                   //if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
                   (RenUSubst(Nil), expr)
               }
@@ -386,7 +386,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           }
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          runTactic(BelleParser(t.inputs.head.asInstanceOf[String].replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
+          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
         case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
           case Some(alt) =>
             val c = Cancellable(runTactic(alt, goal, level, ctx, strict, convertPending, executePending))
@@ -405,8 +405,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
         }
 
+        case t: InputTactic if level > 0 =>
+          runTactic(t.computeExpr(), goal, level-1, ctx, strict, convertPending, executePending)
+
+        // region unsteppable tactics
+        case t: CoreLeftTactic => runTactic(t, goal, 0, ctx, strict, convertPending, executePending)
+        case t: CoreRightTactic => runTactic(t, goal, 0, ctx, strict, convertPending, executePending)
+        // endregion
+
         // forward to inner interpreter
         case _ =>
+          if (level > 0) logger.debug("Missing feature: unable to step into " + tactic.prettyString)
           if (!strict && tactic.isInstanceOf[NoOpTactic]) {
             // skip recording no-op tactics in non-strict mode (but execute, may throw exceptions that we expect)
             runningInner = inner(Nil)

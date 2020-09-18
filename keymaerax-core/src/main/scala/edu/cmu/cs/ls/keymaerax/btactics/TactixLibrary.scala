@@ -361,15 +361,15 @@ object TactixLibrary extends HilbertCalculus
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean = true): BelleExpr = "master" by {
-    master(loopauto(gen), ODE, keepQEFalse)
-  }
+             keepQEFalse: Boolean = true): BelleExpr = masterX(gen, if (keepQEFalse) None else Some(False))
 
   /**
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
   @Tactic(codeName = "master", longDisplayName = "Unfold Automatically")
-  def masterX(generator: Generator[GenProduct]): InputTactic = inputanon { master(generator) }
+  def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
+    master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
+  }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
