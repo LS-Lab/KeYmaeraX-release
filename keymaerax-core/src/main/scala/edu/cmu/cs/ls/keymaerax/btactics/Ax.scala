@@ -3408,7 +3408,7 @@ object Ax extends Logging {
         )
     )
 
-  @Axiom("dualIVT")
+  @Axiom("dualIVT", key="1", unifier="linear")
   lazy val dualIVT: DerivedAxiomInfo = derivedFormula("dualIVT", "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
     implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-2) & notR(1) & useAt(notImply, PosInExpr(0 :: Nil))(-2, 1 :: Nil) &
@@ -3441,7 +3441,7 @@ object Ax extends Logging {
     )
   )
 
-  @Axiom("timeStep")
+  @Axiom("timeStep", key="1", unifier="linear")
   lazy val timeStep: DerivedAxiomInfo = derivedFormula("timeStep", "[{x_'=1,c{|x_|}&q(||)}]p(||)<-(x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))".asFormula,
       implyR(1) & andL(-1) &
         cutR("[{x_'=1, c{|x_|} & q(||)}]((x_>=h()->p(||))&(x_<=h()->p(||)))".asFormula)(1) &
