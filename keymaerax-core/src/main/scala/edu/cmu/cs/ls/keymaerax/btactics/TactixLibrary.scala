@@ -237,7 +237,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  @Tactic("chaseAt", longDisplayName = "Recursively Decompose", codeName = "chaseAt")
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt")
   def chaseAtX: DependentPositionTactic = chaseAt()(
     TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
     TactixLibrary.existsL, TacticIndex.existsRStutter,
