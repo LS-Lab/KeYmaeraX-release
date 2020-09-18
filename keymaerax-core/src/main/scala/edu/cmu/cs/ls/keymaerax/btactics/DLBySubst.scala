@@ -59,7 +59,7 @@ private object DLBySubst {
 
   /** @see [[TactixLibrary.abstractionb]] */
   @Tactic(
-    names = "GVR",
+    names = "GV",
     codeName = "GV", //@todo code name on cheat sheet is abstract
     longDisplayName = "Gödel Vacuous",
     premises   = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
