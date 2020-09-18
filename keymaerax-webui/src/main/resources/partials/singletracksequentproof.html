@@ -269,6 +269,18 @@
     </ul>
 </script>
 <script type="text/ng-template" id="rulehelp.html">
+    <div class="row">
+        <div class="col-sm-12">
+            <h4>{{rulehelp.derivationInfo.longName}}
+                <small class="text-muted"
+                       ng-if="rulehelp.derivationInfo.name !== rulehelp.derivationInfo.longName &&
+                              rulehelp.derivationInfo.name !== rulehelp.derivationInfo.codeName">
+                    <span>({{rulehelp.derivationInfo.name}})</span>
+                </small>
+                <small><code>{{rulehelp.derivationInfo.codeName}}</code></small>
+            </h4>
+        </div>
+    </div>
     <div class="well well-compact" ng-if="rulehelp.derivationInfo.derivation.type === 'axiom'">
         <div class="row">
             <div class="col-sm-12" ng-if="rulehelp.derivationInfo.derivation.displayInfoParts !== null">
