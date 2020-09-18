@@ -317,7 +317,7 @@ class PossibleAttackResponse(val msg: String) extends Response with Logging {
   override def getJson: JsValue = new ErrorResponse(msg).getJson
 }
 
-class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
+class ErrorResponse(val msg: String, val exn: Throwable = null, val severity: String = "error") extends Response {
   private lazy val writer = new StringWriter
   private lazy val stacktrace =
     if (exn != null) {
@@ -337,7 +337,7 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
     "textStatus" -> (if (msg != null) JsString(msg.replaceAllLiterally("[Bellerophon Runtime]", "")) else JsString("")),
     "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replaceAllLiterally("[Bellerophon Runtime", "")) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
-    "type" -> JsString("error")
+    "type" -> JsString(severity)
   )
 }
 
@@ -829,7 +829,7 @@ object Helpers {
       "codeName" -> JsString(codeName),
       "asciiName" -> JsString(asciiName),
       "longName" -> JsString(longName),
-      "maker" -> JsString(maker),
+      "maker" -> JsString(maker), //@note should be equal to codeName
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")

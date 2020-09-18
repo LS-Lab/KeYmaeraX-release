@@ -25,6 +25,8 @@ dl {
 /* Convert Bootstrap absolute font sizes into relative font sizes */
 pre {
   font-size: 100%;
+  background-color: white;
+  border: 0px;
 }
 
 output {
@@ -832,6 +834,10 @@ del {
 
 .modal-fullwidth .modal-header~.modal-body {
 
+}
+
+.modal-errorreport {
+  z-index: 2000 !important; /* larger than internal log popover */
 }
 
 .k4-vertical-fill-flex {

@@ -86,14 +86,10 @@ sealed trait Request extends Logging {
         theSession = SessionManager.session(t)
         resultingResponses()
       } catch {
-        //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
-        //      The web server translates exception into 500 response, the web UI picks them up in the error alert dialog
-        // assert, ensures
-        case a: AssertionError => throw new Exception(
-          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + a.getMessage, a)
-        // require
-        case e: IllegalArgumentException => throw new Exception(
-          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + e.getMessage, e)
+        case e: ParseException => new ErrorResponse(e.getMessage, e) :: Nil
+        case e: Throwable =>
+          new ErrorResponse("We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " +
+            e.getMessage, e, severity = "uncaught") :: Nil
       }
     }
   }
