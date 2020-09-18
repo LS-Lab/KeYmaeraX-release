@@ -105,7 +105,9 @@ trait HybridProgramCalculus {
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
     * @note Beware that the order of premises for hybrid games is use, step, init.
     */
-  @Tactic(premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
+  @Tactic(
+    longDisplayName = "Loop Invariant",
+    premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true,
     inputs = "J:formula", displayLevel = "full")
   def loop(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.loop(invariant)(pos) }
