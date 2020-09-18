@@ -337,7 +337,13 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
       goalIdx, recursive = false, shortName)
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)),
       interpreter(listener::Nil))
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 
@@ -347,7 +353,14 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      // report tactic execution problems upon completion
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 
