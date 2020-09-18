@@ -369,7 +369,7 @@ private object ToolTactics {
     //@todo unify to check whether abbrv is valid; may need reassociating, e.g. in x*y*z x*abbrv(y*z)
 
     val abbrvTactic = abbrvs.values.map({
-      case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
+      case Pair(t, v: Variable) => TactixLibrary.abbrvAll(t, Some(v))
     }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
     (abbrvTo, abbrvTactic)
   }
