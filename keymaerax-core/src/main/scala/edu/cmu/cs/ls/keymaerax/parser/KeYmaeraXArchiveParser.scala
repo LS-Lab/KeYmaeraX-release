@@ -125,6 +125,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       ArchiveEntry(name, kind, loc, inheritedDefinitions ++ defs, definitions, vars, problem, annotations, tactics, info)
     }
 
+    lazy val allDefs: List[Definition] = inheritedDefinitions ++ definitions ++ vars
+
     def allAnnotations: List[Annotation] = annotations ++ definitions.flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
   }
   private[parser] case class ArchiveEntries(entries: List[ArchiveEntry]) extends ArchiveItem {
@@ -757,7 +759,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
-    val definitions = (entry.definitions ++ entry.inheritedDefinitions ++ entry.vars).map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
+    val definitions = entry.allDefs.map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
 
     val annotations = entry.annotations ++ (entry.definitions ++ entry.inheritedDefinitions).flatMap(extractAnnotations)
 
@@ -880,13 +882,11 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
-    val mergedDefinitions = entry.inheritedDefinitions ++ entry.definitions ++ entry.vars
-
-    val elaboratables: Set[NamedSymbol] = mergedDefinitions.flatMap({
+    val elaboratables: Set[NamedSymbol] = entry.allDefs.flatMap({
       case FuncPredDef(name, index, sort, Nil, Left(None), _) => Some(Function(name, index, Unit, sort))
       case _ => None
     }).toSet
-    val elaboratedDefinitions = mergedDefinitions.map({
+    val elaboratedDefinitions = entry.allDefs.map({
       case f@FuncPredDef(_, _, _, _, Left(interpretation), _) => f.copy(definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables))))
       case p@ProgramDef(_, _, Left(interpretation), annotations, _) => p.copy(
         definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables).asInstanceOf[Program])),
