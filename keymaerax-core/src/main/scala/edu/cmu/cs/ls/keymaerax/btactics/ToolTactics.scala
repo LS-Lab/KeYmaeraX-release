@@ -320,20 +320,32 @@ private object ToolTactics {
             case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
             case _ => false
           })) skip
-          else transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+          else TactixLibrary.transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
         } catch {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
             //@note Exception reports variable unifications and function symbol unifications swapped
             if (ex.input.asExpr.isInstanceOf[FuncOf] && !ex.shape.asExpr.isInstanceOf[FuncOf]) {
               FormulaTools.posOf(e, ex.shape.asExpr) match {
-                case Some(pp) => transform(ex.input.asExpr)(pos.topLevel ++ pp) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) | transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
-                case _ => transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case Some(pp) =>
+                  TactixLibrary.transform(ex.input.asExpr)(pos.topLevel ++ pp) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
+                  TactixLibrary.transform(expandTo)(pos) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case _ =>
+                  TactixLibrary.transform(expandTo)(pos) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
               }
             } else {
               FormulaTools.posOf(e, ex.input.asExpr) match {
-                case Some(pp) => transform(ex.shape.asExpr)(pos.topLevel ++ pp) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) | transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
-                case _ => transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case Some(pp) =>
+                  TactixLibrary.transform(ex.shape.asExpr)(pos.topLevel ++ pp) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) |
+                  TactixLibrary.transform(expandTo)(pos) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case _ =>
+                  TactixLibrary.transform(expandTo)(pos) &
+                    DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
               }
             }
         }
