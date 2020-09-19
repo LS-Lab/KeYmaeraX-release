@@ -1139,7 +1139,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "give useful error messages on shape mismatch" in withTactics {
     the [BelleThrowable] thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{t'=x*t*x^2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)) should
-      have message "x*y_*x^2 is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b."
+      have message "Ghost {t'=x*t*x^2} is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y"
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>

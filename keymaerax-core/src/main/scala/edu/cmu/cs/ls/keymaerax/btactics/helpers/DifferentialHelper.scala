@@ -231,7 +231,7 @@ object DifferentialHelper {
       case _ =>
     }
 
-    throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
+    throw new IllegalArgumentException(s"Ghost ${ghost.prettyString} is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
   }
 
   /**
