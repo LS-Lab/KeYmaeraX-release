@@ -342,7 +342,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           runTactic(valueDependentTactic, goal, level - levelDecrement, ctx, strict, convertPending, executePending)
         } catch {
           case e: BelleThrowable => throw e.inContext(d, goal.prettyString)
-          case e: Throwable => throw new IllFormedTacticApplicationException("Unable to create dependent tactic", e).inContext(d, "")
+          case e: Throwable =>
+            val prefix = if (d.name != "ANON") "Unable to execute tactic '" + d.name + "', cause: " else ""
+            throw new IllFormedTacticApplicationException(prefix + e.getMessage, e).inContext(d, "")
         }
 
         case NamedTactic(name, t) if level > 0 || name == "ANON" =>
