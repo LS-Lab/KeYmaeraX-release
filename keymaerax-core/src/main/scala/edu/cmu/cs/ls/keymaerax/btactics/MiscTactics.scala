@@ -110,7 +110,7 @@ object DebuggingTactics {
   def assert(fml: Formula, message: => String, ex: String => Throwable): DependentPositionWithAppliedInputTactic = {
     import TacticFactory._
     //@todo serialize exception
-    ("assert" byWithInputs (fml :: message :: Nil, (pos: Position, seq: Sequent) => {
+    ("assert" byWithInputs (fml :: message :: Nil, (pos: Position, _: Sequent) => {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
@@ -179,7 +179,7 @@ object DebuggingTactics {
   def assertE(expected: => Expression, message: => String, ex: String => Throwable): DependentPositionWithAppliedInputTactic = {
     import TacticFactory._
     //@todo serialize exception
-    ("assert" byWithInputs (expected :: message :: Nil, (pos: Position, seq: Sequent) => {
+    ("assert" byWithInputs (expected :: message :: Nil, (pos: Position, _: Sequent) => {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
@@ -275,7 +275,7 @@ object Idioms {
     val caseFml = cases.map({ case (Case(fml, _), _) => fml }).reduceRight(Or)
 
     //@todo simplify with only the case formula as simplification 'context' (adapt simplifier)
-    val simplify = (fml: Formula) => SimplifierV2.simpTac//(Some(scala.collection.immutable.IndexedSeq(fml)))
+    val simplify = (_: Formula) => SimplifierV2.simpTac//(Some(scala.collection.immutable.IndexedSeq(fml)))
     val simplifyAllButCase = (fml: Formula) => "ANON" by {(seq: Sequent) =>
       (0 until seq.ante.length-1).map(i => simplify(fml)(AntePosition.base0(i))).reduceOption[BelleExpr](_&_).getOrElse(ident) &
       seq.succ.indices.map(i => simplify(fml)(SuccPosition.base0(i))).reduceOption[BelleExpr](_&_).getOrElse(ident)
@@ -339,8 +339,8 @@ object Idioms {
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
-  def must(t: BelleExpr): BelleExpr = anons { (before: ProvableSig) => t & anonnoop { (after: ProvableSig) => {
-    if (before == after) throw new BelleNoProgress("Tactic " + t + " did not result in mandatory change")
+  def must(t: BelleExpr, msg: Option[String] = None): BelleExpr = anons { (before: ProvableSig) => t & anonnoop { (after: ProvableSig) => {
+    if (before == after) throw new BelleNoProgress(msg.getOrElse("Tactic " + t + " did not result in mandatory change"))
     after
   }}}
 
@@ -451,9 +451,9 @@ object TacticFactory {
     def forward(t: BuiltInRightTactic): BuiltInRightTactic = by ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
     def forward(t: CoreLeftTactic): CoreLeftTactic = coreby ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
     def forward(t: CoreRightTactic): CoreRightTactic = coreby ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
-    def forward(t: DependentTactic): DependentTactic = by ((seq: Sequent) => t)
-    def forward(t: DependentPositionTactic): DependentPositionTactic = by ((pos: Position, seq: Sequent) => t(pos))
-    def forward(t: DependentPositionWithAppliedInputTactic): DependentPositionWithAppliedInputTactic = byWithInputs(t.inputs, (pos: Position, seq: Sequent) => t(pos))
+    def forward(t: DependentTactic): DependentTactic = by ((_: Sequent) => t)
+    def forward(t: DependentPositionTactic): DependentPositionTactic = by ((pos: Position, _: Sequent) => t(pos))
+    def forward(t: DependentPositionWithAppliedInputTactic): DependentPositionWithAppliedInputTactic = byWithInputs(t.inputs, (pos: Position, _: Sequent) => t(pos))
     def forward(t: BuiltInTwoPositionTactic): BuiltInTwoPositionTactic = by ((ps: ProvableSig, posOne: Position, posTwo: Position) => t.computeResult(ps, posOne, posTwo))
     // @TODO: implement
     //def forward(t: AppliedBuiltinTwoPositionTactic): AppliedBuiltinTwoPositionTactic = "ANON" by t
@@ -462,14 +462,14 @@ object TacticFactory {
       else byWithInputs(t.inputs, t)
     }
 
-    def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
+    def byTactic(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
-        override def computeExpr(p: ProvableSig) = t(p, p1, p2)
+        override def computeExpr(p: ProvableSig): BelleExpr = t(p, p1, p2)
       }
     }
 
     /** Creates a dependent two position tactic without inspecting the formula at that position */
-    def byLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = {
+    def byLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = {
       name byTactic {(_, l, r) =>
         require(l.isAnte && r.isAnte, "Expected antecedent and succedent position")
         t(l.checkAnte, r.checkSucc)
@@ -478,14 +478,14 @@ object TacticFactory {
 
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
-    def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+    def by(t: Position => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = t(pos)
       }
     }
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
-    def byL(t: (AntePosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+    def byL(t: AntePosition => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = {
           require(pos.isAnte, "Expects an antecedent position.")
@@ -495,7 +495,7 @@ object TacticFactory {
     }
 
     /** Creates a dependent position tactic without inspecting the formula at that position */
-    def byR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+    def byR(t: SuccPosition => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = {
           require(pos.isSucc, "Expects a succedent position.")
@@ -505,7 +505,7 @@ object TacticFactory {
     }
 
     /** Creates a dependent position tactic while inspecting the sequent/formula at that position */
-    def by(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+    def by(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
@@ -514,10 +514,10 @@ object TacticFactory {
       }
     }
 
-    def by(t: ((ProvableSig, Position, Position) => BelleExpr)): DependentTwoPositionTactic = byTactic(t)
+    def by(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = byTactic(t)
 
     /** A position tactic with multiple inputs. */
-    def byWithInputs(inputs: Seq[Any], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+    def byWithInputs(inputs: Seq[Any], t: (Position, Sequent) => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
@@ -527,7 +527,7 @@ object TacticFactory {
     }
 
     /** A position tactic with multiple inputs. */
-    def byWithInputs(inputs: Seq[Any], t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+    def byWithInputs(inputs: Seq[Any], t: Position => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
