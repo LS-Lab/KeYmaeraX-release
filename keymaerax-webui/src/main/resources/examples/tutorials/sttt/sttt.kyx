@@ -1,4 +1,4 @@
-ArchiveEntry "STTT Tutorial Example 1"
+ArchiveEntry "STTT16/Tutorial Example 1"
 
 Description "A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.".
 Title "Uncontrolled continuous car".
@@ -23,7 +23,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 2"
+ArchiveEntry "STTT16/Tutorial Example 2"
 
 Description "A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.".
 Title "Simple Hybrid Car".
@@ -78,7 +78,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 3a"
+ArchiveEntry "STTT16/Tutorial Example 3a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The requirement to prove is that the car never runs the stop sign.".
 Title "Event-triggered car control".
@@ -128,7 +128,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 3b"
+ArchiveEntry "STTT16/Tutorial Example 3b"
 
 Description "A hybrid car model where the controller runs when some yet-to-be-discovered condition is met. The example illustrates how KeYmaera X can be used to discover constraints.".
 Title "Incomplete event-triggered car control".
@@ -163,7 +163,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4a"
+ArchiveEntry "STTT16/Tutorial Example 4a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that certain modeling pitfalls result in vacuous proofs.".
 Title "Pitfalls in event-triggered car control: safety proof for correct controller".
@@ -205,7 +205,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4b"
+ArchiveEntry "STTT16/Tutorial Example 4b"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that overly strong evolution domain constraints can result in a vacuous proof.".
 Title "Pitfalls in event-triggered car control: vacuous proof for faulty controller".
@@ -242,7 +242,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4c"
+ArchiveEntry "STTT16/Tutorial Example 4c"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates the correct modeling idiom to prevent vacuous proofs from evolution domain constraints.".
 Title "Pitfalls in event-triggered car control: correct modeling idiom".
@@ -285,7 +285,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 5"
+ArchiveEntry "STTT16/Tutorial Example 5"
 
 Description "A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.".
 Title "Time-triggered car control".
@@ -348,7 +348,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 6"
+ArchiveEntry "STTT16/Tutorial Example 6"
 
 Description "A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.".
 Title "Non-deterministic acceleration".
@@ -400,7 +400,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 7"
+ArchiveEntry "STTT16/Tutorial Example 7"
 
 Description "A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.".
 Title "Non-deterministic approximation of braking".
@@ -452,7 +452,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9a"
+ArchiveEntry "STTT16/Tutorial Example 9a"
 
 Description "A PD controlled car. The requirement to prove is that the Lyapunov function is a differential invariant.".
 Title "PD controller Lyapunov function".
@@ -486,7 +486,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9b"
+ArchiveEntry "STTT16/Tutorial Example 9b"
 
 Description "A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.".
 Title "PD controlled car".
@@ -546,7 +546,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 10"
+ArchiveEntry "STTT16/Tutorial Example 10"
 
 Description "A car with steering. The requirement to prove is that the car always stays inside the lane boundaries.".
 Title "Steering car".
