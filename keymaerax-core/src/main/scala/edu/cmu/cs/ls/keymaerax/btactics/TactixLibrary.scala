@@ -656,52 +656,19 @@ object TactixLibrary extends HilbertCalculus
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
-    //@todo implement as part of tools?
-    lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
-      throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
-      case Some(t) => tool match {
-        case tom: ToolOperationManagement =>
-          val oldTimeout = tom.getOperationTimeout
-          tom.setOperationTimeout(t)
-          if (oldTimeout != t) {
-            e: BelleExpr => TryCatch(e, classOf[Throwable],
-                // catch: noop
-                (_: Throwable) => skip,
-                // finally: reset timeout
-                Some(new DependentTactic("ANON") {
-                  override def computeExpr(v: BelleValue): BelleExpr = {
-                    tom.setOperationTimeout(oldTimeout)
-                    skip
-                  }
-                })
-            )
-          } else (e: BelleExpr) => e
-        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
-      }
-      case None => (e: BelleExpr) => e
-    }
-    lazy val timeoutTool: QETacticTool = timeout match {
-      case Some(t) => tool match {
-        case tom: ToolOperationManagement =>
-          tom.setOperationTimeout(t)
-          tool
-        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
-      }
-      case None => tool
-    }
-    resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+  def QE(order: Seq[NamedSymbol] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+    if (order.isEmpty) QEX(tool, timeout.map(Number(_)))
+    else ToolTactics.timeoutQE(order, tool, timeout) // non-serializable for now
   }
 
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     (tool, timeout) match {
-      case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
-      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
-      case (Some(toolName), _) =>  TactixLibrary.QE(Nil, Some(toolName))
-      case (_, Some(time)) => TactixLibrary.QE(Nil, None, Some(time.value.toInt))
-      case (_, _) => QE(Nil, None, None)
+      case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(Nil, Some(toolName), Some(time.value.toInt))
+      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(Nil, None, Some(Integer.parseInt(toolName)))
+      case (Some(toolName), _) =>  ToolTactics.timeoutQE(Nil, Some(toolName))
+      case (_, Some(time)) => ToolTactics.timeoutQE(Nil, None, Some(time.value.toInt))
+      case (_, _) => ToolTactics.timeoutQE(Nil, None, None)
     }
   }
   lazy val QE: BelleExpr = QEX(None, None)

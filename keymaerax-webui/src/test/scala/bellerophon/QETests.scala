@@ -132,9 +132,9 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))"),
+    interpreter(BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))"),
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))")
+    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))")
     interpreter.kill()
   }
 
@@ -155,7 +155,7 @@ class QETests extends TacticTestBase {
     val provider = MultiToolProvider(
       new Z3ToolProvider :: MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: Nil)
     ToolProvider.setProvider(provider)
-    val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
+    val tactic = BelleParser("andR(1); <(QE(\"Z3\"), andR(1) ; <(QE(\"Mathematica\"), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
   }
 
@@ -165,7 +165,7 @@ class QETests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("QE({`7`})")
+    db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
   }}
 
   it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
@@ -177,13 +177,13 @@ class QETests extends TacticTestBase {
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
 
-  it should "use the right tool" in withDatabase{ db => withQE { case tool: Tool =>
+  it should "use the right tool" in withDatabase{ db => withQE { tool: Tool =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser(s"QE({`${tool.name}`}, {`7`})")
+    db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
   }}
 
   it should "complain about the wrong tool" in withZ3 { _ =>
@@ -216,7 +216,7 @@ class QETests extends TacticTestBase {
   }
 
   "Partial QE" should "not fail on |-" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.partialQE(qeTool)).
+    proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.partialQE(qeTool)).
       subgoals.loneElement shouldBe "==> false".asSequent
   }
 

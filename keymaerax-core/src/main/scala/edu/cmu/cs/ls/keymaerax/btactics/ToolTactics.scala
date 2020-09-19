@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolInternalException}
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -35,7 +35,7 @@ private object ToolTactics {
   @Tactic("useSolver", codeName = "useSolver")
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def switchSolver(tool: String): InputTactic = inputanon { (_seq: Sequent) => {
+  def switchSolver(tool: String): InputTactic = inputanon { _: Sequent => {
     val config = ToolConfiguration.config(tool)
     tool.toLowerCase match {
       case "mathematica" =>
@@ -67,7 +67,7 @@ private object ToolTactics {
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
-    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+    val convertInterpretedSymbols = Configuration.get[Boolean](Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     val expand =
       if (convertInterpretedSymbols) skip
       else EqualityTactics.expandAll &
@@ -104,6 +104,44 @@ private object ToolTactics {
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
     )
   })
+
+  /** @see[[TactixLibrary.QE]] */
+  def timeoutQE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+    lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
+      throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
+    lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
+      case Some(t) => tool match {
+        case tom: ToolOperationManagement =>
+          val oldTimeout = tom.getOperationTimeout
+          tom.setOperationTimeout(t)
+          if (oldTimeout != t) {
+            e: BelleExpr => TryCatch(e, classOf[Throwable],
+              // catch: noop
+              (_: Throwable) => skip,
+              // finally: reset timeout
+              Some(new DependentTactic("ANON") {
+                override def computeExpr(v: BelleValue): BelleExpr = {
+                  tom.setOperationTimeout(oldTimeout)
+                  skip
+                }
+              })
+            )
+          } else (e: BelleExpr) => e
+        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
+      }
+      case None => (e: BelleExpr) => e
+    }
+    lazy val timeoutTool: QETacticTool = timeout match {
+      case Some(t) => tool match {
+        case tom: ToolOperationManagement =>
+          tom.setOperationTimeout(t)
+          tool
+        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
+      }
+      case None => tool
+    }
+    resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+  }
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
   private val hideDuplicates = anon ((seq: Sequent) => {
@@ -205,9 +243,7 @@ private object ToolTactics {
       (m:Map[Variable,(Int,Int,Int)],f:Formula) => merge(m,fmlDegs(f),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y))
   }
 
-  private def equalityOrder[T] : Ordering[T] = new Ordering[T] {
-    def compare(x:T,y:T): Int =  0
-  }
+  private def equalityOrder[T]: Ordering[T] = (_: T, _: T) => 0
 
   private def orderHeuristic(s:Sequent,po:Ordering[Variable]) : List[Variable] = {
     val m = seqDegs(s)
@@ -238,9 +274,9 @@ private object ToolTactics {
           (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
           hidePredicates &
           toSingleFormula & orderedClosure(po) & rcf(qeTool) &
-            (done | (anon ((s: Sequent) =>
+            (done | anon ((s: Sequent) =>
               if (s.succ.head == False) label(BelleLabels.QECEX)
-              else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+              else DebuggingTactics.done("QE was unable to prove: invalid formula"))
               ))))
     )}
 
@@ -301,10 +337,10 @@ private object ToolTactics {
 
   /** @see [[TactixLibrary.edit()]] */
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) => {
-    val srcExpr = sequent.sub(pos) match {
-      case Some(e) if e.kind == to.kind => e
+    sequent.sub(pos) match {
       case Some(e) if e.kind != to.kind => throw new TacticInapplicableFailure("edit only applicable to terms or formulas of same kind, but " + e.prettyString + " of kind " + e.kind + " is not " + to.kind)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      case _ => // ok
     }
 
     val (abbrvTo: Expression, abbrvTactic: BelleExpr) = createAbbrvTactic(to, sequent)
@@ -397,7 +433,7 @@ private object ToolTactics {
 
     val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
 
-    def getNextName(s: String, t: Term, p: PosInExpr): Term = {
+    def getNextName(s: String, p: PosInExpr): Term = {
       val nn = nextName(s)
       nextName.put(s, Variable(nn.name, Some(nn.index.getOrElse(-1) + 1)))
       expandedVars(p) = s
@@ -407,9 +443,9 @@ private object ToolTactics {
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case FuncOf(Function("expand", None, _, _, _), t) => t match {
-          case FuncOf(Function("abs", _, _, _, _), _) => Right(getNextName("abs", t, p))
-          case FuncOf(Function("min", _, _, _, _), _) => Right(getNextName("min", t, p))
-          case FuncOf(Function("max", _, _, _, _), _) => Right(getNextName("max", t, p))
+          case FuncOf(Function("abs", _, _, _, _), _) => Right(getNextName("abs", p))
+          case FuncOf(Function("min", _, _, _, _), _) => Right(getNextName("min", p))
+          case FuncOf(Function("max", _, _, _, _), _) => Right(getNextName("max", p))
         }
         case _ => Left(None)
       }
