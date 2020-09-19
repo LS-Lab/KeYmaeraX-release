@@ -447,7 +447,8 @@ class ScriptedRequestTests extends TacticTestBase {
         }
         val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
         r5 shouldBe a[AgendaAwesomeResponse]
-        BelleParser(db.db.getModel(id).tactic.get) match {
+        val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
+        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs, expandAll = true) match {
           case _: PartialTactic =>
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false
           case _ =>
@@ -459,8 +460,8 @@ class ScriptedRequestTests extends TacticTestBase {
             r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = BelleParser(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value)
-            val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
+            val extractedTactic = BelleParser.parseWithInvGen(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value,
+              None, entry.defs, expandAll = true)
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
         }
         println("Done")
