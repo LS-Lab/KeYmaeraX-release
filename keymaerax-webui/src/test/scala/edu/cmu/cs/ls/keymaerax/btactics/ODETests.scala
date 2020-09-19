@@ -48,7 +48,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   }
 
   it should "prove FM tutorial 4" in withMathematica { _ => withDatabase { db =>
-    val modelContent = ArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
+    val modelContent = ArchiveParser.getEntry("FM16/Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
@@ -233,7 +233,8 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     TactixLibrary.proveBy("x>=0&y>=0&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "PDEify to prove x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withQE { _ =>
+  it should "PDEify to prove x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8" in withMathematica { _ =>
+    //@todo Z3
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
@@ -258,8 +259,7 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
   it should "neither stutter nor fail evolution domain simplification on empty evolution domain constraint with Z3" in withZ3 { _ =>
     //@note now throws exception instead of stuttering
     the [BelleThrowable] thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1)) should have message
-      """ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.
-        |An (internal) check failed at the subgoal formula [{x'=x^x&true}]x>0""".stripMargin
+      """ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.""".stripMargin
   }
 
   it should "neither stutter nor fail evolution domain simplification on empty evolution domain constraint with Mathematica" in withMathematica { _ =>

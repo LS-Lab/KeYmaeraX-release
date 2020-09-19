@@ -562,7 +562,7 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dG]]
     */
   @Tactic(longDisplayName = "Auto", revealInternalSteps = true)
-  lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
@@ -582,7 +582,7 @@ object TactixLibrary extends HilbertCalculus
           case _ => skip
         })
        else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
-  })
+  }, Some("ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.")))
 
   /**
     * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
