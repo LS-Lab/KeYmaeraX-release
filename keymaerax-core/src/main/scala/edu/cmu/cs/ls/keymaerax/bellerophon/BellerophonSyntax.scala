@@ -130,7 +130,7 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override d
   *
   * In other words:
   * `case _ of {fi => ei}` uniform substitution case pattern applies the first `ei` such that
-  *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
+  *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.
   */
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString: String = "case { " + options.mkString(", ") + " }"}
 
@@ -463,7 +463,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
       //@note interprets PositionLocator
       case Fixed(pos, shape, exact) => shape match {
-        case Some(f:Formula) =>
+        case Some(f: Formula) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal since otherwise ill-defined")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
           if (( exact && provable.subgoals.head.sub(pos).contains(f)) ||
@@ -484,8 +484,9 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
     }
   } catch {
     case be: BelleThrowable => throw be
-    case ex: IndexOutOfBoundsException => throw new IllFormedTacticApplicationException("Position " + locator +
-      " may point outside the positions of the goal " + provable.prettyString, ex)
+    case ex: IndexOutOfBoundsException => throw new IllFormedTacticApplicationException(prettyString +
+      ": applied at position " + locator.prettyString +
+      " may point outside the positions of the goal " + provable.underlyingProvable.prettyString, ex)
   }
 
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
@@ -516,12 +517,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
             case _: BelleProofSearchControl =>
               // trial-and-error fallback for default case in TacticIndex.isApplicable
               tryAllAfter(provable, locator.copy(start = locator.start.advanceIndex(1)), cause)
-            //@todo unlike InapplicableTactic, the MatchError should not be swallowed?
-            //case _: MatchError =>
-            //  // trial-and-error fallback for default case in TacticIndex.isApplicable
-            //  tryAllAfter(provable, locator.copy(start = locator.start.advanceIndex(1)), cause)
           }
-
         case _ => throw cause
       }
     } else throw cause
@@ -692,7 +688,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case _ => throw be
       }
     }
-    case ex: IndexOutOfBoundsException => throw new IllFormedTacticApplicationException("Position " + locator.prettyString +
+    case ex: IndexOutOfBoundsException => throw new IllFormedTacticApplicationException(prettyString +
+      ": applied at position " + locator.prettyString +
       " may point outside the positions of the goal " + v.prettyString, ex)
   }
 

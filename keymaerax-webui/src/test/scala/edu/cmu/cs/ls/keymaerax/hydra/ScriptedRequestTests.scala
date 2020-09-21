@@ -160,7 +160,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  "Step misapplication" should "FEATURE_REQUEST: give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
+  "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -170,7 +170,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("TODO the following does not include implyR: Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply})"))
+    response should have ('msg ("implyR(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply}"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
