@@ -580,15 +580,22 @@ trait UnifyUSCalculus {
 
       private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
 
+      private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Option[Subst] = matcher.unifiable(key, expr) match {
+        case Some(us) => Some(us)
+        case None => throw new InapplicableUnificationKeyFailure("Axiom " + codeName + " " +
+          fact.conclusion.succ.head.prettyString + " cannot be applied: The shape of\n  expression               " +
+          expr.prettyString + "\n  does not match axiom key " + key.prettyString)
+      }
+
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
           // unify keyPart against target expression by single-sided matching
           val subst = try {
             if (OPTIMIZE)
-              inst(matcher.unifiable(keyPart, expr))
+              inst(checkSubst(matcher, keyPart, expr))
             else
-              inst(defaultMatcher.unifiable(keyPart, expr))
+              inst(checkSubst(defaultMatcher, keyPart, expr))
           } catch {
             case ex: InapplicableUnificationKeyFailure => throw ex.inContext("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  of:      " + codeName + "\n  unsuccessful")
           }

@@ -178,7 +178,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "FEATURE_REQUEST: report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
+  it should "report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -188,7 +188,9 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(1, 1::Nil))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("TODO the following is not a readable message: No substitution found by unification, fix axiom key or try to patch locally with own substitution"))
+    response should have ('msg ("""Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
+                                  |  expression               [v:=v;]<{x'=v&true}>x>=0
+                                  |  does not match axiom key [a;++b;]p(||)""".stripMargin))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
