@@ -555,6 +555,7 @@ object AssessmentProver {
       case Success(p) => Left(p)
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
+      case Failure(ex: TacticInapplicableFailure) if ex.getMessage.startsWith("QE with Z3 gives UNKNOWN") => Right(Messages.INSPECT)
       case Failure(_) => Right("")
     }
   }
