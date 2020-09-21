@@ -106,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic(longDisplayName = "Program Step")
+  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
   val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
