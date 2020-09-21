@@ -308,7 +308,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "report when trying to unpeel too far" in withTactics {
     the [IllFormedTacticApplicationException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
-      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to create dependent tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
+      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to execute tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
 
   }
 }
