@@ -21,13 +21,14 @@
             </li>
         </ul>
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <div class="col-sm-12">
+        <div class="col-sm-12 k4-goalwithsiblings">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
                         sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
                         read-only="readOnly" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
                         on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
                         on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
+            <div ng-include="'mainSiblinglinks.html'" replace-include></div>
         </div>
     </div>
     <div ng-if="deductionPath.isCollapsed" ng-init="topSeq = proofTree.node(deductionPath.sections[0].path[0]).getSequent()">
@@ -258,13 +259,17 @@
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>
+<script type="text/ng-template" id="mainSiblinglinks.html">
+    <ul>
+        <li ng-if="siblings(deductionPath.sections[0].path[0]).length > 0">
+            <i class="fa fa-caret-right"></i></span>
+        </li>
+    </ul>
+</script>
 <script type="text/ng-template" id="siblinglinks.html">
-    <ul data-intro="Parent has multiple subgoals, click subgoal number to change tab" data-position="left">
-        <!-- display siblings at fork -->
-        <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
-            <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-            <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-               class="badge">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+    <ul>
+        <li ng-if="siblings(step).length > 0">
+            <i class="fa fa-caret-right"></i></span>
         </li>
     </ul>
 </script>

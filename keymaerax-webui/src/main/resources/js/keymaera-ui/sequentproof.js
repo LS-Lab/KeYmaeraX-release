@@ -85,6 +85,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         }
       }
 
+      scope.siblings = function(nodeId) {
+        var node = scope.proofTree.nodesMap[nodeId];
+        var parent = node ? scope.proofTree.nodesMap[node.parent] : undefined;
+        var siblings = (parent ? parent.children : []).filter(function(id) { return id !== nodeId; });
+        return siblings;
+      }
+
       /** Filters sibling candidates: removes this item's goal and path */
       scope.siblingsWithAgendaItem = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
@@ -388,6 +395,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             //sequentProofData.tactic.fetch($scope.userId, response.data.proofId);
           })
           .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+      }
+
+      scope.siblings = function(nodeId) {
+        var node = scope.proofTree.nodesMap[nodeId];
+        var parent = node ? scope.proofTree.nodesMap[node.parent] : undefined;
+        var siblings = (parent ? parent.children : []).filter(function(id) { return id !== nodeId; });
+        return siblings;
       }
 
       /** Filters sibling candidates: removes this item's goal and path */
