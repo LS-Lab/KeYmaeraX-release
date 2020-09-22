@@ -255,6 +255,12 @@ object AssessmentProver {
               case Some("->") => run(() => qe(h, e, Imply))
               case Some("<-") => run(() => qe(e, h, Imply))
             }
+          case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+            val checked = h.zip(e).map({ case (h, e) => check(ExpressionArtifact(h.prettyString), ExpressionArtifact(e.prettyString)) })
+            checked.find(_.isRight) match {
+              case None => checked.head
+              case Some(r) => r
+            }
           case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
         }
         case Modes.PROP => (have, expected) match {
