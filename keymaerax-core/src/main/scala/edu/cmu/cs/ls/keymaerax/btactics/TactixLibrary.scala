@@ -237,7 +237,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt")
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
   def chaseAtX: DependentPositionTactic = chaseAt()(
     TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
     TactixLibrary.existsL, TacticIndex.existsRStutter,
@@ -726,7 +726,8 @@ object TactixLibrary extends HilbertCalculus
     // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
-    inputs = "e:term;;x[x]:option[variable]"
+    inputs = "e:term;;x[x]:option[variable]",
+    revealInternalSteps = true
   )
   def abbrvAll(e: Term, x: Option[Variable]): InputTactic = inputanon { EqualityTactics.abbrv(e, x) }
 
@@ -755,7 +756,7 @@ object TactixLibrary extends HilbertCalculus
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities")
+  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities", revealInternalSteps = true)
   val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -768,7 +769,7 @@ object TactixLibrary extends HilbertCalculus
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse")
+  @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse", revealInternalSteps = true)
   val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -807,12 +808,13 @@ object TactixLibrary extends HilbertCalculus
     * }}}
     * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
-  @Tactic("trafo", longDisplayName = "Transform Expression", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
+  @Tactic("trafo", longDisplayName = "Transform Expression", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ"
+    /* revealInternalSteps = true not yet possible since non-serializable ProvableSig input used internally */)
   def transform(Q: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.transform(Q)(pos) }
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
-  @Tactic("edit", longDisplayName = "Edit Expression")
+  @Tactic("edit", longDisplayName = "Edit Expression", revealInternalSteps = true)
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.edit(to)(pos) }
 
   //
