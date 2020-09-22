@@ -958,7 +958,7 @@ object AssessmentProver {
   }
 
   private def grade(chapter: Submission.Chapter, msgOut: OutputStream, resultOut: OutputStream, skipGradingOnParseError: Boolean): Unit = {
-    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, prompts) =>
+    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, _, _, prompts) =>
       val parsedAnswers = prompts.map(p => try {
         Left(p -> toAnswerArtifact(p))
       } catch {
@@ -1024,7 +1024,7 @@ object AssessmentProver {
     val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
     val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
     val mergedPrompts = prompts.zipWithIndex.map({
-      case ((p@Submission.SinglePrompt(_, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
+      case ((p@Submission.SinglePrompt(_, _, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
         val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
         if (backRefs.nonEmpty) {
           val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
@@ -1268,7 +1268,8 @@ object AssessmentProver {
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
-    val scoreFields = grades.flatMap({ case (_, _, pg) => pg.map({ case (p, s) => p.id.toString -> JsNumber(s) }) })
+    val scoreFields = grades.map({ case (problem, _, pg) =>
+      (problem.rank + ": " + problem.title + " (" + problem.points + " pts)") -> JsNumber(pg.map(_._2).sum) })
     val jsonGrades = JsObject("scores" -> JsObject(scoreFields:_*))
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }
