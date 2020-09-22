@@ -770,9 +770,11 @@ object AssessmentProver {
         diffAssigns.toList
       }
 
-      val ads = collectDiffAssigns(a).map({ case Assign(d: DifferentialSymbol, _) => d }).toSet
-      val bds = collectDiffAssigns(b).map({ case Assign(d: DifferentialSymbol, _) => d }).toSet
-      require(ads == bds, "Differential assignments do not match: expected assignments to " + ads.map(_.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_.prettyString).mkString(",")))
+      val ads = collectDiffAssigns(a).map({ case Assign(d: DifferentialSymbol, r) => (d, r) }).groupBy(_._1)
+      val bds = collectDiffAssigns(b).map({ case Assign(d: DifferentialSymbol, r) => (d, r) }).groupBy(_._1)
+      require(ads.forall(_._2.size == 1), "Differential assignments must be unique, but got " + ads.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
+      require(bds.forall(_._2.size == 1), "Differential assignments must be unique, but got " + bds.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
+      require(ads == bds, "Differential assignments do not match: expected assignments to " + ads.map(_._1.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_._1.prettyString).mkString(",")))
     }
 
     val ap: ProvableSig = KeYmaeraXProofChecker(1000)(chase(1))(Sequent(IndexedSeq(), IndexedSeq(a)))
