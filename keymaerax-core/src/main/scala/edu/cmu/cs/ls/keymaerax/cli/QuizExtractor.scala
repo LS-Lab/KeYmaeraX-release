@@ -99,7 +99,9 @@ object QuizExtractor {
           case _ => expectedArtifact +: artifactsFromNSolContents(testsol, "\\\\testsol")
         }
         val noSolArtifacts = artifactsFromNSolContents(nosol, "\\\\nosol")
-        AskQuestion(grader, argsFromString(args) ++ solArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
+        val graderArgs = argsFromString(args)
+        val uniqueSolArgs = solArgs.filter({ case (k, _) => !graderArgs.contains(k)}) // grader arguments override solution arguments
+        AskQuestion(grader, graderArgs ++ uniqueSolArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
     }
 
