@@ -238,30 +238,46 @@ object AssessmentProver {
           case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
           case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
         }
-        case Modes.QE => (have, expected) match {
-          case (h: ExpressionArtifact, e: ExpressionArtifact) =>
-            (h.expr, e.expr) match {
-              case (hf: Formula, ef: Formula) =>
-                args.get("op") match {
-                  case None | Some("<->") => run(() => qe(hf, ef, Equiv))
-                  case Some("->") => run(() => qe(hf, ef, Imply))
-                  case Some("<-") => run(() => qe(ef, hf, Imply))
+        case Modes.QE =>
+          args.get("question") match {
+            case Some(q) =>
+              def runQE(question: String, answers: List[String]) = {
+                run(() => {
+                  val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
+                  KeYmaeraXProofChecker(5000)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
+                })
+              }
+              have match {
+                case h: ExpressionArtifact => runQE(q, h.exprString :: Nil)
+                case ListExpressionArtifact(hs) => runQE(q, hs.map(_.prettyString))
+                case SequentArtifact(goals) => runQE(q, goals.map(_.toFormula).map(_.prettyString))
+                case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
+              }
+            case None => (have, expected) match {
+              case (h: ExpressionArtifact, e: ExpressionArtifact) =>
+                (h.expr, e.expr) match {
+                  case (hf: Formula, ef: Formula) =>
+                    args.get("op") match {
+                      case None | Some("<->") => run(() => qe(hf, ef, Equiv))
+                      case Some("->") => run(() => qe(hf, ef, Imply))
+                      case Some("<-") => run(() => qe(ef, hf, Imply))
+                    }
+                  case _ => Right("Answer must be a KeYmaera X expression, but got " + have.longHintString)
                 }
-              case _ => Right("Answer must be a KeYmaera X expression, but got " + have.longHintString)
-            }
-          case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
-            args.get("op") match {
-              case None | Some("<->") => run(() => qe(h, e, Equiv))
-              case Some("->") => run(() => qe(h, e, Imply))
-              case Some("<-") => run(() => qe(e, h, Imply))
-            }
-          case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
-            val checked = h.zip(e).map({ case (h, e) => check(ExpressionArtifact(h.prettyString), ExpressionArtifact(e.prettyString)) })
-            checked.find(_.isRight) match {
-              case None => checked.head
-              case Some(r) => r
-            }
-          case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
+              case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
+                args.get("op") match {
+                  case None | Some("<->") => run(() => qe(h, e, Equiv))
+                  case Some("->") => run(() => qe(h, e, Imply))
+                  case Some("<-") => run(() => qe(e, h, Imply))
+                }
+              case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+                val checked = h.zip(e).map({ case (h, e) => check(ExpressionArtifact(h.prettyString), ExpressionArtifact(e.prettyString)) })
+                checked.find(_.isRight) match {
+                  case None => checked.head
+                  case Some(r) => r
+                }
+              case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
+          }
         }
         case Modes.PROP => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
