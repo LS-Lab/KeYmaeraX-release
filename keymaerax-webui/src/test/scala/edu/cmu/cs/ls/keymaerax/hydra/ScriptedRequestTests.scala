@@ -208,7 +208,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Unable to create dependent tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
+    response should have ('msg ("Unable to execute tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
