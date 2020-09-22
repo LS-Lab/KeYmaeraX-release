@@ -352,7 +352,7 @@ private object ToolTactics {
           //@note skip transformation if diff is abbreviations only (better performance on large formulas)
           //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
           val diff = UnificationMatch(to, e)
-          if (diff.usubst.subsDefsInput.forall(_.what match {
+          if (diff.usubst.subsDefsInput.nonEmpty && diff.usubst.subsDefsInput.forall(_.what match {
             case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
             case _ => false
           })) skip
