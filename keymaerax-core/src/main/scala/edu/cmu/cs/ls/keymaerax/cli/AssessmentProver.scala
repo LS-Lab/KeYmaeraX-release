@@ -796,7 +796,9 @@ object AssessmentProver {
       val bds = collectDiffAssigns(b).map({ case Assign(d: DifferentialSymbol, r) => (d, r) }).groupBy(_._1)
       require(ads.forall(_._2.size == 1), "Differential assignments must be unique, but got " + ads.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
       require(bds.forall(_._2.size == 1), "Differential assignments must be unique, but got " + bds.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
-      require(ads == bds, "Differential assignments do not match: expected assignments to " + ads.map(_._1.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_._1.prettyString).mkString(",")))
+      require(ads.keys == bds.keys, "Differential assignments do not match: expected assignments to " + ads.map(_._1.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_._1.prettyString).mkString(",")))
+      val zipped = for (key <- ads.keys) yield (key, ads(key).map(_._2).head, bds(key).map(_._2).head)
+      assert(zipped.map({ case (_, a, b) => polynomialEquality(a, b) }).forall(_.isProved), "Unexpected differential assignment right-hand side")
     }
 
     val ap: ProvableSig = KeYmaeraXProofChecker(1000)(chase(1))(Sequent(IndexedSeq(), IndexedSeq(a)))
