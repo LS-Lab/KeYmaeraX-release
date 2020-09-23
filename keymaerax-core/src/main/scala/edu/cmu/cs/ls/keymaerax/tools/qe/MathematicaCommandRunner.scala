@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.{Expr, ExprFormatException, KernelLink, MathLinkException}
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaInapplicableMethodException, MathematicaMathlinkException, MathematicaUnknownCauseCriticalException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
@@ -71,6 +72,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
 
   private val fetchMessagesCmd = "$MessageList"
 
+  private val useExprInterface = Configuration.get[Boolean](Configuration.Keys.JLINK_USE_EXPR_INTERFACE).getOrElse(false)
   /** @inheritdoc */
   override def doRun[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T) = try {
     if (ml == null) throw ToolCommunicationException("No MathKernel set")
@@ -105,7 +107,8 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
   private def dispatch(cmd: Expr): Unit = {
     if (ml == null) throw ToolCommunicationException("No MathKernel set")
     try {
-      ml.evaluate(cmd)
+      if (useExprInterface) ml.evaluate(cmd)
+      else ml.evaluate(cmd.toString)
     } catch {
       case ex: MathLinkException => throw MathematicaMathlinkException("Error executing command " + cmd, ex)
     }

@@ -4,7 +4,7 @@
 */
 import com.wolfram.jlink.{Expr, KernelLink}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -135,7 +135,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     link.qe("5 < 5--2".asFormula).fact.conclusion shouldBe "==> 5 < 5--2 <-> true".asSequent
   }
 
-  "QE" should "label branch on invalid formula" taggedAs(SlowTest) in withMathematica { link =>
+  "QE" should "label branch on invalid formula" taggedAs SlowTest in withMathematica { link =>
     link.qe("5<3".asFormula).fact.conclusion shouldBe "==> 5<3 <-> false".asSequent
     val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
       case Some(labels) => labels.loneElement shouldBe BelleLabels.QECEX
