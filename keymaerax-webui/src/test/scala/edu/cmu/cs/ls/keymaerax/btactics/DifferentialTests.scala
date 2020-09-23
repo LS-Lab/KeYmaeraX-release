@@ -276,6 +276,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
 
+  it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+    proveBy("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs
+      "x>=a()&a()>=0, true ==> x>=a()".asSequent ::
+      "x>=a()&a()>=0, true ==> [x':=a();]x'>=0".asSequent :: Nil
+  }
+
   it should "auto-prove x>=5 -> [{x'=2}]!x<5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
     proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
     proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved

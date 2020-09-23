@@ -187,8 +187,7 @@ private object DifferentialTactics extends Logging {
                 abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) })
             } else skip
             )
-        if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
-        else t
+        Dconstify(t)(pos)
       } else {
         val t = expand & DI(pos) &
           (if (auto != 'none) {
@@ -204,8 +203,7 @@ private object DifferentialTactics extends Logging {
               )
             )(pos)
           } else ident)
-        if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
-        else t
+        Dconstify(t)(pos)
       }
     }
   }}
