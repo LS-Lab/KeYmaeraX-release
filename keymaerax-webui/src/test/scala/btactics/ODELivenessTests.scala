@@ -950,7 +950,8 @@ class ODELivenessTests extends TacticTestBase {
                   //dV("B".asTerm)(1),
                   dVAuto(1),
                   QE,
-                  ODE(1)
+                  //todo: fix ODE so that DconstV correctly calculates const assms to keep
+                  dWPlus(1) & QE
                 )
             )
           )
