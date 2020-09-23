@@ -402,6 +402,40 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
+  it should "parse when definitions use constant function symbols" in {
+    val input =
+      """ArchiveEntry "Definitions with Constants"
+        |Definitions
+        |  Real A;
+        |  Real Dist(Real v, Real t) = v*t + A*t^2/2;
+        |End.
+        |
+        |ProgramVariables
+        |  Real v, a;
+        |End.
+        |
+        |Problem
+        |  Dist(v,0)>0 -> [{?(Dist(v,0)>0);a := A;}*@invariant(Dist(v,0)>0)]Dist(v,0)>0
+        |End.
+        |End.
+        |""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Definitions with Constants"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("v", None) -> (None, Real, None, None, UnknownLocation),
+        ("a", None) -> (None, Real, None, None, UnknownLocation),
+        ("A", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("Dist", None) -> (Some(Tuple(Real, Real)), Real, Some((("v", None),Real) :: (("t", None), Real) :: Nil),
+          Some("._0*._1 + A()*._1^2/2".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "Dist(v,0)>0->[{?Dist(v,0)>0;a:=A();}*]Dist(v,0)>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   it should "parse a problem with neither definitions nor variables" in {
     val input =
       """ArchiveEntry "Entry 1".

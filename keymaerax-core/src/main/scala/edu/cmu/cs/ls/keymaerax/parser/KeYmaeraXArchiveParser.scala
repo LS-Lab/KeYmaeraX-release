@@ -849,8 +849,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
   private def expandAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
     annotations.map({
       case (e: Program, a: Formula) =>
-        val substPrg = defs.exhaustiveSubst(e)
-        val substFml = defs.exhaustiveSubst(a)
+        val substPrg = defs.exhaustiveSubst(defs.elaborateToFunctions(e))
+        val substFml = defs.exhaustiveSubst(defs.elaborateToFunctions(a))
         (substPrg, substFml)
       case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
