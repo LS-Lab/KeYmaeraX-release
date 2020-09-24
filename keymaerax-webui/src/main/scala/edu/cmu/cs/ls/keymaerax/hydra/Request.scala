@@ -1836,7 +1836,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
       case Some(symbols) =>
         //@todo InputSignature no longer available from simplified parser -> simplify data structure
         val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
-          filter({ case _: Function => true case _: ProgramConst => true case _ => false }).
+          filter({ case _: Function => true case _: ProgramConst => true case _: SystemConst => true case _ => false }).
           flatMap(s => {
             val defs = proofSession.defs.find(s.name, s.index)
             defs match {
@@ -1855,6 +1855,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
               case Bool => (s, PredOf(s, arg), repl, insig)
             }
           case (s: ProgramConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
+          case (s: SystemConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
           // functions, predicates, and programs without definition
           case (s: Function, ((domain, sort, _, None, _), _)) =>
             val arg = dotted(domain)
@@ -1863,6 +1864,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
               case Bool => (s, PredOf(s, arg), None, None)
             }
           case (s: ProgramConst, ((_, _, _, None, _), _)) => (s, s, None, None)
+          case (s: SystemConst, ((_, _, _, None, _), _)) => (s, s, None, None)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
@@ -1888,6 +1890,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                 case FuncOf(fn: Function, _) => fn
                 case PredOf(fn: Function, _) => fn
                 case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
+                case c: SystemConst => Function(c.name, c.index, Unit, Trafo)
               }
               session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
                 ((fnwhat.name, fnwhat.index) -> (Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
@@ -2856,6 +2859,7 @@ object RequestHelper {
     val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
+      case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
     }).toMap
     proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),
