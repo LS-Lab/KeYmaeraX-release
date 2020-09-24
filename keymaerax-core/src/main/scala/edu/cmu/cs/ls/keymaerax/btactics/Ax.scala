@@ -1784,7 +1784,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "[:=] assign update".
-    *    [x:=t();]p(x) <-> [x:=t();]p(x)
+    *    [x:=t();]P <-> [x:=t();]P
     * End.
     * }}}
     *
@@ -1793,13 +1793,13 @@ object Ax extends Logging {
     */
   @Axiom("[:=]", key = "0", recursor = "1;*")
   lazy val assignbup: DerivedAxiomInfo = derivedAxiom("[:=] assign update",
-    Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(x_) <-> [x_:=t_();]p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(||) <-> [x_:=t_();]p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
   /**
     * {{{Axiom "<:=> assign update".
-    *    <x:=t();>p(x) <-> <x:=t();>p(x)
+    *    <x:=t();>P <-> <x:=t();>P
     * End.
     * }}}
     *
@@ -1808,7 +1808,7 @@ object Ax extends Logging {
     */
   @Axiom("<:=>", key = "0", recursor = "1;*")
   lazy val assigndup: DerivedAxiomInfo = derivedAxiom("<:=> assign update",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(x_) <-> <x_:=t_();>p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(||) <-> <x_:=t_();>p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
@@ -4669,7 +4669,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "all stutter".
-    *    \forall x p <-> \forall x p
+    *    \forall x P <-> \forall x P
     * End.
     * }}}
     *
@@ -4678,13 +4678,13 @@ object Ax extends Logging {
     */
   @Axiom("all stutter", key = "0", recursor = "")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
-    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(x_) <-> \\forall x_ p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
   /**
     * {{{Axiom "exists stutter".
-    *    \exists x p <-> \exists x p
+    *    \exists x P <-> \exists x P
     * End.
     * }}}
     *
@@ -4693,7 +4693,7 @@ object Ax extends Logging {
     */
   @Axiom("exists stutter", key = "0", recursor = "")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
-    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
