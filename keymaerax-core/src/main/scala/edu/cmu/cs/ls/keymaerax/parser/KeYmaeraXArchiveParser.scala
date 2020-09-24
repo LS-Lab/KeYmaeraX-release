@@ -5,13 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import java.io.InputStream
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, StaticSemanticsTools}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
@@ -767,6 +765,32 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
 
     entry.problem match {
       case Left(problem) =>
+        // check whether constants are bound anywhere (quantifiers, program/system consts etc.)
+        val fullyExpanded = try {
+          definitions.expandFull(problem)
+        } catch {
+          case ex: AssertionError => throw ParseException(ex.getMessage, ex)
+        }
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+            case v: Variable if definitions.decls.exists({ case ((n, i), (d, s, _, _, _)) => d.isDefined && v.name == n && v.index == i && v.sort == s }) =>
+              val bv = StaticSemanticsTools.boundAt(fullyExpanded, p)
+              if (bv.contains(v)) {
+                // isInfinite case should never occur because expandFull elaborates first;
+                // but just in case: bound in a programconst, hint that [a;]x>=0 can be fixed with [a;]x()>=0
+                if (bv.isInfinite) throw ParseException(
+                  "Symbol " + v.prettyString + " occurs in variable syntax but is declared constant; please use " +
+                    v.prettyString + "() explicitly.", UnknownLocation)
+                // otherwise it's explicitly bound either in quantifier or program, encourage to rename
+                else throw ParseException(
+                  "Symbol " + v.prettyString + " is bound but is declared constant; please use a different name in the quantifier/program binding " +
+                    v.prettyString, UnknownLocation)
+              }
+              else Left(None)
+            case _ => Left(None)
+          }
+        }, fullyExpanded)
+
         val tactics =
           if (parseTactics) {
             //@note tactics hard to elaborate later (expandAllDefs must use elaborated symbols to not have substitution clashes)
@@ -806,9 +830,14 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
-    KeYmaeraXParser.semanticAnalysis(elaboratedModel) match {
+    val fullyExpandedModel = try {
+      entry.defs.exhaustiveSubst(elaboratedModel)
+    } catch {
+      case ex: AssertionError => throw ParseException(ex.getMessage, ex)
+    }
+    KeYmaeraXParser.semanticAnalysis(fullyExpandedModel) match {
       case None =>
-      case Some(error) => throw ParseException("Semantic analysis error\n" + error, elaboratedModel)
+      case Some(error) => throw ParseException("Semantic analysis error\n" + error, fullyExpandedModel)
     }
     //@note bare formula input without any definitions uses default meaning of symbols
     if (entry.defs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.

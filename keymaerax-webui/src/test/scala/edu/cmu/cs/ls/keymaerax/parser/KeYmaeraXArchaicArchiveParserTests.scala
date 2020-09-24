@@ -436,7 +436,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
-  it should "parse when function argument has same name as constant" in {
+  it should "warn when ambiguous function/variable use" in {
     val input =
       """ArchiveEntry "Entry"
         |Definitions
@@ -449,17 +449,11 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         |  \forall y (y>0 -> \forall x plus(x,y)>0)
         |End.
         |End.""".stripMargin
-    val entry = parse(input).loneElement
-    entry.name shouldBe "Entry"
-    entry.kind shouldBe "theorem"
-    entry.fileContent shouldBe input.trim()
-    entry.defs should beDecl(
-      Declaration(Map(
-        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
-        ("sq", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), Some(".^2".asTerm), UnknownLocation),
-        ("plus", None) -> (Some(Tuple(Real, Real)), Real, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("sq(._0)+._1".asTerm), UnknownLocation)
-      )))
-    entry.model shouldBe "\\forall y (y>0 -> \\forall x plus(x,y)>0)".asFormula
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> assertion failed: Cannot elaborate:
+        |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "parse when function argument has same name as constant in annotations" in {
@@ -491,6 +485,29 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("plus", None) -> (Some(Tuple(Real, Real)), Real, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("sq(._0)+._1".asTerm), UnknownLocation)
       )))
     entry.model shouldBe "y>0 -> [{y:=y+1;}*@invariant(plus(x(),y)>0)]plus(x(),y)>0".asFormula
+  }
+
+  it should "warn when ambiguous because of program definitions" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  HP assign ::= { y:=x; };
+        |End.
+        |
+        |ProgramVariables
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  \exists x [assign;]y>0
+        |End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> assertion failed: Cannot elaborate:
+        |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "parse a problem with neither definitions nor variables" in {
@@ -2060,15 +2077,26 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
   }
 
   it should "report substitution errors" in {
-    val entries = parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
         | ProgramVariables Real y; End.
         | Problem [y:=0;]p() End.
         |End.""".stripMargin
-    )
-    the [ParseException] thrownBy entries.loneElement.expandedModel should have message
+    ) should have message
       """<somewhere> Definition p() as y>=0 must declare arguments {y}
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report ambiguous variable/constant use" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | Problem \forall x x^2>=0 End.
+        |End.""".stripMargin
+    ) should have message
+      """<somewhere> Symbol x is bound but is declared constant; please use a different name in the quantifier/program binding x
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }
