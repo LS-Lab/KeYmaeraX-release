@@ -207,7 +207,6 @@ object SharedModels {
       |""".stripMargin
 
 
-  // @TODO: Fails because we need to look up IH during While() checking, which requires WhileProgress constructor
   val basicReachAvoid: String =
     """?(eps > 0 &  x = 0 & T > 0);
       |while (x + eps <= goal) {
@@ -266,10 +265,838 @@ object SharedModels {
       |}*
       |""".stripMargin
 
+   // @TODO: Probably want definition for ODE
+   // @TODO: Probably want comments
+   val ijrrStaticSafetyDirect: String =
+    """let stopDist(v) = (v^2 / (2*b));
+      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
+      |let admissibileSeparation(v) = (stopDist(v) + accelComp(v));
+      |let bounds() <-> A >= v & b >= 0 & T >= 0;
+      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1);
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
+      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v);
+      |let goal() <-> dist(x, y, xo, yo) > 0;
+      |?(assumptions());
+      |!(loopinv());
+      |      {
+      |      body:
+      |      {
+      |      {
+      |      { a := -b; t := 0;
+      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |          t' = 1 & ?(t <= ep & v >= 0);
+      |         & !tSign:(t >= 0);
+      |         & !dir:(norm(dx, dy) = 1);
+      |         & !vSol:(v = v@body - b()*t);
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
+      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
+      |         };
+      |      }
+      |        ++
+      |      { ?v = 0; a := 0; w := 0; t := 0;
+      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |          t' = 1 & ?(t <= ep & v >= 0);
+      |         & !tSign:(t >= 0);
+      |         & !dir:(norm(dx, dy) = 1);
+      |         & !vSol:(v = v@body);
+      |         & !xSol:(x = x@body);
+      |         & !ySol:(y = y@body);
+      |         };
+      |      }
+      |        ++
+      |        /* or choose a new safe curve */
+      |      { a := A;
+      |        w := *; ?-W<=w & w<=W;
+      |        r := *;
+      |        xo := *; yo := *;
+      |        ?r!=0 & r*w = v;
+      |        ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |        t := 0;
+      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |          t' = 1 & ?(t <= ep & v >= 0);
+      |         & !tSign:(t >= 0);
+      |         & !dir:(norm(dx, dy) = 1);
+      |         & !vSol:(v = v@body + A()*t);
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
+      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
+      |         };
+      |      }
+      |    }
+      |}*
+      |!(goal());
+      |""".stripMargin
+
+  val ijrrStaticSafetySimplified: String =
+    """let stopDist(v) = (v^2 / (2*b));
+      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
+      |let admissibileSeparation(v) = (stopDist(v) + accelComp(v));
+      |let bounds() <-> A >= v & b >= 0 & T >= 0;
+      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1);
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
+      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v);
+      |let goal() <-> dist(x, y, xo, yo) > 0;
+      |?(assumptions());
+      |!(loopinv());
+      |{body:
+      |  {
+      |    {
+      |      { a := -b; }
+      |        ++
+      |      { ?v = 0; a := 0; w := 0;  }
+      |        ++
+      |      { a := A;
+      |        w := *; ?-W<=w & w<=W;
+      |        r := *;
+      |        xo := *; yo := *;
+      |        ?r!=0 & r*w = v;
+      |        ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |      }
+      |    }
+      |    t := 0;
+      |    { x' = v * dx, y' = v * dy, v' = a,
+      |      dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |      t' = 1 & ?(t <= ep & v >= 0);
+      |     & !tSign:(t >= 0);
+      |     & !dir:(norm(dx, dy) = 1);
+      |     & !vSol:(v = v@body - a*t);
+      |     & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
+      |     & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
+      |    };
+      |  }
+      |}*
+      |!(goal());
+      |""".stripMargin
+
+  val ijrrVelocityPassiveSafety: String =
+    """
+      |let stopDist(v) = (0);
+      |let accelComp(v) = (ep()*(v+V()));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v)).
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> ( ep() > 0  & V() >= 0);
+      |let initialState() <-> ( v = 0 & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & (v>0 -> infdist(x, y, xo, yo) > stopDist(v)));
+      |?(assumptions());
+      |!(loopinv());
+      |    {loop:
+      |      {
+      |        {
+      |          vxo := *; vyo := *;
+      |          ?vxo^2+vyo^2<=V^2;
+      |        }
+      |        {
+      |          { v := 0; w := 0; }
+      |          ++
+      |          { v := *; ?0<=v;
+      |            w := *; ?-W<=w & w<=W;
+      |            r := *;
+      |            xo := *; yo := *;      |
+      |            ?r!=0 & r*w = v;
+      |            ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |
+      |      /* dynamics */
+      |      {
+      |      { x' = v * dx, y' = v * dy,                /* move */
+      |        dx' = -w * dy, dy' = w * dx,             /* follow curve */
+      |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+      |        ?(t' = 1 & t <= ep & v >= 0);
+      |        !tSign:(t>=0);
+      |        !xBound:(-t*v <= xo - xo@loop & xo - xo@loop <= t*v);
+      |        !yBound:(-t*v <= yo - yo@loop & yo - yo@loop <= t*v);
+      |      };
+      |      }
+      |    !(loopinv());
+      |    }*
+      | !(v>0 -> dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  val ijrrPassiveSafety: String =
+    """
+      |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V)));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0);
+      |let initialState() <-> (v = 0 & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & (v>0 -> infdist(x, y, xo, yo) > stopDist(v)));
+      |?(assumptions());
+      |!(loopinv());
+      |    {loop:
+      |      {vxo := *; vyo := *; ?(norm(vxo, vyo) <= V^2);}
+      |      {
+      |        { a := -b; }
+               ++
+      |        { ?v = 0; a := 0; w := 0; }
+      |        ++
+      |        {
+      |          a := A;
+      |          w := *; ?-W<=w & w<=W;
+      |          r := *;
+      |          xo := *; yo := *;      |
+      |          ?r!=0 & r*w = v;
+      |          ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |      {
+      |      { x' = v * dx, y' = v * dy, v' = a,
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |        ?(t' = 1 & t <= ep & v >= 0);
+      |        !tSign:(t>=0);
+      |        !dir:(norm(dx, dy) = 1);
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |        !vSol:(v = v@loop + a*t);
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |      };
+      |      }
+      |    !(loopinv());
+      |    }*
+      | !(dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  val ijrrPassiveFriendlySafety: String =
+    """
+      |let friendlyMargin(v) = (v^2/(2*bo()) + tau()*v);
+      |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V)));
+      |let admissibleSeparation(v) = (stopDist(v) + friendlyMargin() + accelComp(v));
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & tau() >= 0 & bo() > 0);
+      |let initialState() <-> (v = 0 & infdist(x,y,xo,yo) >= friendlyMargin(V()) & norm(vxo,vyo) <= V() & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & (v>0 -> infdist(x, y, xo, yo) > stopDist(v) + friendlyMargin(V())));
+      |?(assumptions());
+      |!(loopinv());
+      |    {loop:
+      |      {vxo := *; vyo := *; ?(norm(vxo, vyo) <= V);}
+      |      {
+      |        { a := -b; }
+               ++
+      |        { ?v = 0; a := 0; w := 0; }
+      |        ++
+      |        {
+      |          a := A;
+      |          w := *; ?-W<=w & w<=W;
+      |          r := *;
+      |          xo := *; yo := *;
+      |          ?r!=0 & r*w = v;
+      |          ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |      {
+      |      { x' = v * dx, y' = v * dy, v' = a,
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |        xo' = vxo, yo' = vyo,
+      |        ?(t' = 1 & t <= ep() & v >= 0);
+      |        !tSign:(t>=0);
+      |        !dir:(norm(dx, dy) = 1);
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |        !vSol:(v = v@loop + a*t);
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |      };
+      |      }
+      |    !(loopinv());
+      |    }*
+      | !(v>0 -> dist(x,y,xo,yo) > friendlyMargin(V()));
+      | ?(0 <= vo & vo = norm(vxo, vyo) & dxo*vo = vxo & dyo*vo=vyo);
+      | ?(dist(x,y,xo,yo) > friendlyMargin(V()));
+      | ao := todo(); !(-bo() <= ao & vo + ao*ep() <= V());
+      | t := 0;
+      | {xo'=vo*dxo, yo'=vo*dyo, vo'=ao, t'=1,
+      |    ?(vo>= 0 & t<= ep());
+      |  & ?(t := todo());
+      | };
+      | !(dist(x,y,xo,yo) > 0 & vo = 0);
+      |""".stripMargin
+
+
+  val ijrrPassiveOrientationSafety: String =
+    """
+      |let stopDist(v) = (v^2 / (2*b()));
+      |let stopMargin(v) = stopDist(v) + V()*v/b();
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*v));
+      |let accelMargin(v) = (accelComp(v) + (A()/b() + 1) * (ep()*V()));
+      |let admissibleSeparation(v) = (stopMargin(v) + accelMargin(v));
+      |let admissibleTurnLength(v) = (stopDist(v) + accelComp(v));
+      |let isVisible(x) <-> x > 0;
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & Gamma() > 0);
+      |let initialState() <-> (v = 0 & beta = 0 & r != 0 & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & r != 0 &
+      |    (v>0 -> infdist(x, y, xo, yo) > stopMargin(v)
+      |  |  !isVisible(visDeg) & abs(beta) + stopDist(v)/abs(r) < Gamma()));
+      |?(assumptions());
+      |!(loopinv());
+      |    {loop:
+      |      {vxo := *; vyo := *; ?(norm(vxo, vyo) <= V);}
+      |      {
+      |        { a := -b(); }
+               ++
+      |        { ?v = 0; a := 0; w := 0; }
+      |        ++
+      |        {
+      |          a := A();
+      |          beta := 0;
+      |          r := *; ?r!=0;
+      |          xo := *; yo := *; visDeg := *;
+      |          ?(isVisible(visDeg) -> infdist(x,y,xo,yo) > admissibleSeparation(v));
+      |          ?(admissibleTurnLength(v) < Gamma()*abs(r);
+      |          }
+      |        };
+      |       w := *; ?w*r = v;
+      |      }
+      |      {
+      |      t := 0;
+      |      { x' = v * dx, y' = v * dy, v' = a,
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |        beta' = w,
+      |        xo' = vxo, yo' = vyo, t' = 1 &
+      |        ?(t <= ep() & v >= 0);
+      |        !tSign:(t>=0);
+      |        !dir:(norm(dx, dy) = 1);
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |        !vSol:(v = v@loop + a*t);
+      |        !betaSol:(beta = beta@loop + t/r*(v + a/2*t));
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |      };
+      |      }
+      |    !(loopinv());
+      |    }*
+      | !(v > 0 -> ((x - xo)^2 + (y - yo)^2 > 0 | (!isVisible(visDeg) & (abs(beta) < Gamma()))));
+      |""".stripMargin
+
+  // Theorem 5
+  val ijrrPassiveSafetyActualAcceleration: String =
+    """
+      |let stopDist(v) = (v^2 / (2*b()));
+      |let stopMargin(v) = stopDist(v) + V()*v/b();
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*v));
+      |let accelMargin(v) = (accelComp(v) + (A()/b() + 1) * (ep()*V()));
+      |let admissibleSeparation(v) = (stopMargin(v) + accelMargin(v));
+      |let admissibleTurnLength(v) = (stopDist(v) + accelComp(v));
+      |let isVisible(x) <-> x > 0;
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & Gamma() > 0);
+      |let initialState() <-> (v = 0 & beta = 0 & r != 0 & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & r != 0 &
+      |    (v>0 -> infdist(x, y, xo, yo) > stopMargin(v)
+      |  |  !isVisible(visDeg) & abs(beta) + stopDist(v)/abs(r) < Gamma()));
+      |?(assumptions());
+      |!(loopinv());
+      |    {loop:
+      |      {vxo := *; vyo := *; ?(norm(vxo, vyo) <= V);}
+      |      {
+      |        { a := -b(); }
+               ++
+      |        { ?v = 0; a := 0; w := 0; }
+      |        ++
+      |        {
+      |          a := *; ?(-b() <= a & a <= A());
+      |          w := *; ?-W <= w & w <= W;
+      |          r := *; ?(r!=0 & r*w = v);
+      |          xo := *; yo := *;
+      |          ?(((v+a*ep>=0) & infdist(x,y,xo,yo) > admissibleSeparationG(v,a))
+      |           | (infdist(x,y,xo,yo) &infdist(x,y,xo,yo) > admissibleSeparationL(v,a)));
+      |        }
+      |      }
+      |      {
+      |      t := 0;
+      |      { x' = v * dx, y' = v * dy, v' = a,
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |        xo' = vxo, yo' = vyo, t' = 1 &
+      |        ?(t <= ep() & v >= 0);
+      |        !tSign:(t>=0);
+      |        !dir:(norm(dx, dy) = 1);
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |        !vSol:(v = v@loop + a*t);
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |      };
+      |      }
+      |    !(loopinv());
+      |    }*
+      | !(v > 0 -> (dist(x,y,xo,yo) > 0));
+      |""".stripMargin
+
+  // Theorem 6
+  val ijrrPassiveSafetyLocationUncertainty: String =
+    """
+      |let stopDist(v) = (v^2 / (2*b())+ V()*v/b());
+      |let stopMargin(v) = stopDist(v) ;
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())) + Dp());
+      |let accelMargin(v) = (accelComp(v) + (A()/b() + 1) * (ep()*V()));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let isVisible(x) <-> x > 0;
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & Dp() >= 0);
+      |let initialState() <-> (v = 0  & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & r != 0 &
+      |    (v>0 -> infdist(x, y, xo, yo) > stopMargin(v)
+      |  |  !isVisible(visDeg) & abs(beta) + stopDist(v)/abs(r) < Gamma()));
+      |?(assumptions());
+      |!(loopinv());
+      |{
+      |      {
+      |        {
+      |          mx := *; my := *;
+      |          ?(mx-x)^2+(my-y)^2 <= Dp()^2;
+      |        }
+      |        {
+      |          vxo := *; vyo := *;
+      |          ?vxo^2+vyo^2<=V^2;
+      |        }
+      |        {
+      |          { a := -b; }
+      |          ++
+      |          { ?v = 0; a := 0; w := 0; }
+      |      	  ++
+      |          /* or choose a new safe curve */
+      |          { a := A;
+      |            w := *; ?-W<=w & w<=W;       /* choose steering */
+      |            r := *;
+      |            xo := *; yo := *;            /* measure closest obstacle on the curve */
+      |
+      |            /* admissible curve */
+      |            ?r!=0 & r*w = v;
+      |
+      |            /* use that curve, if it is a safe one (admissible velocities) */
+      |            ? abs(mx-xo) > admissibleSeparation(v)
+      |            | abs(my-yo) > admissibleSeparation(v);
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |
+      |      /* dynamics */
+      |      { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+      |        t' = 1 & t <= ep & v >= 0
+      |       & !tSign:(t>=0);
+      |       & !dir:(norm(dx, dy) = 1);
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |       & !vBound:(v <= v@loop - a**t);
+      |       & !xBound:(-t * (v - a/2*t) <= x - x@loop & x - x@loop <= t * (v - a/2*t));
+      |       & !yBound:-(t * (v - a/2*t) <= y - y@loop & y - y@loop <= t * (v - a/2*t));
+      |      }
+      |    !(loopinv());
+      |    }*
+      |  !(v>0 -> dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  val ijrrPassiveSafetyActuatorDisturbance: String =
+    """let stopDist(v) = (v^2 / (2*(b()*Da()))+ V()*v/(b()*Da()));
+      |let accelComp(v) = ((A()/(b()*Da()) + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let isVisible(x) <-> x > 0;
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & 0 < Da() & Da() <= 1);
+      |let initialState() <-> (v = 0  & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 &
+      |    (v>0 -> infdist(x, y, xo, yo) > stopDist(v));
+      | ?(assumptions());
+      | !(loopinv());
+      | {loop:
+      |      {
+      |        {
+      |          vxo := *; vyo := *;
+      |          ?vxo^2+vyo^2<=V^2;
+      |        }
+      |        {
+      |          { a := -b; }
+      |          ++
+      |          { ?v = 0; a := 0; w := 0; }
+      |      	  ++
+      |          { a := A;
+      |            w := *; ?-W<=w & w<=W;       /* choose steering */
+      |            r := *;
+      |            xo := *; yo := *;            /* measure closest obstacle on the curve */
+      |
+      |            ?r!=0 & r*w = v;
+      |
+      |            ? abs(x-xo) > admissibleSeparation(v)
+      |            | abs(y-yo) > admissibleSeparation(v);
+      |          }
+      |        };
+      |        {
+      |          da := *; ?(Da<=da & da<=1); acc := da*a;
+      |        };
+      |    	  t := 0;
+      |      }
+      |      { x' = v * dx, y' = v * dy, v' = acc,      /* accelerate/decelerate and move */
+      |        dx' = -w * dy, dy' = w * dx, w' = acc/r, /* follow curve */
+      |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+      |        t' = 1 & ?(t <= ep & v >= 0);
+      |       & !tSign:(t>=0);
+      |       & !dir:(norm(dx, dy) = 1);
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |       & !vBound:(v <= v@loop - (b()*Da())*t);
+      |       & !xBound:(-t * (v@loop - (b()*Da())/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - (b()*Da())/2*t));
+      |       & !yBound:-(t * (v@loop - (b()*Da())/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - (b()*Da())/2*t));
+      |      }
+      |    !(loopinv());
+      |    }
+      | !(v>0 -> dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  val ijrrPassiveSafetyVelocityUncertainty: String =
+    """let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0 & Dv() > 0);
+      |let initialState() <-> (v = 0  & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & (v>0 -> infdist(x, y, xo, yo) > stopDist(v));
+      |   ?(assumptions());
+      |   !(loopinv());
+      |    {
+      |      {
+      |        {
+      |          mv := *; ?0<=mv & v-Dv()<=mv & mv<=v+Dv();
+      |        }
+      |        {
+      |          vxo := *; vyo := *;
+      |          ?vxo^2+vyo^2<=V^2;
+      |        }
+      |        {
+      |          { a := -b; }
+      |          ++
+      |          { ?v = 0; a := 0; w := 0; }
+      |      	  ++
+      |          { a := A;
+      |            w := *; ?-W<=w & w<=W;
+      |            r := *;
+      |            xo := *; yo := *;
+      |
+      |            ?r!=0 & r*w = v;
+      |
+      |            ? abs(x-xo) > admissibleSeparation(mv+Dv())
+      |            | abs(y-yo) > admissibleSeparation(mv+Dv());
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |
+      |      { x' = v * dx, y' = v * dy, v' = a,
+      |        dx' = -w * dy, dy' = w * dx, w' = a/r,
+      |        xo' = vxo, yo' = vyo,
+      |        t' = 1 & ?(t <= ep & v >= 0);
+      |       & !tSign:(t>=0);
+      |       & !dir:(norm(dx, dy) = 1);
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
+      |       & !vBound:(v <= v@loop - a*t);
+      |       & !xBound:(-t * (v@loop - a/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - a/2*t));
+      |       & !yBound:-(t * (v@loop - a/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - a/2*t));
+      |      }
+      |    !(loopinv());
+      |    }*
+      |    !(v>0 -> dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  // theorem 9
+  val ijrrPassiveAsync: String =
+    """
+      |let stopDist(v) = (v^2 / (2*b()) + V()*v/b());
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let bounds() <-> (A() >= 0 & b() > 0 & ep() > 0  & V() >= 0);
+      |let initialState() <-> (v = 0  & dist(x,y,xo,yo) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & (v>0 -> infdist(x, y, xo, yo) > stopDist(v));
+      |?(assumptions());
+      |!(loopinv());
+      |
+      |{outer:
+      |      {
+      |        {
+      |          { a := -b; }
+      |          ++
+      |          { ?v = 0; a := 0; w := 0; }
+      |      	  ++
+      |          { a := A;
+      |            w := *; ?-W<=w & w<=W;       /* choose steering */
+      |            r := *;
+      |            xo := *; yo := *;            /* measure closest obstacle on the curve */
+      |
+      |            ?r!=0 & r*w = v;
+      |
+      |            ? abs(x-xo) > admissibleSeparation(v)
+      |            | abs(y-yo) > admissibleSeparation(v);
+      |          }
+      |        };
+      |    	  t := 0;
+      |      }
+      |      inner:
+      |      let innerloopinv(xoo, yoo) <-> 0<=t & t<=ep()
+      |        & v >= 0
+      |        & norm(dx, dy) = 1
+      |        & -t*V() <= xo - xo@inner & xo - xo@inner <= t*V()
+      |        & -t*V() <= yo - yo@inner & yo - yo@inner <= t*V()
+      |        & -t * (v - a/2*t) <= x - x@inner & x - x@inner) <= t * (v - a/2*t)
+      |        & -t * (v - a/2*t) <= y - y@inner & y - y@inner <= t * (v - a/2*t)
+      |      !(innerloopinv());
+      |      {body:
+      |        /* obstacle control */
+      |        {
+      |          vxo := *; vyo := *;
+      |          ?vxo^2+vyo^2<=V^2;
+      |        };
+      |        /* dynamics */
+      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |          xo' = vxo, yo' = vyo,                    /* obstacle moves */
+      |          t' = 1 & ?(t <= ep & v >= 0);
+      |        & !(t>=t@body);
+      |        & !(norm(dx, dy) = 1);
+      |        & !(-(t-t@body)*V() <= xo - xo@body & xo - xo@body <= (t-t@body)*V());
+      |        & !(-(t-t@body)*V() <= yo - yo@body & yo - yo@body <= (t-t@body)*V());
+      |        & !(v = v@body + a*(t-t@body));
+      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= x - x@body & x - x@body <= (t-t@body) * (v - a/2*(t-t@body)));
+      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= y - y@body & y - y@body <= (t-t@body) * (v - a/2*(t-t@body)));
+      |        }
+      |       !(innerloopinv());
+      |      }*
+      |      !(loopinv());
+      |    }*
+      | !(v>0 -> dist(x,y,xo,yo) > 0);
+      |""".stripMargin
+
+  // thm 11
+  val ijrrReachWaypoint: String =
+    """
+      |
+      |	let waypointStartDist(xg) = ( xg-GDelta() );
+      |	let waypointEndDist(xg)   = ( xg+GDelta() );
+      | let minV() = ( A()*ep() );
+      |	let stopDist(v) = ( v^2/(2*b()) );
+      |	let accComp(v)  = ( (A()/b() + 1)*(A()/2*ep()^2 + ep()*v) );
+      |	let bounds() <-> (
+      |      A() > 0
+      |    & b() > 0
+      |    & ep() > 0
+      |    & Vmax() >= 2*A()*ep()
+      |    & GDelta() > Vmax()*ep() + Vmax()^2/(2*b())
+      |  );
+      | let initialState() <-> (
+      |    vr = 0
+      |    & xr < waypointStartDist(xg)
+      |  ).
+      | let assumptions() <-> (bounds() & initialState());
+      |	let loopinv() <-> (
+      |	  0 <= vr & vr <= Vmax & xr + stopDist(vr) < waypointEndDist(xg)
+      |	);
+      |  ?(assumptions());
+      |  !(loopinv());
+      |	  { { { {
+      |      ar := -b();
+      |   ++ ?vr = 0; ar := 0;
+      |   ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
+      |   ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
+      |	} t:=0; }
+      | {xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0};
+      | !(loopinv());
+      | }*
+      | !(xr < waypointEndDist(xg));
+      | !(loopinv());
+      |	{ { { {
+      |      ar := -b();
+      |   ++ ?vr = 0; ar := 0;
+      |   ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
+      |   ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
+      |	} t:=0; } xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0};
+      | !(loopinv());
+      | }*
+      | !(waypointStartDist(xg) < xr);
+      |""".stripMargin
+
+  val ijrrModels: List[String] = List(ijrrPassiveFriendlySafety, ijrrPassiveSafety, ijrrStaticSafetyDirect, ijrrStaticSafetySimplified, ijrrVelocityPassiveSafety)
+  val robixDynamicWindowPassive: String =
+    """let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let goal() <-> vr = 0 | dist(prx, pry, pox, poy) > vr^2/(2*b) + V*(vr/b)
+      |let pre() <-> goal() & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
+      |?(pre());
+      |{  {vox := *; voy := *; ?(norm(vx, vy) <= V);
+      |  {  {ar := -b;}
+      |  ++ {?vr = 0; ar := 0; wr := 0;}
+      |  ++ {ar := *; ?-b <= ar & ar <= A;
+      |      wr := *; ?-W <= wr & wr <= W;
+      |      pcx := *; pcy := *; drx := *; dry := *;
+      |      pox := *; poy := *; ?curve() & safe();}}
+      |  }
+      | t:=0;
+      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar, 
+      |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
+      |  & ?vr >= 0 & t <= T}
+      |}*
+      |!(goal());
+      |""".stripMargin
+
+  // @TODO: Basically has to be wrong. Check kyx artifact
+  val robixDynamicWindowFriendly: String =
+    """let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let goal() <-> vr = 0 | dist(prx, pry, pox, poy) > vr^2/(2*b) + V*(vr/b)
+      |let pre() <-> goal() & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + V^2/(2*b) + tau*V + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
+      |?(pre());
+      |{ {vox := *; voy := *; ?(norm(vx, vy) <= V);
+      |  {  {ar := -b;}
+      |  ++ {?vr = 0; ar := 0; wr := 0;}
+      |  ++ {ar := *; ?-b <= ar & ar <= A;
+      |      wr := *; ?-W <= wr & wr <= W;
+      |      pcx := *; pcy := *; drx := *; dry := *;
+      |      pox := *; poy := *; ?curve() & safe();}}
+      |  }
+      | t:=0;
+      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
+      |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
+      |  & ?(vr >= 0 & t <= T);}
+      |}*
+      |!(goal());
+      |""".stripMargin
+
+  // @TODO: Refine to actual magic, also rpobably quite wrong
+  val robixRefinedObstacle: String =
+    """let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let goal() <-> vr = 0 | dist(prx, pry, pox, poy) > vr^2/(2*b) + V*(vr/b)
+      |let pre() <-> goal() & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + V^2/(2*b) + tau*V + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
+      |?(vr = 0 & (dist(prx, pry, pox, poy) > V^2/(2*bo) + tau*V) & 0 <= vo & vo <= V);
+      |{
+      | {dox := *; doy := *; ?norm(dox, doy) = 1;
+      |  aox := *; aoy := *; ?vo + ao*To <= V;}
+      | t:= 0;
+      | {pox' = vo*dox, poy' = vo*doy, vo' = ao, t' = 1 & t <= To & ?(vo > = 0);}
+      |}*
+      |!(dist(prx, pry, pox, poy) > 0 & vo = 0);
+      |""".stripMargin
+
+  val robixSensorUncertainty: String =
+    """let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let goal() <-> vr = 0 | dist(prx, pry, pox, poy) > vr^2/(2*b) + V*(vr/b)
+      |let pre() <-> goal() & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1
+      |let perp(x, y) = todo();
+      |let curve() <-> dist(ptrx, ptry, pcx, pcy) > 0 & wr*dist(ptrx, ptry, pcx, pcy) = vr & dr = perp(ptrx - pcx, ptry - pcy)/dist(ptrx, ptry, pcx, pcy);
+      |let safe() <-> infdist(ptrx, ptry, pox, poy) > vr^2 /(2*b)  + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b) + Up;
+      |{{ptrx := *; ptry := *; ?(dist(ptrx, ptry, prx, pry) <= Up);}
+      | {vox := *; voy := *; ?(norm(vx, vy) <= V);
+      |  {  {ar := -b;}
+      |  ++ {?vr = 0; ar := 0; wr := 0;}
+      |  ++ {ar := *; ?-b <= ar & ar <= A;
+      |      wr := *; ?-W <= wr & wr <= W;
+      |      pcx := *; pcy := *; drx := *; dry := *;
+      |      pox := *; poy := *; ?curve() & safe();}}
+      |  }
+      | t:=0;
+      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
+      |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
+      |  & ?(vr >= 0 & t <= T);}
+      |}*
+      |
+      |""".stripMargin
+
+  val robixActuatorUncertainty: String =
+    """let norm(x, y) = (x^2 + y^2)^(1/2);
+      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
+      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
+      |let goal() <-> vr = 0 | dist(prx, pry, pox, poy) > vr^2/(2*b) + V*(vr/b)
+      |let pre() <-> goal() & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1
+      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
+      |let safe() <-> infdist(prx, pry, pox, poy) > vr^2 /(2*b*Um) +  ((A/(b*Um)) + 1)*((A/2)*T^2 + T*vr) + V*(T + (vr + A*T)/(b*Um));
+      |?(pre());
+      |{
+      | {{vox := *; voy := *; ?(norm(vx, vy) <= V);
+      |  {  {ar := -b;}
+      |  ++ {?vr = 0; ar := 0; wr := 0;}
+      |  ++ {ar := *; ?-b <= ar & ar <= A;
+      |      wr := *; ?-W <= wr & wr <= W;
+      |      pcx := *; pcy := *; drx := *; dry := *;
+      |      pox := *; poy := *; ?curve() & safe();}}
+      |  }}
+      | {um := *; atr := um*ar; ?(0 <= Um & Um <= um & um <= 1);}
+      | t:=0;
+      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - atr,
+      |  vwr' = atr/dist(prx, pry, pcx, pcy, t' = 1
+      |  & ?(vr >= 0 & t <= T);}
+      |}*
+      |
+      |""".stripMargin
+
+  val rssExamples: List[String] = List(robixDynamicWindowPassive, robixDynamicWindowFriendly, robixRefinedObstacle,
+    robixSensorUncertainty, robixActuatorUncertainty)
+
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
     ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
-    intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid)
+    intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
+    )
+
+  val allExamples: List[String] = rssExamples ++ ijrrModels ++ thesisExamples
 
 
   // @TODO implement file format
