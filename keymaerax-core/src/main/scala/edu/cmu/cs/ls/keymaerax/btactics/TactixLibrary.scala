@@ -366,7 +366,7 @@ object TactixLibrary extends HilbertCalculus
   /**
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
-  @Tactic(codeName = "master", longDisplayName = "Unfold Automatically")
+  @Tactic(names = "auto", codeName = "master", longDisplayName = "Unfold Automatically")
   def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
     master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
   }
