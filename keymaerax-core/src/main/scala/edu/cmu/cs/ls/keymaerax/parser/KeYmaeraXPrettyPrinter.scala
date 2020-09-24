@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -459,7 +460,16 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
   */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   /** @inheritdoc */
-  protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  protected override def skipParens(t: UnaryComposite): Boolean =
+    if (OpSpec.negativeNumber && t.isInstanceOf[Term]) op(t.child) <= op(t) && !leftMostLeaf(t.child).exists(_.isInstanceOf[Number])
+    else op(t.child) <= op(t)
+
+  @tailrec
+  private def leftMostLeaf(t: Expression): Option[Expression] = t match {
+    case _: UnaryComposite => None
+    case b: BinaryComposite => leftMostLeaf(b.left)
+    case x => Some(x)
+  }
 
   /** @inheritdoc */
   protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
