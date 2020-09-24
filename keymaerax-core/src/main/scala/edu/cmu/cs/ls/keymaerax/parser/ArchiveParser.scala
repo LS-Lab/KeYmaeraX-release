@@ -19,7 +19,7 @@ case class Declaration(decls: Map[Name, Signature]) {
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._4.isDefined).map({
     case (name, (domain, sort, argNames, interpretation, loc)) =>
       // elaborate to functions for topSort (topSort uses signature)
-      (name, (domain, sort, argNames, interpretation.map(elaborateToFunctions), loc))
+      (name, (domain, sort, argNames, interpretation.map(elaborateToFunctions(_)), loc))
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
@@ -50,9 +50,9 @@ case class Declaration(decls: Map[Name, Signature]) {
       throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
   }
 
-  /** Elaborates variable uses of declared functions. */
+  /** Elaborates variable uses of declared functions, except those listed in taboo. */
   //@todo need to look into concrete programs that implement program constants when elaborating
-  def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
+  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T = expr.elaborateToFunctions(asNamedSymbols.toSet -- taboo).asInstanceOf[T]
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
   def elaborateToSystemConsts(expr: Formula): Formula = {

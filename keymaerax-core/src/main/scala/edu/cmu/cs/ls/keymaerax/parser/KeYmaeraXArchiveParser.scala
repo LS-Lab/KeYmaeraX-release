@@ -858,8 +858,12 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
   }
 
   def elaborateDefs(defs: Declaration): Declaration = {
+    def taboos(signature: List[((String, Option[Int]), Sort)]): Set[Function] = {
+      signature.filter({ case ((name, _), _) => name != "\\cdot" }).map({ case((name, idx), sort) => Function(name, idx, Unit, sort) }).toSet
+    }
+
     defs.copy(decls = defs.decls.map({ case ((name, index), (domain, sort, argNames, interpretation, loc)) =>
-      ((name, index), (domain, sort, argNames, interpretation.map(defs.elaborateToFunctions), loc))
+      ((name, index), (domain, sort, argNames, interpretation.map(defs.elaborateToFunctions(_, taboos(argNames.getOrElse(Nil)))), loc))
     }))
   }
 
@@ -887,7 +891,9 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       case _ => None
     }).toSet
     val elaboratedDefinitions = entry.allDefs.map({
-      case f@FuncPredDef(_, _, _, _, Left(interpretation), _) => f.copy(definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables))))
+      case f@FuncPredDef(_, _, _, signature, Left(interpretation), _) => f.copy(
+        definition = Left(interpretation.map(_.elaborateToFunctions(
+          elaboratables.filter(e => !signature.exists(s => e.name == s.name && e.index == s.index))))))
       case p@ProgramDef(_, _, Left(interpretation), annotations, _) => p.copy(
         definition = Left(interpretation.map(_.elaborateToFunctions(elaboratables).asInstanceOf[Program])),
         annotations = elaborateAnnotations(annotations, elaboratables)

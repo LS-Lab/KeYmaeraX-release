@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Number, Power, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
@@ -434,6 +434,63 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.model shouldBe "Dist(v,0)>0->[{?Dist(v,0)>0;a:=A();}*]Dist(v,0)>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
+  }
+
+  it should "parse when function argument has same name as constant" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  Real sq(Real x) = x^2;
+        |  Real plus(Real x, Real y) = sq(x)+y;
+        |End.
+        |
+        |Problem
+        |  \forall y (y>0 -> \forall x plus(x,y)>0)
+        |End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("sq", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), Some(".^2".asTerm), UnknownLocation),
+        ("plus", None) -> (Some(Tuple(Real, Real)), Real, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("sq(._0)+._1".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "\\forall y (y>0 -> \\forall x plus(x,y)>0)".asFormula
+  }
+
+  it should "parse when function argument has same name as constant in annotations" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  Real sq(Real x) = x^2;
+        |  Real plus(Real x, Real y) = sq(x)+y;
+        |End.
+        |
+        |ProgramVariables
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  y>0 -> [{y:=y+1;}*@invariant(plus(x,y)>0)]plus(x,y)>0
+        |End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation),
+        ("sq", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), Some(".^2".asTerm), UnknownLocation),
+        ("plus", None) -> (Some(Tuple(Real, Real)), Real, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("sq(._0)+._1".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "y>0 -> [{y:=y+1;}*@invariant(plus(x(),y)>0)]plus(x(),y)>0".asFormula
   }
 
   it should "parse a problem with neither definitions nor variables" in {
