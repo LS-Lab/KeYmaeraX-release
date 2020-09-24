@@ -23,10 +23,15 @@ case class Declaration(decls: Map[Name, Signature]) {
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
-  lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _, _)) => sort match {
+  lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, rhs, _)) => sort match {
     case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
     case Real | Bool if domain.isDefined => Function(name, idx, domain.get, sort)
-    case Trafo => assert(idx.isEmpty, "Program constants are not allowed to have an index, but got " + name + "_" + idx); ProgramConst(name)
+    case Trafo =>
+      assert(idx.isEmpty, "Program/system constants are not allowed to have an index, but got " + name + "_" + idx)
+      rhs match {
+        case Some(p: Program) if FormulaTools.dualFree(p) => SystemConst(name)
+        case _ => ProgramConst(name)
+      }
   }}).toList
 
   /** Topologically sorts the names in `decls`. */
