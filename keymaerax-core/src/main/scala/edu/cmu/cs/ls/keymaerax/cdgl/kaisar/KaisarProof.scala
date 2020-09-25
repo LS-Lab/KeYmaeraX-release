@@ -60,10 +60,10 @@ object KaisarProof {
     extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)) {
     override def toString: String = {
       val msgMsg = trace.map (tr => {
-        val expectation = KaisarProgramParser.expectedClass(tr.groups, tr.terminals).getOrElse(if (tr.label == "") "<unknown>" else Failure.formatStack(tr.input, tr.stack))
+        val expectation = KaisarProgramParser.expectation(tr)
         // note: if statement may not be strictly necessary, written this way to match fastparse code as closely as possible
         val input = if (tr.label == "") tr.failure.extra.input else tr.input
-        "Found " + Failure.formatTrailing(input, tr.index) + " at position " + tr.failure.extra.input.prettyIndex(tr.index) + "\nExpected " + expectation
+        "Found " + Failure.formatTrailing(input, tr.index) + " at position " + tr.failure.extra.input.prettyIndex(tr.index) + s"(${tr.index})" + "\nExpected " + expectation
       }).getOrElse("")
       s"Parse error: $msgMsg"
     }

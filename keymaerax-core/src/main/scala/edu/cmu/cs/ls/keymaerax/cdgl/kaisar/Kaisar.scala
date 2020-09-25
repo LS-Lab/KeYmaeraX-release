@@ -37,7 +37,7 @@ object Kaisar {
         }
         x.value
       case x: Failure =>
-        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)), location = Some(x.index), source = s)
+        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)), location = Some(x.index), source = s, msg = x.msg)
         println(exn.toString)
         println("\n")
         throw exn
