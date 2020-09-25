@@ -264,18 +264,19 @@ object SharedModels {
       |  !step:(safe()) using predictSafe init initSafe tSol xSol vSol time vel by auto;
       |}*
       |""".stripMargin
-   // @TODO: Probably want top-level file format that can factor out definition of  ODE
+
+  // @TODO: Probably want top-level file format that can factor out definition of  ODE
    val ijrrStaticSafetyDirect: String =
-    """let stopDist(v) = (v^2 / (2*b()));
-      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * T()^2 + T()*v));
+    """let stopDist(v) = (v^2 / (2*b));
+      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
-      |let bounds() <-> A() >= v & b() >= 0 & T() >= 0;
+      |let bounds() <-> A >= v & b >= 0 & T >= 0;
       |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 & norm(drx, dry) = 1);
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
       |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
-      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b()) + ((A()/b()) + 1)*(T()^2*A()/2 + T*vr) + V()*(T() + (vr + A()*T())/b());
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b));
       |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?(assumptions());
@@ -289,7 +290,7 @@ object SharedModels {
       |          t' = 1 & ?(t <= ep & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
-      |         & !vSol:(v = v@body - b()*t);
+      |         & !vSol:(v = v@body - b*t);
       |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
       |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
       |        };
@@ -309,7 +310,7 @@ object SharedModels {
       |        ++
       |        /* or choose a new safe curve */
       |      { a := A();
-      |        w := *; ?(-W()<=w & w<=W());
+      |        w := *; ?(-W<=w & w<=W());
       |        r := *;
       |        xo := *; yo := *;
       |        ?(r!=0 & r*w = v);
@@ -320,7 +321,7 @@ object SharedModels {
       |          t' = 1 & ?(t <= ep & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
-      |         & !vSol:(v = v@body + A()*t);
+      |         & !vSol:(v = v@body + A*t);
       |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
       |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
       |        };

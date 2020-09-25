@@ -69,9 +69,9 @@ object Kaisar {
             le match {case ne: NodeException if ne.node != Triv() => s" while checking statement ${snippetFor(ne.node)}" case _ => ""}
           if (le.location.isDefined) {
             val (line, col) = KaisarProgramParser.prettyIndex(le.location.get, pf)
-            println(s"Error in pass $currentPass at location ($line, $col)$stmtMessage: ")
+            println(s"Error in pass $currentPass at location ($line, $col)$stmtMessage: \n" + le.msg)
           } else {
-            println(s"Error in pass $currentPass$stmtMessage at unknown location")
+            println(s"Error in pass $currentPass$stmtMessage at unknown location$stmtMessage: \n" + le.msg)
           }
           throw le
       }
