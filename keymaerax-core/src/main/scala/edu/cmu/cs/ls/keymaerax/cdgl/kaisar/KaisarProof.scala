@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper, UnificationMatch}
-import fastparse.Parsed.TracedFailure
+import fastparse.Parsed.{Failure, TracedFailure}
 import StandardLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
@@ -36,24 +36,38 @@ object KaisarProof {
   case class LabelRef(label: TimeIdent, args: List[Term] = Nil)
 
 
-  class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (cause) {
+  abstract class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (cause) {
+    def location: Option[Int]
+  }
+
+  class NodeException (override val msg: String = "", override val cause: Throwable = null) extends LocatedException (msg, cause) {
     val node: ASTNode = Triv()
     def location: Option[Int] = node.location
   }
-  case class ProofCheckException(override val msg: String, override val cause: Throwable = null, override val node: ASTNode = Triv()) extends LocatedException (msg, cause) {
+  case class ProofCheckException(override val msg: String, override val cause: Throwable = null, override val node: ASTNode = Triv()) extends NodeException (msg, cause) {
     override def toString: String = msg
   }
 
   // Failures in proof transformation passes (as opposed to proof checking)
   case class TransformationException(override val msg: String, override val node: ASTNode = Triv())
-    extends LocatedException(msg)
+    extends NodeException(msg)
   // Failures in elaboration passes. Elaboration passes validate their inputs, while transformations assume correct input
   case class ElaborationException(override val msg: String, override val node: ASTNode = Triv())
-    extends LocatedException(msg)
+    extends NodeException(msg)
   case class ODEAdmissibilityException(vars: Set[Variable], override val node: ASTNode = Triv())
-    extends LocatedException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
-  case class KaisarParseException(override val msg: String = "", trace: Option[TracedFailure] = None, override val node: ASTNode = Triv())
-    extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get))
+    extends NodeException(s"Differential equation proof must be in SSA form, else variables ($vars) escape scope")
+  case class KaisarParseException(override val msg: String = "", trace: Option[TracedFailure] = None, override val location: Option[Int],  source: String)
+    extends LocatedException (if(trace.isEmpty) "KaisarParseException" else KaisarProgramParser.recoverErrorMessage(trace.get)) {
+    override def toString: String = {
+      val msgMsg = trace.map (tr => {
+        val expectation = KaisarProgramParser.expectedClass(tr.groups, tr.terminals).getOrElse(if (tr.label == "") "<unknown>" else Failure.formatStack(tr.input, tr.stack))
+        // note: if statement may not be strictly necessary, written this way to match fastparse code as closely as possible
+        val input = if (tr.label == "") tr.failure.extra.input else tr.input
+        "Found " + Failure.formatTrailing(input, tr.index) + " at position " + tr.failure.extra.input.prettyIndex(tr.index) + "\nExpected " + expectation
+      }).getOrElse("")
+      s"Parse error: $msgMsg"
+    }
+  }
 
   // Kaisar extends the syntax of expressions with located expressions  f@L.
   // Rather than extend Expression,scala, we implement this as an interpreted function symbol at(f, L()) which
@@ -298,7 +312,7 @@ case class Assert(pat: IdentPat, f: Formula, m: Method) extends Statement
 case class Modify(ids: List[Ident], mods: List[(Variable, Option[Term])]) extends Statement {
   val mod = this
   if(ids.length > 1 && ids.length != mods.length)
-    throw new LocatedException("Modify statement should have one fact name for each assignment or one fact name for the entire block") {
+    throw new NodeException("Modify statement should have one fact name for each assignment or one fact name for the entire block") {
       override val node: ASTNode = mod
     }
 

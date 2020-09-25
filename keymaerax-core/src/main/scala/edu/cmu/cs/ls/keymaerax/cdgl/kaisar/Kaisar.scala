@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse.Parsed.{Failure, Success}
+import fastparse.internal.Util
 
 
 /** Entry-point for Kaisar proof checker, which parses a proof and applies all passes in correct order */
@@ -29,15 +30,15 @@ object Kaisar {
           try {
             val rest = s.drop(x.index)
             parseProof(rest)
-            throw KaisarParseException(msg = msg)
+            throw KaisarParseException(msg = msg, location = Some(x.index), source = s)
           } catch {
-            case e: Throwable => throw KaisarParseException(msg = msg)
+            case e: Throwable => throw KaisarParseException(msg = msg, location = Some(x.index), source = s)
           }
         }
         x.value
       case x: Failure =>
-        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)))
-        println("Parse error: " + exn.toString)
+        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)), location = Some(x.index), source = s)
+        println(exn.toString)
         println("\n")
         throw exn
     }
@@ -64,7 +65,8 @@ object Kaisar {
             val str = s.toString
             if (str.length < MAX_CHAR) str else "..." + str.take(MAX_CHAR)
           }
-          val stmtMessage = if(le.node != Triv()) s" while checking statement ${snippetFor(le.node)}" else ""
+          val stmtMessage =
+            le match {case ne: NodeException if ne.node != Triv() => s" while checking statement ${snippetFor(ne.node)}" case _ => ""}
           if (le.location.isDefined) {
             val (line, col) = KaisarProgramParser.prettyIndex(le.location.get, pf)
             println(s"Error in pass $currentPass at location ($line, $col)$stmtMessage: ")

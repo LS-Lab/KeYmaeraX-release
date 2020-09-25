@@ -425,12 +425,19 @@ object KaisarProgramParser {
   def differentialProgram[_: P]: P[DifferentialProgram] = expression.map(_.asInstanceOf[DifferentialProgram])
   def term[_: P]: P[Term] = expression.map(_.asInstanceOf[Term])
 
-  private def expectedClass(groups: Msgs, terminals: Msgs): String = {
+  def expectedClass(groups: Msgs, terminals: Msgs): Option[String] = {
     val grps = groups.value.map(_.force)
     val trms = terminals.value.map(_.force)
     if (trms.contains("\"print\""))
-      return "proof statement"
-    "<unknown>"
+      Some("proof statement")
+    else if (trms.contains("\"\\\\forall\""))
+      Some("formula")
+    else
+      None
+  }
+
+  def inferredClass(groups: Msgs, terminals: Msgs): String = {
+    expectedClass(groups, terminals).getOrElse("<unknown>")
   }
 
   def recoverErrorMessage(trace: TracedFailure): String = {
@@ -442,15 +449,7 @@ object KaisarProgramParser {
   }
 
   def prettyIndex(index: Int, input: String): (Int, Int) = {
-    var lines = (input:StringOps).lines.toList
-    var colIndex = index
-    val SEPARATOR = if (input.contains("\r\n")) "\r\n" else if (input.contains("\r")) "\r" else "\n"
-    var lineIndex = 0
-    while (lines.nonEmpty && colIndex >= lines.head.length) {
-      lineIndex = lineIndex + 1
-      colIndex = colIndex - (lines.head.length + SEPARATOR.length)
-      lines = lines.tail
-    }
-    (lineIndex, colIndex)
+    val arr = IndexedParserInput(input).prettyIndex(index).split(':')
+    (arr(0).toInt, arr(1).toInt)
   }
 }

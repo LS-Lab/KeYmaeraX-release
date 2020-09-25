@@ -42,7 +42,7 @@ object StandardLibrary {
     (xs, ys, zs) match {
       case (Nil, Nil, Nil) => Nil
       case (x :: xs, y :: ys, z :: zs) => (x, y, z) :: zip3(xs, ys, zs, node)
-      case _ => throw new LocatedException("Mismatched lengths in zip3"){ override val node: ASTNode = node}
+      case _ => throw new NodeException("Mismatched lengths in zip3"){ override val node: ASTNode = node}
     }
   }
 
