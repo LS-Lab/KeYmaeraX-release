@@ -561,7 +561,7 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  @Tactic(longDisplayName = "Auto", revealInternalSteps = true)
+  @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
