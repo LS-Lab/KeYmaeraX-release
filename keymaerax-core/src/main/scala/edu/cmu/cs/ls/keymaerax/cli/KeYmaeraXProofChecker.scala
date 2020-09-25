@@ -292,6 +292,8 @@ object KeYmaeraXProofChecker {
         val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)
 
+        println("Done " + path + "#" + entry.name + " (" + proofStat.status + ")")
+
         proofStat.witness match {
           case Some(proof) =>
             if (entry.kind == "lemma") {
