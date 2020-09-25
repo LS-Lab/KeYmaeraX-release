@@ -200,7 +200,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
               })._1
-              case ((BelleProvable(cp, _), i), provable) => provable(cp, i)
+              case ((BelleProvable(cp, _), i), provable) =>
+                // provables may have expanded or not expanded definitions arbitrarily
+                if (provable.sub(i).subgoals.head == cp.conclusion) provable(cp, i)
+                else try {
+                  val downSubst = UnificationMatch(provable.sub(i).subgoals.head, cp.conclusion).usubst
+                  exhaustiveSubst(provable, downSubst)(cp, i)
+                } catch {
+                  case _: UnificationException =>
+                    val upSubst = UnificationMatch(cp.conclusion, provable.sub(i).subgoals.head).usubst
+                    provable(exhaustiveSubst(cp, upSubst), i)
+                }
             })
 
             //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
