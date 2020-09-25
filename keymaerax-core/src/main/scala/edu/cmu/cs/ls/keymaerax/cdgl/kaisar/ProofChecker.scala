@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper, UnificationMatch}
 import StandardLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
@@ -92,14 +93,14 @@ object ProofChecker {
     var substs: Map[Term, Term] = Map()
     var taboo: Set[Variable] = StaticSemantics(naiveFormula).fv.toSet
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
         case fo@FuncOf(fn: Function, child: Term) if KaisarProof.builtin.contains(fn) && !alreadyGhosted.contains(fo) =>
           val (fresh, eq) = functionGhost(fo, taboo)
           alreadyGhosted = alreadyGhosted.+(fo)
           taboo = taboo.+(fresh)
           ghostEqs = ghostEqs.+(eq)
           substs = substs.+((fo -> fresh))
-          Left(None)
+          Right(fresh)
         case _ => Left(None)
       }
     }, naiveFormula)
@@ -112,7 +113,11 @@ object ProofChecker {
 
   /* Implement rcf (real-closed fields) method */
   private def rcf(assms: Set[Formula], f: Formula): Boolean = {
-    edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
+    try {
+      edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
+    } catch {
+      case ce: ConversionException => throw ProofCheckException(msg = "Bug in Kaisar QE wrapper", cause = ce)
+    }
   }
 
   /* implement heuristic "auto" method, which combines propositional and QE reasoning */
