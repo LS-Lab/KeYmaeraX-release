@@ -115,7 +115,7 @@ case class DeterritorializePass(tt: TimeTable) {
   /** Reindex [[f]] according to [[label]] if it is legal to do so. */
   private def renameAdmissible(kc: Context, label: LabelRef, f: Expression, except: Set[Ident], node: ASTNode): Option[Expression] = {
     tt.get(label.label) match {
-      case None => throw TransformationException(s"Undefined line label: $label", node = node)
+      case None => throw TransformationException(s"Undefined line label: ${label.prettyString}", node = node)
       case Some((labelSnap, labelCon, _labelDef)) =>
         // labelSnap has all SSA variables defined, even initial index of 0 for variables that kc hasn't seen yet.
         // So start defaults at 0
