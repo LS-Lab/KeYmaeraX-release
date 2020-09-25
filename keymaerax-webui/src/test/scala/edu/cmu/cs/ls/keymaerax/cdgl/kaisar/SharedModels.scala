@@ -264,41 +264,38 @@ object SharedModels {
       |  !step:(safe()) using predictSafe init initSafe tSol xSol vSol time vel by auto;
       |}*
       |""".stripMargin
-
-   // @TODO: Probably want definition for ODE
-   // @TODO: Probably want comments
+   // @TODO: Probably want top-level file format that can factor out definition of  ODE
    val ijrrStaticSafetyDirect: String =
-    """let stopDist(v) = (v^2 / (2*b));
-      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
-      |let admissibileSeparation(v) = (stopDist(v) + accelComp(v));
-      |let bounds() <-> A >= v & b >= 0 & T >= 0;
-      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1);
+    """let stopDist(v) = (v^2 / (2*b()));
+      |let accelComp(v) = ((A()/b() + 1) * (A()/2 * T()^2 + T()*v));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let bounds() <-> A() >= v & b() >= 0 & T() >= 0;
+      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 & norm(drx, dry) = 1);
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
       |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
-      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
-      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v);
+      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b()) + ((A()/b()) + 1)*(T()^2*A()/2 + T*vr) + V()*(T() + (vr + A()*T())/b());
+      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?(assumptions());
       |!(loopinv());
-      |      {
-      |      body:
-      |      {
-      |      {
+      |{
+      |  {
+      |    {
       |      { a := -b; t := 0;
-      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
-      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+      |        { x' = v * dx, y' = v * dy, v' = a,
+      |          dx' = -w * dy, dy' = w * dx, w' = a/r,
       |          t' = 1 & ?(t <= ep & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
       |         & !vSol:(v = v@body - b()*t);
       |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
       |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
-      |         };
+      |        };
       |      }
       |        ++
-      |      { ?v = 0; a := 0; w := 0; t := 0;
+      |      { ?(v = 0); a := 0; w := 0; t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |          t' = 1 & ?(t <= ep & v >= 0);
@@ -311,11 +308,11 @@ object SharedModels {
       |      }
       |        ++
       |        /* or choose a new safe curve */
-      |      { a := A;
-      |        w := *; ?-W<=w & w<=W;
+      |      { a := A();
+      |        w := *; ?(-W()<=w & w<=W());
       |        r := *;
       |        xo := *; yo := *;
-      |        ?r!=0 & r*w = v;
+      |        ?(r!=0 & r*w = v);
       |        ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
       |        t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
@@ -326,9 +323,10 @@ object SharedModels {
       |         & !vSol:(v = v@body + A()*t);
       |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
       |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
-      |         };
+      |        };
       |      }
       |    }
+      |  }
       |}*
       |!(goal());
       |""".stripMargin
@@ -336,7 +334,7 @@ object SharedModels {
   val ijrrStaticSafetySimplified: String =
     """let stopDist(v) = (v^2 / (2*b));
       |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
-      |let admissibileSeparation(v) = (stopDist(v) + accelComp(v));
+      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
       |let bounds() <-> A >= v & b >= 0 & T >= 0;
       |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1);
       |let norm(x, y) = (x^2 + y^2)^(1/2);
@@ -344,7 +342,7 @@ object SharedModels {
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
       |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
       |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
-      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v);
+      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?(assumptions());
       |!(loopinv());
