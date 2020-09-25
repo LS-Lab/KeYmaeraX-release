@@ -33,7 +33,9 @@ object KaisarProof {
   type Subscript = Option[Int]
 
   case class LabelDef(label: TimeIdent, args: List[Variable] = Nil)
-  case class LabelRef(label: TimeIdent, args: List[Term] = Nil)
+  case class LabelRef(label: TimeIdent, args: List[Term] = Nil) {
+    def prettyString: String = label + (if (args.isEmpty) "" else "(" + args.mkString(",") + ")")
+  }
 
 
   abstract class LocatedException (val msg: String = "", val cause: Throwable = null) extends Exception (cause) {
@@ -95,7 +97,7 @@ object KaisarProof {
   // Pattern match a located term  f@L
   def getAt(t: Term, node: ASTNode = Triv()): Option[(Term, LabelRef)] = {
     t match {
-      case FuncOf(atFunction, Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
+      case FuncOf(Function("at", _index, _domain, _sort, true), Pair(e, FuncOf(Function(label, _, _, _, _), args))) =>
         Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
@@ -103,7 +105,7 @@ object KaisarProof {
 
   def getAt(t: Formula, node: ASTNode): Option[(Formula, LabelRef)] = {
     t match {
-      case PredicationalOf(atFunction, And(e, PredOf(Function(label, _, _, _, _), args))) =>
+      case PredicationalOf(Function("at", _index, _domain, _sort, true), And(e, PredOf(Function(label, _, _, _, _), args))) =>
         Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }
@@ -393,15 +395,23 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     if (timeVar.isEmpty) None
     else {
       val ode = asODESystem
-      val result = Integrator(xys.toMap, timeVar.get, ode)
-      val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
-      val resultMap = resultAlist.toMap
-      val theTimeVar: Variable =
-        if (result.size < xys.size) {
-          xys.filter({case (x, f) => !resultMap.contains(x)}).head._1
-        } else timeVar.get
-      val (timeX, timeF) = duration match {case Some((x, f)) => (x -> f) case None => (theTimeVar -> theTimeVar)}
-      Some((timeX, timeF) :: resultAlist)
+      try {
+        val result = Integrator(xys.toMap, timeVar.get, ode)
+        val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
+        val resultMap = resultAlist.toMap
+        val theTimeVar: Variable =
+          if (result.size < xys.size) {
+            xys.filter({ case (x, f) => !resultMap.contains(x) }).head._1
+          } else timeVar.get
+        val (timeX, timeF) = duration match {
+          case Some((x, f)) => (x -> f)
+          case None => (theTimeVar -> theTimeVar)
+        }
+        Some((timeX, timeF) :: resultAlist)
+      } catch {
+        // Integrator raises Exception if it can't solve. Unfortunately, it does not raise any more specific type.
+        case _: Exception => None
+      }
     }
   }
 
