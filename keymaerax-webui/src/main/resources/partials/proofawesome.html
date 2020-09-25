@@ -236,12 +236,12 @@
                                        uib-popover-template="fetchRuleHelp('cut')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                       <span>Cut ...</span><code class="pull-right">cut</code></a></li>
+                                       <span><i class="fa fa-scissors"></i> Cut ...</span><code class="pull-right">cut</code></a></li>
                                 <li><a ng-click="doTactic(undefined, 'id')"
                                        uib-popover-template="fetchRuleHelp('id')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>Identity</span><code class="pull-right">id</code></a></li>
+                                    <span><i class="fa fa-asterisk"></i> Identity</span><code class="pull-right">id</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('notR', 'R')"
                                        uib-popover-template="fetchRuleHelp('notR')"
@@ -518,7 +518,7 @@
                                        uib-popover-template="fetchRuleHelp('QE')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                        <span>Real Arithmetic</span><code class="pull-right">QE</code>
+                                        <span><i class="fa fa-calculator"></i> Real Arithmetic</span><code class="pull-right">QE</code>
                                     </a>
                                 </li>
                                 <li ng-if="tool=='mathematica' || tool=='wolframengine' || tool=='wolframscript'"><a ng-click="doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'M' }])"
