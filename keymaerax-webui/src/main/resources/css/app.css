@@ -148,16 +148,18 @@ output {
 
 .k4-tactics-nav-first > li > a {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-first > li > span {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-last > li > a {
-  padding-top: 2px;
+  padding-top: 5px;
   padding-bottom: 5px;
 }
 
