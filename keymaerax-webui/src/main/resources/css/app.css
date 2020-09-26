@@ -84,6 +84,14 @@ output {
   font-size: var(--lsfontsize);
 }
 
+.k4-tactics-navitem-dropdown {
+  display: inline-flex !important;
+}
+
+.k4-tactics-navitem-dropdown > span {
+  padding-right: 0px !important;
+}
+
 .navbar {
   min-height: 30px;
 }
