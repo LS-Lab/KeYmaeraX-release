@@ -1,6 +1,6 @@
 <div class="modal-header">
     <h3 class="modal-title">
-        <span>Counter-Example Search</span>
+        <span>Counterexample Search</span>
         <span class="pull-right"><button class="btn btn-primary" ng-click="cancel()">Ok</button></span>
     </h3>
 
@@ -8,7 +8,7 @@
 <div ng-if="result === 'cex.found'" class="modal-body">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h4 class="panel-title"><i class="fa fa-exclamation-circle"></i> Formula not valid, found a counter-example</h4>
+            <h4 class="panel-title"><i class="fa fa-exclamation-circle"></i> Formula not valid, found a counterexample</h4>
         </div>
         <div class="panel-body">
             <p>
@@ -25,7 +25,7 @@
 
     <div class="panel panel-default" ng-if="cexValues.length > 0">
         <div class="panel-heading">
-            <h4 class="panel-title">Counter-example values</h4>
+            <h4 class="panel-title">Counterexample values</h4>
         </div>
         <div class="panel-body">
             <dl class="dl-horizontal">
@@ -49,22 +49,22 @@
 </div>
 <div ng-if="result === 'cex.none'" class="modal-body">
     <p>
-    No counter-example found. Try proving it to see if it is valid.
+    No counterexample found. Try proving it to see if it is valid.
     Some arithmetic simplifications may help reduce the complexity.
     </p>
     <p>
         If the formula cannot be proved (<code>&#8866; false</code>)
-        and no counter-example can be found, then
+        and no counterexample can be found, then
         sanity check it, e.g., whether you could have divided by zero.
     </p>
 </div>
 <div ng-if="result === 'cex.timeout'" class="modal-body">
-    No counter-example found before search timeout expired.
+    No counterexample found before search timeout expired.
 </div>
 <div ng-if="result === 'cex.nonfo'" class="modal-body">
     <p>
-    No counter-example found, but the conjecture still contains box modalities <code>[a]p</code> or diamond modalities
-        <code>&lt;a&gt;p</code>, which make counter-example search less effective.
+    No counterexample found, but the conjecture still contains box modalities <code>[a]p</code> or diamond modalities
+        <code>&lt;a&gt;p</code>, which make counterexample search less effective.
     </p>
     <p>
     Please use more proof steps on formula
@@ -75,7 +75,7 @@
 </div>
 <div ng-if="result === 'cex.notool'" class="modal-body">
     <p>
-        The current backend tool does not support counter-example search.
+        The current backend tool does not support counterexample search.
     </p>
     <p>
         Please go to <mark>KeYmaera&#160;X &rarr; Preferences</mark> and configure Mathematica as backend tool.
