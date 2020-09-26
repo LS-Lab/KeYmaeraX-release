@@ -89,14 +89,16 @@
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
                         <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
                                 <a class="dropdown-toggle" data-toggle="dropdown">
-                                    <span class="k4-btn-optional-text"
+                                    <span class="fa fa-play">
+                                        <span class="k4-btn-optional-text"
                                           ng-click="agenda.items().length <= 0 || doTactic(undefined, 'master');$event.stopPropagation();"
                                           ng-alt-click="onTacticScript('expandAllDefs;master', false)"
                                           data-intro="<center>Automatic search</center>" data-position="top"
                                           uib-popover-template="fetchRuleHelp('master')"
                                           popover-class="k4-rulemenu-helppopover"
                                           popover-trigger="'mouseenter'" popover-placement="auto right-top"
-                                          popover-popup-delay="1000"><i class="fa fa-play"></i> Auto</span>
+                                          popover-popup-delay="1000"> Auto</span>
+                                    </span>
                                     <i class="fa fa-caret-down fa-lg"></i>
                                 </a>
                                 <ul class="dropdown-menu">
