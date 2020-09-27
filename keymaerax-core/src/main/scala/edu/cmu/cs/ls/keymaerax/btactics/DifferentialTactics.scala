@@ -1604,8 +1604,17 @@ private object DifferentialTactics extends Logging {
       cutR(Equal(lie,k))(1)
     })
 
+    // pos = -1
+    def hideUntil : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+      seq.sub(pos) match {
+        case Some(And(l,Greater(_,_))) => andL(pos) & hideL(-1)
+        case _ => andL(pos) & hideL(-2) & hideUntil(pos)
+      }
+    })
+
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, two), gvz))
+
       pre &
       DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
@@ -1614,9 +1623,12 @@ private object DifferentialTactics extends Logging {
           diffWeakenG(pos) & byUS(dbxRw),
           diffInd('diffInd)(pos) <(
             hideL('Llast) & QE,
-            cohideOnlyL('Llast) & andL(-1) & andL(-1) & hideL(-2) &
-            cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
-            implyRi & implyRi & inspectAndCut <(
+            cohideOnlyL('Llast) & andL(-1) &
+              cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
+              implyRi()(AntePos(1),SuccPos(0)) &
+              hideUntil(-1) &
+            //This implyRi is specific to the shape of the above diffInd, diffCut dG steps
+            implyRi()(AntePos(0),SuccPos(0)) & inspectAndCut <(
               QE,
               byUS(barrierCond2)
             )
