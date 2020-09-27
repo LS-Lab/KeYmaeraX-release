@@ -452,6 +452,10 @@ object AssessmentProver {
               case None => return Right(Messages.INSPECT)
             }
             case a: ArchiveArtifact => a.entries
+            case t: TextArtifact => t.value match {
+              case None => return Right(Messages.BLANK)
+              case Some(t) => ArchiveParser.parse(t, parseTactics=true)
+            }
           }
           if (entries.count(_.kind == "theorem") != 1) return Right("Unexpected archive content: any number of lemmas allowed, but expected exactly 1 ArchiveEntry|Theorem")
           val results = entries.map(e => e -> run(() => prove(Sequent(IndexedSeq(), IndexedSeq(e.model.asInstanceOf[Formula])),
