@@ -33,6 +33,7 @@ object UIIndex {
     find(DerivationInfo(_).inputs.forall( p => p.isInstanceOf[OptionArg]))
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
+  //@todo change return type to List[DerivationInfo]
   def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None,
                  substs: List[SubstitutionPair] = Nil): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
@@ -200,10 +201,10 @@ object UIIndex {
             case (_: Imply, false) => axioms ++ ("implyR" :: alwaysApplicable)
             case (_: Equiv, true) => "equivL" :: alwaysApplicable
             case (_: Equiv, false) => "equivR" :: alwaysApplicable
-            case (_: Forall, true) => "allL" :: alwaysApplicable
+            case (_: Forall, true) => "allL" :: "allLimplicit" :: alwaysApplicable
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
-            case (_: Exists, false) => "existsR" :: alwaysApplicable
+            case (_: Exists, false) => "existsR" :: "existsRimplicit" :: alwaysApplicable
             case (Equal(_: Variable | _: FuncOf, _: Variable | _: FuncOf), true) => "allL2R" :: "allR2L" :: alwaysApplicable
             case (Equal(_: Variable | _: FuncOf, _), true) => "allL2R" :: alwaysApplicable
             case (Equal(_, _: Variable | _: FuncOf), true) => "allR2L" :: alwaysApplicable
