@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.useAt
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -297,6 +298,24 @@ trait SequentCalculus {
     case Some(e) => throw new TacticInapplicableFailure("all instantiate pos only applicable to terms, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
+
+  /** all left implicit / universal monotonicity: instantiate a universal quantifier in the antecedent by something satisfying a characteristic property `q(x)` */
+  @Tactic("∀Li",
+    inputs = "q(x):formula",
+    premises = "Γ, q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
+    conclusion = "Γ, ∀x p(x) |- Δ")
+  def allLimplicit(q: Formula)             : DependentPositionWithAppliedInputTactic =
+    inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
+      //@todo faster implementation uses derived axiom Ax.existsDistElim
+      case Some(Forall(x, p)) => cutL(Forall(x, q))(pos) <(
+        allL(pos),
+        useAt(Ax.allDistElim)('Rlast) & allR('Rlast) & implyR('Rlast)
+      )
+      case Some(e) => throw new TacticInapplicableFailure("allLimplicit only applicable to universal quantifiers on the right, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+    }
+
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
   @Tactic("∃L",
     premises = "p(x), Γ |- Δ",
@@ -322,6 +341,24 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
+  /** exists right implicit / existential monotonicity: instantiate an existential quantifier in the succedent by something satisfying a characteristic property `q(x)` */
+  @Tactic("∃Ri",
+    inputs = "q(x):formula",
+    premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
+    conclusion = "Γ |- ∃x p(x), Δ")
+  def existsRimplicit(q: Formula)             : DependentPositionWithAppliedInputTactic =
+    inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
+        //@todo faster implementation uses derived axiom Ax.existsDistElim
+      case Some(Exists(x, p)) => cutR(Exists(x, q))(pos) <(
+        label(BelleLabels.cutShow),
+        // Implementation 1: implyR(pos) & existsL('Llast) & existsR(pos)
+        // Implementation 2:
+        useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(1)
+      )
+      case Some(e) => throw new TacticInapplicableFailure("existsRimplicit only applicable to existential quantifiers on the right, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+    }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // closing tactics

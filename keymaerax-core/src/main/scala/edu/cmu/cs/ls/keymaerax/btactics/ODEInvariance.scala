@@ -457,11 +457,16 @@ object ODEInvariance {
     DebuggingTactics.debug(f.prettyString,doPrint = debugTactic) & (f match {
       case True => G(1) & close
       case And(l,r) => andL(-1) &
-        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1)<(
+        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1) &
+        Idioms.doIfElse(_.subgoals.size == 2)(<(
         hideL(-1) & boxAnd(1) & andR(1) <(
           DW(1) & G(1) & prop,
           recRankOneTac(r)),
         hideL(-2) & recRankOneTac(l)
+        ),
+        hideL(-1) & boxAnd(1) & andR(1) <(
+          DW(1) & G(1) & prop,
+          recRankOneTac(r))
       )
       case Or(l,r) => orL(-1)<(
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),

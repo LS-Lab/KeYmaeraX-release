@@ -1702,6 +1702,13 @@ class DifferentialTests extends TacticTestBase {
     } shouldBe 'proved
   }
 
+  it should "handle Z3 ghost cuts correctly" in withQE { _ =>
+    val seq = " (-1/3 + x)^2 + 2*(-1/3 + y)^2 < 1/25  ==> y=1,  [{x'=x*(2-x-y), y'=x-y & x >0 & y > 0}] (3/8*x+23/56*x^2-123/56*y+3/14*x*y+29/28*y^2-1<0)".asSequent
+    val pr = proveBy(seq, DifferentialTactics.dgBarrier(2))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
     val seq = "f()>0 , v>0, a>0, b>0, <{x'=c+f()}> x>0, c<0 ==> z=1, a>0, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5, y=1".asSequent
     val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))

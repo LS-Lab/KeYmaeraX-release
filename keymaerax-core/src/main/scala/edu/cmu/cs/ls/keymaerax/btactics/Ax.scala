@@ -519,9 +519,11 @@ object Ax extends Logging {
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
+  /** all dual */
   @Axiom(("∀d", "alld"), conclusion = "__¬∃x ¬P__ ↔ ∀x P", displayLevel = "all",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alld: CoreAxiomInfo = coreAxiom("all dual")
+  /** all eliminate */
   @Axiom(("∀e", "alle"), conclusion = "__∀x P__ → P",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alle: CoreAxiomInfo = coreAxiom("all eliminate")
@@ -1227,7 +1229,7 @@ object Ax extends Logging {
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
 
   /**
-    * {{{Axiom "all distribute".
+    * {{{Axiom "all distribute elim".
     *   (\forall x (P->Q)) -> ((\forall x P)->(\forall x Q))
     * }}}
     */
@@ -1246,6 +1248,21 @@ object Ax extends Logging {
     * @todo follows from "all distribute" and "all vacuous"
     */
 
+  /**
+    * {{{Axiom "exists distribute elim".
+    *   (\forall x (P->Q)) -> ((\exists x P)->(\exists x Q))
+    * }}}
+    */
+  @Axiom(("∃→","exists->"), conclusion = "(∀x (P→Q)) → (__∃x P → ∃x Q__)",
+    key = "1", recursor = "*")
+  lazy val existsDistElim: DerivedAxiomInfo = derivedAxiom("exists distribute elim",
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\exists x_ p_(||))->(\\exists x_ q_(||)))".asFormula)),
+    useExpansionAt(existsDual)(1, 1::0::Nil) &
+      useExpansionAt(existsDual)(1, 1::1::Nil) &
+      useAt(converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(converseImply, PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(allDistElim)
+  )
 
   /**
     * {{{Axiom "[] box".
@@ -2479,7 +2496,7 @@ object Ax extends Logging {
     * }}}
     * Contraposition
     */
-  @Axiom(("→conv","-> conv"))
+  @Axiom(("→conv","-> conv"), key="0", recursor = "*")
   lazy val converseImply: DerivedAxiomInfo = derivedAxiom("-> converse", Sequent(IndexedSeq(), IndexedSeq("(p_() -> q_()) <-> (!q_() -> !p_())".asFormula)), prop)
 
   /**
