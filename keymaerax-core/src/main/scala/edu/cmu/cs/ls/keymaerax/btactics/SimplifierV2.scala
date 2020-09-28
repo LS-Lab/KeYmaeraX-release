@@ -408,10 +408,10 @@ object SimplifierV2 {
   lazy val notT = propProof("!true","false")
   lazy val notF = propProof("!false","true")
 
-  lazy val forallTrue = remember("(\\forall x true)<->true".asFormula, auto, namespace).fact
-  lazy val forallFalse = remember("(\\forall x false)<->false".asFormula, auto, namespace).fact
-  lazy val existsTrue = remember("(\\exists x true)<->true".asFormula, auto, namespace).fact
-  lazy val existsFalse = remember("(\\exists x false)<->false".asFormula, auto, namespace).fact
+  lazy val forallTrue = remember("(\\forall x true)<->true".asFormula, autoClose, namespace).fact
+  lazy val forallFalse = remember("(\\forall x false)<->false".asFormula, autoClose, namespace).fact
+  lazy val existsTrue = remember("(\\exists x true)<->true".asFormula, autoClose, namespace).fact
+  lazy val existsFalse = remember("(\\exists x false)<->false".asFormula, autoClose, namespace).fact
 
 
   //Proves |- f -> t = tt or just t = tt

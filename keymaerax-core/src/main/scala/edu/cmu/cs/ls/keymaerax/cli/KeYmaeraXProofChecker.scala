@@ -274,7 +274,7 @@ object KeYmaeraXProofChecker {
       case Some(tac) => ("user", "user", tac) :: Nil
       case None =>
         if (reqTacticName.isDefined) entry.tactics.filter(_._1 == reqTacticName.get)
-        else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil
+        else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.autoClose) :: Nil
         else entry.tactics
     }
 
@@ -315,7 +315,7 @@ object KeYmaeraXProofChecker {
   }
 
   /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
-    * Default [[TactixLibrary.auto]] if `options` does not contain 'tactic. */
+    * Default [[TactixLibrary.autoClose]] if `options` does not contain 'tactic. */
   private def readTactic(options: OptionMap, defs: Declaration): Option[BelleExpr] = {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>

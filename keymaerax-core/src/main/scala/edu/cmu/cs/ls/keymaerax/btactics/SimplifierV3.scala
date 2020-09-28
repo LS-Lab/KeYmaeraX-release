@@ -1006,10 +1006,10 @@ object SimplifierV3 {
   private lazy val notT = propProof("!true","false")
   private lazy val notF = propProof("!false","true")
 
-  private lazy val forallTrue = remember("(\\forall x_ true)<->true".asFormula, auto, namespace).fact
-  private lazy val forallFalse = remember("(\\forall x_ false)<->false".asFormula, auto, namespace).fact
-  private lazy val existsTrue = remember("(\\exists x_ true)<->true".asFormula, auto, namespace).fact
-  private lazy val existsFalse = remember("(\\exists x_ false)<->false".asFormula, auto, namespace).fact
+  private lazy val forallTrue = remember("(\\forall x_ true)<->true".asFormula, autoClose, namespace).fact
+  private lazy val forallFalse = remember("(\\forall x_ false)<->false".asFormula, autoClose, namespace).fact
+  private lazy val existsTrue = remember("(\\exists x_ true)<->true".asFormula, autoClose, namespace).fact
+  private lazy val existsFalse = remember("(\\exists x_ false)<->false".asFormula, autoClose, namespace).fact
 
   def boolIndex (f:Formula,ctx:context) : List[ProvableSig] ={
     f match {

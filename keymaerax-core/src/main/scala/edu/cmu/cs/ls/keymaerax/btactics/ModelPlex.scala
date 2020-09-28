@@ -254,7 +254,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
         val plantApprox = pl.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
 
-        assert(proveBy(Imply(init,bounds), auto).isProved)
+        assert(proveBy(Imply(init,bounds), autoClose).isProved)
         val preVars = senseVars.map(v => preVar(v) -> v)
 //        assert((StaticSemantics(And(plantApprox,q)).fv -- senseVars).toSet.subsetOf(preVars.map(_._1).toSet),
 //          "Plant approximation only allowed to mention sensed variables and their initial states")

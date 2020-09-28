@@ -35,7 +35,7 @@ import scala.util.Try
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
   *   - [[TactixLibrary.master]] automatic proof search
-  *   - [[TactixLibrary.auto]] automatic proof search if that successfully proves the given property
+  *   - [[TactixLibrary.autoClose]] automatic proof search if that successfully proves the given property
   *   - [[TactixLibrary.normalize]] normalize to sequent normal form
   *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
   *   - [[TactixLibrary.prop]] propositional logic proving
@@ -359,13 +359,15 @@ object TactixLibrary extends HilbertCalculus
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
-    * @see [[auto]] */
+ *
+    * @see [[autoClose]] */
   def master(gen: Generator[GenProduct] = invGenerator,
              keepQEFalse: Boolean = true): BelleExpr = masterX(gen, if (keepQEFalse) None else Some(False))
 
   /**
    * master: master tactic that tries hard to prove whatever it could.
-   * @see [[auto]] */
+ *
+   * @see [[autoClose]] */
   @Tactic(names = "auto", codeName = "master", longDisplayName = "Unfold Automatically")
   def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
     master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
@@ -374,7 +376,7 @@ object TactixLibrary extends HilbertCalculus
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic(longDisplayName = "Prove Automatically")
-  def auto: DependentTactic = anons { (_: ProvableSig) =>
+  def autoClose: DependentTactic = anons { (_: ProvableSig) =>
     master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
@@ -484,7 +486,7 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(auto & done) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(autoClose & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
@@ -497,7 +499,7 @@ object TactixLibrary extends HilbertCalculus
                   logger.warn("ChooseSome: error listing options " + err, err)
                   List[Formula]().iterator
               },
-              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(auto) & done
+              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(autoClose) & done
             )
       }
     case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")

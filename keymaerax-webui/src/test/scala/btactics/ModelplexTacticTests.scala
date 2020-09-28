@@ -69,7 +69,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(Variable("x")::Nil, 'ctrl, None)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
-    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & auto) shouldBe 'proved
+    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe 'proved
 
   }
 
