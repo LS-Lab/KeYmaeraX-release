@@ -362,18 +362,20 @@ object TactixLibrary extends HilbertCalculus
  *
     * @see [[autoClose]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean = true): BelleExpr = masterX(gen, if (keepQEFalse) None else Some(False))
+             keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
-   * master: master tactic that tries hard to prove whatever it could.
+   * auto: tactic that tries hard to prove whatever it could.
  *
    * @see [[autoClose]] */
-  @Tactic(names = "auto", codeName = "master", longDisplayName = "Unfold Automatically")
-  def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
+  @Tactic(longDisplayName = "Unfold Automatically")
+  def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
     master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
   }
+  @Tactic(names="master", codeName="master", longDisplayName = "Unfold Automatically")
+  def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = auto(generator, keepQEFalse)
 
-  /** auto: automatically try hard to prove the current goal if that succeeds.
+  /** autoClose: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic(longDisplayName = "Prove Automatically")
   def autoClose: DependentTactic = anons { (_: ProvableSig) =>

@@ -223,7 +223,7 @@ class PropositionalTests extends TacticTestBase {
     p.subgoals.foreach(_ shouldBe " ==> false".asSequent)
   }
 
-  "Master" should "handle implication in succedent" in withMathematica { _ => succImplication(master(), Some(checkFalse(1))) }
+  "Auto" should "handle implication in succedent" in withMathematica { _ => succImplication(master(), Some(checkFalse(1))) }
   it should "handle disjunction in succedent" in withMathematica { _ => succDisjunction(master(), Some(checkFalse(1))) }
   it should "handle negation in succedent" in withMathematica { _ => succNegation(master(), Some(checkFalse(1))) }
   it should "handle conjunction in antecedent" in withMathematica { _ => anteConjunction(master(), Some(checkFalse(1))) }

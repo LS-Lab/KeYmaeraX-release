@@ -271,7 +271,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "expand master" in withMathematica { _ => withDatabase { db =>
+  it should "expand auto" in withMathematica { _ => withDatabase { db =>
     val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -282,7 +282,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", master())
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
-        parentTactic shouldBe "master"
+        parentTactic shouldBe "auto"
         stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; applyEqualities ; QE"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)

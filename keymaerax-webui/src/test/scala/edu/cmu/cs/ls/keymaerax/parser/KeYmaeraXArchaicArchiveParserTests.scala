@@ -1276,7 +1276,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
 
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" auto End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe
@@ -1287,13 +1287,13 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         |Problem
         |  x>0
         |End.
-        |Tactic "Proof" master End. End.""".stripMargin
+        |Tactic "Proof" auto End. End.""".stripMargin
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator, None)) :: Nil
+    entry.tactics shouldBe ("Proof", "auto", TactixLibrary.auto(TactixLibrary.invGenerator, None)) :: Nil
     entry.info shouldBe empty
   }
 

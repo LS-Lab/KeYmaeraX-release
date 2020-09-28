@@ -91,10 +91,10 @@
                                 <a class="dropdown-toggle" data-toggle="dropdown">
                                     <span class="fa fa-play">
                                         <span class="k4-btn-optional-text"
-                                          ng-click="agenda.items().length <= 0 || doTactic(undefined, 'master');$event.stopPropagation();"
-                                          ng-alt-click="onTacticScript('expandAllDefs;master', false)"
+                                          ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto');$event.stopPropagation();"
+                                          ng-alt-click="agenda.items().length <= 0 || onTacticScript('expandAllDefs;auto', false)"
                                           data-intro="<center>Automatic search</center>" data-position="top"
-                                          uib-popover-template="fetchRuleHelp('master')"
+                                          uib-popover-template="fetchRuleHelp('auto')"
                                           popover-class="k4-rulemenu-helppopover"
                                           popover-trigger="'mouseenter'" popover-placement="auto right-top"
                                           popover-popup-delay="1000"> Auto</span>
@@ -103,8 +103,8 @@
                                 </a>
                                 <ul class="dropdown-menu">
                                     <li class="dropdown-item" ng-class="{'disabled': agenda.items().length <= 0 }">
-                                        <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'master')"
-                                           uib-popover-template="fetchRuleHelp('master')"
+                                        <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto')"
+                                           uib-popover-template="fetchRuleHelp('auto')"
                                            popover-class="k4-rulemenu-helppopover"
                                            popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
