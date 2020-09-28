@@ -459,7 +459,12 @@ object AssessmentProver {
             case a: ArchiveArtifact => a.entries
             case t: TextArtifact => t.value match {
               case None => return Right(Messages.BLANK)
-              case Some(t) => ArchiveParser.parse(t, parseTactics=true)
+              case Some(t) =>
+                try {
+                  ArchiveParser.parse(t, parseTactics = true)
+                } catch {
+                  case ex: ParseException => return Right(ex.getMessage)
+                }
             }
           }
           if (entries.count(_.kind == "theorem") != 1) return Right("Unexpected archive content: any number of lemmas allowed, but expected exactly 1 ArchiveEntry|Theorem")
