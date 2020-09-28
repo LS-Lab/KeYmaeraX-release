@@ -121,8 +121,8 @@ object UIIndex {
           }
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
-              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
-              else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
+              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dIRule" ::  "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
+              else ("solve" :: "dC" :: "dIRule" ::  "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
             }
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>

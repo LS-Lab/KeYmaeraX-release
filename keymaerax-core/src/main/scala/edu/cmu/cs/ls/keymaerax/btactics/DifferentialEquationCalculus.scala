@@ -154,6 +154,16 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DI]]
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
+  @Tactic(longDisplayName="Differential Invariant Auto-Close",
+    premises="*",
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
+  @Tactic(longDisplayName="Differential Invariant",
+    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
