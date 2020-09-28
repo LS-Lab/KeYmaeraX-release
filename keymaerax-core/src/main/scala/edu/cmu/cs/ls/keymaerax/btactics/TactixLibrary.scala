@@ -269,7 +269,9 @@ object TactixLibrary extends HilbertCalculus
 
   /** Automated propositional reasoning, only keeps result if proved. */
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
-  val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
+  val propClose: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  val propAuto: BelleExpr = propClose
 
   /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.

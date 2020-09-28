@@ -119,9 +119,9 @@
                                 </ul>
                         </li>
                         <li class="nav-item" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
-                            <a ng-click="agenda.items().length <= 0 || onTacticScript('propAuto',false)"
+                            <a ng-click="agenda.items().length <= 0 || onTacticScript('propClose',false)"
                                data-intro="<center>Propositional proof</center>" data-position="top"
-                               uib-popover-template="fetchRuleHelp('propAuto')"
+                               uib-popover-template="fetchRuleHelp('propClose')"
                                popover-class="k4-rulemenu-helppopover"
                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
