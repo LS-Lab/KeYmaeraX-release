@@ -62,7 +62,10 @@ private object ToolTactics {
   })
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETacticTool): BelleExpr = Idioms.NamedTactic("QE", {
+  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
+    if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
+      seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
+
     val doRcf = rcf(qeTool)
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
@@ -103,7 +106,7 @@ private object ToolTactics {
       if (s.succ.head == False) label(BelleLabels.QECEX)
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
     )
-  })
+  }
 
   /** @see[[TactixLibrary.QE]] */
   def timeoutQE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
