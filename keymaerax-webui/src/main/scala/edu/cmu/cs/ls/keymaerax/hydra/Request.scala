@@ -592,12 +592,12 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(new WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
+          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(new MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
+          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
       }
       ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
@@ -706,17 +706,16 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       ToolProvider.shutdown()
       val config = ToolConfiguration.config(tool)
       try {
-        val provider: Option[ToolProvider] = tool match {
+        val (provider: Option[ToolProvider], saveToConfig: Boolean) = tool match {
           case "mathematica" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
               if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-                Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
-              } else None
+                (Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil)), true)
+              } else (None, false)
             } else {
-              ToolProvider.setProvider(Z3ToolProvider())
-              None
+              (Some(Z3ToolProvider()), false)
             }
           case "wolframengine" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
@@ -724,19 +723,18 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
               if (Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-                Some(new MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
-              } else None
+                (Some(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil)), true)
+              } else (None, false)
             } else {
-              ToolProvider.setProvider(Z3ToolProvider())
-              None
+              (Some(Z3ToolProvider()), false)
             }
-          case "wolframscript" => Some(MultiToolProvider(new WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil))
-          case "z3" => Some(Z3ToolProvider())
-          case _ => ToolProvider.setProvider(new NoneToolProvider); None
+          case "wolframscript" => (Some(MultiToolProvider(WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil)), true)
+          case "z3" => (Some(Z3ToolProvider()), true)
+          case _ => (Some(new NoneToolProvider), false)
         }
         provider match {
           case Some(p) =>
-            Configuration.set(Configuration.Keys.QE_TOOL, tool)
+            if (saveToConfig) Configuration.set(Configuration.Keys.QE_TOOL, tool)
             ToolProvider.setProvider(p)
           case _ => // nothing to do
         }
