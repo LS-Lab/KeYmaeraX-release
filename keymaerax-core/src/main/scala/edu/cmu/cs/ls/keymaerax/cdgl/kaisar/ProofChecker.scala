@@ -17,6 +17,9 @@ import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
+  // If true, print more debug info while doing arithmetic proofs
+  val DEBUG_ARITH = false
+
   /** @return all formulas selected by a selector */
   private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
@@ -88,35 +91,67 @@ object ProofChecker {
   // aren't constructively QE'able
   private def interpretFunctions(assms: Set[Formula], f: Formula): (Set[Formula], Formula) = {
     val naiveFormula = sequentFml(assms, f)
-    var alreadyGhosted: Set[Term] = Set()
+    var alreadyGhosted: Map[Term, Variable] = Map()
     var ghostEqs: Set[Formula] = Set()
     var substs: Map[Term, Term] = Map()
     var taboo: Set[Variable] = StaticSemantics(naiveFormula).fv.toSet
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+    // @TODO: Find why fourth QE call is not adequated substituted
+    // Note: This code would be made cleaner if we had a postorder traversal version of replacesFree
+    def allSubsts(f: Term): Option[Term] = {
+      f match {
+        case fo: FuncOf =>
+          substs.get(f) match {
+            case Some(res) => Some(res)
+            case None =>
+              val argSub = SubstitutionHelper.replacesFree(fo.child)(allSubsts)
+              val foSub = FuncOf(fo.func, argSub)
+              substs.get(foSub)
+          }
+        case _ => None
+      }
+    }
+    def applySubsts(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(t => allSubsts(t))
+    val _ = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case fo@FuncOf(fn: Function, child: Term) if KaisarProof.builtin.contains(fn) && !alreadyGhosted.contains(fo) =>
-          val (fresh, eq) = functionGhost(fo, taboo)
-          alreadyGhosted = alreadyGhosted.+(fo)
-          taboo = taboo.+(fresh)
-          ghostEqs = ghostEqs.+(eq)
-          substs = substs.+((fo -> fresh))
-          Right(fresh)
+        // If function is seen twice, reuse old ghost.
+        case fo@FuncOf(fn: Function, child: Term) if KaisarProof.builtin.contains(fn)  =>
+          if (alreadyGhosted.contains(fo))
+            Right(alreadyGhosted(fo))
+          else {
+            // If this is a new function application, recursively resolve function symbols so we don't accidentally
+            // have function symbols in the goal we hand to mathematica.
+            val foApp = SubstitutionHelper.replacesFree(fo)(allSubsts) match {
+              case fo: FuncOf => fo
+              case _ => fo
+            }
+            val (fresh, eq) = functionGhost(foApp, taboo)
+            alreadyGhosted = alreadyGhosted.+(fo -> fresh)
+            taboo = taboo.+(fresh)
+            ghostEqs = ghostEqs.+(eq)
+            // remember both unexpanded and expanded symbol for completeness.
+            // @TODO: this duplication is redundant with allSubst checking of expanded function.
+            substs = substs.+((fo -> fresh)).+((foApp -> fresh))
+            Right(fresh)
+          }
         case _ => Left(None)
       }
-    }, naiveFormula)
-    def applySubsts(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)(t => substs.get(t))
-    val fullAssms = ghostEqs ++ assms.map(applySubsts)
+      }, naiveFormula)
+    val mapped = assms.map(applySubsts)
+    val fullAssms = ghostEqs ++ mapped
     val fullF = applySubsts(f)
     (fullAssms, fullF)
   }
 
-
   /* Implement rcf (real-closed fields) method */
   private def rcf(assms: Set[Formula], f: Formula): Boolean = {
     try {
-      edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
+      val isValid = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
+      if (DEBUG_ARITH)
+        println(s"QE proof ${if(isValid) "succeeded" else "failed"} on subgoal $assms |- $f")
+      isValid
     } catch {
-      case ce: ConversionException => throw ProofCheckException(msg = "Bug in Kaisar QE wrapper", cause = ce)
+      case ce: ConversionException =>
+        throw ProofCheckException(msg = "Bug in Kaisar QE wrapper", cause = ce)
     }
   }
 
