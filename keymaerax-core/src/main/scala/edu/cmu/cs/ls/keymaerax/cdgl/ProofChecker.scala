@@ -36,14 +36,22 @@ case class ProofException(msg: String, context: Context=Context.empty) extends E
   * @see [[ProofChecker.apply]]
   */
 object ProofChecker {
+  // Note: we will likely want some normalization for formula and term derivatives here, so leaving the code as is until then.
+  private def standardizeFormula(fml: Formula): Formula =  fml
+  private def standardizeTerm(f: Term): Term =  f
+
   /** @see  [[kaisar.ProofChecker]]
-   * @return compute differential of formula [[p]] */
-  def deriveFormula(p: Formula, map: Map[Variable, Term]): Formula = {
+    * @return compute differential of formula [[p]] */
+  def deriveFormula(p: Formula, map: Map[Variable, Term]): Formula = { formulaDerivative(standardizeFormula(p),map) }
+  /** @return compute differential of term [[f]] */
+  def deriveTerm(f: Term, map: Map[Variable, Term]): Term = { termDerivative(standardizeTerm(f),map) }
+
+  def formulaDerivative(p: Formula, map: Map[Variable, Term]): Formula = {
     p match {
-      case And(p, q) => And(deriveFormula(p, map), deriveFormula(q, map))
-      case Or(p, q) => And(deriveFormula(p, map), deriveFormula(q, map))
-      case Exists(List(x), p) => Forall(List(x), deriveFormula(p, map))
-      case Forall(List(x), p) => Forall(List(x), deriveFormula(p, map))
+      case And(p, q) => And(formulaDerivative(p, map), formulaDerivative(q, map))
+      case Or(p, q) => And(formulaDerivative(p, map), formulaDerivative(q, map))
+      case Exists(List(x), p) => Forall(List(x), formulaDerivative(p, map))
+      case Forall(List(x), p) => Forall(List(x), formulaDerivative(p, map))
       case Equal(f, g) => Equal(deriveTerm(f, map), deriveTerm(g, map))
       case NotEqual(f, g) => Equal(deriveTerm(f, map), deriveTerm(g, map))
       case Less(f, g) => LessEqual(deriveTerm(f, map), deriveTerm(g, map))
@@ -60,8 +68,7 @@ object ProofChecker {
     deriveFormula(p, map)
   }
 
-    /** @return compute differential of term [[f]] */
-  private def deriveTerm(e: Term, map: Map[Variable, Term]): Term = {
+  private def termDerivative(e: Term, map: Map[Variable, Term]): Term = {
     e match {
       case _ : Number => Number(0)
       case x : BaseVariable =>
@@ -70,18 +77,25 @@ object ProofChecker {
           case None => Number(0)
         }
       case dx : DifferentialSymbol => throw ProofException(s"Double differential ($dx)' not supported")
-      case Plus(f, g) => Plus(deriveTerm(f, map), deriveTerm(g, map))
-      case Times(f, g) => Plus(Times(deriveTerm(f, map), g), Times(f, deriveTerm(g, map)))
-      case Divide(f, g) => Divide(Minus(Times(deriveTerm(f, map), g), Times(f, deriveTerm(g, map))), Power(g, Number(2)))
+      case Plus(f, g) => Plus(termDerivative(f, map), termDerivative(g, map))
+      case Times(f, g) => Plus(Times(termDerivative(f, map), g), Times(f, termDerivative(g, map)))
+      case Divide(f, g) => Divide(Minus(Times(termDerivative(f, map), g), Times(f, termDerivative(g, map))), Power(g, Number(2)))
       case Power(f, n: Number) =>
         if (n.value == 0)
           throw ProofException(s"Cannot derive $f^0")
         else
-          Times(Times(n, Power(f, Number(n.value-1))), deriveTerm(f, map))
-      case _ : Power => throw ProofException("Must simplify power to f^n before deriving")
-      case Neg(f) => Neg(deriveTerm(f, map))
-      case Minus(f, g) => Minus(deriveTerm(f, map), deriveTerm(g, map))
-      case Pair(f, g) => Pair(deriveTerm(f, map), deriveTerm(g, map))
+          Times(Times(n, Power(f, Number(n.value-1))), termDerivative(f, map))
+      case Power(f, Divide(n: Number, d: Number)) =>
+        if (n.value == 0)
+          throw ProofException(s"Cannot derive $f^0")
+        else if (d.value == 0)
+          throw ProofException(s"Division by zero when deriving $e")
+        else
+          Times(Times(Divide(n, d), Power(f, Divide(Number(n.value-d.value), d))), termDerivative(f, map))
+      case _ : Power => throw ProofException("Must simplify power to f^n or f^(n/d) before deriving")
+      case Neg(f) => Neg(termDerivative(f, map))
+      case Minus(f, g) => Minus(termDerivative(f, map), termDerivative(g, map))
+      case Pair(f, g) => Pair(termDerivative(f, map), termDerivative(g, map))
       case p => throw ProofException(s"Derivative of $p not supported")
     }
   }
@@ -118,9 +132,12 @@ object ProofChecker {
     val fact = t.qe(closure).fact
     val conclusion = fact.conclusion
     val isFormula = conclusion.ante.isEmpty && conclusion.succ.length == 1
+    val conjPre = isConjunctive(pre)
+    val conjPost = isConjunctive(post)
+    val isProved = fact.isProved
     fact.conclusion.succ.headOption match {
       // If formula is conjunctive, then classical and constructive truth agree
-      case Some(Equiv(_, True)) => isFormula && isConjunctive(pre) && isConjunctive(post) && fact.isProved
+      case Some(Equiv(_, True)) => isFormula && conjPre && conjPost && isProved
       case proved => false
     }
   }

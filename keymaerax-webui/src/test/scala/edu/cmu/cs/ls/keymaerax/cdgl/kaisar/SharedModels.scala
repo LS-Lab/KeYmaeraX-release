@@ -265,46 +265,55 @@ object SharedModels {
       |}*
       |""".stripMargin
 
-  // @TODO: Probably want top-level file format that can factor out definition of  ODE
+  // @TODO: Probably want top-level file format that can factor out definition of  ODE, declare rigids, detect wrong or undefined rigid names
+  // @TODO: Need to use elaborated function right-hand-sides when resolving default selector lookups. Probably have to update structures to keep original and elab
+  // @TODO: Greatly restrict elaborate pass to avoid silly ghosts and avoid resolving default selector too early
+  // @TODO: Optimize loop checking case to fail early if loop body doesn't assert or note inductive statement as final step
+  // @TODO: ODE proof checking should include past cuts by default
+  // @TODO: Elaboration of abs, min, max should use intuitive auto-generated names, recover high-level messages if possible
+  // @TODO: Double-check abs, min, max elaboration to avoid needless branching
+  // @TODO: This is also a great time to rewrite the context query interface for great good
+  // @TODO: Use new contexts for all-around smart QE, which substitutes variables wherever possible (may need dependency analysis)
+  //   and which hides old irrelevant max, min, abs to reduce branching factor.
+
    val ijrrStaticSafetyDirect: String =
     """let stopDist(v) = (v^2 / (2*b));
       |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
-      |let bounds() <-> A >= v & b >= 0 & T >= 0;
+      |let bounds() <-> A >= 0 & b > 0 & T > 0;
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
-      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 & norm(drx, dry) = 1);
+      |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 0 & norm(dx, dy) = 1);
+      |let assumptions() <-> (bounds() & initialState());
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
-      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
-      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b));
-      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v));
+      |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & infdist(x, y, xo, yo) >= stopDist(v));
       |let goal() <-> dist(x, y, xo, yo) > 0;
-      |?(assumptions());
-      |!(loopinv());
+      |?assump:(assumptions());
+      |!(loopinv()) using assump by auto;
       |{body:
       |  {
       |    {
       |      { a := -b; t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |          t' = 1 & ?(t <= ep & v >= 0);
+      |          t' = 1 & ?(t <= T & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
       |         & !vSol:(v = v@body - b*t);
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
-      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign ... by induction;
+      |         & !yBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign ... by induction;
       |        };
       |      }
       |        ++
       |      { ?(v = 0); a := 0; w := 0; t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?(t <= ep & v >= 0);
+      |          t' = 1 & ?(t <= T & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
       |         & !vSol:(v = v@body);
-      |         & !xSol:(x = x@body);
-      |         & !ySol:(y = y@body);
+      |         & !xSol:(x = x@body) using vSol dir tSign ... by induction;
+      |         & !ySol:(y = y@body) using vSol dir tSign ... by induction;
       |         };
       |      }
       |        ++
@@ -318,16 +327,17 @@ object SharedModels {
       |        t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?(t <= ep & v >= 0);
+      |          t' = 1 & ?(t <= T & v >= 0);
       |         & !tSign:(t >= 0);
       |         & !dir:(norm(dx, dy) = 1);
       |         & !vSol:(v = v@body + A*t);
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
-      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign ... by induction;
+      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign ... by induction;
       |        };
       |      }
       |    }
       |  }
+      |  !(loopinv()) using assump by auto;
       |}*
       |!(goal());
       |""".stripMargin
