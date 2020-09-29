@@ -58,9 +58,19 @@ Windows, 64bit, Mathematica 10.4+
 Building
 ========
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, install the right software and run the following to build `keymaerax.jar`:
+In a nutshell, install
+
+* Java 11
+* SBT 0.13.17
+* Scala 2.12.8 
+
+and run the following to build `keymaerax.jar`:
 
     sbt clean assembly
+
+or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
+
+    sbt "project core" clean assembly
 
 [ScalaDoc API documentation for KeYmaera X](http://keymaeraX.org/scaladoc) can be generated locally with:
 
