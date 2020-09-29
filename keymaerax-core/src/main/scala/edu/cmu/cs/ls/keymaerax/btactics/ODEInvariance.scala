@@ -352,7 +352,7 @@ object ODEInvariance {
           //G |- P
           implyR(pos) & tac21 & ?(id) & timeoutQE & done
           ,
-          cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          cohideR(pos) & composeb(1) & dW(1) & assignb(1) &
           implyR(1) &
           //Cut P*
           cutR(pf)(1) <(
@@ -1533,7 +1533,7 @@ object ODEInvariance {
       starter & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
         useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
         implyR(pos) & r1 & ?(id) & timeoutQE & done, //common case?
-        cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+        cohideR(pos) & composeb(1) & dW(1) & assignb(1) &
           implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
           & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
       )
@@ -1745,7 +1745,7 @@ object ODEInvariance {
     val finish =
       if (solveEnd)
         ?(diffWeakenPlus('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-          implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+          andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
           SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
           timeoutQE & done)

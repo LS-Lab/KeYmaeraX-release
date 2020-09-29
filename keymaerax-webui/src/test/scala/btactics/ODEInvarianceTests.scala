@@ -203,7 +203,7 @@ class ODEInvarianceTests extends TacticTestBase {
   //  }
 
   //TODO: Z3 gives slightly different but correct (unsimplified) results for next 3 test cases
-  "p*>=0" should "compute p*>0 and p*=0" in withMathematica { qeTool =>
+  "p*>=0" should "compute p*>0 and p*=0" in withMathematica { _ =>
     val odeSys = "{x'=x^2+1, y'=2*x+y, z'=x+y+z & x=5}".asProgram.asInstanceOf[ODESystem]
     val poly = "x+y+z".asTerm
     val (pgt,(r,cof,gs)) = pStarGeq(odeSys,poly)
@@ -211,7 +211,7 @@ class ODEInvarianceTests extends TacticTestBase {
     r shouldBe 2
   }
 
-  "f*>=0" should "compute f*" in withMathematica { qeTool =>
+  "f*>=0" should "compute f*" in withMathematica { _ =>
     val odeSys = "{x'=x^2+1, y'=2*x+y, z'=x+y+z & x=5}".asProgram.asInstanceOf[ODESystem]
     val fml = "y>=0 & x-z>=0|x+y*z>0 & x>=0 &x+y+z = 0".asFormula
     val fs = fStar(odeSys,fml)
@@ -219,7 +219,7 @@ class ODEInvarianceTests extends TacticTestBase {
     fs._1 shouldBe "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&(-31+z=0&36+y=0)&-5+x=0".asFormula
   }
 
-  "sAIc" should "take a local progress step" in withMathematica { qeTool =>
+  "sAIc" should "take a local progress step" in withMathematica { _ =>
     val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
     println(pr)
@@ -230,7 +230,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals(1) shouldBe "x>=0, x=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&1+x>=0}>t_!=0".asSequent
   }
 
-  it should "take a local progress step with Dconstify" in withMathematica { qeTool =>
+  it should "take a local progress step with Dconstify" in withMathematica { _ =>
     val seq = "x>=0, a=1, b=1 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, <{t_'=1,x'=a&x-a*b>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
     println(pr)
@@ -241,14 +241,14 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals(1) shouldBe "x>=0, a=1, b=1, x-a*b=0 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, <{t_'=1,x'=a&a>=0}>t_!=0".asSequent
   }
 
-  it should "package with real induction" in withQE { qeTool =>
+  it should "package with real induction" in withQE { _ =>
     val fml = "-x<=0 & -y<=0 | x+y<=1 | y>=0 -> [{z'=2,x'=x+1,y'=1&x^2+y^2<1}] (-x<=0 & -y<=0 | x+y<=1 | y>=0)".asFormula
     val pr = proveBy(fml, implyR(1) & sAIclosed(1))
     println(pr)
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (1)" in withQE { qeTool =>
+  it should "try some invariants (1)" in withQE { _ =>
     val fml = "x^2+y^2>=1 -> [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asFormula
     val pr = proveBy(fml, implyR(1) &
       dC("(2*(x^2+y^2)-1>=0)".asFormula)(1) <(
@@ -260,7 +260,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (1) in position" in withQE { qeTool =>
+  it should "try some invariants (1) in position" in withQE { _ =>
     val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
     val pr = proveBy(seq,
       dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) <(
@@ -272,7 +272,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (2)" in withQE { qeTool =>
+  it should "try some invariants (2)" in withQE { _ =>
     val fml = "x=-1 & y=-1 & z=a -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}](!(x>0 | y>0)& z=a)".asFormula
     val pr = proveBy(fml, implyR(1) &
       dC("((x<=0&x^2<=2*x*y)&y<=0)".asFormula)(1) <(
@@ -284,7 +284,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (3)" in withQE { qeTool =>
+  it should "try some invariants (3)" in withQE { _ =>
     //The disjunct x=0 should become "trivial" in the progress proof
     val fml = "x <=0 | x=0 -> [{x'=x-1}] (x <=0 | x=0)".asFormula
     val pr = proveBy(fml, implyR(1) &
@@ -295,7 +295,7 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   // TODO: fails on Z3 algebra tool step (bigint to long)
-  it should "prove van der pol" in withMathematica { qeTool =>
+  it should "prove van der pol" in withMathematica { _ =>
     // the higher Lie derivatives are very nasty
     val fml = "1.25<=x&x<=1.55 & 2.35<=y&y<=2.45 -> [{x'=y, y'=y-x-x^2*y, t'=1 & 0<=t&t<=7}]!(y>=2.75)".asFormula
     //The actual invariant:
@@ -309,7 +309,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove duffing" in withMathematica { qeTool =>
+  it should "prove duffing" in withMathematica { _ =>
     val fml = "(-((2*x)/5) + y)^2 <= 1/200 & x^2 <= 1/16 -> [{x'=y, y'=x - x^3 - y}] -(3/2) + x^2 + 4*y^2 <= 0".asFormula
     //The actual invariant:
     val pr = proveBy(fml, implyR(1) &
@@ -324,7 +324,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove FM'18 constructed example" in withMathematica { qeTool =>
+  it should "prove FM'18 constructed example" in withMathematica { _ =>
     val fml = "x1<=0 & x2<=0 & x3 <=0 -> [{x1'=2*x1+x2+2*x3-x1^2+x1*x3-x3^2, x2'=-2+x1-x2-x2^2, x3'=-2-x2-x3+x1^2-x1*x3}]!(x1+x2+x3>=1)".asFormula
     val pr = proveBy(fml, implyR(1) &
       //B1,B2,B3 <=0
@@ -337,7 +337,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove Strict(3) example" in withMathematica { qeTool =>
+  it should "prove Strict(3) example" in withMathematica { _ =>
     //The invariant has a special point which requires the 3rd Lie derivative
     val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
     val pr = proveBy(fml, implyR(1) &
@@ -369,7 +369,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "ODEInvariance" should "compute (bounded) p*>0" in withMathematica { qeTool =>
+  "ODEInvariance" should "compute (bounded) p*>0" in withMathematica { _ =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
     val poly = "x+y*z".asTerm
     val p0 = pStar(ode,poly,Some(0))
@@ -390,7 +390,7 @@ class ODEInvarianceTests extends TacticTestBase {
     p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
   }
 
-  it should "compute bounded P*" in withMathematica { qeTool =>
+  it should "compute bounded P*" in withMathematica { _ =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
     val poly = "max(min(z,min(x,y)),min(x,y))".asTerm
     val p0 = pStarHom(ode,poly,0)
@@ -406,7 +406,7 @@ class ODEInvarianceTests extends TacticTestBase {
     println(p0,p1,p2,p3)
   }
 
-  it should "aggressively try rank 1" in withMathematica { qeTool =>
+  it should "aggressively try rank 1" in withMathematica { _ =>
     val ode = "{x'=x*(x-2*y), y'=-(2*x-y)*y}".asDifferentialProgram
     val fml = "((x^2-2*x*y<=0 & x<=0)&y<=0)".asFormula
     val res = rankOneFml(ode,True,fml)
@@ -415,7 +415,7 @@ class ODEInvarianceTests extends TacticTestBase {
     res shouldBe Some("x<=0&y<=0&x^2-2*x*y<=0&true".asFormula)
   }
 
-  it should "try rank 1 invariants (1)" in withQE { qeTool =>
+  it should "try rank 1 invariants (1)" in withQE { _ =>
     val seq = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     val pr = proveBy(seq, implyR(1) &
       dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) <(
@@ -427,7 +427,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try rank 1 invariants (1) in position" in withQE { qeTool =>
+  it should "try rank 1 invariants (1) in position" in withQE { _ =>
     val seq = "x=-1 & y=-1 ==> a>0 , [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asSequent
     val pr = proveBy(seq,
       dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(2) <(
@@ -439,7 +439,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try rank 1 invariants (1) without reorder" in withQE { qeTool =>
+  it should "try rank 1 invariants (1) without reorder" in withQE { _ =>
     val seq = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     //Tactic fails when given wrong ordering of conjuncts
     val pr = proveBy(seq, implyR(1) &
@@ -452,7 +452,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try a (very) difficult invariant" in withQE { qeTool =>
+  it should "try a (very) difficult invariant" in withQE { _ =>
     val fml = "1/100 - x^2 - y^2 >= 0 -> [{x'=-2*x+x^2+y, y'=x-2*y+y^2 & x!=0 | y!=0}]!(x^2+y^2 >= 1/4)".asFormula
     //Original question did not have x!=0 | y!=0 constraint
     //Pegasus invariant: ((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0
@@ -477,7 +477,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
-  it should "prove with consts (sAIRankOne)" in withQE { qeTool =>
+  it should "prove with consts (sAIRankOne)" in withQE { _ =>
     val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
     //This worked out because the tactic reorders y>=0 before x>=0
     val pr = proveBy(fml, implyR(1) &
@@ -487,14 +487,14 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove with consts (auto andL)" in withQE { qeTool =>
+  it should "prove with consts (auto andL)" in withQE { _ =>
     val fml = "x>=0 & y>0 -> [{x'=x+y}](x>=0 & y>0)".asFormula
     val pr = proveBy(fml, implyR(1) & odeInvariant(1))
     println(pr)
     pr shouldBe 'proved
   }
 
-  it should "ignore bad dbx cofactors" in withQE { qeTool =>
+  it should "ignore bad dbx cofactors" in withQE { _ =>
     val fml = "x>=5 & y>=0 -> [{x'=x^2+y,y'=x}](x>=1 & y>=0)".asFormula
     // This won't work because neither conjunct is rank 1
     // In addition, Mathematica returns a rational function answer for the polynomial division
@@ -505,7 +505,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "false and true invariant" in withQE { qeTool =>
+  it should "false and true invariant" in withQE { _ =>
     val fmlF = "false -> [{x'=x^2+y,y'=x}]false".asFormula
     val fmlT = "true -> [{x'=x^2+y,y'=x}]true".asFormula
     val prF = proveBy(fmlF, implyR(1) & odeInvariant(1))
@@ -521,7 +521,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe'proved
   }
 
-  it should "prove wien bridge with barrier certificate" in withMathematica { qeTool =>
+  it should "prove wien bridge with barrier certificate" in withMathematica { _ =>
     val fml = "x^2<=1/2&y^2<=1/3->[{x'=-x-1117*y/500+439*y^3/200-333*y^5/500,y'=x+617*y/500-439*y^3/200+333*y^5/500&true}]x-4*y < 8".asFormula
     val pr = proveBy(fml, implyR(1) &
       dC("0.29974*x^4 + 0.88095*x^3*y + 1.2781*x^2*y^2 + 1.0779*x*y^3 + \n 0.36289*y^4 - 0.064049*x^3 - 0.31889*x^2*y - 0.55338*x*y^2 - \n 0.33535*y^3 + 0.63612*x^2 + 0.44252*x*y + 1.4492*y^2 + 0.28572*x - \n 0.051594*y - 2.1067 <= 0 & x-4*y <= 8".asFormula)(1) <(
@@ -548,7 +548,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "SAI" should "compute p*>=0" in withMathematica { qeTool =>
+  "SAI" should "compute p*>=0" in withMathematica { _ =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
     val poly = "x+y*z".asTerm
     val p0 = pStar(ode,poly,Some(0))
@@ -569,7 +569,7 @@ class ODEInvarianceTests extends TacticTestBase {
     p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
   }
 
-  "nilpotent solver" should "fail fast on various problematic examples" in withMathematica { qeTool =>
+  "nilpotent solver" should "fail fast on various problematic examples" in withMathematica { _ =>
 
     //Non-linear ODE
     val pr = proveBy("[{x'=y,y'=x^2}] x+v+a+j=1".asFormula,
@@ -585,7 +585,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr2 should not be 'proved
   }
 
-  it should "solve ODE with correct positioning" in withQE { qeTool =>
+  it should "solve ODE with correct positioning" in withQE { _ =>
     def time[T](block: => T): T = {
       val start = System.currentTimeMillis
       val res = block
@@ -612,7 +612,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr3 shouldBe 'proved
   }
 
-  it should "solve ODE quickly (1)" in withQE { qeTool =>
+  it should "solve ODE quickly (1)" in withQE { _ =>
     def time[T](block: => T): T = {
       val start = System.currentTimeMillis
       val res = block
@@ -641,7 +641,7 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   //TODO: Z3 too slow
-  it should "solve ODE quickly (2)" in withMathematica { qeTool =>
+  it should "solve ODE quickly (2)" in withMathematica { _ =>
     def time[T](block: => T): T = {
       val start = System.currentTimeMillis
       val res = block
@@ -667,14 +667,13 @@ class ODEInvarianceTests extends TacticTestBase {
     pr3 shouldBe 'proved
   }
 
-  it should "put an obfuscated ODE into linear form and cut solution" in withMathematica { qeTool =>
+  it should "put an obfuscated ODE into linear form and cut solution" in withMathematica { _ =>
     // x'   (2 2 -2) x    A
     // y' = (5 1 -3) y + -B
     // z'   (1 5 -3) z   5C
     val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
       //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
-      implyR(1) & nilpotentSolve(false)(1) & dWPlus(1) & implyR(1) &
-      SaturateTactic(andL('Llast))
+      implyR(1) & nilpotentSolve(false)(1) & dWPlus(1) & SaturateTactic(andL('Llast))
     )
 
     pr.subgoals(0).ante.length shouldBe 7
@@ -689,7 +688,7 @@ class ODEInvarianceTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "l() < r(), l()<=x_0, x_0<=r(), x_0=l(), l()>=x_0|x_0>=r(), time_=0, x_0=x ==> [{x'=1,time_'=1&(l()>=x|x>=r())&time_>=0&x=time_+x_0}](l()<=x&x<=r())".asSequent
   }
 
-  "diffDivConquer" should "divide and conquer" in withMathematica { qeTool =>
+  "diffDivConquer" should "divide and conquer" in withMathematica { _ =>
 
     val pr = proveBy("x*y=1 , A() = 5 ==> x > b() , [{x'=A() * x & b() * x < A()}] x=b()+A()".asSequent,
       diffDivConquer("x".asTerm)(2)
