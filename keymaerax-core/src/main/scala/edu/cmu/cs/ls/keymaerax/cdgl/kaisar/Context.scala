@@ -335,11 +335,11 @@ case class Context(s: Statement) {
 
   /** Return all assignments which mention any variant of "x" */
   def getAssignments(x: Variable): List[Formula] =
-    withOuter.searchAll(QAssignments(x, onlySSA = false), Set()).formulas
+    withOuter.searchAll(QAssignments(x, onlySSA = false), Set()).formulas.map(elaborateStable)
 
   // Return all facts which mention any SSA-variant of x
   def getMentions(x: Variable): List[Formula] =
-    withOuter.searchAll(QProgramVar(x), Set()).formulas
+    withOuter.searchAll(QProgramVar(x), Set()).formulas.map(elaborateStable)
 
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */

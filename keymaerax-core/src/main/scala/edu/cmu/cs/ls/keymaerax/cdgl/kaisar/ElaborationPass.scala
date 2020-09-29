@@ -36,7 +36,7 @@ class ElaborationPass() {
   }
 
   /** Determine which variables in [[pt]] are fact variables vs. program variables when resolved in context [[kc]]. */
-  private def disambiguate(kc: Context, pt: ProofTerm): ProofTerm = {
+  private def collectPt(kc: Context, pt: ProofTerm): ProofTerm = {
     pt match {
       case ProofVar(x) if ForwardProofChecker.allBuiltins.contains(x.name) => ProofVar(x)
       case ProofVar(x) =>
@@ -49,23 +49,9 @@ class ElaborationPass() {
           case _ =>
             throw ElaborationException(s"Tried to use unknown fact: $x. Typo?", node = pt)
         }
-      case ProofApp(m, n) => locate(ProofApp(disambiguate(kc, m), disambiguate(kc, n)), pt)
+      case ProofApp(m, n) => locate(ProofApp(collectPt(kc, m), collectPt(kc, n)), pt)
       case _: ProofInstance => pt
       case ProgramVar(x) => throw ElaborationException("Did not expect program variable proof term in selector elimination pass.", node = pt)
-    }
-  }
-
-  /** Return morally "the same" selector, but determine which variables are ProofVar vs. ProgramVar */
-  private def disambiguate(kc: Context, sel: Selector, goal: Formula): List[Selector] = {
-    sel match {
-      case DefaultSelector =>
-        val fv = StaticSemantics(goal).fv
-        val candidates = fv.toSet.toList.map(ProgramVar)
-        val mentionedVars = VariableSets(kc).allVars
-        // Keep all variables mentioned in assertions or assignments of context (for example)
-        candidates.filter(x => mentionedVars.contains(x.x) && kc.getMentions(x.x).nonEmpty).map(x => locate(ForwardSelector(x), sel))
-      case ForwardSelector(pt) => List(locate(ForwardSelector(disambiguate(kc, pt)), sel))
-      case sel => List(sel)
     }
   }
 
@@ -78,17 +64,8 @@ class ElaborationPass() {
         val mentionedVars = VariableSets(kc).allVars
         // Keep all variables mentioned in assertions or assignments of context (for example)
         candidates.filter(x => mentionedVars.contains(x.x) && kc.getMentions(x.x).nonEmpty).map(x => locate(x, sel))
-      case ForwardSelector(pt) => List(disambiguate(kc, pt))
-      case PatternSelector(pat) =>
-        kc.unify(pat).flatMap({case (Some(x), _) => Some(locate(ProofVar(x), sel)) case _ => None}).toList
-    }
-  }
-
-  /** Return morally "the same" method, but determine which variables are ProofVar vs. ProgramVar */
-  private def disambiguate(kc: Context, m: Method, goal: Formula): Method = {
-    m match {
-      case Using(use, m) => locate(Using(use.flatMap(disambiguate(kc, _, goal)), disambiguate(kc, m, goal)), m)
-      case m => m
+      case ForwardSelector(pt) => collectPt(kc, pt) :: Nil
+      case PatternSelector(pat) => kc.unify(pat).flatMap({case (Some(x), _) => Some(locate(ProofVar(x), sel)) case _ => None}).toList
     }
   }
 
@@ -96,19 +73,15 @@ class ElaborationPass() {
   private def collectPts(kc: Context, m: Method, goal: Formula): (List[ProofTerm], Method) = {
     m match {
       case Using(use, m) =>
-        // @TODO: Duplicate check
-        val mentionedVars = VariableSets(kc).allVars
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
-        val combineAssmsCandidates = useAssms ++ assms
-        if(combineAssmsCandidates.isEmpty && use != List(DefaultSelector))
+        val combineAssms = useAssms ++ assms
+        if(combineAssms.isEmpty && use != List(DefaultSelector))
           throw ElaborationException("Non-default selector should select at least one fact.", node = m)
-        val allFree = combineAssmsCandidates.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
+        val allFree = combineAssms.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramAssignments(_))
         val freePt = freePtCandidates.filter(x => kc.getAssignments(x.x).nonEmpty)
-        val combineAssms = combineAssmsCandidates//.filter(!_.isInstanceOf[ProgramVar])
-        val dedupAssms = freePt ++ combineAssms
-        (dedupAssms, meth)
+        (freePt ++ combineAssms, meth)
       case ByProof(pf) => (List(), locate(ByProof(apply(locate(Block(pf), m)) :: Nil), m))
       case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => (List(), m)
     }
@@ -128,8 +101,8 @@ class ElaborationPass() {
       case DomAssert(x, f, m) =>
         if(x != Nothing && !x.isInstanceOf[Variable])
           throw ElaborationException(s"Non-scalar fact patterns not allowed in domain constraint assertion ${dc}", node = dc)
-        val meth = disambiguate(kc, m, f)
-        locate(DomAssert(x, kc.elaborateFunctions(f, dc), meth), dc)
+        val (assump, meth) = collectPts(kc, m, f)
+        locate(DomAssert(x, kc.elaborateFunctions(f, dc), Using(assump.map(x => locate(ForwardSelector(x), x)), meth)), dc)
       case DomModify(id, x, f) => locate(DomModify(id, x, kc.elaborateFunctions(f, dc)), dc)
       case DomWeak(dc) => locate(DomWeak(dc), dc)
     }
@@ -140,7 +113,6 @@ class ElaborationPass() {
   def apply(s: Statement): Statement = {
     ghostCon = ghostCon.reapply(s)
     val ret = ProofTraversal.traverse(Context.empty.asElaborationContext, s, new TraversalFunction {
-
       // Forward proof term conjoining input list of facts
       private def conjoin(xs: List[Ident]): ProofTerm = {
         xs.map(ProofVar).reduce[ProofTerm]{case (l, r) => ProofApp(ProofApp(ProofVar(Variable("andI")), l), r)}
@@ -201,20 +173,11 @@ class ElaborationPass() {
             val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(IdentPat(x), y), sel)})
             Some(locate(KaisarProof.block(assumes), sel))
           case Assert(e, f, m) =>
-            val (pts, meth) = collectPts(kc, m, f)
-            val (keptPts, notePts) = pts.partition({case ProofVar(x) => true case _ => false})
-            val notes: List[Ghost] =
-              notePts.foldLeft[List[Ghost]]((List[Ghost]()))({case (acc: List[Ghost], pt) =>
-                val id = ghostCon.fresh()
-                ghostCon = ghostCon.ghost(KaisarProof.askLaterP)
-                // notes should be ghosts since they did not appear in the user's intended proof/program.
-                // proofchecking output after selector elimination should "look like" proofchecking the input
-                locate(Ghost(locate(Note(id, pt), sel)), sel) :: acc})
-            val noteSels = notes.map({case Ghost(Note(id, _, _)) => ForwardSelector(ProofVar(id))})
-            val fullSels = keptPts.map(ForwardSelector) ++ noteSels
+            val (keptPts, meth) = collectPts(kc, m, f)
+            val fullSels = keptPts.map(ForwardSelector)
             val finalMeth = locate(Using(fullSels, meth), meth)
             val assertion = locate(Assert(e, kc.elaborateFunctions(f, sel), finalMeth), sel)
-            Some(locate(Block(notes.:+(assertion)), sel))
+            Some(locate(assertion, sel))
           case ProveODE(ds, dc) =>
             // Context should include ODE during collection, because we want to know about domain constraint fmls and we may
             // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
@@ -237,7 +200,7 @@ class ElaborationPass() {
       // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
       override def postS(kc: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) =>Assume(pat, kc.elaborateFunctions(f, s))
+          case Assume(pat, f) => Assume(pat, kc.elaborateFunctions(f, s))
           // Elaborate all functions that are defined *before* f
           case LetSym(f, args, e: Term) => LetSym(f, args, kc.elaborateFunctions(e, s))
           case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e, s))

@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 // @TODO: Decide how useful pattern selectors and match statements are. (match statements might be kind of useless)
 // @TODO: Test end-to-end angelic loop proofs with nominals etc
-// @TODO: New-and-improved context query interface for great happiness
 // @TODO: Smart-QE for efficiency
 // @TODO: for loops with proper termination metrics not just while loops
 // @TODO: get rid of unsound extra ODE SSA assignments
@@ -257,7 +256,6 @@ class EndToEndTests extends TacticTestBase {
     check(pfStr) shouldBe "[y_1:= 2;]true".asFormula
   }
 
-  /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches. */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr = SharedModels.essentialsSafeCar1D
     val ff = check(pfStr)
@@ -268,12 +266,12 @@ class EndToEndTests extends TacticTestBase {
         "{{{?(v_2+T_0*A_0)^2/(2*B_0)+1>=d_0-(x_2+v_2*T_0+A_0*T_0^2/2);" +
           "a_2:=-B_0;?v_2>=B_0*T_0;" +
           "{?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2);}^@" +
-          "{?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2)&a_2=-B_0&v_2>=B_0*T_0;}^@}" +
+          "}" +
         "^@++" +
         "{?(v_2+T_0*A_0)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+A_0*T_0^2/2);" +
         "  a_2:=A_0;" +
         "  {?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2);}^@" +
-        "  {?(v_2+T_0*a_2)^2/(2*B_0)<=d_0-(x_2+v_2*T_0+a_2*T_0^2/2)&a_2=A_0;}^@}^@}^@" +
+        " }^@}^@" +
         "t_2:=0;" +
         "{x_3:=x_2;t_3:=t_2;v_3:=v_2;}" +
         "{x_3'=v_3,v_3'=a_2,t_3'=1&t_3<=T_0&v_3>=0}" +

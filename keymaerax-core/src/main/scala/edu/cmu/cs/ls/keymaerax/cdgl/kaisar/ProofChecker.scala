@@ -80,6 +80,7 @@ object ProofChecker {
         case ("abs", e) => Or(And(GreaterEqual(e, Number(0)), Equal(fresh, e)), And(LessEqual(e, Number(0)), Equal(fresh, Neg(e))))
         case ("min", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, r)), And(LessEqual(l, r), Equal(fresh, l)))
         case ("max", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, l)), And(LessEqual(l, r), Equal(fresh, r)))
+        case (name, args) => ???
       }
     (fresh, fml)
   }
@@ -389,6 +390,7 @@ object ProofChecker {
   }
 
   private def solveFml(sols: List[(Variable, Term)], f: Formula): Formula = sols.foldLeft[Formula](f){case (acc, (x, f)) => SubstitutionHelper.replaceFree(acc)(x,f)}
+  // @TODO: elaborateStable vs elaborateFunctions, why not both
   private def solveAssertion(discreteCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val DomAssert(x, plainF, m) = assertion
     val f = discreteCon.c.elaborateStable(plainF)
