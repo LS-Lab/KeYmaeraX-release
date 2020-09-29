@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{ElaborationException, Ident}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{ElaborationException, Ident, IdentPat}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ASTNode._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -80,7 +80,7 @@ class ElaborationPass() {
         candidates.filter(x => mentionedVars.contains(x.x) && kc.getMentions(x.x).nonEmpty).map(x => locate(x, sel))
       case ForwardSelector(pt) => List(disambiguate(kc, pt))
       case PatternSelector(pat) =>
-        kc.unify(pat).map({case (x, _) => locate(ProofVar(x), sel)}).toList
+        kc.unify(pat).flatMap({case (Some(x), _) => Some(locate(ProofVar(x), sel)) case _ => None}).toList
     }
   }
 
@@ -123,7 +123,7 @@ class ElaborationPass() {
         val dsR = collectPts(kc.:+(dsL.collect.constraints.s), r)
         locate(DomAnd(dsL, dsR), dc)
       case DomAssume(x, f) =>
-        StandardLibrary.factBindings(x, kc.elaborateFunctions(f, dc), dc).map({case (x, y) => locate(DomAssume(x, y), dc)}).
+        StandardLibrary.factBindings(x, kc.elaborateFunctions(f, dc), dc).map({case (x, y) => locate(DomAssume(IdentPat(x), y), dc)}).
           reduce[DomainStatement]({case (l, r) => locate(DomAnd(l, r), dc)})
       case DomAssert(x, f, m) =>
         if(x != Nothing && !x.isInstanceOf[Variable])
@@ -198,7 +198,7 @@ class ElaborationPass() {
             val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kc.elaborateFunctions(x, mod)))})), sel)
             Some(elabVectorAssign(elabFuncs))
           case Assume(e, f) =>
-            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(x, y), sel)})
+            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(IdentPat(x), y), sel)})
             Some(locate(KaisarProof.block(assumes), sel))
           case Assert(e, f, m) =>
             val (pts, meth) = collectPts(kc, m, f)

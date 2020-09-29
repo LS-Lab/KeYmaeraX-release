@@ -32,6 +32,10 @@ object KaisarProof {
   type Statements = List[Statement]
   type Subscript = Option[Int]
 
+  object IdentPat {
+    def apply(v: Option[Variable]): IdentPat = v.getOrElse(Nothing)
+  }
+
   case class LabelDef(label: TimeIdent, args: List[Variable] = Nil)
   case class LabelRef(label: TimeIdent, args: List[Term] = Nil) {
     def prettyString: String = label + (if (args.isEmpty) "" else "(" + args.mkString(",") + ")")
@@ -105,7 +109,8 @@ object KaisarProof {
 
   def getAt(t: Formula, node: ASTNode): Option[(Formula, LabelRef)] = {
     t match {
-      case PredicationalOf(Function("at", _index, _domain, _sort, true), And(e, PredOf(Function(label, _, _, _, _), args))) =>
+      // predicationals always uninterpreted
+      case PredicationalOf(Function("at", _index, _domain, _sort, false), And(e, PredOf(Function(label, _, _, _, _), args))) =>
         Some(e, LabelRef(label, tupleToTerms(args, node)))
       case _ => None
     }

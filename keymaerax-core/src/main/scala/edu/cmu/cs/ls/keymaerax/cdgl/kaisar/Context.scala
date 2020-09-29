@@ -29,6 +29,133 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Subs
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.ProofCheckException
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
+sealed trait ContextQuery {
+  def matches(x: Option[Ident], f: Formula, isAssignment: Boolean): Boolean
+}
+case class QProgramVar(x: Variable) extends ContextQuery {
+  override def matches(yOpt: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean = {
+    val vars = StaticSemantics(fml)
+    val allVars: Set[Variable] = (vars.fv ++ vars.bv).toSet//.++(yOpt.toSet)
+    allVars.exists(y => x.name == y.name)
+  }
+}
+case class QAssignments(x: Variable, onlySSA: Boolean) extends ContextQuery {
+  override def matches(y: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean = {
+    isAssignment && (fml match {case Equal(z: Variable, _) => x.name == z.name case _ => false })
+  }
+}
+case class QUnion(l: ContextQuery, r: ContextQuery) extends ContextQuery {
+  override def matches(x: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean =
+    l.matches(x, fml, isAssignment) || r.matches(x, fml, isAssignment)
+}
+case class QProofVar(x: Variable) extends ContextQuery {
+  // @TODO: Make interface clear for assignments with or without identifiers
+  override def matches(y: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean = y.contains(x) && !isAssignment
+}
+case class QProofTerm(pt: ProofTerm) extends ContextQuery {
+  override def matches(x: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean = false
+}
+case class QUnify(pat: Expression) extends ContextQuery {
+  override def matches(maybeX: Option[Ident], f: Formula, isAssignment: Boolean): Boolean = {
+    maybeX match {
+      case Some(x) =>
+        try {
+          UnificationMatch(pat, f)
+          true
+        } catch {
+          case _: ProverException => false
+        }
+      case None => false
+    }
+  }
+}
+case class QPhi(phi: Phi, cq: ContextQuery) extends ContextQuery {
+  override def matches(x: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean =
+    cq.matches(x, Context.substPhi(phi, fml), isAssignment)
+}
+
+sealed trait ContextResult {
+  type Item = (Option[Ident], Formula, Boolean)
+  def isEmpty: Boolean = {
+    this match {
+      case RUnion(l, r) => l.isEmpty && r.isEmpty
+      case RFailure(msg) => true
+      case RSuccess(facts, assigns) => facts.isEmpty && assigns.isEmpty
+    }
+  }
+  def nonEmpty: Boolean = !isEmpty
+  def assignFact(as: Assign): Formula = Equal(as.x, as.e)
+  def assignId(as: Assign): Option[Ident] = None
+
+  def filter(p: Item => Boolean): ContextResult = {
+    this match {
+      case RUnion(l, r) => RUnion(l.filter(p), r.filter(p))
+      case RFailure(msg) => RFailure(msg)
+      case RSuccess(facts, assigns) => RSuccess(facts.filter({case (id, fml) => p(id, fml, false)}), assigns.filter(asgn => p(assignId(asgn), assignFact(asgn), true)))
+    }
+  }
+
+  def foreach(p: Item => Unit): Unit = {
+    this match {
+      case RUnion(l, r) => l.foreach(p); r.foreach(p)
+      case RFailure(msg) => ()
+      case RSuccess(facts, assigns) =>
+        facts.foreach({case (id, fml) => p(id, fml, false)})
+        assigns.foreach(asgn => p(assignId(asgn), assignFact(asgn), true))
+    }
+  }
+
+  def admissiblePart(inContext: Context, tabooProgramVars: Set[Variable]): ContextResult =
+    this match {
+      case _: RFailure => this
+      case RUnion(l, r) => RUnion(l.admissiblePart(inContext, tabooProgramVars), r.admissiblePart(inContext, tabooProgramVars))
+      case RSuccess(facts, assigns) =>
+        // && cq.matches(x, y,b)
+        def factFilter(id: Option[Ident], fml: Formula): Boolean = {
+          val free = StaticSemantics(KaisarProof.forgetAt(fml)).fv
+          inContext.isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty
+        }
+        def assignFilter(as: Assign): Boolean = factFilter(assignId(as), assignFact(as))
+        RSuccess(facts.filter({case (x, y) => factFilter(x, y)}), assigns.filter(assignFilter))
+    }
+
+  // @TODO: Better data structure for assignments that might also have names. matchesAssign vs matchesFact
+  def matchingPart(cq: ContextQuery): ContextResult = {
+    this match {
+      case _: RFailure => this
+      case RUnion(l, r) => RUnion(l.matchingPart(cq), r.matchingPart(cq))
+      case RSuccess(facts, assigns) => RSuccess(
+        facts.filter({case (id, fml) => cq.matches(id, fml, isAssignment = false)}),
+        assigns.filter({case (asgn: Assign) => cq.matches(Some(asgn.x), assignFact(asgn), isAssignment = true)}))
+    }
+  }
+  def asList: List[(Option[Ident], Formula)]
+  def formulas: List[Formula] = asList.map(_._2)
+  def ++(other: ContextResult): ContextResult =
+    (this, other) match {
+      case (_: RFailure, _) => this
+      case (_, _: RFailure) => other
+      case (RUnion(l, r), _) => l.++(r).++(other)
+      case (_, RUnion(l, r)) => ++(l).++(r)
+      case (RSuccess(factsL, assignsL), RSuccess(factsR, assignsR)) =>
+        RSuccess(factsL.++(factsR), assignsL.++(assignsR))
+    }
+}
+case class RSuccess(facts: Set[(Option[Ident], Formula)], assigns: Set[Assign] = Set()) extends ContextResult {
+  override def asList: List[(Option[Ident], Formula)] = facts.toList ++ assigns.map((as: Assign) =>  (None, Equal(as.x, as.e))).toList
+}
+case class RFailure(msg: String) extends ContextResult {
+  override def asList: List[(Option[Ident], Formula)] = Nil
+}
+// @TODO: May be unnecessary
+// @TODO: Don't need union but do need "branch". Union should be a function.
+case class RUnion(l: ContextResult, r: ContextResult) extends ContextResult {
+  override def asList: List[(Option[Ident], Formula)] = l.asList ++ r.asList
+}
+object ContextResult {
+  def unit: ContextResult = RSuccess(Set(), Set())
+}
+
 case class Context(s: Statement) {
   import Context._
   // Metadata are vars rather than constructor arguments so that pattern-matches on Context remain simple.
@@ -187,75 +314,54 @@ case class Context(s: Statement) {
   }
 
   /** Return all assignments which mention any variant of "x" */
-  /* @TODO (soundness): searchAll needs to maintain a list of "taboo" variables that have been bound after the 'current' point.
-  *    In SSA style, this will only be Phi variables which get bound multiple times. Filter out any taboo variables, but don't
-  *   consider it an error to search for them. */
-  /* @TODO (soundness): The soundness of this function is questionable. It *may* be sound for SSA, but certainly not
-  *    for arbitrary contexts. */
   def getAssignments(x: Variable): List[Formula] =
-    withOuter.searchAll(
-      {case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx && idx == idxx => true
-      // @TODO: Indices get renamed here, but is that correct?
-      case (v@BaseVariable(xx, idx, _), Equal(BaseVariable(xxx, idxx,_), f), true) if x.name == xx && xx == xxx  => true
-     case _ => false
-      }, Set()).map(_._2)
+    withOuter.searchAll(QAssignments(x, onlySSA = false), Set()).formulas
+
   // Return all facts which mention any SSA-variant of x
   def getMentions(x: Variable): List[Formula] =
-    withOuter.searchAll({case (_, fml, _) =>
-      val set = StaticSemantics(fml).fv.toSet.map((v:Variable) => v.name)
-      val contained = set.contains(x.name)
-      contained
-    }
-      , Set()).map(_._2)
+    withOuter.searchAll(QProgramVar(x), Set()).formulas
 
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
-  def searchAll(f: Finder, tabooProgramVars: Set[Variable]): List[(Ident, Formula)] = {
-    val fAdmiss: Finder = ({case (x, y, b) =>
-      val free = StaticSemantics(KaisarProof.forgetAt(y)).fv
-      val admissible = isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty
-      admissible && f(x, y,b)})
+  def searchAll(cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
     s match {
-      case _: Triv => Nil
-      case Assume(x, g) => Context.matchAssume(x, g, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
-      case Assert(x, g, _) => Context.matchAssume(x, g, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
-      case Note(x, _, Some(g)) => if (fAdmiss(x, g, false)) List((x, g)) else Nil
+      case _: Triv => ContextResult.unit
+      case Assume(x, g) => Context.matchAssume(x, g, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+      case Assert(x, g, _) => Context.matchAssume(x, g, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+      case Note(x, _, Some(g)) => RSuccess(Set((Some(x), g))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
-      case Note(x, _, None) => if (fAdmiss(x, KaisarProof.askLaterP, false)) List((x, KaisarProof.askLaterP)) else Nil
-      case mod: Modify => findAll(mod, f)
+      // @TODO: Use less dummy fact variable names/facts
+      case Note(x, _, None) => RSuccess(Set((Some(x), KaisarProof.askLaterP))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+      case mod: Modify => findAll(mod, cq)
       case Block(ss) =>
-        def iter(ss: List[Statement], f: Finder, tabooProgramVars: Set[Variable]): List[(Ident, Formula)] = {
+        def iter(ss: List[Statement], cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
           ss match {
-            case Nil => Nil
+            case Nil => ContextResult.unit
             case (s: Phi) :: ss =>
               val left =
-                reapply(s.asgns).searchAll(f, tabooProgramVars).filter({case (yx, yf) =>
+                reapply(s.asgns).searchAll(cq, tabooProgramVars).filter({case (yx, yf, yisAssign) =>
                   val surrounding = Block(ss.reverse)
                   val t = VariableSets(surrounding)
                   val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
                   inter.isEmpty})
-              val ff: Finder = ({
-                case ((x: Ident, fml: Formula, b: Boolean)) => fAdmiss(x, Context.substPhi(s, fml), b)
-              })
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              left ++ iter(ss, ff, taboos)
+              RUnion(left, iter(ss, QPhi(s, cq), taboos))
             case s :: ss =>
-              val leftMatches = reapply(s).searchAll(f, tabooProgramVars)
+              val leftMatches = reapply(s).searchAll(cq, tabooProgramVars)
               val surrounding = Block(ss.reverse)
               val t = VariableSets(surrounding)
               // @TODO: Finder needs to be able to specify verbosity level, leave out some error messages
               // @TODO: Careful that it's really okay to look up ghost assignments. Think it is okay here, needs checked elsewhere
-              leftMatches.foreach({ case ((yx, yf)) =>
-                if(t.tabooFacts.contains(yx) && !isElaborationContext && !isInverseGhost)
+              leftMatches.foreach({ case ((yx, yf, isAssignment)) =>
+                if(yx.nonEmpty && t.tabooFacts.contains(yx.get) && !isElaborationContext && !isInverseGhost)
                   throw ProofCheckException(s"Inverse ghost fact $yx inaccessible outside of other inverse ghosts", node = s)
                 })
-               //throw ProofCheckException(s"Fact(s) $yx inaccessible because ghost variable(s) $inter would escape their scope", node = s)
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              leftMatches ++ iter(ss, f, taboos)
+              leftMatches ++ iter(ss, cq, taboos)
           }
         }
-        iter(ss.reverse, f, tabooProgramVars)
-      case BoxChoice(l, r) => reapply(l).searchAll(f, tabooProgramVars) ++ reapply(r).searchAll(f, tabooProgramVars)
+        iter(ss.reverse, cq, tabooProgramVars)
+      case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars) ++ reapply(r).searchAll(cq, tabooProgramVars)
       case switch@Switch(sel, pats) =>
         val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
           case ((k1, v1), (k2, v2)) =>
@@ -265,73 +371,73 @@ case class Context(s: Statement) {
             if (v1 == v2) (k1, v1) // optimize identical branches
             else (k1, Or(v1, v2))
         }
-        val fmls = pats.flatMap({ case (v, e, s) => reapply(s).searchAll(f, tabooProgramVars) })
-        if (fmls.isEmpty) Nil
-        else List(fmls.reduceRight(or))
-      case Ghost(s) => reapply(s).withGhost.searchAll(f, tabooProgramVars)
+        val fmls = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars) })
+        if (fmls.isEmpty) ContextResult.unit
+        else fmls.reduce(RUnion)
+      case Ghost(s) => reapply(s).withGhost.searchAll(cq, tabooProgramVars)
       // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
       // to select the equalities introduced by phi nodes.
-      case Phi(s) => reapply(s).withInverseGhost.searchAll(f, tabooProgramVars)
+      case Phi(s) => reapply(s).withInverseGhost.searchAll(cq, tabooProgramVars)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
-      case InverseGhost(s) => Nil
-      case po: ProveODE => findAll(po, po.ds, f) ++ findAll(po.dc, f)
-      case Was(now, was) => reapply(was).searchAll(f, tabooProgramVars)
-      case _: Label | _: LetSym | _: Match | _: PrintGoal => Nil
+      case InverseGhost(s) => ContextResult.unit
+      case po: ProveODE => RUnion(findAll(po, po.ds, cq), findAll(po.dc, cq))
+      case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars)
+      case _: Label | _: LetSym | _: Match | _: PrintGoal => ContextResult.unit
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
         //reapply(body).searchAll(f, tabooProgramVars)
-        Nil
+        ContextResult.unit
       case BoxLoop(body, ih) =>
         // only allowed to find IH
         ih match {
-          case Some((ihVar, _oldIhFml, Some(ihFml))) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
-          case Some((ihVar, ihFml, None)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
-          case _ => Nil}
+          case Some((ihVar, _oldIhFml, Some(ihFml))) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case Some((ihVar, ihFml, None)) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case _ => ContextResult.unit
+        }
       case BoxLoopProgress(BoxLoop(bl, ihOpt), progress) => {
-        val ihMatch = ihOpt.map({
-          case ((ihVar, _oldIhFml, Some(ihFml))) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
-          case ((ihVar, ihFml, None)) if fAdmiss(ihVar, ihFml, false) => List((ihVar, ihFml))
-          case _ => Nil}).getOrElse(Nil)
-        ihMatch ++ reapply(progress).searchAll(f, tabooProgramVars)
+        val ihMatch: ContextResult = ihOpt.map({
+          case ((ihVar, _oldIhFml, Some(ihFml))) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case ((ihVar, ihFml, None)) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case _ => ContextResult.unit}).getOrElse(ContextResult.unit)
+        RUnion(ihMatch, reapply(progress).searchAll(cq, tabooProgramVars))
       }
       case WhileProgress(While(x, j, s), prog) =>
-        val convMatch = Context.matchAssume(x, j, s).filter({ case (x, y) => fAdmiss(x, y, false)}).toList
-        convMatch ++ reapply(prog).searchAll(f, tabooProgramVars)
+        val convMatch = Context.matchAssume(x, j, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+        convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
         val v = x match {case vv: Variable => vv case _ => defaultVar}
-        val branchMatch = if (fAdmiss(v, fml, false)) List((v, fml)) else List()
-        branchMatch ++ reapply(progress).searchAll(f, tabooProgramVars)
+        val branchMatch = RSuccess(Set((Some(v), fml)), Set()).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+        branchMatch ++ reapply(progress).searchAll(cq, tabooProgramVars)
       case BoxChoiceProgress(bc, onBranch, progress) =>
-        reapply(progress).searchAll(f, tabooProgramVars)
+        reapply(progress).searchAll(cq, tabooProgramVars)
     }
   }
 
-
   /** Find all fact bindings which satisfy [[finder]] in statement [[mod]]
     *
-    * @param mod     A [[Modify]] statement which is searched for bindings
-    * @param finder  A user-supplied search predicate
+    * @param mod   A [[Modify]] statement which is searched for bindings
+    * @param cq    A user-supplied search query
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
-  private def findAll(mod: Modify, finder: Finder): List[(Ident, Formula)] = {
-    mod.asgns.flatMap({case (Some(p), x, Some(f))if (finder(p, Equal(x, f), false)) =>
+  private def findAll(mod: Modify, cq: ContextQuery): ContextResult = {
+    mod.asgns.map({case (Some(p), x, Some(f)) if (cq.matches(Some(p), Equal(x, f), isAssignment = false)) =>
       // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
-      List((p, Equal(x, f)))
-    case (None, x, Some(f)) if (finder(x, Equal(x, f), true)) =>
+      RSuccess(Set((Some(p), Equal(x, f))), Set())
+    case (None, x, Some(f)) if (cq.matches(Some(x), Equal(x, f), isAssignment = true)) =>
       /* @TODO (usability): If another recursive call finds a match for "finder", return that other match. But if *no*
            branch succeeds, somebody, somewhere should give the user an error message like
            "Ghost variable $x inaccessible because it would escape its scope" */
       // Hide ghost statements except when accessed from another ghost context.
       if (isGhost && !outer.isGhost) {
-        List()
+        ContextResult.unit
       } else
-        List((x, Equal(x, f)))
+        RSuccess(Set(), Set(Assign(x, f)))
     case (Some(_), x, None) =>
       throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable", node = mod)
-    case _ => Nil
-    })
+    case _ => ContextResult.unit
+    }).reduce(RUnion)
   }
 
   /** Find all fact and program variable bindings which satisfy [[finder]] in statement [[ds]]
@@ -340,7 +446,7 @@ case class Context(s: Statement) {
     * @param ds A [[DiffStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  private def findAll(odeContext: ProveODE, ds: DiffStatement, f: Finder): List[(Ident, Formula)] = {
+  private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery): ContextResult /*List[(Ident, Formula)] */= {
     ds match {
       case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!this.isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
@@ -353,18 +459,18 @@ case class Context(s: Statement) {
               val eqFact = Equal(xp.x, solMap(xp.x))
               val fullFact = odeContext.timeVar match { case None => eqFact case Some(tvar) => And(eqFact, GreaterEqual(tvar, Number(0)))}
               // Search using full fact and explicit name if possible
-              if (f(ident, fullFact, isUnnamed))
-                List((ident, fullFact))
+              if (cq.matches(Some(ident), fullFact, isUnnamed))
+                RSuccess(Set((Some(ident), fullFact)), Set())
               // To better support ProgramVar lookups, always try f() with *just* the assignment fact as well, but pull
               // a fast one and return the whole fact
-              else if (!isUnnamed && f(xp.x, eqFact, true)) List((xp.x, eqFact)) else List()
-            } else List()
-          case None => List()
+              else if (!isUnnamed && cq.matches(Some(xp.x), eqFact, isAssignment = true)) RSuccess(Set(), Set(Assign(xp.x, solMap(xp.x)))) else ContextResult.unit
+            } else ContextResult.unit
+          case None => ContextResult.unit
         }
-      case AtomicODEStatement(dp, _) => List()
-      case DiffProductStatement(l, r) => findAll(odeContext, l, f) ++ findAll(odeContext, r, f)
-      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, f)
-      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, f)
+      case AtomicODEStatement(dp, _) => ContextResult.unit
+      case DiffProductStatement(l, r) => RUnion(findAll(odeContext, l, cq), findAll(odeContext, r, cq))
+      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq)
+      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq)
     }
   }
 
@@ -372,44 +478,34 @@ case class Context(s: Statement) {
   /** Find all fact bindings which satisfy [[finder]] in statement [[dc]]
     *
     * @param dc A [[DomainStatement]] statement which is searched for bindings
-    * @param f  A user-supplied search predicate
-    * @return all bindings which satisfy [[finder]] */
-  private def findAll(dc: DomainStatement, f: Finder): List[(Ident, Formula)] = {
+    * @param cq  A user-supplied search query
+    * @return all bindings which satisfy [[cq]] */
+  private def findAll(dc: DomainStatement, cq: ContextQuery): ContextResult /*List[(Ident, Formula)] */ = {
     dc match {
-      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).filter({case (x,y) => f(x, y, false)}).toList
-      case DomAssume(x, fml) => Nil
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).filter({case (x,y) => f(x, y, false)}).toList
-      case DomAnd(l, r) => findAll(l, f) ++ findAll(r, f)
+      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).matchingPart(cq)
+      case DomAssume(x, fml) => ContextResult.unit
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).matchingPart(cq)
+      case DomAnd(l, r) => findAll(l, cq) ++ findAll(r, cq)
       case dw@DomWeak(dc) =>
-        withInverseGhost.findAll(dc, f) match {
-          case fml :: _ => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected", node = dw)
-          case Nil => Nil
+        withInverseGhost.findAll(dc, cq) match {
+          // @TODO: Better message
+          case cr if cr.nonEmpty => throw ProofCheckException(s"Weakened domain constraint $dc selected result ${cq}, but selection should have been empty", node = dw)
+          case cr => ContextResult.unit
         }
-      case dm: DomModify => reapply(Modify(dm)).findAll(f)
+      case dm: DomModify => reapply(Modify(dm)).findAll(cq)
     }
   }
 
   // top-level search function wrapper.
-  private def findAll(f: Finder): List[(Ident, Formula)] = {
-    withOuter.searchAll(f, Set())
+  private def findAll(cq: ContextQuery): ContextResult /*List[(Ident, Formula)]*/ = {
+    withOuter.searchAll(cq, Set())
   }
 
   /* Get most recent formula (if any), bound to identifier [[id]]
   * @param wantProgramVar search exclusively for unannotated assignments x:=f rather than facts named "x" */
   def get(id: Ident, wantProgramVar: Boolean = false, isSound: Boolean = true): Option[Formula] = {
-    // gotProgramVar is true only for unannotated assignment statements.
-    val f: ((Ident, Formula, Boolean)) => Boolean = {
-      case (x: Ident, v: Formula, gotProgramVar) =>
-        if (wantProgramVar && gotProgramVar) {
-          val Equal(y, f) = v
-          id == y
-        } else if (wantProgramVar) {
-          false
-        } else {
-          id == x && !gotProgramVar
-        }
-    }
-    withOuter.searchAll(f, Set()).map(_._2).headOption
+    val cq: ContextQuery = if (wantProgramVar) QProgramVar(id) else QProofVar(id)
+    withOuter.searchAll(cq, Set()).formulas.headOption
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborateStable)
 
@@ -583,19 +679,11 @@ case class Context(s: Statement) {
   def contains(id: Ident): Boolean = get(id).isDefined
 
   /** return all facts that unify with a given pattern */
-  def unifyAll(pat: Expression): List[(Ident, Formula)] = {
-    val f: ((Ident, Formula, Boolean)) => Boolean = {case (x: Ident, fml: Formula, false) =>
-      try {
-        UnificationMatch(pat, fml)
-        true
-      } catch {
-        case _: ProverException => false
-      }
-    case _ => false}
-    searchAll(f, Set())
+  def unifyAll(pat: Expression): ContextResult = {
+    searchAll(QUnify(pat), Set())
   }
   /** Return first fact that unifies with a pattern, if any. */
-  def unify(pat: Expression): Option[(Ident, Formula)] = unifyAll(pat).headOption
+  def unify(pat: Expression): Option[(Option[Ident], Formula)] = unifyAll(pat).asList.headOption
 
   // Base name used for fresh variables generated during proof when no better variable name is available.
   private val ghostVar: String = "ghost"
@@ -644,21 +732,21 @@ object Context {
   /** @param e the left-hand side of an assumption statement, which is a pattern that binds fact variables
     * @param f the right-hand side of an assumption statement, which is a formula expression
     * @return the set of fact bindings introduced by an assumption statement */
-  private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): Map[Ident, Formula] = {
+  private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): ContextResult = {
     e match {
       // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name, but can be searched by program-vars.
-      case Nothing => Map(unnamedVar -> f)
-      case BaseVariable(x, _, _) => Map(Variable(x) -> f)
+      case Nothing => RSuccess(Set((Some(unnamedVar), f)))
+      case BaseVariable(x, _, _) => RSuccess(Set((Some(Variable(x)), f)))
       case p: Pair =>
         val bindings = StandardLibrary.factBindings(e, f)
-        bindings.map({case (x: Ident, f) => Map(x -> f)}).reduce(_ ++ _)
+        RSuccess(bindings.toSet, Set())
       case _ =>
         // @TODO: Allows matching arbitrary patterns - delete this feature?
         if (!sameHead(e, f))
           throw ProofCheckException(s"Pattern $e does not match formula $f", node = node)
         (e, f) match {
           case (bcf1: BinaryCompositeFormula, bcf2: BinaryCompositeFormula) =>
-            matchAssume(bcf1.left, bcf2.left, node) ++ matchAssume(bcf1.right, bcf2.right, node)
+            matchAssume(bcf1.left, bcf2.left, node).++(matchAssume(bcf1.right, bcf2.right, node))
           case (ucf1: BinaryCompositeFormula, ucf2: BinaryCompositeFormula) =>
             matchAssume(ucf1.left, ucf2.left, node)
           case (q1: Quantified, q2: Quantified) => matchAssume(q1.child, q2.child, node)
@@ -668,7 +756,7 @@ object Context {
   }
 
   // Rename formula according to assignment from an SSA Phi node
-  private def substPhi(phi: Phi, fml: Formula): Formula = {
+  def substPhi(phi: Phi, fml: Formula): Formula = {
     val mapping = phi.reverseMap
     SubstitutionHelper.replacesFree(fml)(term => {
       (KaisarProof.getStable(term), term) match {

@@ -58,19 +58,19 @@ object StandardLibrary {
   }
 
   /** Elaborate fact binding patterns as in assertions ?pat:(fml); Vectorial patterns ?(x, y):(p & q) become lists of bindings. */
-  def factBindings(lhs: Expression, rhs: Formula, node: ASTNode = Triv()): List[(Term, Formula)] = {
-    def loop(lhs: Expression, rhs: Formula): List[(Term, Formula)] = {
+  def factBindings(lhs: Expression, rhs: Formula, node: ASTNode = Triv()): List[(Option[Ident], Formula)] = {
+    def loop(lhs: Expression, rhs: Formula): List[(Option[Ident], Formula)] = {
       (lhs, rhs) match {
-        case (Nothing, _) => (Nothing, rhs) :: Nil
-        case (v: Variable, _) => (v, rhs) :: Nil
-        case (Pair(v: Variable, Nothing), _) => (v, rhs) :: Nil
+        case (Nothing, _) => (None, rhs) :: Nil
+        case (v: Variable, _) => (Some(v), rhs) :: Nil
+        case (Pair(v: Variable, Nothing), _) => (Some(v), rhs) :: Nil
         case (Pair(l, r), And(pl, pr)) => loop(l, pl) ++ loop(r, pr)
         // Note: Vectorial assumption must look like a conjunction in the *source syntax,* not just after expanding definitions
         case _ => throw ElaborationException(s"Vectorial fact $lhs:$rhs expected right-hand-side to have shape p1 & ... & ... pn with one conjunct per fact name, but it did not.", node)
       }
     }
     lhs match {
-      case v: Variable => List((v, rhs))
+      case v: Variable => List((Some(v), rhs))
       case _ => loop(lhs, rhs)
     }
   }

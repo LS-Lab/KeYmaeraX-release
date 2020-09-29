@@ -24,6 +24,8 @@ object ProofChecker {
   private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
     m match {
       case DefaultSelector =>
+        // @TODO: It should be okay for ProgramVars resulting from DefaultSelector to match nothing in InverseGhost case.
+        //  or do we want to filter them out here?
         // @TODO: deduplicate defaultselector implementation
         //val fv = StaticSemantics(goal).fv
         //val res = fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
