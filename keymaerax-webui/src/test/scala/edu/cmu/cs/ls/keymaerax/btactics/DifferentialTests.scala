@@ -142,6 +142,13 @@ class DifferentialTests extends TacticTestBase {
       loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4, x>2 ==> Blub=3, Blah=1, x>0".asSequent
   }
 
+  it should "DW in context" in withQE { _ =>
+    proveBy("==> [x:=2;][{x'=-3&x>=1}]x>=0".asSequent, dW(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [x:=2;]\\forall x (x>=1 -> x>=0)".asSequent
+    proveBy("==> [x:=2;][{x'=-3&x>=1}]x>=0".asSequent, DifferentialTactics.diffWeakenPlus(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [x:=2;]\\forall x (x>=1 -> x>=0)".asSequent
+  }
+
   "Differential effect" should "introduce a differential assignment" in withTactics {
     val result = proveBy("[{x'=5 & x>2}]x>0".asFormula, DE(1))
     result.subgoals.loneElement shouldBe "==> [{x'=5 & x>2}][x':=5;]x>0".asSequent
