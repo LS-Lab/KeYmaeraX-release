@@ -78,8 +78,9 @@ sealed trait ContextResult {
   type Item = (Option[Ident], Formula, Boolean)
   def isEmpty: Boolean = {
     this match {
-      case RUnion(l, r) => l.isEmpty && r.isEmpty
-      case RFailure(msg) => true
+      case RBranch(l, r) => l.isEmpty && r.isEmpty
+      case RWeakFailure(msg) => true
+      case RStrongFailure(msg) => true
       case RSuccess(facts, assigns) => facts.isEmpty && assigns.isEmpty
     }
   }
@@ -89,16 +90,17 @@ sealed trait ContextResult {
 
   def filter(p: Item => Boolean): ContextResult = {
     this match {
-      case RUnion(l, r) => RUnion(l.filter(p), r.filter(p))
-      case RFailure(msg) => RFailure(msg)
+      case RWeakFailure(msg) => RStrongFailure(msg)
+      case RStrongFailure(msg) => RStrongFailure(msg)
       case RSuccess(facts, assigns) => RSuccess(facts.filter({case (id, fml) => p(id, fml, false)}), assigns.filter(asgn => p(assignId(asgn), assignFact(asgn), true)))
     }
   }
 
   def foreach(p: Item => Unit): Unit = {
     this match {
-      case RUnion(l, r) => l.foreach(p); r.foreach(p)
-      case RFailure(msg) => ()
+      case RWeakFailure(msg) => ()
+      case RStrongFailure(msg) => ()
+      case RBranch(l, r) => l.foreach(p); r.foreach(p)
       case RSuccess(facts, assigns) =>
         facts.foreach({case (id, fml) => p(id, fml, false)})
         assigns.foreach(asgn => p(assignId(asgn), assignFact(asgn), true))
@@ -107,10 +109,9 @@ sealed trait ContextResult {
 
   def admissiblePart(inContext: Context, tabooProgramVars: Set[Variable]): ContextResult =
     this match {
-      case _: RFailure => this
-      case RUnion(l, r) => RUnion(l.admissiblePart(inContext, tabooProgramVars), r.admissiblePart(inContext, tabooProgramVars))
+      case _: RStrongFailure => this
+      case _: RWeakFailure => this
       case RSuccess(facts, assigns) =>
-        // && cq.matches(x, y,b)
         def factFilter(id: Option[Ident], fml: Formula): Boolean = {
           val free = StaticSemantics(KaisarProof.forgetAt(fml)).fv
           inContext.isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty
@@ -122,8 +123,8 @@ sealed trait ContextResult {
   // @TODO: Better data structure for assignments that might also have names. matchesAssign vs matchesFact
   def matchingPart(cq: ContextQuery): ContextResult = {
     this match {
-      case _: RFailure => this
-      case RUnion(l, r) => RUnion(l.matchingPart(cq), r.matchingPart(cq))
+      case _: RStrongFailure => this
+      case _: RWeakFailure => this
       case RSuccess(facts, assigns) => RSuccess(
         facts.filter({case (id, fml) => cq.matches(id, fml, isAssignment = false)}),
         assigns.filter({case (asgn: Assign) => cq.matches(Some(asgn.x), assignFact(asgn), isAssignment = true)}))
@@ -133,25 +134,44 @@ sealed trait ContextResult {
   def formulas: List[Formula] = asList.map(_._2)
   def ++(other: ContextResult): ContextResult =
     (this, other) match {
-      case (_: RFailure, _) => this
-      case (_, _: RFailure) => other
-      case (RUnion(l, r), _) => l.++(r).++(other)
-      case (_, RUnion(l, r)) => ++(l).++(r)
-      case (RSuccess(factsL, assignsL), RSuccess(factsR, assignsR)) =>
-        RSuccess(factsL.++(factsR), assignsL.++(assignsR))
+      case (RSuccess(factsL, assignL), RSuccess(factsR, assignR)) => RSuccess(factsL ++ factsR, assignL ++ assignR)
+      // @TODO: Do we want to allow strong failures with a list of error messages?
+      case (_: RStrongFailure, _) => this
+      case (_, _: RStrongFailure) => other
+      case (_: RWeakFailure, _) => other
+      case (_, _: RWeakFailure) => this
+      case (l, r) if r.isEmpty => l
+      case (l, r) if l.isEmpty => r
+      case _ => throw ProofCheckException(s"Could not compute union of results: $this and $other")
     }
 }
 case class RSuccess(facts: Set[(Option[Ident], Formula)], assigns: Set[Assign] = Set()) extends ContextResult {
   override def asList: List[(Option[Ident], Formula)] = facts.toList ++ assigns.map((as: Assign) =>  (None, Equal(as.x, as.e))).toList
 }
-case class RFailure(msg: String) extends ContextResult {
+// Strong failures represent an issue that must be reported regardless of what happens on other branches
+case class RStrongFailure(msg: String) extends ContextResult {
   override def asList: List[(Option[Ident], Formula)] = Nil
 }
-// @TODO: May be unnecessary
-// @TODO: Don't need union but do need "branch". Union should be a function.
-case class RUnion(l: ContextResult, r: ContextResult) extends ContextResult {
-  override def asList: List[(Option[Ident], Formula)] = l.asList ++ r.asList
+// Weak failures only represent that one branch has failed, and so long as some other branch succeeds, we're ok
+case class RWeakFailure(msg: String) extends ContextResult {
+  override def asList: List[(Option[Ident], Formula)] = Nil
 }
+
+case class RBranch(l: ContextResult, r: ContextResult) extends ContextResult {
+  override def asList: List[(Option[Ident], Formula)] = {
+    (l.asList, r.asList) match {
+      case ((Some(idL), fmlL) :: Nil, (Some(idR), fmlR) :: Nil) if idL == idR => (Some(idL), Or(fmlL, fmlR)) :: Nil
+      case ((Some(idL), fmlL) :: Nil, (Some(idR), fmlR) :: Nil) => throw ProofCheckException(s"Unexpected differing fact names $idL and $idR on different branches")
+      case ((Some(idL), fmlL) :: Nil, (None, fmlR) :: Nil)  => (Some(idL), Or(fmlL, fmlR)) :: Nil
+      case ((None, fmlL) :: Nil, (Some(idR), fmlR) :: Nil)  => (Some(idR), Or(fmlL, fmlR)) :: Nil
+      case ((None, fmlL) :: Nil, (None, fmlR) :: Nil)  => (None, Or(fmlL, fmlR)) :: Nil
+      case (Nil, r) => r
+      case (l, Nil) => l
+      case _ => throw ProofCheckException(s"Could not combine branching results: $l and $r")
+    }
+  }
+}
+
 object ContextResult {
   def unit: ContextResult = RSuccess(Set(), Set())
 }
@@ -345,7 +365,7 @@ case class Context(s: Statement) {
                   val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
                   inter.isEmpty})
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              RUnion(left, iter(ss, QPhi(s, cq), taboos))
+              left.++(iter(ss, QPhi(s, cq), taboos))
             case s :: ss =>
               val leftMatches = reapply(s).searchAll(cq, tabooProgramVars)
               val surrounding = Block(ss.reverse)
@@ -363,24 +383,19 @@ case class Context(s: Statement) {
         iter(ss.reverse, cq, tabooProgramVars)
       case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars) ++ reapply(r).searchAll(cq, tabooProgramVars)
       case switch@Switch(sel, pats) =>
-        val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {
-          case ((k1, v1), (k2, v2)) =>
-            // @TODO: happens because of ghosts on different branches. think more cleverly what to do about it
-            /*if (k1 != k2) throw ProofCheckException(s"recursive call found formula twice with different names: $k1 and $k2", node = switch)
-            else*/
-            if (v1 == v2) (k1, v1) // optimize identical branches
-            else (k1, Or(v1, v2))
-        }
-        val fmls = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars) })
-        if (fmls.isEmpty) ContextResult.unit
-        else fmls.reduce(RUnion)
+        // @TODO: happens because of ghosts on different branches. think more cleverly what to do about it
+        /*if (k1 != k2) throw ProofCheckException(s"recursive call found formula twice with different names: $k1 and $k2", node = switch)
+        else*/
+        val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars) })
+        if (eachResult.isEmpty) ContextResult.unit
+        else eachResult.reduce(RBranch)
       case Ghost(s) => reapply(s).withGhost.searchAll(cq, tabooProgramVars)
       // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
       // to select the equalities introduced by phi nodes.
       case Phi(s) => reapply(s).withInverseGhost.searchAll(cq, tabooProgramVars)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => ContextResult.unit
-      case po: ProveODE => RUnion(findAll(po, po.ds, cq), findAll(po.dc, cq))
+      case po: ProveODE => findAll(po, po.ds, cq).++(findAll(po.dc, cq))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal => ContextResult.unit
       case While(_, _, body) =>
@@ -400,7 +415,7 @@ case class Context(s: Statement) {
           case ((ihVar, _oldIhFml, Some(ihFml))) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
           case ((ihVar, ihFml, None)) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
           case _ => ContextResult.unit}).getOrElse(ContextResult.unit)
-        RUnion(ihMatch, reapply(progress).searchAll(cq, tabooProgramVars))
+        ihMatch.++(reapply(progress).searchAll(cq, tabooProgramVars))
       }
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = Context.matchAssume(x, j, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
@@ -437,7 +452,7 @@ case class Context(s: Statement) {
     case (Some(_), x, None) =>
       throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable", node = mod)
     case _ => ContextResult.unit
-    }).reduce(RUnion)
+    }).reduce(_.++(_))
   }
 
   /** Find all fact and program variable bindings which satisfy [[finder]] in statement [[ds]]
@@ -468,7 +483,7 @@ case class Context(s: Statement) {
           case None => ContextResult.unit
         }
       case AtomicODEStatement(dp, _) => ContextResult.unit
-      case DiffProductStatement(l, r) => RUnion(findAll(odeContext, l, cq), findAll(odeContext, r, cq))
+      case DiffProductStatement(l, r) => findAll(odeContext, l, cq).++(findAll(odeContext, r, cq))
       case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq)
       case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq)
     }

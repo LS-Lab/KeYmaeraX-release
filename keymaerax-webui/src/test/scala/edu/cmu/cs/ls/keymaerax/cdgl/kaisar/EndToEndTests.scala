@@ -257,8 +257,7 @@ class EndToEndTests extends TacticTestBase {
     check(pfStr) shouldBe "[y_1:= 2;]true".asFormula
   }
 
-  /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches.
-   */
+  /* @TODO: This test would be prettier and faster if Context fact lookup was fully precise when looking up multiple facts, each on multiple branches. */
   it should "Prove 1d car safety" in withMathematica { _ =>
     val pfStr = SharedModels.essentialsSafeCar1D
     val ff = check(pfStr)
