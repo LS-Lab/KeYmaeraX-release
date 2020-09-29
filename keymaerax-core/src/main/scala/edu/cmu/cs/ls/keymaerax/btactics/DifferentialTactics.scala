@@ -816,8 +816,8 @@ private object DifferentialTactics extends Logging {
           (exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
       })
 
-      def cutFmls(seq: Sequent, pos: SeqPos): (List[Formula], List[Formula]) = {
-        val bv = StaticSemantics.boundVars(seq(pos))
+      def cutFmls(seq: Sequent): (List[Formula], List[Formula]) = {
+        val bv = StaticSemantics.boundVars(a)
         (seq.ante.flatMap({ fml =>
           if (fml != box && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) Some(fml)
           else None
@@ -830,7 +830,7 @@ private object DifferentialTactics extends Logging {
 
       val cutAndDW = anon ((seq: Sequent) => {
         //@note filter to include only formulas that are rewritten to initial values
-        val (anteCuts, succCuts) = cutFmls(seq, pos.top)
+        val (anteCuts, succCuts) = cutFmls(seq)
         val cuts = anteCuts ++ succCuts
         val odeAfterCut = if (cuts.isEmpty) box else Box(ODESystem(a.ode, And(a.constraint, cuts.reduceRight(And))), p)
         //@note implyRi+implyR to move Q last in succedent
