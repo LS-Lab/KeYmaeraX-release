@@ -111,6 +111,7 @@ trait HybridProgramCalculus {
     longDisplayName = "Loop Invariant",
     premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true,
+    //@note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula", displayLevel = "full")
   def loop(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.loop(invariant)(pos) }
 
