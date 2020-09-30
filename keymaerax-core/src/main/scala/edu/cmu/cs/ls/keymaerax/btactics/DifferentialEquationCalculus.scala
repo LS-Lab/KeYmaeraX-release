@@ -97,8 +97,10 @@ trait DifferentialEquationCalculus {
     */
   def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = dC(List(R))
   @Tactic(longDisplayName = "Differential Cut",
-    conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
-    premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
+    premises = "Γ |- [{x'=f(x) & Q}]R, Δ ;; Γ |- [{x'=f(x) & (Q∧R)}]P, Δ",
+    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
+    contextPremises = "Γ |- C( [{x'=f(x) & Q}]R ), Δ ;; Γ |- C( [{x'=f(x) & (Q∧R)}]P ), Δ",
+    contextConclusion = "Γ |- C( [{x'=f(x) & Q}]P ), Δ",
     revealInternalSteps = true)
   def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
 
@@ -157,16 +159,22 @@ trait DifferentialEquationCalculus {
   @Tactic(longDisplayName="Differential Invariant Auto-Close",
     premises="*",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
   def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
   @Tactic(longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    contextPremises="Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
   def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true, codeName = "dI")
   def   dIX: DependentPositionTactic = DifferentialTactics.diffInd('cex)
 
@@ -200,7 +208,10 @@ trait DifferentialEquationCalculus {
     */
   @Tactic(longDisplayName = "Differential Ghost",
     premises = "Γ |- ∃y [x'=f(x),E&Q]G, Δ ;; G |- P",
-    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E[y,x,y']:expression;; G[y]:option[formula]")
+    conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
+    contextPremises = "Γ |- C( ∃y [x'=f(x),E&Q]P ), Δ", //@note G->P in context not yet supported
+    contextConclusion = "Γ |- C( [x'=f(x)&Q]P ), Δ",
+    revealInternalSteps = true, inputs = "E[y,x,y']:expression;; G[y]:option[formula]")
   def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) =>
     E match {
       case Equal(l: DifferentialSymbol, r) =>
@@ -215,8 +226,8 @@ trait DifferentialEquationCalculus {
   }
 
   @Tactic("dG", longDisplayName = "Differential Ghost",
-    conclusion = "Γ |- [{x′=f(x) & Q}]P, Δ",
-    premises = "Γ |- ∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
+    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
+    premises = "Γ |- ∃y [{x'=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
     inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]")
   def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): DependentPositionWithAppliedInputTactic =
     TactixLibrary.dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)

@@ -65,6 +65,8 @@ private object DLBySubst {
     premises   = "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
     //       GVR --------------------------------------------
     conclusion = "Γ |- [a]P, Δ",
+    contextPremises = "Γ |- C( ∀x P ), Δ",
+    contextConclusion = "Γ |- C( [a]P ), Δ",
     displayLevel = "all",
     revealInternalSteps = true)
   val abstractionb: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
