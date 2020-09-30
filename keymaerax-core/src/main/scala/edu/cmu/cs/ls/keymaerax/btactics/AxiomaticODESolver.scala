@@ -133,14 +133,24 @@ object AxiomaticODESolver {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
     val renameDuration =
-      if (StaticSemanticsTools.boundAt(s(pos.top), pos.inExpr).contains(DURATION)) {
+      if (StaticSemantics.symbols(s(pos.top)).contains(DURATION) && StaticSemanticsTools.boundAt(s(pos.top), pos.inExpr).contains(DURATION)) {
         @tailrec
-        def findDurationBoundPos(seed: Position): Position = s.sub(seed) match {
-          case Some(Forall(v, _)) if v.contains(DURATION) => seed
-          case Some(Exists(v, _)) if v.contains(DURATION) => seed
-          case _ => findDurationBoundPos(seed.parent.get)
+        def findDurationBoundPos(seed: Position): Option[Position] = s.sub(seed) match {
+          case Some(Forall(v, _)) if v.contains(DURATION) => Some(seed)
+          case Some(Exists(v, _)) if v.contains(DURATION) => Some(seed)
+          case Some(Box(Assign(v, _), _)) if v == DURATION => Some(seed)
+          case Some(Box(AssignAny(v), _)) if v == DURATION => Some(seed)
+          case Some(Diamond(Assign(v, _), _)) if v == DURATION => Some(seed)
+          case Some(Diamond(AssignAny(v), _)) if v == DURATION => Some(seed)
+          case _ => seed.parent match {
+            case Some(parent) => findDurationBoundPos(parent)
+            case None => None //@note not reachable since tested for symbols(s(pos.top).contains(DURATION)
+          }
         }
-        boundRename(DURATION, TacticHelper.freshNamedSymbol(DURATION, s))(findDurationBoundPos(pos))
+        findDurationBoundPos(pos) match {
+          case Some(dpos) => boundRename(DURATION, TacticHelper.freshNamedSymbol(DURATION, s))(dpos)
+          case None => skip
+        }
       } else nil
 
     val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante

@@ -135,6 +135,21 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.loneElement shouldBe "==> x=1&v=2&a=0 -> \\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
+  it should "solve inside another solution" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("x>=0, y>=0 ==> [{x'=1}][{y'=x}]y>=0".asSequent, AxiomaticODESolver()(1) & AxiomaticODESolver()(1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "x>=0, y>=0 ==> \\forall t__0 (t__0>=0->\\forall t_ (t_>=0->(t__0+x)*t_+y>=0))".asSequent
+  }
+
+  it should "solve in the context of an assignment to t_" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("x>=0, y>=0 ==> [t_:=4;][{x'=y*t_}]x>=0".asSequent, AxiomaticODESolver()(1, 1::Nil)).subgoals.
+      loneElement shouldBe "x>=0, y>=0 ==> [t__0:=4;]\\forall t_ (t_>=0->y*t__0*t_+x>=0)".asSequent
+  }
+
+  it should "solve in the context of a system constant" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("==> [a;][{x'=1}]x>=0".asSequent, AxiomaticODESolver()(1, 1::Nil)).subgoals.
+      loneElement shouldBe " ==> [a;]\\forall t_ (t_>=0->t_+x>=0)".asSequent
+  }
+
   it should "still introduce internal time even if own time is present" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
