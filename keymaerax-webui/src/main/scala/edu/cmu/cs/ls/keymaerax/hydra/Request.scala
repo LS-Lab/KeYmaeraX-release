@@ -1763,19 +1763,19 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
       case Some(node) => node.goal match {
-        case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil //@note node closed
+        case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil //@note node closed
         case Some(seq) =>
           if (seq.isFOL) {
             val folSuggestions = "QE"::"abbrv"::"hideL"::Nil
             // todo: counterexample, find assumptions + general help
             val tactics = folSuggestions.map(s => (DerivationInfo(s), None))
-            ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+            ApplicableAxiomsResponse(tactics, Map.empty, topLevel=true) :: Nil
           } else {
             // find "largest" succedent formula with programs and suggest top-level popup content
             val pos = SuccPosition(1)
-            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), Some(Fixed(1))) :: Nil
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), topLevel=true, Some(Fixed(1))) :: Nil
           }
       }
     }
@@ -1786,10 +1786,10 @@ class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: Str
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
-      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
-      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs, pos.isTopLevel) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
     }
   }
 }
@@ -1799,10 +1799,10 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.done) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
     tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-      case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
+      case Some(tactics) => ApplicableAxiomsResponse(tactics, Map.empty, pos1.isTopLevel) :: Nil
     }
   }
 }
@@ -1819,7 +1819,7 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
         filter({case (name, di) => di.displayLevel != 'internal}).
         map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList
     }
-    ApplicableAxiomsResponse(infos, Map.empty) :: Nil
+    ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil
   }
 }
 
@@ -1935,15 +1935,15 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.goal) match {
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
       case Some(goal) =>
         goal.sub(pos) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, Some(pos)) match {
-              case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty) :: Nil
-              case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+              case Some(step) => ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
+              case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
             }
-          case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+          case _ => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
         }
     }
   }

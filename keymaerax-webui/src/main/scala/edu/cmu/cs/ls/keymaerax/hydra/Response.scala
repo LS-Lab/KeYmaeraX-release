@@ -819,7 +819,7 @@ object Helpers {
     val belleTerm = ruleName.split("\\(")(0)
     val (name, codeName, asciiName, longName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
       case Some(di) => (di.display.name, di.codeName, di.display.asciiName, di.longDisplayName, ruleName,
-          ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
+          ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
       case None => (ruleName, ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
@@ -913,7 +913,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
 }
 
 case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
-                                    suggestedInput: Map[ArgInfo, Expression],
+                                    suggestedInput: Map[ArgInfo, Expression], topLevel: Boolean,
                                     suggestedPosition: Option[PositionLocator] = None) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
@@ -955,7 +955,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       (info, info.display) match {
         case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
         case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
-        case (info:AxiomInfo, _) => info.formula.prettyString
+        case (info: AxiomInfo, _) => info.formula.prettyString
       }
     JsObject(
       "type" -> JsString("axiom"),
@@ -1017,6 +1017,9 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
         case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
         case (pi: DerivationInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
         case (_, RuleDisplayInfo(_, conclusion, premises)) => ruleJson(info, conclusion, premises)
+        case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem)) =>
+          if (topLevel) ruleJson(info, conclusion, premises)
+          else ruleJson(info, ctxConc, ctxPrem)
         case (_, (_: AxiomDisplayInfo) | (_: InputAxiomDisplayInfo)) =>
           throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }
@@ -1052,7 +1055,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       )
   }
 
-  def getJson = JsArray(derivationInfos.map(derivationJson):_*)
+  def getJson: JsValue = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
 case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])]) extends Response {
