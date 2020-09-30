@@ -8,10 +8,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
@@ -112,7 +113,7 @@ trait ProofTreeNode {
       // single-position tactics
       goal.map(g => (g, g.sub(pos))) match {
         case Some((goal, Some(subFormula))) =>
-          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal)).map(axiom =>
+          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal), proof.substs).map(axiom =>
             (DerivationInfo(axiom), UIIndex.comfortOf(axiom).map(DerivationInfo(_))))
         case _ => Nil
       }
@@ -143,6 +144,31 @@ trait ProofTreeNode {
   /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
     * Returns `goal` if `sub` is not applicable at `i`. */
   private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]): (ProvableSig, List[SubstitutionPair]) = {
+    /** Unify goal with sub-conclusion to find missing substitutions.
+      * @note sub may originate from a lemma that was proved with expanded definitions; find by unification,
+      *       but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
+      *       may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
+      */
+    def unificationSubst(goal: ProvableSig, sub: ProvableSig, subst: USubst): (ProvableSig, List[SubstitutionPair]) = {
+      val substGoal = exhaustiveSubst(goal, subst)
+      val substSub = exhaustiveSubst(sub, subst)
+      try {
+        val downSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+      } catch {
+        case _: UnificationException =>
+          try {
+            val upSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+            substGoal(exhaustiveSubst(substSub, upSubst), i) -> (substs ++ upSubst.subsDefsInput)
+          } catch {
+            case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
+              //@note proof step introduced function symbols with delayed substitution,
+              // but may not yet be done and so back-substitution fails
+              substGoal -> subst.subsDefsInput.toList
+          }
+      }
+    }
+
     if (goal.subgoals(i) == sub.conclusion) goal(sub, i) -> substs
     else if (substs.nonEmpty) {
       // apply only substitutions for difference between goal and sub
@@ -151,20 +177,10 @@ trait ProofTreeNode {
       val sigDiff = goalSig -- subSig
       val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
       val subst = RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst
-      val substGoal = exhaustiveSubst(goal, subst)
-      val substSub = exhaustiveSubst(sub, subst)
-      //@note sub may originate from a lemma that was proved with expanded definitions; find by unification,
-      // but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
-      // may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
-      try {
-        val downSubst = UnificationMatch.apply(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
-      } catch {
-        case _: UnificationException =>
-          val upSubst = UnificationMatch.apply(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
-          substGoal(exhaustiveSubst(substSub, upSubst), i) -> (substs ++ upSubst.subsDefsInput)
-      }
-    } else goal -> substs
+      unificationSubst(goal, sub, subst)
+    } else {
+      unificationSubst(goal, sub, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)
+    }
   }
 
 
@@ -337,7 +353,13 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
       goalIdx, recursive = false, shortName)
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)),
       interpreter(listener::Nil))
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 
@@ -347,7 +369,14 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      // report tactic execution problems upon completion
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 

@@ -1551,9 +1551,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "replace tabs with spaces" in {
+  it should "replace tabs with spaces" in withTactics {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" auto End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
@@ -1561,7 +1561,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator)) :: Nil
+    entry.tactics shouldBe ("Proof", "auto", TactixLibrary.auto(TactixLibrary.invGenerator, None)) :: Nil
     entry.info shouldBe empty
     entry.fileContent shouldBe
       """ArchiveEntry "Replace tabs"
@@ -1571,7 +1571,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Problem
         |  x>0
         |End.
-        |Tactic "Proof" master End. End.""".stripMargin
+        |Tactic "Proof" auto End. End.""".stripMargin
   }
 
   it should "replace tabs with spaces in model-only entry" in {

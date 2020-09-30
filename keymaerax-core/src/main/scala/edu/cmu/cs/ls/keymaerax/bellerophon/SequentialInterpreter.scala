@@ -197,7 +197,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       apply(valueDependentTactic, v)
     } catch {
       case e: BelleThrowable => if (throwWithDebugInfo) throw e.inContext(d, v.prettyString) else throw e
-      case e: Throwable => throw new IllFormedTacticApplicationException("Unable to create dependent tactic '" + d.name + "', cause: " + e.getMessage, e).inContext(d, "")
+      case e: Throwable =>
+        val prefix = if (d.name != "ANON") "Unable to execute tactic '" + d.name + "', cause: " else ""
+        throw new IllFormedTacticApplicationException(prefix + e.getMessage, e).inContext(d, "")
     }
 
     case subst: InputTactic if subst.name == "US" =>

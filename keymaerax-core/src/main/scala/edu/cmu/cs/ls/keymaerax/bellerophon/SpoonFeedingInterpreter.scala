@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -80,7 +80,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   * @author Stefan Mitsch
   */
 case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
-                                   listenerFactory: Int => ((String, Int, Int) => scala.collection.immutable.Seq[IOListener]),
+                                   listenerFactory: Int => (String, Int, Int) => scala.collection.immutable.Seq[IOListener],
                                    inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int = 0,
                                    strict: Boolean = true, convertPending: Boolean = true) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
@@ -200,7 +200,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
               })._1
-              case ((BelleProvable(cp, _), i), provable) => provable(cp, i)
+              case ((BelleProvable(cp, _), i), provable) =>
+                // provables may have expanded or not expanded definitions arbitrarily
+                if (provable.sub(i).subgoals.head == cp.conclusion) provable(cp, i)
+                else try {
+                  val downSubst = UnificationMatch(provable.sub(i).subgoals.head, cp.conclusion).usubst
+                  exhaustiveSubst(provable, downSubst)(cp, i)
+                } catch {
+                  case _: UnificationException =>
+                    val upSubst = UnificationMatch(cp.conclusion, provable.sub(i).subgoals.head).usubst
+                    provable(exhaustiveSubst(cp, upSubst), i)
+                }
             })
 
             //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
@@ -230,7 +240,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
-                case e: UnificationException =>
+                case _: UnificationException =>
                   //if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
                   (RenUSubst(Nil), expr)
               }
@@ -342,7 +352,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           runTactic(valueDependentTactic, goal, level - levelDecrement, ctx, strict, convertPending, executePending)
         } catch {
           case e: BelleThrowable => throw e.inContext(d, goal.prettyString)
-          case e: Throwable => throw new IllFormedTacticApplicationException("Unable to create dependent tactic", e).inContext(d, "")
+          case e: Throwable =>
+            val prefix = if (d.name != "ANON") "Unable to execute tactic '" + d.name + "', cause: " else ""
+            throw new IllFormedTacticApplicationException(prefix + e.getMessage, e).inContext(d, "")
         }
 
         case NamedTactic(name, t) if level > 0 || name == "ANON" =>
@@ -386,7 +398,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           }
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          runTactic(BelleParser(t.inputs.head.asInstanceOf[String].replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
+          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
         case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
           case Some(alt) =>
             val c = Cancellable(runTactic(alt, goal, level, ctx, strict, convertPending, executePending))
@@ -405,8 +417,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
         }
 
+        case t: InputTactic if level > 0 =>
+          runTactic(t.computeExpr(), goal, level-1, ctx, strict, convertPending, executePending)
+
+        // region unsteppable tactics
+        case t: CoreLeftTactic => runTactic(t, goal, 0, ctx, strict, convertPending, executePending)
+        case t: CoreRightTactic => runTactic(t, goal, 0, ctx, strict, convertPending, executePending)
+        // endregion
+
         // forward to inner interpreter
         case _ =>
+          if (level > 0) logger.debug("Missing feature: unable to step into " + tactic.prettyString)
           if (!strict && tactic.isInstanceOf[NoOpTactic]) {
             // skip recording no-op tactics in non-strict mode (but execute, may throw exceptions that we expect)
             runningInner = inner(Nil)
@@ -428,7 +449,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 case _ =>
                   if (provable.subgoals.size > 1) {
                     //@note tactic operating on multiple subgoals without OnAll
-                    throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    //@note tactic annotations do not retain NoOpTactic type, so on e.g. andR(1);print/nil/... we get into
+                    // this case; workaround: execute without recording and check that nothing changed
+                    runningInner = inner(Nil)
+                    val result = (runningInner(tactic, goal), ctx)
+                    runningInner = null
+                    if (result._1 != goal) throw new IllFormedTacticApplicationException("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
+                    else result
                   } else {
                     assert(tactic.prettyString != "ANON", "Unable to record anonymous tactic without name")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))

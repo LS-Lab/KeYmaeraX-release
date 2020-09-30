@@ -9,7 +9,8 @@ import java.util.Properties
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, PolynomialArithV2, SimplifierV3, TacticFactory, TactixInit, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
@@ -26,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import spray.json._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.{HashSet, IndexedSeq}
+import scala.collection.immutable.{HashSet, IndexedSeq, Nil}
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.util.matching.Regex
@@ -238,24 +239,46 @@ object AssessmentProver {
           case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
           case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
         }
-        case Modes.QE => (have, expected) match {
-          case (h: ExpressionArtifact, e: ExpressionArtifact) =>
-            (h.expr, e.expr) match {
-              case (hf: Formula, ef: Formula) =>
-                args.get("op") match {
-                  case None | Some("<->") => run(() => qe(hf, ef, Equiv))
-                  case Some("->") => run(() => qe(hf, ef, Imply))
-                  case Some("<-") => run(() => qe(ef, hf, Imply))
+        case Modes.QE =>
+          args.get("question") match {
+            case Some(q) =>
+              def runQE(question: String, answers: List[String]) = {
+                run(() => {
+                  val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
+                  KeYmaeraXProofChecker(60)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
+                })
+              }
+              have match {
+                case h: ExpressionArtifact => runQE(q, h.exprString :: Nil)
+                case ListExpressionArtifact(hs) => runQE(q, hs.map(_.prettyString))
+                case SequentArtifact(goals) => runQE(q, goals.map(_.toFormula).map(_.prettyString))
+                case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
+              }
+            case None => (have, expected) match {
+              case (h: ExpressionArtifact, e: ExpressionArtifact) =>
+                (h.expr, e.expr) match {
+                  case (hf: Formula, ef: Formula) =>
+                    args.get("op") match {
+                      case None | Some("<->") => run(() => qe(hf, ef, Equiv))
+                      case Some("->") => run(() => qe(hf, ef, Imply))
+                      case Some("<-") => run(() => qe(ef, hf, Imply))
+                    }
+                  case _ => Right("Answer must be a KeYmaera X expression, but got " + have.longHintString)
                 }
-              case _ => Right("Answer must be a KeYmaera X expression, but got " + have.longHintString)
-            }
-          case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
-            args.get("op") match {
-              case None | Some("<->") => run(() => qe(h, e, Equiv))
-              case Some("->") => run(() => qe(h, e, Imply))
-              case Some("<-") => run(() => qe(e, h, Imply))
-            }
-          case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
+              case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) =>
+                args.get("op") match {
+                  case None | Some("<->") => run(() => qe(h, e, Equiv))
+                  case Some("->") => run(() => qe(h, e, Imply))
+                  case Some("<-") => run(() => qe(e, h, Imply))
+                }
+              case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
+                val checked = h.zip(e).map({ case (h, e) => check(ExpressionArtifact(h.prettyString), ExpressionArtifact(e.prettyString)) })
+                checked.find(_.isRight) match {
+                  case None => checked.head
+                  case Some(r) => r
+                }
+              case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
+          }
         }
         case Modes.PROP => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
@@ -376,6 +399,10 @@ object AssessmentProver {
 
           def runBelleProof(question: String, answers: List[String]): Either[ProvableSig, String] = {
             run(() => {
+              val generator = new ConfigurableGenerator[GenProduct]()
+              Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
+                generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
+              TactixInit.invSupplier = generator
               val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
               val t = expand(args("tactic"), answers, BelleParser)
               val p = prove(Sequent(IndexedSeq(), IndexedSeq(m)), t)
@@ -430,6 +457,15 @@ object AssessmentProver {
               case None => return Right(Messages.INSPECT)
             }
             case a: ArchiveArtifact => a.entries
+            case t: TextArtifact => t.value match {
+              case None => return Right(Messages.BLANK)
+              case Some(t) =>
+                try {
+                  ArchiveParser.parse(t, parseTactics = true)
+                } catch {
+                  case ex: ParseException => return Right(ex.getMessage)
+                }
+            }
           }
           if (entries.count(_.kind == "theorem") != 1) return Right("Unexpected archive content: any number of lemmas allowed, but expected exactly 1 ArchiveEntry|Theorem")
           val results = entries.map(e => e -> run(() => prove(Sequent(IndexedSeq(), IndexedSeq(e.model.asInstanceOf[Formula])),
@@ -555,13 +591,14 @@ object AssessmentProver {
       case Success(p) => Left(p)
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
+      case Failure(ex: TacticInapplicableFailure) if ex.getMessage.startsWith("QE with Z3 gives UNKNOWN") => Right(Messages.INSPECT)
       case Failure(_) => Right("")
     }
   }
 
   /** Proves equivalence of `a` and `b` by QE. */
   def qe(a: Formula, b: Formula, op: (Formula, Formula) => Formula): ProvableSig = {
-    KeYmaeraXProofChecker(5000)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(op(a, b))))
+    KeYmaeraXProofChecker(60)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(op(a, b))))
   }
 
   /** Compares terms `a` and `b` for having the same real values. */
@@ -605,7 +642,7 @@ object AssessmentProver {
         "Expected uninterpreted function arguments to be equal, but not all are.")
       val encodeda = encodeFunctions(expa, funca.map({ case (fn, (v, _)) => fn -> v }))
       val encodedb = encodeFunctions(expb, funcb.map({ case (fn, (v, _)) => fn -> v }))
-      KeYmaeraXProofChecker(5000)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
+      KeYmaeraXProofChecker(60)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
   }
 
   private def nameOf(t: Term): String = StaticSemantics.freeVars(t).toSet[Variable].map(_.prettyString.replaceAllLiterally("_", "$u$")).mkString("")
@@ -769,9 +806,13 @@ object AssessmentProver {
         diffAssigns.toList
       }
 
-      val ads = collectDiffAssigns(a).map({ case Assign(d: DifferentialSymbol, _) => d }).toSet
-      val bds = collectDiffAssigns(b).map({ case Assign(d: DifferentialSymbol, _) => d }).toSet
-      require(ads == bds, "Differential assignments do not match: expected assignments to " + ads.map(_.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_.prettyString).mkString(",")))
+      val ads = collectDiffAssigns(a).map({ case Assign(d: DifferentialSymbol, r) => (d, r) }).groupBy(_._1)
+      val bds = collectDiffAssigns(b).map({ case Assign(d: DifferentialSymbol, r) => (d, r) }).groupBy(_._1)
+      require(ads.forall(_._2.size == 1), "Differential assignments must be unique, but got " + ads.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
+      require(bds.forall(_._2.size == 1), "Differential assignments must be unique, but got " + bds.find(_._2.size > 1).map(_._1.prettyString).getOrElse(""))
+      require(ads.keys == bds.keys, "Differential assignments do not match: expected assignments to " + ads.map(_._1.prettyString).mkString(",") + " but found " + (if (bds.isEmpty) "none" else bds.map(_._1.prettyString).mkString(",")))
+      val zipped = for (key <- ads.keys) yield (key, ads(key).map(_._2).head, bds(key).map(_._2).head)
+      assert(zipped.map({ case (_, a, b) => polynomialEquality(a, b) }).forall(_.isProved), "Unexpected differential assignment right-hand side")
     }
 
     val ap: ProvableSig = KeYmaeraXProofChecker(1000)(chase(1))(Sequent(IndexedSeq(), IndexedSeq(a)))
@@ -793,7 +834,7 @@ object AssessmentProver {
   def dICheck(ode: ODESystem, inv: Formula): ProvableSig = {
     require(!StaticSemantics.freeVars(SimplifierV3.formulaSimp(inv, HashSet.empty,
       SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).isEmpty, "Invariant " + inv.prettyString + " does not mention free variables")
-    KeYmaeraXProofChecker(5000)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
+    KeYmaeraXProofChecker(60)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h')  */
@@ -802,7 +843,7 @@ object AssessmentProver {
       StaticSemantics.freeVars(s).toSet.filter(_.isInstanceOf[DifferentialSymbol]).
         map(abbrvAll(_, None)).reduceRightOption[BelleExpr](_&_).getOrElse(skip) & SaturateTactic(hideL('L))
     }
-    KeYmaeraXProofChecker(5000)(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
+    KeYmaeraXProofChecker(60)(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
       SimplifierV3.fullSimplify & prop & OnAll(QE & done))(
       Sequent(IndexedSeq(), IndexedSeq(And(Equiv(e, h), Imply(DifferentialFormula(e), DifferentialFormula(h)))))
     )
@@ -857,7 +898,7 @@ object AssessmentProver {
       }
     }
     val (as, bs) = (elaborateToSystem(a), elaborateToSystem(b))
-    KeYmaeraXProofChecker(5000)(chase(1, 0::Nil) & chase(1, 1::Nil) &
+    KeYmaeraXProofChecker(60)(chase(1, 0::Nil) & chase(1, 1::Nil) &
       SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop))) & DebuggingTactics.done("Program is not as expected"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
@@ -873,13 +914,13 @@ object AssessmentProver {
         map({ case (Equiv(l, _), pr) => useAt(pr, if (l == fml) PosInExpr(0::Nil) else PosInExpr(1::Nil))(Position(SuccPos(i)) ++ PosInExpr(1::Nil)) }) }).
         reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }
-    KeYmaeraXProofChecker(5000)(chase(1) & prop & OnAll(rephrasePost & prop) & DebuggingTactics.done(""))(
+    KeYmaeraXProofChecker(60)(chase(1) & prop & OnAll(rephrasePost & prop) & DebuggingTactics.done(""))(
       Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
   }
 
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
   def prove(s: Sequent, t: BelleExpr): ProvableSig = {
-    KeYmaeraXProofChecker(5000)(t)(s)
+    KeYmaeraXProofChecker(60)(t)(s)
   }
 
   /** Exports answers from `chapter` to individual files in directory `out`, on for each question (named 1a.txt ... Xy.txt) */
@@ -957,7 +998,7 @@ object AssessmentProver {
   }
 
   private def grade(chapter: Submission.Chapter, msgOut: OutputStream, resultOut: OutputStream, skipGradingOnParseError: Boolean): Unit = {
-    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, prompts) =>
+    val parsedProblems = chapter.problems.map({ case problem@Submission.Problem(_, _, _, _, _, _, prompts) =>
       val parsedAnswers = prompts.map(p => try {
         Left(p -> toAnswerArtifact(p))
       } catch {
@@ -1023,7 +1064,7 @@ object AssessmentProver {
     val ARG_PLACEHOLDER_GROUP = "argPlaceholder"
     val NEG_HASH = (Regex.quote(QuizExtractor.AskQuestion.ARG_PLACEHOLDER) + """(-\d+)""").r(ARG_PLACEHOLDER_GROUP)
     val mergedPrompts = prompts.zipWithIndex.map({
-      case ((p@Submission.SinglePrompt(_, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
+      case ((p@Submission.SinglePrompt(_, _, _, _, _, Submission.TextAnswer(_, _, _, Some(Submission.GraderCookie(_, _, method)), _, _) :: Nil), answer), i) =>
         val backRefs = NEG_HASH.findAllMatchIn(method).map(_.group(ARG_PLACEHOLDER_GROUP).toInt).toList
         if (backRefs.nonEmpty) {
           val mergedPrompt = Submission.MultiPrompt(p, backRefs.map(j => (j, prompts(i + j)._1)).toMap)
@@ -1267,7 +1308,8 @@ object AssessmentProver {
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
-    val scoreFields = grades.flatMap({ case (_, _, pg) => pg.map({ case (p, s) => p.id.toString -> JsNumber(s) }) })
+    val scoreFields = grades.map({ case (problem, _, pg) =>
+      (problem.rank + ": " + problem.title + " (" + problem.points + " pts)") -> JsNumber(pg.map(_._2).sum) })
     val jsonGrades = JsObject("scores" -> JsObject(scoreFields:_*))
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }

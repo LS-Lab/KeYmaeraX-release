@@ -276,6 +276,12 @@ class DLTests extends TacticTestBase {
       loneElement shouldBe "==> [y:=2;]\\exists x (x=3 & [{x:=x+y+1;}*]x>0) -> z>0".asSequent
   }
 
+  it should "FEATURE_REQUEST: keep positions stable" taggedAs TodoTest in withTactics {
+    //@todo last step (implyR) in assignEquality changes position
+    proveBy("x=1, [x:=2;]x=2 ==> [x:=3;]x>0, [x:=5;]x>6, x=7".asSequent, DLBySubst.assignEquality(1)).
+      subgoals.loneElement shouldBe "x_0=1, [x_0:=2;]x_0=2, x=3 ==> x>0, [x_0:=5;]x_0>6, x_0=7".asSequent
+  }
+
   "generalize" should "introduce intermediate condition" in withTactics {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
@@ -756,6 +762,12 @@ class DLTests extends TacticTestBase {
   it should "not clash with preexisting variables when introducing anonymous ghosts" in withTactics {
     val result = proveBy("ghost>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
     result.subgoals.loneElement shouldBe "ghost>0, ghost_0=y+v/1 ==> x>0".asSequent
+  }
+
+  it should "FEATURE_REQUEST: keep positions stable" taggedAs TodoTest in withTactics {
+    //@todo last step (implyR) in assignEquality step used in discreteGhost changes position
+    val result = proveBy("a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent, discreteGhost("0".asTerm, Some("z".asVariable))(2))
+    result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in withTactics {

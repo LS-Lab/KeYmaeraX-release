@@ -519,9 +519,11 @@ object Ax extends Logging {
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
+  /** all dual */
   @Axiom(("∀d", "alld"), conclusion = "__¬∃x ¬P__ ↔ ∀x P", displayLevel = "all",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alld: CoreAxiomInfo = coreAxiom("all dual")
+  /** all eliminate */
   @Axiom(("∀e", "alle"), conclusion = "__∀x P__ → P",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alle: CoreAxiomInfo = coreAxiom("all eliminate")
@@ -1227,7 +1229,7 @@ object Ax extends Logging {
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
 
   /**
-    * {{{Axiom "all distribute".
+    * {{{Axiom "all distribute elim".
     *   (\forall x (P->Q)) -> ((\forall x P)->(\forall x Q))
     * }}}
     */
@@ -1246,6 +1248,21 @@ object Ax extends Logging {
     * @todo follows from "all distribute" and "all vacuous"
     */
 
+  /**
+    * {{{Axiom "exists distribute elim".
+    *   (\forall x (P->Q)) -> ((\exists x P)->(\exists x Q))
+    * }}}
+    */
+  @Axiom(("∃→","exists->"), conclusion = "(∀x (P→Q)) → (__∃x P → ∃x Q__)",
+    key = "1", recursor = "*")
+  lazy val existsDistElim: DerivedAxiomInfo = derivedAxiom("exists distribute elim",
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\exists x_ p_(||))->(\\exists x_ q_(||)))".asFormula)),
+    useExpansionAt(existsDual)(1, 1::0::Nil) &
+      useExpansionAt(existsDual)(1, 1::1::Nil) &
+      useAt(converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(converseImply, PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(allDistElim)
+  )
 
   /**
     * {{{Axiom "[] box".
@@ -1784,7 +1801,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "[:=] assign update".
-    *    [x:=t();]p(x) <-> [x:=t();]p(x)
+    *    [x:=t();]P <-> [x:=t();]P
     * End.
     * }}}
     *
@@ -1793,13 +1810,13 @@ object Ax extends Logging {
     */
   @Axiom("[:=]", key = "0", recursor = "1;*")
   lazy val assignbup: DerivedAxiomInfo = derivedAxiom("[:=] assign update",
-    Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(x_) <-> [x_:=t_();]p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(||) <-> [x_:=t_();]p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
   /**
     * {{{Axiom "<:=> assign update".
-    *    <x:=t();>p(x) <-> <x:=t();>p(x)
+    *    <x:=t();>P <-> <x:=t();>P
     * End.
     * }}}
     *
@@ -1808,7 +1825,7 @@ object Ax extends Logging {
     */
   @Axiom("<:=>", key = "0", recursor = "1;*")
   lazy val assigndup: DerivedAxiomInfo = derivedAxiom("<:=> assign update",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(x_) <-> <x_:=t_();>p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(||) <-> <x_:=t_();>p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
@@ -2479,7 +2496,7 @@ object Ax extends Logging {
     * }}}
     * Contraposition
     */
-  @Axiom(("→conv","-> conv"))
+  @Axiom(("→conv","-> conv"), key="0", recursor = "*")
   lazy val converseImply: DerivedAxiomInfo = derivedAxiom("-> converse", Sequent(IndexedSeq(), IndexedSeq("(p_() -> q_()) <-> (!q_() -> !p_())".asFormula)), prop)
 
   /**
@@ -3408,7 +3425,7 @@ object Ax extends Logging {
         )
     )
 
-  @Axiom("dualIVT")
+  @Axiom("dualIVT", key="1", unifier="linear")
   lazy val dualIVT: DerivedAxiomInfo = derivedFormula("dualIVT", "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
     implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
       notL(-2) & notR(1) & useAt(notImply, PosInExpr(0 :: Nil))(-2, 1 :: Nil) &
@@ -3441,7 +3458,7 @@ object Ax extends Logging {
     )
   )
 
-  @Axiom("timeStep")
+  @Axiom("timeStep", key="1", unifier="linear")
   lazy val timeStep: DerivedAxiomInfo = derivedFormula("timeStep", "[{x_'=1,c{|x_|}&q(||)}]p(||)<-(x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))".asFormula,
       implyR(1) & andL(-1) &
         cutR("[{x_'=1, c{|x_|} & q(||)}]((x_>=h()->p(||))&(x_<=h()->p(||)))".asFormula)(1) &
@@ -4669,7 +4686,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "all stutter".
-    *    \forall x p <-> \forall x p
+    *    \forall x P <-> \forall x P
     * End.
     * }}}
     *
@@ -4678,13 +4695,13 @@ object Ax extends Logging {
     */
   @Axiom("all stutter", key = "0", recursor = "")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
-    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(x_) <-> \\forall x_ p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
   /**
     * {{{Axiom "exists stutter".
-    *    \exists x p <-> \exists x p
+    *    \exists x P <-> \exists x P
     * End.
     * }}}
     *
@@ -4693,7 +4710,7 @@ object Ax extends Logging {
     */
   @Axiom("exists stutter", key = "0", recursor = "")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
-    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 

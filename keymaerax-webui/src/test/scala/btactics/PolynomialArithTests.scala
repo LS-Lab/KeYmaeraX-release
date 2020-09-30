@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
@@ -270,7 +271,7 @@ class PolynomialArithTests extends TacticTestBase {
       (AntePosition(3,1::Nil),"a".asTerm,"b/2+5/2-c".asTerm,"2".asTerm)
     )
     val elim = (rewriteEquality _).tupled
-    val pr = proveBy(Sequent(antes,succs), rewrites.foldLeft(nil)(_ & elim(_)))
+    val pr = proveBy(Sequent(antes,succs), rewrites.foldLeft[BelleExpr](nil)(_ & elim(_)))
     pr.subgoals should contain only
       Sequent(IndexedSeq("a+b=c","y=5/2*(F()+G()-x-z)","d*f=12&a=b/2+5/2-c").map(_.asFormula),
               IndexedSeq("z=k","g()=f()","K()=A+2*B+C").map(_.asFormula))

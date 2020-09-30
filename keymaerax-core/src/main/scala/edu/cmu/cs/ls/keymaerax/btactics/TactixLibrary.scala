@@ -35,7 +35,7 @@ import scala.util.Try
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
   *   - [[TactixLibrary.master]] automatic proof search
-  *   - [[TactixLibrary.auto]] automatic proof search if that successfully proves the given property
+  *   - [[TactixLibrary.autoClose]] automatic proof search if that successfully proves the given property
   *   - [[TactixLibrary.normalize]] normalize to sequent normal form
   *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
   *   - [[TactixLibrary.prop]] propositional logic proving
@@ -106,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic(longDisplayName = "Program Step")
+  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
   val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
@@ -237,7 +237,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  @Tactic("chaseAt", longDisplayName = "Recursively Decompose", codeName = "chaseAt")
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
   def chaseAtX: DependentPositionTactic = chaseAt()(
     TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
     TactixLibrary.existsL, TacticIndex.existsRStutter,
@@ -269,7 +269,9 @@ object TactixLibrary extends HilbertCalculus
 
   /** Automated propositional reasoning, only keeps result if proved. */
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
-  val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
+  val propClose: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  val propAuto: BelleExpr = propClose
 
   /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
@@ -359,22 +361,26 @@ object TactixLibrary extends HilbertCalculus
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
-    * @see [[auto]] */
+ *
+    * @see [[autoClose]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean = true): BelleExpr = "master" by {
-    master(loopauto(gen), ODE, keepQEFalse)
-  }
+             keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
-   * master: master tactic that tries hard to prove whatever it could.
-   * @see [[auto]] */
-  @Tactic(codeName = "master", longDisplayName = "Unfold Automatically")
-  def masterX(generator: Generator[GenProduct]): InputTactic = inputanon { master(generator) }
+   * auto: tactic that tries hard to prove whatever it could.
+ *
+   * @see [[autoClose]] */
+  @Tactic(longDisplayName = "Unfold Automatically")
+  def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
+    master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
+  }
+  @Tactic(names="master", codeName="master", longDisplayName = "Unfold Automatically")
+  def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = auto(generator, keepQEFalse)
 
-  /** auto: automatically try hard to prove the current goal if that succeeds.
+  /** autoClose: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic(longDisplayName = "Prove Automatically")
-  def auto: DependentTactic = anons { (_: ProvableSig) =>
+  def autoClose: DependentTactic = anons { (_: ProvableSig) =>
     master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
@@ -484,7 +490,7 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(auto & done) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(autoClose & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
@@ -497,7 +503,7 @@ object TactixLibrary extends HilbertCalculus
                   logger.warn("ChooseSome: error listing options " + err, err)
                   List[Formula]().iterator
               },
-              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(auto) & done
+              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(autoClose) & done
             )
       }
     case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")
@@ -561,8 +567,8 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  @Tactic(longDisplayName = "Auto", revealInternalSteps = true)
-  lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
+  lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
@@ -582,7 +588,7 @@ object TactixLibrary extends HilbertCalculus
           case _ => skip
         })
        else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
-  })
+  }, Some("ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.")))
 
   /**
     * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
@@ -656,52 +662,19 @@ object TactixLibrary extends HilbertCalculus
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
-    //@todo implement as part of tools?
-    lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
-      throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
-      case Some(t) => tool match {
-        case tom: ToolOperationManagement =>
-          val oldTimeout = tom.getOperationTimeout
-          tom.setOperationTimeout(t)
-          if (oldTimeout != t) {
-            e: BelleExpr => TryCatch(e, classOf[Throwable],
-                // catch: noop
-                (_: Throwable) => skip,
-                // finally: reset timeout
-                Some(new DependentTactic("ANON") {
-                  override def computeExpr(v: BelleValue): BelleExpr = {
-                    tom.setOperationTimeout(oldTimeout)
-                    skip
-                  }
-                })
-            )
-          } else (e: BelleExpr) => e
-        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
-      }
-      case None => (e: BelleExpr) => e
-    }
-    lazy val timeoutTool: QETacticTool = timeout match {
-      case Some(t) => tool match {
-        case tom: ToolOperationManagement =>
-          tom.setOperationTimeout(t)
-          tool
-        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
-      }
-      case None => tool
-    }
-    resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+  def QE(order: Seq[NamedSymbol] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+    if (order.isEmpty) QEX(tool, timeout.map(Number(_)))
+    else ToolTactics.timeoutQE(order, tool, timeout) // non-serializable for now
   }
 
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     (tool, timeout) match {
-      case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
-      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
-      case (Some(toolName), _) =>  TactixLibrary.QE(Nil, Some(toolName))
-      case (_, Some(time)) => TactixLibrary.QE(Nil, None, Some(time.value.toInt))
-      case (_, _) => QE(Nil, None, None)
+      case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(Nil, Some(toolName), Some(time.value.toInt))
+      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(Nil, None, Some(Integer.parseInt(toolName)))
+      case (Some(toolName), _) =>  ToolTactics.timeoutQE(Nil, Some(toolName))
+      case (_, Some(time)) => ToolTactics.timeoutQE(Nil, None, Some(time.value.toInt))
+      case (_, _) => ToolTactics.timeoutQE(Nil, None, None)
     }
   }
   lazy val QE: BelleExpr = QEX(None, None)
@@ -759,7 +732,8 @@ object TactixLibrary extends HilbertCalculus
     // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
-    inputs = "e:term;;x[x]:option[variable]"
+    inputs = "e:term;;x[x]:option[variable]",
+    revealInternalSteps = true
   )
   def abbrvAll(e: Term, x: Option[Variable]): InputTactic = inputanon { EqualityTactics.abbrv(e, x) }
 
@@ -788,7 +762,7 @@ object TactixLibrary extends HilbertCalculus
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities")
+  @Tactic(names = "L=R all", codeName = "allL2R", longDisplayName = "Apply All Equalities", revealInternalSteps = true)
   val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -801,7 +775,7 @@ object TactixLibrary extends HilbertCalculus
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse")
+  @Tactic(names = "R=L all", codeName = "allR2L", longDisplayName = "Apply All Equalities Inverse", revealInternalSteps = true)
   val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -840,12 +814,13 @@ object TactixLibrary extends HilbertCalculus
     * }}}
     * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
-  @Tactic("trafo", longDisplayName = "Transform Expression", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
+  @Tactic("trafo", longDisplayName = "Transform Expression", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ"
+    /* revealInternalSteps = true not yet possible since non-serializable ProvableSig input used internally */)
   def transform(Q: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.transform(Q)(pos) }
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
-  @Tactic("edit", longDisplayName = "Edit Expression")
+  @Tactic("edit", longDisplayName = "Edit Expression", revealInternalSteps = true)
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => ToolTactics.edit(to)(pos) }
 
   //

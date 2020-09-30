@@ -8,11 +8,12 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Number, Power, Real, SubstitutionPair, Trafo, Tuple, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the archive parser with mostly old archaic outdated file format.
@@ -399,6 +400,114 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.model shouldBe "[{x:=x;}*]x=x".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
+  }
+
+  it should "parse when definitions use constant function symbols" in {
+    val input =
+      """ArchiveEntry "Definitions with Constants"
+        |Definitions
+        |  Real A;
+        |  Real Dist(Real v, Real t) = v*t + A*t^2/2;
+        |End.
+        |
+        |ProgramVariables
+        |  Real v, a;
+        |End.
+        |
+        |Problem
+        |  Dist(v,0)>0 -> [{?(Dist(v,0)>0);a := A;}*@invariant(Dist(v,0)>0)]Dist(v,0)>0
+        |End.
+        |End.
+        |""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Definitions with Constants"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("v", None) -> (None, Real, None, None, UnknownLocation),
+        ("a", None) -> (None, Real, None, None, UnknownLocation),
+        ("A", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("Dist", None) -> (Some(Tuple(Real, Real)), Real, Some((("v", None),Real) :: (("t", None), Real) :: Nil),
+          Some("._0*._1 + A()*._1^2/2".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "Dist(v,0)>0->[{?Dist(v,0)>0;a:=A();}*]Dist(v,0)>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "warn when ambiguous function/variable use" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  Real sq(Real x) = x^2;
+        |  Real plus(Real x, Real y) = sq(x)+y;
+        |End.
+        |
+        |Problem
+        |  \forall y (y>0 -> \forall x plus(x,y)>0)
+        |End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> assertion failed: Cannot elaborate:
+        |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "parse when function argument has same name as constant in annotations" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  Real sq(Real x) = x^2;
+        |  Real plus(Real x, Real y) = sq(x)+y;
+        |End.
+        |
+        |ProgramVariables
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  y>0 -> [{y:=y+1;}*@invariant(plus(x,y)>0)]plus(x,y)>0
+        |End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation),
+        ("sq", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), Some(".^2".asTerm), UnknownLocation),
+        ("plus", None) -> (Some(Tuple(Real, Real)), Real, Some((("x", None), Real) :: (("y", None), Real) :: Nil), Some("sq(._0)+._1".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "y>0 -> [{y:=y+1;}*@invariant(plus(x(),y)>0)]plus(x(),y)>0".asFormula
+  }
+
+  it should "warn when ambiguous because of program definitions" in {
+    val input =
+      """ArchiveEntry "Entry"
+        |Definitions
+        |  Real x();
+        |  HP assign ::= { y:=x; };
+        |End.
+        |
+        |ProgramVariables
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  \exists x [assign;]y>0
+        |End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> assertion failed: Cannot elaborate:
+        |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "parse a problem with neither definitions nor variables" in {
@@ -1167,7 +1276,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
 
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" auto End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe
@@ -1178,13 +1287,13 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         |Problem
         |  x>0
         |End.
-        |Tactic "Proof" master End. End.""".stripMargin
+        |Tactic "Proof" auto End. End.""".stripMargin
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
-    entry.tactics shouldBe ("Proof", "master", TactixLibrary.masterX(TactixLibrary.invGenerator)) :: Nil
+    entry.tactics shouldBe ("Proof", "auto", TactixLibrary.auto(TactixLibrary.invGenerator, None)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1238,7 +1347,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
                      |Expected: <unknown>""".stripMargin
   }
 
-  "Global definitions" should "be added to all entries" in {
+  "Global definitions" should "be added to all entries" in withTactics {
     val input =
       """SharedDefinitions.
         | B gt(R,R) <-> ( ._0 > ._1 ).
@@ -1393,7 +1502,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.info shouldBe empty
   }
 
-  it should "add to all entries but not auto-expand if tactic uses US to expand" in {
+  it should "FEATURE_REQUEST: add to all entries but not auto-expand if tactic uses US to expand" taggedAs TodoTest in {
     val input =
       """SharedDefinitions.
         | B gt(R,R) <-> ( ._0 > ._1 ).
@@ -1968,15 +2077,26 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
   }
 
   it should "report substitution errors" in {
-    val entries = parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
         | ProgramVariables Real y; End.
         | Problem [y:=0;]p() End.
         |End.""".stripMargin
-    )
-    the [ParseException] thrownBy entries.loneElement.expandedModel should have message
+    ) should have message
       """<somewhere> Definition p() as y>=0 must declare arguments {y}
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report ambiguous variable/constant use" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | Problem \forall x x^2>=0 End.
+        |End.""".stripMargin
+    ) should have message
+      """<somewhere> Symbol x is bound but is declared constant; please use a different name in the quantifier/program binding x
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }

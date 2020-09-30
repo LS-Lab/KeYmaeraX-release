@@ -112,10 +112,10 @@ trait UnifyUSCalculus {
     * Identical to [[nil]] but different name
     * @see [[TactixLibrary.done]] */
   @Tactic()
-  val skip : BelleExpr = anon { Idioms.ident }
+  val skip : BuiltInTactic = anonnoop { Idioms.ident.result }
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
-  val nil : BelleExpr = anon { Idioms.ident }
+  val nil : BuiltInTactic = anonnoop { Idioms.nil.result }
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
@@ -137,24 +137,20 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     * @see [[HilbertCalculus.stepAt]]
     */
-  def stepAt(axiomIndex: Expression => Option[DerivationInfo]): DependentPositionTactic = new DependentPositionTactic("stepAt") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic("stepAt") {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        val sub = sequent.sub(pos)
-        if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
-        axiomIndex(sub.get) match {
-          case Some(axiom) =>
-            logger.debug("stepAt " + axiom)
-            axiom.belleExpr match {
-              case ap:AtPosition[_] => ap(pos)
-              case expr:BelleExpr => expr
-              case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
-            }
-          case None => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+  def stepAt(axiomIndex: Expression => Option[DerivationInfo]): DependentPositionTactic = anon { (pos: Position, sequent: Sequent) => {
+    val sub = sequent.sub(pos)
+    if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+    axiomIndex(sub.get) match {
+      case Some(axiom) =>
+        logger.debug("stepAt " + axiom)
+        axiom.belleExpr match {
+          case ap:AtPosition[_] => ap(pos)
+          case expr:BelleExpr => expr
+          case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
         }
-      }
+      case None => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
     }
-  }
+  }}
 
   /*******************************************************************
     * close or proceed in proof by providing a Provable fact
@@ -580,15 +576,27 @@ trait UnifyUSCalculus {
 
       private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
 
+      private def checkSubst(matcher: Matcher, key: Expression, expr: Expression): Subst = matcher.unifiable(key, expr) match {
+        case Some(us) => inst(Some(us))
+        case None => try {
+          inst(None)
+        } catch {
+          case ex: InapplicableUnificationKeyFailure if ex.getMessage == "No substitution found by unification, fix axiom key or try to patch locally with own substitution" =>
+            throw new InapplicableUnificationKeyFailure("Axiom " + codeName + " " +
+              fact.conclusion.succ.head.prettyString + " cannot be applied: The shape of\n  expression               " +
+              expr.prettyString + "\n  does not match axiom key " + key.prettyString)
+        }
+      }
+
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
           // unify keyPart against target expression by single-sided matching
           val subst = try {
             if (OPTIMIZE)
-              inst(matcher.unifiable(keyPart, expr))
+              checkSubst(matcher, keyPart, expr)
             else
-              inst(defaultMatcher.unifiable(keyPart, expr))
+              checkSubst(defaultMatcher, keyPart, expr)
           } catch {
             case ex: InapplicableUnificationKeyFailure => throw ex.inContext("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  of:      " + codeName + "\n  unsuccessful")
           }
@@ -2079,7 +2087,7 @@ trait UnifyUSCalculus {
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
-  @Tactic()
+  @Tactic(longDisplayName = "Decompose")
   lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3)(pos)}
 
   /** Chase with bounded breadth and giveUp to stop.

@@ -338,6 +338,7 @@ object BelleParser extends TacticParser with Logging {
           case FuncOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
           case PredOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
           case ns: ProgramConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case ns: SystemConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
           case _ => false
         }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
         val expand = (modelExpand, proofsExpand) match {

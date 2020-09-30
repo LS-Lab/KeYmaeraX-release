@@ -5,7 +5,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -16,10 +15,10 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
  */
 class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  val one = Number(1)
-  val two = Number(2)
-  val three = Number(3)
-  val six = Number(6)
+  private val one = Number(1)
+  private val two = Number(2)
+  private val three = Number(3)
+  private val six = Number(6)
 
   override def beforeEach(): Unit = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
@@ -96,6 +95,13 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val add = Divide(Divide(one, two), three)
     add.right should be (three)
     add.prettyString.asTerm.asInstanceOf[Divide].right shouldBe three
+  }
+
+  "-/" should "print/parse correctly" in {
+    Neg(Divide(one, two)).prettyString.asTerm.asInstanceOf[Neg].child shouldBe Divide(one, two)
+    Neg(Times(one, two)).prettyString.asTerm.asInstanceOf[Neg].child shouldBe Times(one, two)
+    Neg(Plus(one, two)).prettyString.asTerm.asInstanceOf[Neg].child shouldBe Plus(one, two)
+    Neg(Minus(one, two)).prettyString.asTerm.asInstanceOf[Neg].child shouldBe Minus(one, two)
   }
 
   "Power" should "give useful location information" in {

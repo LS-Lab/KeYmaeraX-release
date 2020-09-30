@@ -332,6 +332,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
   it should "tactically prove all eliminate" taggedAs OptimisticTest ignore {check(alle)}
   it should "tactically prove exists eliminate" in {check(existse)}
   it should "tactically prove all distribute" in {check(allDist)}
+  it should "tactically prove exists distribute eliminate" in {check(existsDistElim)}
   it should "tactically prove box dual" in {check(box)}
   it should "tactically prove <:=> assign" in {check(assigndAxiom)}
   it should "tactically prove [:=] equational" in withMathematica(initLibrary = false, testcode = { _ => check(assignbequational)})

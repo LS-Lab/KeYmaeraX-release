@@ -125,7 +125,7 @@ object TaylorModelTactics extends Logging {
   // Equality
 
   def rewriteAnte(hide: Boolean) = anon { (pos: Position, seq: Sequent) =>
-    seq.ante.zipWithIndex.filter{ case (Equal(_, _), i) => true case _ => false }.foldLeft(skip){ case (t, (f, i)) =>
+    seq.ante.zipWithIndex.filter{ case (Equal(_, _), i) => true case _ => false }.foldLeft[BelleExpr](skip){ case (t, (f, i)) =>
       eqL2R(- i - 1)(pos) & (if(hide) hideL(-i - 1) else skip) & t
     }
   }
@@ -286,7 +286,7 @@ object TaylorModelTactics extends Logging {
       case (LessEqual(_, Plus(Times(s, _), _)), pos) if s == t =>
         leTimesMono(pos)
       case _ => skip
-    }.reduceOption(_ & _).getOrElse(skip)
+    }.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   }
 
   // only the cases that I need here...

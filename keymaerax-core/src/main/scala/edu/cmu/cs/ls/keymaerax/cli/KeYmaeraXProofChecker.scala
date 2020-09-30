@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, DependentTactic, IOListeners, LazySequentialInterpreter, TacticStatistics}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.OptionMap
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, PrettyPrinter, Sequent, USubst, insist}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -274,7 +274,7 @@ object KeYmaeraXProofChecker {
       case Some(tac) => ("user", "user", tac) :: Nil
       case None =>
         if (reqTacticName.isDefined) entry.tactics.filter(_._1 == reqTacticName.get)
-        else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil
+        else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.autoClose) :: Nil
         else entry.tactics
     }
 
@@ -291,6 +291,8 @@ object KeYmaeraXProofChecker {
 
         val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)
+
+        println("Done " + path + "#" + entry.name + " (" + proofStat.status + ")")
 
         proofStat.witness match {
           case Some(proof) =>
@@ -313,7 +315,7 @@ object KeYmaeraXProofChecker {
   }
 
   /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
-    * Default [[TactixLibrary.auto]] if `options` does not contain 'tactic. */
+    * Default [[TactixLibrary.autoClose]] if `options` does not contain 'tactic. */
   private def readTactic(options: OptionMap, defs: Declaration): Option[BelleExpr] = {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
@@ -366,14 +368,20 @@ object KeYmaeraXProofChecker {
 /** Checks proves (aborting after timeout seconds) and returns the [[ProvableSig]] as a witness. */
 case class KeYmaeraXProofChecker(timeout: Long) extends (BelleExpr => Sequent => ProvableSig) {
   /** Checker that uses tactic `t`. */
-  override def apply(t: BelleExpr): Sequent => ProvableSig = {
+  override def apply(t: BelleExpr): Sequent => ProvableSig = (s: Sequent) => {
     implicit val ec: ExecutionContext = ExecutionContext.global
-    Await.result(
-      Future {
-        TactixLibrary.proveBy(_, t)
-      },
-      if (timeout>0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
-    )
+    try {
+      Await.result(
+        Future {
+          TactixLibrary.proveBy(s, t)
+        },
+        if (timeout > 0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
+      )
+    } catch {
+      case ex: TimeoutException =>
+        ToolProvider.tools().foreach(_.cancel())
+        throw ex
+    }
   }
 
 }

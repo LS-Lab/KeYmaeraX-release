@@ -813,7 +813,7 @@ object ODELiveness {
 
     //println("compatible asms: ", ls)
 
-    ls.foldLeft(skip) (
+    ls.foldLeft[BelleExpr](skip) (
       (in,fp) => {
         val (dom,pr,f,i,tac) = (fp._1,fp._2,fp._3,fp._4,fp._5)
         in & dC(f)(pos) <(

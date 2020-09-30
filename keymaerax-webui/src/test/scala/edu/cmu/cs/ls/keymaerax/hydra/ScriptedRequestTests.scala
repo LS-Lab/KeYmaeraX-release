@@ -3,14 +3,15 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import spray.json.{JsArray, JsBoolean, JsString}
@@ -159,7 +160,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  "Step misapplication" should "FEATURE_REQUEST: give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
+  "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -169,7 +170,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("TODO the following does not include implyR: Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply})"))
+    response should have ('msg ("implyR(2): applied at position 2 may point outside the positions of the goal Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply}"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -177,7 +178,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "FEATURE_REQUEST: report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
+  it should "report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -187,7 +188,9 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(1, 1::Nil))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("TODO the following is not a readable message: No substitution found by unification, fix axiom key or try to patch locally with own substitution"))
+    response should have ('msg ("""Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
+                                  |  expression               [v:=v;]<{x'=v&true}>x>=0
+                                  |  does not match axiom key [a;++b;]p(||)""".stripMargin))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -205,7 +208,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Unable to create dependent tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
+    response should have ('msg ("Unable to execute tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -268,7 +271,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "expand master" in withMathematica { _ => withDatabase { db =>
+  it should "expand auto" in withMathematica { _ => withDatabase { db =>
     val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -279,8 +282,8 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", master())
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
-        parentTactic shouldBe "master"
-        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"
+        parentTactic shouldBe "auto"
+        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; applyEqualities ; QE"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
@@ -446,7 +449,8 @@ class ScriptedRequestTests extends TacticTestBase {
         }
         val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
         r5 shouldBe a[AgendaAwesomeResponse]
-        BelleParser(db.db.getModel(id).tactic.get) match {
+        val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
+        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs, expandAll = true) match {
           case _: PartialTactic =>
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false
           case _ =>
@@ -458,8 +462,8 @@ class ScriptedRequestTests extends TacticTestBase {
             r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = BelleParser(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value)
-            val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
+            val extractedTactic = BelleParser.parseWithInvGen(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value,
+              None, entry.defs, expandAll = true)
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
         }
         println("Done")
@@ -468,22 +472,28 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
+    def createInputs(name: String, inputs: Seq[Any]): Seq[BelleTermInput] = {
+      val info = DerivationInfo(name)
+      val expectedInputs = info.inputs
+      inputs.zipWithIndex.flatMap({
+        case (in: Expression, i) => Some(BelleTermInput(in.prettyString, Some(expectedInputs(i))))
+        case (_: Generator[GenProduct], _) => None //@todo pass on once supported
+        case (Some(e: Expression), i) => Some(BelleTermInput(e.prettyString, Some(expectedInputs(i))))
+        case (None, _) => None
+        case (in, i) => Some(BelleTermInput(in.toString, Some(expectedInputs(i))))
+      })
+    }
+
     val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
       case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None)
       case t: AppliedDependentPositionTactic => t.pt match {
-        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.isEmpty =>
-          (inner.name, Nil, Some(t.locator), None)
-        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.nonEmpty =>
-          val info = DerivationInfo(t.pt.name)
-          val expectedInputs = info.inputs
-          val inputs = inner.inputs.zipWithIndex.map({
-            case (in: Expression, i) => BelleTermInput(in.prettyString, Some(expectedInputs(i)))
-            case (in, i) => BelleTermInput(in.toString, Some(expectedInputs(i)))
-          })
-          (inner.name, inputs, Some(t.locator), None)
+        case inner: DependentPositionWithAppliedInputTactic =>
+          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None)
+          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None)
         case _ => (t.pt.name, Nil, Some(t.locator), None)
       }
       case NamedTactic(name, _) => (name, Nil, None, None)
+      case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None)
       //@todo extend on demand
     }
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo = true, pos1, pos2, inputs)

@@ -16,7 +16,7 @@ import AnnotationCommon._
   *                 `codeName`` will be inferred from the val that is annotated by this `@Tactic` and is usually recommended to be identical to it.
   *                 The exception is when you wish for your tactic to have different arguments in the parsed Bellerophon language than does your implementation.
   *                 In this case it is conventional to write a declaration  val <tacticName>X = <tacticName>(...)  with codeName <tacticName> which converts arguments as needed.
-  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to ASCII display name
+  * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode display name
   * @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
   *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
   *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
@@ -46,6 +46,8 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
              val longDisplayName: String = "",
              val premises: String = "",
              val conclusion: String = "",
+             val contextPremises: String = "",
+             val contextConclusion: String = "",
              val displayLevel: String = "internal",
              val needsGenerator: Boolean = false,
              val revealInternalSteps: Boolean = false,
@@ -73,7 +75,7 @@ class TacticImpl(val c: blackbox.Context) {
   private case class NoPos(provableName: Option[ValDef]) extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "codeName", "longDisplayName", "premises", "conclusion", "displayLevel", "needsGenerator", "revealInternalSteps", "inputs")
+    val paramNames = List("names", "codeName", "longDisplayName", "premises", "conclusion", "contextPremises", "contextConclusion", "displayLevel", "needsGenerator", "revealInternalSteps", "inputs")
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getLiteral(t: Tree): String = {
@@ -95,14 +97,16 @@ class TacticImpl(val c: blackbox.Context) {
         "longDisplayName" -> Literal(Constant(false)),
         "premises" -> Literal(Constant("")),
         "conclusion" -> Literal(Constant("")),
+        "contextPremises" -> Literal(Constant("")),
+        "contextConclusion" -> Literal(Constant("")),
         "displayLevel" -> Literal(Constant("internal")),
         "revealInternalSteps" -> Literal(Constant(false)),
         "inputs" -> Literal(Constant(""))
       )
       val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (inputString, displayLevel, premisesString, conclusionString, revealInternal) =
+      val (inputString, displayLevel, premisesString, conclusionString, contextPremisesString, contextConclusionString, revealInternal) =
         (getLiteral(paramMap("inputs")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
-           getBoolLiteral(paramMap("revealInternalSteps")))
+          getLiteral(paramMap("contextPremises")), getLiteral(paramMap("contextConclusion")), getBoolLiteral(paramMap("revealInternalSteps")))
       val inputs: List[ArgInfo] = parseAIs(inputString)(c)
       val codeName: String = paramMap("codeName") match {
         case Literal(Constant("")) => tn.decodedName.toString
@@ -121,15 +125,19 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val longDisplayName = paramMap("longDisplayName") match {
         case Literal(Constant(s: String)) => s
-        case Literal(Constant(false)) => simpleDisplay.asciiName
+        case Literal(Constant(false)) => simpleDisplay.name
       }
-      val displayInfo = (inputs, premisesString, conclusionString) match {
-        case (Nil, "", "") => simpleDisplay
-        case (Nil, "", concl) if concl != "" => AxiomDisplayInfo.render(simpleDisplay, concl)
-        case (ins, "", concl) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
-        case (ins, prem, concl) if concl != "" && prem != "" =>
+      val displayInfo = (inputs, premisesString, conclusionString, contextPremisesString, contextConclusionString) match {
+        case (Nil, "", "", _, _) => simpleDisplay
+        case (Nil, "", concl, _, _) if concl != "" => AxiomDisplayInfo.render(simpleDisplay, concl)
+        case (ins, "", concl, _, _) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
+        case (ins, prem, concl, "", "") if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           RuleDisplayInfo(simpleDisplay, conc, prem)
+        case (ins, prem, concl, ctxPrem, ctxConcl) if concl != "" && prem != "" && ctxPrem != "" && ctxConcl != "" =>
+          val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
+          val (ctxPrem, ctxConc) = (parseSequents(contextPremisesString)(c), parseSequent(contextConclusionString)(c))
+          TacticDisplayInfo(simpleDisplay, conc, prem, ctxConc, ctxPrem)
         //case (_::_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }

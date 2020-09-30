@@ -12,7 +12,6 @@ import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import org.scalatest.OptionValues._
 import org.scalamock.scalatest.MockFactory
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable._
 
@@ -649,7 +648,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
       AtomicODE(DifferentialSymbol(y), x)), True), True)
   }
 
-  "String converter" should "FEATURE_REQUEST: parse substitution pair with 0-based dots" taggedAs IgnoreInBuildTest in  {
+  "String converter" should "parse substitution pair with 0-based dots" in  {
     //@note conversion to all 1-based indices also acceptable
     "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair shouldBe SubstitutionPair(
       PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),

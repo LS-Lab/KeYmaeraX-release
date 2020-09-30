@@ -1,5 +1,17 @@
 <div class="modal-header" >
-    <h4 class="modal-title">Report this error to <b>bug@keymaerax.org</b> by clicking <kbd>Report</kbd>.</h4>
+    <div class="row">
+        <div class="col-md-12">
+    <h4 class="modal-title">
+        <span>Request help at <b>bug@keymaerax.org</b></span>
+        <span class="pull-right">
+        <a class="btn btn-danger" ng-href="mailto:bug@keymaerax.org?subject={{subjectText}}&body={{bodyText()}}">
+            <i class="fa fa-envelope-o"></i>&nbsp;Request Help
+        </a>
+        <button class="btn btn-link" ng-click="cancel()"><span class="fa fa-close"></span></button>
+    </span>
+    </h4>
+        </div>
+    </div>
 </div>
 <div class="modal-body">
     <form>
@@ -29,8 +41,4 @@
             </div>
         </div>
     </form>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary"><a ng-href="mailto:bug@keymaerax.org?subject={{subjectText}}&body={{bodyText()}}" style='color: white;text-decoration: none'>Report</a></button>
-    <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>

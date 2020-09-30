@@ -13,13 +13,15 @@ object Submission {
 
     private val SCORES = "scores"
 
-    implicit val scoreJsonFormat: JsonFormat[List[(Submission.Prompt, Double)]] = new RootJsonFormat[List[(Submission.Prompt, Double)]] {
-      override def write(scores: List[(Submission.Prompt, Double)]): JsValue =
-        JsObject(SCORES -> JsObject(scores.map({ case (p, s) => p.id.toString -> s.toJson }).toMap))
+    implicit val scoreJsonFormat: JsonFormat[List[(Submission.Problem, Double)]] = new RootJsonFormat[List[(Submission.Problem, Double)]] {
+      override def write(scores: List[(Submission.Problem, Double)]): JsValue =
+        JsObject(SCORES -> JsObject(scores.map({ case (p, s) => (p.rank + ": " + p.title + " (" + p.points + " pts)") -> s.toJson }).toMap))
 
-      override def read(json: JsValue): List[(Prompt, Double)] = {
+      override def read(json: JsValue): List[(Problem, Double)] = {
         json.asJsObject.fields(SCORES).asJsObject.fields.toList.map({ case (k, JsNumber(v)) =>
-          (SinglePrompt(k.toLong, "-1", "", -1.0, Nil), v.toDouble)
+          val extractProblemInfo = """(\d+):(.*)\((\d+(?:\.\d+)) pts\)""".r("rank", "title", "points")
+          val (rank, title, points) = extractProblemInfo.findFirstMatchIn(k).map(m => (m.group("rank"), m.group("title"), m.group("points"))).get
+          (Problem(-1, rank.toLong, "-1", title.trim, "", points.toDouble, Nil), v.toDouble)
         })
       }
     }
@@ -33,6 +35,7 @@ object Submission {
     private val NUMBER = "number"
     private val TITLE = "title"
     private val ID = "id"
+    private val RANK = "rank"
     private val LABEL = "label"
     private val NAME = "name"
     private val TYPE = "type"
@@ -69,7 +72,7 @@ object Submission {
           replaceAllLiterally("\n", " ")
         //@note {` `} become \u2018 in JSON
         var i = 0
-        val m2 = "\u2018".r.replaceAllIn(m1, m => { i=i+1; if (i%2 == 1) "{`" else "`}" })
+        val m2 = "\u2018".r.replaceAllIn(m1, _ => { i=i+1; if (i%2 == 1) "{`" else "`}" })
         m2
       }
     }
@@ -190,6 +193,7 @@ object Submission {
     implicit val promptJsonFormat: JsonFormat[Submission.Prompt] = new RootJsonFormat[Submission.Prompt] {
       override def write(prompt: Submission.Prompt): JsValue = JsObject(
         ID -> prompt.id.toJson,
+        RANK -> prompt.rank.toJson,
         POINT_VALUE -> prompt.points.toJson,
         NAME -> prompt.name.toJson,
         CHILDREN -> prompt.answers.toJson
@@ -198,13 +202,14 @@ object Submission {
       override def read(json: JsValue): Submission.Prompt = {
         val root = json.asJsObject
         val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        val rank = root.fields(RANK) match { case JsNumber(n) => n.toLong }
         val name = root.fields(NAME) match { case JsString(s) => s }
         val points = root.fields(POINT_VALUE) match { case JsNumber(n) => n.toDouble }
         val answers = root.fields(CHILDREN) match {
           case JsArray(s) => s.map(_.convertTo[Submission.Answer]).toList
           case _ => List.empty
         }
-        SinglePrompt(id, "-1", name, points, answers)
+        SinglePrompt(id, rank, "-1", name, points, answers)
       }
     }
 
@@ -213,9 +218,14 @@ object Submission {
         NUMBER -> problem.number.toJson,
         TITLE -> problem.title.toUpperCase.toJson,
         TYPE -> "segment".toJson,
-        POINT_VALUE -> problem.prompts.map(_.points).sum.toJson,
+        POINT_VALUE -> {
+          val promptSum = problem.prompts.map(_.points).sum
+          assert(problem.points == promptSum, "Problem total points is not equal to sum of prompt points")
+          problem.points.toJson
+        },
         CHILDREN -> JsArray(JsObject(
           ID -> problem.id.toJson,
+          RANK -> problem.rank.toJson,
           NUMBER -> problem.number.toJson,
           TITLE -> problem.title.toJson,
           LABEL -> problem.label.toJson,
@@ -232,8 +242,10 @@ object Submission {
         require(root.fields(TYPE) match { case JsString("atom") => true case _ => false }, "Type 'atom' expected")
         require(root.fields(NAME) match { case JsString("problem") => true case _ => false }, "Name 'problem' expected")
         val id = root.fields(ID) match { case JsNumber(n) => n.toLong }
+        val rank = root.fields(RANK) match { case JsNumber(n) => n.toLong }
         val title = root.fields(TITLE) match { case JsString(s) => s }
         val label = root.fields(LABEL) match { case JsString(s) => s }
+        val points = root.fields(POINT_VALUE) match { case JsNumber(n) => n.toDouble }
         val prompts = root.fields.get(PROMPTS) match {
           case Some(JsArray(prompts)) => prompts.map(_.convertTo[Prompt]).toList.zipWithIndex.map({
             case (p: SinglePrompt, i) => p.copy(number=(i+'a'.toInt).toChar.toString)
@@ -241,7 +253,7 @@ object Submission {
           })
           case _ => List.empty
         }
-        Problem(id, "-1", title, label, prompts)
+        Problem(id, rank, "-1", title, label, points, prompts)
       }
     }
 
@@ -303,23 +315,25 @@ object Submission {
   /** A question with submitted answer, name indicates the type of prompt. */
   trait Prompt {
     val id: Long
+    val rank: Long
     val number: String
     val name: String
     val points: Double
     val answers: List[Answer]
   }
   /** A single quiz question with submitted answer. `name` indicates the type of prompt. */
-  case class SinglePrompt(id: Long, number: String, name: String, points: Double, answers: List[Answer]) extends Prompt
+  case class SinglePrompt(id: Long, rank: Long, number: String, name: String, points: Double, answers: List[Answer]) extends Prompt
   /** An answered quiz question that needs access to answers of earlier questions. */
   case class MultiPrompt(main: Prompt, earlier: Map[Int, Prompt]) extends Prompt {
     val id: Long = main.id
+    val rank: Long = main.rank
     val number: String = main.number
     val name: String = main.name
     val points: Double = main.points
     val answers: List[Answer] = main.answers
   }
   /** A problem segment. */
-  case class Problem(id: Long, number: String, title: String, label: String, prompts: List[Prompt])
+  case class Problem(id: Long, rank: Long, number: String, title: String, label: String, points: Double, prompts: List[Prompt])
   /** A quiz chapter. */
   case class Chapter(id: Long, label: String, problems: List[Problem])
 }

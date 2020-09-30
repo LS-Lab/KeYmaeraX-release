@@ -132,11 +132,11 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   //@todo why does this test fail?
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
-    proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, auto) shouldBe 'proved
+    proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, autoClose) shouldBe 'proved
   }
 
   it should "prove simple loop from postcondition invariant" in withQE { _ =>
-    proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, auto) shouldBe 'proved
+    proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, autoClose) shouldBe 'proved
   }
 
   it should "discrete ghost on old(.) notation in ODE annotations" in withQE { tool =>

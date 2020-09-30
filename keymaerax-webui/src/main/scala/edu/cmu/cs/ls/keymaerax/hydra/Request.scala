@@ -86,14 +86,10 @@ sealed trait Request extends Logging {
         theSession = SessionManager.session(t)
         resultingResponses()
       } catch {
-        //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
-        //      The web server translates exception into 500 response, the web UI picks them up in the error alert dialog
-        // assert, ensures
-        case a: AssertionError => throw new Exception(
-          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + a.getMessage, a)
-        // require
-        case e: IllegalArgumentException => throw new Exception(
-          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + e.getMessage, e)
+        case e: ParseException => new ErrorResponse(e.getMessage, e) :: Nil
+        case e: Throwable =>
+          new ErrorResponse("We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " +
+            e.getMessage, e, severity = "uncaught") :: Nil
       }
     }
   }
@@ -131,7 +127,7 @@ abstract class UserModelRequest(db: DBAbstraction, userId: String, modelId: Stri
 
 abstract class UserProofRequest(db: DBAbstraction, userId: String, proofId: String)
   //@todo faster query for existence
-  extends UserRequest(userId, (id: String) => db.getProofInfo(proofId).modelId.isDefined && db.userOwnsProof(id, proofId)) {
+  extends UserRequest(userId, (id: String) => db.getProofInfo(proofId).modelId.isEmpty || db.userOwnsProof(id, proofId)) {
   override final def resultingResponses(): List[Response] = {
     Try(proofId.toInt).toOption match {
       case Some(_) => doResultingResponses()
@@ -596,12 +592,12 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(new WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
+          ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          ToolProvider.initFallbackZ3(new MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
+          ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
       }
       ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
@@ -710,17 +706,16 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       ToolProvider.shutdown()
       val config = ToolConfiguration.config(tool)
       try {
-        val provider: Option[ToolProvider] = tool match {
+        val (provider: Option[ToolProvider], saveToConfig: Boolean) = tool match {
           case "mathematica" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
               if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-                Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil))
-              } else None
+                (Some(MultiToolProvider(MathematicaToolProvider(config) :: Z3ToolProvider() :: Nil)), true)
+              } else (None, false)
             } else {
-              ToolProvider.setProvider(Z3ToolProvider())
-              None
+              (Some(Z3ToolProvider()), false)
             }
           case "wolframengine" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
@@ -728,19 +723,18 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
               if (Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-                Some(new MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil))
-              } else None
+                (Some(MultiToolProvider(WolframEngineToolProvider(config) :: Z3ToolProvider() :: Nil)), true)
+              } else (None, false)
             } else {
-              ToolProvider.setProvider(Z3ToolProvider())
-              None
+              (Some(Z3ToolProvider()), false)
             }
-          case "wolframscript" => Some(MultiToolProvider(new WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil))
-          case "z3" => Some(Z3ToolProvider())
-          case _ => ToolProvider.setProvider(new NoneToolProvider); None
+          case "wolframscript" => (Some(MultiToolProvider(WolframScriptToolProvider(Map.empty) :: Z3ToolProvider() :: Nil)), true)
+          case "z3" => (Some(Z3ToolProvider()), true)
+          case _ => (Some(new NoneToolProvider), false)
         }
         provider match {
           case Some(p) =>
-            Configuration.set(Configuration.Keys.QE_TOOL, tool)
+            if (saveToConfig) Configuration.set(Configuration.Keys.QE_TOOL, tool)
             ToolProvider.setProvider(p)
           case _ => // nothing to do
         }
@@ -1769,19 +1763,19 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
       case Some(node) => node.goal match {
-        case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil //@note node closed
+        case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil //@note node closed
         case Some(seq) =>
           if (seq.isFOL) {
             val folSuggestions = "QE"::"abbrv"::"hideL"::Nil
             // todo: counterexample, find assumptions + general help
             val tactics = folSuggestions.map(s => (DerivationInfo(s), None))
-            ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+            ApplicableAxiomsResponse(tactics, Map.empty, topLevel=true) :: Nil
           } else {
             // find "largest" succedent formula with programs and suggest top-level popup content
             val pos = SuccPosition(1)
-            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), Some(Fixed(1))) :: Nil
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), topLevel=true, Some(Fixed(1))) :: Nil
           }
       }
     }
@@ -1792,10 +1786,10 @@ class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: Str
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
-      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
-      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs, pos.isTopLevel) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
     }
   }
 }
@@ -1805,10 +1799,10 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.done) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
     tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-      case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true) :: Nil
+      case Some(tactics) => ApplicableAxiomsResponse(tactics, Map.empty, pos1.isTopLevel) :: Nil
     }
   }
 }
@@ -1825,7 +1819,7 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
         filter({case (name, di) => di.displayLevel != 'internal}).
         map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList
     }
-    ApplicableAxiomsResponse(infos, Map.empty) :: Nil
+    ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil
   }
 }
 
@@ -1840,7 +1834,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
       case Some(symbols) =>
         //@todo InputSignature no longer available from simplified parser -> simplify data structure
         val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
-          filter({ case _: Function => true case _: ProgramConst => true case _ => false }).
+          filter({ case _: Function => true case _: ProgramConst => true case _: SystemConst => true case _ => false }).
           flatMap(s => {
             val defs = proofSession.defs.find(s.name, s.index)
             defs match {
@@ -1859,6 +1853,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
               case Bool => (s, PredOf(s, arg), repl, insig)
             }
           case (s: ProgramConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
+          case (s: SystemConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
           // functions, predicates, and programs without definition
           case (s: Function, ((domain, sort, _, None, _), _)) =>
             val arg = dotted(domain)
@@ -1867,6 +1862,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
               case Bool => (s, PredOf(s, arg), None, None)
             }
           case (s: ProgramConst, ((_, _, _, None, _), _)) => (s, s, None, None)
+          case (s: SystemConst, ((_, _, _, None, _), _)) => (s, s, None, None)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
@@ -1892,6 +1888,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                 case FuncOf(fn: Function, _) => fn
                 case PredOf(fn: Function, _) => fn
                 case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
+                case c: SystemConst => Function(c.name, c.index, Unit, Trafo)
               }
               session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
                 ((fnwhat.name, fnwhat.index) -> (Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
@@ -1938,15 +1935,15 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.goal) match {
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
       case Some(goal) =>
         goal.sub(pos) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, Some(pos)) match {
-              case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty) :: Nil
-              case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+              case Some(step) => ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
+              case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
             }
-          case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+          case _ => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
         }
     }
   }
@@ -2860,6 +2857,7 @@ object RequestHelper {
     val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
+      case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
     }).toMap
     proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),

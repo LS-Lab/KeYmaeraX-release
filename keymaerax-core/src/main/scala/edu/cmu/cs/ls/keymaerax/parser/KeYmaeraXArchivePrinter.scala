@@ -116,7 +116,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
        #$END_BLOCK""".stripMargin('#')
 
     val finalPrint = if (withComments) {
-      assert(ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
+      assert(ArchiveParser(printed).map(_.model) == Parser(entry.problemContent)::Nil,
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {

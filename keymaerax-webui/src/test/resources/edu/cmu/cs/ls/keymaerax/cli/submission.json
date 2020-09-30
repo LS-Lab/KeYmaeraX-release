@@ -21,6 +21,7 @@
               "type": "atom",
               "name": "problem",
               "id": 25053,
+              "rank": 1,
               "label": "prob::1",
               "point_value": 3.0,
               "title": "Problem block 1 (2 questions)",
@@ -29,6 +30,7 @@
                   "point_value": 2.0,
                   "name": "\\ask",
                   "id": 141,
+                  "rank": 1,
                   "children": [
                     {
                       "id": 142,
@@ -54,6 +56,7 @@
                   "name": "\\ask",
                   "body": "This question has an answer with a syntax error",
                   "point_value": 1.0,
+                  "rank": 2,
                   "id": 143,
                   "children": [
                     {
@@ -94,9 +97,11 @@
               "label": "prob::2",
               "title": "Problem block 2 (one non-autogradable question)",
               "id": 17218,
+              "rank": 1,
               "prompts": [
                 {
                   "id": 145,
+                  "rank": 1,
                   "name": "\\ask",
                   "body": "This is the question",
                   "children": [
@@ -127,11 +132,13 @@
           "name": "problem",
           "label": "prob::3",
           "id": 25160,
+          "rank": 3,
           "title": "Problem block 3 (single question)",
           "this entry": "has one question",
           "prompts": [
             {
               "id": 147,
+              "rank": 1,
               "name": "\\ask",
               "body": "The question in LaTeX: \\(x\\geq 0 \\ldots\\)",
               "children": [
@@ -167,12 +174,14 @@
           "name": "problem",
           "label": "prob::4",
           "id": 25057,
+          "rank": 1,
           "title": "Problem block in second segment",
           "point_value": 1.0,
           "prompts": [
             {
               "body": " A question in the second segment",
               "id": 149,
+              "rank": 1,
               "name": "\\onechoice",
               "point_value": 1.0,
               "is_question_any_choice": false,

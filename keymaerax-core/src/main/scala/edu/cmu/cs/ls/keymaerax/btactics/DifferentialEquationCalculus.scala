@@ -46,14 +46,14 @@ trait DifferentialEquationCalculus {
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
-  @Tactic("[']", longDisplayName="Solve",
+  @Tactic("[']", longDisplayName="Solution",
     premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
   lazy val solve: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)}
 
   /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
-  @Tactic(longDisplayName="Solve with q(x) true at end",
+  @Tactic(longDisplayName="Solution with q(x) true at end",
     premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
     conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
   lazy val solveEnd: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos) }
@@ -154,6 +154,16 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DI]]
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
+  @Tactic(longDisplayName="Differential Invariant Auto-Close",
+    premises="*",
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
+  @Tactic(longDisplayName="Differential Invariant",
+    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",

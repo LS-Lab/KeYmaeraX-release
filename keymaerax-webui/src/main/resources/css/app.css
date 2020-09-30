@@ -25,6 +25,8 @@ dl {
 /* Convert Bootstrap absolute font sizes into relative font sizes */
 pre {
   font-size: 100%;
+  background-color: white;
+  border: 0px;
 }
 
 output {
@@ -80,6 +82,14 @@ output {
 
 .input-group-addon {
   font-size: var(--lsfontsize);
+}
+
+.k4-tactics-navitem-dropdown {
+  display: inline-flex !important;
+}
+
+.k4-tactics-navitem-dropdown > span {
+  padding-right: 0px !important;
 }
 
 .navbar {
@@ -138,16 +148,18 @@ output {
 
 .k4-tactics-nav-first > li > a {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-first > li > span {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-last > li > a {
-  padding-top: 2px;
+  padding-top: 5px;
   padding-bottom: 5px;
 }
 
@@ -834,6 +846,10 @@ del {
 
 }
 
+.modal-errorreport {
+  z-index: 2000 !important; /* larger than internal log popover */
+}
+
 .k4-vertical-fill-flex {
   flex: 1;
   display: flex;
@@ -975,11 +991,11 @@ del {
 .k4-goalwithsiblings > ul:last-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1ex 0 0 0;
+  margin: 0 0 0 0;
   text-align: right;
   display: block;
   position: absolute;
-  top: -50%;
+  bottom: 0;
   right: 0;
 }
 .k4-goalwithsiblings > ul:last-child li {

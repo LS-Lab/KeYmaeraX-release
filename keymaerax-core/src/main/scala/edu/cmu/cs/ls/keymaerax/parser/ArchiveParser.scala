@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{Name, Signature}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parse
 
 import scala.collection.immutable.List
 
@@ -19,14 +18,19 @@ case class Declaration(decls: Map[Name, Signature]) {
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._4.isDefined).map({
     case (name, (domain, sort, argNames, interpretation, loc)) =>
       // elaborate to functions for topSort (topSort uses signature)
-      (name, (domain, sort, argNames, interpretation.map(elaborateToFunctions), loc))
+      (name, (domain, sort, argNames, interpretation.map(elaborateToFunctions(_)), loc))
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
-  lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _, _)) => sort match {
+  lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, rhs, _)) => sort match {
     case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
     case Real | Bool if domain.isDefined => Function(name, idx, domain.get, sort)
-    case Trafo => assert(idx.isEmpty, "Program constants are not allowed to have an index, but got " + name + "_" + idx); ProgramConst(name)
+    case Trafo =>
+      assert(idx.isEmpty, "Program/system constants are not allowed to have an index, but got " + name + "_" + idx)
+      rhs match {
+        case Some(p: Program) if FormulaTools.dualFree(p) => SystemConst(name)
+        case _ => ProgramConst(name)
+      }
   }}).toList
 
   /** Topologically sorts the names in `decls`. */
@@ -50,13 +54,21 @@ case class Declaration(decls: Map[Name, Signature]) {
       throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
   }
 
-  /** Elaborates variable uses of declared functions. */
+  /** Expands all symbols in expression `arg` fully. */
+  def expandFull[T <: Expression](arg: T): T = try {
+    exhaustiveSubst(elaborateToFunctions(elaborateToSystemConsts(arg)))
+  } catch {
+    case ex: SubstitutionClashException =>
+      throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
+  }
+
+  /** Elaborates variable uses of declared functions, except those listed in taboo. */
   //@todo need to look into concrete programs that implement program constants when elaborating
-  def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
+  def elaborateToFunctions[T <: Expression](expr: T, taboo: Set[Function] = Set.empty): T = expr.elaborateToFunctions(asNamedSymbols.toSet -- taboo).asInstanceOf[T]
 
   /** Elaborates program constants to system constants if their definition is dual-free. */
-  def elaborateToSystemConsts(expr: Formula): Formula = {
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+  def elaborateToSystemConsts[T <: Expression](expr: T): T = {
+    val elaborator = new ExpressionTraversalFunction() {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
         case ProgramConst(name, space) =>
           decls.find(_._1._1 == name).flatMap(_._2._4) match {
@@ -68,9 +80,12 @@ case class Declaration(decls: Map[Name, Signature]) {
           }
         case _ => Left(None)
       }
-    }, expr) match {
-      case Some(f) => f
-      case None => ???
+    }
+
+    expr match {
+      case f: Formula => ExpressionTraversal.traverse(elaborator, f).get.asInstanceOf[T]
+      case t: Term => ExpressionTraversal.traverse(elaborator, t).get.asInstanceOf[T]
+      case p: Program => ExpressionTraversal.traverse(elaborator, p).get.asInstanceOf[T]
     }
   }
 

@@ -223,7 +223,7 @@ class PropositionalTests extends TacticTestBase {
     p.subgoals.foreach(_ shouldBe " ==> false".asSequent)
   }
 
-  "Master" should "handle implication in succedent" in withMathematica { _ => succImplication(master(), Some(checkFalse(1))) }
+  "Auto" should "handle implication in succedent" in withMathematica { _ => succImplication(master(), Some(checkFalse(1))) }
   it should "handle disjunction in succedent" in withMathematica { _ => succDisjunction(master(), Some(checkFalse(1))) }
   it should "handle negation in succedent" in withMathematica { _ => succNegation(master(), Some(checkFalse(1))) }
   it should "handle conjunction in antecedent" in withMathematica { _ => anteConjunction(master(), Some(checkFalse(1))) }
@@ -308,7 +308,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "report when trying to unpeel too far" in withTactics {
     the [IllFormedTacticApplicationException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
-      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to create dependent tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
+      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to execute tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
 
   }
 }

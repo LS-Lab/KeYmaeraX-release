@@ -418,12 +418,7 @@ class EqualityTests extends TacticTestBase {
 
   it should "not infinite recurse but report exception" in withQE { _ =>
     val f = "[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(-- (100*x^4+y*x^3-x^2+x+c))/max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c))))*dbxy_+0&c>x&max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c)))>0}]dbxy_>0".asFormula
-    the [ProverException] thrownBy proveBy(f, EqualityTactics.expandAll) should have message
-      """Unable to create dependent tactic 'CMonCongruence', cause: No monotone context within programs ReplContext{{[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(--(100*x^4+y*x^3-x^2+x+c))/max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c)))*dbxy_+0&c>x&((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0)}]dbxy_>0 at .0.1.1}}
-        |in CMon.monStep(ReplContext{{[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(--(100*x^4+y*x^3-x^2+x+c))/max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c)))*dbxy_+0&c>x&((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0)}]dbxy_>0 at .0.1.1}},
-        |on ElidingProvable(Provable((0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0
-        |  ==>  max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c))>0
-        |  from   (0--x)*(0--x)>=--(100*x^4+y*x^3-x^2+x+c)&(0--x)*(0--x)>0|(0--x)*(0--x) < --(100*x^4+y*x^3-x^2+x+c)&--(100*x^4+y*x^3-x^2+x+c)>0
-        |  ==>  max((0--x)*(0--x),--(100*x^4+y*x^3-x^2+x+c))>0)))""".stripMargin
+    (the [ProverException] thrownBy proveBy(f, EqualityTactics.expandAll)).getMessage should startWith
+      "Unable to create dependent tactic 'CMonCongruence'"
   }
 }

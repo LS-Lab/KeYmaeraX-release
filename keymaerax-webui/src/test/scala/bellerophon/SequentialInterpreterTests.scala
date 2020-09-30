@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.time.SpanSugar._
 import testHelper.KeYmaeraXTestTags.SlowTest
 
-import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.language.postfixOps
 import org.scalatest.Inside._
@@ -341,13 +340,10 @@ class SequentialInterpreterTests extends TacticTestBase {
     })
   }
 
-  // @TODO: Failing because left branch raises a throwable that is no longer handled by | operator, test expects it to be handled.
   "Let" should "fail (but not horribly) when inner proof cannot be started" in withMathematica { _ =>
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
-    the [Throwable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
+    the [IllFormedTacticApplicationException] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
       "Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
-    val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
-    result.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
   }
 
   "Unification" should "work on 1=1->1=1" in withMathematica { _ =>

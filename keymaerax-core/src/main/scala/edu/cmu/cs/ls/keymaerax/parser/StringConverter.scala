@@ -3,7 +3,8 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, UnificationMatch}
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -84,6 +85,19 @@ class StringConverter(val s: String) {
 
   /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = {
+    //@note workaround for unification messing up indices when 0-based
+    def incrementer(increment: Int) = new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case DotTerm(s, Some(i)) => Right(DotTerm(s, Some(i+increment)))
+        case _ => Left(None)
+      }
+    }
+    def incrementDotIdxs(x: Expression, increment: Int): Expression = x match {
+      case f: Formula => ExpressionTraversal.traverse(incrementer(increment), f).get
+      case t: Term => ExpressionTraversal.traverse(incrementer(increment), t).get
+      case p: Program => ExpressionTraversal.traverse(incrementer(increment), p).get
+    }
+
     val exprs =
       if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>")
       else s.split("~>")
@@ -93,6 +107,7 @@ class StringConverter(val s: String) {
       if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
       else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
       else Parser.parser.programParser(exprs(0))
-    UnificationMatch(what, repl).usubst.subsDefsInput.head
+    val result = UnificationMatch(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1)).usubst.subsDefsInput.head
+    result.copy(what = incrementDotIdxs(result.what, -1), repl = incrementDotIdxs(result.repl, -1))
   }
 }

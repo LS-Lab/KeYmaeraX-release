@@ -37,11 +37,11 @@ object ToolProvider extends ToolProvider with Logging {
     */
   def setProvider(provider: ToolProvider): Unit = {
     if (provider != this) {
-      if (provider != f) {
+      if (provider != f || provider.isInitialized != f.isInitialized) {
         f.shutdown()
         f = provider
-        f.init()
       }
+      if (!f.isInitialized) f.init()
     } else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
 
@@ -73,19 +73,23 @@ object ToolProvider extends ToolProvider with Logging {
 
   def shutdown(): Unit = f.shutdown()
 
+  def isInitialized: Boolean = f.isInitialized
+
   def tools(): List[Tool] = f.tools()
 
   def initFallbackZ3(p: ToolProvider, toolName: String): ToolProvider = {
+    def init(t: ToolProvider): ToolProvider = { t.init(); t }
+
     try {
       if (p.init()) {
-        MultiToolProvider(p :: new Z3ToolProvider :: Nil)
+        MultiToolProvider(p :: init(new Z3ToolProvider) :: Nil)
       } else {
         val msg =
           s"""Unable to connect to $toolName, switching to Z3
              |Please check your $toolName configuration in KeYmaera X->Preferences
             """.stripMargin
         logger.info(msg)
-        new Z3ToolProvider
+        init(new Z3ToolProvider)
       }
     } catch {
       case ex: Throwable =>
@@ -96,7 +100,7 @@ object ToolProvider extends ToolProvider with Logging {
             """.stripMargin
         logger.warn(msg, ex)
         logger.info(s"Starting with Z3 since $toolName initialization failed")
-        new Z3ToolProvider
+        init(new Z3ToolProvider)
     }
   }
 }
@@ -149,6 +153,9 @@ trait ToolProvider {
 
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out None only. */
   def shutdown(): Unit
+
+  /** Indicates whether the tool is initialized. */
+  def isInitialized: Boolean
 }
 
 /** A tool provider that picks appropriate special tools from the list of preferences, i.e., if multiple tools with
@@ -189,6 +196,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def sosSolveTool(): Option[SOSsolveTool] = ensureInitialized(sossolve)
   override def init(): Boolean = false /* override to initialize tools in more specialized providers */
   override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
+  override def isInitialized: Boolean = toolPreferences.forall(_.isInitialized)
 
   /** Ensures that the tool `t` is initialized (= not yet shutdown) before returning it; returns None for uninitialized tools. */
   private def ensureInitialized[S <: Tool](tool: Option[S]): Option[S] = tool match {
@@ -216,6 +224,7 @@ class NoneToolProvider extends ToolProvider {
   override def sosSolveTool(): Option[SOSsolveTool] = None
   override def init(): Boolean = true
   override def shutdown(): Unit = {}
+  override def isInitialized: Boolean = true
 }
 
 /** Combines multiple tool providers. */
@@ -224,16 +233,16 @@ case class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToo
   override def qeTool(name: Option[String]): Option[QETacticTool] = providers.flatMap(_.qeTool(name)).headOption
   override def invGenTool(name: Option[String]): Option[InvGenTool] = providers.flatMap(_.invGenTool(name)).headOption
   override def init(): Boolean = providers.forall(_.init())
-  override def shutdown(): Unit = providers.foreach(_.shutdown())
 }
 
 /** Base class for Wolfram tools with alternative names. */
 abstract class WolframToolProvider[T <: Tool](val tool: T, config: Configuration, alternativeNames: List[String]) extends PreferredToolProvider(tool :: Nil) {
   protected def alternativeTool[S](name: Option[String], factory: Option[String] => Option[S]): Option[S] = factory(name) match {
-    case None => name match {
-      case Some(t) if alternativeNames.contains(t) => defaultTool().filter(_.isInstanceOf[S]).map(_.asInstanceOf[Tool with S])
-      case _ => None
-    }
+    case None =>
+      name match {
+        case Some(t) if alternativeNames.contains(t) => defaultTool().filter(_.isInstanceOf[S]).map(_.asInstanceOf[Tool with S])
+        case _ => None
+      }
     case t => t
   }
   override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)

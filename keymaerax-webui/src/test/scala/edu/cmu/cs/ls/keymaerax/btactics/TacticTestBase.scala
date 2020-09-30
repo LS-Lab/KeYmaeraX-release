@@ -382,7 +382,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   /** Execute a task with tactic progress.
     * @example {{{
     *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
-    *   withTacticProgress("master".asTactic, "master"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
+    *   withTacticProgress("auto".asTactic, "auto"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
     * }}}
     */
   def withTacticProgress(tactic: BelleExpr, stepInto: List[String] = Nil)(task: BelleExpr => ProvableSig): ProvableSig = {

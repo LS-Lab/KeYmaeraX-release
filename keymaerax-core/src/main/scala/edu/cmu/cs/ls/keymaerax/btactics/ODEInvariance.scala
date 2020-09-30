@@ -352,7 +352,7 @@ object ODEInvariance {
           //G |- P
           implyR(pos) & tac21 & ?(id) & timeoutQE & done
           ,
-          cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          cohideR(pos) & composeb(1) & dW(1) & assignb(1) &
           implyR(1) &
           //Cut P*
           cutR(pf)(1) <(
@@ -457,11 +457,16 @@ object ODEInvariance {
     DebuggingTactics.debug(f.prettyString,doPrint = debugTactic) & (f match {
       case True => G(1) & close
       case And(l,r) => andL(-1) &
-        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1)<(
+        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1) &
+        Idioms.doIfElse(_.subgoals.size == 2)(<(
         hideL(-1) & boxAnd(1) & andR(1) <(
           DW(1) & G(1) & prop,
           recRankOneTac(r)),
         hideL(-2) & recRankOneTac(l)
+        ),
+        hideL(-1) & boxAnd(1) & andR(1) <(
+          DW(1) & G(1) & prop,
+          recRankOneTac(r))
       )
       case Or(l,r) => orL(-1)<(
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
@@ -1528,7 +1533,7 @@ object ODEInvariance {
       starter & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
         useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
         implyR(pos) & r1 & ?(id) & timeoutQE & done, //common case?
-        cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+        cohideR(pos) & composeb(1) & dW(1) & assignb(1) &
           implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
           & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
       )
@@ -1740,7 +1745,7 @@ object ODEInvariance {
     val finish =
       if (solveEnd)
         ?(diffWeakenPlus('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-          implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+          andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
           SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
           timeoutQE & done)
@@ -1757,7 +1762,7 @@ object ODEInvariance {
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
+      cuts.foldLeft[BelleExpr](skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(

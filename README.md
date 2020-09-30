@@ -8,13 +8,13 @@ KeYmaera X features a minimal core of just about 2000 lines of code that isolate
 **More information** and precompiled binaries are available at:
   http://keymaeraX.org/
 
-* [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
-* [Informal KeYmaera X Syntax](https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics)
+* [Differential dynamic logic grammar](http://keymaeraX.org/doc/dL-grammar.md)
+* [KeYmaera X Tutorial](http://keymaeraX.org/Xtutorial.html)
 
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
-[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and start from command line:
+[keymaerax.jar](http://keymaeraX.org/keymaerax.jar) and start from command line:
 
     java -jar keymaerax.jar
 
@@ -58,11 +58,21 @@ Windows, 64bit, Mathematica 10.4+
 Building
 ========
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, install the right software and run the following to build `keymaerax.jar`:
+In a nutshell, install
+
+* Java 11
+* SBT 0.13.17
+* Scala 2.12.8 
+
+and run the following to build `keymaerax.jar`:
 
     sbt clean assembly
 
-[ScalaDoc API documentation for KeYmaera X](http://keymaerax.org/scaladoc) can be generated locally with:
+or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
+
+    sbt "project core" clean assembly
+
+[ScalaDoc API documentation for KeYmaera X](http://keymaeraX.org/scaladoc) can be generated locally with:
 
     sbt unidoc
 
@@ -135,15 +145,22 @@ Automatic proofs for differential equation invariants are based on:
 J. ACM 67(1), 2020. 
 Extended version of [LICS'18](https://doi.org/10.1145/3209108.3209147). 
 
+Liveness proofs for differential equations are based on:
+
+13. Yong Kiam Tan and André Platzer. 
+[An axiomatic approach to liveness for differential equations](https://doi.org/10.1007/978-3-030-30942-8_23). 
+In Maurice ter Beek, Annabelle McIver, and José N. Oliviera, editors, FM 2019: Formal Methods - The Next 30 Years, volume 11800 of LNCS, pp. 371-388. Springer, 2019.
+
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
 
-13. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
-[Pegasus: A framework for sound continuous invariant generation](https://doi.org/10.1145/3209108.3209147). 
-In Maurice ter Beek, Annabelle McIver, and José N. Oliviera, editors, FM 2019: Formal Methods - The Next 30 Years, volume 11800 of LNCS, pp. 138-157. Springer, 2019.
+14. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
+[Pegasus: Sound continuous invariant generation](https://arxiv.org/abs/2005.09348).
+Formal Methods in System Design. To appear. 
+Special issue for selected papers from [FM'19](https://doi.org/10.1145/3209108.3209147).
 
 The design principles for the user interface of KeYmaera X are described in:
 
-14. Stefan Mitsch and André Platzer. 
+15. Stefan Mitsch and André Platzer. 
 [The KeYmaera X proof IDE: Concepts on usability in hybrid systems theorem proving](https://doi.org/10.4204/EPTCS.240.5). 
 In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on Formal Integrated Development Environment F-IDE 2016, volume 240 of EPTCS, pp. 67-81, 2017.
 
