@@ -18,6 +18,12 @@ case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay,
   override def name: String = names.name
   override def asciiName: String = names.asciiName
 }
+/** Render a tactic either top-level as rule with a name as a conclusion and list of premises, or in context with a different conclusion and list of premises. */
+case class TacticDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay],
+                           ctxConclusion: SequentDisplay, ctxPremises:List[SequentDisplay]) extends DisplayInfo {
+  override def name: String = names.name
+  override def asciiName: String = names.asciiName
+}
 /** Render a sequent as a list of antecedent UI strings and a list of succedent UI strings.
  * @param isClosed true to indicate that this sequent is closed so (*) star. */
 case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean = false)

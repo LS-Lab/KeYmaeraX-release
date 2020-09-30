@@ -131,7 +131,14 @@ object AnnotationCommon {
         val namesTree = convDI(names)
         val conclusionTree = convSD(conclusion)
         val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
-        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(${namesTree}, $conclusionTree, $premiseTrees)"""
+      case TacticDisplayInfo(names, conclusion, premises, ctxConclusion, ctxPremises)  =>
+        val namesTree = convDI(names)
+        val conclusionTree = convSD(conclusion)
+        val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
+        val ctxConclusionTree = convSD(ctxConclusion)
+        val ctxPremiseTrees = ctxPremises.map((sd: SequentDisplay) => convSD(sd))
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticDisplayInfo(${namesTree}, $conclusionTree, $premiseTrees, $ctxConclusionTree, $ctxPremiseTrees)"""
       case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
         q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
       case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
