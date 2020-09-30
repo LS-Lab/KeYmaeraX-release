@@ -766,6 +766,8 @@ private object DifferentialTactics extends Logging {
           longDisplayName="Differential Weaken",
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
           conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+          contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
+          contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
           displayLevel="all", revealInternalSteps=true)
   private[btactics] lazy val diffWeaken: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
@@ -802,6 +804,8 @@ private object DifferentialTactics extends Logging {
     longDisplayName="Differential Weaken",
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
     displayLevel="browse", revealInternalSteps=true)
   private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
