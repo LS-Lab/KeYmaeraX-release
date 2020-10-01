@@ -4,7 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.TodoTest
 
@@ -17,12 +16,12 @@ import testHelper.KeYmaeraXTestTags.TodoTest
 class KeYmaeraXLexerTests extends FlatSpec with Matchers {
   "Lexer" should "Handle spaces correctly" in {
     val input = "   ("
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(LPAREN, Region(1, 4, 1, 4))
+    KeYmaeraXLexer(input).head shouldBe Token(LPAREN, Region(1, 4, 1, 4))
   }
 
   it should "Handle no spaces correctly" in {
     val input = ")"
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(RPAREN, Region(1, 1, 1, 1))
+    KeYmaeraXLexer(input).head shouldBe Token(RPAREN, Region(1, 1, 1, 1))
   }
 
   it should "Handle empty string correctly" in {
@@ -37,10 +36,21 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
       """
         |   (""".stripMargin
     KeYmaeraXLexer(input).head.loc shouldBe Region(2, 4, 2, 4)
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(LPAREN, Region(2, 4, 2, 4))
+    KeYmaeraXLexer(input).head shouldBe Token(LPAREN, Region(2, 4, 2, 4))
   }
 
-  it should "handle tabs correctly" taggedAs TodoTest in {
+  it should "Handle newlines in strings correctly" in {
+    val input =
+      """cut("x>=0
+        |    &y>=0")""".stripMargin
+    val lexed = KeYmaeraXLexer.inMode(input, ProblemFileMode)
+    lexed(0) shouldBe Token(IDENT("cut"), Region(1, 1, 1, 3))
+    lexed(1) shouldBe Token(LPAREN, Region(1, 4, 1, 4))
+    lexed(2) shouldBe Token(DOUBLE_QUOTES_STRING("x>=0\n    &y>=0"), Region(1,5,2,10))
+    lexed(3) shouldBe Token(RPAREN, Region(2,11,2,11))
+  }
+
+  it should "FEATURE_REQUEST: handle tabs correctly" taggedAs TodoTest in {
     //@todo fails: fix lexer bug
     val lexed = KeYmaeraXLexer("\n\t\n (").head
     lexed.loc shouldBe Region(3, 2, 3, 2)

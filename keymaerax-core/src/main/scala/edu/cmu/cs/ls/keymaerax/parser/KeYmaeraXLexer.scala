@@ -572,7 +572,14 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     }),
     DOUBLE_QUOTES_STRING_PAT.startPattern -> ((s: String, loc: Location, mode: LexerMode, str: String) => mode match {
       case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
-        Right(consumeColumns(s, str.length, DOUBLE_QUOTES_STRING(str.stripPrefix("\"").stripSuffix("\"")), loc))
+        val terminal = DOUBLE_QUOTES_STRING(str.stripPrefix("\"").stripSuffix("\""))
+        val n = str.count(_ == '\n')
+        val c = if (n>0) str.length - str.lastIndexOf('\n') else loc.begin.column + str.length
+        val strLoc = Region(loc.begin.line, loc.begin.column, loc.begin.line + n, c) // endcolumn with \n character
+        Right(Some((
+          s.substring(str.length),
+          Token(terminal, Region(loc.begin.line, loc.begin.column, loc.begin.line + n, c-1)), // without \n character
+          SuffixRegion(strLoc.end.line, strLoc.end.column))))
       case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
     }),
     //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
