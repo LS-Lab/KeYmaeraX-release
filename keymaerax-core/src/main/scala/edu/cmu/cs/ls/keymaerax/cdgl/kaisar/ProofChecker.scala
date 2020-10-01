@@ -535,8 +535,8 @@ object ProofChecker {
       if (!asgn.exists({case Equal(y: Variable, Number(n)) if n.toInt == 0 && sameTimeVar(x, y) => true case _ => false}))
         throw ProofCheckException(s"Duration variable $x must be initialized to 0 before ODE", node = inODE)
     })
+    initializeTimeVar(odeCon, proveODE)
     (proveODE, fml)
-
   }
 
   /** @return equivalent formula of f, with shape [a]P */

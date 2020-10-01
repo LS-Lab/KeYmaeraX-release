@@ -170,7 +170,7 @@ class ElaborationPass() {
             val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kc.elaborateFunctions(x, mod)))})), sel)
             Some(elabVectorAssign(elabFuncs))
           case Assume(e, f) =>
-            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(IdentPat(x), y), sel)})
+            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(IdentPat(x), kc.elaborateFunctions(y, sel)), sel)})
             Some(locate(KaisarProof.block(assumes), sel))
           case Assert(e, f, m) =>
             val (keptPts, meth) = collectPts(kc, m, f)

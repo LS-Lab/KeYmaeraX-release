@@ -80,7 +80,7 @@ object SharedModels {
   val straightODE: String =
     """x:= 0; y := 2;
       |{x' = 2, y' = -1 & ?dc:(y >= 0);};
-      |!xFinal:(x <= 4);
+      |!xFinal:(x <= 4) using dc x y by auto;
       |""".stripMargin
 
   val assertODE: String =
@@ -204,35 +204,30 @@ object SharedModels {
       |ode(t):
       |""".stripMargin
 
-
   val basicReachAvoid: String =
     """?(eps > 0 &  x = 0 & T > 0);
-      |while (x + eps <= goal) {
+      |while (x >= 0 & x + eps <= goal) {
       |  vel := (goal - (x + eps))/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T);};
-      |  /-- !safe:(x >= 0);  --/
+      |  /-- !safe:(x >= 0) using time ... by auto;  --/
       |  ?(t >= T/2);
-      |  !live:(x + eps <= goal) using time ... by auto;
+      |  !live:(x >= 0 & x + eps <= goal) using time ... by auto;
       |}
       |""".stripMargin
 
-  // @TODO: something is super unsound with x1 = x0
-
-
   // @TODO: Check SB() vs SB parenthesis... hmm...
-  // @TODO: DefaultSelector needs to be smarter when mixed with defined symbols like safe()
   val forwardHypothetical: String =
     """?init:(T > 0 & A > 0 & B > 0);
       |let SB() = v^2/(2*B);
-      |let safe() <-> SB() <= (d-x);
+      |let safe() <-> SB() <= (d-x) & v >= 0;
       |?initSafe:(safe());
       |{
       |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
       |   t:= 0;
       |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(t <= T); & ?vel:(v >= 0);};
       |ode(t):
-      |   !step:(safe()) using env init time vel xSol vSol tSol by auto;
+      |   !step:(safe()) using env init initSafe time vel xSol vSol tSol by auto;
       |}*
       |""".stripMargin
 

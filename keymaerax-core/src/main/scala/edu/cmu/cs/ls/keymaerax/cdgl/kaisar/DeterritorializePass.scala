@@ -131,13 +131,6 @@ case class DeterritorializePass(tt: TimeTable) {
     }
   }
 
-  // Rename individual atomic terms
-  /*private def transHelper(kc: Context, local: Set[Ident], node: ASTNode = Triv()): Term => Option[Term] = (f: Term) =>
-    KaisarProof.getAt(f, node) match {
-      case Some((e, label)) => renameAdmissible(kc, label, e, local, node)
-      case None => None
-    }*/
-
   def etf(kc: Context, local: Set[Ident], node: ASTNode = Triv()): ExpressionTraversalFunction = new ExpressionTraversalFunction {
     override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
       getAt(e, Triv()) match {

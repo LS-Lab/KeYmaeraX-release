@@ -398,7 +398,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.forwardHypothetical :: Nil)
+    testExampleSet(SharedModels.basicReachAvoid :: Nil)
   }
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>

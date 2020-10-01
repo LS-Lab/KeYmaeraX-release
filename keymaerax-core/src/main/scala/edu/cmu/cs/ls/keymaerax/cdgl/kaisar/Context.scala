@@ -269,6 +269,13 @@ case class Context(s: Statement) {
     ec
   }
 
+  /** Clone this context but indicate that we are checking a normal statement */
+  def withoutGhost: Context = {
+    val gc: Context = this.clone
+    gc.ghostStatus = NonGhostMode
+    gc
+  }
+
   /** Clone this context but indicate that we are checking a ghost statement */
   def withGhost: Context = {
     val gc: Context = this.clone
@@ -372,11 +379,11 @@ case class Context(s: Statement) {
 
   /** Return all assignments which mention any variant of "x" */
   def getAssignments(x: Variable): List[Formula] =
-    withOuter.searchAll(QAssignments(x, onlySSA = false), Set()).formulas.map(elaborateStable)
+    withOuter.withoutGhost.searchAll(QAssignments(x, onlySSA = false), Set()).formulas.map(elaborateStable)
 
   // Return all facts which mention any SSA-variant of x
   def getMentions(x: Variable): List[Formula] =
-    withOuter.searchAll(QProgramVar(x), Set()).formulas.map(elaborateStable)
+    withOuter.withoutGhost.searchAll(QProgramVar(x), Set()).formulas.map(elaborateStable)
 
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
@@ -393,7 +400,7 @@ case class Context(s: Statement) {
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
       // @TODO: Use less dummy fact variable names/facts
       case Note(x, _, None) => succeed(Set((Some(x), KaisarProof.askLaterP)), Set())
-      case mod: Modify => findAll(mod, cq)
+      case mod: Modify => findAll(mod, cq, tabooProgramVars)
       case Block(ss) =>
         def iter(ss: List[Statement], cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
           ss match {
@@ -474,9 +481,9 @@ case class Context(s: Statement) {
     * @param mod   A [[Modify]] statement which is searched for bindings
     * @param cq    A user-supplied search query
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
-  private def findAll(mod: Modify, cq: ContextQuery): ContextResult = {
+  private def findAll(mod: Modify, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
-      RSuccess(fmls, assigns).matchingPart(cq).elaborated(this, cq)
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
     mod.asgns.map({case (Some(p), x, Some(f)) if (cq.matches(Some(p), Equal(x, f), isAssignment = false)) =>
       // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
       RSuccess(Set((Some(p), Equal(x, f))), Set())
@@ -565,7 +572,7 @@ case class Context(s: Statement) {
         } catch {
           case pce: ProofCheckException => RStrongFailure(s"Could not check proof term ${pt}, reason: ${pce.msg}")
         }
-      case None => withOuter.searchAll(cq, Set())
+      case None => withOuter.withoutGhost.searchAll(cq, Set())
     }
   }
 
@@ -573,7 +580,7 @@ case class Context(s: Statement) {
   * @param wantProgramVar search exclusively for unannotated assignments x:=f rather than facts named "x" */
   def get(id: Ident, wantProgramVar: Boolean = false, isSound: Boolean = true): Option[Formula] = {
     val cq: ContextQuery = if (wantProgramVar) QProgramVar(id) else QProofVar(id)
-    withOuter.searchAll(cq, Set()).formulas.headOption
+    withOuter.withoutGhost.searchAll(cq, Set()).formulas.headOption
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborateStable)
 
