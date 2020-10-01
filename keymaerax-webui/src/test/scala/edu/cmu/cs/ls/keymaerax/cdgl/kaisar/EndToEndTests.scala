@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 // @TODO: Test end-to-end angelic loop proofs with nominals etc
 // @TODO: Smart-QE for efficiency
 // @TODO: for loops with proper termination metrics not just while loops
-// @TODO: get rid of unsound extra ODE SSA assignments
 
 class EndToEndTests extends TacticTestBase {
   val check: String => Formula = Kaisar.apply

@@ -386,7 +386,6 @@ case class Context(s: Statement) {
     withOuter.withoutGhost.searchAll(QProgramVar(x), Set()).formulas.map(elaborateStable)
 
   /** Look up definitions of a proof variable, starting with the most recent. */
-  /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
   def searchAll(cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
       RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
@@ -440,7 +439,7 @@ case class Context(s: Statement) {
       case Phi(s) => reapply(s).withInverseGhost.searchAll(cq, tabooProgramVars)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => ContextResult.unit
-      case po: ProveODE => findAll(po, po.ds, cq).++(findAll(po.dc, cq))
+      case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars).++(findAll(po.dc, cq, tabooProgramVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal => ContextResult.unit
       case While(_, _, body) =>
@@ -508,9 +507,9 @@ case class Context(s: Statement) {
     * @param ds A [[DiffStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery): ContextResult /*List[(Ident, Formula)] */= {
+  private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
-      RSuccess(fmls, assigns).matchingPart(cq).elaborated(this, cq)
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
     ds match {
       case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!this.isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
@@ -533,9 +532,9 @@ case class Context(s: Statement) {
           case None => ContextResult.unit
         }
       case AtomicODEStatement(dp, _) => ContextResult.unit
-      case DiffProductStatement(l, r) => findAll(odeContext, l, cq).++(findAll(odeContext, r, cq))
-      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq)
-      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq)
+      case DiffProductStatement(l, r) => findAll(odeContext, l, cq, tabooProgramVars).++(findAll(odeContext, r, cq, tabooProgramVars))
+      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq, tabooProgramVars)
+      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq, tabooProgramVars)
     }
   }
 
@@ -545,14 +544,14 @@ case class Context(s: Statement) {
     * @param dc A [[DomainStatement]] statement which is searched for bindings
     * @param cq  A user-supplied search query
     * @return all bindings which satisfy [[cq]] */
-  private def findAll(dc: DomainStatement, cq: ContextQuery): ContextResult /*List[(Ident, Formula)] */ = {
+  private def findAll(dc: DomainStatement, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
     dc match {
       case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).matchingPart(cq)
       case DomAssume(x, fml) => ContextResult.unit
       case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).matchingPart(cq)
-      case DomAnd(l, r) => findAll(l, cq) ++ findAll(r, cq)
+      case DomAnd(l, r) => findAll(l, cq, tabooProgramVars) ++ findAll(r, cq, tabooProgramVars)
       case dw@DomWeak(dc) =>
-        withInverseGhost.findAll(dc, cq) match {
+        withInverseGhost.findAll(dc, cq, tabooProgramVars) match {
           // @TODO: Better message
           case cr if cr.nonEmpty => throw ProofCheckException(s"Weakened domain constraint $dc selected result ${cq}, but selection should have been empty", node = dw)
           case cr => ContextResult.unit
