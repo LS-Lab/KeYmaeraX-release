@@ -20,36 +20,26 @@ object ProofChecker {
   // If true, print more debug info while doing arithmetic proofs
   val DEBUG_ARITH = false
 
-  /** @return all formulas selected by a selector */
-  private def methodAssumptions(con: Context, m: Selector, goal: Formula): List[Formula] = {
-    m match {
-      case DefaultSelector =>
-        // @TODO: It should be okay for ProgramVars resulting from DefaultSelector to match nothing in InverseGhost case.
-        //  or do we want to filter them out here?
-        // @TODO: deduplicate defaultselector implementation
-        //val fv = StaticSemantics(goal).fv
-        //val res = fv.toSet.toList.flatMap((v: Variable) => con.get(v, wantProgramVar = true).toList)
-        //res
-        val fv = StaticSemantics(goal).fv
-        val candidates = fv.toSet.toList.map((v: Variable) => ProgramVar(Variable(v.name)))
-        val mentionedVars = VariableSets(con).allVars.map((v:Variable) => v.name)
-        // Keep all variables mentioned in assertions or assignments of context (for example)
-        candidates.filter(x => mentionedVars.contains(x.x.name)).map(x => ForwardProofChecker(con, x))
+  /** @return query for selector */
+  def methodAssumptions(con: Context, sel: Selector, goal: Formula): ContextQuery =  (sel match {
+    case DefaultSelector =>
+      // @TODO: It should be okay for ProgramVars resulting from DefaultSelector to match nothing in InverseGhost case.
+      //  or do we want to filter them out here?
+      val fv = StaticSemantics(goal).fv
+      val candidates = fv.toSet.toList.map((v: Variable) => ProgramVar(Variable(v.name)))
+      val mentionedVars = VariableSets(con).allVars.map((v:Variable) => v.name)
+      // Keep all variables mentioned in assertions or assignments of context (for example)
+      candidates.filter(x => mentionedVars.contains(x.x.name)).map(x => QProgramVar(x.x))
+    case ForwardSelector(pt: ProofVar) => List(QProofVar(pt.x))
+    case ForwardSelector(pt: ProgramVar) => List(QProgramVar(pt.x))
+    case ForwardSelector(pt: ProgramAssignments) => List(QAssignments(pt.x, pt.onlySSA))
+    case ForwardSelector(pt) => List(QProofTerm(pt))
+    case PatternSelector(e) => List(QUnify(e))
+  }).fold[ContextQuery](QNil())(QUnion(_, _))
 
-      case ForwardSelector(pt) => List(ForwardProofChecker(con, pt))
-      case PatternSelector(e) => con.unify(e).toList.map(_._2)
-    }
-  }
-
-  /** @return formulas selected in method, paired with underlying basic method */
-  def methodAssumptions(con: Context, m: Method, goal: Formula): (List[Formula], Method) = {
-    m match {
-      case Using(sels, m) =>
-        val assms = sels.flatMap(methodAssumptions(con, _, goal))
-        val (assm, meth) = methodAssumptions(con, m, goal)
-        (assms ++ assm, meth)
-      case RCF() | Auto() | Prop() | Solution() | DiffInduction() | _: ByProof | _: Exhaustive | _: Hypothesis => (List(), m)
-    }
+  /* @return query for method */
+  def methodAssumptions(con: Context, m: Method, goal: Formula): ContextQuery = {
+    QElaborate(m.selectors.map(methodAssumptions(con, _, goal)).fold[ContextQuery](QNil())(QUnion(_, _)))
   }
 
   /** @return unit if [[f]] succeeds, else throw [[ProofCheckException]] */
@@ -80,7 +70,8 @@ object ProofChecker {
         case ("abs", e) => Or(And(GreaterEqual(e, Number(0)), Equal(fresh, e)), And(LessEqual(e, Number(0)), Equal(fresh, Neg(e))))
         case ("min", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, r)), And(LessEqual(l, r), Equal(fresh, l)))
         case ("max", Pair(l, r)) => Or(And(GreaterEqual(l, r), Equal(fresh, l)), And(LessEqual(l, r), Equal(fresh, r)))
-        case (name, args) => ???
+        case (name, args) =>
+          throw ProofCheckException("Cannot eliminate function: " + name)
       }
     (fresh, fml)
   }
@@ -98,7 +89,6 @@ object ProofChecker {
     var ghostEqs: Set[Formula] = Set()
     var substs: Map[Term, Term] = Map()
     var taboo: Set[Variable] = StaticSemantics(naiveFormula).fv.toSet
-    // @TODO: Find why fourth QE call is not adequated substituted
     // Note: This code would be made cleaner if we had a postorder traversal version of replacesFree
     def allSubsts(f: Term): Option[Term] = {
       f match {
@@ -215,9 +205,11 @@ object ProofChecker {
 
   /** @return unit if f proves by method [[m]], else throw. */
   private def apply(con: Context, f: Formula, m: Method, outerStatement: ASTNode = Triv()): Unit = {
-    val (assms, meth) = methodAssumptions(con, m, f)
+    val query = methodAssumptions(con, m, f)
+    val result = con.findAll(query)
+    val assms = result.formulas
     val (interpAssums, interpF) = interpretFunctions(assms.toSet, f)
-    meth match {
+    m.atom match {
       case Hypothesis() => qeAssert(hyp(interpAssums, interpF), assms, f, m, outerStatement)
       case RCF() => qeAssert(rcf(interpAssums, interpF), assms, f, m, outerStatement)
       // general-purpose auto heuristic
@@ -619,7 +611,8 @@ object ProofChecker {
     * has exactly the right cases expected by the formula that we case-analyze */
   private def compareCasesToScrutinee(con: Context, sel: Selector, branches: List[Expression], node: ASTNode): Unit = {
     // Goal formala "true" should be ignored, case selector should not be "default"
-    methodAssumptions(con: Context, sel: Selector, True) match {
+    val query = methodAssumptions(con: Context, sel: Selector, True)
+    con.findAll(query).formulas match {
       case fml :: Nil =>
         // TODO: Support cases with non-ground patterns. Improve error messages for case where right-handed split produces too few cases but exhaustive split gives too many
         // Heuristic matching: split disjuncts based on number of cases.

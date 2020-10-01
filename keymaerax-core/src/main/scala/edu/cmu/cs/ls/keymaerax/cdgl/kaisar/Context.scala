@@ -31,7 +31,22 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 
 sealed trait ContextQuery {
   def matches(x: Option[Ident], f: Formula, isAssignment: Boolean): Boolean
+  def elaborate(kc: Context, f: Formula): Formula = f
+  def elaborate(kc: Context, f: Term): Term = f
 }
+
+case class QElaborate(cq: ContextQuery) extends ContextQuery {
+  override def matches(x: Option[Ident], f: Formula, isAssignment: Boolean): Boolean = cq.matches(x, f, isAssignment = isAssignment)
+  override def elaborate(kc: Context, f: Formula): Formula =
+    kc.elaborateStable(kc.elaborateFunctions(f, Triv()))
+  override def elaborate(kc: Context, f: Term): Term =
+    kc.elaborateStable(kc.elaborateFunctions(f, Triv()))
+}
+
+case class QNil() extends ContextQuery {
+  override def matches(x: Option[Ident], f: Formula, isAssignment: Boolean): Boolean = false
+}
+
 case class QProgramVar(x: Variable) extends ContextQuery {
   override def matches(yOpt: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean = {
     val vars = StaticSemantics(fml)
@@ -44,7 +59,17 @@ case class QAssignments(x: Variable, onlySSA: Boolean) extends ContextQuery {
     isAssignment && (fml match {case Equal(z: Variable, _) => x.name == z.name case _ => false })
   }
 }
-case class QUnion(l: ContextQuery, r: ContextQuery) extends ContextQuery {
+object QUnion {
+  def apply(l: ContextQuery, r: ContextQuery): ContextQuery = {
+    (l, r) match {
+      case (QNil(), _) => r
+      case (_, QNil()) => l
+      case _ => new QUnion(l, r)
+    }
+  }
+}
+
+case class QUnion private(l: ContextQuery, r: ContextQuery) extends ContextQuery {
   override def matches(x: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean =
     l.matches(x, fml, isAssignment) || r.matches(x, fml, isAssignment)
 }
@@ -72,6 +97,8 @@ case class QUnify(pat: Expression) extends ContextQuery {
 case class QPhi(phi: Phi, cq: ContextQuery) extends ContextQuery {
   override def matches(x: Option[Ident], fml: Formula, isAssignment: Boolean): Boolean =
     cq.matches(x, Context.substPhi(phi, fml), isAssignment)
+
+  override def elaborate(kc: Context, f: Formula): Formula = cq.elaborate(kc, f)
 }
 
 sealed trait ContextResult {
@@ -121,13 +148,24 @@ sealed trait ContextResult {
     }
 
   // @TODO: Better data structure for assignments that might also have names. matchesAssign vs matchesFact
-  def matchingPart(cq: ContextQuery): ContextResult = {
+    def matchingPart(cq: ContextQuery): ContextResult = {
     this match {
       case _: RStrongFailure => this
       case _: RWeakFailure => this
-      case RSuccess(facts, assigns) => RSuccess(
+      case RSuccess(facts, assigns) =>
+        RSuccess(
         facts.filter({case (id, fml) => cq.matches(id, fml, isAssignment = false)}),
         assigns.filter({case (asgn: Assign) => cq.matches(Some(asgn.x), assignFact(asgn), isAssignment = true)}))
+    }
+  }
+
+  def elaborated(kc: Context, cq: ContextQuery): ContextResult = {
+    this match {
+      case RSuccess(fmls, assigns) =>
+        val elabFmls =  fmls.map(idFml => (idFml._1, cq.elaborate(kc.outer, idFml._2)))
+        val elabAssigns = assigns.map(asgn => Assign(asgn.x, cq.elaborate(kc.outer, asgn.e)))
+        RSuccess(elabFmls, elabAssigns)
+      case _ => this
     }
   }
   def asList: List[(Option[Ident], Formula)]
@@ -142,6 +180,8 @@ sealed trait ContextResult {
       case (_, _: RWeakFailure) => this
       case (l, r) if r.isEmpty => l
       case (l, r) if l.isEmpty => r
+      case (x, RBranch(l, r)) => RBranch(l.++(x), r.++(x))
+      case (RBranch(l, r), x) => RBranch(l.++(x), r.++(x))
       case _ => throw ProofCheckException(s"Could not compute union of results: $this and $other")
     }
 }
@@ -159,16 +199,13 @@ case class RWeakFailure(msg: String) extends ContextResult {
 
 case class RBranch(l: ContextResult, r: ContextResult) extends ContextResult {
   override def asList: List[(Option[Ident], Formula)] = {
-    (l.asList, r.asList) match {
-      case ((Some(idL), fmlL) :: Nil, (Some(idR), fmlR) :: Nil) if idL == idR => (Some(idL), Or(fmlL, fmlR)) :: Nil
-      case ((Some(idL), fmlL) :: Nil, (Some(idR), fmlR) :: Nil) => throw ProofCheckException(s"Unexpected differing fact names $idL and $idR on different branches")
-      case ((Some(idL), fmlL) :: Nil, (None, fmlR) :: Nil)  => (Some(idL), Or(fmlL, fmlR)) :: Nil
-      case ((None, fmlL) :: Nil, (Some(idR), fmlR) :: Nil)  => (Some(idR), Or(fmlL, fmlR)) :: Nil
-      case ((None, fmlL) :: Nil, (None, fmlR) :: Nil)  => (None, Or(fmlL, fmlR)) :: Nil
-      case (Nil, r) => r
-      case (l, Nil) => l
-      case _ => throw ProofCheckException(s"Could not combine branching results: $l and $r")
-    }
+    def setted(lst: List[(Option[Ident], Formula)]): Set[Formula] =
+      l.asList.foldLeft[Set[Formula]](Set())({ case (acc, x) => acc.+(x._2) })
+    val (lSet, rSet) = (setted(l.asList), setted(r.asList))
+      val (inter, lDiff, rDiff) = (lSet.intersect(rSet), lSet.--(rSet), rSet.--(lSet))
+    val (lBranch, rBranch) = (lDiff.toList.fold(True)(And), rDiff.toList.fold(True)(And))
+    val fmls = Or(lBranch, rBranch) :: inter.toList
+    fmls.map(x => (None, x))
   }
 }
 
@@ -182,7 +219,7 @@ case class Context(s: Statement) {
 
   // When recursively traversing a proof statement with context, [[outer]] represents the context at the beginning of
   // the recursion.
-  private var outer: Context = this
+  var outer: Context = this
   // Tracks whether the *statement* being checked appears under a Ghost or InverseGhost node.
   // This is *distinct* from whether the context statement [[s]] contains ghosts.
   private var ghostStatus: GhostMode = NonGhostMode
@@ -344,14 +381,18 @@ case class Context(s: Statement) {
   /** Look up definitions of a proof variable, starting with the most recent. */
   /** @TODO: Soundness: Is this sound for SSA? What happens when a free variable of a fact is modified after the fact is proved? */
   def searchAll(cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+    def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
+    def matched(x: IdentPat, fml: Formula): ContextResult =
+      Context.matchAssume(x, fml, s).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
     s match {
       case _: Triv => ContextResult.unit
-      case Assume(x, g) => Context.matchAssume(x, g, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
-      case Assert(x, g, _) => Context.matchAssume(x, g, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
-      case Note(x, _, Some(g)) => RSuccess(Set((Some(x), g))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+      case Assume(x, g) => matched(x, g)
+      case Assert(x, g, _) => matched(x, g)
+      case Note(x, _, Some(g)) => succeed(Set((Some(x), g)), Set())
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
       // @TODO: Use less dummy fact variable names/facts
-      case Note(x, _, None) => RSuccess(Set((Some(x), KaisarProof.askLaterP))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+      case Note(x, _, None) => succeed(Set((Some(x), KaisarProof.askLaterP)), Set())
       case mod: Modify => findAll(mod, cq)
       case Block(ss) =>
         def iter(ss: List[Statement], cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
@@ -383,9 +424,6 @@ case class Context(s: Statement) {
         iter(ss.reverse, cq, tabooProgramVars)
       case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars) ++ reapply(r).searchAll(cq, tabooProgramVars)
       case switch@Switch(sel, pats) =>
-        // @TODO: happens because of ghosts on different branches. think more cleverly what to do about it
-        /*if (k1 != k2) throw ProofCheckException(s"recursive call found formula twice with different names: $k1 and $k2", node = switch)
-        else*/
         val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars) })
         if (eachResult.isEmpty) ContextResult.unit
         else eachResult.reduce(RBranch)
@@ -406,25 +444,25 @@ case class Context(s: Statement) {
       case BoxLoop(body, ih) =>
         // only allowed to find IH
         ih match {
-          case Some((ihVar, _oldIhFml, Some(ihFml))) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
-          case Some((ihVar, ihFml, None)) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case Some((ihVar, _oldIhFml, Some(ihFml))) => succeed(Set((Some(ihVar), ihFml)), Set())
+          case Some((ihVar, ihFml, None)) => succeed(Set((Some(ihVar), ihFml)), Set())
           case _ => ContextResult.unit
         }
       case BoxLoopProgress(BoxLoop(bl, ihOpt), progress) => {
         val ihMatch: ContextResult = ihOpt.map({
-          case ((ihVar, _oldIhFml, Some(ihFml))) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
-          case ((ihVar, ihFml, None)) => RSuccess(Set((Some(ihVar), ihFml))).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+          case ((ihVar, _oldIhFml, Some(ihFml))) => succeed(Set((Some(ihVar), ihFml)), Set())
+          case ((ihVar, ihFml, None)) => succeed(Set((Some(ihVar), ihFml)), Set())
           case _ => ContextResult.unit}).getOrElse(ContextResult.unit)
         ihMatch.++(reapply(progress).searchAll(cq, tabooProgramVars))
       }
       case WhileProgress(While(x, j, s), prog) =>
-        val convMatch = Context.matchAssume(x, j, s).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+        val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
         val v = x match {case vv: Variable => vv case _ => defaultVar}
-        val branchMatch = RSuccess(Set((Some(v), fml)), Set()).admissiblePart(this, tabooProgramVars).matchingPart(cq)
+        val branchMatch = succeed(Set((Some(v), fml)), Set())
         branchMatch ++ reapply(progress).searchAll(cq, tabooProgramVars)
       case BoxChoiceProgress(bc, onBranch, progress) =>
         reapply(progress).searchAll(cq, tabooProgramVars)
@@ -437,6 +475,8 @@ case class Context(s: Statement) {
     * @param cq    A user-supplied search query
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
   private def findAll(mod: Modify, cq: ContextQuery): ContextResult = {
+    def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
+      RSuccess(fmls, assigns).matchingPart(cq).elaborated(this, cq)
     mod.asgns.map({case (Some(p), x, Some(f)) if (cq.matches(Some(p), Equal(x, f), isAssignment = false)) =>
       // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
       RSuccess(Set((Some(p), Equal(x, f))), Set())
@@ -448,7 +488,7 @@ case class Context(s: Statement) {
       if (isGhost && !outer.isGhost) {
         ContextResult.unit
       } else
-        RSuccess(Set(), Set(Assign(x, f)))
+        succeed(Set(), Set(Assign(x, f)))
     case (Some(_), x, None) =>
       throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable", node = mod)
     case _ => ContextResult.unit
@@ -462,6 +502,8 @@ case class Context(s: Statement) {
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
   private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery): ContextResult /*List[(Ident, Formula)] */= {
+    def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
+      RSuccess(fmls, assigns).matchingPart(cq).elaborated(this, cq)
     ds match {
       case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!this.isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
@@ -475,10 +517,11 @@ case class Context(s: Statement) {
               val fullFact = odeContext.timeVar match { case None => eqFact case Some(tvar) => And(eqFact, GreaterEqual(tvar, Number(0)))}
               // Search using full fact and explicit name if possible
               if (cq.matches(Some(ident), fullFact, isUnnamed))
-                RSuccess(Set((Some(ident), fullFact)), Set())
+                succeed(Set((Some(ident), fullFact)), Set())
               // To better support ProgramVar lookups, always try f() with *just* the assignment fact as well, but pull
               // a fast one and return the whole fact
-              else if (!isUnnamed && cq.matches(Some(xp.x), eqFact, isAssignment = true)) RSuccess(Set(), Set(Assign(xp.x, solMap(xp.x)))) else ContextResult.unit
+              else if (!isUnnamed && cq.matches(Some(xp.x), eqFact, isAssignment = true))
+                succeed(Set(), Set(Assign(xp.x, solMap(xp.x)))) else ContextResult.unit
             } else ContextResult.unit
           case None => ContextResult.unit
         }
@@ -512,8 +555,18 @@ case class Context(s: Statement) {
   }
 
   // top-level search function wrapper.
-  private def findAll(cq: ContextQuery): ContextResult /*List[(Ident, Formula)]*/ = {
-    withOuter.searchAll(cq, Set())
+  def findAll(cq: ContextQuery): ContextResult  = {
+    val ptOpt = cq match {case QElaborate(QProofTerm(pt)) => Some(pt) case QProofTerm(pt) => Some(pt) case _ => None}
+    ptOpt match {
+      case Some(pt) =>
+        try {
+          /* TODO: Fancier logic to support proof terms whose arguments vary across branches */
+          RSuccess(Set((None, ForwardProofChecker(this, pt))), Set())
+        } catch {
+          case pce: ProofCheckException => RStrongFailure(s"Could not check proof term ${pt}, reason: ${pce.msg}")
+        }
+      case None => withOuter.searchAll(cq, Set())
+    }
   }
 
   /* Get most recent formula (if any), bound to identifier [[id]]
@@ -606,10 +659,14 @@ case class Context(s: Statement) {
   private def destabilize(f: Formula): Formula =
     SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
 
+  private def destabilize(f: Term): Term =
+    SubstitutionHelper.replacesFree(f)(f => KaisarProof.getStable(f))
+
   // While it would be nice to do all translation steps before the proof-checker, the lastFact computations in ProofChecker
   // need "stable" markers to determine when loop base cases and inductive steps agree.
   /** Final elaboration step used in proof-checker. */
   def elaborateStable(f: Formula): Formula = destabilize(f)
+  def elaborateStable(f: Term): Term = destabilize(f)
 
   /** Optionally replace user-defined function symbols in [[t]] */
   private def replaceFunctions(t: Term, node: ASTNode = Triv()): Option[Term] = {

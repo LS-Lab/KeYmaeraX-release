@@ -49,6 +49,12 @@ object KaisarProof {
   class NodeException (override val msg: String = "", override val cause: Throwable = null) extends LocatedException (msg, cause) {
     val node: ASTNode = Triv()
     def location: Option[Int] = node.location
+    override def toString: String =
+      if (cause == null) {
+        s"NodeException($msg)"
+      } else {
+        s"NodeException($msg), cause ${cause}"
+      }
   }
   case class ProofCheckException(override val msg: String, override val cause: Throwable = null, override val node: ASTNode = Triv()) extends NodeException (msg, cause) {
     override def toString: String = msg
@@ -250,7 +256,15 @@ case class Using(use: List[Selector], method: Method) extends Method {
 case class ByProof(proof: Statements) extends Method
 
 // Forward-chaining natural deduction proof term.
-sealed trait ProofTerm extends ASTNode
+sealed trait ProofTerm extends ASTNode {
+  def freeProofVars: List[Ident] = {
+    this match {
+      case ProofVar(id) => List(id)
+      case ProofApp(m, n) => m.freeProofVars ++ n.freeProofVars
+      case _ => List()
+    }
+  }
+}
 // Hypothesis rule. Identifier x can be either a proof variable in the current context or a built-in natural-deduction
 // rule from the CdGL proof calculus.
 case class ProofVar(x: Ident) extends ProofTerm {}

@@ -4,7 +4,7 @@
   */
 /**
   * Reduces all other selectors to proof and program-variable selectors.
-  * Proof-term selectors are translated to [[Note]]s. Variables, which are armbiguous
+  * Proof-term selectors are translated to [[Note]]s. Variables, which are ambiguous
   * in the source syntax, are disambiguated to program variables or proof variables, and the "default"
   * selector is lowered as well.
   */
