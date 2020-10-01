@@ -110,7 +110,7 @@ object BelleParser extends TacticParser with Logging {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs, expandAll)
     result.stack match {
       case Bottom :+ BelleAccept(e) => if (expandAll && defs.substs.nonEmpty) ExpandAll(defs.substs) & e else e
-      case _ :+ (BelleErrorItem(msg,loc,st)) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st) //@todo not sure why I need the extra () around ErrorList.
+      case _ :+ BelleErrorItem(msg,loc,st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
       case _ => throw new AssertionError(s"Parser terminated with unexpected stack ${result.stack}")
     }
   }
@@ -138,10 +138,15 @@ object BelleParser extends TacticParser with Logging {
         case BelleToken(CLOSE_PAREN, _) => openParens = openParens - 1; openParens > 0
         case _ => openParens > 0
       })
-      val innerExpr = parseTokenStream(inner,
-        DefScope(scala.collection.mutable.Map.empty, Some(tacticDefs)),
-        g, defs, expandAll)
-      (innerExpr, oParenLoc.spanTo(cParenLoc), remainder)
+
+      val innerExpr = parseLoop(ParserState(Bottom, inner),
+        DefScope(scala.collection.mutable.Map.empty, Some(tacticDefs)), g, defs, expandAll)
+      val result = innerExpr.stack match {
+        case Bottom :+ BelleAccept(e) => e
+        case _ :+ BelleErrorItem(msg,loc,st) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st)
+        case _ => throw new AssertionError(s"Parser terminated with unexpected stack ${innerExpr.stack}")
+      }
+      (result, oParenLoc.spanTo(cParenLoc), remainder)
   }
 
   private def parseStep(st: ParserState, tacticDefs: DefScope[String, DefTactic],
