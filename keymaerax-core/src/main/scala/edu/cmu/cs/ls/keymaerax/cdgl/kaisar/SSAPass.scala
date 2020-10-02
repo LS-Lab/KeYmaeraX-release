@@ -251,6 +251,7 @@ object SSAPass {
         val snap = snapshot.addPattern(pat)
         (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
       case Triv() => (Triv(), snapshot)
+      case pr: Pragma => (pr, snapshot)
     }
     (locate(node, s), snap)
   }

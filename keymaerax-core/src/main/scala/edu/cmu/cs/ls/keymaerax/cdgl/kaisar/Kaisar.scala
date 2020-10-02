@@ -50,6 +50,7 @@ object Kaisar {
       val in = parseProof(pf)
       // Apply all proof transformation and checking passes, and recover error messages if necessary
       try {
+        ProofOptions.proofText = Some(pf)
         currentPass = "elaboration"
         val sel = new ElaborationPass()(in)
         currentPass = "SSA"

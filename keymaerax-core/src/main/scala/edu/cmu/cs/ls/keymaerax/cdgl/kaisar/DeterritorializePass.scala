@@ -45,7 +45,8 @@ case class DeterritorializePass(tt: TimeTable) {
       // Insert "stable" function to indicate that proofchecking should never change the index on this variable -
       // we already figured out the right index.
       if (!except.contains(Variable(name))) {
-        Some(FuncOf(KaisarProof.stable, BaseVariable(name, snapshot.get(name), sort)))
+        Some(FuncOf(KaisarProof.stable, BaseVariable(name,
+          snapshot.get(name), sort)))
       } else None
     case _ => None
     })

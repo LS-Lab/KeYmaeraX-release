@@ -373,7 +373,7 @@ case class Context(s: Statement) {
       case SwitchProgress(bl, i, progress) => Context(progress).signature
       case Phi(s) => Context(s).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match => Map()
+           | _: Label | _: Match | _: Pragma => Map()
     }
   }
 
@@ -441,7 +441,7 @@ case class Context(s: Statement) {
       case InverseGhost(s) => ContextResult.unit
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars).++(findAll(po.dc, cq, tabooProgramVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars)
-      case _: Label | _: LetSym | _: Match | _: PrintGoal => ContextResult.unit
+      case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH

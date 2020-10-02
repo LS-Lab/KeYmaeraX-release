@@ -407,10 +407,14 @@ object ProofParser {
   def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~/  "(" ~ (literal.map(PrintString) |  expression.map(PrintExpr))  ~ ")" ~ ";").
     map({case (i, pg) => locate(PrintGoal(pg), i)})
 
+  def pragma[_: P]: P[Pragma] = (Index ~ "pragma" ~/ identString ~/ literal ~/ ";").
+    filter({case (i, id, str) => Pragmas.canParse(id, str)}).
+    map({case (i, id, str) => locate(Pragma(Pragmas.parse(id, str)), i)})
+
   private def debugParse[_: P](msg: String): P[Unit] = P("").map(_ => println(msg))
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile  | NoCut(modify).opaque("assignment") | parseBlock | NoCut(label).opaque("label")
+    printGoal | pragma | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile  | NoCut(modify).opaque("assignment") | parseBlock | NoCut(label).opaque("label")
 
   def postfixStatement[_: P]: P[Statement] =
     // line label syntax can collide with ODE label syntax, check labels last.

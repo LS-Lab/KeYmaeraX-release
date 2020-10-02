@@ -93,7 +93,7 @@ object ProofTraversal {
             Assert(x, f, traverse(kc, child, tf))
           case Note(x, pt, ann) =>
             Note(x, traverse(kc, pt, tf), ann)
-          case _: Modify | _: PrintGoal | _: Assume | _: Label | _: LetSym | _: Match | _: Triv => s
+          case _: Modify | _: PrintGoal | _: Assume | _: Label | _: LetSym | _: Match | _: Triv | _: Pragma => s
         }
         locate(tf.postS(kc, locate(mid, s)), s)
     }

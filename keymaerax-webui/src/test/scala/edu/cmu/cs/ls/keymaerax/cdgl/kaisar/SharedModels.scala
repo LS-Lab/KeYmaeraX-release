@@ -267,7 +267,9 @@ object SharedModels {
 
 
    val ijrrStaticSafetyDirect: String =
-    """let stopDist(v) = (v^2 / (2*b));
+    """pragma option "time=true";
+      |pragma option "trace=true";
+      |let stopDist(v) = (v^2 / (2*b));
       |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
       |let bounds() <-> A >= 0 & b > 0 & T > 0;

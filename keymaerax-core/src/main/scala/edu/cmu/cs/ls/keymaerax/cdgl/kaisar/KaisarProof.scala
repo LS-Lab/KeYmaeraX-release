@@ -518,6 +518,14 @@ case class PrintExpr(e: Expression) extends Printable
 case class PrintGoal(printable: Printable) extends MetaNode {
   override val children: List[Statement] = Nil
 }
+
+
+/** Used for features which are not fundamentally part of the language, but more convenience features of the implementation.
+  * Used for setting options including those useful for debugging or profiling  */
+case class Pragma(ps: PragmaSpec) extends MetaNode {
+  override val children: List[Statement] = Nil
+}
+
 // Debugging feature. Equivalent to "now" in all respects, annotated with the fact that it was once "was"
 // before transformation by the proof checker
 case class Was(now: Statement, was: Statement) extends MetaNode {
