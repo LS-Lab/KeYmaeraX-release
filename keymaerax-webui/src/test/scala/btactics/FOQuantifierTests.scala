@@ -96,14 +96,14 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "diffWeaken ouch" in withMathematica { _ =>
     val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
-      dW(1) & implyR(1) & dW(1) & prop)
+      dW(1) & dW(1) & prop)
     println(result)
     result shouldBe 'proved
   }
 
   it should "diffWeaken before loopy" in withMathematica { _ =>
     val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula,
-      dW(1) & implyR(1) & loop("x>0".asFormula)(1) & master())
+      dW(1) & loop("x>0".asFormula)(1) & master())
     println(result)
     result shouldBe 'proved
   }
@@ -204,10 +204,10 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y>0, y>0 ==> ".asSequent
   }
 
-  it should "instantiate ODE" ignore withTactics {
+  it should "instantiate ODE" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("\\forall t_ [{x'=2,t_'=1&true}]x>b".asFormula), IndexedSeq()),
       allInstantiate(None, Some("0".asTerm))(-1))
-    result.subgoals.loneElement shouldBe "t_=0->[{x'=2,t_'=1&true}]x>b ==> ".asSequent
+    result.subgoals.loneElement shouldBe "t_=0, [{x'=2,t_'=1&true}]x>b ==> ".asSequent
   }
 
   "existsR" should "instantiate simple formula" in withTactics {
