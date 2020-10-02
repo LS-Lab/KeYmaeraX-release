@@ -323,7 +323,6 @@ trait SequentCalculus {
     conclusion = "∀x p(x), Γ |- Δ")
   def allLkeep(e: Term)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
-      //@todo faster implementation uses derived axiom Ax.existsDistElim
       case Some(Forall(x, p)) => cut(Forall(x, p)) <(
         allL(e)('Llast),
         closeId(pos, SuccPosition(seq.succ.length + 1))
