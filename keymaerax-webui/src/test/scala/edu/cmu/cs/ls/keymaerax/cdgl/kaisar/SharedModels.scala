@@ -1,5 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
+// @TODO: Probably want top-level file format that can factor out definition of  ODE, declare rigids, detect wrong or undefined rigid names
+// @TODO: Optimize loop checking case to fail early if loop body doesn't assert or note inductive statement as final step
+// @TODO: ODE proof checking should include past cuts by default
+// @TODO: Elaboration of abs, min, max should use intuitive auto-generated names, recover high-level messages if possible
+// @TODO: Double-check abs, min, max elaboration to avoid needless branching
+// @TODO: Use new contexts for all-around smart QE, which substitutes variables wherever possible (may need dependency analysis)
+//   and which hides old irrelevant max, min, abs to reduce branching factor.
 /** Kaisar models/proofs which are used in multiple test suites, e.g. Kaisar and ProofPlex. */
 object SharedModels {
   val essentialsSafeCar1D: String =
@@ -258,16 +265,6 @@ object SharedModels {
       |}*
       |""".stripMargin
 
-  // @TODO: Probably want top-level file format that can factor out definition of  ODE, declare rigids, detect wrong or undefined rigid names
-  // @TODO: Need to use elaborated function right-hand-sides when resolving default selector lookups. Probably have to update structures to keep original and elab
-  // @TODO: Greatly restrict elaborate pass to avoid silly ghosts and avoid resolving default selector too early
-  // @TODO: Optimize loop checking case to fail early if loop body doesn't assert or note inductive statement as final step
-  // @TODO: ODE proof checking should include past cuts by default
-  // @TODO: Elaboration of abs, min, max should use intuitive auto-generated names, recover high-level messages if possible
-  // @TODO: Double-check abs, min, max elaboration to avoid needless branching
-  // @TODO: This is also a great time to rewrite the context query interface for great good
-  // @TODO: Use new contexts for all-around smart QE, which substitutes variables wherever possible (may need dependency analysis)
-  //   and which hides old irrelevant max, min, abs to reduce branching factor.
 
    val ijrrStaticSafetyDirect: String =
     """let stopDist(v) = (v^2 / (2*b));
@@ -282,37 +279,37 @@ object SharedModels {
       |let loopinv() <-> (v >= 0 & norm(dx, dy) = 1 & infdist(x, y, xo, yo) >= stopDist(v));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?assump:(assumptions());
-      |!(loopinv()) using assump by auto;
+      |!inv:(loopinv()) using assump by auto;
       |{body:
       |  {
       |    {
       |      { a := -b; t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |          t' = 1 & ?(t <= T & v >= 0);
-      |         & !tSign:(t >= 0);
-      |         & !dir:(norm(dx, dy) = 1);
-      |         & !vSol:(v = v@body - b*t);
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign ... by induction;
-      |         & !yBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign ... by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0);
+      |         & !tSign:(t >= 0) using t by induction;
+      |         & !dir:(norm(dx, dy) = 1) using inv by induction;
+      |         & !vSol:(v = v@body - b*t) using a by induction;
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign dc by induction;
+      |         & !yBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign dc by induction;
       |        };
       |      }
       |        ++
-      |      { ?(v = 0); a := 0; w := 0; t := 0;
+      |      { ?vZ:(v = 0); a := 0; w := 0; t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?(t <= T & v >= 0);
-      |         & !tSign:(t >= 0);
-      |         & !dir:(norm(dx, dy) = 1);
-      |         & !vSol:(v = v@body);
-      |         & !xSol:(x = x@body) using vSol dir tSign ... by induction;
-      |         & !ySol:(y = y@body) using vSol dir tSign ... by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0);
+      |         & !tSign:(t >= 0) using t by induction;
+      |         & !dir:(norm(dx, dy) = 1) using inv by induction;
+      |         & !vSol:(v = v@body) using a by induction;
+      |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
+      |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
       |         };
       |      }
       |        ++
       |        /* or choose a new safe curve */
       |      { a := A;
-      |        w := *; ?(-W<=w & w<=W());
+      |        w := *; ?(-W<=w & w<=W);
       |        r := *;
       |        xo := *; yo := *;
       |        ?(r!=0 & r*w = v);
@@ -320,12 +317,12 @@ object SharedModels {
       |        t := 0;
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?(t <= T & v >= 0);
-      |         & !tSign:(t >= 0);
-      |         & !dir:(norm(dx, dy) = 1);
-      |         & !vSol:(v = v@body + A*t);
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign ... by induction;
-      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign ... by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0);
+      |         & !tSign:(t >= 0) using t by induction;
+      |         & !dir:(norm(dx, dy) = 1) using inv by induction;
+      |         & !vSol:(v = v@body + A*t) using a by induction;
+      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign dc by induction; /* got here after 20 mins */
+      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign dc by induction;
       |        };
       |      }
       |    }
