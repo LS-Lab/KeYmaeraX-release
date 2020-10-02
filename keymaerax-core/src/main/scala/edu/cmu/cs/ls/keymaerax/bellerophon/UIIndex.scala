@@ -201,7 +201,7 @@ object UIIndex {
             case (_: Imply, false) => axioms ++ ("implyR" :: alwaysApplicable)
             case (_: Equiv, true) => "equivL" :: alwaysApplicable
             case (_: Equiv, false) => "equivR" :: alwaysApplicable
-            case (_: Forall, true) => "allL" :: "allLimplicit" :: alwaysApplicable
+            case (_: Forall, true) => "allL" :: "allLkeep" :: "allLimplicit" :: alwaysApplicable
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
             case (_: Exists, false) => "existsR" :: "existsRimplicit" :: alwaysApplicable
