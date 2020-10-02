@@ -1014,6 +1014,8 @@ object AssessmentProver {
     if (skipGradingOnParseError && parsedProblems.exists(_._2._2.nonEmpty)) {
       // report parse errors
       reportParseSummary(parsedProblems, msgStream)
+      val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> 0.0 })) })
+      printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({
         case (p, (gradablePrompts, unparseablePrompts)) =>
