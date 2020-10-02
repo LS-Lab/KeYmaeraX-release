@@ -186,7 +186,7 @@ object ProofChecker {
     assms.find { case _: Or => true case _: Imply => true case _ => false } match {
       case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) || prop(assms.-(Or(l,r)).+(r), f, leaf)
       case Some(Imply(l, r)) => prop(assms.-(Imply(l,r)), l) && prop(assms.-(Imply(l,r)).+(r), f)
-      case _ => leaf(assms, f)
+      case _ => ProofOptions.branchCount = ProofOptions.branchCount + 1;   leaf(assms, f)
     }
   }
 
@@ -209,6 +209,8 @@ object ProofChecker {
     val result = con.findAll(query)
     val assms = result.formulas
     val (interpAssums, interpF) = interpretFunctions(assms.toSet, f)
+    if(ProofOptions.trace) println(s"Proving ${assms.mkString(", ")} |- $f")
+    ProofOptions.branchCount = 0
     m.atom match {
       case Hypothesis() => qeAssert(hyp(interpAssums, interpF), assms, f, m, outerStatement)
       case RCF() => qeAssert(rcf(interpAssums, interpF), assms, f, m, outerStatement)
@@ -223,6 +225,7 @@ object ProofChecker {
       // discharge goal with structured proof
       case ByProof(proof: Statements) => apply(con, proof)
     }
+    ProofOptions.countBranches()
   }
 
   /** exhaustive proof method which is used by default to check whether very simple case analyses are constructively exhaustive */
@@ -633,6 +636,7 @@ object ProofChecker {
   /** @return  (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
+    Pragmas.listen(con, s)
     s match {
       case Assert(x , f, m) =>
         val taboo: Set[Variable] = if (con.isGhost) Set() else VariableSets(con).tabooVars
@@ -756,6 +760,7 @@ object ProofChecker {
         val elabF = con.elaborateStable(f)
         (Context(s), Box(Test(elabF), True))
       case _: Triv | _: Label => (Context(s), True)
+      case pr: Pragma => Pragmas.update(pr.ps); (Context(s), True)
     }
   }
 }
