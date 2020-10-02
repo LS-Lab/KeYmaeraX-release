@@ -184,7 +184,7 @@ object ProofChecker {
     * @return whether assms |- f proves propositionally */
   private def contextBetas(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     assms.find { case _: Or => true case _: Imply => true case _ => false } match {
-      case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) || prop(assms.-(Or(l,r)).+(r), f, leaf)
+      case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) && prop(assms.-(Or(l,r)).+(r), f, leaf)
       case Some(Imply(l, r)) => prop(assms.-(Imply(l,r)), l) && prop(assms.-(Imply(l,r)).+(r), f)
       case _ => ProofOptions.branchCount = ProofOptions.branchCount + 1;   leaf(assms, f)
     }
