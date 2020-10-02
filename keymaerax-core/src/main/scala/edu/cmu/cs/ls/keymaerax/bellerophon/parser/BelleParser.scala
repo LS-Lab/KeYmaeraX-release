@@ -553,7 +553,7 @@ object BelleParser extends TacticParser with Logging {
       val remainder = closeParenAndRemainder.tail
 
       def expand[T <: Expression](e: T): T =
-        if (expandAll) defs.elaborateToFunctions(defs.exhaustiveSubst(e))
+        if (expandAll) defs.elaborateToFunctions(defs.exhaustiveSubst(defs.elaborateToFunctions(e)))
         else defs.elaborateToFunctions(e)
 
       //Parse all the arguments.
