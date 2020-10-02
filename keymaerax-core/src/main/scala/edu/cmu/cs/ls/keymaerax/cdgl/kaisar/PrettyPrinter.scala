@@ -6,10 +6,10 @@ object PrettyPrinter {
   def short(s: Statement): String = {
     s match {
       case Assume(pat, f) =>
-        val patStr = pat match {case Nothing => "" case f => s"f:"}
+        val patStr = pat match {case Nothing => "" case f => s"$f:"}
         s"?$patStr($f)"
       case Assert(pat, f, m) =>
-        val patStr = pat match {case Nothing => "" case f => s"f:"}
+        val patStr = pat match {case Nothing => "" case f => s"$f:"}
         s"!$patStr($f) ..."
       case Modify(ids, mods) => mods.map({case (x, None) => s"$x:=*;" case (x, Some(f)) => s"$x:=$f;"}).mkString(" ")
       case Label(st, snapshot) => s"$st:"
