@@ -124,6 +124,7 @@ object ProofChecker {
             // remember both unexpanded and expanded symbol for completeness.
             // @TODO: this duplication is redundant with allSubst checking of expanded function.
             substs = substs.+((fo -> fresh)).+((foApp -> fresh))
+            ProofOptions.branchCount = 2 * ProofOptions.branchCount
             Right(fresh)
           }
         case _ => Left(None)
@@ -208,9 +209,10 @@ object ProofChecker {
     val query = methodAssumptions(con, m, f)
     val result = con.findAll(query)
     val assms = result.formulas
+    ProofOptions.branchCount = 1
     val (interpAssums, interpF) = interpretFunctions(assms.toSet, f)
     if(ProofOptions.trace) println(s"Proving ${assms.mkString(", ")} |- $f")
-    ProofOptions.branchCount = 0
+    ProofOptions.countBranches(estimated = true)
     m.atom match {
       case Hypothesis() => qeAssert(hyp(interpAssums, interpF), assms, f, m, outerStatement)
       case RCF() => qeAssert(rcf(interpAssums, interpF), assms, f, m, outerStatement)

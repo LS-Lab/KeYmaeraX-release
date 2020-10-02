@@ -46,9 +46,10 @@ object ProofOptions {
     }
   }
 
-  def countBranches(): Unit = {
+  def countBranches(estimated: Boolean = false): Unit = {
+    val tag = if (estimated) "Branches (estimated): " else "Branches: "
     if (trace && branchCount >= branchBound)
-      println(s"Branches: $branchCount")
+      println(s"$tag$branchCount")
     branchCount = 0
   }
 }
