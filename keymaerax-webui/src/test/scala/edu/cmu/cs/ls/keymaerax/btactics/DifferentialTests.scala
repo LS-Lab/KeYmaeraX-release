@@ -925,9 +925,9 @@ class DifferentialTests extends TacticTestBase {
       derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
   }
 
-  it should "let us prove variable [x':=5;](x+y)'>=0" ignore withQE { _ =>
+  it should "let us prove variable [x':=5;](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
-    proveBy("[x':=5;](x+y)'>=0".asFormula,
+    TactixLibrary.proveBy("[x':=5;](x+y)'>=0".asFormula,
       let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
@@ -936,9 +936,9 @@ class DifferentialTests extends TacticTestBase {
       derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE) shouldBe 'proved
   }
 
-  it should "let us prove variable [{x'=5}](x+y)'>=0" ignore withQE { _ =>
+  it should "let us prove variable [{x'=5}](x+y)'>=0" in withQE { _ =>
     //@note proof waited too long. Should have gone constant before diffind
-    proveBy("[{x'=5}](x+y)'>=0".asFormula,
+    TactixLibrary.proveBy("[{x'=5}](x+y)'>=0".asFormula,
       let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G(1) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
@@ -1493,7 +1493,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>=0 ==> [{x'=3&x>=0}]x>=0".asSequent
   }
 
-  "Differential Invariants" should "FEATURE_REQUEST: prove random differential invariant equations" taggedAs (IgnoreInBuildTest,TodoTest) in withMathematica { tool =>
+  "Differential Invariants" should "FEATURE_REQUEST: prove random differential invariant equations" taggedAs TodoTest in withMathematica { tool =>
     //@note test is supposed/very likely to fail until feature is implemented (^0)
     for (i <- 1 to randomTrials) {
       val vars = IndexedSeq(Variable("x"),Variable("y"),Variable("z")) //rand.nextNames("z", 4)
@@ -1554,15 +1554,15 @@ class DifferentialTests extends TacticTestBase {
   it should "prove boring case" in withQE { _ =>
     proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "FEATURE_REQUEST: prove ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
+  it should "FEATURE_REQUEST: prove ^0 case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
     proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "FEATURE_REQUEST: prove crazy ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
+  it should "FEATURE_REQUEST: prove crazy ^0 case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
     proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "FEATURE_REQUEST: prove crazy case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
+  it should "FEATURE_REQUEST: prove crazy case" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
     proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
@@ -1571,7 +1571,7 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "FEATURE_REQUEST: prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
+  it should "FEATURE_REQUEST: prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs TodoTest in withQE { _ =>
     //@note test is supposed to fail until feature is implemented
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe 'proved
   }

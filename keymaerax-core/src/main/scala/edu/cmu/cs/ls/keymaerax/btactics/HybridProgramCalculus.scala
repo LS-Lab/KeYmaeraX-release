@@ -76,6 +76,8 @@ trait HybridProgramCalculus {
     premises =      "Γ |- [a]Q, Δ ;; Q |- P",
     // Monotonicity ------------------------
     conclusion =    "Γ |- [a]P, Δ",
+    contextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const></sub>, Q |- P",
+    contextConclusion = "Γ |- C( [a]P ), Δ",
     inputs = "Q:formula",
     revealInternalSteps = true)
   def generalize(C: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos:Position) => DLBySubst.generalize(C)(pos) }
@@ -109,6 +111,7 @@ trait HybridProgramCalculus {
     longDisplayName = "Loop Invariant",
     premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true,
+    //@note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula", displayLevel = "full")
   def loop(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.loop(invariant)(pos) }
 

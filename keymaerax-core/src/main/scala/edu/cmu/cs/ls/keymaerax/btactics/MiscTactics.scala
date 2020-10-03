@@ -47,7 +47,7 @@ object DebuggingTactics {
   }
 
   /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
-  def debug(message: => String, doPrint: Boolean = DEBUG, printer: ProvableSig => String = _.toString): BuiltInTactic = anon {
+  def debug(message: => String, doPrint: Boolean = DEBUG, printer: ProvableSig => String = _.toString): BuiltInTactic = anonnoop {
     (provable: ProvableSig) => {
       if (doPrint) logger.info("===== " + message + " ==== " + printer(provable) + " =====")
       provable

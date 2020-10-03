@@ -383,13 +383,16 @@ private object DifferentialTactics extends Logging {
   )
 
   /** @see [[TactixLibrary.diffInvariant]] */
-  //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.diffInvariant(Formula)
   private[btactics] def diffInvariant(R: List[Formula]): DependentPositionWithAppliedInputTactic =
     inputanon {(pos: Position, sequent: Sequent) =>
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
-      val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
-      TactixLibrary.dC(R)(pos) <(diffIndAllButFirst:_*)
+      if (R.size == 1) {
+        TactixLibrary.dC(R.head)(pos) <(skip, DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & QE & done)
+      } else {
+        val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & QE & done)
+        TactixLibrary.dC(R)(pos) <(diffIndAllButFirst: _*)
+      }
     }
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.

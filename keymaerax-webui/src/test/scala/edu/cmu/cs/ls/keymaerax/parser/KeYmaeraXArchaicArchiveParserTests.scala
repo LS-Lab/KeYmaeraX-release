@@ -654,6 +654,34 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
+  it should "parse a tactic entry with multi-line string" in withZ3 { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof 1". cut("x>=0
+        |                       &y>=0") End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe """ArchiveEntry "Entry 1".
+                                    | ProgramVariables. R x. R y. End.
+                                    | Problem. x>y -> x>=y End.
+                                    |End.""".stripMargin.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe ("Proof 1", "cut(\"x>=0\n                       &y>=0\")", cut("x>=0&y>=0".asFormula)) :: Nil
+    entry.info shouldBe empty
+  }
+
   it should "parse a tactic without name" in withQE { _ =>
     val input =
       """

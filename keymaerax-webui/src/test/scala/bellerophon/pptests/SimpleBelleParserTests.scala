@@ -619,6 +619,16 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     ))
   }
 
+  it should "elaborate variables to functions in tactic arguments" in {
+    val tactic = BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, None, None, UnknownLocation)),
+        (("g", None), (Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
+      )
+      ), expandAll=true)
+    tactic shouldBe ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+  }
+
   it should "elaborate variables to functions per declarations" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
       Declaration(scala.collection.immutable.Map(

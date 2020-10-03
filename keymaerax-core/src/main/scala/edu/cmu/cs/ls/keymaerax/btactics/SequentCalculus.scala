@@ -316,6 +316,22 @@ trait SequentCalculus {
     }
     }
 
+  /** all left keep: keeping around the quantifier, instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
+  @Tactic("∀Lk",
+    inputs = "θ[θ]:term",
+    premises = "∀x p(x), Γ, p(θ) |- Δ",
+    conclusion = "∀x p(x), Γ |- Δ")
+  def allLkeep(e: Term)             : DependentPositionWithAppliedInputTactic =
+    inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
+      case Some(Forall(x, p)) => cut(Forall(x, p)) <(
+        allL(e)('Llast),
+        closeId(pos, SuccPosition(seq.succ.length + 1))
+      )
+      case Some(e) => throw new TacticInapplicableFailure("allLkeep only applicable to universal quantifiers on the right, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+    }
+
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
   @Tactic("∃L",
     premises = "p(x), Γ |- Δ",
