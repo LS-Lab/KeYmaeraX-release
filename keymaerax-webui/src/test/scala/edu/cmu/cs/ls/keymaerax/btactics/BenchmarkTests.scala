@@ -173,7 +173,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   it should "prove interactive benchmarks" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.filter(_.name=="").map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
@@ -317,7 +317,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         println(s"Proving $name")
 
         val hasDefinitions = defs.decls.exists(_._2._3.isDefined)
-        val tacticExpands = "(expand\\s)|(expandAllDefs)".r.findFirstIn(t).nonEmpty
+        val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(t)
         if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
         val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)
 

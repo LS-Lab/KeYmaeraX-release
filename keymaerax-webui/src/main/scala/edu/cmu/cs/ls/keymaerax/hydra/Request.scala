@@ -2272,8 +2272,8 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
         val tactic =
-          if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
-          else if ("""US\([^)]*\)""".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          if (BelleParser.tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          else if (BelleParser.tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
           else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
 
         def atomic(name: String): String = {

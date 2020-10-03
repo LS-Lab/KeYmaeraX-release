@@ -983,7 +983,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
     val usMatchers = defs.decls.filter(_._2._3.isDefined).map({ case ((name, idx), _) => name + idx.map("_" + _).getOrElse("") })
     val expandAll = usMatchers.nonEmpty &&
-      "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t.tacticText).isEmpty &&
+      !BelleParser.tacticExpandsDefsExplicitly(t.tacticText) &&
       usMatchers.mkString("US\\(\"(", "|", ")").r.findFirstIn(t.tacticText).isEmpty
     val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
 

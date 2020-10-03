@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 /**
   * The Bellerophon parser
@@ -63,6 +64,15 @@ object BelleParser extends TacticParser with Logging {
     '←',
     '•'
   )
+
+  private val TACTIC_EXPANDS: Regex = "(expand\\s*\"[^\"]*\")|(expandAllDefs)".r
+  private val TACTICS_SUBSTS: Regex = """US\([^)]*\)""".r
+
+  /** Detects whether a tactic string uses `expand "..."` or `expandAllDefs`.  */
+  def tacticExpandsDefsExplicitly(s: String): Boolean = TACTIC_EXPANDS.findFirstIn(s).isDefined
+  /** Detects whether a tactic string uses `US(...)`.  */
+  def tacticSubstsDefsExplicitly(s: String): Boolean = TACTICS_SUBSTS.findFirstMatchIn(s).isDefined
+
 
   /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */
   def firstUnacceptableCharacter(s : String) : Option[(Location, Char)] = {
