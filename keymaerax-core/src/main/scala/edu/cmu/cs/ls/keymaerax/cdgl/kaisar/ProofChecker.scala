@@ -424,9 +424,7 @@ object ProofChecker {
     val DomAssert(x, plainF, m) = assertion
     val f = odeCon.c.elaborateStable(plainF)
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, odeCon.c.elaborateStable(f))})
-    val dSet = proveODE.ds.atoms
     // assignments not needed because they're already handled during lieDerivative
-    //val discreteAssigns = dSet.toList.map({case AtomicODEStatement(AtomicODE(dx, e), _) => Modify(Nil, List((dx, Some(e))))})
     val ihCon = (discreteAssumps /*++ discreteAssigns*/).foldLeft[Context](baseCon)(_.:+(_))
     val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
