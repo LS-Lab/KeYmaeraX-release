@@ -30,6 +30,14 @@ object ProofChecker {
       val mentionedVars = VariableSets(con).allVars.map((v:Variable) => v.name)
       // Keep all variables mentioned in assertions or assignments of context (for example)
       candidates.filter(x => mentionedVars.contains(x.x.name)).map(x => QProgramVar(x.x))
+    case DefaultAssignmentSelector =>
+      // @TODO: It should be okay for ProgramVars resulting from DefaultSelector to match nothing in InverseGhost case.
+      //  or do we want to filter them out here?
+      val fv = StaticSemantics(goal).fv
+      val candidates = fv.toSet.toList.map((v: Variable) => ProgramVar(Variable(v.name)))
+      val mentionedVars = VariableSets(con).allVars.map((v:Variable) => v.name)
+      // Keep all variables mentioned in assertions or assignments of context (for example)
+      candidates.filter(x => mentionedVars.contains(x.x.name)).map(x => QAssignments(x.x, onlySSA = false))
     case ForwardSelector(pt: ProofVar) => List(QProofVar(pt.x))
     case ForwardSelector(pt: ProgramVar) => List(QProgramVar(pt.x))
     case ForwardSelector(pt: ProgramAssignments) => List(QAssignments(pt.x, pt.onlySSA))
@@ -408,7 +416,7 @@ object ProofChecker {
     val (id, timeCon) = (baseCon.fresh(), baseCon.ghost(timeFml))
     val solMeth = Using(ForwardSelector(ProofVar(id)) :: methAssumps, RCF())
     apply(timeCon, subSol, solMeth, assertion)
-    assertion
+    DomAssert(x, f, m)
   }
 
   private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
@@ -430,12 +438,12 @@ object ProofChecker {
       case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
         case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f", node = assertion)
         case None =>
-          apply(baseCon, f, Using(DefaultSelector :: filteredSelectors,  Auto()), assertion)
+          apply(baseCon, f, Using(DefaultAssignmentSelector :: filteredSelectors,  Auto()), assertion)
       }
     }
     /* Prove inductive case */
     apply(ihCon, lieDerivative, Using(m.selectors, Auto()), assertion)
-    assertion
+    DomAssert(x, f, m)
   }
 
   private def applyAssertion(baseCon: ODEContext, odeContext: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {

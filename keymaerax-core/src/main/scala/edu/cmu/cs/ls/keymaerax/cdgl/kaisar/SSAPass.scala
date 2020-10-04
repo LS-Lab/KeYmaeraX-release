@@ -114,7 +114,7 @@ object SSAPass {
   def ssa(sel: Selector, snapshot: Snapshot): Selector = {
     val node =
       sel match {
-        case DefaultSelector => sel
+        case DefaultSelector | DefaultAssignmentSelector => sel
         /* @TODO: Revisit this once pattern selectors have really been used. It's arguably better for a pattern to select
          * facts regardless of which variable version/index is used. In that case, SSA renaming would be irrelevant here*/
         case PatternSelector(e) => PatternSelector(ssa(e, snapshot))

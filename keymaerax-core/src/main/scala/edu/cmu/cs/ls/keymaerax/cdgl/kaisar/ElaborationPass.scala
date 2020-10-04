@@ -58,6 +58,12 @@ class ElaborationPass() {
   /** @return list of proof terms selected by selector. */
   private def collectPts(kc: Context, sel: Selector, goal: Formula): List[ProofTerm] = {
     sel match {
+      case DefaultAssignmentSelector =>
+        val fv = StaticSemantics(goal).fv
+        val candidates = fv.toSet.toList.map(ProgramVar)
+        val bndVars = VariableSets(kc).boundVars
+        // Keep all variables mentioned in assertions or assignments of context (for example)
+        candidates.filter(x => bndVars.contains(x.x) && kc.getAssignments(x.x).nonEmpty).map(x => locate(x, sel))
       case DefaultSelector =>
         val fv = StaticSemantics(goal).fv
         val candidates = fv.toSet.toList.map(ProgramVar)
@@ -76,7 +82,7 @@ class ElaborationPass() {
         val useAssms = use.flatMap(collectPts(kc, _, goal))
         val (assms, meth) = collectPts(kc, m, goal)
         val combineAssms = useAssms ++ assms
-        if(combineAssms.isEmpty && use != List(DefaultSelector))
+        if(combineAssms.isEmpty && use != List(DefaultSelector) && use != List(DefaultAssignmentSelector))
           throw ElaborationException("Non-default selector should select at least one fact.", node = m)
         val allFree = combineAssms.map(freeVarsPT(kc, _)).foldLeft[Set[Variable]](Set())(_ ++ _)
         val freePtCandidates = allFree.toList.map(ProgramAssignments(_))

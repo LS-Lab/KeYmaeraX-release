@@ -170,6 +170,7 @@ object ProofTraversal {
           case ForwardSelector(pt) => ForwardSelector(traverse(kc, pt, tf))
           case PatternSelector(e) => PatternSelector(e)
           case DefaultSelector => DefaultSelector
+          case DefaultAssignmentSelector => DefaultAssignmentSelector
         }
         locate(tf.postSel(kc, locate(mid, s)), s)
     }

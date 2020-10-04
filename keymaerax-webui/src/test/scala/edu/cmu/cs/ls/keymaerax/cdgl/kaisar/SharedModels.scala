@@ -265,8 +265,8 @@ object SharedModels {
       |}*
       |""".stripMargin
 
-
-   val ijrrStaticSafetyDirect: String =
+  /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
+  val ijrrStaticSafetyDirect: String =
     """pragma option "time=true";
       |pragma option "trace=true";
       |let stopDist(v) = (v^2 / (2*b));
@@ -288,14 +288,15 @@ object SharedModels {
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
       |          t' = 1 & ?dc:(t <= T & v >= 0);
       |         & !tSign:(t >= 0) using tZ by induction;
-      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body - b*t) using aB by induction;
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign dc by induction;
-      |         & !yBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign dc by induction;
+      |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction;
+      |         & !vSol:(v = v@body - b*t) using aB tZ by induction;
+      |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
+      |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
+      |        !infInd: (infdist(x, y, xo, yo) >= stopDist(v)); /*  using safeDist bnds xBound yBound vSol dc tSign aB tZ vSign by auto */
       |      }
       |        ++
-      |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ(t := 0);
+      |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |          t' = 1 & ?dc:(t <= T & v >= 0);
@@ -305,6 +306,7 @@ object SharedModels {
       |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
       |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
       |         };
+      |         !infInd: (infdist(x, y, xo, yo) >= stopDist(v)) using safeDist bnds xSol ySol vSol dc tSign aZ by auto;
       |      }
       |        ++
       |        /* or choose a new safe curve */
@@ -313,22 +315,22 @@ object SharedModels {
       |        r := *;
       |        xo := *; yo := *;
       |        ?(r!=0 & r*w = v);
-      |        ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |        ?admiss:(infdist(x, y, xo, yo) > admissibleSeparation(v));
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |          t' = 1 & ?dc:(t <= T & v >= 0);
       |         & !tSign:(t >= 0) using tZ aA by induction;
       |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body + A*t) using aA by induction;
-      |         & !xBound:(-t * v <= x - x@body & x - x@body <= t * v) using vSol dir tSign dc by induction; /* got here after 20 mins */
-      |         & !xBound:(-t * v <= y - y@body & y - y@body <= t * v) using vSol dir tSign dc by induction;
+      |         & !vSol:(v = v@body + A*t) using aA tZ by induction;
+      |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction; /* got here after 20 mins -> reduced to 4 secs */
+      |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction;
       |        };
+      |        !infInd: (infdist(x, y, xo, yo) >= stopDist(v)) using safeDist bnds xBound yBound vSol dc tSign tZ admiss by auto;
       |      }
       |    }
       |  }
-      |  !vInv: (v >= 0) using vSol vSign by auto;
-      |  !infInd: (infdist(x, y, xo, yo) >= stopDist(v)) using safeDist bnds by auto;
+      |  !vInv: (v >= 0) using dc by auto;
       |  note indStep = andI(andI(vInv, dir), infInd);
       |}*
       |!(goal()) using safeDist bnds by auto;

@@ -291,6 +291,7 @@ case class ForwardSelector(forward: ProofTerm) extends Selector {}
 case class PatternSelector(e: Term) extends Selector {}
 // Heuristically selects assumptions which mention variables that the goal also mentions.
 case object DefaultSelector extends Selector {}
+case object DefaultAssignmentSelector extends Selector {}
 
 // Pattern language for left-hand side of assignment proofs. Expressions are used for most patterns, but assignment
 // patterns are not quite expressions because each assigned variable may introduce a proof variable.
