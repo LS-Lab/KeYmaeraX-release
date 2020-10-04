@@ -308,8 +308,8 @@ class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String])
   )
 }
 
-class CreatedIdResponse(id: String) extends Response {
-  def getJson = JsObject("id" -> JsString(id))
+case class CreatedIdResponse(id: String) extends Response {
+  def getJson: JsValue = JsObject("id" -> JsString(id))
 }
 
 class PossibleAttackResponse(val msg: String) extends Response with Logging {
@@ -532,9 +532,9 @@ case class ProofLemmasResponse(lemmas: List[(String, Int)]) extends Response {
   })
 }
 
-class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
-  override val schema = Some("proof.js")
-  def getJson = JsObject(
+case class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
+  override val schema: Option[String] = Some("proof.js")
+  def getJson: JsValue = JsObject(
     "id" -> JsString(proof.proofId.toString),
     "name" -> JsString(proof.name),
     "description" -> JsString(proof.description),

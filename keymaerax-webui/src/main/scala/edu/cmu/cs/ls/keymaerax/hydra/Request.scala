@@ -1473,13 +1473,23 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
       proofInfo.modelId match {
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
-          val generator = new ConfigurableGenerator[GenProduct]()
+          var products: Map[Expression, Seq[GenProduct]] = Map[Expression, Seq[GenProduct]]()
           Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
-            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
+            products += (p -> (products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
+          //@note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification
+          val generator = new ConfigurableGenerator[GenProduct](
+            products.map({ case (k, v) =>
+              problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k)) ->
+                v.map({ case (f, h) => problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f)) -> h }).distinct
+            }) ++
+            products.map({ case (k, v) =>
+              problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k))) ->
+                v.map({ case (f, h) => problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f))) -> h }).distinct
+            })
+          )
           session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
-          //TactixInit.invSupplier = generator //@todo should not store invariant generator globally for all users
-          new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+          OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }
   }
@@ -2860,8 +2870,13 @@ object RequestHelper {
       case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
     }).toMap
+    //@note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
+    val mergedInvSupplier = TactixInit.invSupplier match {
+      case ts: ConfigurableGenerator[GenProduct] => if (ts.products.nonEmpty) ts else proofSession.invSupplier
+      case ts => ts
+    }
     proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),
-      invSupplier = TactixInit.invSupplier)
+      invSupplier = mergedInvSupplier)
   }
 
 }
