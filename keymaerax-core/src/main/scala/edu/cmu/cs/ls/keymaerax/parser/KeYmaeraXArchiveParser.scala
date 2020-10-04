@@ -824,14 +824,16 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
   /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
     * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
   def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
+    val elaboratedDefs = elaborateDefs(entry.defs)
+
     // elaborate model and check
     val elaboratedModel = try {
-      entry.defs.elaborateToSystemConsts(entry.defs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
+      elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
     val fullyExpandedModel = try {
-      entry.defs.exhaustiveSubst(elaboratedModel)
+      elaboratedDefs.exhaustiveSubst(elaboratedModel)
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
@@ -840,21 +842,21 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, fullyExpandedModel)
     }
     //@note bare formula input without any definitions uses default meaning of symbols
-    if (entry.defs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
-    checkUseDefMatch(elaboratedModel, entry.defs)
+    if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
+    checkUseDefMatch(elaboratedModel, elaboratedDefs)
 
     // analyze and report annotations
-    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, entry.defs)
-    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, entry.defs), entry.defs)
+    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, elaboratedDefs)
+    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
     (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
-        typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
     })
 
     entry.copy(
       model = elaboratedModel,
-      defs = elaborateDefs(entry.defs).elaborateWithDots,
+      defs = elaboratedDefs.elaborateWithDots,
     )
   }
 
@@ -892,7 +894,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     }
 
     defs.copy(decls = defs.decls.map({ case ((name, index), (domain, sort, argNames, interpretation, loc)) =>
-      ((name, index), (domain, sort, argNames, interpretation.map(defs.elaborateToFunctions(_, taboos(argNames.getOrElse(Nil)))), loc))
+      ((name, index), (domain, sort, argNames, interpretation.map(i =>
+        defs.elaborateToSystemConsts(defs.elaborateToFunctions(i, taboos(argNames.getOrElse(Nil))))), loc))
     }))
   }
 
