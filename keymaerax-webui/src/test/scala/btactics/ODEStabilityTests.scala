@@ -15,23 +15,23 @@ import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 class ODEStabilityTests extends TacticTestBase {
 
   "stability" should "prove stability for pendulum" in withMathematica { _ =>
-    val ode = "theta' = w, w'= -a*theta - b*w".asDifferentialProgram
+    val ode = "theta' = w, w'= -a()*theta - b()*w".asDifferentialProgram
     val stable = stabODE(ode)
     val attractive = attrODE(ode)
 
-    // Lyapunov function a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4
+    // Lyapunov function a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4
     // The conditions of Lyapunov's theorem is satisfied globally, which gives an easier proof (choosing \tau = \eps)
-    val qe = proveBy("a>0&b>0, eps>0 ==> \\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*theta-b*w))+2*w*(-a*theta-b*w))*4/16)>=bnd))".asSequent,
+    val qe = proveBy("a()>0&b()>0, eps>0 ==> \\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-(a()*(2*theta*w)*2/4+(2*(b()*theta+w)*(b()*w+(-a()*theta-b()*w))+2*w*(-a()*theta-b()*w))*4/16)>=bnd))".asSequent,
       QE)
 
-    val pr1 = proveBy(Imply("a > 0 & b > 0".asFormula,stable),
+    val pr1 = proveBy(Imply("a() > 0 & b() > 0".asFormula,stable),
       unfoldProgramNormalize &
         //On ||x||=eps, there is a global lower bound on k
-        cutR("\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = eps*eps -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 >= k))".asFormula)(1) <(
+        cutR("\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = eps*eps -> a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 >= k))".asFormula)(1) <(
           QE,
           unfoldProgramNormalize &
             //There is del s.t. ||x||<del -> v < k
-            cutR("\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
+            cutR("\\exists del (del > 0 & del < eps & \\forall theta \\forall w (theta*theta+w*w < del*del -> a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
               hideL('Llast) & QE,
               unfoldProgramNormalize &
                 existsR("del".asTerm)(1) & andR(1) <(
@@ -42,10 +42,10 @@ class ODEStabilityTests extends TacticTestBase {
                     hideR(1) & prop,
                     // Move the forall quantified antecedent into domain constraint
                     // TODO: make tactic that adds universals directly into domain (without the universals)
-                    dC("theta*theta+w*w=eps*eps->a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4>=k".asFormula)(1) <(
+                    dC("theta*theta+w*w=eps*eps->a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4>=k".asFormula)(1) <(
                       hideL(-5) &
                         // This part is slightly simpler without having to close over the sub-domain
-                        dC("a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k".asFormula)(1) <(
+                        dC("a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 < k".asFormula)(1) <(
                           ODE(1),
                           ODE(1)
                         )
@@ -60,8 +60,8 @@ class ODEStabilityTests extends TacticTestBase {
 
     // The important direction of SAttr
     val pr2 = proveBy(
-      Imply(And(stable,"\\forall eps (eps>0-><{theta'=w,w'=-a*theta-b*w&true}>theta*theta+w*w < eps*eps)".asFormula),
-        "\\forall eps (eps>0-><{theta'=w,w'=-a*theta-b*w&true}>[{theta'=w,w'=-a*theta-b*w&true}]theta*theta+w*w < eps*eps)".asFormula),
+      Imply(And(stable,"\\forall eps (eps>0-><{theta'=w,w'=-a()*theta-b()*w&true}>theta*theta+w*w < eps*eps)".asFormula),
+        "\\forall eps (eps>0-><{theta'=w,w'=-a()*theta-b()*w&true}>[{theta'=w,w'=-a()*theta-b()*w&true}]theta*theta+w*w < eps*eps)".asFormula),
       implyR(1) & andL(-1) & allR(1) & implyR(1) &
       allL(-1) & implyL(-1) <(
         prop,
@@ -73,7 +73,7 @@ class ODEStabilityTests extends TacticTestBase {
             andL('Llast) &
             // Move the forall quantified antecedent into domain constraint
             // TODO: make tactic that adds universals directly into domain (without the universals)
-            dC("(theta*theta+w*w < del*del->[{theta'=w,w'=-a*theta-b*w&true}]theta*theta+w*w < eps*eps)".asFormula)(1) <(
+            dC("(theta*theta+w*w < del*del->[{theta'=w,w'=-a()*theta-b()*w&true}]theta*theta+w*w < eps*eps)".asFormula)(1) <(
               dW(1) & prop,
               dWPlus(1) & allL(-3) & allL(-3) & close
             )
@@ -84,23 +84,23 @@ class ODEStabilityTests extends TacticTestBase {
 
     // The important direction of SAttr + some quantifiers
     val pr3 = proveBy(
-    Imply(And(stable,"\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=-a*theta-b*w&true}>theta*theta+w*w < eps*eps)))".asFormula),
+    Imply(And(stable,"\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=-a()*theta-b()*w&true}>theta*theta+w*w < eps*eps)))".asFormula),
       attractive),
       implyR(1) & andL(-1) & existsL(-2) & andL(-2) & existsR(1) & andR(1) <(
         prop,
         allR(1) & allR(1) & implyR(1) &
         //weird
-        cutR(And(stable,"\\forall eps (eps>0-><{theta'=w,w'=-a*theta-b*w&true}>theta*theta+w*w < eps*eps)".asFormula))(1) <(
+        cutR(And(stable,"\\forall eps (eps>0-><{theta'=w,w'=-a()*theta-b()*w&true}>theta*theta+w*w < eps*eps)".asFormula))(1) <(
           andR(1) <(prop, allL(-3) & allL(-3) & implyL(-3) <(prop,prop) ),
           cohideR(1) & byUS(pr2)
         )
       )
     )
 
-    val pr4 = proveBy( Imply("a > 0 & b > 0".asFormula, Imply(stable, attractive)),
+    val pr4 = proveBy( Imply("a() > 0 & b() > 0".asFormula, Imply(stable, attractive)),
       implyR(1) &
         implyR(1) &
-      cutR(And(stable,"\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=-a*theta-b*w&true}>theta*theta+w*w < eps*eps)))".asFormula))(1)<(
+      cutR(And(stable,"\\exists del (del>0&\\forall theta \\forall w (theta*theta+w*w < del*del->\\forall eps (eps>0-><{theta'=w,w'=-a()*theta-b()*w&true}>theta*theta+w*w < eps*eps)))".asFormula))(1)<(
         andR(1) <( prop,
           allL(Number(1))(-2) & // Because of global-ness, we can pick any arbitrary epsilon here
           implyL(-2) <(
@@ -112,13 +112,13 @@ class ODEStabilityTests extends TacticTestBase {
                 prop,
                 allR(1) & implyR(1) &
                 ODELiveness.saveBox(1) &
-                cutR("\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 >= bnd)".asFormula)(1) <(
+                cutR("\\exists bnd \\forall theta \\forall w (theta*theta+w*w < 1 * 1 -> a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 >= bnd)".asFormula)(1) <(
                   cohideR(1) & QE,
                   implyR(1) & existsL('Llast) &
-                  ODELiveness.kDomainDiamond("a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < bnd ".asFormula)(1) <(
+                  ODELiveness.kDomainDiamond("a()*(theta^2)/2 + ((b()*theta+w)^2+w^2)/4 < bnd ".asFormula)(1) <(
                     hideL(-7) & hideL(-4) & hideL(-2) & ODELiveness.dV(None)(1) &
                       //Nasty
-                      cutR("\\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*theta-b*w))+2*w*(-a*theta-b*w))*4/16)>=bnd))".asFormula)(1) <(
+                      cutR("\\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w < 1*1)&!theta*theta+w*w < eps*eps->-(a()*(2*theta*w)*2/4+(2*(b()*theta+w)*(b()*w+(-a()*theta-b()*w))+2*w*(-a()*theta-b()*w))*4/16)>=bnd))".asFormula)(1) <(
                         byUS(qe),
                         implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) & andR(1) <(
                           prop,
@@ -137,7 +137,7 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     // Propositional manipulation
-    val pr5 = proveBy( Imply("a > 0 & b > 0".asFormula, And(stable , attractive)),
+    val pr5 = proveBy( Imply("a() > 0 & b() > 0".asFormula, And(stable , attractive)),
       implyR(1) & cutR( And(stable , Imply(stable,attractive)) )(1) <(
         andR(1) <(
           implyRi & byUS(pr1),
@@ -151,6 +151,31 @@ class ODEStabilityTests extends TacticTestBase {
     pr5 shouldBe 'proved
   }
 
+  it should "prove global exponential stability for pendulum" in withMathematica { _ =>
+    val ode = "theta' = w, w'= -a()*theta - b()*w".asDifferentialProgram
+    val estable = estabODEP(ode,True)
+
+    val pr1 = proveBy(Imply("a() = 1 & b() =1".asFormula,estable),
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) &  exhaustiveEqL2R(-2) &
+      existsR("2".asTerm)(1)<(
+        andR(1) <(
+          QE,
+          existsR("1/4".asTerm)(1) & andR(1) <(
+            QE,
+            unfoldProgramNormalize &
+            dC("(theta^2)/2 + ((theta+w)^2+w^2)/4 <= 1/4 * aux".asFormula)(1) <(
+              ODE(1),
+              ODE(1)
+            )
+          )
+        )
+      )
+    )
+
+    println(pr1)
+    pr1 shouldBe 'proved
+  }
+
   it should "prove 3rd order stability for pendulum" in withMathematica { _ =>
     val ode = "theta' = w, w'= -a*(theta - theta^3/6) - b*w".asDifferentialProgram
     val stable = stabODE(ode)
@@ -159,6 +184,10 @@ class ODEStabilityTests extends TacticTestBase {
     val lyap = "a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4".asTerm
     val lie = DifferentialHelper.simplifiedLieDerivative(ode,lyap, ToolProvider.simplifierTool())
     println(lie)
+
+    val qe = proveBy("==> \\exists theta0 \\exists w0 ( (theta0*theta0+w0*w0 <= 2*2)&theta0*theta0+w0*w0 >= 1*1&\\forall theta \\forall w ((theta*theta+w*w <= 2*2)&theta*theta+w*w >= 1*1->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*(theta-theta^3/6)-b*w))+2*w*(-a*(theta-theta^3/6)-b*w))*4/16)>=-(a*(2*theta0*w0)*2/4+(2*(b*theta0+w0)*(b*w0+(-a*(theta0-theta0^3/6)-b*w0))+2*w0*(-a*(theta0-theta0^3/6)-b*w0))*4/16)))".asSequent,
+      QE)
+    println(qe)
 
 //    val pr1 = proveBy(Imply("a > 0 & b > 0".asFormula,stable),
 //      unfoldProgramNormalize &
@@ -244,10 +273,6 @@ class ODEStabilityTests extends TacticTestBase {
           )
       )
     )
-//    val qe = proveBy(("\\forall theta \\forall w ((theta*theta+w*w <= 1*1)&!theta*theta+w*w < eps*eps->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*(theta-theta^3/6)-b*w))+2*w*(-a*(theta-theta^3/6)-b*w))*4/16)>0) ==>" +
-//      "\\exists bnd (bnd>0&\\forall theta \\forall w ((theta*theta+w*w <= 1*1)&!theta*theta+w*w < eps*eps->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*(theta-theta^3/6)-b*w))+2*w*(-a*(theta-theta^3/6)-b*w))*4/16)>=bnd))").asSequent,
-//      QE)
-//    println(qe)
 //
 //    val pr4 = proveBy( Imply("a > 0 & b > 0".asFormula, Imply(stable, attractive)),
 //      implyR(1) &

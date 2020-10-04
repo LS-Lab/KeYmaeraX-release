@@ -39,7 +39,6 @@ object ODEStability {
       ))))
   }
 
-
   /** Attractivity
     * @param ode the ODE
     * @return Formula specifying attractivity of the origin for the input ODE
@@ -63,5 +62,34 @@ object ODEStability {
     Exists(del::Nil, And(Greater(del,zero),
       odevars.foldRight(inner:Formula)( (v,f) => Forall(v::Nil,f))
     ))
+  }
+
+  /** Exponential stability
+    * @param ode the ODE
+    * @param P the region of exponential stability
+    * @return Formula specifying exponential stability of the origin for the input ODE with respect to formula P
+    */
+  def estabODEP(ode : DifferentialProgram, P : Formula) : Formula = {
+    val alpha = TacticHelper.freshNamedSymbol(Variable("alp"), Box(ode,P))
+    val beta = TacticHelper.freshNamedSymbol(Variable("beta"), Box(ode,P))
+    val aux = TacticHelper.freshNamedSymbol(Variable("aux"), Box(ode,P))
+    val zero = Number(0)
+
+    val odevars = DifferentialProduct.listify(ode).map {
+      case AtomicODE(xp, _) => xp.x
+      case _ => throw new IllegalArgumentException("attractivity only for concrete ODEs")
+    }
+
+    val norm = dot_prod(odevars,odevars)
+
+    val odeext = DifferentialProduct( AtomicODE(DifferentialSymbol(aux),Times(Number(-2),Times(beta,aux))), ode)
+
+    val inner =
+      Imply(P, Box(Compose(Assign(aux,Times(Times(alpha,alpha),norm)), ODESystem(odeext,True)), LessEqual(norm,aux)))
+
+    Exists(alpha::Nil, And(Greater(alpha,zero),
+      Exists(beta::Nil, And(Greater(beta,zero),
+      odevars.foldRight(inner:Formula)( (v,f) => Forall(v::Nil,f))
+    ))))
   }
 }

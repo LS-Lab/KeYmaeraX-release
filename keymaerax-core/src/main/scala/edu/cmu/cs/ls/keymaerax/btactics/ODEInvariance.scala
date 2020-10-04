@@ -1822,4 +1822,6 @@ object ODEInvariance {
       )
     )
   })
+
+  lazy val dCClosure = DifferentialTactics.dCClosure(true)
 }
