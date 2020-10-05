@@ -314,6 +314,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                   case None => new CounterExampleResponse("cex.none") :: Nil
                 }
               } catch {
+                case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
                 case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
               }
             }
