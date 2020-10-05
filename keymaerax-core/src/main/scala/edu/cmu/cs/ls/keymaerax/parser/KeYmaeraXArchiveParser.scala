@@ -980,7 +980,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
 
   private def convert(a: Annotation): (Expression, Expression) = (a.element, a.annotation)
 
-  private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
+  private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = try {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
     // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
@@ -991,6 +991,15 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
 
     (t.name, t.tacticText, tactic)
+  } catch {
+    case ex: ParseException =>
+      val shiftedLoc = ex.loc.addLines(t.blockLoc.line)
+      val msg = {
+        if (ex.msg.startsWith("Lexer")) ex.msg.substring(0, ex.msg.indexOf("in `")) +
+          ex.msg.substring(ex.msg.indexOf("beginning with character"))
+        else ex.msg
+      }.replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
+      throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }
 
   private def slice(text: String, loc: Location): String = {
