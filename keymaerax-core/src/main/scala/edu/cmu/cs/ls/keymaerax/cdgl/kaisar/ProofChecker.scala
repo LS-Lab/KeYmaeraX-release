@@ -635,7 +635,7 @@ object ProofChecker {
         // until we peel off the right number of cases.
         val disj = FormulaTools.disjuncts(fml)
         if (disj.length == branches.length && disj.toSet != branches.toSet)
-          throw ProofCheckException("Switch statement branches differ from scrutinee", node = node)
+          throw ProofCheckException(s"Switch statement branches differ from scrutinee.\nScrutinee: ${disj}\nBranches: $branches", node = node)
         else if (disj.length != branches.length) {
           val kDisj = disjoin(fml, branches.length, node)
           if (kDisj.toSet != branches.toSet)
@@ -681,10 +681,11 @@ object ProofChecker {
         (Context(ss), Box(Choice(a,b), p))
       case switch@Switch(sel, branches: List[(Expression, Expression, Statement)]) =>
         // @TODO: proper expression patterns not just formulas
-        val (patterns, conds, bodies) = unzip3(branches)
+        val (patterns, plainConds, bodies) = unzip3(branches)
+        val conds = plainConds.map(f => con.elaborateStable(f))
         sel match {
           case None => if (!exhaustive(conds)) throw ProofCheckException("Inexhaustive match in switch statement", node = switch)
-          case Some(sel) => compareCasesToScrutinee(con, sel, branches.map(_._2), switch)
+          case Some(sel) => compareCasesToScrutinee(con, sel, conds, switch)
         }
         val (cons, fmls) = branches.zipWithIndex.map({case (cb, i) => {
           val (c, f) = apply(con.:+(SwitchProgress(switch, i, Triv())), cb._3)
