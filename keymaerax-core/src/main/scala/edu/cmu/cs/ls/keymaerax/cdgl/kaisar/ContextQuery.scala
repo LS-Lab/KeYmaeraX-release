@@ -31,6 +31,23 @@ sealed trait ContextQuery {
   def elaborate(kc: Context, f: Formula): Formula = f
   /** Optionally elaborate or otherwise post-process only the successful matches */
   def elaborate(kc: Context, f: Term): Term = f
+
+  def partitionPt: (List[ProofTerm], ContextQuery) = {
+    this match {
+      case QProofTerm(pt) => (List(pt), QNil())
+      case QElaborate(cq) =>
+        val (pts, cqq) = cq.partitionPt
+        (pts, QElaborate(cqq))
+      case QPhi(phi, cq) =>
+        val (pts, cqq) = cq.partitionPt
+        (pts, QPhi(phi, cqq))
+      case QUnion(l, r) =>
+        val (ptsL, cqL) = l.partitionPt
+        val (ptsR, cqR) = r.partitionPt
+        (ptsL ++ ptsR, QUnion(l, r))
+      case _: QNil | _: QUnify | _: QProofVar | _: QAssignments | _: QProgramVar => (Nil, this)
+    }
+  }
 }
 
 /** [[QElaborate]] instructs the context to execute query [[cq]] normally, then fully elaborate all

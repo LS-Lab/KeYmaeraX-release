@@ -381,17 +381,17 @@ case class Context(s: Statement) {
 
   // top-level search function wrapper.
   def findAll(cq: ContextQuery): ContextResult  = {
-    val ptOpt = cq match {case QElaborate(QProofTerm(pt)) => Some(pt) case QProofTerm(pt) => Some(pt) case _ => None}
-    ptOpt match {
-      case Some(pt) =>
-        try {
-          /* TODO: Fancier logic to support proof terms whose arguments vary across branches */
-          RSuccess(Set((None, ForwardProofChecker(this, pt))), Set())
-        } catch {
-          case pce: ProofCheckException => RStrongFailure(s"Could not check proof term ${pt}, reason: ${pce.msg}")
-        }
-      case None => withOuter.withoutGhost.searchAll(cq, Set(), Set())
-    }
+    val (pts, nonPt) = cq.partitionPt
+    val ptRes = pts.map(pt =>
+      try {
+        /* TODO: Fancier logic to support proof terms whose arguments vary across branches */
+        RSuccess(Set((None, ForwardProofChecker(this, pt))), Set())
+      } catch {
+        case pce: ProofCheckException => RStrongFailure(s"Could not check proof term ${pt}, reason: ${pce.msg}")
+      }
+    ).foldLeft[ContextResult](ContextResult.unit)(_.++(_))
+    val plainRes = withOuter.withoutGhost.searchAll(nonPt, Set(), Set())
+    ptRes.++(plainRes)
   }
 
   /* Get most recent formula (if any), bound to identifier [[id]]
@@ -495,14 +495,15 @@ case class Context(s: Statement) {
   private def replaceFunctions(t: Term, node: ASTNode = Triv()): Option[Term] = {
     t match {
       case f: FuncOf =>
-        signature.get(f.func) match {
-          case Some(lf) =>
+        signature.find(fn => fn._1.name == f.func.name) match {
+          case Some((fn, lf)) if fn == f.func =>
             val elabChild = elaborateFunctions(f.child, node)
             val elabArgs = StandardLibrary.tupleToTerms(elabChild, node)
             if (elabArgs.length != lf.args.length)
               throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}", node = node)
             val argMap = lf.args.zip(elabArgs).toMap
             Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Term])
+          case Some((fn, lf)) => throw ElaborationException(s"Function ${f.func} found with argument type ${f.func.domain}, expected ${fn.domain}", node = node)
           case None =>
             KaisarProof.getAt(f) match {
               case Some((trm, lr)) =>
@@ -511,8 +512,9 @@ case class Context(s: Statement) {
                 if (KaisarProof.isBuiltinFunction(f.func)) {
                   val elabChild = elaborateFunctions(f.child, node)
                   Some(FuncOf(f.func, elabChild))
-                } else
+                } else {
                   throw ElaborationException(s"Unknown function ${f.func}", node = node)
+                }
             }
         }
       case _ => None

@@ -171,6 +171,7 @@ object KaisarProof {
   val builtin: Set[Function] = Set(min, max, abs, askLaterTF, askLaterPF, wild.func, init.func, stable, atFunction)
 
   def isBuiltinFunction(f: Function): Boolean = builtin.contains(f)
+  def getBuiltin(f: String): Option[Function] = builtin.find(func => func.name == f)
 
   // Proof statement Block() sequences a list of statements. [[flatten]] flattens the tree structure induced by the
   // [[Block]] constructor.
