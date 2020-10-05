@@ -27,6 +27,22 @@ object ForwardProofChecker {
   private case class ProvedArg (fml: Formula) extends ForwardArg
   private case class ExpressionArg (expr: Expression) extends ForwardArg
 
+  private def coerceFormula(e: Expression): Formula = {
+    e match {
+      case f: Formula => f
+      case FuncOf(Function(name, index, domain, sort, interpreted), arg) => PredOf(Function(name, index, domain, Bool, interpreted), arg)
+      case _ => throw new Exception(s"Expected formula, got $e")
+    }
+  }
+
+  private def coerceTerm(e: Expression): Term = {
+    e match {
+      case f: Term => f
+      case PredOf(Function(name, index, domain, sort, interpreted), arg) => FuncOf(Function(name, index, domain, Real, interpreted), arg)
+      case _ => throw new Exception(s"Expected formula, got $e")
+    }
+  }
+
   /** The following tables define the built-in proof term connectives, with usage strings, organized by arity. */
   private val nullaryBuiltin: Map[String, Formula] = Map("trueI" -> True)
   private val unaryBuiltin: Map[String, (String, ForwardArg => Formula)] = Map(
@@ -40,18 +56,18 @@ object ForwardProofChecker {
     "andI" -> ("andI (proofL: P, proofR: Q)", {case (ProvedArg(l), ProvedArg(r)) => And(l, r)}),
     /* Note that in natural deduction, we wish to compute the conclusion given the proof, so we annotate orI<X> with
     *  the unknown disjunct, for example */
-    "orIL" -> ("orIL (proof: P, Q : Formula)", {case (ProvedArg(l), ExpressionArg(r: Formula)) => Or(l, r)}),
-    "orIR" -> ("orIR (P: Formula, proof: Q)", {case (ExpressionArg(l: Formula), ProvedArg(r)) => Or(l, r)}),
+    "orIL" -> ("orIL (proof: P, Q : Formula)", {case (ProvedArg(l), ExpressionArg(r)) => Or(l, coerceFormula(r))}),
+    "orIR" -> ("orIR (P: Formula, proof: Q)", {case (ExpressionArg(l), ProvedArg(r)) => Or(coerceFormula(l), r)}),
     "notE" -> ("notE (proofL: !P, proofR: P)", {case (ProvedArg(Not(p)), ProvedArg(pp)) if p == pp => False}),
-    "falseE" -> ("falseE (proof: False, P: Formula)", {case (ProvedArg(False), ExpressionArg(p: Formula)) => p}),
-    "ignoreI" -> ("ignoreI (P: Formula, proof: Q)", {case (ExpressionArg(p: Formula), ProvedArg(q)) => Imply(p, q)}),
+    "falseE" -> ("falseE (proof: False, P: Formula)", {case (ProvedArg(False), ExpressionArg(p)) => coerceFormula(p)}),
+    "ignoreI" -> ("ignoreI (P: Formula, proof: Q)", {case (ExpressionArg(p), ProvedArg(q)) => Imply(coerceFormula(p), q)}),
     "allI" -> ("allI (x: Variable, proof: P)", {case (ExpressionArg(v: Variable), ProvedArg(p)) if !StaticSemantics(p).fv.contains(v) => Forall(List(v), p)}),
-    "allE" -> ("allE (proof: (forall x, P), f: Term)", {case (ProvedArg(Forall(xs, p)), ExpressionArg(f: Term)) => subst(xs.head, f, p)}),
+    "allE" -> ("allE (proof: (forall x, P), f: Term)", {case (ProvedArg(Forall(xs, p)), ExpressionArg(f)) => subst(xs.head, coerceTerm(f), p)}),
     "existsE" -> ("existsE (proofL: (exists x, P), proofR: (forall y, (P -> Q)))", {case (ProvedArg(Exists(List(x), p)), ProvedArg(Forall(List(y), Imply(pp, q)))) if p == pp && x == y && !StaticSemantics(q).fv.contains(x) => q})
   )
   private val ternaryBuiltin: Map[String, (String, (ForwardArg, ForwardArg, ForwardArg) => Formula)] = Map(
     "orE"     -> ("orE (proof: (A | B), proofL: (A -> C), proofR: (B -> C))", {case (ProvedArg(Or(a,b)), ProvedArg(Imply(aa, c)), ProvedArg(Imply(bb, cc))) if a == aa && b == bb && c == cc => c}),
-    "existsI" -> ("existsI (x: Variable, f: Term, proof: P(f))", {case (ExpressionArg(x: Variable), ExpressionArg(f: Term), ProvedArg(p)) => Exists(List(x), invSubst(x, f, p))})
+    "existsI" -> ("existsI (x: Variable, f: Term, proof: P(f))", {case (ExpressionArg(x: Variable), ExpressionArg(f), ProvedArg(p)) => Exists(List(x), invSubst(x, coerceTerm(f), p))})
   )
 
   val allBuiltins: Set[String] = nullaryBuiltin.keySet ++ unaryBuiltin.keySet ++ binaryBuiltin.keySet ++ ternaryBuiltin.keySet
