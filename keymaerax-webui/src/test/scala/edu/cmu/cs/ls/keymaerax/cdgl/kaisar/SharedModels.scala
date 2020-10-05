@@ -265,7 +265,21 @@ object SharedModels {
       |}*
       |""".stripMargin
 
-  
+  val pldiModelSafe: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | {
+      |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps);};}
+      |  !(inv());
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
+  val pldiSandboxSafe: String = """"""
+
   /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
   /** @TODO: initial !(vSign, dxyNorm, safeDist) makes Mathematica run out of space, time, just crash */
   /** @TODO: First update QE solver to do less excessive branching on | in assumptions */
