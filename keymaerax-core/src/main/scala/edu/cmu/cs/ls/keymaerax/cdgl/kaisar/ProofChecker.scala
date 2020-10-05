@@ -147,7 +147,10 @@ object ProofChecker {
   /* Implement rcf (real-closed fields) method */
   private def rcf(assms: Set[Formula], f: Formula): Boolean = {
     try {
-      val isValid = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(sequentFml(assms, f))
+      val fullFml = sequentFml(assms, f)
+      if (ProofOptions.debugArith)
+        println("Checking formula with QE: " + fullFml)
+      val isValid = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(fullFml)
       if (DEBUG_ARITH)
         println(s"QE proof ${if(isValid) "succeeded" else "failed"} on subgoal $assms |- $f")
       isValid

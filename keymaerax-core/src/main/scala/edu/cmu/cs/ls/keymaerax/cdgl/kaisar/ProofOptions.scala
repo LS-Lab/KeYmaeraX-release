@@ -12,6 +12,8 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 sealed trait OptionSpec
 /** When tracing is enabled, every proof statement is printed as it is checked, with line numbers */
 case class Trace(opt: Boolean) extends OptionSpec
+/** When arith debug, every formula checked in a proof search is printed */
+case class DebugArith(opt: Boolean) extends OptionSpec
 /** If tracing is also enabled, enabling time will print the cumulative runtime at each line, to allow macro-scale
   * performance measurements. The timestamp resets each time this option is enabled, even if it is already on.  */
 case class Time(opt: Boolean) extends OptionSpec
@@ -19,11 +21,12 @@ case class Time(opt: Boolean) extends OptionSpec
 /** Set option status and implement functionality of specific options */
 object ProofOptions {
   var proofText: Option[String] = None
-  val allNames: Set[String] = Set("trace", "time")
+  val allNames: Set[String] = Set("trace", "time", "debugArith")
   var branchCount: Int = 0
   var branchBound: Int = 1
 
   var trace: Boolean = false
+  var debugArith: Boolean = false
   // If Some(ts), ts is the time, in milliseconds,
   private var time: Option[Long] = None
   def timeEnabled: Boolean = time.nonEmpty
@@ -40,6 +43,7 @@ object ProofOptions {
   /** Update the value of a setting */
   def update(id: OptionSpec): Unit = {
     id match {
+      case DebugArith(opt) => debugArith = opt
       case Trace(opt) => trace = opt
       case Time(opt) =>
         if (opt)
@@ -58,6 +62,8 @@ object ProofOptions {
         parseBool(optArg).map(b => (Time(b)))
       case ("trace" :: optArg :: Nil) =>
         parseBool(optArg).map(b => (Trace(b)))
+      case ("debugArith" :: optArg :: Nil) =>
+        parseBool(optArg).map(b => (DebugArith(b)))
       case _ => None
     }
   }
