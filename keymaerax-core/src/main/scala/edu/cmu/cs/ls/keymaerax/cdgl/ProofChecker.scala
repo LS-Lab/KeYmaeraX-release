@@ -116,6 +116,19 @@ object ProofChecker {
     }
   }
 
+  /** @return whether [[p]] is admissible as an assumption in constructive QE*/
+  private def isAssumptive(p: Formula): Boolean = {
+    p match {
+      case True | _: Less | _: LessEqual | _: Equal | _ : NotEqual | _ : Greater | _ : GreaterEqual => true
+      case And(p, q) => isAssumptive(p) && isAssumptive(q)
+      case Forall(xs, f) => isAssumptive(f)
+      // It's okay to assume p | q because constructive p | q implies classical p | q, but can only assume p | q in
+      // positive polarity, e.g. not okay to have assumption (\forall x (a(x) | b(x)) -> c(x))
+      case Or(l, r) => isAssumptive(l) && isAssumptive(r)
+      case Imply(l, r) => isConjunctive(l) && isAssumptive(r)
+    }
+  }
+
 
   /** @param p formula of first-order constructive arithmetic
     * @return whether formula is constructively valid */
@@ -132,12 +145,12 @@ object ProofChecker {
     val fact = t.qe(closure).fact
     val conclusion = fact.conclusion
     val isFormula = conclusion.ante.isEmpty && conclusion.succ.length == 1
-    val conjPre = isConjunctive(pre)
+    val assumpPre = isAssumptive(pre)
     val conjPost = isConjunctive(post)
     val isProved = fact.isProved
     fact.conclusion.succ.headOption match {
       // If formula is conjunctive, then classical and constructive truth agree
-      case Some(Equiv(_, True)) => isFormula && conjPre && conjPost && isProved
+      case Some(Equiv(_, True)) => isFormula && assumpPre && conjPost && isProved
       case proved => false
     }
   }
