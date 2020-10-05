@@ -1,3 +1,11 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Interpreter for strategies
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import java.math.RoundingMode
@@ -8,23 +16,31 @@ import edu.cmu.cs.ls.keymaerax.core
 import spire.math._
 import edu.cmu.cs.ls.keymaerax.core._
 
+/** Indicates that expression was not in the executable fragment */
 case class UnsimpleException(nodeID: Int) extends Exception
+/** Indicates that we tried to evaluate something whose value could not be determined */
 case class ValuelessException(nodeID: Int = -1) extends Exception
+/** Indicates that a Demonic test failed, thus Demon loses */
 case class TestFailureException(nodeID: Int) extends Exception
 
+/** Runtime state of executed strategy */
 class Environment {
+  /** Raw program variable state */
   var state: Play.state = Map()
 
+  /** Is variable dynamically defined? */
   def contains(x: Ident): Boolean = state.contains(x)
 
-  // Unindexed variable x always represents "current value," but indexed "x_i" also remembered for history. So set both.
+  /** Unindexed variable x always represents "current value," but indexed "x_i" also remembered for history. This sets both. */
   def set(x: Ident, v: Play.number): Unit = {
     val base = x match {case bv: BaseVariable => Variable(bv.name) case ds: DifferentialSymbol => DifferentialSymbol(Variable(ds.name))}
     (state = state.+(x -> v).+(base -> v))
   }
 
+  /** Get current state of value, which must be defined */
   def get(x: Ident): Play.number = state(x)
 
+  /** Evaluate decidable formula at current state */
   def holds(fml: Formula): Boolean = {
     fml match {
       case Less(l, r) => eval(l) < eval(r)
@@ -46,6 +62,7 @@ class Environment {
     }
   }
 
+  /** Evaluate computable term at current state */
   def eval(f: Term): number = {
     f match {
       case n: core.Number => Rational(n.value)
@@ -86,11 +103,14 @@ class Environment {
 
 }
 
+/** Interpreter for strategies */
 object Play {
   type number = Rational
   type state = Map[Ident, number]
+  /** For printing,  etc. */
   val ROUNDING_SCALE = 5
 
+  /** Interpret given angel strategy against given demon strategy */
   def apply(as: AngelStrategy, ds: DemonStrategy[number]): Environment = {
     val env = new Environment()
     // in-place updates to environment
@@ -98,6 +118,7 @@ object Play {
     env
   }
 
+  /** Interpret given angel strategy against given demon strategy in given environment. */
   def apply(env: Environment, as: AngelStrategy, ds: DemonStrategy[number]): Unit = {
     as match {
       case DTest(f) =>

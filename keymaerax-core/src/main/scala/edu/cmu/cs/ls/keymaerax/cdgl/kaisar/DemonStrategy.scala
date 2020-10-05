@@ -1,3 +1,11 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Interfaces for Demon strategies, both high-level and low-level
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
@@ -6,28 +14,43 @@ import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, DifferentialSymbol}
 
 class DemonException(val msg: String) extends Exception (msg)
 
+/** Interface for drivers implementing Demon strategies / implementing an environment or hardware/simulation platform
+  * @see [[BasicDemonStrategy]] */
 trait DemonStrategy[T] {
   // NodeID is used to allow demon strategy to determine which statement is being executed.
   // We use integer IDs rather than passing the actual AST node so that the same DemonStrategy interface
   // would work as foreign-function interface for low-level languages, where we wish to pass only basic types.
   type NodeID = Int
+  /** Hook for any additional initialization */
   def init(): Unit = ()
+  /** @return whether the driver wishes to continue executing the given loop */
   def readLoop(id: NodeID): Boolean
+  /** @return whether the driver wishes to take the right branch of the given choice */
   def readChoice(id: NodeID): Boolean
+  /** @return the numeric value the driver wishes to assign to [[x]] */
   def readAssign(id: NodeID, x: Ident): T
+  /** Hook to perform actuation, reports fact that Angel assigned x:=f  */
   def writeAssign(id: NodeID, x: Ident, f: T): Unit
 }
 
+/** Wrappable interface for Demon strategies. While this interface is not "simpler" than [[DemonStrategy]],
+  * it is designed to work seamlessly with the output of [[SimpleStrategy.apply]]. i.e., if you wish to write a raw
+  * [[DemonStrategy]], you will have to be familiar with the [[SimpleStrategy.apply]] implementation, but not if you
+  * write [[BasicDemonStrategy]].
+  * Also simplifies initial-state computation.
+  * @see [[DemonStrategy]]
+  * @see WrappedDemonStrategy*/
 trait BasicDemonStrategy {
   type NodeID = Int
   val env: Environment
   val readInitState: Map[Ident, number]
   def readDemonLoop(id: NodeID): Boolean
   def readDemonChoice(id: NodeID): Boolean
-  // @TODO: Should there be separate function for ODE
+  // @TODO: Should there be separate function for ODE? Yes.
   def readDemonAssign(id: NodeID, baseVar: String, varIndex: Option[Int]): number
   def writeAngelAssign(id: NodeID, baseVar: String, varIndex: Option[Int], value: number): Unit
 
+  /** Get the current value for variable [[x]], initializing if necessary */
   def valFor(x: Ident): Play.number = {
     if (env.contains(x)) env.get(x)
     else  {
@@ -39,6 +62,11 @@ trait BasicDemonStrategy {
   }
 }
 
+/** Produces an executable [[DemonStrategy]] from high-level [[BasicDemonStrategy]] interface, fit for use with
+  * [[SimpleStrategy.apply]]. The major contribution is that [[WrappedDemonStrategy]] automatically remembers the Angelic choices from
+  * the ambient Angelic strategy, and makes Demon simulate those Angelic choices automatically, leaving you to implement
+  * only the true Demon operations.
+  * */
 class WrappedDemonStrategy (bds: BasicDemonStrategy)(val env: Environment) extends DemonStrategy[number] {
   val initState: Map[Ident, number] = bds.readInitState
   override def readLoop(id: NodeID): Boolean =

@@ -1,9 +1,20 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Pragma management for Kaisar. Tracks status of optional language features that should only be considered an
+  * incidental part of the Kaisar implementation rather than fundamental language features.
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-
+/** Language of pragma statements */
 sealed trait PragmaSpec {}
+/** The option pragma is used to configure settings */
 case class OptionPragma(optionSpec: OptionSpec) extends PragmaSpec
 
+/** Maintain pragma state and implement specific pragmas */
 object Pragmas {
   val allNames = Set("option")
   private def tryParse(pragmaName: String, pragmaArg: String): Option[PragmaSpec] = {

@@ -4,6 +4,7 @@
   */
 /**
   * Remove line labels by rewriting
+  * @author Brandon Bohrer
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
@@ -16,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Subs
 
 object DeterritorializePass {
   val DEBUG: Boolean = false
+  /** The [[TimeTable]] associates each line label with its key information such as snapshot, context, definition */
   type TimeTable = Map[TimeIdent, (Snapshot, Context, LabelDef)]
 
   /** Translate away labels in statement, which must be in SSA form. */
@@ -132,6 +134,7 @@ case class DeterritorializePass(tt: TimeTable) {
     }
   }
 
+  /** Expression traversal function for @ renaming */
   def etf(kc: Context, local: Set[Ident], node: ASTNode = Triv()): ExpressionTraversalFunction = new ExpressionTraversalFunction {
     override def postF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = {
       getAt(e, Triv()) match {

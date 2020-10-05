@@ -266,6 +266,10 @@ object SharedModels {
       |""".stripMargin
 
   /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
+  /** @TODO: initial !(vSign, dxyNorm, safeDist) makes Mathematica run out of space, time, just crash */
+  /** @TODO: First update QE solver to do less excessive branching on | in assumptions */
+  /** @TODO: Then split assertion into several separate smaller assertions and/or cross-check against what Robix KyX did */
+  /** @TODO: At some point, translate the PLDI model, identify which models are most important for synthesis */
   val ijrrStaticSafetyDirect: String =
     """pragma option "time=true";
       |pragma option "trace=true";

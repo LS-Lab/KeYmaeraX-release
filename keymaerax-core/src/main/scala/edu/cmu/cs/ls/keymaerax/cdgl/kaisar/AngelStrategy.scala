@@ -1,3 +1,12 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Executable representation for Angelic strategies.
+  * Translations to Angelic strategies and to simplified Demon subset.
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
@@ -5,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 
 // @TODO: Massive memory leak, use local data structure instead
+/** Used for allocating unique integer IDs */
 object IDCounter {
   // Tracks every allocated ID associated to its node
   var idMap: Map[Int, AngelStrategy] = Map()
@@ -26,27 +36,39 @@ object IDCounter {
   def setOriginal(n: Int, as: AngelStrategy): Unit = (originMap = originMap.+(n -> as))
 }
 
+/** Directly executable, simply-typed strategy for Angel player */
 sealed trait AngelStrategy {
   val nodeID: Int = IDCounter.next(this)
 }
+/** A simple strategy is one where Angel makes no choices, only Demon */
 sealed trait SimpleStrategy extends AngelStrategy
 
-//case object Skip extends DemonStrategy
+/** Demon must pass test f. Strategies are weak-test, assume f is decidable */
 case class DTest(f: Formula) extends SimpleStrategy
+/** Deterministic assignment. Works identically for Angel/Demon.*/
 case class DAssign(x: Ident, f: Term) extends SimpleStrategy
+/** Nondeterministic assignment resolved by demon */
 case class NDAssign(x: Ident) extends SimpleStrategy
+/** Demonic loop */
 case class DLoop(s: AngelStrategy) extends SimpleStrategy
 // Note: binary compose is better for backend execution, but n-ary composition looks much nicer in debugger.
+/** (n-ary) sequential composition, identical for Demon vs Angel. */
 case class DCompose(children: List[AngelStrategy]) extends SimpleStrategy
+/** Demonic choice */
 case class DChoice(l: AngelStrategy, r: AngelStrategy) extends SimpleStrategy
+/** Differential equation with decidable domain constraint and Demonic duration */
 case class DODE(ode: ODESystem) extends AngelStrategy
 
+/** Angelic while loop with decidable convergence/guard formula */
 case class ALoop(conv: Formula, body: AngelStrategy) extends AngelStrategy
+/** Angelic switch statement with decidable branch guards */
 case class ASwitch(branches: List[(Formula, AngelStrategy)]) extends AngelStrategy
+/** Differential equation with (concrete) angelic duration. */
 case class AODE(ode: ODESystem, dur: Term) extends AngelStrategy
 
 /** Smart constructors for DCompose */
 object Composed {
+  /** Smart constructor that filters out no-ops for readability */
   def apply(children: List[AngelStrategy]): AngelStrategy = {
     // Careful: Should distinguish "real" ?true from no-ops which should be eliminated
     val filtered = children.filter({case DTest(True) => false case _ => true})
@@ -79,6 +101,11 @@ object Composed {
 }
 
 object SimpleStrategy {
+  /** Demonization pass which inlines Angelic strategies into Demon strategies.
+    * The resulting Demon strategy is more complex in the sense that Demon must provide (or simulate) choices which Angel
+    * previously made.
+    * @see [[BasicDemonStrategy]] wrapper which automatically handles the added complexity of a Demonized strategy, so the
+    * Demon driver can be programmed against the original game specification */
   def apply(fs: AngelStrategy): SimpleStrategy = {
     fs match {
       case DLoop(s) => DLoop(apply(s))
@@ -108,6 +135,7 @@ object SimpleStrategy {
 }
 
 object AngelStrategy {
+  /** Extract executable strategy for ODE from Kaisar proof. */
   private def ofODE(pode: ProveODE): AngelStrategy = {
     val tv = pode.timeVar.getOrElse(Variable("t"))
     val assignT = pode.duration match {
@@ -135,6 +163,7 @@ object AngelStrategy {
     }
   }
 
+  /** Main translation pass from Kaisar to strategies */
   private def body(pf: Statement, isPhi: Boolean): AngelStrategy = {
     pf match {
       case Assume(pat, f) => DTest(f)
@@ -167,6 +196,7 @@ object AngelStrategy {
     }
   }
 
+  /** Extract executable (Angelic) strategy from a (weak-test) Kaisar proof */
   def apply(pf: Statement): AngelStrategy = {
     val fv = VariableSets(pf).freeVars
     val main = body(pf, isPhi = false)
