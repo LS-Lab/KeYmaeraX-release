@@ -298,7 +298,7 @@ object SharedModels {
       | }*
       |""".stripMargin
 
-  /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
+  /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign, check whether still broke after recent change */
   /** @TODO: initial !(vSign, dxyNorm, safeDist) makes Mathematica run out of space, time, just crash */
   /** @TODO: First update QE solver to do less excessive branching on | in assumptions */
   /** @TODO: Then split assertion into several separate smaller assertions and/or cross-check against what Robix KyX did */
@@ -308,6 +308,10 @@ object SharedModels {
     *       Discuss whether we should just cheat and use classical arithmetic.
     *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
     *       sound on left where we can maybe assume ability to case-analyze, but not on right where case analysis must be proved not assumed.
+    *
+    *       Note about inf-norm proof: only base case disjunction is "hard" to prove. In loop, we can thread the branch through to same side, i think.
+    *
+    *       @TODO: Might want note to allow formula annotations.
     *       */
   val ijrrStaticSafetyDirect: String =
     """pragma option "time=true";
@@ -320,11 +324,12 @@ object SharedModels {
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
       |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 1 & norm(dx, dy) = 1);
-      |let infdistGr(x1, x2, y1, y2, y) <-> (x1-x2 >= y | x2 - x1 >= y | y1 - y2 >= y | y2 - y1 >= y);
+      |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 >= z | x2 - x1 >= z | y1 - y2 >= z | y2 - y1 >= z);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?(bnds, st):(bounds() & initialState());
-      |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st by auto;
+      |/* @TODO: Should be assertion */
+      |?(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) /* using bnds st by auto */;
       |{body:
       |  {
       |    {
@@ -338,7 +343,25 @@ object SharedModels {
       |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
-      |        !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist xBound yBound vSol dc bnds tSign aB tZ by auto; /* vSign */
+      |        let b1() <-> (x-xo >= stopDist(v));
+      |        let b2() <-> (xo-x >= stopDist(v));
+      |        let b3() <-> (y-yo >= stopDist(v));
+      |        let b4() <-> (yo-y >= stopDist(v));
+      |        switch (safeDist) {
+      |          case far:((x - xo >= stopDist(v))@body) =>
+      |            !prog:(x-xo >= stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIL(orIL(orIL(prog, "b2()"), "b3()"), "b4()");
+      |          case far:((xo-x >= stopDist(v))@body) =>
+      |            !prog:(xo-x >= stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIL(orIL(orIR("b1()", prog), "b3()"), "b4()");
+      |          case far:((y-yo >= stopDist(v))@body) =>
+      |            !prog:(y-yo >= stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIL(orIR("(b1() | b2())", far), "b4()");
+      |          case far:((yo-y >= stopDist(v))@body) =>
+      |            !prog:(yo-y >= stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("(b1() | b2() | b3())", far);
+      |        }
+      |        /*!infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist xBound yBound vSol dc bnds tSign aB tZ by auto;  vSign */
       |      }
       |      ++
       |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0);
