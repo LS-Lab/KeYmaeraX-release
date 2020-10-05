@@ -278,7 +278,25 @@ object SharedModels {
       | !(d >= 0);
       |""".stripMargin
 
-  val pldiSandboxSafe: String = """"""
+  val pldiSandboxSafe: String =
+    """
+      |  let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | { v :=*;
+      |   switch {
+      |     case (inv()@mid) =>
+      |     case (true) => v := 0;
+      |   }
+      |   t := 0;
+      |   mid:
+      |   {d' = -v, t' = 1 & ?(t <= eps);
+      |    & !tSign:(t>=0);
+      |    & !dBound:(d>=v*(eps-t));
+      |   };
+      |   !(inv());
+      | }*
+      |""".stripMargin
 
   /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
   /** @TODO: initial !(vSign, dxyNorm, safeDist) makes Mathematica run out of space, time, just crash */
