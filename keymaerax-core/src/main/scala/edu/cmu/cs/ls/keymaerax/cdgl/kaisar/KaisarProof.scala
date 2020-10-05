@@ -394,7 +394,7 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
 case class While(x: IdentPat, j: Formula, s: Statement) extends Statement
 // Repeat [[s]] nondeterministically any number of times
-case class BoxLoop(s: Statement, ih: Option[(Ident, Formula, Option[Formula])] = None) extends Statement
+case class BoxLoop(s: Statement, ih: Option[(IdentPat, Formula, Option[Formula])] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
 // For example, Ghost(Modify(_)) is a discrete ghost assignment
 case class Ghost(s: Statement) extends Statement

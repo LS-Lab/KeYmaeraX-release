@@ -58,14 +58,15 @@ sealed trait ContextResult {
 
   /** @return only those results which can soundly be accessed in the given context, assuming a given set of taboo variables
     * (i.e. variables which were bound after the context and before the reference site) */
-  def admissiblePart(inContext: Context, tabooProgramVars: Set[Variable]): ContextResult =
+  def admissiblePart(inContext: Context, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult =
     this match {
       case _: RStrongFailure => this
       case _: RWeakFailure => this
       case RSuccess(facts, assigns) =>
         def factFilter(id: Option[Ident], fml: Formula): Boolean = {
           val free = StaticSemantics(KaisarProof.forgetAt(fml)).fv
-          inContext.isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty
+          (id.forall(!tabooFactVars.contains(_))) &&
+          (inContext.isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty)
         }
         def assignFilter(as: Assign): Boolean = factFilter(assignId(as), assignFact(as))
         RSuccess(facts.filter({case (x, y) => factFilter(x, y)}), assigns.filter(assignFilter))
@@ -99,6 +100,9 @@ sealed trait ContextResult {
 
   /** @return formulas for each fact and assignment */
   def formulas: List[Formula] = asList.map(_._2)
+
+  /** @return all identifiers found */
+  def idents: List[Ident] = asList.map(_._1).flatMap(_.toList)
 
   /** @return results of both contexts, swallowing weak errors */
   def ++(other: ContextResult): ContextResult =

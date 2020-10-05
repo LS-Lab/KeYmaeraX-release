@@ -195,18 +195,19 @@ case class Context(s: Statement) {
 
   /** Return all assignments which mention any variant of "x" */
   def getAssignments(x: Variable): List[Formula] =
-    withOuter.withoutGhost.searchAll(QAssignments(x, onlySSA = false), Set()).formulas.map(elaborateStable)
+    withOuter.withoutGhost.searchAll(QAssignments(x, onlySSA = false), Set(), Set()).formulas.map(elaborateStable)
 
   // Return all facts which mention any SSA-variant of x
   def getMentions(x: Variable): List[Formula] =
-    withOuter.withoutGhost.searchAll(QProgramVar(x), Set()).formulas.map(elaborateStable)
+    withOuter.withoutGhost.searchAll(QProgramVar(x), Set(), Set()).formulas.map(elaborateStable)
 
-  /** Look up definitions of a proof variable, starting with the most recent. */
-  def searchAll(cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+  /** Look up definitions of a proof variable, starting with the most recent.
+    * tabooProgramVars are for soundness, tabooFactVars are to avoid duplicate lookup results*/
+  def searchAll(cq: ContextQuery, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
-      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq).elaborated(this, cq)
     def matched(x: IdentPat, fml: Formula): ContextResult =
-      Context.matchAssume(x, fml, s).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
+      Context.matchAssume(x, fml, s).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq).elaborated(this, cq)
     s match {
       case _: Triv => ContextResult.unit
       case Assume(x, g) => matched(x, g)
@@ -215,22 +216,23 @@ case class Context(s: Statement) {
       // While unannotated Note's are allowed in contexts (for transformation passes), the lookup has to use a dummy value
       // @TODO: Use less dummy fact variable names/facts
       case Note(x, _, None) => succeed(Set((Some(x), KaisarProof.askLaterP)), Set())
-      case mod: Modify => findAll(mod, cq, tabooProgramVars)
+      case mod: Modify => findAll(mod, cq, tabooProgramVars, tabooFactVars)
       case Block(ss) =>
-        def iter(ss: List[Statement], cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+        def iter(ss: List[Statement], cq: ContextQuery, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult = {
           ss match {
             case Nil => ContextResult.unit
             case (s: Phi) :: ss =>
               val left =
-                reapply(s.asgns).searchAll(cq, tabooProgramVars).filter({case (yx, yf, yisAssign) =>
+                reapply(s.asgns).searchAll(cq, tabooProgramVars, tabooFactVars).filter({case (yx, yf, yisAssign) =>
                   val surrounding = Block(ss.reverse)
                   val t = VariableSets(surrounding)
                   val inter = t.tabooVars.intersect(StaticSemantics(yf).fv.toSet)
                   inter.isEmpty})
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              left.++(iter(ss, QPhi(s, cq), taboos))
+              val tabooFacts = tabooFactVars ++ left.idents
+              left.++(iter(ss, QPhi(s, cq), taboos, tabooFacts))
             case s :: ss =>
-              val leftMatches = reapply(s).searchAll(cq, tabooProgramVars)
+              val leftMatches = reapply(s).searchAll(cq, tabooProgramVars, tabooFactVars)
               val surrounding = Block(ss.reverse)
               val t = VariableSets(surrounding)
               // @TODO: Finder needs to be able to specify verbosity level, leave out some error messages
@@ -240,23 +242,24 @@ case class Context(s: Statement) {
                   throw ProofCheckException(s"Inverse ghost fact $yx inaccessible outside of other inverse ghosts", node = s)
                 })
               val taboos = tabooProgramVars ++ VariableSets(s).boundVars
-              leftMatches ++ iter(ss, cq, taboos)
+              val tabooFacts = tabooFactVars ++ leftMatches.idents
+              leftMatches ++ iter(ss, cq, taboos, tabooFacts)
           }
         }
-        iter(ss.reverse, cq, tabooProgramVars)
-      case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars) ++ reapply(r).searchAll(cq, tabooProgramVars)
+        iter(ss.reverse, cq, tabooProgramVars, tabooFactVars)
+      case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars, tabooFactVars) ++ reapply(r).searchAll(cq, tabooProgramVars, tabooFactVars)
       case switch@Switch(sel, pats) =>
-        val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars) })
+        val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars, tabooFactVars) })
         if (eachResult.isEmpty) ContextResult.unit
         else eachResult.reduce(RBranch)
-      case Ghost(s) => reapply(s).withGhost.searchAll(cq, tabooProgramVars)
+      case Ghost(s) => reapply(s).withGhost.searchAll(cq, tabooProgramVars, tabooFactVars)
       // While phi nodes are "ghost" in the sense that they do not appear in the source program, we should allow ProgramVar() selectors
       // to select the equalities introduced by phi nodes.
-      case Phi(s) => reapply(s).withInverseGhost.searchAll(cq, tabooProgramVars)
+      case Phi(s) => reapply(s).withInverseGhost.searchAll(cq, tabooProgramVars, tabooFactVars)
       /* @TODO: Somewhere add a user-friendly message like s"Formula $f should not be selected from statement $s which is an inverse ghost" */
       case InverseGhost(s) => ContextResult.unit
-      case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars).++(findAll(po.dc, cq, tabooProgramVars))
-      case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars)
+      case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
+      case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
       case While(_, _, body) =>
         //@TODO
@@ -266,28 +269,28 @@ case class Context(s: Statement) {
       case BoxLoop(body, ih) =>
         // only allowed to find IH
         ih match {
-          case Some((ihVar, _oldIhFml, Some(ihFml))) => succeed(Set((Some(ihVar), ihFml)), Set())
-          case Some((ihVar, ihFml, None)) => succeed(Set((Some(ihVar), ihFml)), Set())
+          case Some((ihVar, _oldIhFml, Some(ihFml))) => matched(ihVar, ihFml)
+          case Some((ihVar, ihFml, None)) => matched(ihVar, ihFml)
           case _ => ContextResult.unit
         }
       case BoxLoopProgress(BoxLoop(bl, ihOpt), progress) => {
         val ihMatch: ContextResult = ihOpt.map({
-          case ((ihVar, _oldIhFml, Some(ihFml))) => succeed(Set((Some(ihVar), ihFml)), Set())
-          case ((ihVar, ihFml, None)) => succeed(Set((Some(ihVar), ihFml)), Set())
+          case ((ihVar, _oldIhFml, Some(ihFml))) => matched(ihVar, ihFml)
+          case ((ihVar, ihFml, None)) => matched(ihVar, ihFml)
           case _ => ContextResult.unit}).getOrElse(ContextResult.unit)
-        ihMatch.++(reapply(progress).searchAll(cq, tabooProgramVars))
+        ihMatch.++(reapply(progress).searchAll(cq, tabooProgramVars, tabooFactVars))
       }
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
-        convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars)
+        convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
         val v = x match {case vv: Variable => vv case _ => defaultVar}
         val branchMatch = succeed(Set((Some(v), fml)), Set())
-        branchMatch ++ reapply(progress).searchAll(cq, tabooProgramVars)
+        branchMatch ++ reapply(progress).searchAll(cq, tabooProgramVars, tabooFactVars)
       case BoxChoiceProgress(bc, onBranch, progress) =>
-        reapply(progress).searchAll(cq, tabooProgramVars)
+        reapply(progress).searchAll(cq, tabooProgramVars, tabooFactVars)
     }
   }
 
@@ -296,9 +299,9 @@ case class Context(s: Statement) {
     * @param mod   A [[Modify]] statement which is searched for bindings
     * @param cq    A user-supplied search query
     * @return all bindings which satisfy [[finder]], starting with the most recent binding (i.e. variable's current value) */
-  private def findAll(mod: Modify, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+  private def findAll(mod: Modify, cq: ContextQuery, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
-      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq).elaborated(this, cq)
     mod.asgns.map({case (Some(p), x, Some(f)) if (cq.matches(Some(p), Equal(x, f), isAssignment = false)) =>
       // Note: Okay to return x=f here because admissibilty of x:=f is ensured in SSA and checked in ProofChecker.
       RSuccess(Set((Some(p), Equal(x, f))), Set())
@@ -323,9 +326,9 @@ case class Context(s: Statement) {
     * @param ds A [[DiffStatement]] statement which is searched for bindings
     * @param f  A user-supplied search predicate
     * @return all bindings which satisfy [[finder]] */
-  private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+  private def findAll(odeContext: ProveODE, ds: DiffStatement, cq: ContextQuery, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult = {
     def succeed(fmls: Set[(Option[Ident], Formula)], assigns: Set[Assign]): ContextResult =
-      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars).matchingPart(cq).elaborated(this, cq)
+      RSuccess(fmls, assigns).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq).elaborated(this, cq)
     ds match {
       case AtomicODEStatement(AtomicODE(xp, e), solIdent) if(!this.isInverseGhost)=>
         // Can't determine exact solution until SSA pass, but we want to use this function in earlier passes, so just check
@@ -348,9 +351,9 @@ case class Context(s: Statement) {
           case None => ContextResult.unit
         }
       case AtomicODEStatement(dp, _) => ContextResult.unit
-      case DiffProductStatement(l, r) => findAll(odeContext, l, cq, tabooProgramVars).++(findAll(odeContext, r, cq, tabooProgramVars))
-      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq, tabooProgramVars)
-      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq, tabooProgramVars)
+      case DiffProductStatement(l, r) => findAll(odeContext, l, cq, tabooProgramVars, tabooFactVars).++(findAll(odeContext, r, cq, tabooProgramVars, tabooFactVars))
+      case DiffGhostStatement(ds) => withGhost.findAll(odeContext, ds, cq, tabooProgramVars, tabooFactVars)
+      case InverseDiffGhostStatement(ds) => withInverseGhost.findAll(odeContext, ds, cq, tabooProgramVars, tabooFactVars)
     }
   }
 
@@ -360,14 +363,14 @@ case class Context(s: Statement) {
     * @param dc A [[DomainStatement]] statement which is searched for bindings
     * @param cq  A user-supplied search query
     * @return all bindings which satisfy [[cq]] */
-  private def findAll(dc: DomainStatement, cq: ContextQuery, tabooProgramVars: Set[Variable]): ContextResult = {
+  private def findAll(dc: DomainStatement, cq: ContextQuery, tabooProgramVars: Set[Variable], tabooFactVars: Set[Ident]): ContextResult = {
     dc match {
-      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).matchingPart(cq)
+      case DomAssume(x, fml) if !isInverseGhost => matchAssume(x, fml, dc).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq)
       case DomAssume(x, fml) => ContextResult.unit
-      case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).matchingPart(cq)
-      case DomAnd(l, r) => findAll(l, cq, tabooProgramVars) ++ findAll(r, cq, tabooProgramVars)
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml, dc).admissiblePart(this, tabooProgramVars, tabooFactVars).matchingPart(cq)
+      case DomAnd(l, r) => findAll(l, cq, tabooProgramVars, tabooFactVars) ++ findAll(r, cq, tabooProgramVars, tabooFactVars)
       case dw@DomWeak(dc) =>
-        withInverseGhost.findAll(dc, cq, tabooProgramVars) match {
+        withInverseGhost.findAll(dc, cq, tabooProgramVars, tabooFactVars) match {
           // @TODO: Better message
           case cr if cr.nonEmpty => throw ProofCheckException(s"Weakened domain constraint $dc selected result ${cq}, but selection should have been empty", node = dw)
           case cr => ContextResult.unit
@@ -387,7 +390,7 @@ case class Context(s: Statement) {
         } catch {
           case pce: ProofCheckException => RStrongFailure(s"Could not check proof term ${pt}, reason: ${pce.msg}")
         }
-      case None => withOuter.withoutGhost.searchAll(cq, Set())
+      case None => withOuter.withoutGhost.searchAll(cq, Set(), Set())
     }
   }
 
@@ -395,7 +398,7 @@ case class Context(s: Statement) {
   * @param wantProgramVar search exclusively for unannotated assignments x:=f rather than facts named "x" */
   def get(id: Ident, wantProgramVar: Boolean = false, isSound: Boolean = true): Option[Formula] = {
     val cq: ContextQuery = if (wantProgramVar) QProgramVar(id) else QProofVar(id)
-    withOuter.withoutGhost.searchAll(cq, Set()).formulas.headOption
+    withOuter.withoutGhost.searchAll(cq, Set(), Set()).formulas.headOption
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborateStable)
 
@@ -443,13 +446,11 @@ case class Context(s: Statement) {
     * appear ghosted or unghosted.  */
   def lastBlock: Block = Block(lastStatements())
 
-  private def collectLastFact: (Option[(Ident, Formula)], List[Phi]) = {
-    def unwind(wound: List[Statement]): (Option[(Ident, Formula)], List[Phi]) = {
+  private def collectLastFact: (Option[(IdentPat, Formula)], List[Phi]) = {
+    def unwind(wound: List[Statement]): (Option[(IdentPat, Formula)], List[Phi]) = {
       wound match {
-        case Assert(x: Variable, f, _) :: _ => (Some((x, f)), Nil)
-        case Assume(x: Variable, f) :: _ => (Some((x, f)), Nil)
-        case Assert(Nothing, f, _) :: _ => (Some((unnamedVar, f)), Nil)
-        case Assume(Nothing, f) :: _ => (Some((unnamedVar, f)), Nil)
+        case Assert(pat, f, _) :: _ => (Some((pat, f)), Nil)
+        case Assume(pat, f) :: _ => (Some((pat, f)), Nil)
         case (phi: Phi) :: rest =>
           val (fml, phis) = unwind(rest)
           (fml, phi :: phis)
@@ -466,13 +467,13 @@ case class Context(s: Statement) {
 
   /** The most recently proven fact in a context.
     * Fact is returned as (ident, unelaboratedFml, elaboratedFml) */
-  def lastFact: Option[(Ident, Formula, Formula)] = {
+  def lastFact: Option[(IdentPat, Formula, Formula)] = {
     val (kFml, phis) = collectLastFact
     val triple = kFml.map({case (k, fml) => (k, fml, elaborateFunctions(fml, Triv()))})
     triple.map({case ((k,fact, elab)) => (k, finishFact(fact, phis), finishFact(elab, phis))})
   }
 
-  def rawLastFact: Option[(Ident, Formula)] = {
+  def rawLastFact: Option[(IdentPat, Formula)] = {
     val (kFml, phis) = collectLastFact
     kFml.map({case ((k,fact)) => (k, finishFact(fact, phis))})
   }
@@ -574,7 +575,7 @@ case class Context(s: Statement) {
 
   /** return all facts that unify with a given pattern */
   def unifyAll(pat: Expression): ContextResult = {
-    searchAll(QUnify(pat), Set())
+    searchAll(QUnify(pat), Set(), Set())
   }
   /** Return first fact that unifies with a pattern, if any. */
   def unify(pat: Expression): Option[(Option[Ident], Formula)] = unifyAll(pat).asList.headOption
