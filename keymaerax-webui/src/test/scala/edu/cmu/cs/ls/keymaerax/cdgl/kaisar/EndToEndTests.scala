@@ -364,7 +364,7 @@ class EndToEndTests extends TacticTestBase {
         } catch { case t: Throwable =>
           checkErrors = (s, t) :: checkErrors;
           if (STOP_AFTER_FIRST) {
-            println("Failed while checking proof: " + s)
+            println("\n\nFailed while checking proof: " + s)
             throw t
           }
           Nil
@@ -399,6 +399,16 @@ class EndToEndTests extends TacticTestBase {
   it should "parse and prove specific examples" in withMathematica { _ =>
     testExampleSet(SharedModels.ijrrStaticSafetyDirect :: Nil)
   }
+
+  "QE" should "prove some formulas" in withMathematica { _ =>
+    /*val fmlStr = "((((((((((((((((((t_3<=T_0&v_2=v_1-b_0*t_3)&ghostVar_2>=v_1^2/(2*b_0))&T_0>0)&b_0>0)&(ghostVar_0>=ghostVar_1&ghostVar_2=ghostVar_0|ghostVar_0<=ghostVar_1&ghostVar_2=ghostVar_1))&(x_2-xo_1>=0&ghostVar_3=x_2-xo_1|x_2-xo_1<=0&ghostVar_3=-(x_2-xo_1)))&(y_1-yo_1>=0&ghostVar_1=y_1-yo_1|y_1-yo_1<=0&ghostVar_1=-(y_1-yo_1)))&(x_1-xo_1>=0&ghostVar_0=x_1-xo_1|x_1-xo_1<=0&ghostVar_0=-(x_1-xo_1)))&t_2=0)&v_2>=0)&(-t_3)*(v_1-b_0/2*t_3)<=x_2-x_1)&t_3>=0)&x_2-x_1<=t_3*(v_1-b_0/2*t_3))&a_2=-b_0)&(-t_3)*(v_1-b_0/2*t_3)<=y_2-y_1)&y_2-y_1<=t_3*(v_1-b_0/2*t_3))&(ghostVar_3>=ghostVar_4&ghostVar_5=ghostVar_3|ghostVar_3<=ghostVar_4&ghostVar_5=ghostVar_4))&(y_2-yo_1>=0&ghostVar_4=y_2-yo_1|y_2-yo_1<=0&ghostVar_4=-(y_2-yo_1)))&A_0>=0->ghostVar_5>=v_2^2/(2*b_0)"*/
+    val fmlStr = "((((((((((((((((((t_3<=T_0)&ghostVar_2>=v_1^2/(2*b_0))&T_0>0)&b_0>0)&(ghostVar_0>=ghostVar_1& ghostVar_2=ghostVar_0|ghostVar_0<=ghostVar_1& ghostVar_2=ghostVar_1))&(x_2-xo_1>=0&ghostVar_3=x_2-xo_1 |x_2-xo_1<=0&ghostVar_3=-(x_2-xo_1)))&(y_1-yo_1>=0&ghostVar_1=y_1-yo_1 |y_1-yo_1<=0&ghostVar_1=-(y_1-yo_1)))&(x_1-xo_1>=0&ghostVar_0=x_1-xo_1|x_1-xo_1<=0 &ghostVar_0=-(x_1-xo_1))))&(v_1-b_0*t_3)>=0)&(-t_3)*(v_1-b_0/2*t_3)<=x_2-x_1)&t_3>=0)&x_2-x_1<=t_3*(v_1-b_0/2*t_3)))&(-t_3)*(v_1-b_0/2*t_3)<=y_2-y_1)&y_2-y_1<=t_3*(v_1-b_0/2*t_3))&(ghostVar_3>=ghostVar_4&ghostVar_5=ghostVar_3 |ghostVar_3<=ghostVar_4&ghostVar_5=ghostVar_4))&(y_2-yo_1>=0&ghostVar_4=y_2-yo_1 |y_2-yo_1<=0&ghostVar_4=-(y_2-yo_1)))&A_0>=0->ghostVar_5>=(v_1-b_0*t_3)^2/(2*b_0)"
+    val fml = fmlStr.asFormula
+    val res = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(fml)
+    println("returned")
+    res shouldBe true
+  }
+
 
   "Error message printer" should "nicely print missing semicolon;" in withMathematica { _ =>
     val pfStr =

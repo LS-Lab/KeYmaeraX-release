@@ -265,25 +265,34 @@ object SharedModels {
       |}*
       |""".stripMargin
 
+  
   /* @TODO: vInv has unsound lookup of SSA assignments  if using vSol vSign */
   /** @TODO: initial !(vSign, dxyNorm, safeDist) makes Mathematica run out of space, time, just crash */
   /** @TODO: First update QE solver to do less excessive branching on | in assumptions */
   /** @TODO: Then split assertion into several separate smaller assertions and/or cross-check against what Robix KyX did */
   /** @TODO: At some point, translate the PLDI model, identify which models are most important for synthesis */
+  /** @TODO: Old proof too slow because max(abs,abs) has branching factor of 8, but improved branching factor of 4 for
+    *       custom inf-norm predicate also not working yet because we need to manually do LEM applications to resolve disjunction |.
+    *       Discuss whether we should just cheat and use classical arithmetic.
+    *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
+    *       sound on left where we can maybe assume ability to case-analyze, but not on right where case analysis must be proved not assumed.
+    *       */
   val ijrrStaticSafetyDirect: String =
     """pragma option "time=true";
       |pragma option "trace=true";
+      |pragma option "debugArith=true";
       |let stopDist(v) = (v^2 / (2*b));
       |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
       |let bounds() <-> A >= 0 & b > 0 & T > 0;
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
-      |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 0 & norm(dx, dy) = 1);
+      |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 1 & norm(dx, dy) = 1);
+      |let infdistGr(x1, x2, y1, y2, y) <-> (x1-x2 >= y | x2 - x1 >= y | y1 - y2 >= y | y2 - y1 >= y);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let goal() <-> dist(x, y, xo, yo) > 0;
       |?(bnds, st):(bounds() & initialState());
-      |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdist(x, y, xo, yo) >= stopDist(v)) using bnds st by auto;
+      |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st by auto;
       |{body:
       |  {
       |    {
@@ -297,9 +306,9 @@ object SharedModels {
       |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
-      |        !infInd: (infdist(x, y, xo, yo) >= stopDist(v)); /*  using safeDist bnds xBound yBound vSol dc tSign aB tZ vSign by auto */
+      |        !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist xBound yBound vSol dc bnds tSign aB tZ by auto; /* vSign */
       |      }
-      |        ++
+      |      ++
       |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
@@ -310,7 +319,7 @@ object SharedModels {
       |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
       |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
       |         };
-      |         !infInd: (infdist(x, y, xo, yo) >= stopDist(v)) using safeDist bnds xSol ySol vSol dc tSign aZ by auto;
+      |         !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist bnds xSol ySol vSol dc tSign aZ by auto;
       |      }
       |        ++
       |        /* or choose a new safe curve */
@@ -319,7 +328,7 @@ object SharedModels {
       |        r := *;
       |        xo := *; yo := *;
       |        ?(r!=0 & r*w = v);
-      |        ?admiss:(infdist(x, y, xo, yo) > admissibleSeparation(v));
+      |        ?admiss:(infdistGr(x, y, xo, yo,  admissibleSeparation(v)));
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
@@ -330,7 +339,7 @@ object SharedModels {
       |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction; /* got here after 20 mins -> reduced to 4 secs */
       |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction;
       |        };
-      |        !infInd: (infdist(x, y, xo, yo) >= stopDist(v)) using safeDist bnds xBound yBound vSol dc tSign tZ admiss by auto;
+      |        !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist bnds xBound yBound vSol dc tSign tZ admiss by auto;
       |      }
       |    }
       |  }
