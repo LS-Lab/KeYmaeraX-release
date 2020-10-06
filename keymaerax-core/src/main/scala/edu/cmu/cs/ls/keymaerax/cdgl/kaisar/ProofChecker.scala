@@ -53,10 +53,11 @@ object ProofChecker {
   /** @return unit if [[f]] succeeds, else throw [[ProofCheckException]] */
   private def qeAssert(f: => Boolean, assms: List[Formula], fml: Formula, m: Method, outerStatement: ASTNode): Unit = {
     if(!f) {
+      val (interpAssums, interpF) = interpretFunctions(assms.toSet, fml)
       outerStatement match {
         // Give simple error message, no statement given
-        case Triv () => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m")
-        case s => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m", node = s)
+        case Triv () => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m\nElaborated: ${interpAssums.mkString(",")} |- $interpF")
+        case s => throw ProofCheckException(s"Couldn't prove goal ${assms.mkString(",")} |- $fml with method $m\nElaborated: ${interpAssums.mkString(",")} |- $interpF", node = s)
       }
     }
   }
@@ -176,7 +177,18 @@ object ProofChecker {
       case Some(False) => true
       case Some(And(l, r)) => prop(fmls.-(And(l,r)).+(l).+(r), f, leaf)
       case Some(Equiv(l, r)) => prop(fmls.-(And(l,r)).+(l).+(r), f, leaf)
-      case _ => conclusionBeta(fmls, f, leaf)
+      case _ => conclusionBranching(fmls, f, leaf)
+    }
+  }
+
+  /** Apply branching, but invertible,  elimination rules to the conclusion if possible, then recursively apply other prop rules.
+    * @param leaf is a proof method applied at leaves of search
+    * @return whether assms |- f proves propositionally */
+  private def conclusionBranching(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
+    f match {
+      case And(l, r) => prop(assms, l, leaf) && prop(assms, r, leaf)
+      case Equiv(l, r) => prop(assms.+(l), r) && prop(assms.+(r), l)
+      case _ => contextBetas(assms, f, leaf)
     }
   }
 
@@ -185,9 +197,8 @@ object ProofChecker {
     * @return whether assms |- f proves propositionally */
   private def conclusionBeta(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     f match {
-      case And(l, r) => prop(assms, l, leaf) && prop(assms, r, leaf)
-      case Equiv(l, r) => prop(assms.+(l), r) && prop(assms.+(r), l)
-      case _ => contextBetas(assms, f, leaf)
+      case Or(l, r) => prop(assms, l, leaf) || prop(assms, r, leaf)
+      case _ => ProofOptions.branchCount = ProofOptions.branchCount + 1;  leaf(assms, f)
     }
   }
 
@@ -196,10 +207,9 @@ object ProofChecker {
     * @return whether assms |- f proves propositionally */
   private def contextBetas(assms: Set[Formula], f: Formula, leaf: (Set[Formula], Formula) => Boolean = hyp): Boolean = {
     assms.find { case _: Or => true case _: Imply => true case _ => false } match {
-      // keep | around to minimize branching
-      //case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) && prop(assms.-(Or(l,r)).+(r), f, leaf)
-      case Some(Imply(l, r)) => prop(assms.-(Imply(l,r)), l) && prop(assms.-(Imply(l,r)).+(r), f)
-      case _ => ProofOptions.branchCount = ProofOptions.branchCount + 1;   leaf(assms, f)
+      case Some(Or(l, r)) => prop(assms.-(Or(l,r)).+(l), f, leaf) && prop(assms.-(Or(l,r)).+(r), f, leaf)
+      case Some(Imply(l, r)) if assms.contains(l) => prop(assms.-(Imply(l,r)).+(r), f)
+      case _ => conclusionBeta(assms, f, leaf)
     }
   }
 
