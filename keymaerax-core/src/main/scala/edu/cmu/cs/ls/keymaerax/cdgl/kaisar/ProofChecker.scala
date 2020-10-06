@@ -245,7 +245,7 @@ object ProofChecker {
       case Prop() => qeAssert(prop(interpAssums, interpF), assms, f, m, outerStatement)
       // case exhaustiveness
       case Exhaustive() =>
-        val branches = disjoin(interpF, 0, outerStatement)
+        val branches = FormulaTools.disjuncts(interpF)
         qeAssert (exhaustive(branches), assms, f, m, outerStatement)
       // discharge goal with structured proof
       case ByProof(proof: Statements) => apply(con, proof)
