@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-md-12">
-        Besides the <a href="http://lfcps.org/lfcps/">textbook</a>, more information on the input syntax can be found on the <a href="https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics">Wiki</a>
+        Besides the <a href="http://lfcps.org/lfcps/" target="_blank">textbook</a>, more information can be found in the <a href="http://keymaerax.org/Xtutorial.html" target="_blank">KeYmaera&#160;X Tutorial</a>
 
         <h2 id="HP-syntax">Hybrid Programs</h2>
         <span style="float:right"><a href="http://keymaerax.org/doc/dL-grammar.md" target="_blank">grammar</a></span>
@@ -28,9 +28,9 @@
                 </tr>
                 <tr>
                     <td>x<sub>1</sub>'=f<sub>1</sub>(x), ... x<sub>n</sub>'=f<sub>n</sub>(x) &amp; Q</td>
-                    <td><code>{x'=2*y&#160;&amp;&#160;x&#160;&gt;=&#160;0}</code></td>
-                    <td>continuous evolution of <var>x</var> along the differential equation system <code>x'=2*y</code>
-                        restricted to evolution domain described by formula <code>x&#160;&gt;=&#160;0</code></td>
+                    <td><code>{x'=v&#160;&amp;&#160;x&#160;&lt;=&#160;5}</code></td>
+                    <td>continuous evolution of <var>x</var> along the differential equation system <code>x'=v</code>
+                        restricted to evolution domain described by formula <code>x&#160;&lt;=&#160;5</code></td>
                 </tr>
                 <tr>
                     <td>&alpha; ; &beta;</td>
@@ -78,7 +78,7 @@
             without changing the state if <code>F</code> is true in the current
             state, otherwise it aborts all further evolution. For example,
             a car controller can check whether the chosen acceleration
-            is within physical limits by <code>?(-B &le; a &le; A)</code>.
+            is within physical limits by <code>?(-B &le; a &amp; a &le; A)</code>.
             If a computation branch does not satisfy this condition,
             that branch is discontinued and aborts. From a modeling
             perspective, tests should only fail if a branch is not
@@ -86,7 +86,7 @@
             possible in the model of the system. Therefore, during
             verification we consider only those branches of a system
             where all tests succeed.
-            For example, <code>a := *; ?(-B &le; a &le; A)</code>
+            For example, <code>a := *; ?(-B &le; a &amp; a &le; A)</code>
             first assigns any arbitrary real number to <code>a</code>, but then subsequently tests that <code>a</code> is in between <code>-B</code> and <code>A</code>. This combination ensures that <code>a</code> is changed to any arbitrary real number within this range.
         </p>
         <p>
@@ -186,8 +186,17 @@ End.
     </div>
 </div>
 
+<h3 id="Books">Compendia</h3>
+<ul>
+  <li>Andr&#233; Platzer. <a href="http://lfcps.org/lfcps/">Logical Foundations of Cyber-Physical Systems</a>.
+Springer, 2018.</li>
+  <li>Andr&#233; Platzer. <a href="https://doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>.
+Springer, 2010.</a></li>
+</ul>
+
 <h3 id="More">More Information</h3>
 <ul>
+  <li><a href="http://keymaerax.org/Xtutorial.html" target="_blank">KeYmaera&#160;X Tutorial</a></li>
   <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/lds-lics.pdf">Logics of dynamical systems</a> (<a href="http://symbolaris.com/pub/lds-slides.pdf">invited tutorial</a>). 
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012</li>
   <li>Jan-David Quesel, Stefan Mitsch, Sarah Loos, Nikos Ar&#233;chiga, and Andr&#233; Platzer.
@@ -197,15 +206,7 @@ STTT, <b>18</b>(1), pp. 67-91. 2016.
 Journal of Automated Reasoning, <b>59</b>(2), pp. 219-265, 2017.</li>
   <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/freedL.pdf">Differential dynamic logic for hybrid systems</a>. 
 Journal of Automated Reasoning, <b>41</b>(2), pages 143-189, 2008.</li>
-    <li><a href="https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics">Wiki information</a></a></li>
-</ul>
-
-<h3 id="Books">Compendia</h3>
-<ul>
-  <li>Andr&#233; Platzer. <a href="http://lfcps.org/lfcps/">Logical Foundations of Cyber-Physical Systems</a>.
-Springer, 2018.</li>
-  <li>Andr&#233; Platzer. <a href="https://doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>.
-Springer, 2010.</a></li>
+    <li><a href="https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics">Wiki</a></a></li>
 </ul>
 
 <script>
