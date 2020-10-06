@@ -480,6 +480,7 @@ object SharedModels {
       |let d4() <-> (yo-y > stopDist(v));
       |let goal() <-> (dist(x,y,xo,yo) > 0);
       |?(bnds, st):(bounds() & initialState());
+      |/* Prove infdist > 0 in base case by case-analyzing x,y and using assumption on euclidean distance > 1*/
       |switch {
       |  case xhi:(x-xo >= 0.25) =>
       |    !cs:(x-xo > stopDist(v)) using xhi bnds st by auto;
@@ -500,11 +501,21 @@ object SharedModels {
       |        }
       |    }
       |}
+      |/* Base case invariant */
       |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st sd by auto;
       |{body:
       |  {
       |    {
-      |      { ?aB:(a := -b); ?tZ:(t := 0);
+      |      { {  {?aB:(a := -b); }
+      |        ++ {?vZ:(v = 0); ?aZ:(a := 0); w := 0; }
+      |        ++ {w := *; ?(-W<=w & w<=W);
+      |            r := *;
+      |            xo := *; yo := *;
+      |            ?(r!=0 & r*w = v);}
+      |        }
+      |        ?admiss:(infdistGr(x, y, xo, yo,  admissibleSeparation(v)));
+      |  monitor:
+      |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
       |          t' = 1 & ?dc:(t <= T & v >= 0);
@@ -513,66 +524,6 @@ object SharedModels {
       |         & !vSol:(v = v@body - b*t) using aB tZ by induction;
       |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
-      |        };
-      |        switch (safeDist) {
-      |          case far:((x - xo > stopDist(v))@body) =>
-      |            !prog:(x-xo >= stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIL(prog, "d2() | d3() | d4()");
-      |          case far:((xo-x > stopDist(v))@body) =>
-      |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIL(orIL(prog, "d3()"), "d4()"));
-      |          case far:((y-yo > stopDist(v))@body) =>
-      |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIL(far, "d4()")));
-      |         case far:((yo-y > stopDist(v))@body) =>
-      |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIR("d3()", far)));
-      |        }
-      |      }
-      |      ++
-      |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0);
-      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
-      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ by induction;
-      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body) using aZ by induction;
-      |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
-      |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
-      |         };
-      |        switch (safeDist) {
-      |          case far:((x - xo > stopDist(v))@body) =>
-      |            !prog:(x-xo > stopDist(v)) using far xSol vSol dc bnds tSign by auto;
-      |            note infInd = orIL(prog, "d2() | d3() | d4()");
-      |          case far:((xo-x > stopDist(v))@body) =>
-      |            !prog:(xo-x > stopDist(v)) using far xSol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIL(orIL(prog, "d3()"), "d4()"));
-      |          case far:((y-yo > stopDist(v))@body) =>
-      |            !prog:(y-yo > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIL(far, "d4()")));
-      |          case far:((yo-y > stopDist(v))@body) =>
-      |            !prog:(yo-y > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIR("d3()", far)));
-      |        }
-      |      }
-      |        ++
-      |        /* or choose a new safe curve */
-      |      { ?aA:(a := A);
-      |        w := *; ?(-W<=w & w<=W);
-      |        r := *;
-      |        xo := *; yo := *;
-      |        monitor:
-      |        ?(r!=0 & r*w = v);
-      |        ?admiss:(infdistGr(x, y, xo, yo,  admissibleSeparation(v)));
-      |        ?tZ:(t := 0);
-      |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
-      |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ aA by induction;
-      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body + A*t) using aA tZ by induction;
-      |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction; /* got here after 20 mins -> reduced to 4 secs */
-      |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction;
       |        };
       |        switch (admiss) {
       |          case far:((x - xo > admissibleSeparation(v))@monitor) =>
@@ -583,10 +534,10 @@ object SharedModels {
       |            note infInd = orIR("d1()", orIL(orIL(prog, "d3()"), "d4()"));
       |          case far:((y-yo > admissibleSeparation(v))@monitor) =>
       |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIL(far, "d4()")));
+      |            note infInd = orIR("d1()", orIR("d2()", orIL(prog, "d4()")));
       |          case far:((yo-y > admissibleSeparation(v))@monitor) =>
       |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIR("d3()", far)));
+      |            note infInd = orIR("d1()", orIR("d2()", orIR("d3()", prog)));
       |        }
       |      }
       |    }
@@ -594,60 +545,16 @@ object SharedModels {
       |  !vInv: (v >= 0) using dc by auto;
       |  note indStep = andI(vInv, andI(dir, infInd));
       |}*
-      |        switch (safeDist) {
-      |          case far:((x - xo > stopDist(v))) =>
-      |            !prog:(goal()) using far bnds  by auto;
-      |          case far:((xo-x > stopDist(v))) =>
-      |            !prog:(goal()) using far bnds  by auto;
-      |          case far:((y-yo > stopDist(v))) =>
-      |            !prog:(goal()) using far bnds  by auto;
-      |          case far:((yo-y > stopDist(v))) =>
-      |            !prog:(goal()) using far bnds  by auto;
-      |        }
-      |""".stripMargin
-
-  val ijrrSimplificationIdea: String = """let stopDist(v) = (v^2 / (2*b));
-      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
-      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
-      |let bounds() <-> A >= v & b >= 0 & T >= 0;
-      |let initialState() <-> (v = 0 & dist(prx,pry,pcx,pcy) > 0 ^ norm(drx, dry) = 1);
-      |let norm(x, y) = (x^2 + y^2)^(1/2);
-      |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
-      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
-      |let curve() <-> dist(prx, pry, pcx, pcy) > 0 & wr*dist(prx, pry, pcx, pcy) = vr;
-      |let safe() <-> infdist(prx, pry, pcx, pcy) > vr^2 /(2*b) + ((A/b) + 1)*(T^2*A/2 + T*vr) + V*(T + (vr + A*T)/b);
-      |let loopinv() <-> (v >= 0 & norm(drx, dry) = 1 & infdist(x, y, xo, yo) > stopDist(v));
-      |let goal() <-> dist(x, y, xo, yo) > 0;
-      |?(assumptions());
-      |!(loopinv());
-      |{body:
-      |  {
-      |    {
-      |      { a := -b; }
-      |        ++
-      |      { ?v = 0; a := 0; w := 0;  }
-      |        ++
-      |      { a := A;
-      |        w := *; ?-W<=w & w<=W;
-      |        r := *;
-      |        xo := *; yo := *;
-      |        ?r!=0 & r*w = v;
-      |        ?(infdist(x, y, xo, yo) > admissibleSeparation(v));
-      |      }
-      |    }
-      |    t := 0;
-      |    { x' = v * dx, y' = v * dy, v' = a,
-      |      dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |      t' = 1 & ?(t <= ep & v >= 0);
-      |     & !tSign:(t >= 0);
-      |     & !dir:(norm(dx, dy) = 1);
-      |     & !vSol:(v = v@body - a*t);
-      |     & !xBound:(-t * v <= x - x@body & x - x@body <= t * v);
-      |     & !xBound:(-t * v <= y - y@body & y - y@body <= t * v);
-      |    };
-      |  }
-      |}*
-      |!(goal());
+      |switch (safeDist) {
+      |  case far:((x - xo > stopDist(v))) =>
+      |    !prog:(goal()) using far bnds  by auto;
+      |  case far:((xo-x > stopDist(v))) =>
+      |    !prog:(goal()) using far bnds  by auto;
+      |  case far:((y-yo > stopDist(v))) =>
+      |    !prog:(goal()) using far bnds  by auto;
+      |  case far:((yo-y > stopDist(v))) =>
+      |    !prog:(goal()) using far bnds  by auto;
+      |}
       |""".stripMargin
 
   val ijrrVelocityPassiveSafety: String =
