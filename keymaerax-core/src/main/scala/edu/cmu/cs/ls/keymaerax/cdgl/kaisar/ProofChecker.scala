@@ -212,6 +212,7 @@ object ProofChecker {
       case True => true  // True proves trivially
       case Imply(l, r) => prop(assms.+(l), r, leaf)
       case Not(f) => prop(assms.+(f), False)
+      case _ if assms.contains(f) => true
       case _ => contextAlphas(assms, f, leaf)
     }
   }
