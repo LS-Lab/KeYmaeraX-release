@@ -30,7 +30,7 @@ class AssessmentProverTests extends TacticTestBase {
   private val LAB_PATH: String = COURSE_PATH + "/diderot/labs"
 
   private val RANDOM_TRIALS = 3
-  private val rand = RepeatableRandom(1429498057447373779L)
+  private val rand = RepeatableRandom(/*1429498057447373779L*/)
 
   "Extractor" should "extract grading information" in {
     inside (Problem.fromString("""\begin{problem}\label{prob:withoutpoints} \ask \sol{\kyxline"x>=0"} \end{problem}""")) {
@@ -625,7 +625,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 12" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/12/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Using differential ghosts", 3) :: ("Differential ghost construction", 16) ::
+      ("Using differential ghosts", 3) :: ("Differential ghost construction", 8) ::
         ("Parachute", 3) :: Nil
     run(problems)
   }
@@ -641,7 +641,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Player Count", 5) :: ("Strategically reachable set", 6) :: ("Game Shapes", 2) ::
+      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game Shapes", 2) ::
         ("Truth Identification", 10) :: Nil
     run(problems)
   }
@@ -804,6 +804,10 @@ class AssessmentProverTests extends TacticTestBase {
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "lab:0", checkScore = false) }
   }
 
+  it should "grade quiz 9 submission" in withZ3 { _ =>
+    AssessmentProver.grade(Map('skiponparseerror -> "true", 'in -> ("/Users/smitsch/Documents/projects/keymaera/github/KeYmaeraX-Collab/KeYmaera4-Collab/keymaerax-webui/src/test/resources" + QUIZ_PATH + "/9/chapter_submission.json")), System.out, System.out, "")
+  }
+
   /** Runs the autograder on the `i`th random submission (list of `problems`), unless `uniformAnswer`
     * (text+whether parseable) is provided; uses `chapterLabel` to look up the grading information
     * currently missing from problems. */
@@ -820,7 +824,9 @@ class AssessmentProverTests extends TacticTestBase {
 
     def checkGradedLines(gradedLines: List[String], expectPass: Boolean) = {
       gradedLines.loneElement.split("""\.\.\.""")(1) should (
-        if (expectPass) startWith (AssessmentProver.Messages.PASS) or startWith(AssessmentProver.Messages.SKIPPED)
+        if (expectPass) startWith (AssessmentProver.Messages.PASS) or
+                        startWith(AssessmentProver.Messages.SKIPPED) or
+                        startWith(AssessmentProver.Messages.INSPECT)
         else startWith (AssessmentProver.Messages.FAILED) or
              startWith (AssessmentProver.Messages.BLANK) or
              startWith (AssessmentProver.Messages.INSPECT) or
@@ -880,11 +886,13 @@ class AssessmentProverTests extends TacticTestBase {
         val submittedProblem = submission.problems.find(_.title == problem.title).get
         val achievedPoints = submittedProblem.prompts.map(prompt => expected.find(_._1.id == prompt.id) match {
           case Some((p, answeredCorrectly)) => p.name match {
-            case "\\ask" =>
+            case "\\ask" | "\\anychoice" =>
               val skipped = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_ == AssessmentProver.Messages.SKIPPED)
               val partial = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_.startsWith(AssessmentProver.Messages.PASS + ":Partial"))
-              if (!skipped && uniformAnswer.forall(_._2) && answeredCorrectly) 1.0
+              val inspect = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_.startsWith(AssessmentProver.Messages.INSPECT))
+              if (!skipped && !partial && !inspect && uniformAnswer.forall(_._2) && answeredCorrectly) 1.0
               else if (partial) 0.5
+              else if (inspect) 0.0
               else expectedFailScore
             case _ => if (answeredCorrectly) 1.0 else expectedFailScore
           }
@@ -1116,8 +1124,14 @@ class AssessmentProverTests extends TacticTestBase {
         println("Testing sol: " + t)
         val tic = System.nanoTime()
         val result = grader.check(t)
-        result.left.value shouldBe 'proved withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
-        println("Successfully verified sol")
+        result match {
+          case Left(l) =>
+            l shouldBe 'proved withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
+            println("Successfully verified sol")
+          case Right(msg) =>
+            msg shouldBe "INSPECT"
+            println("WARNING: sol needs manual inspection (INSPECT)")
+        }
         val toc = System.nanoTime()
         //(toc - tic) should be <= 5000000000L
       })
@@ -1125,7 +1139,11 @@ class AssessmentProverTests extends TacticTestBase {
         println("Testing no-sol: " + t)
         val tic = System.nanoTime()
         grader.check(t) match {
-          case Left(l) => l shouldNot be ('proved)
+          case Left(l) => grader match {
+            case _: AnyChoiceGrader if l.isProved =>
+              l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent
+            case _ => l shouldNot be ('proved)
+          }
           case Right(_) => //
         }
         println("Successfully rejected no-sol")
