@@ -43,7 +43,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** Lightweight check that we are communicating with Z3 in the expected version and build hash. */
   insist(version == "-1" && hash == "-1" || {
     val versionOutput = runZ3(z3Path + " -version", -1)
-    versionOutput.startsWith("Z3 version " + version) && versionOutput.endsWith(hash)
+    versionOutput.startsWith("Z3 version " + version) && (hash == "-1" || versionOutput.endsWith(hash))
   }, "Z3 not of the expected version and build hash")
 
   /** Return Z3 QE result and the proof evidence */
