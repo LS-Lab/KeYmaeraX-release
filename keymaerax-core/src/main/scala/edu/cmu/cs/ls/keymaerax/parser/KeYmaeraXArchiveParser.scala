@@ -992,13 +992,11 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
 
     (t.name, t.tacticText, tactic)
   } catch {
-    case ex: ParseException =>
-      val shiftedLoc = ex.loc.addLines(t.blockLoc.line)
-      val msg = {
-        if (ex.msg.startsWith("Lexer")) ex.msg.substring(0, ex.msg.indexOf("in `")) +
-          ex.msg.substring(ex.msg.indexOf("beginning with character"))
-        else ex.msg
-      }.replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
+    case ex: ParseException if ex.msg.startsWith("Lexer") =>
+      val shiftedLoc = shiftLoc(ex.loc, t.belleExprLoc)
+      val msg = (ex.msg.substring(0, ex.msg.indexOf("in `")) +
+        ex.msg.substring(ex.msg.indexOf("beginning with character"))).
+        replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
       throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }
 

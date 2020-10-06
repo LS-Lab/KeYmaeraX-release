@@ -2198,7 +2198,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
                             |Expected: )""".stripMargin
   }
 
-  it should "report tactic errors at the correct location" in {
+  it should "report tactic parse errors at the correct location" in withTactics {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
@@ -2208,6 +2208,18 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     ) should have message """4:31 A combinator should be followed by a full tactic expression
                             |Found:    Some(BelleToken(EOF$,4:31 to EOF$)) at 4:31 to EOF$
                             |Expected: """.stripMargin
+  }
+
+  it should "report tactic lex errors at the correct location" in withTactics {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof 1". implyR(1) : End.
+        |End.""".stripMargin
+    ) should have message """4:30 Lexer 4:30 Lexer does not recognize input at 4:30 to EOF$ beginning with character `:`=-1
+                            |Found:    <unknown> at 4:30 to EOF$
+                            |Expected: <unknown>""".stripMargin
   }
 
   it should "report a missing entry ID separator" in {
