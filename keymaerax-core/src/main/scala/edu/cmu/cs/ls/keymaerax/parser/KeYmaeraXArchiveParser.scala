@@ -850,7 +850,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     val expandedAnnotations = elaborateAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
     (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
-        typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
     })
 

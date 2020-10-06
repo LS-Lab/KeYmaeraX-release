@@ -546,7 +546,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
   }
 
   it should "parse an entry without definitions" in {
-    val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
+    val input = "ArchiveEntry \"Test\" Problem x>y -> [{x:=y;}*@invariant(x>=y)]x>=y End. End."
     val entry = parse(input).loneElement
     entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
@@ -556,7 +556,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.model shouldBe "x>y -> [{x:=y;}*]x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -2371,6 +2371,14 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     ) should have message
       """2:19 type analysis: Entry 1: x declared as a variable of sort Real but used as a function with arguments.
         |Found:    no arguments at 2:19 to 2:22
+        |Expected: function with arguments""".stripMargin
+  }
+
+  it should "report a mismatch between model and annotation an entry without definitions" in {
+    the [ParseException] thrownBy parse(
+      "ArchiveEntry \"Test\" Problem x>y -> [{x:=y;}*@invariant(x()>=y)]x>=y End. End.") should have message
+      """<somewhere> type analysis: Test: x declared as a variable of sort Real but used as a function with arguments.
+        |Found:    no arguments at <somewhere>
         |Expected: function with arguments""".stripMargin
   }
 
