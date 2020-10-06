@@ -298,8 +298,6 @@ object SharedModels {
       | }*
       |""".stripMargin
 
-  /* @TODO: vInv had unsound lookup of SSA assignments  if using vSol vSign, check whether still broke after recent change */
-  /* @TODO: Also had soundness bug which allowed looking up out-of-scope assignments which were only on one of several branches, in general could prove some bad dIs */
   /** @TODO:Discuss whether we should just cheat and use classical arithmetic.
     *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
     *       sound on left where we can maybe assume ability to case-analyze, but not on right where case analysis must be proved not assumed.
@@ -463,6 +461,8 @@ object SharedModels {
       |""".stripMargin
 
 
+  /* @TODO: vInv had unsound lookup of SSA assignments  if using vSol vSign, check whether still broke after recent change */
+  /* @TODO: Remove need for stutters in branching */
   val ijrrStaticSafetySimplified: String =
     """pragma option "time=true";
       |pragma option "trace=true";
@@ -505,18 +505,18 @@ object SharedModels {
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
+      |          t' = 1 & ?dom:(t <= T & v >= 0);
       |         & !tSign:(t >= 0) using tZ by induction;
       |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction;
       |         & !vSol:(v = v@body + a*t) using tZ by induction;
-      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
-      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
+      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction;
+      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction;
       |        };
-      |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dc bnds tSign by auto;
+      |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dom bnds tSign by auto;
       |      }
       |    }
       |  }
-      |  !vInv: (v >= 0) using dc by auto;
+      |  !vInv: (v >= 0) using dom by auto;
       |  note indStep = andI(vInv, andI(dir, infInd));
       |}*
       |!(goal()) using safeDist bnds by auto;
