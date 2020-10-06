@@ -481,26 +481,10 @@ object SharedModels {
       |let goal() <-> (dist(x,y,xo,yo) > 0);
       |?(bnds, st):(bounds() & initialState());
       |/* Prove infdist > 0 in base case by case-analyzing x,y and using assumption on euclidean distance > 1*/
-      |switch {
-      |  case xhi:(x-xo >= 0.25) =>
-      |    !cs:(x-xo > stopDist(v)) using xhi bnds st by auto;
-      |    note sd = orIL(cs, "d2() | d3() | d4()");
-      |  case xlo:(x-xo <= 0.35) =>
-      |    switch {
-      |      case xohi:(xo-x >= 0.25) =>
-      |        !cs:(xo-x > stopDist(v)) using xohi bnds st by auto;
-      |        note sd = orIR("d1()", orIL(cs, " d3() | d4()"));
-      |      case xolo:(xo-x <= 0.35) =>
-      |        switch {
-      |          case yhi:(y-yo >= 0.25) =>
-      |            !cs:(y-yo > stopDist(v)) using yhi bnds st by auto;
-      |            note sd = orIR("d1()", orIR("d2()", orIL(cs, "d4()")));
-      |          case ylo:(y-yo <= 0.35) =>
-      |            !cs:(yo-y > stopDist(v)) using ylo xolo xlo bnds st by auto;
-      |            note sd = orIR("d1()", orIR("d2()", orIR("d3()", cs)));
-      |        }
-      |    }
-      |}
+      |!splitX:(x-xo >= 0.25 | x-xo <= 0.35) by exhaustion;
+      |!splitXO:(xo-x >= 0.25 | xo-x <= 0.35) by exhaustion;
+      |!splitY:(y-yo >= 0.25 | y-yo <= 0.35) by exhaustion;
+      |!sd:(infdistGr(x, y, xo, yo, stopDist(v))) using splitX splitXO splitY bnds st by auto;
       |/* Base case invariant */
       |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st sd by auto;
       |{body:
@@ -525,36 +509,14 @@ object SharedModels {
       |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
-      |        switch (admiss) {
-      |          case far:((x - xo > admissibleSeparation(v))@monitor) =>
-      |            !prog:(x-xo > stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIL(prog, "d2() | d3() | d4()");
-      |          case far:((xo-x > admissibleSeparation(v))@monitor) =>
-      |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIL(orIL(prog, "d3()"), "d4()"));
-      |          case far:((y-yo > admissibleSeparation(v))@monitor) =>
-      |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIL(prog, "d4()")));
-      |          case far:((yo-y > admissibleSeparation(v))@monitor) =>
-      |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("d1()", orIR("d2()", orIR("d3()", prog)));
-      |        }
+      |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dc bnds tSign by auto;
       |      }
       |    }
       |  }
       |  !vInv: (v >= 0) using dc by auto;
       |  note indStep = andI(vInv, andI(dir, infInd));
       |}*
-      |switch (safeDist) {
-      |  case far:((x - xo > stopDist(v))) =>
-      |    !prog:(goal()) using far bnds  by auto;
-      |  case far:((xo-x > stopDist(v))) =>
-      |    !prog:(goal()) using far bnds  by auto;
-      |  case far:((y-yo > stopDist(v))) =>
-      |    !prog:(goal()) using far bnds  by auto;
-      |  case far:((yo-y > stopDist(v))) =>
-      |    !prog:(goal()) using far bnds  by auto;
-      |}
+      |!(goal()) using safeDist bnds by auto;
       |""".stripMargin
 
   val ijrrVelocityPassiveSafety: String =
