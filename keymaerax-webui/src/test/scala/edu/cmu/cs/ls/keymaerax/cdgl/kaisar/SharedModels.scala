@@ -322,14 +322,37 @@ object SharedModels {
       |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
       |let bounds() <-> A >= 0 & b > 0 & T > 0;
       |let norm(x, y) = (x^2 + y^2)^(1/2);
-      |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
-      |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 1 & norm(dx, dy) = 1);
+      |let dist(xl, yl, xr, yr) = norm (xl - xr, yl - yr);
+      |let initialState() <-> (v = 0 & dist(x,y,xo,yo) > 1 & norm(dx, dy) = 1);
       |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
       |let goal() <-> ((x-xo)^2 + (y-yo)^2)^(1/2) > 0; /* @TODO: Need to expand more aggressively dist(x, y, xo, yo) > 0;*/
       |?(bnds, st):(bounds() & initialState());
-      |/* @TODO: Should be assertion */
-      |?(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) /* using bnds st by auto */;
+      |        let d1() <-> (x-xo > stopDist(v));
+      |        let d2() <-> (xo-x > stopDist(v));
+      |        let d3() <-> (y-yo > stopDist(v));
+      |        let d4() <-> (yo-y > stopDist(v));
+      |switch {
+      |  case xhi:(x-xo >= 0.25) =>
+      |    !cs:(x-xo > stopDist(v)) using xhi bnds st by auto;
+      |    note sd = orIL(cs, "d2() | d3() | d4()");
+      |  case xlo:(x-xo <= 0.35) =>
+      |    switch {
+      |      case xohi:(xo-x >= 0.25) =>
+      |        !cs:(xo-x > stopDist(v)) using xohi bnds st by auto;
+      |        note sd = orIR("d1()", orIL(cs, " d3() | d4()"));
+      |      case xolo:(xo-x <= 0.35) =>
+      |        switch {
+      |          case yhi:(y-yo >= 0.25) =>
+      |            !cs:(y-yo > stopDist(v)) using yhi bnds st by auto;
+      |            note sd = orIR("d1()", orIR("d2()", orIL(cs, "d4()")));
+      |          case ylo:(y-yo <= 0.35) =>
+      |            !cs:(yo-y > stopDist(v)) using ylo xolo xlo bnds st by auto;
+      |            note sd = orIR("d1()", orIR("d2()", orIR("d3()", cs)));
+      |        }
+      |    }
+      |}
+      |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st sd by auto;
       |{body:
       |  {
       |    {
