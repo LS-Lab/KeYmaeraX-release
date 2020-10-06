@@ -18,7 +18,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 /** Checks a Kaisar proof term, after all elaboration/transformation passes have been applied */
 object ProofChecker {
   // If true, print more debug info while doing arithmetic proofs
-  val DEBUG_ARITH = false
 
   /** @return query for selector */
   def methodAssumptions(con: Context, sel: Selector, goal: Formula): ContextQuery =  (sel match {
@@ -152,8 +151,8 @@ object ProofChecker {
       if (ProofOptions.debugArith)
         println("Checking formula with QE: " + fullFml)
       val isValid = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(fullFml)
-      if (DEBUG_ARITH)
-        println(s"QE proof ${if(isValid) "succeeded" else "failed"} on subgoal $assms |- $f")
+      if (ProofOptions.debugArith)
+        println(s"QE on formula ${if(isValid) "succeeded" else "failed"} on subgoal $assms |- $f")
       isValid
     } catch {
       case ce: ConversionException =>
