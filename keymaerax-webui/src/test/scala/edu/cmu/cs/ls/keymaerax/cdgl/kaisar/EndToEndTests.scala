@@ -259,7 +259,7 @@ class EndToEndTests extends TacticTestBase {
     val pfStr = SharedModels.essentialsSafeCar1D
     val ff = check(pfStr)
     val discreteFml =
-      ("[x_1:=0;v_1:=0;?A_0>0;?B_0>0;?T_0>0;?x_1 < d_0;" +
+      ("[x_1:=0;v_1:=0;?(A_0>0&B_0>0&T_0>0&x_1 < d_0);" +
         "{?v_1^2/(2*B_0)<=d_0-x_1&v_1>=0;}^@" +
         "{x_2:=x_1;t_1:=t_0;a_1:=a_0;v_2:=v_1;}" +
         "{{{?(v_2+T_0*A_0)^2/(2*B_0)+1>=d_0-(x_2+v_2*T_0+A_0*T_0^2/2);" +
@@ -283,7 +283,7 @@ class EndToEndTests extends TacticTestBase {
   it should "support tuple patterns" in withMathematica { _ =>
     val pfStr = "?(xInit, vInit):(x := 0; v := 0;); ?(acc, brk, tstep, separate):(A > 0 & B > 0 & T > 0 & x < d);"
     val ff = check(pfStr)
-    ff shouldBe "[x_1:= 0; v_1 := 0; ?(A_0 > 0); ?(B_0 > 0); ?(T_0 > 0); ?(x_1 < d_0);]true".asFormula
+    ff shouldBe "[x_1:= 0; v_1 := 0; ?(A_0 > 0& B_0 > 0 & T_0 > 0 & x_1 < d_0);]true".asFormula
   }
 
 
@@ -401,11 +401,10 @@ class EndToEndTests extends TacticTestBase {
   }
 
   "QE" should "prove some formulas" in withMathematica { _ =>
-    /*val fmlStr = "((((((((((((((((((t_3<=T_0&v_2=v_1-b_0*t_3)&ghostVar_2>=v_1^2/(2*b_0))&T_0>0)&b_0>0)&(ghostVar_0>=ghostVar_1&ghostVar_2=ghostVar_0|ghostVar_0<=ghostVar_1&ghostVar_2=ghostVar_1))&(x_2-xo_1>=0&ghostVar_3=x_2-xo_1|x_2-xo_1<=0&ghostVar_3=-(x_2-xo_1)))&(y_1-yo_1>=0&ghostVar_1=y_1-yo_1|y_1-yo_1<=0&ghostVar_1=-(y_1-yo_1)))&(x_1-xo_1>=0&ghostVar_0=x_1-xo_1|x_1-xo_1<=0&ghostVar_0=-(x_1-xo_1)))&t_2=0)&v_2>=0)&(-t_3)*(v_1-b_0/2*t_3)<=x_2-x_1)&t_3>=0)&x_2-x_1<=t_3*(v_1-b_0/2*t_3))&a_2=-b_0)&(-t_3)*(v_1-b_0/2*t_3)<=y_2-y_1)&y_2-y_1<=t_3*(v_1-b_0/2*t_3))&(ghostVar_3>=ghostVar_4&ghostVar_5=ghostVar_3|ghostVar_3<=ghostVar_4&ghostVar_5=ghostVar_4))&(y_2-yo_1>=0&ghostVar_4=y_2-yo_1|y_2-yo_1<=0&ghostVar_4=-(y_2-yo_1)))&A_0>=0->ghostVar_5>=v_2^2/(2*b_0)"*/
-    val fmlStr = "((((((((((((((((((t_3<=T_0)&ghostVar_2>=v_1^2/(2*b_0))&T_0>0)&b_0>0)&(ghostVar_0>=ghostVar_1& ghostVar_2=ghostVar_0|ghostVar_0<=ghostVar_1& ghostVar_2=ghostVar_1))&(x_2-xo_1>=0&ghostVar_3=x_2-xo_1 |x_2-xo_1<=0&ghostVar_3=-(x_2-xo_1)))&(y_1-yo_1>=0&ghostVar_1=y_1-yo_1 |y_1-yo_1<=0&ghostVar_1=-(y_1-yo_1)))&(x_1-xo_1>=0&ghostVar_0=x_1-xo_1|x_1-xo_1<=0 &ghostVar_0=-(x_1-xo_1))))&(v_1-b_0*t_3)>=0)&(-t_3)*(v_1-b_0/2*t_3)<=x_2-x_1)&t_3>=0)&x_2-x_1<=t_3*(v_1-b_0/2*t_3)))&(-t_3)*(v_1-b_0/2*t_3)<=y_2-y_1)&y_2-y_1<=t_3*(v_1-b_0/2*t_3))&(ghostVar_3>=ghostVar_4&ghostVar_5=ghostVar_3 |ghostVar_3<=ghostVar_4&ghostVar_5=ghostVar_4))&(y_2-yo_1>=0&ghostVar_4=y_2-yo_1 |y_2-yo_1<=0&ghostVar_4=-(y_2-yo_1)))&A_0>=0->ghostVar_5>=(v_1-b_0*t_3)^2/(2*b_0)"
+    val fmlStr = "true"
     val fml = fmlStr.asFormula
     val res = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.qeValid(fml)
-    println("returned")
+    println("QE complete")
     res shouldBe true
   }
 
