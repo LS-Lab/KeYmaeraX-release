@@ -324,9 +324,9 @@ object SharedModels {
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, xr, yl, yr) = norm (xl - xr, yl - yr);
       |let initialState() <-> (v = 0 & dist(x,y,ox,oy) > 1 & norm(dx, dy) = 1);
-      |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 >= z | x2 - x1 >= z | y1 - y2 >= z | y2 - y1 >= z);
+      |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
-      |let goal() <-> dist(x, y, xo, yo) > 0;
+      |let goal() <-> ((x-xo)^2 + (y-yo)^2)^(1/2) > 0; /* @TODO: Need to expand more aggressively dist(x, y, xo, yo) > 0;*/
       |?(bnds, st):(bounds() & initialState());
       |/* @TODO: Should be assertion */
       |?(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) /* using bnds st by auto */;
@@ -343,23 +343,23 @@ object SharedModels {
       |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
-      |        let b1() <-> (x-xo >= stopDist(v));
-      |        let b2() <-> (xo-x >= stopDist(v));
-      |        let b3() <-> (y-yo >= stopDist(v));
-      |        let b4() <-> (yo-y >= stopDist(v));
+      |        let b1() <-> (x-xo > stopDist(v));
+      |        let b2() <-> (xo-x > stopDist(v));
+      |        let b3() <-> (y-yo > stopDist(v));
+      |        let b4() <-> (yo-y > stopDist(v));
       |        switch (safeDist) {
-      |          case far:((x - xo >= stopDist(v))@body) =>
+      |          case far:((x - xo > stopDist(v))@body) =>
       |            !prog:(x-xo >= stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIL(orIL(orIL(prog, "b2()"), "b3()"), "b4()");
-      |          case far:((xo-x >= stopDist(v))@body) =>
-      |            !prog:(xo-x >= stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIL(orIL(orIR("b1()", prog), "b3()"), "b4()");
-      |          case far:((y-yo >= stopDist(v))@body) =>
-      |            !prog:(y-yo >= stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIL(orIR("(b1() | b2())", far), "b4()");
-      |          case far:((yo-y >= stopDist(v))@body) =>
-      |            !prog:(yo-y >= stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("(b1() | b2() | b3())", far);
+      |            note infInd = orIL(prog, "b2() | b3() | b4()");
+      |          case far:((xo-x > stopDist(v))@body) =>
+      |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |          case far:((y-yo > stopDist(v))@body) =>
+      |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |         case far:((yo-y > stopDist(v))@body) =>
+      |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
       |        }
       |        /*!infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist xBound yBound vSol dc bnds tSign aB tZ by auto;  vSign */
       |      }
@@ -374,7 +374,24 @@ object SharedModels {
       |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
       |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
       |         };
-      |         !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist bnds xSol ySol vSol dc tSign aZ by auto;
+      |        let b1() <-> (x-xo > stopDist(v));
+      |        let b2() <-> (xo-x > stopDist(v));
+      |        let b3() <-> (y-yo > stopDist(v));
+      |        let b4() <-> (yo-y > stopDist(v));
+      |        switch (safeDist) {
+      |          case far:((x - xo > stopDist(v))@body) =>
+      |            !prog:(x-xo > stopDist(v)) using far xSol vSol dc bnds tSign by auto;
+      |            note infInd = orIL(prog, "b2() | b3() | b4()");
+      |          case far:((xo-x > stopDist(v))@body) =>
+      |            !prog:(xo-x > stopDist(v)) using far xSol vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |          case far:((y-yo > stopDist(v))@body) =>
+      |            !prog:(y-yo > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |          case far:((yo-y > stopDist(v))@body) =>
+      |            !prog:(yo-y > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
+      |        }
       |      }
       |        ++
       |        /* or choose a new safe curve */
@@ -382,6 +399,7 @@ object SharedModels {
       |        w := *; ?(-W<=w & w<=W);
       |        r := *;
       |        xo := *; yo := *;
+      |        monitor:
       |        ?(r!=0 & r*w = v);
       |        ?admiss:(infdistGr(x, y, xo, yo,  admissibleSeparation(v)));
       |        ?tZ:(t := 0);
@@ -394,14 +412,40 @@ object SharedModels {
       |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction; /* got here after 20 mins -> reduced to 4 secs */
       |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction;
       |        };
-      |        !infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist bnds xBound yBound vSol dc tSign tZ admiss by auto;
+      |        let b1() <-> (x-xo > stopDist(v));
+      |        let b2() <-> (xo-x > stopDist(v));
+      |        let b3() <-> (y-yo > stopDist(v));
+      |        let b4() <-> (yo-y > stopDist(v));
+      |        switch (admiss) {
+      |          case far:((x - xo > admissibleSeparation(v))@monitor) =>
+      |            !prog:(x-xo > stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIL(prog, "b2() | b3() | b4()");
+      |          case far:((xo-x > admissibleSeparation(v))@monitor) =>
+      |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |          case far:((y-yo > admissibleSeparation(v))@monitor) =>
+      |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |          case far:((yo-y > admissibleSeparation(v))@monitor) =>
+      |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
+      |        }
       |      }
       |    }
       |  }
       |  !vInv: (v >= 0) using dc by auto;
-      |  note indStep = andI(andI(vInv, dir), infInd);
+      |  note indStep = andI(vInv, andI(dir, infInd));
       |}*
-      |!(goal()) using safeDist bnds by auto;
+      |        switch (safeDist) {
+      |          case far:((x - xo > stopDist(v))) =>
+      |            !prog:(goal()) using far bnds  by auto;
+      |          case far:((xo-x > stopDist(v))) =>
+      |            !prog:(goal()) using far bnds  by auto;
+      |          case far:((y-yo > stopDist(v))) =>
+      |            !prog:(goal()) using far bnds  by auto;
+      |          case far:((yo-y > stopDist(v))) =>
+      |            !prog:(goal()) using far bnds  by auto;
+      |        }
       |""".stripMargin
 
   val ijrrStaticSafetySimplified: String =
