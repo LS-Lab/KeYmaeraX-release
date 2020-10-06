@@ -25,7 +25,7 @@ object DeterritorializePass {
     var times: TimeTable = Map()
     // Collect snapshot information of all labels. This information was populated during SSA.
     val collectSnapshots = new TraversalFunction {
-      override def postS(kc: Context, s: Statement): Statement = {
+      override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
           case Label(ld, Some(snap: Snapshot)) => times = times.+(ld.label -> (snap, kc, ld))
           case Label(ld, None) => throw TransformationException("Expected label statement to contain snapshot", node = s)
@@ -34,7 +34,7 @@ object DeterritorializePass {
         s
       }
     }
-    ProofTraversal.traverse(Context.empty, s, collectSnapshots)
+    ProofTraversal.traverse(Context.empty, Context.empty, s, collectSnapshots)
     new DeterritorializePass(times).apply(s)
   }
 }
@@ -180,7 +180,7 @@ case class DeterritorializePass(tt: TimeTable) {
   def apply(s: Statement): Statement = {
     val pass = new TraversalFunction {
       /* delete labels now. We already got all the info we need from them in [[tt]] */
-      override def preS(kc: Context, s: Statement): Option[Statement] = {
+      override def preS(kc: Context, kce: Context, s: Statement): Option[Statement] = {
         s match {
           case _: Label => Some(Ghost(Triv()))
           case _ => None
@@ -188,21 +188,21 @@ case class DeterritorializePass(tt: TimeTable) {
       }
 
       // translate named references in atoms
-      override def postPT(kc: Context, pt: ProofTerm): ProofTerm = {
+      override def postPT(kc: Context, kce: Context, pt: ProofTerm): ProofTerm = {
         pt match {
           case ProofInstance(e) => ProofInstance(translate(kc, e, List(), pt))
           case _ => pt
         }
       }
 
-      override def postSel(kc: Context, sel: Selector): Selector = {
+      override def postSel(kc: Context, kce: Context, sel: Selector): Selector = {
         sel match {
           case PatternSelector(e) => PatternSelector(translatePat(kc, e, sel))
           case _ => sel
         }
       }
 
-      override def postDomS(kc: Context, ds: DomainStatement): DomainStatement = {
+      override def postDomS(kc: Context,  kce: Context, ds: DomainStatement): DomainStatement = {
         ds match {
           case DomAssume(x, f) =>  DomAssume(x, translate(kc, f, List(), ds))
           case DomAssert(x, f, child) => DomAssert(x, translate(kc, f, List(), ds), child)
@@ -211,7 +211,7 @@ case class DeterritorializePass(tt: TimeTable) {
         }
       }
 
-      override def postDiffS(kc: Context, ds: DiffStatement): DiffStatement = {
+      override def postDiffS(kc: Context,  kce: Context, ds: DiffStatement): DiffStatement = {
         ds match {
           case AtomicODEStatement(dp, ident) => AtomicODEStatement(AtomicODE(dp.xp, translate(kc, dp.e, node = ds)), ident)
           case _ => ds
@@ -219,7 +219,7 @@ case class DeterritorializePass(tt: TimeTable) {
       }
 
       // translate named references in atoms
-      override def postS(kc: Context, s: Statement): Statement = {
+      override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
           case Assume(pat, f) => Assume(pat, translate(kc, f, List(), s))
           case Assert(pat, f, m) => Assert(pat, translate(kc, f, List(), s), m)
@@ -237,6 +237,6 @@ case class DeterritorializePass(tt: TimeTable) {
         }
       }
     }
-    ProofTraversal.traverse(Context.empty, s, pass)
+    ProofTraversal.traverse(Context.empty, Context.empty, s, pass)
   }
 }

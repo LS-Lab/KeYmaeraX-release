@@ -128,28 +128,28 @@ object Snapshot {
     val vars = vs.freeVars ++ vs.boundVars
     var snap = Snapshot.initial(vars)
     val tf = new TraversalFunction {
-      override def postS(kc: Context, s: Statement): Statement = {
+      override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
           case mod: Modify => mod.mods.foreach({case (x, f) => snap = snap.revisit(x)}); mod
           case s => s
         }
       }
 
-      override def postDiffS(kc: Context, s: DiffStatement): DiffStatement = {
+      override def postDiffS(kc: Context, kce: Context, s: DiffStatement): DiffStatement = {
         s match {
           case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), _), _) => snap = snap.revisit(x); s
           case _ => s
         }
       }
 
-      override def postDomS(kc: Context, s: DomainStatement): DomainStatement = {
+      override def postDomS(kc: Context, kce: Context, s: DomainStatement): DomainStatement = {
         s match {
           case DomModify(_id, x, f) => snap = snap.revisit(x); s
           case _ => s
         }
       }
     }
-  ProofTraversal.traverse(Context.empty, c.s, tf)
+  ProofTraversal.traverse(Context.empty, Context.empty, c.s, tf)
   snap
   }
 }

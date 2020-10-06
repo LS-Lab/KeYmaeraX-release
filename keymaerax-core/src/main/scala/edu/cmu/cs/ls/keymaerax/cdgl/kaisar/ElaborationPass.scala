@@ -114,7 +114,7 @@ class ElaborationPass() {
   /** @return statement where advanced selectors have been elaborated to simple selectors */
   def apply(s: Statement): Statement = {
     ghostCon = ghostCon.reapply(s)
-    val ret = ProofTraversal.traverse(Context.empty.asElaborationContext, s, new TraversalFunction {
+    val ret = ProofTraversal.traverse(Context.empty.asElaborationContext, Context.empty.asElaborationContext,s, new TraversalFunction {
       // Forward proof term conjoining input list of facts
       private def conjoin(xs: List[Ident]): ProofTerm = {
         xs.map(ProofVar).reduce[ProofTerm]{case (l, r) => ProofApp(ProofApp(ProofVar(Variable("andI")), l), r)}
@@ -193,56 +193,62 @@ class ElaborationPass() {
         }
       }
 
-      override def preS(kc: Context, sel: Statement): Option[Statement] = {
+      override def preS(kc: Context, kce: Context, sel: Statement): Option[Statement] = {
         sel match {
           case mod: Modify =>
             // ProofTraversal can handle locations if we're translating statements one-to-one, but we should do it by hand
             // when we introduce "new" assignments.
-            val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kc.elaborateFunctions(x, mod)))})), sel)
+            val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kce.elaborateFunctions(x, mod)))})), sel)
             Some(elabVectorAssign(elabFuncs))
           case Assume(e, f) =>
             // @Note: Splitting up assumes would be bad because it breaks lastFact
-            Some(locate(Assume(e, kc.elaborateFunctions(f, sel)), sel))
+            Some(locate(Assume(e, kce.elaborateFunctions(f, sel)), sel))
           case Assert(e, f, m) =>
             val (fullSels, meth) = collectPts(kc, m, f)
             val finalMeth = locate(Using(fullSels, meth), meth)
-            val assertion = locate(Assert(e, kc.elaborateFunctions(f, sel), finalMeth), sel)
+            val assertion = locate(Assert(e, kce.elaborateFunctions(f, sel), finalMeth), sel)
             Some(locate(assertion, sel))
           case ProveODE(ds, dc) =>
             // Context should include ODE during collection, because we want to know about domain constraint fmls and we may
             // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
-            val dom = collectPts(kc.:+(sel), dc)
+            val dom = collectPts(kce.:+(sel), dc)
             Some(ProveODE(ds, dom))
           case Note(x, plainPt, ann) =>
             val pt = coercePTSorts(plainPt)
-            val finalPt = locate(kc.elaborateFunctions(pt, pt), pt)
+            val finalPt = locate(kce.elaborateFunctions(pt, pt), pt)
             Some(locate(Note(x, finalPt, ann), sel))
           case _ => None
         }
       }
 
       // Elaborate terms and formulas throughout an ODE proof
-      private def elaborateODE(kc: Context, ds: DiffStatement): DiffStatement = {
+      private def elaborateODE(kc: Context, kce: Context,  ds: DiffStatement): DiffStatement = {
         ds match {
-          case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kc.elaborateFunctions(e, ds)), solFact)
-          case DiffProductStatement(l, r) => DiffProductStatement(elaborateODE(kc, l), elaborateODE(kc, r))
-          case DiffGhostStatement(ds) => DiffGhostStatement(elaborateODE(kc, ds))
-          case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(elaborateODE(kc, ds))
+          case AtomicODEStatement(AtomicODE(xp, e), solFact) => AtomicODEStatement(AtomicODE(xp, kce.elaborateFunctions(e, ds)), solFact)
+          case DiffProductStatement(l, r) => DiffProductStatement(elaborateODE(kc, kce, l), elaborateODE(kc, kce, r))
+          case DiffGhostStatement(ds) => DiffGhostStatement(elaborateODE(kc, kce, ds))
+          case InverseDiffGhostStatement(ds) => InverseDiffGhostStatement(elaborateODE(kc, kce, ds))
         }
       }
 
       // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
-      override def postS(kc: Context, s: Statement): Statement = {
+      override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) => Assume(pat, kc.elaborateFunctions(f, s))
+          case Assume(pat, f) => Assume(pat, kce.elaborateFunctions(f, s))
           // Elaborate all functions that are defined *before* f
-          case LetSym(f, args, e: Term) => LetSym(f, args, kc.elaborateFunctions(e, s))
-          case Match(pat, e: Term) => Match(pat, kc.elaborateFunctions(e, s))
-          case While(x, j, body) => While(x, kc.elaborateFunctions(j, s), body)
-          case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kc.elaborateFunctions(ihv, s), None)))
+          case LetSym(f, args, e: Term) =>
+            val rhs = kce.elaborateFunctions(e, s)
+            if(f.name == "dist") {
+              val _ = 1 + 1
+            }
+            LetSym(f, args, rhs)
+          case LetSym(f, args, e: Formula) => LetSym(f, args, kce.elaborateFunctions(e, s))
+          case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
+          case While(x, j, body) => While(x, kce.elaborateFunctions(j, s), body)
+          case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None)))
           // dc was elaborated in preS
-          case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, ds), dc)
-          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kc.elaborateFunctions(f, s), b)}))
+          case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, kce, ds), dc)
+          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kce.elaborateFunctions(f, s), b)}))
           case s => s
         }
       }
