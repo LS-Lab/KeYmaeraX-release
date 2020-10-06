@@ -24,7 +24,7 @@ object SharedModels {
     "t:= 0;" +
     "{xSol: x' = v, vSol: v' = a, tSol: t' = 1 & ?dc: (t <= T & v>=0);};" +
     "!invStep: (v^2/(2*B) <= (d - x) & v>= 0) " +
-    "using xSol vSol tSol safeCtrl accval fast inv dc acc brk tstep by auto;" +
+    "using xSol vSol tSol safeCtrl accval inv dc acc brk tstep by auto;" +
     "}*" +
     "!safe:(x <= d & v >= 0) using inv brk  by auto;"
 
@@ -326,7 +326,7 @@ object SharedModels {
       |let initialState() <-> (v = 0 & dist(x,y,xo,yo) > 1 & norm(dx, dy) = 1);
       |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
-      |let goal() <-> ((x-xo)^2 + (y-yo)^2)^(1/2) > 0; /* @TODO: Need to expand more aggressively dist(x, y, xo, yo) > 0;*/
+      |let goal() <-> (dist(x,y,xo,yo) > 0); /* @TODO: Need to expand more aggressively dist(x, y, xo, yo) > 0;*/
       |?(bnds, st):(bounds() & initialState());
       |        let d1() <-> (x-xo > stopDist(v));
       |        let d2() <-> (xo-x > stopDist(v));
