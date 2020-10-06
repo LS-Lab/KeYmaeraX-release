@@ -212,6 +212,16 @@ class EndToEndTests extends TacticTestBase {
     ff shouldBe "[x_1:=0; y_1:=0;z_1:=0;{x_2:=x_1;y_2:=y_1;z_2:=z_1;}{x_2'=z_2, y_2'=1, z_2'=y_2}]true".asFormula
   }
 
+  it should "catch unsound dI variable scoping " in withMathematica { _ =>
+    val pfStr = "?xInit:(x:=0); ?yInit:(y:=0); ?zInit:(z:=0); " +
+      "{x'=z, y' = 1, z' = y " +
+      "& !yInv:(y >= 0) using yInit  by induction;" +
+      "& !zInv:(z = 0) using zInit yInit y by induction;" +
+      "& !xInv:(x = 0) using xInit zInit z by induction;" +
+      "};"
+    a[ProofCheckException] shouldBe thrownBy(check(pfStr))
+  }
+
   it should "catch invalid dc-assign 3: wrong clock" in withMathematica { _ =>
     val pfStr = "t:= 0; {t' = 2, x' = y & ?(t := T);};"
     a[ProofCheckException] shouldBe thrownBy(check(pfStr))
