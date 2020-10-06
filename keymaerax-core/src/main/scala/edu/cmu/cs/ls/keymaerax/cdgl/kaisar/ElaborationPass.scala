@@ -238,9 +238,6 @@ class ElaborationPass() {
           // Elaborate all functions that are defined *before* f
           case LetSym(f, args, e: Term) =>
             val rhs = kce.elaborateFunctions(e, s)
-            if(f.name == "dist") {
-              val _ = 1 + 1
-            }
             LetSym(f, args, rhs)
           case LetSym(f, args, e: Formula) => LetSym(f, args, kce.elaborateFunctions(e, s))
           case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
