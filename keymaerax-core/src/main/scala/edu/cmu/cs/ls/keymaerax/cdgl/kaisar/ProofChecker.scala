@@ -658,7 +658,8 @@ object ProofChecker {
         if (conflict.nonEmpty)
           throw ProofCheckException(s"Assertion ${f.prettyString} must not mention taboo variables")
         (Context(s), Box(Dual(Test(elabF)), True))
-      case Note(x , pt,  conclusion) =>
+      case Note(x , plainPt,  conclusion) =>
+        val pt = con.elaborateStable(plainPt)
         val res = ForwardProofChecker(con, pt)
         if (conclusion.isDefined && conclusion.get != res) {
           throw ProofCheckException(s"Note $x expected conclusion ${conclusion.get}, got $res", node = s)

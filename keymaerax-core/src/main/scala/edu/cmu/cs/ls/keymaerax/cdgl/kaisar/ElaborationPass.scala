@@ -164,6 +164,35 @@ class ElaborationPass() {
         }
       }
 
+      private def coerceFormula(e: ProofTerm): ProofTerm = {
+        e match {
+          case ProofInstance(f: Formula) => ProofInstance(f)
+          case ProofInstance(FuncOf(Function(name, index, domain, sort, interpreted), arg)) => ProofInstance(PredOf(Function(name, index, domain, Bool, interpreted), arg))
+          case _ => throw new Exception(s"Expected formula, got $e")
+        }
+      }
+
+      private def coerceTerm(e: ProofTerm): ProofTerm = {
+        e match {
+          case ProofInstance(f: Term) => ProofInstance(f)
+          case ProofInstance(PredOf(Function(name, index, domain, sort, interpreted), arg)) => ProofInstance(FuncOf(Function(name, index, domain, Real, interpreted), arg))
+          case _ => throw new Exception(s"Expected formula, got $e")
+        }
+      }
+
+      private def coercePTSorts(pt: ProofTerm): ProofTerm = {
+        pt match {
+          case ProofApp(ProofApp(ProofVar(BaseVariable("orIL", _, _)), pt1), pt2: ProofInstance) => ProofApp(ProofApp(ProofVar(Variable("orIL")), coercePTSorts(pt1)), coerceFormula(pt2))
+          case ProofApp(ProofApp(ProofVar(BaseVariable("orIR", _, _)), pt1: ProofInstance), pt2) => ProofApp(ProofApp(ProofVar(Variable("orIR")), coerceFormula(pt1)), coercePTSorts(pt2))
+          case ProofApp(ProofApp(ProofVar(BaseVariable("falseE", _, _)), pt1), pt2:ProofInstance) => ProofApp(ProofApp(ProofVar(Variable("falseE")), coercePTSorts(pt1)), coerceFormula(pt2))
+          case ProofApp(ProofApp(ProofVar(BaseVariable("ignoreI", _, _)), pt1: ProofInstance), pt2) => ProofApp(ProofApp(ProofVar(Variable("ignoreI")), coerceFormula(pt1)), coercePTSorts(pt2))
+          case ProofApp(ProofApp(ProofVar(BaseVariable("allE", _, _)), pt1), pt2) => ProofApp(ProofApp(ProofVar(Variable("allE")), coercePTSorts(pt1)), coerceTerm(pt2))
+          case ProofApp(ProofApp(ProofApp(ProofVar(BaseVariable("existsI", _, _)), pt1), pt2), pt3) =>ProofApp(ProofApp(ProofApp(ProofVar(Variable("existsI")), coercePTSorts(pt1)), coerceTerm(pt2)), coercePTSorts(pt3))
+          case ProofApp(m, n) => ProofApp(coercePTSorts(m), coercePTSorts(n))
+          case _ => pt
+        }
+      }
+
       override def preS(kc: Context, sel: Statement): Option[Statement] = {
         sel match {
           case mod: Modify =>
@@ -172,8 +201,8 @@ class ElaborationPass() {
             val elabFuncs = locate(Modify(mod.ids, mod.mods.map({case (x, fOpt) => (x, fOpt.map(x => kc.elaborateFunctions(x, mod)))})), sel)
             Some(elabVectorAssign(elabFuncs))
           case Assume(e, f) =>
-            val assumes  = StandardLibrary.factBindings(e, f, sel).map({case (x, y) => locate(Assume(IdentPat(x), kc.elaborateFunctions(y, sel)), sel)})
-            Some(locate(KaisarProof.block(assumes), sel))
+            // @Note: Splitting up assumes would be bad because it breaks lastFact
+            Some(locate(Assume(e, kc.elaborateFunctions(f, sel)), sel))
           case Assert(e, f, m) =>
             val (fullSels, meth) = collectPts(kc, m, f)
             val finalMeth = locate(Using(fullSels, meth), meth)
@@ -184,6 +213,10 @@ class ElaborationPass() {
             // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
             val dom = collectPts(kc.:+(sel), dc)
             Some(ProveODE(ds, dom))
+          case Note(x, plainPt, ann) =>
+            val pt = coercePTSorts(plainPt)
+            val finalPt = locate(kc.elaborateFunctions(pt, pt), pt)
+            Some(locate(Note(x, finalPt, ann), sel))
           case _ => None
         }
       }

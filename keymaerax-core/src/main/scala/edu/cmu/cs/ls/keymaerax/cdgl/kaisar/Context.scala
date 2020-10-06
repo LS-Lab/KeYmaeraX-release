@@ -247,7 +247,10 @@ case class Context(s: Statement) {
           }
         }
         iter(ss.reverse, cq, tabooProgramVars, tabooFactVars)
-      case BoxChoice(l, r) => reapply(l).searchAll(cq, tabooProgramVars, tabooFactVars) ++ reapply(r).searchAll(cq, tabooProgramVars, tabooFactVars)
+      case BoxChoice(l, r) =>
+        val left = reapply(l).searchAll(cq, tabooProgramVars, tabooFactVars)
+        val right = reapply(r).searchAll(cq, tabooProgramVars, tabooFactVars)
+        RBranch(left, right)
       case switch@Switch(sel, pats) =>
         val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars, tabooFactVars) })
         if (eachResult.isEmpty) ContextResult.unit
@@ -398,7 +401,11 @@ case class Context(s: Statement) {
   * @param wantProgramVar search exclusively for unannotated assignments x:=f rather than facts named "x" */
   def get(id: Ident, wantProgramVar: Boolean = false, isSound: Boolean = true): Option[Formula] = {
     val cq: ContextQuery = if (wantProgramVar) QProgramVar(id) else QProofVar(id)
-    withOuter.withoutGhost.searchAll(cq, Set(), Set()).formulas.headOption
+    withOuter.withoutGhost.searchAll(cq, Set(), Set()).formulas match {
+      case Nil => None
+      case f :: Nil => Some(f)
+      case fs => Some(fs.reduce(And))
+    }
   }
   def getHere(id: Ident, wantProgramVar: Boolean = false): Option[Formula] = get(id, wantProgramVar).map(elaborateStable)
 
@@ -451,6 +458,7 @@ case class Context(s: Statement) {
       wound match {
         case Assert(pat, f, _) :: _ => (Some((pat, f)), Nil)
         case Assume(pat, f) :: _ => (Some((pat, f)), Nil)
+        case Note(x, pt, Some(fml)) :: _ => (Some((x, fml)), Nil)
         case (phi: Phi) :: rest =>
           val (fml, phis) = unwind(rest)
           (fml, phi :: phis)
@@ -490,6 +498,19 @@ case class Context(s: Statement) {
   /** Final elaboration step used in proof-checker. */
   def elaborateStable(f: Formula): Formula = destabilize(f)
   def elaborateStable(f: Term): Term = destabilize(f)
+  def elaborateStable(e: Expression): Expression =
+    e match {
+      case f: Formula => elaborateStable(f)
+      case f: Term => elaborateStable(f)
+      case _ => throw ElaborationException("Unexpected expression: " + e)
+    }
+  def elaborateStable(pt: ProofTerm): ProofTerm = {
+    pt match {
+      case ProofInstance(e) => ProofInstance(elaborateStable(e))
+      case ProofApp(m, n) => ProofApp(elaborateStable(m), elaborateStable(n))
+      case pt => pt
+    }
+  }
 
   /** Optionally replace user-defined function symbols in [[t]] */
   private def replaceFunctions(t: Term, node: ASTNode = Triv()): Option[Term] = {
@@ -503,7 +524,8 @@ case class Context(s: Statement) {
               throw ElaborationException(s"Function ${f.func.name} called with ${elabArgs.length}, expected ${lf.args.length}", node = node)
             val argMap = lf.args.zip(elabArgs).toMap
             Some(SubstitutionHelper.replacesFree(lf.e)({case (v: Variable) => argMap.get(v) case _ => None }).asInstanceOf[Term])
-          case Some((fn, lf)) => throw ElaborationException(s"Function ${f.func} found with argument type ${f.func.domain}, expected ${fn.domain}", node = node)
+          case Some((fn, lf)) =>
+            throw ElaborationException(s"Function ${f.func} found with type ${f.func.domain} -> ${f.func.sort}(interpreted?: ${f.func.interpreted}), expected ${fn.domain}->${fn.domain} (interpreted?: ${fn.interpreted})", node = node)
           case None =>
             KaisarProof.getAt(f) match {
               case Some((trm, lr)) =>
@@ -570,7 +592,12 @@ case class Context(s: Statement) {
   def elaborateFunctions(f: Term, node: ASTNode): Term = ExpressionTraversal.traverse(elabFunctionETF(node), f).getOrElse(f)
   def elaborateFunctions(fml: Formula, node: ASTNode): Formula = ExpressionTraversal.traverse(elabFunctionETF(node), fml).getOrElse(fml)
   def elaborateFunctions(e: Expression, node: ASTNode): Expression = e match {case f: Term => elaborateFunctions(f, node) case fml: Formula => elaborateFunctions(fml, node)}
-
+  def elaborateFunctions(pt: ProofTerm, node: ASTNode): ProofTerm =
+    pt match {
+      case ProofInstance(e) => ProofInstance(elaborateFunctions(e, node))
+      case ProofApp(m, n) => ProofApp(elaborateFunctions(m, node), elaborateFunctions(n, node))
+      case _ => pt
+    }
 
   /** Does the context contain a fact named [[id]]? */
   def contains(id: Ident): Boolean = get(id).isDefined

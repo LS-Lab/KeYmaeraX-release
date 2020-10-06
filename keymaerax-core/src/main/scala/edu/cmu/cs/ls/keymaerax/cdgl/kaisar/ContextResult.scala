@@ -149,7 +149,11 @@ case class RBranch(l: ContextResult, r: ContextResult) extends ContextResult {
     val (lSet, rSet) = (setted(l.asList), setted(r.asList))
     val (inter, lDiff, rDiff) = (lSet.intersect(rSet), lSet.--(rSet), rSet.--(lSet))
     val (lBranch, rBranch) = (lDiff.toList.fold(True)(And), rDiff.toList.fold(True)(And))
-    val fmls = Or(lBranch, rBranch) :: inter.toList
+    val fmls = (lBranch, rBranch) match {
+      // if either branch is true, then P | true simplifies to True
+      case (True, _) | (_, True) => inter.toList
+      case _ => Or(lBranch, rBranch) :: inter.toList
+    }
     fmls.map(x => (None, x))
   }
 }
