@@ -145,8 +145,9 @@ case class RBranch(l: ContextResult, r: ContextResult) extends ContextResult {
   // *result* of a query.
   override def asList: List[(Option[Ident], Formula)] = {
     def setted(lst: List[(Option[Ident], Formula)]): Set[Formula] =
-      l.asList.foldLeft[Set[Formula]](Set())({ case (acc, x) => acc.+(x._2) })
-    val (lSet, rSet) = (setted(l.asList), setted(r.asList))
+      lst.foldLeft[Set[Formula]](Set())({ case (acc, x) => acc.+(x._2) })
+    val (llst, rlst) = (l.asList, r.asList)
+    val (lSet, rSet) = (setted(llst), setted(rlst))
     val (inter, lDiff, rDiff) = (lSet.intersect(rSet), lSet.--(rSet), rSet.--(lSet))
     val (lBranch, rBranch) = (lDiff.toList.fold(True)(And), rDiff.toList.fold(True)(And))
     val fmls = (lBranch, rBranch) match {
