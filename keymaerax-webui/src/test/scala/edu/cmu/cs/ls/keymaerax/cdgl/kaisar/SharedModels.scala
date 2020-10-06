@@ -461,7 +461,6 @@ object SharedModels {
       |""".stripMargin
 
 
-  /* @TODO: vInv had unsound lookup of SSA assignments  if using vSol vSign, check whether still broke after recent change */
   /* @TODO: Remove need for stutters in branching */
   val ijrrStaticSafetySimplified: String =
     """pragma option "time=true";

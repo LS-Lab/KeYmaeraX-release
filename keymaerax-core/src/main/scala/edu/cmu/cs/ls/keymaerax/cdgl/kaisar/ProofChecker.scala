@@ -324,6 +324,7 @@ object ProofChecker {
   }
 
   private case class ODEContext(c: Context, header: ODEProofHeader) {
+    def dropPhi: ODEContext = ODEContext(c.dropPhi, header)
     def applyPhi(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)({case v: Variable => header.phiAssigns.get(v) case _ => None})
     def containsFact(fml: Formula, shouldApplyPhi: Boolean = true): Boolean = {
       val fmls = if (shouldApplyPhi) Set(fml, applyPhi(fml)) else Set(fml)
@@ -434,12 +435,13 @@ object ProofChecker {
   }
 
   private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
-    val baseCon = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
+    val baseConBC = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
+    val baseConIH = domainFacts.foldLeft(odeCon.dropPhi.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
     val DomAssert(x, plainF, m) = assertion
     val f = odeCon.c.elaborateStable(plainF)
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, odeCon.c.elaborateStable(f))})
     // assignments not needed because they're already handled during lieDerivative
-    val ihCon = (discreteAssumps /*++ discreteAssigns*/).foldLeft[Context](baseCon)(_.:+(_))
+    val ihCon = (discreteAssumps /*++ discreteAssigns*/).foldLeft[Context](baseConIH)(_.:+(_))
     val odeMap = proveODE.ds.allAtoms.toList.map({case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), f), _) => (x, f)}).toMap
     val lieDerivative = edu.cmu.cs.ls.keymaerax.cdgl.ProofChecker.deriveFormula(f, odeMap)
     val allCutNames = coll.assertions.map(da => da.x.asInstanceOf[Variable])
@@ -450,7 +452,7 @@ object ProofChecker {
       case (false, v: Variable) => odeCon.header.namedFacts.get(v) match {
         case Some(got) => throw ProofCheckException(s"You proved ${odeCon.applyPhi(got)} as a base case for differential invariant $x, but needed to prove $f", node = assertion)
         case None =>
-          apply(baseCon, f, Using(DefaultAssignmentSelector :: filteredSelectors,  Auto()), assertion)
+          apply(baseConBC, f, Using(DefaultAssignmentSelector :: filteredSelectors,  Auto()), assertion)
       }
     }
     /* Prove inductive case */

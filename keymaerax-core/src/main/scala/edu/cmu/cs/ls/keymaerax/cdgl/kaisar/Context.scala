@@ -453,6 +453,24 @@ case class Context(s: Statement) {
     * appear ghosted or unghosted.  */
   def lastBlock: Block = Block(lastStatements())
 
+  private def starPhi(s: Statement): Statement = {
+    s match {
+      case Modify(ids, mods) => Modify(ids, mods.map({case ((x, _)) => (x, None)}))
+      case Block(ss) => Block(ss.map(starPhi))
+    }
+  }
+  def dropPhi: Context = {
+    s match {
+      case Block(ss) if ss.length > 1 && ss.last.isInstanceOf[Phi]=>
+        val (lefts, right) = (ss.dropRight(1), starPhi(ss.last.asInstanceOf[Phi].asgns))
+        reapply(Block(lefts :+ right))
+      case phi: Phi => reapply(Phi(starPhi(phi.asgns)))
+      case Ghost(s) => reapply(Ghost(reapply(s).dropPhi.s))
+      case InverseGhost(s) => reapply(InverseGhost(reapply(s).dropPhi.s))
+      case _ => this
+    }
+  }
+
   private def collectLastFact: (Option[(IdentPat, Formula)], List[Phi]) = {
     def unwind(wound: List[Statement]): (Option[(IdentPat, Formula)], List[Phi]) = {
       wound match {
