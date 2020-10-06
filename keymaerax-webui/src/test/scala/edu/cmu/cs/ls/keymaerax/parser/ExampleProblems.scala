@@ -434,8 +434,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
-    //@note annotations are never elaborated since not all definitions may be available when reporting an annotation
-    annotations.toList should contain theSameElementsInOrderAs ("{loopBody;}*".asProgram, "p(x,1)".asFormula) :: ("{loopBody;}*".asProgram, "x>=1".asFormula) :: Nil
+    annotations.toList should contain theSameElementsInOrderAs ("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula) :: ("{loopBody{|^@|};}*".asProgram, "x>=1".asFormula) :: Nil
     entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 
@@ -474,8 +473,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
     annotation shouldBe 'defined
-    //@note annotations are never elaborated since not all definitions may be available when reporting an annotation
-    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody;}*".asProgram))
+    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody{|^@|};}*".asProgram))
     annotation.get._2 should (be ("x>=1".asFormula) or be ("p(x,1)".asFormula))
     entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }

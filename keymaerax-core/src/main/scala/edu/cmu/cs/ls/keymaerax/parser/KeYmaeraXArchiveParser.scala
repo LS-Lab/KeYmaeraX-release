@@ -846,8 +846,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     checkUseDefMatch(elaboratedModel, elaboratedDefs)
 
     // analyze and report annotations
-    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, elaboratedDefs)
-    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
+    val elaboratedAnnotations = elaborateAnnotations(entry.annotations, elaboratedDefs)
+    val expandedAnnotations = elaborateAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
     (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
         typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
@@ -865,11 +865,11 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     * @param defs lists functions to elaborate to
     * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
     * */
-  private def elaborateToFnsInAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+  private def elaborateAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
     annotations.map({
       case (e: Program, a: Formula) =>
-        val substPrg = defs.elaborateToFunctions(e)
-        val substFml = defs.elaborateToFunctions(a)
+        val substPrg = defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))
+        val substFml = defs.elaborateToSystemConsts(defs.elaborateToFunctions(a))
         (substPrg, substFml)
       case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
