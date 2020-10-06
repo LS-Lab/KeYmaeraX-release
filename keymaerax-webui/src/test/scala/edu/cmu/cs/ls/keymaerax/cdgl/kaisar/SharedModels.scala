@@ -299,6 +299,7 @@ object SharedModels {
       |""".stripMargin
 
   /* @TODO: vInv had unsound lookup of SSA assignments  if using vSol vSign, check whether still broke after recent change */
+  /* @TODO: Also had soundness bug which allowed looking up out-of-scope assignments which were only on one of several branches, in general could prove some bad dIs */
   /** @TODO:Discuss whether we should just cheat and use classical arithmetic.
     *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
     *       sound on left where we can maybe assume ability to case-analyze, but not on right where case analysis must be proved not assumed.
@@ -461,23 +462,20 @@ object SharedModels {
       |        }
       |""".stripMargin
 
+
   val ijrrStaticSafetySimplified: String =
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
       |let stopDist(v) = (v^2 / (2*b));
-      |let accelComp(v) = ((A/b + 1) * (A/2 * T^2 + T*v));
-      |let admissibleSeparation(v) = (stopDist(v) + accelComp(v));
+      |let accelComp(v,a) = ((a/b + 1) * (a/2 * T^2 + T*v));
+      |let admissibleSeparation(v,a) = (stopDist(v) + accelComp(v,a));
       |let bounds() <-> A >= 0 & b > 0 & T > 0;
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, yl, xr, yr) = norm (xl - xr, yl - yr);
       |let initialState() <-> (v = 0 & dist(x,y,xo,yo) > 1 & norm(dx, dy) = 1);
       |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
       |/* Disjuncts of infdistGr predicate, useful in case analysis */
-      |let d1() <-> (x-xo > stopDist(v));
-      |let d2() <-> (xo-x > stopDist(v));
-      |let d3() <-> (y-yo > stopDist(v));
-      |let d4() <-> (yo-y > stopDist(v));
       |let goal() <-> (dist(x,y,xo,yo) > 0);
       |?(bnds, st):(bounds() & initialState());
       |/* Prove infdist > 0 in base case by case-analyzing x,y and using assumption on euclidean distance > 1*/
@@ -490,14 +488,19 @@ object SharedModels {
       |{body:
       |  {
       |    {
-      |      { {  {?aB:(a := -b); }
-      |        ++ {?vZ:(v = 0); ?aZ:(a := 0); w := 0; }
-      |        ++ {w := *; ?(-W<=w & w<=W);
+      |     let monCond() <-> ((a = -b | (a = 0 & v = 0)) & infdistGr(x, y, xo, yo,  stopDist(v)) | a = A & infdistGr(x, y, xo, yo,  admissibleSeparation(v,A)));
+      |      { {  {?aB:(a := -b);
+      |           xo := xo; yo := yo;
+      |           !admiss:(monCond()) using safeDist vSign bnds aB by auto; }
+      |        ++ {?vZ:(v = 0); ?aZ:(a := 0); w := 0;
+      |           xo := xo; yo := yo;
+      |           !admiss:(monCond()) using safeDist vSign bnds aZ vZ by auto; }
+      |        ++ {?aA:(a := A); w := *; ?(-W<=w & w<=W);
       |            r := *;
       |            xo := *; yo := *;
-      |            ?(r!=0 & r*w = v);}
+      |            ?(r!=0 & r*w = v);
+      |            ?admiss:(monCond());}
       |        }
-      |        ?admiss:(infdistGr(x, y, xo, yo,  admissibleSeparation(v)));
       |  monitor:
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,
@@ -505,9 +508,9 @@ object SharedModels {
       |          t' = 1 & ?dc:(t <= T & v >= 0);
       |         & !tSign:(t >= 0) using tZ by induction;
       |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body - b*t) using aB tZ by induction;
-      |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
-      |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
+      |         & !vSol:(v = v@body + a*t) using tZ by induction;
+      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
+      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
       |        };
       |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dc bnds tSign by auto;
       |      }
