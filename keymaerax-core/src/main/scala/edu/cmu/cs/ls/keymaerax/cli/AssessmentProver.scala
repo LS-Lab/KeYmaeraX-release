@@ -570,13 +570,12 @@ object AssessmentProver {
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
       case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
-        val correct = h.toSet.intersect(expected.selected.toSet)
         val incorrect = (h.toSet--expected.selected.toSet) ++ (expected.selected.toSet--h.toSet)
         // correct if answering with exactly the correct yes/no pattern (modulo order)
         if (incorrect.isEmpty) run(() => prove(s"==> $ANYCHOICE_MODE&full <-> $ANYCHOICE_MODE&full".asSequent, byUS(Ax.equivReflexive)))
         // partial credit for 75% correct
         else if (incorrect.size/expected.selected.toSet.size <= 0.25) run(() => prove(s"==> $ANYCHOICE_MODE&partial <-> $ANYCHOICE_MODE&partial".asSequent, byUS(Ax.equivReflexive)))
-        else Right(s"${correct.size} correct choices, ${incorrect.size} incorrect choices")
+        else Right("")
     }
   }
 
