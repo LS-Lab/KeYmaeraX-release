@@ -83,7 +83,14 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     proveBy(s, ODE(1)) shouldBe 'proved
   }
 
-  it should "prove when postcondition is invariant" in withQE { _ =>
+  it should "prove when postcondition is invariant" in withMathematica { _ =>
+    // tests that trivial invariant generator results are not accidentally discarded
+    // (e.g., Pegasus will return (True,PostInv) as an invariant, which is discarded in relevance filtering)
+    val seq = "y=2*(x1^2+x2^2) ==>  [{x1'=-x1-x2,x2'=x1-x2,y'=- 1*y&true}]x1^2+2*x2^2-y<=0".asSequent
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: prove when postcondition is invariant" taggedAs TodoTest in withZ3 { _ =>
     // tests that trivial invariant generator results are not accidentally discarded
     // (e.g., Pegasus will return (True,PostInv) as an invariant, which is discarded in relevance filtering)
     val seq = "y=2*(x1^2+x2^2) ==>  [{x1'=-x1-x2,x2'=x1-x2,y'=- 1*y&true}]x1^2+2*x2^2-y<=0".asSequent
@@ -113,7 +120,11 @@ class ODETests extends TacticTestBase(registerAxTactics = Some("z3")) {
     TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
   }
 
-  it should "prove a postcondition invariant that requires trying hard" in withZ3 { _ =>
+  it should "prove a postcondition invariant that requires trying hard" in withMathematica { _ =>
+    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: prove a postcondition invariant that requires trying hard" taggedAs TodoTest in withZ3 { _ =>
     proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
   }
 
