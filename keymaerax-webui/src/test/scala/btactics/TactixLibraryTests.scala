@@ -480,6 +480,10 @@ class TactixLibraryTests extends TacticTestBase {
     i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
   }
 
+  it should "not apply stutter axioms infinitely" in withQE { _ =>
+    proveBy("[x:=x+1;][{x'=1}]j(x)".asFormula, chase(1))
+  }
+
   it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
