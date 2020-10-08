@@ -1490,6 +1490,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             })
           )
           session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
+          TactixInit.invSupplier = generator
           OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }

@@ -400,7 +400,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
     case Some((goal, Some(subFormula))) =>
       //@HACK assumes that the currently loaded proof and this tree's proof are the same
       //      to avoid reparsing the model on every call to tacticInputSuggestions.
-      val generator = TactixLibrary.invGenerator
+      val generator = TactixLibrary.invSupplier
       //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
       //@HACK for loop and dG
       subFormula match {
