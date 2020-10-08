@@ -57,6 +57,37 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
+  it should "parse a formula-only entry" in {
+    // backwards-compatibility with old databases
+    val input = "x>y -> x>=y"
+    val entry = parse(input).loneElement
+    entry.name shouldBe "New Entry"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe
+      """ArchiveEntry "New Entry"
+        |
+        |ProgramVariables
+        |  Real x;
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  x>y -> x>=y
+        |End.
+        |
+        |
+        |End.""".stripMargin
+    entry.problemContent shouldBe entry.fileContent
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   it should "parse a model with entry ID" in {
     val input =
       """ArchiveEntry b01_8entry1_and_more_underscores : "Entry 1".

@@ -191,6 +191,17 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       parse(tokenStream, stripped, parseTactics).map(e =>
         if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
     } catch {
+      //@note backwards compatibility with formula-only problem contents of old databases
+      case ex: ParseException if ex.expect == "ArchiveEntry|Theorem|Lemma|Exercise" =>
+        val content = Parser(input)
+        val decls = declarationsOf(content)
+        val name = "New Entry"
+        val symbols = StaticSemantics.symbols(content)
+        val defsBlock = KeYmaeraXArchivePrinter.printDefsBlock(decls, symbols)
+        val varsBlock = KeYmaeraXArchivePrinter.printVarsBlock(symbols)
+        val fileContent = KeYmaeraXArchivePrinter.print("ArchiveEntry", name, defsBlock, varsBlock, input, "")
+        val problemContent = fileContent
+        ParsedArchiveEntry(name, "theorem", fileContent, problemContent, decls, content, Nil, Nil, Map.empty) :: Nil
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
   }
