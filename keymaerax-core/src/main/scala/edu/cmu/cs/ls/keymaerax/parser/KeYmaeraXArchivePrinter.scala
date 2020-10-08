@@ -55,7 +55,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
-          s"""${entry.problemContent.replaceAllLiterally(header, head + "\"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
+          s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              |
              |$printedTactics
              |
