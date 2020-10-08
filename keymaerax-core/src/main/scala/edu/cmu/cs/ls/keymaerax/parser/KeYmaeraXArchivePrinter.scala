@@ -56,30 +56,30 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
           s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
-             |
-             |$printedTactics
-             |
-             |$END_BLOCK""".stripMargin
+             #
+             #$printedTactics
+             #
+             #$END_BLOCK""".stripMargin('#')
         case None if entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           s"""$head "${entry.name}"
-             |${entry.problemContent}
-             |
-             |$printedTactics
-             |
-             |$END_BLOCK""".stripMargin
+             #${entry.problemContent}
+             #
+             #$printedTactics
+             #
+             #$END_BLOCK""".stripMargin('#')
         case None if !entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           // entry was imported from formula. augment header and blocks but print plain formula content.
           s"""$head "${entry.name}"
-             |$defsBlock
-             |$varsBlock
-             |
-             |Problem
-             |  ${entry.problemContent}
-             |$END_BLOCK
-             |
-             |$printedTactics
-             |
-             |$END_BLOCK""".stripMargin
+             #$defsBlock
+             #$varsBlock
+             #
+             #Problem
+             #  ${entry.problemContent}
+             #$END_BLOCK
+             #
+             #$printedTactics
+             #
+             #$END_BLOCK""".stripMargin('#')
       }
     } else printed
 
@@ -158,15 +158,15 @@ object KeYmaeraXArchivePrinter {
 
   def print(head: String, name: String, defsBlock: String, varsBlock: String, model: String, tacticsBlock: String): String = {
     s"""$head "$name"
-       |$defsBlock
-       |$varsBlock
-       |
-       |Problem
-       |  $model
-       |$END_BLOCK
-       |
-       |$tacticsBlock
-       |$END_BLOCK""".stripMargin
+       #$defsBlock
+       #$varsBlock
+       #
+       #Problem
+       #  $model
+       #$END_BLOCK
+       #
+       #$tacticsBlock
+       #$END_BLOCK""".stripMargin('#')
   }
 }
 
@@ -235,9 +235,9 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
       }).filter(_.nonEmpty).mkString("\n")
 
       val printedDefs = defs.map({
-        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain == Trafo =>
+        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain == Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)} ${printDef(codomain, interpretation)}."
-        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain != Trafo =>
+        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain != Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
         case _ => ""
       }).filter(_.nonEmpty)
