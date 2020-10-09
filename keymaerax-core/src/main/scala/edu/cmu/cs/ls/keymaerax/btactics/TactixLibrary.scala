@@ -256,7 +256,7 @@ object TactixLibrary extends HilbertCalculus
           if (pos.isAnte && tactics._1.isDefined || pos.isSucc && tactics._2.isDefined) {
             tacticChase(tacticIndex)(restrictTo:_*)(None)(pos)
           } else {
-            throw new TacticInapplicableFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
+            throw new TacticInapplicableFailure("Chase is not applicable, please try other tactics at position " + pos.prettyString + " in\n" + seq.prettyString)
           }
         }
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
