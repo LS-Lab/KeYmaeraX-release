@@ -11,8 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SOSSolve.{ExponentOutOfScopeFailure, Non
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
-import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Witness
 import org.scalatest.PrivateMethodTester
 import org.scalatest.LoneElement._
@@ -21,7 +20,7 @@ import org.scalatest.time.{Days, Span}
 import scala.collection.immutable._
 
 class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
-  val prob1 = ("!(-200 + 10 * t10_0 + v2_0 = 0 &" +
+  private val prob1 = ("!(-200 + 10 * t10_0 + v2_0 = 0 &" +
     "t10_0 >= 0 &" +
     "st2_0 = 0 &" +
     "-2000 * st2_0 - 4000 * s2_0 -" +
@@ -34,7 +33,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     "-200 * st2_0 - 10 * t2_0 +" +
     "  20 * st2_0 * t2_0 + v2_0 = 0 &" +
     "t10_0 + t2_0 < 0)").asFormula
-  val polys1 = (
+  private val polys1 = (
     "st2_0," +
       "-200 + 10 * t10_0 + v2_0," +
       "-200 * st2_0 - 10 * t2_0 + 20 * st2_0 * t2_0 + v2_0," +
@@ -46,11 +45,11 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
       "-GEQ15^2 +  z2_0," +
       "-1 + GT16^2 * (-t10_0 - t2_0)"
     ).split(',').map(_.asTerm).toList
-  val vars1 = ("v2_0, t10_0, st2_0, z2_0," +
+  private val vars1 = ("v2_0, t10_0, st2_0, z2_0," +
     "t2_0, s2_0, GEQ11, GEQ12, GEQ13, GEQ14, GEQ15, GT16").split(',').map(_.asTerm).toList
 
   "sosSolveTool" should "return the certificate" in withMathematica { _ =>
-    val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
+    val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(fail("no SOSSolveTool configured"))
     sosSolveTool.sosSolve(polys1, vars1, 1, None) shouldBe
       Witness("1+20*GT16^2".asTerm,
         "20*GT16^2+(-2)*GEQ13^2*GT16^2, 0, 0, 0, (-1)".split(',').map(_.asTerm).toList,
@@ -64,7 +63,6 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "SOSSolve" should "prove using the certificate" in withMathematica { _ =>
-    val pp = new KeYmaeraXPrettierPrinter(100)
     TaylorModelTactics.Timing.tic()
     PolynomialArithV2
     TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
@@ -103,10 +101,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "ratFormAnte and elimRatForm" should "test" in withMathematica { _ =>
-    val seq = Sequent("b > 0, x + y/b = 0, x - y/2 = 0, x / b + x + y/(2*b) = 0".split(',').map(_.asFormula).toIndexedSeq, IndexedSeq())
+    val seq = "b > 0, x + y/b = 0, x - y/2 = 0, x / b + x + y/(2*b) = 0 ==> ".asSequent
     val ratFormPrv = proveBy(seq, SOSSolve.ratFormAnte)
-    ratFormPrv.subgoals.loneElement.ante shouldBe "b/1>0,(y+b*x)/b=0, (-y+2*x)/2=0, (y+2*x+2*b*x)/(2*b)=0".split(',').map(_.asFormula).toIndexedSeq
-    ratFormPrv.subgoals.loneElement.succ shouldBe 'empty
+    ratFormPrv.subgoals.loneElement shouldBe "b/1>0,(y+b*x)/b=0, (-y+2*x)/2=0, (y+2*x+2*b*x)/(2*b)=0 ==> ".asSequent
 
     // eliminate rational forms (with sign assumptions expected in the
     val ex = the [RatFormError] thrownBy proveBy(ratFormPrv, SOSSolve.elimRatForms(false))
@@ -114,16 +111,13 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
 
     val prv = proveBy(ratFormPrv, cut("2*b>0".asFormula) & Idioms.<(skip, QE))
     val prv2 = proveBy(prv, SOSSolve.elimRatForms(false))
-    prv2.subgoals.loneElement.ante shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0, 2*b>0".split(',').map(_.asFormula).toIndexedSeq
-    prv2.subgoals.loneElement.succ shouldBe 'empty
+    prv2.subgoals.loneElement shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0, 2*b>0 ==> ".asSequent
 
     val prv3 = proveBy(ratFormPrv, SOSSolve.elimRatForms(true))
     println(prv3)
-    prv3.subgoals.length shouldBe 2
-    prv3.subgoals(0).ante shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0".split(',').map(_.asFormula).toIndexedSeq
-    prv3.subgoals(0).succ shouldBe 'empty
-    prv3.subgoals(1).ante shouldBe "b>0, y+b*x=0, -y+2*x=0".split(',').map(_.asFormula).toIndexedSeq
-    prv3.subgoals(1).succ shouldBe IndexedSeq("2*b != 0".asFormula)
+    prv3.subgoals should contain theSameElementsInOrderAs List(
+      "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0 ==> ".asSequent,
+      "b>0, y+b*x=0, -y+2*x=0 ==> 2*b != 0".asSequent)
   }
 
 }
