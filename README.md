@@ -19,8 +19,8 @@ The easiest way to run KeYmaera X is to download binaries
     java -jar keymaerax.jar
 
 For this to succeed, ensure that the following software is installed:
-- [Java Development Kit JDK](https://java.com/download)
-  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended.)
+- [Oracle Java Development Kit JDK/Java Runtime Environment JRE](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK/JRE](https://openjdk.java.net/)
+  (version 1.8 or later, tested up to Java15)
 - Use any number of the following real arithmetic solvers:
   - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
     (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
@@ -60,7 +60,7 @@ Building
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 In a nutshell, install
 
-* Java 11
+* [Java Development Kit JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html) or [OpenJDK](https://openjdk.java.net/)
 * SBT 0.13.17
 * Scala 2.12.8 
 
