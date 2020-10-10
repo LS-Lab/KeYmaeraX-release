@@ -60,7 +60,7 @@ Building
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 In a nutshell, install
 
-* [Java Development Kit JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html) or [OpenJDK](https://openjdk.java.net/)
+* [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java13 onwards does not work)
 * SBT 0.13.17
 * Scala 2.12.8 
 
