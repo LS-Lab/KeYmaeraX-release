@@ -2260,7 +2260,10 @@ trait UnifyUSCalculus {
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
-                (pf, cursor) => doChase(pf, pos ++ cursor)
+                (pf, cursor) =>
+                  //@note avoid infinite recursion on . recursor when earlier recursors don't make progress
+                  if (cursor.pos.nonEmpty || pf != de) doChase(pf, pos ++ cursor)
+                  else pf
               )
           }
       }

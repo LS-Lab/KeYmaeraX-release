@@ -106,6 +106,12 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     proveBy(fml, tactic) shouldBe 'proved
   }
 
+  "exhaustiveAbsSplit" should "handle nested abs" in withMathematica { _ =>
+    proveBy("abs(abs(x)-y)>=0".asFormula, ArithmeticSpeculativeSimplification.exhaustiveAbsSplit).subgoals shouldBe
+      "x>=0, x-y>=0 ==> x-y>=0".asSequent :: "x < 0, -x-y>=0 ==> -x-y>=0".asSequent ::
+      "x>=0, x-y < 0 ==> -(x-y)>=0".asSequent :: "x < 0, -x-y < 0 ==> -(-x-y)>=0".asSequent :: Nil
+  }
+
   "autoTransform" should "transform formulas from worst-case bounds to concrete variables" in withMathematica { _ =>
     val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
     proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform) shouldBe "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=t, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent

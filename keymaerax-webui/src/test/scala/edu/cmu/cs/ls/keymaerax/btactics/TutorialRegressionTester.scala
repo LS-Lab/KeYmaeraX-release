@@ -103,7 +103,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
       println(s"Proving $name with ${tactic._1}")
       // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
       val hasDefinitions = decls.decls.exists(_._2._3.isDefined)
-      val tacticExpands = "(expand(?!All))|(expandAllDefs)".r.findFirstIn(tactic._2).nonEmpty
+      val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(tactic._2)
       if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls, hasDefinitions && !tacticExpands)
 

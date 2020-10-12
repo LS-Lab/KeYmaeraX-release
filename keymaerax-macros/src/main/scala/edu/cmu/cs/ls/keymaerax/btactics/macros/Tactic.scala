@@ -18,11 +18,22 @@ import AnnotationCommon._
   *                 In this case it is conventional to write a declaration  val <tacticName>X = <tacticName>(...)  with codeName <tacticName> which converts arguments as needed.
   * @param longDisplayName Descriptive name used in longer menus. Should be a short, grammatical English phrase. Optional, defaults to Unicode display name
   * @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
-  *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
-  *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
+  *               Arguments are separated with ;; and optional square brackets []. In the default case, without brackets,
+  *               the inputs of tactic must not introduce any new variables. The optional brackets contain a
+  *               comma-separated list of variables, which are always allowed to appear in the input, even if that
+  *               appearance is fresh. For example, the tactic dG has arguments E and P which are annotated
+  *               E[y,x,y']:Formula;; P[y]:Formula. This means that y,x, and y' are always allowed to be mentioned in
+  *               E and y is always allowed to be mentioned in P. Fresh variables are most often specified for tactics
+  *               such as dG which introduce ghost variables that we wish to mention in an input.
   *               By default, this argument is inferred from the argument types and names of the annotated [[def]].
   *               Use this argument when you want customized display on the UI or when there are allowedFresh variables.
   *               Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
+  *               Bellerophon does not have options or lists. As far as parsing a Bellerophon tactic script is concerned,
+  *               an input specification of type Option[T] indicates an optional argument which has type T, while an
+  *               input specification of type List[T] indicates a variadic function where arbitrarily many arguments
+  *               may have type T. At most one List[T] argument should be used, and it should be the last argument.
+  *               If optional arguments are used, they should appear after all required arguments. Optional arguments
+  *               are resolved positionally without regard to type.
   *               Type names are case-insensitive.
   * @param premises String of premises when (if) the tactic is displayed like a rule on the UI.
   *                 For tactics with (non-position) inputs, the premises or conclusion must mention each input.
@@ -40,7 +51,39 @@ import AnnotationCommon._
   *                       Used for a small number of tactics such as master.
   * @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
   * @see [[TacticInfo]]
+  * @example {{{
+  *   @Tactic("diffCuts")
+  *   def diffCuts(fmls: List[Formula]): BelleExpr = ...   /* Definition */
+  *   diffCuts(List("acc > 0".asFormula)) /* Used in Scala */
+  *   diffCuts({`acc > 0`}) /* Used in Bellerophon */
+  *   diffCuts(List("acc > 0".asFormula, "v > 0".asFormula, "x > 0".asFormula)) /* Used in Scala */
+  *   diffCuts({`acc > 0`}, {`v > 0`}, {`x > 0`}) /* Used in Bellerophon */
+  * }}}
+  * @example {{{
+  *   @Tactic("cutFresh", inputs = "x:Variable;; p(x)[x]:Formula")
+  *   def cutFresh(x: Variable, px: Formula): InputTactic = ...
+  *   cutFresh("x".asVariable, "x^2 >= 0".asFormula)  /* Used in Scala */
+  *   cutFresh({`x`}, {`x^2 >= 0`})  /* Used in Bellerophon */
+  * }}}
+  * @example {{{
+  *  /* Discharge x:=*, optionally instantiate x := f for [] on left or <> on right */
+  *  @Tactic("random", inputs = "f:Option[Term]")
+  *  def random(maybeF: Option[Term]): DependentPositionWithAppliedPositionTactic = ...
+  *  random(None)(1) & random(Some("x".asTerm"))   /* Scala */
+  *  random(1) & random({`x`})   /* Bellerophon */
+  * }}}
+  * @example {{{
+  *  /* Invalid: multiple variadic argument lists. Don't do this. */
+  *  @Tactic("cutLAndOrR", inputs = "lcuts: List[Formula];; rcuts: List[Formula]")
+  *  def cutLAndOrR(lcuts: List[Formula], rcuts: List[Formula]): BelleExpr =  ...
+  * }}}
+  * @example {{{
+  *  /* Invalid: optional arguments stuttered with required arguments. Don't do this. */
+  *  @Tactic("sandwich", inputs = "l: Option[Term];; x: Term;; r: Option[Term]")
+  *  def sandwich(l: Option[Term], x: Term, r: Option[Term]): BelleExpr =  ...
+  * }}}
   */
+
 class Tactic(val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
              val codeName: String = "",
              val longDisplayName: String = "",

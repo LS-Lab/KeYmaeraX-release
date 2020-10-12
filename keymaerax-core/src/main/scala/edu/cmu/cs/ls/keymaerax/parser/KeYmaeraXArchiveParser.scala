@@ -191,6 +191,17 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       parse(tokenStream, stripped, parseTactics).map(e =>
         if (e.defs.decls.isEmpty) elaborate(e.copy(defs = declarationsOf(e.model))) else e)
     } catch {
+      //@note backwards compatibility with formula-only problem contents of old databases
+      case ex: ParseException if ex.expect == "ArchiveEntry|Theorem|Lemma|Exercise" =>
+        val content = Parser(input)
+        val decls = declarationsOf(content)
+        val name = "New Entry"
+        val symbols = StaticSemantics.symbols(content)
+        val defsBlock = KeYmaeraXArchivePrinter.printDefsBlock(decls, symbols)
+        val varsBlock = KeYmaeraXArchivePrinter.printVarsBlock(symbols)
+        val fileContent = KeYmaeraXArchivePrinter.print("ArchiveEntry", name, defsBlock, varsBlock, input, "")
+        val problemContent = fileContent
+        ParsedArchiveEntry(name, "theorem", fileContent, problemContent, decls, content, Nil, Nil, Map.empty) :: Nil
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
   }
@@ -824,14 +835,16 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
   /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
     * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
   def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
+    val elaboratedDefs = elaborateDefs(entry.defs)
+
     // elaborate model and check
     val elaboratedModel = try {
-      entry.defs.elaborateToSystemConsts(entry.defs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
+      elaboratedDefs.elaborateToSystemConsts(elaboratedDefs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
     val fullyExpandedModel = try {
-      entry.defs.exhaustiveSubst(elaboratedModel)
+      elaboratedDefs.exhaustiveSubst(elaboratedModel)
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
@@ -840,21 +853,22 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, fullyExpandedModel)
     }
     //@note bare formula input without any definitions uses default meaning of symbols
-    if (entry.defs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
-    checkUseDefMatch(elaboratedModel, entry.defs)
+    if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs, elaboratedModel) //throws ParseExceptions.
+    checkUseDefMatch(elaboratedModel, elaboratedDefs)
 
     // analyze and report annotations
-    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, entry.defs)
-    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, entry.defs), entry.defs)
+    val elaboratedAnnotations = elaborateAnnotations(entry.annotations, elaboratedDefs)
+    val expandedAnnotations = elaborateAnnotations(expandAnnotations(entry.annotations, elaboratedDefs), elaboratedDefs)
     (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
-        typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
+        else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
     })
 
     entry.copy(
       model = elaboratedModel,
-      defs = elaborateDefs(entry.defs).elaborateWithDots,
+      defs = elaboratedDefs.elaborateWithDots,
     )
   }
 
@@ -863,11 +877,11 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     * @param defs lists functions to elaborate to
     * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
     * */
-  private def elaborateToFnsInAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+  private def elaborateAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
     annotations.map({
       case (e: Program, a: Formula) =>
-        val substPrg = defs.elaborateToFunctions(e)
-        val substFml = defs.elaborateToFunctions(a)
+        val substPrg = defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))
+        val substFml = defs.elaborateToSystemConsts(defs.elaborateToFunctions(a))
         (substPrg, substFml)
       case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
@@ -892,7 +906,8 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
     }
 
     defs.copy(decls = defs.decls.map({ case ((name, index), (domain, sort, argNames, interpretation, loc)) =>
-      ((name, index), (domain, sort, argNames, interpretation.map(defs.elaborateToFunctions(_, taboos(argNames.getOrElse(Nil)))), loc))
+      ((name, index), (domain, sort, argNames, interpretation.map(i =>
+        defs.elaborateToSystemConsts(defs.elaborateToFunctions(i, taboos(argNames.getOrElse(Nil))))), loc))
     }))
   }
 
@@ -977,17 +992,24 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
 
   private def convert(a: Annotation): (Expression, Expression) = (a.element, a.annotation)
 
-  private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
+  private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = try {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
     // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
     val usMatchers = defs.decls.filter(_._2._3.isDefined).map({ case ((name, idx), _) => name + idx.map("_" + _).getOrElse("") })
     val expandAll = usMatchers.nonEmpty &&
-      "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t.tacticText).isEmpty &&
+      !BelleParser.tacticExpandsDefsExplicitly(t.tacticText) &&
       usMatchers.mkString("US\\(\"(", "|", ")").r.findFirstIn(t.tacticText).isEmpty
     val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
 
     (t.name, t.tacticText, tactic)
+  } catch {
+    case ex: ParseException if ex.msg.startsWith("Lexer") =>
+      val shiftedLoc = shiftLoc(ex.loc, t.belleExprLoc)
+      val msg = (ex.msg.substring(0, ex.msg.indexOf("in `")) +
+        ex.msg.substring(ex.msg.indexOf("beginning with character"))).
+        replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
+      throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }
 
   private def slice(text: String, loc: Location): String = {

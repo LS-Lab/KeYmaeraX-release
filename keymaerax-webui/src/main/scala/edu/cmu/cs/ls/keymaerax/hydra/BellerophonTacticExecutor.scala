@@ -128,7 +128,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
           Left(interpreter(tactic, value))
         } catch {
           case e: BelleThrowable => Right(e)
-          case e: Throwable => Right(new UnsupportedTacticFeature("Tactic " + tactic.prettyString + " failed, because internally:\n" + e.getMessage, e))
+          case e: Throwable => Right(new UnsupportedTacticFeature("Tactic " + tactic.prettyString + " reported:\n" + e.getMessage, e))
         }
       }
     })

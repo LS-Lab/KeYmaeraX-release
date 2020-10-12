@@ -653,6 +653,17 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     ))
   }
 
+  it should "elaborate programconsts to systemconsts" in {
+    val decls = Declaration(scala.collection.immutable.Map(
+      (("p", None), (Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation)),
+      (("a", None), (Some(Unit), Trafo, None, Some("x:=x+1;".asExpr), UnknownLocation))
+    ))
+    BelleParser.parseWithInvGen("implyR(1) ; cut(\"[a;]p\")", None, decls) shouldBe
+      TactixLibrary.implyR(1) & cut("[a{|^@|};]p()".asFormula)
+    BelleParser.parseWithInvGen("implyR(1) ; cut(\"[a;]p\")", None, decls, expandAll=true) shouldBe
+      ExpandAll(decls.substs) & (TactixLibrary.implyR(1) & cut("[x:=x+1;]3*2>=0".asFormula))
+  }
+
   "ExpandAll" should "expand multiple definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(

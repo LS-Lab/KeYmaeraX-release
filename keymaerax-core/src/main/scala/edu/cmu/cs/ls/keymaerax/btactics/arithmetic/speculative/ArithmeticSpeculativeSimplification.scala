@@ -97,8 +97,8 @@ object ArithmeticSpeculativeSimplification {
 
     val absTactic = (anteAbs++succAbs).
       //@note p+inExpr navigates to sub-expression since p are top
-      map{ case (f,p) => (f, absPos(f).map(inExpr => p ++ inExpr)) }.
-      map{ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip) }.
+      map({ case (f,p) => (f, absPos(f).sortBy(_.pos.length).reverse.map(inExpr => p ++ inExpr)) }).
+      map({ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip) }).
         reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
 
     absTactic & OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))

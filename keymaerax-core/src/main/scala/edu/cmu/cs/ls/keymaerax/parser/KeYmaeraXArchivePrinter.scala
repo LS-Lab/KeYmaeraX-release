@@ -26,12 +26,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
   * Created by smitsch on 01/04/18.
   */
 class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
-  private val ARCHIVE_ENTRY_BEGIN: String = "ArchiveEntry"
-  private val LEMMA_BEGIN: String = "Lemma"
-  private val THEOREM_BEGIN: String = "Theorem"
-  private val TACTIC_BEGIN: String = "Tactic"
-  private val EXERCISE_BEGIN: String = "Exercise"
-  private val END_BLOCK: String = "End."
+  import KeYmaeraXArchivePrinter._
 
   /** Prints the `entry`. */
   def apply(entry: ParsedArchiveEntry): String = {
@@ -42,86 +37,25 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
       case _ => ARCHIVE_ENTRY_BEGIN
     }
 
-    def printName(name: String, idx: Option[Int]): String = name + (idx match {
-      case Some(i) => "_" + i
-      case None => ""
-    })
-
-    def printSort(domain: Sort): String = domain match {
-      case Real => "Real"
-      case Bool => "Bool"
-      case Trafo => "HP"
-      case Unit => ""
-      case Tuple(l, r) => printSort(l) + "," + printSort(r)
-    }
-
-    def printDef(domain: Sort, interpretation: Option[Expression]): String = interpretation match {
-      case Some(i) =>
-        val (op, parens) = domain match {
-          case Real => ("=", "("::")"::Nil)
-          case Bool => ("<->", "("::")"::Nil)
-          case Trafo => ("::=", "{"::"}"::Nil)
-        }
-        s" $op ${parens(0)} ${i.prettyString} ${parens(1)}"
-      case None => ""
-    }
-
     val symbols = StaticSemantics.symbols(entry.model)
 
-    val defs = entry.defs.decls.filter(_._2._1.isDefined)
-
-    val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
-      case Function(name, idx, domain, sort, _) if !entry.defs.decls.contains((name, idx)) =>
-        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
-      case _ => "" // either printedDefs or printedVars
-    }).filter(_.nonEmpty).mkString("\n")
-
-    val printedDefs = defs.map({
-      case ((name, idx), (domain, codomain, argNames, interpretation, _)) =>
-        val printedSort = codomain match {
-          case Trafo => "" //@todo program arguments not yet supported
-          case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
-        }
-        s"  ${printSort(codomain)} ${printName(name, idx)}$printedSort${printDef(codomain, interpretation)};"
-      case _ => ""
-    }).filter(_.nonEmpty)
-
-    val printedVars = symbols.map({
-      case v: BaseVariable => "  " + printSort(v.sort) + " " + printName(v.name, v.index) + ";"
-      case _ => "" // see printDecls and printDefs above
-    }).filter(_.nonEmpty).mkString("\n")
+    val varsBlock = printVarsBlock(symbols)
 
     val printedTactics = entry.tactics.map({
-      case (tname, t, _) =>
-        s"""$TACTIC_BEGIN "$tname"\n$t\n$END_BLOCK"""
+      case (tname, t, _) => s"""$TACTIC_BEGIN "$tname"\n$t\n$END_BLOCK"""
     }).mkString("\n\n")
 
-    val defsBlock =
-      if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions\n" +
-        printedDecls + (if (printedDecls.nonEmpty && printedDefs.nonEmpty) "\n" else "") +
-        printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
-      else ""
+    val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val printed = s"""$head "${entry.name}"
-       #$defsBlock
-       #ProgramVariables
-       #$printedVars
-       #$END_BLOCK
-       #
-       #Problem
-       #  ${entry.model.prettyString}
-       #$END_BLOCK
-       #
-       #$printedTactics
-       #$END_BLOCK""".stripMargin('#')
+    val printed = print(head, entry.name, defsBlock, varsBlock, entry.model.prettyString, printedTactics)
 
     val finalPrint = if (withComments) {
-      assert(ArchiveParser(printed).map(_.model) == Parser(entry.problemContent)::Nil,
+      assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
-          s"""${entry.problemContent.replaceAllLiterally(header, head + "\"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
+          s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              #
              #$printedTactics
              #
@@ -137,9 +71,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
           // entry was imported from formula. augment header and blocks but print plain formula content.
           s"""$head "${entry.name}"
              #$defsBlock
-             #ProgramVariables
-             #$printedVars
-             #$END_BLOCK
+             #$varsBlock
              #
              #Problem
              #  ${entry.problemContent}
@@ -155,6 +87,87 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
   }
 
 
+}
+
+object KeYmaeraXArchivePrinter {
+  private val ARCHIVE_ENTRY_BEGIN: String = "ArchiveEntry"
+  private val LEMMA_BEGIN: String = "Lemma"
+  private val THEOREM_BEGIN: String = "Theorem"
+  private val TACTIC_BEGIN: String = "Tactic"
+  private val EXERCISE_BEGIN: String = "Exercise"
+  private val END_BLOCK: String = "End."
+
+  def printName(name: String, idx: Option[Int]): String = name + (idx match {
+    case Some(i) => "_" + i
+    case None => ""
+  })
+
+  def printSort(domain: Sort): String = domain match {
+    case Real => "Real"
+    case Bool => "Bool"
+    case Trafo => "HP"
+    case Unit => ""
+    case Tuple(l, r) => printSort(l) + "," + printSort(r)
+  }
+
+  def printDef(domain: Sort, interpretation: Option[Expression]): String = interpretation match {
+    case Some(i) =>
+      val (op, parens) = domain match {
+        case Real => ("=", "("::")"::Nil)
+        case Bool => ("<->", "("::")"::Nil)
+        case Trafo => ("::=", "{"::"}"::Nil)
+      }
+      s" $op ${parens(0)} ${i.prettyString} ${parens(1)}"
+    case None => ""
+  }
+
+  /** Prints a `Definitions` block, excluding base variables occurring in `symbols`. */
+  def printDefsBlock(decl: Declaration, symbols: Set[NamedSymbol]): String = {
+    val defs = decl.decls.filter(_._2._1.isDefined)
+
+    val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
+      case Function(name, idx, domain, sort, _) if !decl.decls.contains((name, idx)) =>
+        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+      case _ => "" // either printedDefs or printedVars
+    }).filter(_.nonEmpty).mkString("\n")
+
+    val printedDefs = defs.map({
+      case ((name, idx), (domain, codomain, _, interpretation, _)) =>
+        val printedSort = codomain match {
+          case Trafo => "" //@todo program arguments not yet supported
+          case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
+        }
+        s"  ${printSort(codomain)} ${printName(name, idx)}$printedSort${printDef(codomain, interpretation)};"
+      case _ => ""
+    }).filter(_.nonEmpty)
+
+    if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions\n" +
+      printedDecls + (if (printedDecls.nonEmpty && printedDefs.nonEmpty) "\n" else "") +
+      printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
+    else ""
+  }
+
+  def printVarsBlock(symbols: Set[NamedSymbol]): String = {
+    val printedVars = symbols.map({
+      case v: BaseVariable => "  " + printSort(v.sort) + " " + printName(v.name, v.index) + ";"
+      case _ => "" // see [[printDefsBlock]]
+    }).filter(_.nonEmpty)
+    if (printedVars.nonEmpty) "ProgramVariables\n" + printedVars.mkString("\n") + "\n" + END_BLOCK
+    else ""
+  }
+
+  def print(head: String, name: String, defsBlock: String, varsBlock: String, model: String, tacticsBlock: String): String = {
+    s"""$head "$name"
+       #$defsBlock
+       #$varsBlock
+       #
+       #Problem
+       #  $model
+       #$END_BLOCK
+       #
+       #$tacticsBlock
+       #$END_BLOCK""".stripMargin('#')
+  }
 }
 
 class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
@@ -222,9 +235,9 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
       }).filter(_.nonEmpty).mkString("\n")
 
       val printedDefs = defs.map({
-        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain == Trafo =>
+        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain == Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)} ${printDef(codomain, interpretation)}."
-        case ((name, idx), (domain, codomain, argNames, interpretation, _)) if codomain != Trafo =>
+        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain != Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
         case _ => ""
       }).filter(_.nonEmpty)

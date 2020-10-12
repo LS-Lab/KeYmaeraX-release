@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
@@ -395,6 +395,43 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have ('flag (true))
   }
+
+  "OpenProofRequest" should "populate the invariant supplier from annotations" in withTactics { withDatabase { db =>
+    val userName = "opr"
+    db.db.createUser(userName, "", "1")
+    val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
+    val content =
+      """Theorem "Theorem 1"
+        |Definitions
+        |  HP a ::= { {x:=2;}*@invariant(x=2) };
+        |End.
+        |ProgramVariables Real x; End.
+        |Problem
+        |  x>=1 -> [{ x:=x+1; a; }*@invariant(x>=0)]x>=-1
+        |End.
+        |Tactic "Proof"
+        |  auto
+        |End.
+        |End.""".stripMargin
+    inside(new UploadArchiveRequest(db.db, userName, content, None).getResultingResponses(t).loneElement) {
+      case ModelUploadResponse(Some(id), _) =>
+        inside (new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement) {
+          case CreatedIdResponse(proofId) =>
+            inside (new OpenProofRequest(db.db, userName, proofId).getResultingResponses(t).loneElement) {
+              case OpenProofResponse(_, _) =>
+                val session = SessionManager.session(t)
+                session(proofId).asInstanceOf[ProofSession].invSupplier match {
+                  case s: ConfigurableGenerator[GenProduct] =>
+                    s.products shouldBe Map(
+                      "{x:=2;}*".asProgram -> (("x=2".asFormula, None)::Nil),
+                      "{x:=x+1; a{|^@|};}*".asProgram -> (("x>=0".asFormula, None)::Nil),
+                      "{x:=x+1; {x:=2;}*}*".asProgram -> (("x>=0".asFormula, None)::Nil)
+                    )
+                }
+            }
+        }
+    }
+  }}
 
   private def importExamplesIntoDB(db: TempDBTools): Unit = {
     val userName = "maxLevelUser"

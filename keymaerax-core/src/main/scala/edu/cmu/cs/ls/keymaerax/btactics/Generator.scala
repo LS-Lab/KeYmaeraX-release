@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.infrastruct.{NonSubstUnificationMatch, Position}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{NonSubstUnificationMatch, Position, UnificationMatch}
 
 import scala.util.Try
 
@@ -49,7 +49,13 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
         p._2.map(extractConditionalDiffInv(DifferentialHelper.atomicOdes(p._1.asInstanceOf[ODESystem]), _)).
           filter(_.isDefined).flatten))
       extractedConditionalProducts.getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.toStream
-    case _ => products.getOrElse(prg, Nil).distinct.toStream
+    case _ => products.get(prg) match {
+      case Some(products) => products.distinct.toStream
+      case None => products.find({ case (k, _) => Try(!UnificationMatch(k, prg).isEmpty).getOrElse(false) }) match {
+        case Some((_, products)) => products.distinct.toStream
+        case None => Nil.toStream
+      }
+    }
   }
 
   /** Finds products that match the ODE `ode` by shape and with a condition that matches.

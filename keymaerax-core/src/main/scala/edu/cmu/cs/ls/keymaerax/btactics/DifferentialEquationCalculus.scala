@@ -48,7 +48,10 @@ trait DifferentialEquationCalculus {
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
   @Tactic("[']", longDisplayName="Solution",
     premises = "Γ |- ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)), Δ",
-    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
+    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ",
+    contextPremises = "Γ |- C( ∀t≥0 (∀0≤s≤t q(x(s))→[x:=x(t)]p(x)) ), Δ",
+    contextConclusion = "Γ |- C( [x'=f(x)&q(x)]p(x) ), Δ",
+    revealInternalSteps = true)
   lazy val solve: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = false)(pos)}
 
   /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.

@@ -426,7 +426,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
-      interpretation.value shouldBe "x:=1; {loopBody;}*".asProgram
+      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
     entry.defs.decls(("loopBody", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
@@ -434,8 +434,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
-    annotations.toList should contain theSameElementsInOrderAs ("{loopBody;}*".asProgram, "p(x,1)".asFormula) :: ("{loopBody;}*".asProgram, "x>=1".asFormula) :: Nil
-    entry.model shouldBe "[a;]x>=1".asFormula
+    annotations.toList should contain theSameElementsInOrderAs ("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula) :: ("{loopBody{|^@|};}*".asProgram, "x>=1".asFormula) :: Nil
+    entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 
   it should "be allowed to ignore later definitions when elaborating annotations" in {
@@ -464,7 +464,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       domain.value shouldBe Unit
       sort shouldBe Trafo
       argNames shouldBe 'empty
-      interpretation.value shouldBe "x:=1; {loopBody;}*".asProgram
+      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
     entry.defs.decls(("loopBody", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
@@ -473,8 +473,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
     annotation shouldBe 'defined
-    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody;}*".asProgram))
+    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody{|^@|};}*".asProgram))
     annotation.get._2 should (be ("x>=1".asFormula) or be ("p(x,1)".asFormula))
-    entry.model shouldBe "[a;]x>=1".asFormula
+    entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 }

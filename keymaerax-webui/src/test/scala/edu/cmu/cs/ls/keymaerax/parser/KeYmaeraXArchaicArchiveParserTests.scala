@@ -57,6 +57,37 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
+  it should "parse a formula-only entry" in {
+    // backwards-compatibility with old databases
+    val input = "x>y -> x>=y"
+    val entry = parse(input).loneElement
+    entry.name shouldBe "New Entry"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe
+      """ArchiveEntry "New Entry"
+        |
+        |ProgramVariables
+        |  Real x;
+        |  Real y;
+        |End.
+        |
+        |Problem
+        |  x>y -> x>=y
+        |End.
+        |
+        |
+        |End.""".stripMargin
+    entry.problemContent shouldBe entry.fileContent
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   it should "parse a model with entry ID" in {
     val input =
       """ArchiveEntry b01_8entry1_and_more_underscores : "Entry 1".
@@ -546,7 +577,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
   }
 
   it should "parse an entry without definitions" in {
-    val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
+    val input = "ArchiveEntry \"Test\" Problem x>y -> [{x:=y;}*@invariant(x>=y)]x>=y End. End."
     val entry = parse(input).loneElement
     entry.name shouldBe "Test"
     entry.kind shouldBe "theorem"
@@ -556,7 +587,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.model shouldBe "x>y -> [{x:=y;}*]x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -847,6 +878,53 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
       )))
     entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
+    entry.info shouldBe empty
+  }
+
+  it should "elaborate programconsts to systemconsts" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1;} ; End.
+        | ProgramVariables Real x; End.
+        | Problem x>0 -> [a;]x>0 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)
+      )))
+    entry.model shouldBe "x>0 -> [a{|^@|};]x>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "cascade elaborate programconsts to systemconsts" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1;}; HP b ::= { a; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x>0 -> [b;]x>0 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+        ("b", None) -> (Some(Unit), Trafo, None, Some("a{|^@|};".asProgram), UnknownLocation)
+      )))
+    entry.model shouldBe "x>0 -> [b{|^@|};]x>0".asFormula
+    entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
 
@@ -2151,7 +2229,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
                             |Expected: )""".stripMargin
   }
 
-  it should "report tactic errors at the correct location" in {
+  it should "report tactic parse errors at the correct location" in withTactics {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
@@ -2161,6 +2239,18 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     ) should have message """4:31 A combinator should be followed by a full tactic expression
                             |Found:    Some(BelleToken(EOF$,4:31 to EOF$)) at 4:31 to EOF$
                             |Expected: """.stripMargin
+  }
+
+  it should "report tactic lex errors at the correct location" in withTactics {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof 1". implyR(1) : End.
+        |End.""".stripMargin
+    ) should have message """4:30 Lexer 4:30 Lexer does not recognize input at 4:30 to EOF$ beginning with character `:`=-1
+                            |Found:    <unknown> at 4:30 to EOF$
+                            |Expected: <unknown>""".stripMargin
   }
 
   it should "report a missing entry ID separator" in {
@@ -2312,6 +2402,14 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     ) should have message
       """2:19 type analysis: Entry 1: x declared as a variable of sort Real but used as a function with arguments.
         |Found:    no arguments at 2:19 to 2:22
+        |Expected: function with arguments""".stripMargin
+  }
+
+  it should "report a mismatch between model and annotation an entry without definitions" in {
+    the [ParseException] thrownBy parse(
+      "ArchiveEntry \"Test\" Problem x>y -> [{x:=y;}*@invariant(x()>=y)]x>=y End. End.") should have message
+      """<somewhere> type analysis: Test: x declared as a variable of sort Real but used as a function with arguments.
+        |Found:    no arguments at <somewhere>
         |Expected: function with arguments""".stripMargin
   }
 

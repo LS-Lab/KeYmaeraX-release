@@ -566,11 +566,15 @@ object AssessmentProver {
     }
   }
   case class AnyChoiceGrader(args: Map[String, String], expected: ChoiceArtifact) extends Grader {
+    private val ANYCHOICE_MODE = "anychoice"
     override def check(have: Artifact): Either[ProvableSig, String] = have match {
       case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
-        //@note correct if answering with exactly the correct yes/no pattern (modulo order)
-        if (h.toSet == expected.selected.toSet) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
+        val incorrect = (h.toSet--expected.selected.toSet) ++ (expected.selected.toSet--h.toSet)
+        // correct if answering with exactly the correct yes/no pattern (modulo order)
+        if (incorrect.isEmpty) run(() => prove(s"==> $ANYCHOICE_MODE&full <-> $ANYCHOICE_MODE&full".asSequent, byUS(Ax.equivReflexive)))
+        // partial credit for 75% correct
+        else if (incorrect.size/expected.selected.toSet.size <= 0.25) run(() => prove(s"==> $ANYCHOICE_MODE&partial <-> $ANYCHOICE_MODE&partial".asSequent, byUS(Ax.equivReflexive)))
         else Right("")
     }
   }
@@ -1014,6 +1018,8 @@ object AssessmentProver {
     if (skipGradingOnParseError && parsedProblems.exists(_._2._2.nonEmpty)) {
       // report parse errors
       reportParseSummary(parsedProblems, msgStream)
+      val allGrades = parsedProblems.map({ case (p, (prompts, _)) => (p, None, prompts.map({ case (p, _) => p -> 0.0 })) })
+      printJSONGrades(allGrades, resultOut)
     } else {
       val allGrades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])] = parsedProblems.map({
         case (p, (gradablePrompts, unparseablePrompts)) =>
@@ -1107,6 +1113,14 @@ object AssessmentProver {
                   (prompt, prompt.points)
                 case "min()" =>
                   msgStream.println(Messages.PASS + ":Partial (please elaborate your explanation)")
+                  (prompt, prompt.points/2)
+              }
+              case Sequent(IndexedSeq(), IndexedSeq(Equiv(And(p, q), _))) if p.prettyString.startsWith("anychoice") => q.prettyString match {
+                case "full()" =>
+                  msgStream.println(Messages.PASS)
+                  (prompt, prompt.points)
+                case "partial()" =>
+                  msgStream.println(Messages.PASS + ":Partial")
                   (prompt, prompt.points/2)
               }
               case _ =>

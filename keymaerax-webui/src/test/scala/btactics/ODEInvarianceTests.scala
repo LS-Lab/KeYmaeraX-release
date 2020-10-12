@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 class ODEInvarianceTests extends TacticTestBase {
 
@@ -248,7 +248,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (1)" in withQE { _ =>
+  it should "try some invariants (1)" in withMathematica { _ =>
     val fml = "x^2+y^2>=1 -> [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asFormula
     val pr = proveBy(fml, implyR(1) &
       dC("(2*(x^2+y^2)-1>=0)".asFormula)(1) <(
@@ -260,7 +260,19 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (1) in position" in withQE { _ =>
+  it should "try some invariants (1) in position" in withMathematica { _ =>
+    val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
+    val pr = proveBy(seq,
+      dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) <(
+        dW(2) & QE,
+        sAIclosed(2)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: try some invariants (1) in position" taggedAs TodoTest in withZ3 { _ =>
     val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
     val pr = proveBy(seq,
       dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) <(

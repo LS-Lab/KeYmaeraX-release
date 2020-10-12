@@ -76,7 +76,7 @@ trait HybridProgramCalculus {
     premises =      "Γ |- [a]Q, Δ ;; Q |- P",
     // Monotonicity ------------------------
     conclusion =    "Γ |- [a]P, Δ",
-    contextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const></sub>, Q |- P",
+    contextPremises = "Γ |- C( Γ<sub>const</sub>∧[a]Q ), Δ ;; Γ<sub>const</sub>, Q |- P",
     contextConclusion = "Γ |- C( [a]P ), Δ",
     inputs = "Q:formula",
     revealInternalSteps = true)

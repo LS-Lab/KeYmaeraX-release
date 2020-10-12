@@ -23,9 +23,7 @@ import testHelper.KeYmaeraXTestTags.TodoTest
   * @author Andre Platzer
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
-  private val parser =
-    KeYmaeraXArchiveParser
-//  DLArchiveParser
+  private val parser = DLArchiveParser
 
   private def parse(input: String): List[ParsedArchiveEntry] =
     parser.parse(input)
@@ -150,7 +148,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse simple predicate declaration" in {
+  it should "FEATURE_REQUEST: parse simple predicate declaration" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -223,7 +221,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse simple unary predicate definition" in {
+  it should "FEATURE_REQUEST: parse simple unary predicate definition" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -247,7 +245,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse simple program declaration before variables" in {
+  it should "FEATURE_REQUEST: parse simple program declaration before variables" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -419,7 +417,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse lots of definitions before variables" in {
+  it should "FEATURE_REQUEST: parse lots of definitions before variables" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -487,7 +485,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse lots of definitions after variables" in {
+  it should "FEATURE_REQUEST: parse lots of definitions after variables" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -540,7 +538,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse definitions with dot arguments" in {
+  it should "FEATURE_REQUEST: parse definitions with dot arguments" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | Definitions Real f(Real); Real g(Real,Real); Real h(Real) = (.+2); End.
@@ -565,7 +563,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse definitions without parentheses" in {
+  it should "FEATURE_REQUEST: parse definitions without parentheses" taggedAs TodoTest in {
     val input = """ArchiveEntry "Entry 1"
                   | Definitions Real f() = 5; Bool p(Real x) <-> x>0; End.
                   | Problem p(f()) End.
@@ -672,7 +670,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "allow comma-separated simple function definitions" in {
+  it should "FEATURE_REQUEST: allow comma-separated simple function definitions" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | Definitions Real f(), g; End.
@@ -712,7 +710,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a problem that uses the allowed interpreted functions" in {
+  it should "FEATURE_REQUEST: parse a problem that uses the allowed interpreted functions" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | Problem abs(-5)>0 End.
@@ -761,7 +759,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a plain problem format" in {
+  it should "FEATURE_REQUEST: parse a plain problem format" taggedAs TodoTest in {
     val input =
       """ProgramVariables Real x; Real y; End.
         |Problem x>y -> x>=y End.
@@ -781,7 +779,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a problem without declarations" in {
+  it should "FEATURE_REQUEST: parse a problem without declarations" taggedAs TodoTest in {
     val input = "ArchiveEntry \"Test\" Problem x>y -> x>=y End. End."
     val entry = parse(input).loneElement
     entry.name shouldBe "Test"
@@ -798,7 +796,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
 
-  it should "refuse mixed plain and named entries" in {
+  it should "FEATURE_REQUEST: refuse mixed plain and named entries" taggedAs TodoTest in {
     val input =
       """ProgramVariables Real x; Real y; End.
         |Problem x>y -> x>=y End.
@@ -812,7 +810,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Archives that start with an anonymous entry may not contain any other entries, but found ArchiveEntry")
   }
 
-  it should "detect duplicate variable definitions" in {
+  it should "FEATURE_REQUEST: detect duplicate variable definitions" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -824,7 +822,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Duplicate variable 'x'")
   }
 
-  it should "detect duplicate function names" in {
+  it should "FEATURE_REQUEST: detect duplicate function names" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -837,7 +835,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Duplicate symbol 'f'")
   }
 
-  it should "detect duplicate predicate names" in {
+  it should "FEATURE_REQUEST: detect duplicate predicate names" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -850,7 +848,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Duplicate symbol 'p'")
   }
 
-  it should "detect duplicate program names" in {
+  it should "FEATURE_REQUEST: detect duplicate program names" taggedAs TodoTest in {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -863,7 +861,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Duplicate symbol 'a'")
   }
 
-  it should "parse a model and tactic entry" in withTactics {
+  it should "FEATURE_REQUEST: parse a model and tactic entry" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -918,7 +916,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "parse a tactic with a comment in the beginning" in withTactics {
+  it should "FEATURE_REQUEST: parse a tactic with a comment in the beginning" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -941,7 +939,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a pending tactic" in withTactics {
+  it should "FEATURE_REQUEST: parse a pending tactic" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -964,7 +962,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a pending tactic with arguments" in withTactics {
+  it should "FEATURE_REQUEST: parse a pending tactic with arguments" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -987,7 +985,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a tactic with arguments in new syntax" in withTactics {
+  it should "FEATURE_REQUEST: parse a tactic with arguments in new syntax" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1010,7 +1008,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "elaborate to functions when parsing a tactic" in withTactics {
+  it should "FEATURE_REQUEST: elaborate to functions when parsing a tactic" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1034,7 +1032,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "elaborate to functions in the presence of program constants" in withTactics {
+  it should "FEATURE_REQUEST: elaborate to functions in the presence of program constants" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1058,7 +1056,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "sort definitions correctly when parsing expandAllDefs" in withTactics {
+  it should "FEATURE_REQUEST: sort definitions correctly when parsing expandAllDefs" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1099,7 +1097,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a pending tactic with arguments in new syntax" in {
+  it should "FEATURE_REQUEST: parse a pending tactic with arguments in new syntax" taggedAs TodoTest in withTactics {
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1122,7 +1120,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
-  it should "parse a model with several tactics" in withQE { _ =>
+  it should "FEATURE_REQUEST: parse a model with several tactics" taggedAs TodoTest in withQE { _ =>
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -1151,7 +1149,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "parse a list of model and tactic entries" in {
+  it should "FEATURE_REQUEST: parse a list of model and tactic entries" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1202,7 +1200,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                                   |End.""".stripMargin
   }
 
-  it should "parse a list of mixed entries, lemmas, and theorems" in {
+  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1294,7 +1292,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                                   |End.""".stripMargin
   }
 
-  it should "parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" in {
+  it should "FEATURE_REQUEST: parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" taggedAs TodoTest in {
     val input =
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1430,7 +1428,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim
   }
 
-  it should "split blocks by whole word only (lemma used in tactic)" in {
+  it should "FEATURE_REQUEST: split blocks by whole word only (lemma used in tactic)" taggedAs TodoTest in {
     val input =
       """Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1514,7 +1512,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "parse meta information at any position" in {
+  it should "FEATURE_REQUEST: parse meta information at any position" taggedAs TodoTest in {
     val input =
       """Lemma "Entry 1"
         | Description "The description of entry 1".
@@ -1551,7 +1549,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "replace tabs with spaces" in withTactics {
+  it should "FEATURE_REQUEST: replace tabs with spaces" taggedAs TodoTest in withTactics {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
     val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" auto End. End.").loneElement
     entry.name shouldBe "Replace tabs"
@@ -1574,7 +1572,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Tactic "Proof" auto End. End.""".stripMargin
   }
 
-  it should "replace tabs with spaces in model-only entry" in {
+  it should "FEATURE_REQUEST: replace tabs with spaces in model-only entry" taggedAs TodoTest in {
     // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
     val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
     entry.name shouldBe "Replace tabs"
@@ -1595,7 +1593,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
          |x>0 End. End.""".stripMargin
   }
 
-  it should "double-check extracted artifact strings" in {
+  it should "FEATURE_REQUEST: double-check extracted artifact strings" taggedAs TodoTest in {
     val text = """ArchiveEntry "Entry 1"
                  |ProgramVariables
                  |  Real x;
@@ -1624,7 +1622,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                      |Expected: <unknown>""".stripMargin
   }
 
-  "Global definitions" should "be added to all entries" in withTactics {
+  "Global definitions" should "FEATURE_REQUEST: be added to all entries" taggedAs TodoTest in withTactics {
     val input =
       """SharedDefinitions
         | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
@@ -1706,7 +1704,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "add to all entries but not auto-expand if tactic expands" in withTactics {
+  it should "FEATURE_REQUEST: add to all entries but not auto-expand if tactic expands" taggedAs TodoTest in withTactics {
     val input =
       """SharedDefinitions
         | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
@@ -1786,7 +1784,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "add to all entries but not auto-expand if tactic uses US to expand" in withTactics {
+  it should "FEATURE_REQUEST: add to all entries but not auto-expand if tactic uses US to expand" taggedAs TodoTest in withTactics {
     val input =
       """SharedDefinitions
         | Bool gt(Real x, Real y) <-> x > y;
@@ -1850,8 +1848,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(x,y) ~> x>y") ; useLemma("Entry 1")""",
       TactixLibrary.USX(SubstitutionPair(
-        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(1)), DotTerm(Real, Some(2)))),
-        Greater(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))
       ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
@@ -1866,7 +1864,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "not allow duplicates with local definitions" in {
+  it should "FEATURE_REQUEST: not allow duplicates with local definitions" taggedAs TodoTest in {
     val input =
       """
         |SharedDefinitions
@@ -1883,7 +1881,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Symbol 'gt' overrides inherited definition; must declare override")
   }
 
-  it should "not allow duplicates with local definitions even with different sorts" in {
+  it should "FEATURE_REQUEST: not allow duplicates with local definitions even with different sorts" taggedAs TodoTest in {
     val input =
       """
         |SharedDefinitions
@@ -1900,7 +1898,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ex.msg should include ("Symbol 'gt' overrides inherited definition; must declare override")
   }
 
-  it should "not swallow backslashes, for example \\exists" in {
+  it should "FEATURE_REQUEST: not swallow backslashes, for example \\exists" taggedAs TodoTest in {
     val input =
       """SharedDefinitions
         | Bool gt(Real,Real) <-> ( \exists t (t=1 & ._0*t > ._1) ).
@@ -1936,7 +1934,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "accept exercises" in {
+  it should "FEATURE_REQUEST: accept exercises" taggedAs TodoTest in {
     val input =
       """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
@@ -1963,7 +1961,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  it should "accept exercises in definitions" in {
+  it should "FEATURE_REQUEST: accept exercises in definitions" taggedAs TodoTest in {
     val input =
       """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
@@ -1990,7 +1988,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
   }
 
-  "Archive parser error message" should "report an invalid meta info key" in {
+  "Archive parser error message" should "FEATURE_REQUEST: report an invalid meta info key" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | MetaInfo "Invalid key".
@@ -2002,7 +2000,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: Link,Citation,Title,Description,Author,See,Illustration""".stripMargin
   }
 
-  it should "report invalid meta info value" in {
+  it should "FEATURE_REQUEST: report invalid meta info value" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Title InvalidValue.
@@ -2014,7 +2012,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: <string>""".stripMargin
   }
 
-  it should "report missing meta info delimiter" in {
+  it should "FEATURE_REQUEST: report missing meta info delimiter" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Title "A title"
@@ -2027,7 +2025,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |      or: ;""".stripMargin
   }
 
-  it should "report missing or misplaced problem blocks" in {
+  it should "FEATURE_REQUEST: report missing or misplaced problem blocks" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; End.
@@ -2056,7 +2054,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                            |Expected: Problem""".stripMargin
   }
 
-  it should "report misplaced variables or definitions" in {
+  it should "FEATURE_REQUEST: report misplaced variables or definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem x>0 End.
@@ -2086,7 +2084,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                            |Expected: ProgramVariables""".stripMargin
   }
 
-  it should "report missing archive names" in {
+  it should "FEATURE_REQUEST: report missing archive names" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry.
         | ProgramVariables Real x; End.
@@ -2097,7 +2095,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: "<string>"""".stripMargin
   }
 
-  it should "report a missing archive entry delimiter" in {
+  it should "FEATURE_REQUEST: report a missing archive entry delimiter" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true End.""".stripMargin
@@ -2120,7 +2118,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
   }
 
-  it should "report a missing definitions delimiter" in {
+  it should "FEATURE_REQUEST: report a missing definitions delimiter" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f().
@@ -2134,7 +2132,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |      or: HP""".stripMargin
   }
 
-  it should "report a missing program variables delimiter" in {
+  it should "FEATURE_REQUEST: report a missing program variables delimiter" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x.
@@ -2146,7 +2144,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |      or: Real""".stripMargin
   }
 
-  it should "report a missing problem delimiter" in {
+  it should "FEATURE_REQUEST: report a missing problem delimiter" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true
@@ -2181,7 +2179,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, TACTIC_BLOCK$, DOUBLE_QUOTES_STRING, ID("closeTrue"), END_BLOCK$, PERIOD$, EOF$)""".stripMargin
   }
 
-  it should "report parse errors in function definitions" in {
+  it should "FEATURE_REQUEST: report parse errors in function definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f() = 5*g() + *h(); End.
@@ -2192,7 +2190,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
 
-  it should "report parse errors in predicate definitions" in {
+  it should "FEATURE_REQUEST: report parse errors in predicate definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> f()+5^ > g(); End.
@@ -2203,7 +2201,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
 
-  it should "report parse errors in program definitions" in {
+  it should "FEATURE_REQUEST: report parse errors in program definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP acc ::= { a:=* }; End.
@@ -2243,7 +2241,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
 
 
-  it should "report misplaced function, predicate, or program definitions" in {
+  it should "FEATURE_REQUEST: report misplaced function, predicate, or program definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real f(); End.
@@ -2292,7 +2290,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: ;""".stripMargin
   }
 
-  it should "report function definition errors" in {
+  it should "FEATURE_REQUEST: report function definition errors" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f() & ; End.
@@ -2322,7 +2320,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: Term""".stripMargin
   }
 
-  it should "report predicate definition errors" in {
+  it should "FEATURE_REQUEST: report predicate definition errors" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() & ; End.
@@ -2351,7 +2349,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: Formula""".stripMargin
   }
 
-  it should "report substitution errors" in {
+  it should "FEATURE_REQUEST: report substitution errors" taggedAs TodoTest in {
     val entries = parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
@@ -2365,7 +2363,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Expected: <unknown>""".stripMargin
   }
 
-  it should "report imbalanced parentheses in predicate definitions" in {
+  it should "FEATURE_REQUEST: report imbalanced parentheses in predicate definitions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> ( true; End.
@@ -2387,7 +2385,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: )""".stripMargin
   }
 
-  it should "report tactic errors at the correct location" in {
+  it should "FEATURE_REQUEST: report tactic errors at the correct location" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -2399,7 +2397,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: """.stripMargin
   }
 
-  it should "report a missing entry ID separator" in {
+  it should "FEATURE_REQUEST: report a missing entry ID separator" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry entry1 "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -2419,7 +2417,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: :""".stripMargin
   }
 
-  it should "report a missing entry title" in {
+  it should "FEATURE_REQUEST: report a missing entry title" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry entry1 :
         | ProgramVariables Real x; Real y; End.
@@ -2430,7 +2428,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: <string>""".stripMargin
   }
 
-  it should "report undefined entry IDs" in {
+  it should "FEATURE_REQUEST: report undefined entry IDs" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -2450,7 +2448,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: <unknown>""".stripMargin
   }
 
-  it should "report sort identifier mismatches" in {
+  it should "FEATURE_REQUEST: report sort identifier mismatches" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ProgramVariables
         |  Real x;
@@ -2473,7 +2471,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: Real""".stripMargin
   }
 
-  it should "type-analyze annotations" in {
+  it should "FEATURE_REQUEST: type-analyze annotations" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """Definitions
         |  Real f;
@@ -2489,7 +2487,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Hint: Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.""".stripMargin
   }
 
-  it should "report program constant and differential program constant mismatches" in {
+  it should "FEATURE_REQUEST: report program constant and differential program constant mismatches" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ProgramVariables Real x; End.
         |Definitions HP inc ::= { x:=x+1; }; End.
@@ -2516,7 +2514,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Expected: inc{|^@|};""".stripMargin
   }
 
-  it should "report illegal name overloading" in {
+  it should "FEATURE_REQUEST: report illegal name overloading" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f(Real x) = x+1; Real f(Real x, Real y) = x+y; Bool f(Real x) <-> x>0; End.
@@ -2539,7 +2537,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Expected: <unknown>""".stripMargin
   }
 
-  it should "report variables used as functions" in {
+  it should "FEATURE_REQUEST: report variables used as functions" taggedAs TodoTest in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; End.

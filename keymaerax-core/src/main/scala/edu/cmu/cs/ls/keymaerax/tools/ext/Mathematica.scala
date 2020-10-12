@@ -74,6 +74,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     mSolve.init()
     mAlgebra.init()
     mSimplify.init()
+    mSOSsolve.init()
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
