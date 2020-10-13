@@ -28,10 +28,10 @@ object Z3Installer extends Logging {
       if (needsUpdate) {
         logger.debug("Updating Z3 binary...")
         copyToDisk(osName, z3TempDir)
-      } else if (osName.contains("windows") && new File(z3TempDir + "z3.exe").exists()) {
-        z3TempDir + "z3.exe"
-      } else if (new File(z3TempDir + "z3").exists()) {
-        z3TempDir + "z3"
+      } else if (osName.contains("windows") && new File(z3TempDir + File.separator + "z3.exe").exists()) {
+        z3TempDir + File.separator + "z3.exe"
+      } else if (new File(z3TempDir + File.separator + "z3").exists()) {
+        z3TempDir + File.separator + "z3"
       } else {
         logger.debug("Installing Z3 binary...")
         copyToDisk(osName, z3TempDir)
