@@ -600,6 +600,71 @@ class ODEStabilityTests extends TacticTestBase {
     pr24 shouldBe 'proved
   }
 
+  it should "prove epsilon stability for Moore-Greitzer Jet Engine" in withMathematica { _ =>
+    val ode = "x1'=-x2-3/2*x1^2-1/2*x1^3, x2'=3*x1-x2".asDifferentialProgram
+    // epsilon-stability bound-renamed to tau here
+    // where tau = 10^-10
+
+    val stable = "\\forall eps (eps>0->\\exists del (del>0&\\forall x1 \\forall x2 (x1*x1+x2*x2 < del*del->[{x1'=-x2-3/2*x1^2-1/2*x1^3,x2'=3*x1-x2&true}]x1*x1+x2*x2 < (tau+eps)*(tau+eps))))".asFormula
+
+    val lyapstr = "x2 * (31.294269 * x2 - 9.7437617 * x1 - 18.856765 * x1 * x2 +\n      22.509931 * (x1 ^ 2) + 11.165278 * (x2 ^ 2)) -\n1.0 * x1 *\n    (9.7437617 * x2 - 100.0 * x1 - 48.132286 * x1 * x2 +\n     60.459815 * (x1 ^ 2) + 12.035111 * (x2 ^ 2)) +\n(x1 ^ 2) * (22.509931 * x2 - 60.459815 * x1 - 88.160775 * x1 * x2 +\n            100.0 * (x1 ^ 2) + 31.337433 * (x2 ^ 2)) +\n(x2 ^ 2) * (11.165278 * x2 - 12.035111 * x1 - 27.051686 * x1 * x2 +\n            31.337433 * (x1 ^ 2) + 14.189252 * (x2 ^ 2)) -\n1.0 * x1 * x2 *\n    (18.856765 * x2 - 48.132286 * x1 - 81.481369 * x1 * x2 +\n     88.160775 * (x1 ^ 2) + 27.051686 * (x2 ^ 2))"
+    // Lyapunov function
+    //      x2 * (31.294269 * x2 - 9.7437617 * x1 - 18.856765 * x1 * x2 +
+    //            22.509931 * (x1 ^ 2) + 11.165278 * (x2 ^ 2)) -
+    //      1.0 * x1 *
+    //          (9.7437617 * x2 - 100.0 * x1 - 48.132286 * x1 * x2 +
+    //           60.459815 * (x1 ^ 2) + 12.035111 * (x2 ^ 2)) +
+    //      (x1 ^ 2) * (22.509931 * x2 - 60.459815 * x1 - 88.160775 * x1 * x2 +
+    //                  100.0 * (x1 ^ 2) + 31.337433 * (x2 ^ 2)) +
+    //      (x2 ^ 2) * (11.165278 * x2 - 12.035111 * x1 - 27.051686 * x1 * x2 +
+    //                  31.337433 * (x1 ^ 2) + 14.189252 * (x2 ^ 2)) -
+    //      1.0 * x1 * x2 *
+    //          (18.856765 * x2 - 48.132286 * x1 - 81.481369 * x1 * x2 +
+    //           88.160775 * (x1 ^ 2) + 27.051686 * (x2 ^ 2))
+
+    val qe = proveBy(s"\\forall x1 \\forall x2 (x1*x1+x2*x2  >= 10^-10 -> $lyapstr > 0)".asFormula, QE)
+
+    println(qe)
+    val pr1 = proveBy(Imply("tau = 10^-10".asFormula,stable),
+      unfoldProgramNormalize&
+        //On ||x||=eps+tau, there is a global lower bound k > 0 on the Lyapunov function
+        //From paper, this bound can be k = alpha = 2.95 * 10^-19
+        cutR(s"\\forall x1 \\forall x2 (x1*x1+x2*x2 = eps+tau*eps+tau -> $lyapstr >= 2.95 * 10^-19)".asFormula)(1) <(
+          QE,
+          unfoldProgramNormalize &
+            //There is del s.t. ||x||<del -> v < k
+            //From paper, this del can be del = eps' = 5*10^-11
+            cutR(s"\\exists del (del > 0 & del < eps+tau & \\forall x1 \\forall x2 (x1*x1+x2*x2 < del*del -> $lyapstr < 2.95 * 10^-19))".asFormula)(1) <(
+              hideL('Llast) & QE,
+              unfoldProgramNormalize &
+                existsR("del".asTerm)(1) & andR(1) <(
+                prop,
+                unfoldProgramNormalize &
+                allL(-6) & allL(-6) & //x1, x2
+                implyL(-6) <(
+                  hideR(1) & prop,
+                  // Move the forall quantified antecedent into domain constraint
+                  // TODO: make tactic that adds universals directly into domain (without the universals)
+                  dC(s"x1*x1+x2*x2=eps+tau*eps+tau->$lyapstr >= 2.95 * 10^-19".asFormula)(1) <(
+                    hideL(-3) &
+                    // This part is slightly simpler without having to close over the sub-domain
+                    dC(s"$lyapstr < 2.95 * 10^-19".asFormula)(1) <(
+                      ODE(1),
+                      ODE(1)
+                    )
+                    ,
+                    dWPlus(1) & allL(-3) & allL(-3) & prop
+                  )
+                )
+              )
+            )
+        )
+    )
+
+    println(pr1)
+    pr1 shouldBe 'proved
+  }
+
   it should "prove 3rd order stability for pendulum" in withMathematica { _ =>
     val ode = "theta' = w, w'= -a*(theta - theta^3/6) - b*w".asDifferentialProgram
     val stable = stabODE(ode)
