@@ -662,6 +662,29 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 17" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Comparing systems versus games", 3) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
+        ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
+    run(problems)
+  }
+
+  it should "prove quiz 20" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Substitution of linear equations", 7) :: ("Square root arithmetic", 3) :: ("Eliminate quantifiers", 6) :: Nil
+    run(problems)
+  }
+
+  it should "prove quiz 21" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/21/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Virtual substitution with real tradeoffs", 1) :: ("Infinity and infinitesimal virtual substitution", 2) ::
+        ("Eliminate quantifiers", 10) :: Nil
+    run(problems)
+  }
+
   "Submission extraction" should "extract answers in the order listed in the file" in {
     val s = Source.fromInputStream(getClass.getResourceAsStream("/edu/cmu/cs/ls/keymaerax/cli/submission.json")).mkString
     import Submission.SubmissionJsonFormat._
