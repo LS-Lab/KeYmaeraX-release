@@ -395,7 +395,7 @@ class ODEStabilityTests extends TacticTestBase {
 
     // Lyapunov function 1/2*((I1()-I2())/I3() *x2^2 - (I3()-I1())/I2()*x3^2)
     // Picking tau = eps
-    val pr1 = proveBy(Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() > 0 & a2() > 0 & a3() > 0".asFormula,stable),
+    val pr1 = proveBy(Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() >= 0 & a2() > 0 & a3() > 0".asFormula,stable),
       unfoldProgramNormalize &
         cutR(("\\exists k (" +
           "\\exists del (del > 0 & del < eps & \\forall x2 \\forall x3 (x2*x2+x3*x3 < del*del -> 1/2*((I1()-I2())/I3() *x2^2 - (I3()-I1())/I2()*x3^2)  < k)) &" +
@@ -424,7 +424,6 @@ class ODEStabilityTests extends TacticTestBase {
         )
     )
 
-
     // The important direction of SAttr
     val pr2 = proveBy(
       Imply(And(stable,"\\forall eps (eps>0-><{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}>x2*x2+x3*x3 < eps*eps)".asFormula),
@@ -449,10 +448,10 @@ class ODEStabilityTests extends TacticTestBase {
       )
     )
 
-    val qe = proveBy("I1()>I2()&I2()>I3()&I3()>0&a1()>0&a2()>0&a3()>0, eps>0  ==> \\exists bnd (bnd>0&\\forall x1 \\forall x2 \\forall x3 ((x2*x2+x1*x1+x3*x3<=r/I3())&!x2*x2+x3*x3 < eps*eps->-(1/2*(0/(I3()*I3())*x2^2+(I1()-I2())/I3()*(2*x2*((I3()-I1())/I2()*x3*x1-a2()*x2))-(0/(I2()*I2())*x3^2+(I3()-I1())/I2()*(2*x3*((I1()-I2())/I3()*x1*x2-a3()*x3)))))>=bnd))".asSequent,
+    val qe = proveBy("I1()>I2()&I2()>I3()&I3()>0&a1()>=0&a2()>0&a3()>0, eps>0  ==> \\exists bnd (bnd>0&\\forall x1 \\forall x2 \\forall x3 ((x2*x2+x1*x1+x3*x3<=r/I3())&!x2*x2+x3*x3 < eps*eps->-(1/2*(0/(I3()*I3())*x2^2+(I1()-I2())/I3()*(2*x2*((I3()-I1())/I2()*x3*x1-a2()*x2))-(0/(I2()*I2())*x3^2+(I3()-I1())/I2()*(2*x3*((I1()-I2())/I3()*x1*x2-a3()*x3)))))>=bnd))".asSequent,
       QE)
 
-    val pr3 = proveBy( Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() > 0 & a2() > 0 & a3() > 0".asFormula, Imply(stable, gattractive)),
+    val pr3 = proveBy( Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() >= 0 & a2() > 0 & a3() > 0".asFormula, Imply(stable, gattractive)),
       implyR(1) &
         implyR(1) &
         cutR(And(stable,"\\forall eps (eps>0-><{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}>x2*x2+x3*x3 < eps*eps)".asFormula))(1)<(
@@ -495,7 +494,129 @@ class ODEStabilityTests extends TacticTestBase {
     )
 
     // Propositional manipulation
-    val pr4 = proveBy( Imply("I1()>I2()&I2()>I3()&I3()>0&a1()>0&a2()>0&a3()>0".asFormula, And(stable , gattractive)),
+    val pr4 = proveBy( Imply("I1()>I2()&I2()>I3()&I3()>0&a1()>=0&a2()>0&a3()>0".asFormula, And(stable , gattractive)),
+      implyR(1) & cutR( And(stable , Imply(stable,gattractive)) )(1) <(
+        andR(1) <(
+          implyRi & byUS(pr1),
+          implyRi & byUS(pr3)
+        ),
+        prop
+      )
+    )
+
+    println(pr4)
+    pr4 shouldBe 'proved
+  }
+
+  it should "prove global asymptotic stability for 3rd axis of rigid body with friction" in withMathematica { _ =>
+    val ode = "x1'=(I2()-I3())/I1() *x2*x3 - a1()*x1, x2'=(I3()-I1())/I2() *x3*x1 - a2()*x2, x3'=(I1()-I2())/I3()*x1*x2 - a3()*x3".asDifferentialProgram
+
+    val stable = "\\forall eps (eps>0->\\exists del (del>0&\\forall x1 \\forall x2 \\forall x3 (x1*x1+x2*x2 < del*del->[{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}]x1*x1+x2*x2 < eps*eps)))".asFormula
+    //Globally attractive
+    val gattractive = "\\forall eps (eps>0-><{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}>[{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}]x1*x1+x2*x2 < eps*eps)".asFormula
+
+    // Lyapunov function 1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2)
+    // Picking tau = eps
+    val pr1 = proveBy(Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() > 0 & a2() > 0 & a3() >= 0".asFormula,stable),
+      unfoldProgramNormalize &
+        cutR(("\\exists k (" +
+          "\\exists del (del > 0 & del < eps & \\forall x1 \\forall x2 (x1*x1+x2*x2 < del*del -> 1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) < k)) &" +
+          "\\forall x1 \\forall x2 (x1*x1+x2*x2 = eps*eps -> 1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) >= k))").asFormula)(1) <(
+          QE,
+          unfoldProgramNormalize &
+            existsR("del".asTerm)(1) & andR(1) <(
+            prop,
+            unfoldProgramNormalize &
+              allL(-11) & allL(-11) & implyL(-11) <(
+              hideR(1) & prop,
+              // Move the forall quantified antecedent into domain constraint
+              // TODO: make tactic that adds universals directly into domain (without the universals)
+              dC("x1*x1+x2*x2 = eps*eps -> 1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) >= k".asFormula)(1) <(
+                hideL(-8) &
+                  // This part is slightly simpler without having to close over the sub-domain
+                  dC("1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) < k".asFormula)(1) <(
+                    ODE(1),
+                    ODE(1)
+                  )
+                ,
+                dWPlus(1) & allL(-8) & allL(-8) & prop
+              )
+            )
+          )
+        )
+    )
+
+    // The important direction of SAttr
+    val pr2 = proveBy(
+      Imply(And(stable,"\\forall eps (eps>0-><{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}>x1*x1+x2*x2 < eps*eps)".asFormula),
+        gattractive),
+      implyR(1) & andL(-1) & allR(1) & implyR(1) &
+        allL(-1) & implyL(-1) <(
+        prop,
+        existsL(-1) & allL("del".asTerm)(-1) &
+          implyL(-1) <(
+            prop,
+            ODELiveness.kDomainDiamond("x1*x1+x2*x2 < del*del".asFormula)(1) <(
+              prop,
+              andL('Llast) &
+                // Move the forall quantified antecedent into domain constraint
+                // TODO: make tactic that adds universals directly into domain (without the universals)
+                dC("(x1*x1+x2*x2 < del*del->[{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}]x1*x1+x2*x2 < eps*eps)".asFormula)(1) <(
+                  dW(1) & prop,
+                  dWPlus(1) & allL(-3) & allL(-3) & allL(-3) & close
+                )
+            )
+          )
+      )
+    )
+
+    val qe = proveBy("I1()>I2()&I2()>I3()&I3()>0&a1()>0&a2()>0&a3()>=0, eps>0  ==> \\exists bnd (bnd>0&\\forall x1 \\forall x2 \\forall x3 ((x2*x2+x1*x1+x3*x3<=r/I3())&!x1*x1+x2*x2 < eps*eps->-(1/2*(-(0/(I2()*I2())*x1^2+(I3()-I1())/I2()*(2*x1*((I2()-I3())/I1()*x2*x3-a1()*x1)))+(0/(I1()*I1())*x2^2+(I2()-I3())/I1()*(2*x2*((I3()-I1())/I2()*x3*x1-a2()*x2)))))>=bnd))".asSequent,
+      QE)
+
+    val pr3 = proveBy( Imply("I1() > I2() & I2() > I3() & I3() > 0 & a1() > 0 & a2() > 0 & a3() >= 0".asFormula, Imply(stable, gattractive)),
+      implyR(1) &
+        implyR(1) &
+        cutR(And(stable,"\\forall eps (eps>0-><{x1'=(I2()-I3())/I1()*x2*x3-a1()*x1,x2'=(I3()-I1())/I2()*x3*x1-a2()*x2,x3'=(I1()-I2())/I3()*x1*x2-a3()*x3&true}>x1*x1+x2*x2 < eps*eps)".asFormula))(1)<(
+          andR(1) <( prop,
+            //The rest of this is essentially a custom liveness proof
+            hideL(-2) &
+              allR(1) & implyR(1) &
+              // Prove that solutions are trapped in I1() * x1^2 + I2() * x2^2 + I3() * x3^2 <= old()
+              cutR("\\exists r (I1() * x1^2 + I2() * x2^2 + I3() * x3^2 = r)".asFormula)(1) <(
+                QE,
+                implyR(1) & existsL('Llast) &
+                  ODELiveness.compatCut("x2*x2+x1*x1+x3*x3<=r/I3()".asFormula)(1) <(skip , hideR(1) &
+                    dC("I1() * x1^2 + I2() * x2^2 + I3() * x3^2 <= r".asFormula)(1) <(
+                      ODE(1),
+                      ODE(1)
+                    ))
+              ) &
+              cutR("\\exists bnd \\forall x1 \\forall x2 \\forall x3 (x2*x2+x1*x1+x3*x3<=r/I3() -> 1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) >= bnd)".asFormula)(1) <(
+                hideL(-4) & QE,
+                implyR(1) & existsL('Llast) &
+                  ODELiveness.saveBox(1) &
+                  ODELiveness.kDomainDiamond("1/2*(-(I3()-I1())/I2()*x1^2 + (I2()-I3())/I1() *x2^2) < bnd ".asFormula)(1) <(
+                    hideL(-5) & hideL(-3) & ODELiveness.dV(None)(1) <(
+                      cutR("\\exists bnd (bnd>0&\\forall x1 \\forall x2 \\forall x3 ((x2*x2+x1*x1+x3*x3<=r/I3())&!x1*x1+x2*x2 < eps*eps->-(1/2*(-(0/(I2()*I2())*x1^2+(I3()-I1())/I2()*(2*x1*((I2()-I3())/I1()*x2*x3-a1()*x1)))+(0/(I1()*I1())*x2^2+(I2()-I3())/I1()*(2*x2*((I3()-I1())/I2()*x3*x1-a2()*x2)))))>=bnd))".asFormula)(1) <(
+                        byUS(qe),
+                        implyR(1) & existsL(-3) & existsR("bnd".asTerm)(1) & andR(1) <(
+                          prop,
+                          andL('Llast) & cohideOnlyL('Llast) & unfoldProgramNormalize &
+                            allL(-1) & allL(-1) & allL(-1) & implyL(-1) <(prop, prop)
+                        )
+                      ),
+                      ODELiveness.odeReduce(true,"x2*x2+x1*x1+x3*x3<=r/I3()".asFormula::Nil)(1) &
+                        cohideR(1) & byUS(Ax.TExgt)
+                    ),
+                    dWPlus(1) & allL(-4) & allL(-4) & allL(-4) & QE //can be done propositionally
+                  )
+              )
+          ),
+          cohideR(1) & byUS(pr2))
+    )
+
+    // Propositional manipulation
+    val pr4 = proveBy( Imply("I1()>I2()&I2()>I3()&I3()>0&a1()>0&a2()>0&a3()>=0".asFormula, And(stable , gattractive)),
       implyR(1) & cutR( And(stable , Imply(stable,gattractive)) )(1) <(
         andR(1) <(
           implyRi & byUS(pr1),
