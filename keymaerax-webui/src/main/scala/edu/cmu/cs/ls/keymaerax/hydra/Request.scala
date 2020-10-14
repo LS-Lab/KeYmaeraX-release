@@ -2084,22 +2084,23 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   extends UserProofRequest(db, userId, proofId) with WriteRequest {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
+    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     val paramStrings: List[String] = inputs.map{
-      case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:TermArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:FormulaArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:VariableArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:ExpressionArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:SubstitutionArg)) => "\""+value+"\""
       /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */
-      case BelleTermInput(value, Some(ListArg(ai: FormulaArg))) =>
-        val values = value.split(",")
+      case BelleTermInput(value, Some(ListArg(_: FormulaArg))) =>
+        val values = value.split(splitComma)
         if (values.isEmpty) value
-        else if (values.length == 1) "{`"+value+"`}"
-        else "[" + values.map("{`"+_+"`}").mkString(",") + "]"
-      case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
-      case BelleTermInput(value, Some(OptionArg(_))) => "{`"+value+"`}"
+        else if (values.length == 1) "\""+value+"\""
+        else "[" + values.map("\""+_+"\"").mkString(",") + "]"
+      case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(splitComma).map("\""+_+"\"").mkString(",") + "]"
+      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
