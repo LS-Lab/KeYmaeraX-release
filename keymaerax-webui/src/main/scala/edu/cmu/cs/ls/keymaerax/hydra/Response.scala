@@ -1244,6 +1244,13 @@ class ConfigureMathematicaResponse(linkNamePrefix: String, jlinkLibDirPrefix: St
   )
 }
 
+class ConfigureZ3Response(z3Path: String, success: Boolean) extends Response {
+  def getJson: JsValue = JsObject(
+    "z3Path" -> JsString(z3Path),
+    "success" -> { if(success) JsTrue else JsFalse }
+  )
+}
+
 class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestionFound: Boolean,
                                           suggestion: ToolConfiguration.ConfigSuggestion,
                                           allSuggestions: List[ToolConfiguration.ConfigSuggestion]) extends Response {
@@ -1265,6 +1272,10 @@ class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestio
   )
 }
 
+class Z3ConfigSuggestionResponse(defaultPath: String) extends Response {
+  def getJson: JsValue = JsObject("z3Path" -> JsString(defaultPath))
+}
+
 //@todo these are a mess.
 class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVendor: String,
                          jvmVersion: String, jvmBits: String) extends Response {
@@ -1283,6 +1294,12 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String, jl
     "linkName" -> JsString(linkName),
     "jlinkLibDir" -> JsString(jlinkLibDir),
     "jlinkTcpip" -> JsString(jlinkTcpip)
+  )
+}
+
+class Z3ConfigurationResponse(z3Path: String) extends Response {
+  def getJson: JsValue = JsObject(
+    "z3Path" -> JsString(z3Path)
   )
 }
 

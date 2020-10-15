@@ -982,6 +982,14 @@ object RestApi extends Logging {
     }
   }
 
+  val z3ConfSuggestion: Route = path("config" / "z3" / "suggest") {
+    pathEnd {
+      get {
+        completeRequest(new GetZ3ConfigSuggestionRequest(), EmptyToken())
+      }
+    }
+  }
+
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
@@ -1042,6 +1050,22 @@ object RestApi extends Logging {
             completeRequest(request, EmptyToken())
           }}
         }
+    }
+  }
+
+  val z3Config: Route = path("config" / "z3") {
+    pathEnd {
+      get {
+        completeRequest(new GetZ3ConfigurationRequest(), EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { params => {
+          val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value)
+          assert(p.contains("z3Path"), "z3 path not in: " + p.keys.toString())
+          val z3Path: String = p("z3Path")
+          completeRequest(new ConfigureZ3Request(z3Path), EmptyToken())
+        }}
+      }
     }
   }
 
@@ -1214,6 +1238,7 @@ object RestApi extends Logging {
     keymaeraXVersion   ::
     mathematicaConfig  ::
     wolframEngineConfig ::
+    z3Config           ::
     toolStatus         ::
     tool               ::
     guestBrowseArchiveRequest ::
@@ -1221,6 +1246,7 @@ object RestApi extends Logging {
     mathConfSuggestion ::
     wolframEngineConfSuggestion ::
     wolframScriptConfSuggestion::
+    z3ConfSuggestion   ::
     devAction          ::
     checkProofValidation ::
     validateProof      ::

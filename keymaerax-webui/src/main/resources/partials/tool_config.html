@@ -137,11 +137,6 @@
 </div>
 
 <div ng-if="toolStatus.tool==='z3'">
-    <h2>Z3 Configuration</h2>
-    <p><b>Limited functionality with Z3.</b></p>
-    <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
-        simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> or <kbd>Wolfram Engine</kbd> as Arithmetic Solver from the
-        options above.</p>
-    <p>In general, complex problems may require trying different tools.</p>
+    <div ng-include="'/partials/z3_config.html'" ng-controller="Z3Config"></div>
 </div>
 </div>

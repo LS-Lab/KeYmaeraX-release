@@ -50,7 +50,7 @@ import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import org.apache.logging.log4j.scala.Logging
 
@@ -606,6 +606,26 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
   }
 }
 
+class ConfigureZ3Request(z3Path: String) extends LocalhostOnlyRequest with WriteRequest {
+  private def isZ3PathCorrect(z3Path: java.io.File): Boolean = z3Path.getName == "z3" || z3Path.getName == "z3.exe"
+
+  override def resultingResponses(): List[Response] = {
+    //check to make sure the indicated files exist and point to the correct files.
+    val z3File = new java.io.File(z3Path)
+    val z3Exists = isZ3PathCorrect(z3File)
+
+    if (!z3Exists) {
+      new ConfigureZ3Response("", false) :: Nil
+    } else {
+      ToolProvider.shutdown()
+      Configuration.set(Configuration.Keys.QE_TOOL, "z3")
+      Configuration.set(Configuration.Keys.Z3_PATH, z3Path)
+      ToolProvider.setProvider(Z3ToolProvider(Map("z3Path" -> z3Path)))
+      new ConfigureZ3Response(z3File.getAbsolutePath, true) :: Nil
+    }
+  }
+}
+
 class GetMathematicaConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val allSuggestions = ToolConfiguration.mathematicaSuggestion()
@@ -652,6 +672,12 @@ class GetWolframScriptConfigSuggestionRequest(db: DBAbstraction) extends Localho
         new MathematicaConfigSuggestionResponse(os, jvmBits, false,
           ToolConfiguration.ConfigSuggestion("", "", "", "", ""), Nil) :: Nil
     }
+  }
+}
+
+class GetZ3ConfigSuggestionRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    new Z3ConfigSuggestionResponse(Z3Installer.defaultZ3Path) :: Nil
   }
 }
 
@@ -773,6 +799,12 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String) ex
         ) :: Nil
       case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
     }
+  }
+}
+
+class GetZ3ConfigurationRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    new Z3ConfigurationResponse(Z3Installer.z3Path) :: Nil
   }
 }
 
