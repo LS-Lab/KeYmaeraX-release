@@ -2019,17 +2019,25 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
+    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     try {
       input match {
-        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: SubstitutionArg)) => checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: TermArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: FormulaArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: VariableArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: ExpressionArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: SubstitutionArg)) =>
+          checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) => checkExpressionInput(arg, value.split(",").map(Parser.parser).toList, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) =>
+          checkExpressionInput(arg, value.split(splitComma).map(Parser.parser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
@@ -2039,20 +2047,23 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Checks expression inputs. */
   private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
                                                     defs: Declaration) = {
-    val sortMismatch: Option[String] = (arg, exprs) match {
+
+    val elaborated = exprs.map(e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+
+    val sortMismatch: Option[String] = (arg, elaborated) match {
       case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
       case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
       case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
       case (ListArg(ai: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
-      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " +   exprs.map(_.prettyString).mkString(","))
+      case _ => Some("Expected: " + arg.sort + ", found: " + elaborated.map(_.kind).mkString(",") + " " +   elaborated.map(_.prettyString).mkString(","))
     }
 
     sortMismatch match {
       case None =>
         val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
         val paramFV: Set[NamedSymbol] =
-          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+          elaborated.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
