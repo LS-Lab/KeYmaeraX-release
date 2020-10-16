@@ -808,6 +808,21 @@ class GetZ3ConfigurationRequest extends LocalhostOnlyRequest with ReadRequest {
   }
 }
 
+class GetFullConfigRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val w = new StringWriter()
+    Configuration.printConfig(new PrintWriter(w))
+    new FullConfigurationResponse(w.toString) :: Nil
+  }
+}
+
+class SaveFullConfigRequest(content: String) extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    Configuration.overwrite(content)
+    BooleanResponse(flag = true) :: Nil
+  }
+}
+
 class GetUserThemeRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userId).config

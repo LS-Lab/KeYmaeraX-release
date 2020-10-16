@@ -1,10 +1,20 @@
 <div class="modal-header">
     <h3>
-        <span>Tool Configuration</span>
-        <span class="pull-right"><a ng-click="close()"><span class="fa fa-close"></span></a></span>
+        <span ng-if="config.mode==='toolConfig'">
+            <span>Tool Configuration</span>
+            <small ng-click="setMode('advancedConfig')">Advanced...</small>
+        </span>
+        <span ng-if="config.mode==='advancedConfig'">
+            <span>Advanced Configuration</span>
+            <small ng-click="setMode('toolConfig')">Tool...</small>
+        </span>
+        <span class="pull-right">
+            <button ng-if="config.mode==='advancedConfig'" class="btn btn-primary" ng-click="saveFullConfig()">Save</button>
+            <a ng-click="close()"><span class="fa fa-close"></span></a>
+        </span>
     </h3>
 </div>
-<div class="modal-body modal-nofoot">
+<div class="modal-body modal-nofoot" ng-if="config.mode==='toolConfig'">
 <div class="row">
     <div class="col-md-5">
         <p>KeYmaera&#160;X uses backend tools to prove validity of real arithmetic formulas.
@@ -139,4 +149,14 @@
 <div ng-if="toolStatus.tool==='z3'">
     <div ng-include="'/partials/z3_config.html'" ng-controller="Z3Config"></div>
 </div>
+</div>
+
+<div class="modal-body modal-nofoot" ng-if="config.mode==='advancedConfig'">
+    <div class="row k4-vertical-fill-flex">
+        <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
+            {{config.full.content}} <!-- don't know why editor doesn't show content without this line -->
+            <div ui-ace="{theme:'github',mode:'properties',showGutter:true}"
+                 ng-model="config.full.content" id="editor"></div>
+        </div>
+    </div>
 </div>

@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax
 
-import java.io.{File, PrintWriter}
+import java.io.{File, PrintWriter, StringReader}
 import java.nio.file.{Files, Paths}
 
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -135,6 +135,16 @@ object Configuration {
       config.write(new PrintWriter(new File(CONFIG_PATH)))
     } else config.read(scala.io.Source.fromFile(CONFIG_PATH).reader)
     updateConfig(config)
+  }
+
+  /** Prints the configuration to `writer`. */
+  def printConfig(writer: PrintWriter): Unit= config.write(writer)
+
+  /** Overwrites the configuration with `content`. */
+  def overwrite(content: String): Unit = {
+    val config = new PropertiesConfiguration()
+    config.read(new StringReader(content))
+    config.write(new PrintWriter(new File(CONFIG_PATH)))
   }
 
   /** Indicates whether or not the configuration contains the `key`. */

@@ -1069,6 +1069,20 @@ object RestApi extends Logging {
     }
   }
 
+  val fullConfig: Route = path("config" / "fullContent") {
+    pathEnd {
+      get {
+        completeRequest(new GetFullConfigRequest(), EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { params => {
+          val content = params.parseJson.asJsObject.fields("content") match { case JsString(s) => s }
+          completeRequest(new SaveFullConfigRequest(content), EmptyToken())
+        }}
+      }
+    }
+  }
+
   val systemInfo: Route = path("config" / "systeminfo") {
     pathEnd {
       get {
@@ -1243,6 +1257,7 @@ object RestApi extends Logging {
     tool               ::
     guestBrowseArchiveRequest ::
     systemInfo         ::
+    fullConfig         ::
     mathConfSuggestion ::
     wolframEngineConfSuggestion ::
     wolframScriptConfSuggestion::

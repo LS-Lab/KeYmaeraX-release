@@ -1303,6 +1303,12 @@ class Z3ConfigurationResponse(z3Path: String) extends Response {
   )
 }
 
+class FullConfigurationResponse(content: String) extends Response {
+  override def getJson: JsValue = JsObject(
+    "content" -> JsString(content)
+  )
+}
+
 class ToolConfigStatusResponse(tool: String, configured: Boolean) extends Response {
   def getJson: JsValue = JsObject(
     "tool" -> JsString(tool),

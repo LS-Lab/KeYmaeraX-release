@@ -42,7 +42,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
       $uibModal.open({
         templateUrl: 'partials/tool_config.html',
         controller: 'ToolConfig',
-        size: 'fullwidth'
+        size: 'fullscreen'
       });
     }
   };
