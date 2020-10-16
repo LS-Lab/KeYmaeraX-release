@@ -57,7 +57,8 @@ object SharedModels {
 
   val squareNonneg: String =
     """let square(x) = x*x;
-      |!allSquaresNonneg:(square(y) >= 0);
+      |let nonneg(x) <-> x >= 0;
+      |!allSquaresNonneg:(nonneg(square(y)));
       |""".stripMargin
 
   /** Carefully check speed. Should use simple prop proof, not slow QE */
@@ -221,6 +222,22 @@ object SharedModels {
       |  ?(t >= T/2);
       |  !live:(x >= 0 & x + eps <= goal) using time ... by auto;
       |}
+      |""".stripMargin
+
+  val basicReachAvoidFor: String =
+    """?(eps > 0 &  x = 0 & T > 0 & d > 0);
+      |let J(pos) <-> (pos <= d);
+      |!conv:(J(0));
+      |for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2;) {
+      |prev:
+      |  vel := (d - (x + eps))/T;
+      |  t := 0;
+      |  {t' = 1, x' = vel & ?time:(t <= T);};
+      |  !safe:(J(x)) using conv guard vel time by auto;
+      |  ?(t >= T/2);
+      |  !prog:(pos >= pos@prev + eps*T/2);
+      |}
+      |!(d >= x & x >= d - eps) using guard conv by auto;
       |""".stripMargin
 
   // @TODO: Check SB() vs SB parenthesis... hmm...

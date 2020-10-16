@@ -17,9 +17,9 @@ import spire.math._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /** Indicates that expression was not in the executable fragment */
-case class UnsimpleException(nodeID: Int) extends Exception
+case class UnsupportedStrategyException(nodeID: Int) extends Exception
 /** Indicates that we tried to evaluate something whose value could not be determined */
-case class ValuelessException(nodeID: Int = -1) extends Exception
+case class NoValueException(nodeID: Int = -1) extends Exception
 /** Indicates that a Demonic test failed, thus Demon loses */
 case class TestFailureException(nodeID: Int) extends Exception
 
@@ -58,7 +58,7 @@ class Environment {
       case Equiv (l, r) =>  holds(r) == holds(l)
       case True => true
       case False => false
-      case _ => throw ValuelessException()
+      case _ => throw NoValueException()
     }
   }
 
@@ -86,18 +86,18 @@ class Environment {
           case ("max", Pair(l, r)) => eval(l).max(eval(r))
           case ("min", Pair(l, r)) => eval(l).min(eval(r))
           case ("abs", l) => eval(l).abs
-          case _ => throw ValuelessException()
+          case _ => throw NoValueException()
         }
       case v: Variable =>
         if (state.contains(v))
           state(v)
         else {
           println(s"Unknown value for variable $v")
-          throw ValuelessException()
+          throw NoValueException()
         }
       case _ =>
         println(s"Couldn't evaluate $f in state $state")
-        throw ValuelessException()
+        throw NoValueException()
     }
   }
 
@@ -128,7 +128,7 @@ object Play {
             throw TestFailureException(as.nodeID)
           }
         } catch {
-          case v: ValuelessException => throw ValuelessException(as.nodeID)
+          case v: NoValueException => throw NoValueException(as.nodeID)
         }
       case DAssign(x, f) =>
         try {
@@ -137,7 +137,7 @@ object Play {
           //println(s"Interpreter assigned $x -> $v")
           env.set(x, v)
         } catch {
-          case v: ValuelessException => throw ValuelessException(as.nodeID)
+          case v: NoValueException => throw NoValueException(as.nodeID)
         }
       case NDAssign(x) =>
         val v = ds.readAssign(as.nodeID, x)
@@ -156,7 +156,7 @@ object Play {
           apply(env, l, ds)
         else
           apply(env, r, ds)
-      case _ => throw UnsimpleException(as.nodeID)
+      case _ => throw UnsupportedStrategyException(as.nodeID)
     }
   }
 }
