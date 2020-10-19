@@ -15,30 +15,39 @@ import org.apache.logging.log4j.scala.Logging
   * Installs and/or updates the Z3 binary in the KeYmaera X directory.
   */
 object Z3Installer extends Logging {
+  /** The default z3 installation path. */
+  val defaultZ3Path: String = {
+    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+    if (osName.contains("windows")) Configuration.KEYMAERAX_HOME_PATH + File.separator + "z3.exe"
+    else  Configuration.KEYMAERAX_HOME_PATH + File.separator + "z3"
+  }
 
   /** Get the absolute path to the Z3 binary.
     * Installs Z3 from the JAR if not installed yet, or if the KeYmaera X version has updated. */
   val z3Path: String = {
-    val z3TempDir = Configuration.path(Configuration.Keys.Z3_PATH)
-    if (!new File(z3TempDir).exists) new File(z3TempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+    val z3ConfigPath = Configuration.path(Configuration.Keys.Z3_PATH)
+    val z3Path = if (new File(z3ConfigPath).exists) z3ConfigPath else defaultZ3Path
+    val z3File =
+      if (new File(z3Path).isFile) new File(z3Path)
+      else if (osName.contains("windows")) new File(z3Path + File.separator + "z3.exe")
+      else new File(z3Path + File.separator + "z3")
+    if (!z3File.getParentFile.exists) z3File.mkdirs
 
-    val needsUpdate = installedFromKyxVersion(z3TempDir) != edu.cmu.cs.ls.keymaerax.core.VERSION
+    val needsUpdate = installedFromKyxVersion(defaultZ3Path) != edu.cmu.cs.ls.keymaerax.core.VERSION
     val z3AbsPath =
-      if (needsUpdate) {
-        logger.debug("Updating Z3 binary...")
-        copyToDisk(osName, z3TempDir)
-      } else if (osName.contains("windows") && new File(z3TempDir + "z3.exe").exists()) {
-        z3TempDir + "z3.exe"
-      } else if (new File(z3TempDir + "z3").exists()) {
-        z3TempDir + "z3"
+      if (z3ConfigPath == defaultZ3Path && needsUpdate) {
+        logger.debug("Updating default Z3 binary...")
+        new File(copyToDisk(osName, new File(defaultZ3Path).getParent))
+      } else if (z3File.exists()) {
+        z3File
       } else {
         logger.debug("Installing Z3 binary...")
-        copyToDisk(osName, z3TempDir)
+        new File(copyToDisk(osName, z3File.getParent))
       }
 
-    assert(new File(z3AbsPath).exists())
-    z3AbsPath
+    assert(z3AbsPath.exists())
+    z3AbsPath.getAbsolutePath
   }
 
   /** We store the last version of KeYmaera X that updated the Z3 binary, and copy over Z3 every time we notice

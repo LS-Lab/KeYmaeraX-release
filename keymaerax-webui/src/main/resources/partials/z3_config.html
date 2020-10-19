@@ -1,0 +1,46 @@
+<form ng-controller="Z3Config" name="Z3Form">
+    <h2>
+        <span>Z3 Configuration</span>
+        <span>
+            <button ng-click="configureZ3()"
+                    ng-class="{'btn': true, 'btn-primary': path !== origPath,
+                                            'btn-default': path === origPath}">
+                <span ng-if="path !== origPath">*</span>
+                <span>Save</span>
+            </button>
+            <button ng-click="defaultZ3Path()" class="btn btn-default">Reset to Default</button>
+            <button ng-click="resetZ3Path()" class="btn btn-default">Discard Changes</button>
+        </span>
+    </h2>
+
+    <p><b>Limited functionality with Z3.</b></p>
+    <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
+        simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> or <kbd>Wolfram Engine</kbd> as Arithmetic Solver from the
+        options above.</p>
+    <p>In general, complex problems may require trying different tools.</p>
+
+    <p>Z3 is available for download at <a href="https://github.com/Z3Prover/z3/releases">Z3 download</a>.</p>
+
+    <div class="form-group">
+        <div class="input-group"
+             data-intro="Configure the path to Z3. Look for an executable file named <code>z3</code>."
+             data-position="top" style="padding-top: 10px;">
+            <span class="input-group-addon" ng-if="z3Path"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="z3Path === undefined"><i class="fa fa-wrench"></i></span>
+            <span class="input-group-addon">Path to Z3</span>
+            <input type="text" name="z3Path" id="z3Path" class="form-control" ng-model="z3Path"/>
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
+                        data-placement="bottom"
+                        ng-click="setDefaultZ3Path()"
+                        title="{{z3ConfigSuggestion.z3Path}}">
+                    <span ng-if="z3Path">Reset to </span><span ng-if="z3Path === undefined">Use </span> Default
+                </button>
+            </span>
+        </div>
+        <div ng-show="Z3Form.z3Path.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            <span>This file does not exist on your system.</span>
+        </div>
+    </div>
+
+</form>

@@ -46,6 +46,10 @@ object AssessmentProver {
     val INSPECT = "INSPECT"
   }
 
+  object Options {
+    val FAIL_HINT = "failHint"
+  }
+
   /** Assessment prover input artifacts (expressions, sequents etc.) */
   abstract class Artifact {
     def hintString: String
@@ -76,9 +80,46 @@ object AssessmentProver {
           case _: ComparisonFormula => None
           case _ => Some("Not an inequality")
         }
+        //quantifier-free real arithmetic
         case Some("qfra") => expr match {
           case f: Formula if StaticSemantics.boundVars(f).isEmpty => None
           case _ => Some("Not a quantifier-free formula of real arithmetic")
+        }
+        //quantifier-free real arithmetic with only natural exponents
+        case Some("qfrane") => expr match {
+          case f: Formula if StaticSemantics.boundVars(f).isEmpty =>
+            val exponents = ListBuffer[Term]()
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+                case Power(_, e) =>
+                  exponents += e
+                  Left(None)
+                case _ => Left(None)
+              }
+            }, f)
+            if (exponents.forall({ case Number(n) => n >= 1 case _ => false })) None
+            else Some("Not a quantifier-free formula of real arithmetic with only natural exponents")
+          case _ => Some("Not a quantifier-free formula of real arithmetic with only natural exponents")
+        }
+        //quantifier-free division-free real arithmetic with only natural exponents
+        case Some("qfradfne") => expr match {
+          case f: Formula if StaticSemantics.boundVars(f).isEmpty =>
+            val exponents = ListBuffer[Term]()
+            val divisions = ListBuffer[Term]()
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+                case d: Divide =>
+                  divisions += d
+                  Left(None)
+                case Power(_, e) =>
+                  exponents += e
+                  Left(None)
+                case _ => Left(None)
+              }
+            }, f)
+            if (divisions.isEmpty && exponents.forall({ case Number(n) => n >= 1 case _ => false })) None
+            else Some("Not a quantifier-free division-free formula of real arithmetic with only natural exponents")
+          case _ => Some("Not a quantifier-free formula of real arithmetic with only natural exponents")
         }
         case Some(_) => throw new IllegalArgumentException("Unknown shape " + shape)
         case None => None
@@ -190,6 +231,8 @@ object AssessmentProver {
       }
     }
 
+    private def run(p: => () => ProvableSig): Either[ProvableSig, String] = AssessmentProver.run(p, args.get(Options.FAIL_HINT))
+
     private def check(have: Artifact, expected: Artifact): Either[ProvableSig, String] = {
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
@@ -245,7 +288,7 @@ object AssessmentProver {
               def runQE(question: String, answers: List[String]) = {
                 run(() => {
                   val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
-                  KeYmaeraXProofChecker(60)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
+                  KeYmaeraXProofChecker(5)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
                 })
               }
               have match {
@@ -561,7 +604,7 @@ object AssessmentProver {
       case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
         //@note correct if answering with any of the correctly marked solutions
-        if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))))
+        if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))), None)
         else Right("")
     }
   }
@@ -572,9 +615,9 @@ object AssessmentProver {
       case ChoiceArtifact(h) =>
         val incorrect = (h.toSet--expected.selected.toSet) ++ (expected.selected.toSet--h.toSet)
         // correct if answering with exactly the correct yes/no pattern (modulo order)
-        if (incorrect.isEmpty) run(() => prove(s"==> $ANYCHOICE_MODE&full <-> $ANYCHOICE_MODE&full".asSequent, byUS(Ax.equivReflexive)))
+        if (incorrect.isEmpty) run(() => prove(s"==> $ANYCHOICE_MODE&full <-> $ANYCHOICE_MODE&full".asSequent, byUS(Ax.equivReflexive)), None)
         // partial credit for 75% correct
-        else if (incorrect.size/expected.selected.toSet.size <= 0.25) run(() => prove(s"==> $ANYCHOICE_MODE&partial <-> $ANYCHOICE_MODE&partial".asSequent, byUS(Ax.equivReflexive)))
+        else if (incorrect.size/expected.selected.toSet.size <= 0.25) run(() => prove(s"==> $ANYCHOICE_MODE&partial <-> $ANYCHOICE_MODE&partial".asSequent, byUS(Ax.equivReflexive)), None)
         else Right("")
     }
   }
@@ -585,18 +628,18 @@ object AssessmentProver {
       case BoolArtifact(Some(h)) =>
         val ef = if (expected.value.get) True else False
         val hf = if (h) True else False
-        run(() => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))))
+        run(() => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))), None)
     }
   }
 
   /** Runs a proof returning either the proved provable as a witness of a hint message. */
-  private def run(p: => () => ProvableSig): Either[ProvableSig, String] = {
+  private def run(p: => () => ProvableSig, failHint: Option[String]): Either[ProvableSig, String] = {
     Try(p()) match {
       case Success(p) => Left(p)
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
       case Failure(ex: TacticInapplicableFailure) if ex.getMessage.startsWith("QE with Z3 gives UNKNOWN") => Right(Messages.INSPECT)
-      case Failure(_) => Right("")
+      case Failure(_) => Right(failHint.getOrElse(""))
     }
   }
 

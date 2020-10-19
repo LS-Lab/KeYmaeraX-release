@@ -9,6 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io._
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
@@ -33,18 +34,8 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** Provides a unique index for identifying the next query, incremented on every Z3 query. */
   private var queryIndex = 0
 
-  /** The expected version and hash code */
-  private val version :: hash :: Nil = {
-    val resource = getClass.getResourceAsStream("/z3/VERSION")
-    if (resource != null) scala.io.Source.fromInputStream(resource).getLines().toList
-    else "-1" :: "-1" :: Nil //@note ignore version check if KeYmaera X jar does not ship Z3
-  }
-
-  /** Lightweight check that we are communicating with Z3 in the expected version and build hash. */
-  insist(version == "-1" && hash == "-1" || {
-    val versionOutput = runZ3(z3Path + " -version", -1)
-    versionOutput.startsWith("Z3 version " + version) && (hash == "-1" || versionOutput.endsWith(hash))
-  }, "Z3 not of the expected version and build hash")
+  /** Z3 version information. */
+  val versionInfo: String = runZ3(z3Path + " -version", -1)
 
   /** Return Z3 QE result and the proof evidence */
   def qe(f: Formula): Formula = {

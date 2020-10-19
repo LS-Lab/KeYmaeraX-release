@@ -50,7 +50,7 @@ import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
 import org.apache.logging.log4j.scala.Logging
 
@@ -606,6 +606,26 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
   }
 }
 
+class ConfigureZ3Request(z3Path: String) extends LocalhostOnlyRequest with WriteRequest {
+  private def isZ3PathCorrect(z3Path: java.io.File): Boolean = z3Path.getName == "z3" || z3Path.getName == "z3.exe"
+
+  override def resultingResponses(): List[Response] = {
+    //check to make sure the indicated files exist and point to the correct files.
+    val z3File = new java.io.File(z3Path)
+    val z3Exists = isZ3PathCorrect(z3File)
+
+    if (!z3Exists) {
+      new ConfigureZ3Response("", false) :: Nil
+    } else {
+      ToolProvider.shutdown()
+      Configuration.set(Configuration.Keys.QE_TOOL, "z3")
+      Configuration.set(Configuration.Keys.Z3_PATH, z3Path)
+      ToolProvider.setProvider(Z3ToolProvider(Map("z3Path" -> z3Path)))
+      new ConfigureZ3Response(z3File.getAbsolutePath, true) :: Nil
+    }
+  }
+}
+
 class GetMathematicaConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val allSuggestions = ToolConfiguration.mathematicaSuggestion()
@@ -652,6 +672,12 @@ class GetWolframScriptConfigSuggestionRequest(db: DBAbstraction) extends Localho
         new MathematicaConfigSuggestionResponse(os, jvmBits, false,
           ToolConfiguration.ConfigSuggestion("", "", "", "", ""), Nil) :: Nil
     }
+  }
+}
+
+class GetZ3ConfigSuggestionRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    new Z3ConfigSuggestionResponse(Z3Installer.defaultZ3Path) :: Nil
   }
 }
 
@@ -773,6 +799,27 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String) ex
         ) :: Nil
       case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
     }
+  }
+}
+
+class GetZ3ConfigurationRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    new Z3ConfigurationResponse(Z3Installer.z3Path) :: Nil
+  }
+}
+
+class GetFullConfigRequest extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val w = new StringWriter()
+    Configuration.printConfig(new PrintWriter(w))
+    new FullConfigurationResponse(w.toString) :: Nil
+  }
+}
+
+class SaveFullConfigRequest(content: String) extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    Configuration.overwrite(content)
+    BooleanResponse(flag = true) :: Nil
   }
 }
 
@@ -1987,17 +2034,25 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
+    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     try {
       input match {
-        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: SubstitutionArg)) => checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: TermArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: FormulaArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: VariableArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: ExpressionArg)) =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: SubstitutionArg)) =>
+          checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] =>
+          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) => checkExpressionInput(arg, value.split(",").map(Parser.parser).toList, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) =>
+          checkExpressionInput(arg, value.split(splitComma).map(Parser.parser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
@@ -2007,20 +2062,23 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Checks expression inputs. */
   private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
                                                     defs: Declaration) = {
-    val sortMismatch: Option[String] = (arg, exprs) match {
+
+    val elaborated = exprs.map(e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+
+    val sortMismatch: Option[String] = (arg, elaborated) match {
       case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
       case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
       case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
       case (ListArg(ai: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
-      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " +   exprs.map(_.prettyString).mkString(","))
+      case _ => Some("Expected: " + arg.sort + ", found: " + elaborated.map(_.kind).mkString(",") + " " +   elaborated.map(_.prettyString).mkString(","))
     }
 
     sortMismatch match {
       case None =>
         val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
         val paramFV: Set[NamedSymbol] =
-          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+          elaborated.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
@@ -2084,22 +2142,23 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   extends UserProofRequest(db, userId, proofId) with WriteRequest {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
+    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     val paramStrings: List[String] = inputs.map{
-      case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:TermArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:FormulaArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:VariableArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:ExpressionArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:SubstitutionArg)) => "\""+value+"\""
       /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */
-      case BelleTermInput(value, Some(ListArg(ai: FormulaArg))) =>
-        val values = value.split(",")
+      case BelleTermInput(value, Some(ListArg(_: FormulaArg))) =>
+        val values = value.split(splitComma)
         if (values.isEmpty) value
-        else if (values.length == 1) "{`"+value+"`}"
-        else "[" + values.map("{`"+_+"`}").mkString(",") + "]"
-      case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
-      case BelleTermInput(value, Some(OptionArg(_))) => "{`"+value+"`}"
+        else if (values.length == 1) "\""+value+"\""
+        else "[" + values.map("\""+_+"\"").mkString(",") + "]"
+      case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(splitComma).map("\""+_+"\"").mkString(",") + "]"
+      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)

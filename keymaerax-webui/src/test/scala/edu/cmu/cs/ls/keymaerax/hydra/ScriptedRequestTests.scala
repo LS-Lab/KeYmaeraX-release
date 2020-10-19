@@ -144,6 +144,27 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
+  it should "not split formula arguments at comma in predicates or ODEs" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem [{x'=4}]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", dC("[{x'=2,y'=3}]P(x,y)".asFormula :: Nil)(1)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
+        root should have ('goal (Some("==> [{x'=4}]x>=0".asSequent)))
+        leaves(0) should have ('goal (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
+        leaves(1) should have ('goal (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
+    }
+  }}
+
   "Custom tactic execution" should "expand tactic definitions" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
@@ -514,8 +535,10 @@ class ScriptedRequestTests extends TacticTestBase {
       val expectedInputs = info.inputs
       inputs.zipWithIndex.flatMap({
         case (in: Expression, i) => Some(BelleTermInput(in.prettyString, Some(expectedInputs(i))))
+        case (es: List[Expression], i) => Some(BelleTermInput(es.map(_.prettyString).mkString(","), Some(expectedInputs(i))))
         case (_: Generator[GenProduct], _) => None //@todo pass on once supported
         case (Some(e: Expression), i) => Some(BelleTermInput(e.prettyString, Some(expectedInputs(i))))
+        case (Some(es: List[Expression]), i) => Some(BelleTermInput(es.map(_.prettyString).mkString(","), Some(expectedInputs(i))))
         case (None, _) => None
         case (in, i) => Some(BelleTermInput(in.toString, Some(expectedInputs(i))))
       })
@@ -531,6 +554,12 @@ class ScriptedRequestTests extends TacticTestBase {
       }
       case NamedTactic(name, _) => (name, Nil, None, None)
       case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None)
+      case t: AppliedDependentPositionTacticWithAppliedInput => t.pt match {
+        case inner: DependentPositionWithAppliedInputTactic =>
+          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None)
+          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None)
+        case _ => (t.pt.name, Nil, Some(t.locator), None)
+      }
       //@todo extend on demand
     }
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo = true, pos1, pos2, inputs)
