@@ -39,12 +39,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
-  def apply(formula: Formula, kind: Symbol, checkProvable: Option[(ProvableSig => Unit)] = Some({case _ => ()})): Formula = formula match {
-    case Imply(assumptions, Box(prg, _)) =>
-      val vars = StaticSemantics.boundVars(prg).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
-      val sortedVars = vars.sortWith((x,y)=>x<y)
-      apply(sortedVars, kind, checkProvable)(formula)
-    case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
+  def apply(formula: Formula, kind: Symbol, checkProvable: Option[(ProvableSig => Unit)] = Some(_ => ())): Formula = {
+    val vars = StaticSemantics.boundVars(formula).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+    val sortedVars = vars.sortWith((x,y)=>x<y)
+    apply(sortedVars, kind, checkProvable)(formula)
   }
 
   /**

@@ -215,7 +215,7 @@ object KeYmaeraX {
 
     val in = options('in).toString
     val inputEntry = ArchiveParser.parseFromFile(in).head
-    val inputModel = inputEntry.model.asInstanceOf[Formula]
+    val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
