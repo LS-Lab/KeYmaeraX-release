@@ -2288,6 +2288,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                   }
                 }
 
+                override def start(): Unit = inner.start()
+
                 override def kill(): Unit = inner.kill()
 
                 override def isDead: Boolean = inner.isDead

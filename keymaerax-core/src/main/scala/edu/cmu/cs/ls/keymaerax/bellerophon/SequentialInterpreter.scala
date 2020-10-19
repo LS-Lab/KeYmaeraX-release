@@ -8,7 +8,7 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -33,9 +33,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
   extends Interpreter with Logging {
   var isDead: Boolean = false
 
+  override def start(): Unit = isDead = false
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
-      //@todo kill the running tactic (cancel QE), here or in kill
+      ToolProvider.tools().foreach(_.cancel())
       //@note end executing the interpreter when its thread gets interrupted
       throw new BelleAbort("Killed", "Execution stopped by killing the interpreter or interrupting the interpreter thread")
     }

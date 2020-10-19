@@ -92,6 +92,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
   /** The spoon-feeding interpreter itself does not have listeners. */
   val listeners: scala.collection.immutable.Seq[IOListener] = Nil
 
+  override def start(): Unit = isDead = false
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (runningInner == null) {
       runTactic(expr, v, descend, DbAtomPointer(startStepIndex), strict, convertPending, executePending=true)._1
