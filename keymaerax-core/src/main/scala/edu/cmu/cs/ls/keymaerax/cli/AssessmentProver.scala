@@ -1275,7 +1275,8 @@ object AssessmentProver {
             case Some(g) =>
               val (gr, args) = QuizExtractor.AskQuestion.graderInfoFromString(g.method)
               toExpectedArtifact(p) match {
-                case (Some(expected), a) => AskGrader(Some(gr), args ++ a, expected)
+                case (Some(expected), a) =>
+                  AskGrader(Some(gr), args ++ a.filter({ case (k, _) => !args.keySet.contains(k) }), expected)
                 case (None, _) => SkipGrader(null, Messages.INSPECT)
               }
             case None =>

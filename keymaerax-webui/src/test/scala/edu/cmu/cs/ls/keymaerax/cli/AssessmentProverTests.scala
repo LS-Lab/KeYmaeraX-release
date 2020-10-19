@@ -162,6 +162,21 @@ class AssessmentProverTests extends TacticTestBase {
     inside (Problem.fromString(
       """\begin{problem}[1.0]
         |\ask
+        |\solfin
+        |\begin{lstlisting}
+        |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
+        |\end{lstlisting}
+        |\algog{qe(question="\%1->true",feedback="3.4")}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("qe"), Map("question" -> "\\%1->true", "feedback" -> "3.4"),
+            ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
+            List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask
         |\sol
         |{\begin{lstlisting}
         |x>=0 -> [{?true; x:=x+1;}*@invariant(x>=0)]x>=0
