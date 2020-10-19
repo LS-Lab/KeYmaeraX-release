@@ -680,12 +680,13 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 17" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Comparing systems versus games", 3) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
+      ("Comparing systems versus games", 4) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
         ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
     run(problems)
   }
 
   it should "prove quiz 20" in withZ3 { _ =>
+    // most questions flagged INSPECT, those need Mathematica
     val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Substitution of linear equations", 7) :: ("Square root arithmetic", 3) :: ("Eliminate quantifiers", 6) :: Nil

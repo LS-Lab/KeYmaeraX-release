@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{BufferedOutputStream, BufferedWriter, File, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
+import java.util.concurrent.TimeoutException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
@@ -639,6 +640,7 @@ object AssessmentProver {
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
       case Failure(ex: TacticInapplicableFailure) if ex.getMessage.startsWith("QE with Z3 gives UNKNOWN") => Right(Messages.INSPECT)
+      case Failure(_: TimeoutException) => Right(Messages.INSPECT)
       case Failure(_) => Right(failHint.getOrElse(""))
     }
   }
