@@ -371,6 +371,7 @@ case class KeYmaeraXProofChecker(timeout: Long) extends (BelleExpr => Sequent =>
   override def apply(t: BelleExpr): Sequent => ProvableSig = (s: Sequent) => {
     implicit val ec: ExecutionContext = ExecutionContext.global
     try {
+      BelleInterpreter.interpreter.start()
       Await.result(
         Future {
           TactixLibrary.proveBy(s, t)
@@ -379,6 +380,7 @@ case class KeYmaeraXProofChecker(timeout: Long) extends (BelleExpr => Sequent =>
       )
     } catch {
       case ex: TimeoutException =>
+        BelleInterpreter.interpreter.kill()
         ToolProvider.tools().foreach(_.cancel())
         throw ex
     }
