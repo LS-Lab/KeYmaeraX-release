@@ -674,55 +674,55 @@ class ODEStabilityTests extends TacticTestBase {
     val lie = DifferentialHelper.simplifiedLieDerivative(ode,lyap, ToolProvider.simplifierTool())
     println(lie)
 
-    val qe = proveBy("==> \\exists theta0 \\exists w0 ( (theta0*theta0+w0*w0 <= 2*2)&theta0*theta0+w0*w0 >= 1*1&\\forall theta \\forall w ((theta*theta+w*w <= 2*2)&theta*theta+w*w >= 1*1->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*(theta-theta^3/6)-b*w))+2*w*(-a*(theta-theta^3/6)-b*w))*4/16)>=-(a*(2*theta0*w0)*2/4+(2*(b*theta0+w0)*(b*w0+(-a*(theta0-theta0^3/6)-b*w0))+2*w0*(-a*(theta0-theta0^3/6)-b*w0))*4/16)))".asSequent,
-      QE)
-    println(qe)
+//    val qe = proveBy("==> \\exists theta0 \\exists w0 ( (theta0*theta0+w0*w0 <= 2*2)&theta0*theta0+w0*w0 >= 1*1&\\forall theta \\forall w ((theta*theta+w*w <= 2*2)&theta*theta+w*w >= 1*1->-(a*(2*theta*w)*2/4+(2*(b*theta+w)*(b*w+(-a*(theta-theta^3/6)-b*w))+2*w*(-a*(theta-theta^3/6)-b*w))*4/16)>=-(a*(2*theta0*w0)*2/4+(2*(b*theta0+w0)*(b*w0+(-a*(theta0-theta0^3/6)-b*w0))+2*w0*(-a*(theta0-theta0^3/6)-b*w0))*4/16)))".asSequent,
+//      QE)
+//    println(qe)
 
-//    val pr1 = proveBy(Imply("a > 0 & b > 0".asFormula,stable),
-//      unfoldProgramNormalize &
-//      cutR("\\exists tau (tau > 0 & tau < eps & \\forall theta \\forall w (theta*theta+w*w <= tau*tau -> 1/12*((-6)*b*w^2+a*theta^2*(b*((-6)+theta^2)+2*theta*w)) <= 0))".asFormula)(1) <(
-//        QE,
-//        unfoldProgramNormalize &
-//        //On ||x||=tau, there is a global lower bound on k
-//        cutR("\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = tau*tau -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 >= k))".asFormula)(1) <(
-//          hideL('Llast) & QE,
-//          unfoldProgramNormalize &
-//          //There is del s.t. ||x||<del -> v < k
-//          cutR("\\exists del (del > 0 & del < tau & \\forall theta \\forall w (theta*theta+w*w < del*del -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
-//            hideL('Llast) & hideL(-6) & QE,
-//            unfoldProgramNormalize &
-//            existsR("del".asTerm)(1) & andR(1) <(
-//              prop,
-//              unfoldProgramNormalize &
-//              allL(-11) & allL(-11) & //theta, w
-//              implyL(-11) <(
-//                hideR(1) & prop,
-//                generalize("theta*theta+w*w < tau*tau".asFormula)(1) <(
-//                  hideL(-5) & hideL(-3) &
-//                  ODEInvariance.dCClosure(1) <(
-//                    hideL(-6) & hideL(-4) & QE,
-//                    dC("theta*theta+w*w=tau*tau->a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4>=k".asFormula)(1) <(
-//                      hideL(-6) &
-//                      dC("1/12*((-6)*b*w^2+a*theta^2*(b*((-6)+theta^2)+2*theta*w))<=0".asFormula)(1) <(
-//                        hideL(-4) &
-//                          dC("a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k".asFormula)(1) <(
-//                            ODE(1),
-//                            ODE(1)
-//                          ),
-//                        dWPlus(1) & allL(-4) & allL(-4) & QE
-//                      )
-//                      ,
-//                      dWPlus(1) & allL(-6) & allL(-6) & prop
-//                    )
-//                  ),
-//                  QE
-//                )
-//              )
-//            )
-//          )
-//        )
-//      )
-//    )
+    val pr1 = proveBy(Imply("a > 0 & b > 0".asFormula,stable),
+      unfoldProgramNormalize &
+      cutR("\\exists tau (tau > 0 & tau < eps & \\forall theta \\forall w (theta*theta+w*w <= tau*tau -> 1/12*((-6)*b*w^2+a*theta^2*(b*((-6)+theta^2)+2*theta*w)) <= 0))".asFormula)(1) <(
+        QE,
+        unfoldProgramNormalize &
+        //On ||x||=tau, there is a global lower bound on k
+        cutR("\\exists k (k > 0 & \\forall theta \\forall w (theta*theta+w*w = tau*tau -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 >= k))".asFormula)(1) <(
+          hideL('Llast) & QE,
+          unfoldProgramNormalize &
+          //There is del s.t. ||x||<del -> v < k
+          cutR("\\exists del (del > 0 & del < tau & \\forall theta \\forall w (theta*theta+w*w < del*del -> a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k))".asFormula)(1) <(
+            hideL('Llast) & hideL(-6) & QE,
+            unfoldProgramNormalize &
+            existsR("del".asTerm)(1) & andR(1) <(
+              prop,
+              unfoldProgramNormalize &
+              allL(-11) & allL(-11) & //theta, w
+              implyL(-11) <(
+                hideR(1) & prop,
+                generalize("theta*theta+w*w < tau*tau".asFormula)(1) <(
+                  hideL(-5) & hideL(-3) &
+                  ODEInvariance.dCClosure(1) <(
+                    hideL(-6) & hideL(-4) & QE,
+                    dC("theta*theta+w*w=tau*tau->a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4>=k".asFormula)(1) <(
+                      hideL(-6) &
+                      dC("1/12*((-6)*b*w^2+a*theta^2*(b*((-6)+theta^2)+2*theta*w))<=0".asFormula)(1) <(
+                        hideL(-4) &
+                          dC("a*(theta^2)/2 + ((b*theta+w)^2+w^2)/4 < k".asFormula)(1) <(
+                            ODE(1),
+                            ODE(1)
+                          ),
+                        dWPlus(1) & allL(-4) & allL(-4) & QE
+                      )
+                      ,
+                      dWPlus(1) & allL(-6) & allL(-6) & prop
+                    )
+                  ),
+                  QE
+                )
+              )
+            )
+          )
+        )
+      )
+    )
 
     // The important direction of SAttr
     val pr2 = proveBy(
