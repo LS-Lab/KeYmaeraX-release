@@ -91,13 +91,10 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
         throw SMTQeException("Error executing Z3, exit value " + exitVal)
       }
     } catch {
-      case ex: TimeoutException =>
-        p.destroy()
-        throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
-      case ex: InterruptedException =>
-        p.destroy
-        throw ToolCommunicationException(s"Z3 interrupted", ex)
+      case ex: TimeoutException => throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
+      case ex: InterruptedException => throw ToolCommunicationException(s"Z3 interrupted", ex)
     } finally {
+      p.destroy
       z3Process = None
     }
   }
