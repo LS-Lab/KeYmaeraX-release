@@ -1938,7 +1938,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("<?>", key = "0", recursor = "1;0", unifier = "surjlinear", displayLevel = "all")
+  @Axiom("<?>", conclusion = "__<?Q>P__↔Q∧P", key = "0", recursor = "1;0", unifier = "surjlinear", displayLevel = "all")
   lazy val testd: DerivedAxiomInfo = derivedAxiom("<?> test",
     Sequent(IndexedSeq(), IndexedSeq("<?q_();>p_() <-> (q_() & p_())".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1975,7 +1975,7 @@ object Ax extends Logging {
     *
     * @todo first show de Morgan
     */
-  @Axiom(("<∪>", "<++>"), conclusion = "__<a∪b>P__↔<a>P∧<b>P", displayLevel = "all",
+  @Axiom(("<∪>", "<++>"), conclusion = "__<a∪b>P__↔<a>P∨<b>P", displayLevel = "all",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   lazy val choiced: DerivedAxiomInfo = derivedAxiom("<++> choice",
     Sequent(IndexedSeq(), IndexedSeq("<a_;++b_;>p_(||) <-> (<a_;>p_(||) | <b_;>p_(||))".asFormula)),
