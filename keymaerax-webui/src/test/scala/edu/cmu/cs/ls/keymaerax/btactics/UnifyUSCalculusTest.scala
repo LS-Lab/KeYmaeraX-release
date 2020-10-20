@@ -358,11 +358,11 @@ class UnifyUSCalculusTest extends TacticTestBase {
   }
 
   "US" should "uniformly substitute in a single goal" in {
-    proveBy("J(x) ==> J(x+1)".asSequent, USX("J(.) ~> .>=0".asSubstitutionPair)).subgoals.loneElement shouldBe "x>=0 ==> x+1>=0".asSequent
+    proveBy("J(x) ==> J(x+1)".asSequent, USX("J(.) ~> .>=0".asSubstitutionPair :: Nil)).subgoals.loneElement shouldBe "x>=0 ==> x+1>=0".asSequent
   }
 
   it should "uniformly substitute in all goals" in {
-    proveBy("J(x) ==> J(x+1) & J(x+2)".asSequent, andR(1) & USX("J(.) ~> .>=0".asSubstitutionPair)).subgoals shouldBe
+    proveBy("J(x) ==> J(x+1) & J(x+2)".asSequent, andR(1) & USX("J(.) ~> .>=0".asSubstitutionPair :: Nil)).subgoals shouldBe
       List("x>=0 ==> x+1>=0".asSequent, "x>=0 ==> x+2>=0".asSequent)
   }
 

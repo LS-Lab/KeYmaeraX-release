@@ -685,6 +685,13 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 18" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/18/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Uniform substitution application", 13) :: ("Finding uniform substitutions", 8) :: ("Axiom for axiom schema", 4) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 20" in withZ3 { _ =>
     // most questions flagged INSPECT, those need Mathematica
     val problems = extractProblems(QUIZ_PATH + "/20/main.tex")

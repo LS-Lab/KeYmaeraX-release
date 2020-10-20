@@ -18,13 +18,10 @@ import scala.annotation.tailrec
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
-  private[bellerophon] def flattenArgs[T](args: Seq[T]): Seq[T] = {
-    args.flatMap{case arg: List[T] => flattenArgs(arg) case arg => Seq(arg) }
-  }
+
   // Don't persist generator arguments
   private[bellerophon] def persistable[T](args: Seq[T]): Seq[T] = {
-    val filtered = args.filter{case (_: Generator[_]) => false case _ => true}
-    flattenArgs(filtered)
+    args.filter{case _: Generator[_] => false case _ => true}
   }
 
   private[bellerophon] def prettyArgs(inputs: Seq[Any]): String = {

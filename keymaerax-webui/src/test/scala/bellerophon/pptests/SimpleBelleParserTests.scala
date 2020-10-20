@@ -762,13 +762,22 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BelleParser("dC({`x>0`},1)") shouldBe (round trip TactixLibrary.dC("x>0".asFormula)(1))
   }
 
+  it should "parse list formula arguments" in {
+    BelleParser("dC(\"x>0 :: y<1 :: nil\",1)") shouldBe (round trip TactixLibrary.dC("x>0".asFormula :: "y<1".asFormula :: Nil)(1))
+  }
+
   it should "parse term arguments" in {
     BelleParser("transform({`x+2`},1)") shouldBe (round trip TactixLibrary.transform("x+2".asTerm)(1))
   }
 
   it should "parse substitution arguments" in {
     BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.USX(
-      SubstitutionPair("init(.)".asFormula, ".=0".asFormula)))
+      SubstitutionPair("init(.)".asFormula, ".=0".asFormula) :: Nil))
+  }
+
+  it should "parse list substitution arguments" in {
+    BelleParser("US(\"init(.) ~> .=0 :: a;~>{x'=v,t'=1&true} :: nil\")") shouldBe (round trip TactixLibrary.USX(
+      SubstitutionPair("init(.)".asFormula, ".=0".asFormula) :: SubstitutionPair("a;".asProgram, "{x'=v,t'=1}".asProgram) :: Nil))
   }
 
   it should "parse mixed arguments" in {

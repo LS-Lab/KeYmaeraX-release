@@ -205,7 +205,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     }
 
     case subst: InputTactic if subst.name == "US" =>
-      val substs = collection.immutable.Seq(subst.inputs.map(_.asInstanceOf[SubstitutionPair]).map(sp => sp.what -> sp.repl):_*)
+      val substs = collection.immutable.Seq(subst.inputs.head.asInstanceOf[List[SubstitutionPair]].map(sp => sp.what -> sp.repl):_*)
       apply(subst.computeExpr(), v) match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ RenUSubst(substs).usubst)
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, RenUSubst(substs).usubst)

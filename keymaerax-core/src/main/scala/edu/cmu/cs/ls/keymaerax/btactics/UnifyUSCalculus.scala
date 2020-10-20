@@ -495,7 +495,7 @@ trait UnifyUSCalculus {
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst)}
 
   @Tactic(("US", "US"), codeName = "US", conclusion = "|- S(P)", premises = "|- P")
-  def USX(S: SubstitutionPair): InputTactic = inputanon { TactixLibrary.uniformSubstitute(USubst(Seq(S))) }
+  def USX(S: List[SubstitutionPair]): InputTactic = inputanon { TactixLibrary.uniformSubstitute(USubst(S)) }
 
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
