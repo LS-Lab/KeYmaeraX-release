@@ -1681,7 +1681,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
-      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula)) &
+      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil) &
         TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }

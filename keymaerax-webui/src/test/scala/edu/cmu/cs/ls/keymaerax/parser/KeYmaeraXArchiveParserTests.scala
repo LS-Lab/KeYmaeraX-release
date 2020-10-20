@@ -1849,7 +1849,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(x,y) ~> x>y") ; useLemma("Entry 1")""",
       TactixLibrary.USX(SubstitutionPair(
         PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
-        Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))
+        Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))) :: Nil
       ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
