@@ -144,6 +144,9 @@ object AssessmentProver {
     lazy val entries: List[ParsedArchiveEntry] = ArchiveParser.parse(s, parseTactics=true)
     override def hintString: String = "Archive"
   }
+  case class SubstitutionArtifact(s: List[SubstitutionPair]) extends Artifact {
+    override def hintString: String = "Uniform substitution"
+  }
   case class ChoiceArtifact(selected: List[String]) extends Artifact {
     override def hintString: String = "Choice"
   }
@@ -469,6 +472,8 @@ object AssessmentProver {
                 case h: ExpressionArtifact => runBelleProof(q, h.exprString :: Nil)
                 case ListExpressionArtifact(hs) => runBelleProof(q, hs.map(_.prettyString))
                 case SequentArtifact(goals) => runBelleProof(q, goals.map(_.toFormula).map(_.prettyString))
+                case SubstitutionArtifact(s) => runBelleProof(q, s.map(sp => sp.what.prettyString + "~>" + sp.repl.prettyString).
+                  mkString("", "::", "::nil") :: Nil)
                 case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
               }
             case None =>
