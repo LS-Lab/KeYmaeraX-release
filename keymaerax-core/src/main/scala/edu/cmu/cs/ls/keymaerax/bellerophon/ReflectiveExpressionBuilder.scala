@@ -52,6 +52,8 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: TypedFunc[Option[PosInExpr], _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[Option[PosInExpr]].tpe => expr(Some(pie))
       case (expr: TypedFunc[Seq[Expression], _], fmls: Seq[Expression]) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(fmls)
       case (expr: TypedFunc[Seq[Expression], _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(Seq(fml))
+      case (expr: TypedFunc[Seq[SubstitutionPair], _], ex: Seq[SubstitutionPair]) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(ex)
+      case (expr: TypedFunc[Seq[SubstitutionPair], _], (ex: SubstitutionPair) :: Nil) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(Seq(ex))
       case (expr: TypedFunc[_, _], _) => throw new ReflectiveExpressionBuilderExn(s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName)
       case _ => throw new ReflectiveExpressionBuilderExn("Expected a TypedFunc (cannot match due to type erasure)")
     }
