@@ -392,18 +392,19 @@ case class Switch(scrutinee: Option[Selector], pats: List[(IdentPat, Formula, St
 // Execute either branch of a program nondeterministically, with corresponding proofs
 case class BoxChoice(left: Statement, right: Statement) extends Statement
 /* Canonical usage of for loops has form
-   [!conv;]
-   for(metX := metF; guard; pos := metIncr) {
+
+   for(metX := met0; !conv; ?(met <cmp> metFinal)); metX := metIncr) {
      body
    }
-   where body ends with  !conv; !(metF >= metX + metIncr)
-   For loops encode Angelic loop convergence proofs
-   convergence is optional.
-   @TODO: Decide whether metX works as a variable which updates at every step or works as a function, and whether it uses
-   @TODO: Decide whether conv option needed, whether it's formula or assume
+   where body also ends with  !conv;
+   and where metX is not bound in body.
+   @TODO: allow ghosting metX away with syntax  /-- metX := metF --/
+   For loops encode Angelic loop convergence proofs.
+   Every for loop has initial value, guard, and increment, but convergence predicate is optional.
+   @TODO: Decide whether conv option needed, whether it should contain elaborated fml, whether  constructors can be further combined + simplified
    = or := syntax
  */
-case class For(metX: Ident, metF: Term, metIncr: Term, guard: Assume, conv: Option[Assume], body: Statement) extends Statement
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]

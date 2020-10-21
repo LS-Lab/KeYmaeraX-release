@@ -111,7 +111,7 @@ object VariableSets {
       }).reduce((l, r) => l.choice(r))
     case BoxChoice(left, right) => apply(kc.reapply(left)).choice(apply(kc.reapply(right)))
     case While(x: Term, j, s) => apply(kc.reapply(s)).addTabooFacts(StaticSemantics(x).toSet).option
-    case For(metX, metF, metIncr, guard, conv, body) =>
+    case For(metX, metF, metIncr, conv, guard, body) =>
       val mx = ofMustBound(Set(metX), kc.isGhost)
       val mf = mx.addFreeVars(StaticSemantics(metF).toSet)
       val mi = mf.addFreeVars(StaticSemantics(metIncr).toSet)

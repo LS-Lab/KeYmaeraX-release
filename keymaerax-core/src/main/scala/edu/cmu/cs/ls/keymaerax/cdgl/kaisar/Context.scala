@@ -289,7 +289,7 @@ case class Context(s: Statement) {
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case ForProgress(For(metX, metF, metIncr, guard, conv, body), prog) =>
+      case ForProgress(For(metX, metF, metIncr, conv, guard, body), prog) =>
         val convMatch = conv match { case Some(cnv) => matchAssume(cnv.pat, cnv.f) case None => ContextResult.unit }
         val guardMatch = matchAssume(guard.pat, guard.f)
         convMatch ++ guardMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)

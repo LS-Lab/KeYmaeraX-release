@@ -746,35 +746,31 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
-      case fr@For(metX, metF, metIncr, guard, maybeConv, body) =>
+      case fr@For(metX, met0, metIncr, maybeConv, guard, body) =>
         // @TODO: Make sure to properly elaborate things
         // @TODO: Check silly syntactic agreement conditions if any
         // @TODO: Check termination metric
         // @TODO: Check variable binding side conditions
-        val cnvXFElab: Option[(IdentPat, Formula, Formula)] =
-          (con.lastFact, maybeConv) match {
-            case (None, None) =>
-              println("For loop has no convergence predicate, and thats ok")
-              None
-            case (Some((name, fml, elab)), Some(Assume(x, fml2))) if elab == fml2 => Some(name, fml, elab)
-            case (Some(nameFmlElab), _) => Some(nameFmlElab)
-            case (None, Some(Assume(x, f))) => Some(x, f, f)
-        }
-        val cnvAnnot = cnvXFElab.map({ case ((cnvX, cnvF, cnvElab)) => Assume(cnvX, cnvElab)})
         // throws exception if metric ill-formed
-        val (progCond, termCond) = forMetric(con, metX, metF, metIncr, guard.f)
+        val (progCond, termCond) = forMetric(con, metX, met0, metIncr, guard.f)
+        if (VariableSets(body).boundVars.contains(metX)) {
+          throw ProofCheckException(s"For loop index variable $metX must not be bound in loop body", node = fr)
+        }
+        val baseCon = con.:+(Modify(Nil, List((metX, Some(met0)))))
+        val _baseResult = maybeConv.map(cnv => apply(baseCon, cnv))
         // @TODO: triple IH with elab instead of assume
-        val progFor = For(metX, metF, metIncr, guard, cnvAnnot, body)
+        val cnvElab = maybeConv.map({ case Assert(x, f, m) => Assert(x, con.elaborateStable(f), m)})
+        val progFor = For(metX, met0, metIncr,  cnvElab, guard, body)
         val progCon = ForProgress(progFor, Triv())
         val (sBody, fBody) = apply(con.:+(progCon), body)
         val indStepResults = sBody.lastFacts
-        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => cnvXFElab.exists({case (x,f,elab) => elab == kElab})})
+        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => cnvElab.exists({case Assert(x,f,m) => f == kElab})})
         val indStepProg = indStepResults.find({case (kName, kFml, kElab) => kElab == progCond})
         // Check that convergence inductive step has been proven which matches the convergence condition, if there is any
         val cnvConcl: Formula =
-        (indStepConv, cnvXFElab) match {
-          case (None, Some((cnvX,cnvF,cnvElab))) => throw ProofCheckException(s"For loop has no inductive step for convergence predicate $cnvX:$cnvElab")
-          case (Some((istepX, istepF, istepElab)), Some((cnvX,cnvF,cnvElab))) => istepElab
+        (indStepConv, cnvElab) match {
+          case (None, Some(Assert(cnvX,cnvElab, cnvM))) => throw ProofCheckException(s"For loop has no inductive step for convergence predicate $cnvX:$cnvElab")
+          case (Some((istepX, istepF, istepElab)), Some(Assert(cnvX,cnvElab,cnvM))) => istepElab
           case _ => True
         }
         // Check that progress inductive step has been proven
@@ -785,8 +781,9 @@ object ProofChecker {
         }
         val Box(a, p) = asBox(fBody)
         val theConcl = cnvConcl match {case True => progConcl case f => And(f, progConcl)}
-        val ff = Box(Compose(Dual(Loop(Dual(a))), Dual(Test(theConcl))), True) // @TODO: reconsider format
-        val ss = For(metX, metF, metIncr, guard, cnvAnnot, sBody.s)
+        // @TODO: reconsider result formula format. Complicated one here needed when proved formula mentions metX though
+        val ff = Box(Compose(Compose(Assign(metX, met0),Dual(Loop(Compose(Dual(a), Assign(metX,metIncr))))), Dual(Test(theConcl))), True)
+        val ss = For(metX, met0, metIncr, cnvElab, guard, sBody.s)
         (Context(ss), ff)
       case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {

@@ -84,10 +84,10 @@ object ProofTraversal {
             BoxChoice(traverse(conL, coneL, left, tf), traverse(conR, coneR, right, tf))
           case While(x, j, ss) =>
             While(x, j, traverse(kc, kce, ss, tf))
-          case For(metX, metF, metIncr, guard, conv, body) =>
+          case For(metX, metF, metIncr, conv, guard, body) =>
             val grd: Assume = traverse(kc, kce, guard, tf).asInstanceOf[Assume]
-            val cnv: Option[Assume] = conv.map(as => traverse(kc, kce, as, tf).asInstanceOf[Assume])
-            For(metX, metF, metIncr, grd, cnv, traverse(kc, kce, body, tf))
+            val cnv: Option[Assert] = conv.map(as => traverse(kc, kce, as, tf).asInstanceOf[Assert])
+            For(metX, metF, metIncr, cnv, grd, traverse(kc, kce, body, tf))
           case BoxLoop(s, ih) =>
             BoxLoop(traverse(kc, kce, s, tf), ih)
           case Ghost(ss) =>

@@ -368,11 +368,11 @@ object ProofParser {
     case _ => false
   }
   def parseFor[_: P]: P[For] =
-    (Index ~ "for" ~/ "(" ~/ ExpressionParser.assign ~/ ";" ~/ assume /*includes ;*/ ~/ ExpressionParser.assign ~/ ";".? ~/ ")"
+    (Index ~ "for" ~/ "(" ~/ ExpressionParser.assign ~/ ";" ~/ assert.? /* includes ; */ ~/ assume /*includes ;*/ ~/ ExpressionParser.assign ~/ ";".? ~/ ")"
       ~/ "{" ~ statement.rep ~ "}").
-    map({case (i, Assign(metX, metF), guard: Assume, Assign(incL, metIncr), body: Seq[Statement])
+    map({case (i, Assign(metX, metF), conv: Option[Assert], guard: Assume, Assign(incL, metIncr), body: Seq[Statement])
       if (incL ==  metX && increments(metIncr, metX)) => locate(
-      For(metX: Ident, metF: Term, metIncr: Term, guard: Assume, None, block(body.toList)), i)})
+      For(metX, metF, metIncr, conv, guard, block(body.toList)), i)})
 
   def let[_: P]: P[Statement] = (Index ~ "let" ~/ ((ident ~/ "(" ~/ ident.rep(sep = ",") ~/ ")").map(Left(_))
            | term.map(Right(_)))
