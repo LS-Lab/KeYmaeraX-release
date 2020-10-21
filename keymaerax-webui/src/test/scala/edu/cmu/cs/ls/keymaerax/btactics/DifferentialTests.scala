@@ -1191,14 +1191,13 @@ class DifferentialTests extends TacticTestBase {
         |==> 1:  [b:=1;]\exists z [{x'=v,z'=v&true}]x>b	Box}""".stripMargin
   }
 
-  it should "FEATURE_REQUEST: use facts preserved by dC when transforming postcondition" taggedAs TodoTest in withMathematica { _ =>
-    //@todo requires transform feature
+  it should "use facts preserved by dC when transforming postcondition" in withMathematica { _ =>
     proveBy("==> [b:=1;][{x'=v}]x>b".asSequent,
       dC("b=1".asFormula)(1, 1::Nil) <(
         dG("z'=v".asDifferentialProgram, Some("x/b>1".asFormula))(1, 1::Nil),
         skip
       )).subgoals should contain theSameElementsInOrderAs(
-      "==> [b:=1;][{x'=v,z'=v}]x/b>1".asSequent ::
+      "==> [b:=1;]\\exists z [{x'=v,z'=v&true&b=1}]x/b>1".asSequent ::
       "==> [b:=1;][{x'=v}]b=1".asSequent :: Nil)
   }
 

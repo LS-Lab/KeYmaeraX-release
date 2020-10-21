@@ -636,7 +636,7 @@ private object DifferentialTactics extends Logging {
           } else skip
           val doGhost = r match {
             case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
-              DG(ghost)(pos) & (transform(rr)(pos ++ PosInExpr(0::1::Nil)) | DebuggingTactics.error(
+              DG(ghost)(pos) & (DW(pos ++ PosInExpr(0::Nil)) & transform(rr)(pos ++ PosInExpr(0::1::Nil)) | DebuggingTactics.error(
                 "Formula\n  " + rr.prettyString + "\ndoes not imply postcondition\n  " + p.prettyString +
                   "\nor necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in\n",
                 new BelleUserCorrectableException(_) {}
