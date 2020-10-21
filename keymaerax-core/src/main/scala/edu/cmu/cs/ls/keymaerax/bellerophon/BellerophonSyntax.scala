@@ -25,20 +25,24 @@ object BelleExpr {
   }
 
   private[bellerophon] def prettyArgs(inputs: Seq[Any]): String = {
-    persistable(inputs).flatMap(printOne) match {
+    persistable(inputs).flatMap(printOne(_, inputs.size <= 1)) match {
       case Nil => ""
       case args => "(" + args.mkString(",") + ")"
     }
   }
 
-  @tailrec private[bellerophon] def printOne(x: Any): Option[String] = {
+  private[bellerophon] def printOne(x: Any, listAsVarArgs: Boolean): Option[String] = {
     x match {
       case None => None
-      case Some(y) => printOne(y)
+      case Some(y) => printOne(y, listAsVarArgs)
       case input: Expression => Some("\"" + input.prettyString + "\"")
       case input: USubst => Some(input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(","))
       case input: SubstitutionPair => Some("\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\"")
       case input: String => Some("\"" + input + "\"")
+      case (head: Expression)::Nil => Some("\"" + head.prettyString + "\"")
+      case (head: Expression)::tail =>
+        if (listAsVarArgs) Some((head :: tail).map(printOne(_, listAsVarArgs)).mkString(","))
+        else Some("\"" + (head :: tail).map(_.asInstanceOf[Expression].prettyString).mkString("::") + "::nil\"")
       case input => Some("\"" + input.toString + "\"")
     }
   }
@@ -615,7 +619,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
     if (pt.inputs.nonEmpty) {
-      val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne)
+      val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne(_, pt.inputs.size <= 1))
       s"${pt.name}(${each.mkString(", ")}, ${locator.prettyString})"
     } else pt.name + "(" + locator.prettyString + ")"
 
