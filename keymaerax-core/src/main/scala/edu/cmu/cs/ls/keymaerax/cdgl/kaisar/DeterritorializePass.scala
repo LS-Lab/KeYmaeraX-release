@@ -229,6 +229,12 @@ case class DeterritorializePass(tt: TimeTable) {
           case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, List(), s))
           case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, bs) => (e1, translatePat(kc, e2, s), bs)}))
           case While(x, j, bs) => While(x, translate(kc, j, List(), s), bs)
+          case For(metX, metF, metIncr, guard, conv, body) =>
+            For(metX, translate(kc, metF, List(), s)
+              , translate(kc, metIncr, List(), s)
+              , guard
+              , conv
+              , body)
           // Filter out no-op'd labels
           case BoxChoice(Ghost(Triv()), right) => right
           case BoxChoice(left, Ghost(Triv())) => left

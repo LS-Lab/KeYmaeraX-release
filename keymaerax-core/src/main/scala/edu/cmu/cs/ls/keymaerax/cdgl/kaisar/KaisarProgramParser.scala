@@ -362,6 +362,17 @@ object ProofParser {
   def inverseGhost[_: P]: P[Statement] = (Index ~ "/--" ~ statement.rep ~ "--/").map({case (i, ss )=> locate(KaisarProof.inverseGhost(block(ss.toList)), i)})
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~/ "(" ~/ formula ~/ ")" ~/ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
+  private def increments(f: Term, x: Variable): Boolean = f match {
+    case Plus(y, f) if x == y => true
+    case Minus(y, f) if x == y => true
+    case _ => false
+  }
+  def parseFor[_: P]: P[For] =
+    (Index ~ "for" ~/ "(" ~/ ExpressionParser.assign ~/ ";" ~/ assume ~/ ";" ~/ ExpressionParser.assign ~/ ")"
+      ~/ "{" ~ statement.rep ~ "}").
+    map({case (i, Assign(metX, metF), guard: Assume, Assign(incL, metIncr), body: Seq[Statement])
+      if (incL ==  metX && increments(metIncr, metX)) => locate(
+      For(metX: Ident, metF: Term, metIncr: Term, guard: Assume, None, block(body.toList)), i)})
 
   def let[_: P]: P[Statement] = (Index ~ "let" ~/ ((ident ~/ "(" ~/ ident.rep(sep = ",") ~/ ")").map(Left(_))
            | term.map(Right(_)))
@@ -414,7 +425,7 @@ object ProofParser {
   private def debugParse[_: P](msg: String): P[Unit] = P("").map(_ => println(msg))
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal | pragma | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile  | NoCut(modify).opaque("assignment") | parseBlock | NoCut(label).opaque("label")
+    printGoal | pragma | note | let | switch | assume | assert | ghost | inverseGhost | parseFor | parseWhile  | NoCut(modify).opaque("assignment") | parseBlock | NoCut(label).opaque("label")
 
   def postfixStatement[_: P]: P[Statement] =
     // line label syntax can collide with ODE label syntax, check labels last.

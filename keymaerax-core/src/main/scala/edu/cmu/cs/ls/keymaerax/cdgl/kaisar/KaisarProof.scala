@@ -391,9 +391,24 @@ case class Block(ss: Statements) extends Statement
 case class Switch(scrutinee: Option[Selector], pats: List[(IdentPat, Formula, Statement)]) extends Statement
 // Execute either branch of a program nondeterministically, with corresponding proofs
 case class BoxChoice(left: Statement, right: Statement) extends Statement
+/* Canonical usage of for loops has form
+   [!conv;]
+   for(metX := metF; guard; pos := metIncr) {
+     body
+   }
+   where body ends with  !conv; !(metF >= metX + metIncr)
+   For loops encode Angelic loop convergence proofs
+   convergence is optional.
+   @TODO: Decide whether metX works as a variable which updates at every step or works as a function, and whether it uses
+   @TODO: Decide whether conv option needed, whether it's formula or assume
+   = or := syntax
+ */
+case class For(metX: Ident, metF: Term, metIncr: Term, guard: Assume, conv: Option[Assume], body: Statement) extends Statement
+// @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
 case class While(x: IdentPat, j: Formula, s: Statement) extends Statement
+
 // Repeat [[s]] nondeterministically any number of times
 case class BoxLoop(s: Statement, ih: Option[(IdentPat, Formula, Option[Formula])] = None) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
@@ -563,6 +578,11 @@ case class BoxLoopProgress(boxLoop: BoxLoop, progress: Statement) extends MetaNo
 
 // meta node for in-progress while loop.
 case class WhileProgress(whilst: While, progress: Statement) extends MetaNode {
+  override val children: List[Statement] = List(progress)
+}
+
+// meta node for in-progress for loop.
+case class ForProgress(forth: For, progress: Statement) extends MetaNode {
   override val children: List[Statement] = List(progress)
 }
 

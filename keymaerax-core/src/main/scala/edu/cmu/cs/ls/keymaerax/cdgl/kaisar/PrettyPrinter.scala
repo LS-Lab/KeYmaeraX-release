@@ -19,6 +19,7 @@ object PrettyPrinter {
       case Switch(scrutinee, pats) => s"switch ($scrutinee) { ... }"
       case BoxChoice(left, right) => s"... ++ ..."
       case While(x, j, s) => s"while($x:$j) { ... }"
+      case For(metX, metF, metIncr, guard, conv, body) => s"for($metX := $metF; $guard; $metX := $metIncr) { ... }"
       case BoxLoop(s, ih) => s"{...}*"
       case Ghost(s) =>  s"/++ ++/"
       case InverseGhost(s) => s"/-- --/"

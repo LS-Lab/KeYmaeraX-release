@@ -182,6 +182,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).signature
       case Was(now, was) => Context(now).signature
       case While(_, _, body) => Context(body).signature
+      case For(_, _, _, _, _, body) => Context(body).signature
       case BoxLoop(body, _) => Context(body).signature
       case BoxLoopProgress(bl, progress) => Context(progress).signature
       case WhileProgress(wh, prog) => Context(prog).signature
@@ -264,6 +265,8 @@ case class Context(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
+        // @TODO:
+      case For(_, _, _, _, _, body) => ContextResult.unit
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
@@ -286,6 +289,10 @@ case class Context(s: Statement) {
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
+      case ForProgress(For(metX, metF, metIncr, guard, conv, body), prog) =>
+        val convMatch = conv match { case Some(cnv) => matchAssume(cnv.pat, cnv.f) case None => ContextResult.unit }
+        val guardMatch = matchAssume(guard.pat, guard.f)
+        convMatch ++ guardMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")
