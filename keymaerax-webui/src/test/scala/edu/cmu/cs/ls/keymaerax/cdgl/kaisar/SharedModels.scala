@@ -240,12 +240,12 @@ object SharedModels {
       |!(d >= x & x >= d - eps) using guard conv by auto;
       |""".stripMargin
 
+  // @TODO: Best way to handle refinement: allow ghost around /++ pos := 0 ++/ to give back existential statement in pos
   val basicForNoConv: String =
     """
+      | sum := 0;
       | for (pos := 0; ?(pos <= 10); pos := (pos + 1);) {
-      |  prev:
-      |    prog := prog + 1;
-      |   !prog:(pos >= pos@prev + 1);
+      |    sum := sum + 1;
       | }
       |""".stripMargin
 
@@ -253,31 +253,26 @@ object SharedModels {
   val basicForConv: String =
     """
       | sum := 0;
-      | let J(x) <-> (sum = x^2 / 2);
-      | !conv:(J(0));
-      | for (x = 0; x <= 10; x := x + 1) {
-      |  prev:
-      |    x := x + 1;
-      |   !cnv:(J(x));
-      |   !prog:(x >= x@prev + 1);
+      | for (x = 0; !(sum = x^2 / 2); ?(x <= 10); x := x + 1) {
+      |    sum := sum + x;
+      |   !cnv:(sum = x^2 / 2);
       | }
-      | !total:(x = 50);
+      | !total:(sum >= 50);
       |""".stripMargin
 
   // may be less popular but may be easier to implement / test
   val revisedReachAvoidFor: String =
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
-      |let J(pos) <-> (x <= pos & pos <= d);
-      |!conv:(J(0));
-      |for (pos := 0; ?guard:(pos <= d - eps); pos := pos + eps*T/2) {
-      |prev:
+      |for (pos := 0; !conv:(pos <= x & x <= d - eps); ?guard:(pos <= d - eps); pos := pos + eps*T/2) {
       |  vel := (d - (x + eps))/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T);};
-      |  !safe:(J(pos)) using conv guard vel time by auto;
+      |  !safe:(x <= d - eps) using conv guard vel time by auto;
       |  ?(t >= T/2);
-      |  !prog:(pos >= pos@prev + eps*T/2);
+      |  !prog:(pos + eps*T/2 <= x);
+      |  note step = andI(prog, safe);
       |}
+      | /* @TODO: Decide how we feel about guard negations here */
       |!(d >= x & x >= d - eps) using guard conv by auto;
       |""".stripMargin
 
