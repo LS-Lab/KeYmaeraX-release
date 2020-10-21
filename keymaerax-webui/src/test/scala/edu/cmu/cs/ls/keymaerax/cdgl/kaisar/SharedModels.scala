@@ -242,7 +242,9 @@ object SharedModels {
 
   // @TODO: Best way to handle refinement: allow ghost around /++ pos := 0 ++/ to give back existential statement in pos
   val basicForNoConv: String =
-    """
+    """pragma option "time=true";
+      |pragma option "trace=true";
+      |pragma option "debugArith=true";
       | sum := 0;
       | for (pos := 0; ?(pos <= 10); pos := (pos + 1);) {
       |    sum := sum + 1;
@@ -253,7 +255,7 @@ object SharedModels {
   val basicForConv: String =
     """
       | sum := 0;
-      | for (x = 0; !(sum = x^2 / 2); ?(x <= 10); x := x + 1) {
+      | for (x := 0; !(sum = x^2 / 2); ?(x <= 10); x := x + 1) {
       |    sum := sum + x;
       |   !cnv:(sum = x^2 / 2);
       | }

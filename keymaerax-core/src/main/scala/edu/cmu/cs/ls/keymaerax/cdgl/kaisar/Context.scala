@@ -290,9 +290,10 @@ case class Context(s: Statement) {
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
       case ForProgress(For(metX, metF, metIncr, conv, guard, body), prog) =>
-        val convMatch = conv match { case Some(cnv) => matchAssume(cnv.pat, cnv.f) case None => ContextResult.unit }
-        val guardMatch = matchAssume(guard.pat, guard.f)
-        convMatch ++ guardMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
+        val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
+        val guardMatch = matched(guard.pat, guard.f)
+        val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
+        convMatch ++ guardMatch ++ rec
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")

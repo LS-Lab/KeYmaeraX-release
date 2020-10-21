@@ -765,7 +765,7 @@ object ProofChecker {
         val (sBody, fBody) = apply(con.:+(progCon), body)
         val indStepResults = sBody.lastFacts
         val indStepConv = indStepResults.find({case (kName, kFml, kElab) => cnvElab.exists({case Assert(x,f,m) => f == kElab})})
-        val indStepProg = indStepResults.find({case (kName, kFml, kElab) => kElab == progCond})
+        //val indStepProg = indStepResults.find({case (kName, kFml, kElab) => kElab == progCond})
         // Check that convergence inductive step has been proven which matches the convergence condition, if there is any
         val cnvConcl: Formula =
         (indStepConv, cnvElab) match {
@@ -774,13 +774,14 @@ object ProofChecker {
           case _ => True
         }
         // Check that progress inductive step has been proven
-        val progConcl =
+        // NB: progress is now automatic from the incrementations
+        /*val progConcl =
         indStepProg match {
           case None => throw ProofCheckException(s"For loop body must assert progress condition $progCond but did not")
           case _ => termCond // termination condition of the metric
-        }
+        }*/
         val Box(a, p) = asBox(fBody)
-        val theConcl = cnvConcl match {case True => progConcl case f => And(f, progConcl)}
+        val theConcl = cnvConcl match {case True => termCond case f => And(f, termCond)}
         // @TODO: reconsider result formula format. Complicated one here needed when proved formula mentions metX though
         val ff = Box(Compose(Compose(Assign(metX, met0),Dual(Loop(Compose(Dual(a), Assign(metX,metIncr))))), Dual(Test(theConcl))), True)
         val ss = For(metX, met0, metIncr, cnvElab, guard, sBody.s)
