@@ -1156,6 +1156,11 @@ class DifferentialTests extends TacticTestBase {
       have message "Ghost {t'=x*t*x^2} is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y"
   }
 
+  it should "unify ghost shapes correctly" in withMathematica { _ =>
+    proveBy("==> [{x'=v}]x>0".asSequent, dG("z'=1*v".asDifferentialProgram, None)(1)).subgoals.loneElement shouldBe
+      "==> \\exists z [{x'=v, z'=1*v}]x>0".asSequent
+  }
+
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
