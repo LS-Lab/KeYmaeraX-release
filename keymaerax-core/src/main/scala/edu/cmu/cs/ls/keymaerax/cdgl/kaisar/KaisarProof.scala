@@ -404,7 +404,38 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
    @TODO: Decide whether conv option needed, whether it should contain elaborated fml, whether  constructors can be further combined + simplified
    = or := syntax
  */
-case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement {
+  /** Guard termination condition that holds after the loop terminates.
+    * Raises exception if loop termination metric ill-founded */
+  def guardPost: Formula = {
+    // @TODO: Refactor to have better helper functions with les surprising exceptions
+    // @TODO: Careful about metF = init value or value everywhere
+    // true for increasing metric value, false for decreasing, throw exception when unknown or rate of change does not have
+    // a provable lower bound
+    // @TODO: Allow much more general metrics, but need some examples/tests first
+    // for example "for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2)"
+    val (posDir, bound) = metIncr match {
+      case Plus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value > 0, ny.value)
+      case Minus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value < 0, ny.value)
+      case _ => throw ProofCheckException("For loop only supports loops which increment by constant literal value metric := metric + c;")
+    }
+    // progress, termination
+    // @TODO: more cases
+    (guard.f, posDir) match {
+      case (Greater(metX, ny: Number), false) if ny.value <= bound =>
+        (LessEqual(metX, ny))
+      case (GreaterEqual(metX, ny: Number), false) if ny.value <= bound =>
+        (Less(metX, ny))
+      case (Less(metX, ny: Number), true) if ny.value >= bound =>
+        (GreaterEqual(metX, ny))
+      case (LessEqual(metX, ny: Number), true) if ny.value >= bound =>
+        (Greater(metX, ny))
+      case _ => throw ProofCheckException("Could not understand termination metric for \"for\" loop. " +
+        "Make sure guard has shape  metricVar <cmp> <number> and make sure loop increases or decreases " +
+        "in correct direction")
+    }
+  }
+}
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]

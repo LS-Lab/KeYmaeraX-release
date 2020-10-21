@@ -259,7 +259,7 @@ object SharedModels {
       |    sum := sum + x;
       |   !cnv:(sum = x^2 / 2);
       | }
-      | !total:(sum >= 50);
+      | !total:(sum >= 50) using sum x by auto;
       |""".stripMargin
 
   // may be less popular but may be easier to implement / test

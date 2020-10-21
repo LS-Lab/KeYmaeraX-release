@@ -156,6 +156,7 @@ case class Context(s: Statement) {
        * the newly-processed "s" should be part of "pr". */
       case BoxLoopProgress(bl, pr) => reapply(BoxLoopProgress(bl, reapply(pr).:+(other).s))
       case WhileProgress(wh, pr) => reapply(WhileProgress(wh, reapply(pr).:+(other).s))
+      case ForProgress(fr, pr) => reapply(ForProgress(fr, reapply(pr).:+(other).s))
       case SwitchProgress(switch, onBranch, pr) => reapply(SwitchProgress(switch, onBranch, reapply(pr).:+(other).s))
       case BoxChoiceProgress(bc, onBranch, pr) => reapply(BoxChoiceProgress(bc, onBranch, reapply(pr).:+(other).s))
       case Block(ss) =>
@@ -265,8 +266,14 @@ case class Context(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
-        // @TODO:
-      case For(_, _, _, _, _, body) => ContextResult.unit
+        // @TODO: add functions to For which compute the terminated guard and terminated conv
+      case fr@For(_, _, _, conv, guard, body) =>
+        val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
+        val guardMatch = matched(guard.pat, fr.guardPost)
+        //val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
+        val res = convMatch ++ guardMatch
+        res
+        // ++ rec
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
@@ -294,6 +301,7 @@ case class Context(s: Statement) {
         val guardMatch = matched(guard.pat, guard.f)
         val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
         convMatch ++ guardMatch ++ rec
+        // @TODO: Probably an admissibility issue sum2 gets bound and is also mentioned in conv, plz fix
       case SwitchProgress(switch, onBranch, progress) =>
         val (x, fml: Formula, e) = switch.pats(onBranch)
         val defaultVar = Variable("anon")

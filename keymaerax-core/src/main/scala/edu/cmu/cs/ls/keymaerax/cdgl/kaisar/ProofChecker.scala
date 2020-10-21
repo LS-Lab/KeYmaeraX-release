@@ -656,37 +656,6 @@ object ProofChecker {
       case fmls => throw ProofCheckException("Switch expected scrutinee to match exactly one formula, but matches: " + fmls, node = node)
     }
   }
-
-  /** @return inductive step and conclusion formulas for well-formed for loop termination metric, throw [[ProofCheckException]]
-    *  if not well-formed */
-  private def forMetric(con: Context,  metX: Ident, metF: Term, metIncr: Term, guard: Formula): (Formula, Formula) = {
-    // @TODO: Careful about metF = init value or value everywhere
-    // true for increasing metric value, false for decreasing, throw exception when unknown or rate of change does not have
-    // a provable lower bound
-    // @TODO: Allow much more general metrics, but need some examples/tests first
-    // for example "for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2)"
-    val (posDir, bound) = metIncr match {
-      case Plus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value > 0, ny.value)
-      case Minus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value < 0, ny.value)
-      case _ => throw ProofCheckException("For loop only supports loops which increment by constant literal value metric := metric + c;")
-    }
-    // progress, termination
-    // @TODO: more cases
-    (guard, posDir) match {
-      case (Greater(metX, ny: Number), false) if ny.value <= bound =>
-        (LessEqual(metF, metIncr), LessEqual(metF, ny))
-      case (GreaterEqual(metX, ny: Number), false) if ny.value <= bound =>
-        (Less(metF, metIncr), Less(metF, ny))
-      case (Less(metX, ny: Number), true) if ny.value >= bound =>
-        (GreaterEqual(metF, metIncr), GreaterEqual(metF, ny))
-      case (LessEqual(metX, ny: Number), true) if ny.value >= bound =>
-        (Greater(metF, metIncr), Greater(metF, ny))
-      case _ => throw ProofCheckException("Could not understand termination metric for \"for\" loop. " +
-        "Make sure guard has shape  metricVar <cmp> <number> and make sure loop increases or decreases " +
-        "in correct direction")
-    }
-  }
-
   /** @return  (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
@@ -752,7 +721,7 @@ object ProofChecker {
         // @TODO: Check termination metric
         // @TODO: Check variable binding side conditions
         // throws exception if metric ill-formed
-        val (progCond, termCond) = forMetric(con, metX, met0, metIncr, guard.f)
+        val termCond = fr.guardPost // checks well-foundedness, raises exception if it can't
         if (VariableSets(body).boundVars.contains(metX)) {
           throw ProofCheckException(s"For loop index variable $metX must not be bound in loop body", node = fr)
         }
