@@ -263,6 +263,8 @@ object SharedModels {
       |""".stripMargin
 
   // may be less popular but may be easier to implement / test
+  // @TODO: need d > eps but let's catch it in the tests first before fixing it
+  // @TODO: remember to update thesis after code is working
   val revisedReachAvoidFor: String =
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
       |for (pos := 0; !conv:(pos <= x & x <= d - eps); ?guard:(pos <= d - eps); pos := pos + eps*T/2) {

@@ -66,6 +66,7 @@ object ProofTraversal {
           case BoxChoiceProgress(bc, onBranch, progress) => BoxChoiceProgress(bc, onBranch, traverse(kc, kce, progress, tf))
           case BoxLoopProgress(bl, prog) => BoxLoopProgress(bl, traverse(kc, kce, prog, tf))
           case WhileProgress(wh, prog) => WhileProgress(wh, traverse(kc, kce, prog, tf))
+          case ForProgress(fr, prog) => ForProgress(fr, traverse(kc, kce, prog, tf))
           case Phi(asgns) => Phi(traverse(kc, kce, asgns, tf))
           case Was(now: Statement, was: Statement) =>
             Was(traverse(kc, kce, now, tf), was)
@@ -84,10 +85,12 @@ object ProofTraversal {
             BoxChoice(traverse(conL, coneL, left, tf), traverse(conR, coneR, right, tf))
           case While(x, j, ss) =>
             While(x, j, traverse(kc, kce, ss, tf))
-          case For(metX, metF, metIncr, conv, guard, body) =>
+          case fr@For(metX, metF, metIncr, conv, guard, body) =>
             val grd: Assume = traverse(kc, kce, guard, tf).asInstanceOf[Assume]
             val cnv: Option[Assert] = conv.map(as => traverse(kc, kce, as, tf).asInstanceOf[Assert])
-            For(metX, metF, metIncr, cnv, grd, traverse(kc, kce, body, tf))
+            val prog = (ForProgress(fr, Triv()))
+            // @TODO: if progress helps, use it in all constructors of traverse
+            For(metX, metF, metIncr, cnv, grd, traverse(kc.:+(prog), kce.:+(prog), body, tf))
           case BoxLoop(s, ih) =>
             BoxLoop(traverse(kc, kce, s, tf), ih)
           case Ghost(ss) =>

@@ -407,7 +407,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.basicForConv :: Nil)
+    testExampleSet(SharedModels.revisedReachAvoidFor :: Nil)
   }
 
   "QE" should "prove some formulas" in withMathematica { _ =>
