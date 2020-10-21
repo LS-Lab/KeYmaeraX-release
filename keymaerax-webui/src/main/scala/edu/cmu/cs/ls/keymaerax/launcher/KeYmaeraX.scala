@@ -92,11 +92,12 @@ object KeYmaeraX {
       //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
       options.get('mode) match {
         case Some(Modes.CODEGEN) =>
-          val toolConfig = if (options.get('quantitative).isDefined) {
-            configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
-          } else {
-            configFromFile("z3")
-          }
+          val toolConfig =
+            if (options.contains('quantitative)) {
+              configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
+            } else {
+              configFromFile("z3")
+            }
           initializeProver(combineConfigs(options, toolConfig), usage)
           CodeGen.codegen(options, usage)
         case Some(Modes.MODELPLEX) =>
@@ -193,7 +194,10 @@ object KeYmaeraX {
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
-        nextOption(options, unprocessedArgs)
+        if (unprocessedArgs == list) {
+          Usage.optionErrorReporter(unprocessedArgs.head, usage)
+          exit(1)
+        } else nextOption(options, unprocessedArgs)
     }
   }
 
