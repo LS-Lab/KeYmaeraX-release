@@ -159,7 +159,7 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
-      case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
+      case "-quantitative" :: tail => nextOption(map ++ Map('quantitative -> true), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
