@@ -37,7 +37,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
-      ToolProvider.tools().foreach(_.cancel())
+      //ToolProvider.tools().foreach(_.cancel()) //@todo breaks TimeoutAlternatives+Mathematica
       //@note end executing the interpreter when its thread gets interrupted
       throw new BelleAbort("Killed", "Execution stopped by killing the interpreter or interrupting the interpreter thread")
     }
