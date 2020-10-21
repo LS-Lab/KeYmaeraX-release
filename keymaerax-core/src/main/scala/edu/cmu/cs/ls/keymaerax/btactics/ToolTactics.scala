@@ -476,7 +476,9 @@ private object ToolTactics {
     }
 
     val boundVars = StaticSemantics.boundVars(sequent(pos.top))
-    val gaFull = if (pos.isSucc) sequent.ante.flatMap(FormulaTools.conjuncts) else sequent.ante.patch(pos.top.getIndex, Nil, 1).flatMap(FormulaTools.conjuncts)
+    val gaFull =
+      if (pos.isSucc) (sequent.ante ++ sequent.succ.patch(pos.top.getIndex, Nil, 1).map(Not)).filter(_.isFOL).flatMap(FormulaTools.conjuncts)
+      else (sequent.ante.patch(pos.top.getIndex, Nil, 1) ++ sequent.succ.map(Not)).filter(_.isFOL).flatMap(FormulaTools.conjuncts)
 
     @tailrec
     def proveFact(assumptions: IndexedSeq[Formula], filters: List[IndexedSeq[Formula]=>IndexedSeq[Formula]]): (ProvableSig, IndexedSeq[Formula]) = {

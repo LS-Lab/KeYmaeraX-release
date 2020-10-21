@@ -127,6 +127,11 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "b>0 ==> [x:=4;]x>=v^2/(2*b)".asSequent
   }
 
+  it should "exploit conditional equivalence from negated global facts" in withQE { _ =>
+    val result = proveBy("==> b<=0, [x:=4;]2*x*b>=v*v".asSequent, transform("x>=v^2/(2*b)".asFormula)(2, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> b<=0, [x:=4;]x>=v^2/(2*b)".asSequent
+  }
+
   it should "FEATURE_REQUEST: exploit facts from evolution domain constraints" taggedAs TodoTest in withQE { _ =>
     val result = proveBy(" ==> [{x'=v&b>0}]2*x*b>=v*v".asSequent, transform("x>=v^2/(2*b)".asFormula)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "==> [{x'=v&b>0}]x>=v^2/(2*b)".asSequent
