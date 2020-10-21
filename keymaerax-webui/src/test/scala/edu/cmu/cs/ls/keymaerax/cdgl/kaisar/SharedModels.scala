@@ -224,16 +224,57 @@ object SharedModels {
       |}
       |""".stripMargin
 
-  val basicReachAvoidFor: String =
+  val proposedReachAvoidFor: String =
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
       |let J(pos) <-> (pos <= d);
       |!conv:(J(0));
-      |for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2;) {
+      |for (pos = 0; ?guard:(pos <= d - eps); pos := pos + eps*T/2;) {
       |prev:
       |  vel := (d - (x + eps))/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T);};
       |  !safe:(J(x)) using conv guard vel time by auto;
+      |  ?(t >= T/2);
+      |  !prog:(pos >= pos@prev + eps*T/2);
+      |}
+      |!(d >= x & x >= d - eps) using guard conv by auto;
+      |""".stripMargin
+
+  val basicForNoConv: String =
+    """
+      | for (pos := 0; ?(pos <= 10); pos := (pos + 1);) {
+      |  prev:
+      |    prog := prog + 1;
+      |   !prog:(pos >= pos@prev + 1);
+      | }
+      |""".stripMargin
+
+  // gauss formula for triangle number
+  val basicForConv: String =
+    """
+      | sum := 0;
+      | let J(x) <-> (sum = x^2 / 2);
+      | !conv:(J(0));
+      | for (x = 0; x <= 10; x := x + 1) {
+      |  prev:
+      |    x := x + 1;
+      |   !cnv:(J(x));
+      |   !prog:(x >= x@prev + 1);
+      | }
+      | !total:(x = 50);
+      |""".stripMargin
+
+  // may be less popular but may be easier to implement / test
+  val revisedReachAvoidFor: String =
+    """?(eps > 0 &  x = 0 & T > 0 & d > 0);
+      |let J(pos) <-> (x <= pos & pos <= d);
+      |!conv:(J(0));
+      |for (pos := 0; ?guard:(pos <= d - eps); pos := pos + eps*T/2) {
+      |prev:
+      |  vel := (d - (x + eps))/T;
+      |  t := 0;
+      |  {t' = 1, x' = vel & ?time:(t <= T);};
+      |  !safe:(J(pos)) using conv guard vel time by auto;
       |  ?(t >= T/2);
       |  !prog:(pos >= pos@prev + eps*T/2);
       |}

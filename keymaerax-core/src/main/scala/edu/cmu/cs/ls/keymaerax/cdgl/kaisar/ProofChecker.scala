@@ -664,6 +664,7 @@ object ProofChecker {
     // true for increasing metric value, false for decreasing, throw exception when unknown or rate of change does not have
     // a provable lower bound
     // @TODO: Allow much more general metrics, but need some examples/tests first
+    // for example "for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2)"
     val (posDir, bound) = metIncr match {
       case Plus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value > 0, ny.value)
       case Minus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value < 0, ny.value)

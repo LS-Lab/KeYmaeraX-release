@@ -202,6 +202,7 @@ object SSAPass {
         val (xx, jj) = (ssa(x, bodySnap), ssa(j, bodySnap))
         val whilst = locate(While(xx, jj, KaisarProof.block(indStutters :: body :: Nil)), s)
         (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
+      case For(metX, metF, metIncr, guard, conv, body) => ???
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {

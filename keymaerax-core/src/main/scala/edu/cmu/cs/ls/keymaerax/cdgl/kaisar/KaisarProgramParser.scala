@@ -368,7 +368,7 @@ object ProofParser {
     case _ => false
   }
   def parseFor[_: P]: P[For] =
-    (Index ~ "for" ~/ "(" ~/ ExpressionParser.assign ~/ ";" ~/ assume ~/ ";" ~/ ExpressionParser.assign ~/ ")"
+    (Index ~ "for" ~/ "(" ~/ ExpressionParser.assign ~/ ";" ~/ assume /*includes ;*/ ~/ ExpressionParser.assign ~/ ";".? ~/ ")"
       ~/ "{" ~ statement.rep ~ "}").
     map({case (i, Assign(metX, metF), guard: Assume, Assign(incL, metIncr), body: Seq[Statement])
       if (incL ==  metX && increments(metIncr, metX)) => locate(
