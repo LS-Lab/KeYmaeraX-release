@@ -183,7 +183,7 @@ class CMonitorGenerator extends CodeGenerator {
             val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
             val (errorMargin, combinedMargin) = dist match {
               case Number(n) if n == 0 => (simpMargin, simpMargin)
-              case Divide(Number(n), Plus(l: Divide, r: Divide)) if n == 1 =>
+              case Divide(Number(n), Plus(l: Divide, r)) if n == 1 =>
                 //@note parallel composition of successive tests (n-ary conjunction)
                 (simpMargin, Divide(Number(1), Plus(l, Plus(r, Divide(Number(1), simpMargin)))))
               case _ =>
