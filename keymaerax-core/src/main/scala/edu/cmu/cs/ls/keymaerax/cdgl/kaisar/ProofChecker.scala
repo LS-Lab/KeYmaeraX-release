@@ -657,6 +657,35 @@ object ProofChecker {
     }
   }
 
+  /** @return inductive step and conclusion formulas for well-formed for loop termination metric, throw [[ProofCheckException]]
+    *  if not well-formed */
+  private def forMetric(con: Context,  metX: Ident, metF: Term, metIncr: Term, guard: Formula): (Formula, Formula) = {
+    // @TODO: Careful about metF = init value or value everywhere
+    // true for increasing metric value, false for decreasing, throw exception when unknown or rate of change does not have
+    // a provable lower bound
+    // @TODO: Allow much more general metrics, but need some examples/tests first
+    val (posDir, bound) = metIncr match {
+      case Plus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value > 0, ny.value)
+      case Minus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value < 0, ny.value)
+      case _ => throw ProofCheckException("For loop only supports loops which increment by constant literal value metric := metric + c;")
+    }
+    // progress, termination
+    // @TODO: more cases
+    (guard, posDir) match {
+      case (Greater(metX, ny: Number), false) if ny.value <= bound =>
+        (LessEqual(metF, metIncr), LessEqual(metF, ny))
+      case (GreaterEqual(metX, ny: Number), false) if ny.value <= bound =>
+        (Less(metF, metIncr), Less(metF, ny))
+      case (Less(metX, ny: Number), true) if ny.value >= bound =>
+        (GreaterEqual(metF, metIncr), GreaterEqual(metF, ny))
+      case (LessEqual(metX, ny: Number), true) if ny.value >= bound =>
+        (Greater(metF, metIncr), Greater(metF, ny))
+      case _ => throw ProofCheckException("Could not understand termination metric for \"for\" loop. " +
+        "Make sure guard has shape  metricVar <cmp> <number> and make sure loop increases or decreases " +
+        "in correct direction")
+    }
+  }
+
   /** @return  (c1, f) where c1 is the elaboration of s (but not con) into a context and f is the conclusion proved
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
@@ -716,6 +745,48 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
+      case fr@For(metX, metF, metIncr, guard, maybeConv, body) =>
+        // @TODO: Make sure to properly elaborate things
+        // @TODO: Check silly syntactic agreement conditions if any
+        // @TODO: Check termination metric
+        // @TODO: Check variable binding side conditions
+        val cnvXFElab: Option[(IdentPat, Formula, Formula)] =
+          (con.lastFact, maybeConv) match {
+            case (None, None) =>
+              println("For loop has no convergence predicate, and thats ok")
+              None
+            case (Some((name, fml, elab)), Some(Assume(x, fml2))) if elab == fml2 => Some(name, fml, elab)
+            case (Some(nameFmlElab), _) => Some(nameFmlElab)
+            case (None, Some(Assume(x, f))) => Some(x, f, f)
+        }
+        val cnvAnnot = cnvXFElab.map({ case ((cnvX, cnvF, cnvElab)) => Assume(cnvX, cnvElab)})
+        // throws exception if metric ill-formed
+        val (progCond, termCond) = forMetric(con, metX, metF, metIncr, guard.f)
+        // @TODO: triple IH with elab instead of assume
+        val progFor = For(metX, metF, metIncr, guard, cnvAnnot, body)
+        val progCon = ForProgress(progFor, Triv())
+        val (sBody, fBody) = apply(con.:+(progCon), body)
+        val indStepResults = sBody.lastFacts
+        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => cnvXFElab.exists({case (x,f,elab) => elab == kElab})})
+        val indStepProg = indStepResults.find({case (kName, kFml, kElab) => kElab == progCond})
+        // Check that convergence inductive step has been proven which matches the convergence condition, if there is any
+        val cnvConcl: Formula =
+        (indStepConv, cnvXFElab) match {
+          case (None, Some((cnvX,cnvF,cnvElab))) => throw ProofCheckException(s"For loop has no inductive step for convergence predicate $cnvX:$cnvElab")
+          case (Some((istepX, istepF, istepElab)), Some((cnvX,cnvF,cnvElab))) => istepElab
+          case _ => True
+        }
+        // Check that progress inductive step has been proven
+        val progConcl =
+        indStepProg match {
+          case None => throw ProofCheckException(s"For loop body must assert progress condition $progCond but did not")
+          case _ => termCond // termination condition of the metric
+        }
+        val Box(a, p) = asBox(fBody)
+        val theConcl = cnvConcl match {case True => progConcl case f => And(f, progConcl)}
+        val ff = Box(Compose(Dual(Loop(Dual(a))), Dual(Test(theConcl))), True) // @TODO: reconsider format
+        val ss = For(metX, metF, metIncr, guard, cnvAnnot, sBody.s)
+        (Context(ss), ff)
       case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {
           case None => throw ProofCheckException(s"No invariant found in $con", node = bl)

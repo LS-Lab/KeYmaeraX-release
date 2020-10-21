@@ -458,7 +458,10 @@ case class Context(s: Statement) {
   /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
     * appear ghosted or unghosted.  */
-  def lastBlock: Block = Block(lastStatements())
+  def lastBlock: Block = {
+    Block(lastStatements())
+  }
+
 
   private def starPhi(s: Statement): Statement = {
     s match {
@@ -479,18 +482,25 @@ case class Context(s: Statement) {
   }
 
   private def collectLastFact: (Option[(IdentPat, Formula)], List[Phi]) = {
-    def unwind(wound: List[Statement]): (Option[(IdentPat, Formula)], List[Phi]) = {
+    collectLastFacts.headOption match {
+      case Some(((x, y), z)) => (Some(x, y), z)
+      case None => (None, Nil)
+    }
+  }
+
+  private def collectLastFacts: (List[((IdentPat, Formula), List[Phi])]) = {
+    def unwind(wound: List[Statement]): List[((IdentPat, Formula), List[Phi])] = {
       wound match {
-        case Assert(pat, f, _) :: _ => (Some((pat, f)), Nil)
-        case Assume(pat, f) :: _ => (Some((pat, f)), Nil)
-        case Note(x, pt, Some(fml)) :: _ => (Some((x, fml)), Nil)
+        case Assert(pat, f, _) :: _ =>  ((pat, f), Nil) :: Nil
+        case Assume(pat, f) :: _ => ((pat, f), Nil) :: Nil
+        case Note(x, pt, Some(fml)) :: _ => ((x, fml), Nil) :: Nil
         case (phi: Phi) :: rest =>
-          val (fml, phis) = unwind(rest)
-          (fml, phi :: phis)
+          val (fmlPhis) = unwind(rest)
+          fmlPhis.map({case (fml, phis) => (fml, phi :: phis)})
         // looking up forward-ghost facts is ok
         case Ghost(s) :: ss => unwind(s :: ss)
         case s :: ss => unwind(ss)
-        case Nil => (None, Nil)
+        case Nil => Nil
       }
     }
     unwind(lastStatements().reverse)
@@ -504,6 +514,14 @@ case class Context(s: Statement) {
     val (kFml, phis) = collectLastFact
     val triple = kFml.map({case (k, fml) => (k, fml, elaborateFunctions(fml, Triv()))})
     triple.map({case ((k,fact, elab)) => (k, finishFact(fact, phis), finishFact(elab, phis))})
+  }
+
+  def lastFacts: List[(IdentPat, Formula, Formula)] = {
+    val fmlPhis = collectLastFacts
+    fmlPhis.map({case ((k, fml), kPhis) =>
+      val (kk, fact, elab) =  (k, fml, elaborateFunctions(fml, Triv()))
+      (kk, finishFact(fact, kPhis), finishFact(elab, kPhis))
+    })
   }
 
   def rawLastFact: Option[(IdentPat, Formula)] = {
