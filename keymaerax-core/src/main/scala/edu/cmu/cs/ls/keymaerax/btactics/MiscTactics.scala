@@ -33,9 +33,10 @@ object DebuggingTactics {
 
   /** Indicates a failed attempt that triggers proof search. */
   // @TODO: No AxiomInfo for "Error" due to funny type.
-  def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
+  def error(s: => String, e: String => BelleThrowable = new TacticInapplicableFailure(_)): BuiltInTactic =
+      new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
-      throw new TacticInapplicableFailure(s + "\n" + provable.underlyingProvable.prettyString)
+      throw e(s + "\n" + provable.underlyingProvable.prettyString)
     }
   }
 
