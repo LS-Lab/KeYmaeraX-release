@@ -561,7 +561,7 @@ private object DifferentialTactics extends Logging {
           )
         }
 
-        if (!singular.isEmpty)
+        if (singular.nonEmpty)
           throw new IllFormedTacticApplicationException("Possible singularities during DG(" + ghost + ") will be rejected: " +
             singular.mkString(",") + " in\n" + sequent.prettyString +
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
@@ -611,7 +611,7 @@ private object DifferentialTactics extends Logging {
   /** [[DifferentialEquationCalculus.dG]] */
   private[btactics] def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = anon (
       (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-        case Some(Box(ODESystem(_, h), _)) =>
+        case Some(Box(ODESystem(_, h), p)) =>
           val (_, a: Term, b: Term) = try {
             DifferentialHelper.parseGhost(ghost)
           } catch {
@@ -636,7 +636,11 @@ private object DifferentialTactics extends Logging {
           } else skip
           val doGhost = r match {
             case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
-              DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
+              DG(ghost)(pos) & (transform(rr)(pos ++ PosInExpr(0::1::Nil)) | DebuggingTactics.error(
+                "Formula\n  " + rr.prettyString + "\ndoes not imply postcondition\n  " + p.prettyString +
+                  "\nor necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in\n",
+                new BelleUserCorrectableException(_) {}
+              ))
             case _ => DG(ghost)(pos) //@note no r or r==p
           }
           cutSingularities & doGhost

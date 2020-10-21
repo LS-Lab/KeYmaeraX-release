@@ -1161,6 +1161,47 @@ class DifferentialTests extends TacticTestBase {
       "==> \\exists z [{x'=v, z'=1*v}]x>0".asSequent
   }
 
+  it should "give a useful error message on invalid transformation of postcondition" in withMathematica { _ =>
+    the [BelleUserCorrectableException] thrownBy proveBy("==> [{x'=v}]x>0".asSequent,
+      dG("z'=v".asDifferentialProgram, Some("z>=0".asFormula))(1)) should have message
+      """Formula
+        |  z>=0
+        |does not imply postcondition
+        |  x>0
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |
+        |Provable{
+        |==> 1:  [{x'=v&true}]x>0	Box
+        |  from
+        |==> 1:  \exists z [{x'=v,z'=v&true}]x>0	Exists}""".stripMargin
+  }
+
+  it should "give a useful error message when facts cannot be preserved for postcondition transformation" in withMathematica { _ =>
+    the [BelleUserCorrectableException] thrownBy proveBy("==> [b:=1;][{x'=v}]x>b".asSequent,
+      dG("z'=v".asDifferentialProgram, Some("x/b>1".asFormula))(1, 1::Nil)) should have message
+      """Formula
+        |  x/b>1
+        |does not imply postcondition
+        |  x>b
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |
+        |Provable{
+        |==> 1:  [b:=1;][{x'=v&true}]x>b	Box
+        |  from
+        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v&true}]x>b	Box}""".stripMargin
+  }
+
+  it should "FEATURE_REQUEST: use facts preserved by dC when transforming postcondition" taggedAs TodoTest in withMathematica { _ =>
+    //@todo requires transform feature
+    proveBy("==> [b:=1;][{x'=v}]x>b".asSequent,
+      dC("b=1".asFormula)(1, 1::Nil) <(
+        dG("z'=v".asDifferentialProgram, Some("x/b>1".asFormula))(1, 1::Nil),
+        skip
+      )).subgoals should contain theSameElementsInOrderAs(
+      "==> [b:=1;][{x'=v,z'=v}]x/b>1".asSequent ::
+      "==> [b:=1;][{x'=v}]b=1".asSequent :: Nil)
+  }
+
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
