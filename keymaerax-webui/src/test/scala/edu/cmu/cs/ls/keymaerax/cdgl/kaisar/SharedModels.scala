@@ -1,12 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-// @TODO: Probably want top-level file format that can factor out definition of  ODE, declare rigids, detect wrong or undefined rigid names
-// @TODO: Optimize loop checking case to fail early if loop body doesn't assert or note inductive statement as final step
-// @TODO: ODE proof checking should include past cuts by default
-// @TODO: Elaboration of abs, min, max should use intuitive auto-generated names, recover high-level messages if possible
-// @TODO: Double-check abs, min, max elaboration to avoid needless branching
-// @TODO: Use new contexts for all-around smart QE, which substitutes variables wherever possible (may need dependency analysis)
-//   and which hides old irrelevant max, min, abs to reduce branching factor.
 /** Kaisar models/proofs which are used in multiple test suites, e.g. Kaisar and ProofPlex. */
 object SharedModels {
   val essentialsSafeCar1D: String =

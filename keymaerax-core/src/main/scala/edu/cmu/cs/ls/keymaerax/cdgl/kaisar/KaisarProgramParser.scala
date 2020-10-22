@@ -131,6 +131,7 @@ object ExpressionParser {
     f match {
       case Nothing => true
       case _: Variable => true
+      case fo: FuncOf if fo.child.isInstanceOf[BaseVariable] => true
       case Pair(l, r) => isPatTerm(l) && isPatTerm(r)
       case _ => false
     }
@@ -276,7 +277,9 @@ object ProofParser {
   /*def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
     map({case (i, p, x) => locate(VarPat(p, x), i)})*/
   def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
-  def exPat[_: P]: P[Term] = NoCut(ExpressionParser.patTerm ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
+  def fullExPat[_: P]: P[Term] = NoCut(ExpressionParser.patTerm ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
+  def exPat[_: P]: P[Term] = NoCut(ExpressionParser.patTerm ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e}).
+    filter({case _: FuncOf => false case _ => true})
   def idExPat[_: P]: P[Option[Ident]] = exPat.map({case (e: BaseVariable) => Some(e) case _ => None })
 
   private def assembleMod(e: Term, hp: Program): Modify = {
@@ -384,7 +387,7 @@ object ProofParser {
 
   def note[_: P]: P[Note] = (Index ~ "note" ~/ ident ~/ "=" ~/ proofTerm ~/ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
-  def atomicODEStatement[_: P]: P[AtomicODEStatement] = (NoCut(idExPat) ~ atomicOde).map({case (id, ode) => AtomicODEStatement(ode, id)})
+  def atomicODEStatement[_: P]: P[AtomicODEStatement] = (NoCut(fullExPat) ~ atomicOde).map({case (id, ode) => AtomicODEStatement(ode, id)})
   def ghostODE[_: P]: P[DiffStatement] = (Index ~ "/++" ~ diffStatement ~ "++/").
     map({case (i, ds) => locate(DiffGhostStatement(ds), i)})
   def inverseGhostODE[_: P]: P[DiffStatement] = (Index ~ "/--" ~ diffStatement ~ "--/").
@@ -395,13 +398,13 @@ object ProofParser {
     map({case (i, dps)=> locate(dps.reduceRight(DiffProductStatement), i)})
 
   // @TODO: Special error message for missing ?(); maybe
-  def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  exPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
+  def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  fullExPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
     case (i, pat, fml: Formula) => locate(DomAssume(pat, fml), i)
     case (i, pat, hp: Assign) =>  locate(DomModify(pat, hp.x, hp.e), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })}
 
-  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~/ exPat ~ "(" ~ formula ~ ")" ~ method.opaque("; or <method>")).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
+  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~/ fullExPat ~ "(" ~ formula ~ ")" ~ method.opaque("; or <method>")).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
 //  included under "assume" case
 //  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(id, f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~/ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})

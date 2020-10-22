@@ -389,8 +389,8 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse simple system with solution annotations" in {
     p("{xSol: x' = y, ySol: y' = x};", pp.statement(_)) shouldBe ProveODE(DiffProductStatement(
-      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y")), Some(Variable("xSol"))),
-      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Variable("x")), Some(Variable("ySol"))))
+      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y")), Variable("xSol")),
+      AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Variable("x")), Variable("ySol")))
       , DomAssume(Nothing, True))
   }
 

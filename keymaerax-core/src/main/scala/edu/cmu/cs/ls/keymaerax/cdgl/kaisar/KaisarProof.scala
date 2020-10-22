@@ -28,6 +28,7 @@ object KaisarProof {
   //   Nothing -> no binding
   //   Variable/Ident -> Bind one fact
   //   Pair(v1, ... Pair(vn, Nothing)) -> pattern-match fact (p1 & ... pn) and bind vi -> pi
+  //   FuncOf(id: Real -> Real, (arg: Real)) -> represents a universally quantified fact which can be instantiated by plugging in different args
   type IdentPat = Term
   type Statements = List[Statement]
   type Subscript = Option[Int]
@@ -745,7 +746,7 @@ sealed trait DiffStatement extends ASTNode {
 }
 
 // Specifies a single ODE being proved
-case class AtomicODEStatement(dp: AtomicODE, solFact: Option[Ident] = None) extends DiffStatement
+case class AtomicODEStatement(dp: AtomicODE, solFact: IdentPat = Nothing) extends DiffStatement
 // Corresponding proofs for each conjunct of differential product
 case class DiffProductStatement(l: DiffStatement, r: DiffStatement) extends DiffStatement
 // Proof for ghost ODE introduced for sake of proof but not in conclusion

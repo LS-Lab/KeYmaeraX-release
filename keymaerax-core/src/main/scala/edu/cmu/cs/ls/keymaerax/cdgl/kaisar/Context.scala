@@ -358,7 +358,7 @@ case class Context(s: Statement) {
         odeContext.bestSolutions match {
           case Some(sols) =>
             val solMap = sols.toMap
-            val (ident, isUnnamed) = solIdent match {case Some(id) => (id, false) case None => (xp.x, true)}
+            val (ident, isUnnamed) = solIdent match {case Nothing => (xp.x, true) case id: Variable => (id, false) case FuncOf(fn, arg) => (Variable(fn.name), false)}
             if (solMap.contains(xp.x)) {
               val eqFact = Equal(xp.x, solMap(xp.x))
               val fullFact = odeContext.timeVar match { case None => eqFact case Some(tvar) => And(eqFact, GreaterEqual(tvar, Number(0)))}
