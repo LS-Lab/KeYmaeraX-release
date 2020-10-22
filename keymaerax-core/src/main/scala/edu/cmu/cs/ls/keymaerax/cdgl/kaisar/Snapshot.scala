@@ -130,6 +130,8 @@ object Snapshot {
     val tf = new TraversalFunction {
       override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
+          case fr: For => snap = snap.revisit(fr.metX); fr
+          case fr: ForProgress => snap = snap.revisit(fr.forth.metX); fr
           case mod: Modify => mod.mods.foreach({case (x, f) => snap = snap.revisit(x)}); mod
           case s => s
         }

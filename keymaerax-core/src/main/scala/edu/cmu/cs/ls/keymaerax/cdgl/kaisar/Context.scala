@@ -187,6 +187,7 @@ case class Context(s: Statement) {
       case BoxLoop(body, _) => Context(body).signature
       case BoxLoopProgress(bl, progress) => Context(progress).signature
       case WhileProgress(wh, prog) => Context(prog).signature
+      case ForProgress(fr, prog) => Context(prog).signature
       case BoxChoiceProgress(bl, i, progress) => Context(progress).signature
       case SwitchProgress(bl, i, progress) => Context(progress).signature
       case Phi(s) => Context(s).signature
@@ -266,14 +267,16 @@ case class Context(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
-        // @TODO: add functions to For which compute the terminated guard and terminated conv
-      case fr@For(_, _, _, conv, guard, body) =>
+      case fr@For(metX, met0, metIncr, conv, guard, body) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
-        val guardMatch = matched(guard.pat, fr.guardPost)
-        //val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
+        // Represents bound variables of loop *body*, not tabooProgramVars.
+        // Taboo set is used to raise exception if metric is invalid. We assume that metric will be constructed elsewhere
+        // with correct taboo set in order to check foundedness
+        val bodyTaboos = Set[Variable]()
+        val metric = Metric(metX, metIncr, guard.f, bodyTaboos)
+        val guardMatch = matched(guard.pat, metric.guardPost(metX))
         val res = convMatch ++ guardMatch
         res
-        // ++ rec
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH

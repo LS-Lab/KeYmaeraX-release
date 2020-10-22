@@ -200,20 +200,23 @@ object SSAPass {
         val baseStutters = stutters(snapshot, bodySnap, s)
         val indStutters = stutters(bodySnap, snapshot, s)
         val (xx, jj) = (ssa(x, bodySnap), ssa(j, bodySnap))
-        val whilst = locate(While(xx, jj, KaisarProof.block(indStutters :: body :: Nil)), s)
+        val whilst = locate(While(xx, jj, KaisarProof.block(body :: indStutters :: Nil)), s)
         (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
       case For(metX, met0, metIncr, conv, guard, inBody) =>
         val met00 = ssa(met0, snapshot)
         val (metXX, initSnap) = snapshot.increment(metX)
-        val (body, bodySnap) = ssa(inBody, initSnap)
-        val baseStutters = stutters(initSnap, bodySnap, s)
-        val indStutters = stutters(bodySnap, initSnap, s)
-        // @TODO awkward: want to assign SSA after initializing
-        val metIncrr = ssa(metIncr, bodySnap)
-        val (guardd : Assume, _) = ssa(guard, bodySnap)
-        val convv = conv.map(ssa(_, bodySnap)._1.asInstanceOf[Assert])
-        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(indStutters :: body :: Nil)), s)
-        (KaisarProof.block(baseStutters :: forth :: Nil), bodySnap)
+        val boundVars = VariableSets(inBody).boundVars
+        val preSnap = snapshot.addSet(boundVars).revisit(metXX)
+        val (body, postSnap) = ssa(inBody, preSnap)
+        val baseStutters = stutters(snapshot, preSnap, s)
+        val indStutters = stutters(postSnap, preSnap, s)
+        // NB: SSA for for-loops is awkward because we SSA-assign the loop index variable and then assign it again as part
+        // of the loop, but this might be preferable to leaving out its SSA assignment
+        val metIncrr = ssa(metIncr, preSnap)
+        val (guardd : Assume, _) = ssa(guard, preSnap)
+        val convv = conv.map(ssa(_, preSnap)._1.asInstanceOf[Assert])
+        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil)), s)
+        (KaisarProof.block(baseStutters :: forth :: Nil), preSnap)
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {

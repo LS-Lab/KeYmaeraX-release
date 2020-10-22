@@ -101,6 +101,14 @@ case class DeterritorializePass(tt: TimeTable) {
           else if (rr == f) ll
           else fail
         case Phi(asgns) => traverse(asgns, f)
+        case fr@For(metX, met0, metIncr, conv, guard, body) =>
+          val f0 = traverse(Modify(Nil, List((metX, Some(met0)))), f)
+          val fBody = traverse(body, f)
+          val fIncr = traverse(Modify(Nil, List((metX, Some(metIncr)))), f)
+          if (f == f0 && f == fBody && f == fIncr) f
+          else
+            throw TransformationException(s"Value of $f@$lr is under-defined because it depends on duration of for loop ${fr}. " +
+              s"Change the loop or change $f so that $f does not mention any variables modified by the loop.", node = node)
         case BoxLoop(s, ih) =>
           val ff = traverse(s, f)
           if (f == ff) f

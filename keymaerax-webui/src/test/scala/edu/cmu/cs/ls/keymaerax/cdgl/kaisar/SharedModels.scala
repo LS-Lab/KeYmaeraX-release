@@ -261,22 +261,29 @@ object SharedModels {
       | }
       | !total:(sum >= 50) using sum x by auto;
       |""".stripMargin
-
+  
   // may be less popular but may be easier to implement / test
-  // @TODO: need d > eps but let's catch it in the tests first before fixing it
   // @TODO: remember to update thesis after code is working
+  // @TODO: Constructivize guards
   val revisedReachAvoidFor: String =
-    """?(eps > 0 &  x = 0 & T > 0 & d > 0);
-      |for (pos := 0; !conv:(pos <= x & x <= d - eps); ?guard:(pos <= d - eps); pos := pos + eps*T/2) {
-      |  vel := (d - (x + eps))/T;
+    """pragma option "time=true";
+      |pragma option "trace=true";
+      |pragma option "debugArith=true";
+      |?consts:(eps > 0 &  x = 0 & T > 0 & d > eps);
+      |init:
+      |for (pos := 0;
+      |    !conv:(pos <= (x - x@init) & x <= d);
+      |    ?guard:(pos <= d - (eps + x@init) & x <= d - eps);
+      |    pos := pos + eps*T/2) {
+      |  body:
+      |  vel := (d - x)/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T);};
-      |  !safe:(x <= d - eps) using conv guard vel time by auto;
-      |  ?(t >= T/2);
-      |  !prog:(pos + eps*T/2 <= x);
+      |  !safe:(x <= d) using conv guard vel time by auto;
+      |  ?high:(t >= T/2);
+      |  !prog:(pos <= (x - x@init));
       |  note step = andI(prog, safe);
       |}
-      | /* @TODO: Decide how we feel about guard negations here */
       |!(d >= x & x >= d - eps) using guard conv by auto;
       |""".stripMargin
 

@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Integrator
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper, UnificationMatch}
 import fastparse.Parsed.{Failure, TracedFailure}
 import StandardLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -404,38 +404,84 @@ case class BoxChoice(left: Statement, right: Statement) extends Statement
    @TODO: Decide whether conv option needed, whether it should contain elaborated fml, whether  constructors can be further combined + simplified
    = or := syntax
  */
-case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement {
-  /** Guard termination condition that holds after the loop terminates.
-    * Raises exception if loop termination metric ill-founded */
-  def guardPost: Formula = {
-    // @TODO: Refactor to have better helper functions with les surprising exceptions
-    // @TODO: Careful about metF = init value or value everywhere
-    // true for increasing metric value, false for decreasing, throw exception when unknown or rate of change does not have
-    // a provable lower bound
-    // @TODO: Allow much more general metrics, but need some examples/tests first
-    // for example "for (pos = x; ?guard:(pos <= d - eps); pos := pos + eps*T/2)"
-    val (posDir, bound) = metIncr match {
-      case Plus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value > 0, ny.value)
-      case Minus(y, ny: Number) if ny.value != 0 && y == metX => (ny.value < 0, ny.value)
-      case _ => throw ProofCheckException("For loop only supports loops which increment by constant literal value metric := metric + c;")
-    }
-    // progress, termination
-    // @TODO: more cases
-    (guard.f, posDir) match {
-      case (Greater(metX, ny: Number), false) if ny.value <= bound =>
-        (LessEqual(metX, ny))
-      case (GreaterEqual(metX, ny: Number), false) if ny.value <= bound =>
-        (Less(metX, ny))
-      case (Less(metX, ny: Number), true) if ny.value >= bound =>
-        (GreaterEqual(metX, ny))
-      case (LessEqual(metX, ny: Number), true) if ny.value >= bound =>
-        (Greater(metX, ny))
-      case _ => throw ProofCheckException("Could not understand termination metric for \"for\" loop. " +
-        "Make sure guard has shape  metricVar <cmp> <number> and make sure loop increases or decreases " +
-        "in correct direction")
+
+sealed trait Metric {
+  /** Optional formula which must be proved for soundness in order for metric to be well-founded */
+  def sideCondition: Option[Formula] = None
+  /** Whether loop makes its progress by increasing value */
+  def isIncreasing: Boolean
+  /** Amount which metric increases each iteration. Positive for increasing loop, negative for decreasing loop */
+  def delta: Term
+  /** Value at which metric terminates */
+  def bound: Term
+  /** Formula which holds once the loop has terminated, in term of the changing loop index variable */
+    // @TODO: Make sure to get comparisons right with double epsilons
+  def guardPost(index: Variable): Formula = {
+    if (isIncreasing) (GreaterEqual(index, bound)) else (LessEqual(index, bound))
+  }
+}
+
+object Metric {
+  /** @return A termination bound and flag indicating whether loop increases vs decreases
+    * @throws MatchError If this conjunct is not a loop bound  */
+  private def conjunctBound(mvar: Variable): PartialFunction[Formula, (Term, Boolean)] = {
+    case (Greater(x, lim)) if x == mvar => ((lim, false))
+    case (GreaterEqual(x, lim)) if x == mvar => ((lim, false))
+    case (Less(lim, x)) if x == mvar => ((lim, false))
+    case (LessEqual(lim, x)) if x == mvar => ((lim, false))
+    case (Greater(lim, x)) if x == mvar => ((lim, true))
+    case (GreaterEqual(lim, x)) if x == mvar => ((lim, true))
+    case (Less(x, lim))  if x == mvar => ((lim, true))
+    case (LessEqual(x, lim)) if x == mvar => ((lim, true))
+  }
+
+  /** @param guard can be a conjunction of guard conditions, only one has to be the bound
+    * @return termination bound and flag to indicate whether loop index increases or decreases. None if guard is not found. */
+  def guardBound(mvar: Variable, guard: Formula): Option[(Term, Boolean)] = {
+    val cnjs = FormulaTools.conjuncts(guard)
+    cnjs.collectFirst(conjunctBound(mvar))
+  }
+
+  /**
+    *
+    * @param mvar loop index variable
+    * @param increment term which increments/decrements index variable at each iteration
+    * @param guard guard formula of loop termination condition
+    * @param taboos variables bound during loop body which are taboo in loop init, increment
+    * @return Loop termination metric if well-founded
+    * @throws ProofCheckException if termination metric ill-founded
+    */
+  def apply(mvar: Variable, increment: Term, guard: Formula, taboos: Set[Variable]): Metric = {
+    (increment, guardBound(mvar, guard)) match {
+      case (_, None) => throw ProofCheckException("Could not construct metric, guard " + guard + " did not mention index variable or did not indicate loop bound")
+      case (Plus(y, ny: Number), Some((bnd: Number, true))) if ny.value != 0 && y == mvar => LiteralMetric(ny, bnd)
+      case (Minus(y, ny: Number), Some((bnd: Number, false))) if ny.value != 0 && y == mvar => LiteralMetric(Number(-ny.value), bnd)
+      case (Plus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException("Could not construct metric, direction of guard condition and increment statement disagree")
+      case (Minus(y, ny: Number), Some((bnd: Number, _))) => throw ProofCheckException("Could not construct metric, direction of guard condition and increment statement disagree")
+      case (Plus(y, ey), Some((bnd, dir))) if StaticSemantics(ey).intersect(taboos).isEmpty => // constant throughout loop
+        ProvablyConstantMetric(ey, bnd, dir, taboos)
+      case _ => throw ProofCheckException("For loop only supports loops which increment by provably constant value metric := metric + c; non-literal increments must be positive")
     }
   }
 }
+
+// @TODO: [low priority] Allow lexicographic metrics or other fancy metrics
+case class LiteralMetric(override val delta: Number, override val bound: Number) extends Metric {
+  if (delta.value == 0 ) throw ProofCheckException("Ill-founded metric with increment of 0")
+  override def isIncreasing: Boolean = delta.value > 0
+}
+
+case class ProvablyConstantMetric(override val delta: Term, override val bound: Term, override val isIncreasing: Boolean, taboos: Set[Variable]) extends Metric {
+  if (!StaticSemantics(delta).intersect(taboos).isEmpty)
+    throw ProofCheckException(s"Termination metric increment $delta not guaranteed to be constant")
+  if (!StaticSemantics(bound).intersect(taboos).isEmpty)
+    throw ProofCheckException(s"Termination metric bound $bound not guaranteed to be constant")
+  override def sideCondition: Option[Formula] = {
+    Some(if (isIncreasing) Greater(delta, Number(0)) else Less(delta, Number(0)))
+  }
+}
+
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
