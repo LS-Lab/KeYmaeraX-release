@@ -17,7 +17,8 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
   }
 
   var config = {
-    content: undefined
+    content: undefined,
+    origContent: undefined
   }
 
   this.fetchSystemInfo = function() {

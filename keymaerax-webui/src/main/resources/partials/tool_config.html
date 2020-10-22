@@ -9,7 +9,8 @@
             <small ng-click="setMode('toolConfig')">Tool...</small>
         </span>
         <span class="pull-right">
-            <button ng-if="config.mode==='advancedConfig'" class="btn btn-primary" ng-click="saveFullConfig()">Save</button>
+            <button ng-if="config.mode==='advancedConfig' && config.full.content !== config.full.origContent"
+                    class="btn btn-primary" ng-click="saveFullConfig()">Save</button>
             <a ng-click="close()"><span class="fa fa-close"></span></a>
         </span>
     </h3>
