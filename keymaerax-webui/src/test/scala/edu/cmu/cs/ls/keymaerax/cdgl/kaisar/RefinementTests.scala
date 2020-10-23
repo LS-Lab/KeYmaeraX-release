@@ -31,6 +31,7 @@ class RefinementTests extends TacticTestBase {
   val inverseGhostODE: RefinementTestCase = RefinementTestCase("Simple inverse differential ghost proof", SharedModels.inverseGhostODE, SharedModels.inverseGhostODEProgram)
   val demonLoop: RefinementTestCase = RefinementTestCase("Simple demonic increment loop", SharedModels.demonicLoop, SharedModels.demonicLoopProgram)
   val demonLoopGhostly: RefinementTestCase = RefinementTestCase("Demonic increment loop with hidden induction proofs", SharedModels.demonicLoopGhostly, SharedModels.demonicLoopGhostlyProgram)
+
   val allCases: List[RefinementTestCase] = List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE)
 
   private def didRefine(pf: Statement, g: Program): Boolean = {
@@ -49,7 +50,7 @@ class RefinementTests extends TacticTestBase {
   }
 
   it should "check specific cases" in {
-    val chosenCases = List(trivAssign, demonLoop, demonLoopGhostly)
+    val chosenCases = List(inverseGhostODE)
     chosenCases.foreach(rtc => {
       println("Checking: " + rtc.name)
       didRefine(rtc.proof, rtc.game) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"

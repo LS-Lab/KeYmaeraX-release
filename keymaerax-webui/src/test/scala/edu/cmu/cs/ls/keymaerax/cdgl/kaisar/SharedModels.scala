@@ -177,7 +177,7 @@ object SharedModels {
 
   /** Program which the ghost ODE refines */
   val ghostODEProgram: String =
-  "x := 1; {x' = x}; {?(x > 0);}^@ "
+  "x := 1; {x' = -x}; {?(x > 0);}^@ "
 
   val inverseGhostODE: String =
     """z := 0;
