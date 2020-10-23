@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 
 /** Basic functions about lists, expressions, and non-Kaisar data structures which "should" be a standard library */
 object StandardLibrary {
@@ -75,4 +76,55 @@ object StandardLibrary {
     }
   }
 
+  /** @return equivalent formula of f, with shape [a]P */
+  def asBox(f: Formula): Box = {
+    f match {
+      case b: Box => b
+      case _ => Box(Dual(Test(f)), True)
+    }
+  }
+
+  /** @return equivalent formula of f, with shape <a>P */
+  def asDiamond(f: Formula): Diamond = {
+    f match {
+      case b: Diamond => b
+      case _ => Diamond(Test(f), True)
+    }
+  }
+
+  /** @return unification result of p and q, if any */
+  def unifyFml(p: Formula, q: Formula): Option[Formula] = {
+    try {
+      val subst = UnificationMatch(p, q)
+      val r = subst(p)
+      Some(r)
+    } catch {
+      case _: ProverException => None
+    }
+  }
+
+  /** @return unification result of formulas, if any. */
+  def unifyFmls(ps: Seq[Formula]): Option[Formula] = {
+    ps match {
+      case Nil => None
+      case p :: Nil => Some(p)
+      case p :: ps => unifyFmls(ps) match {
+        case None => None
+        case Some(q) => unifyFml(p, q)
+      }
+    }
+  }
+
+  /** @return Box formula which runs programs of [[p]] first, then programs of [[b]]*/
+  def concatBox(p: Formula, q: Formula): Formula = {
+    (p, q) match {
+      case (True, _) => q
+      case (_, True) => p
+      case (Box(a, True), Box(b, q1)) => Box(Compose(a, b), q1)
+      case (Box(a, True), q) => Box(Compose(a, Dual(Test(q))), True)
+      case (Box(a, p1), Box(b, q1)) => Box(Compose(a, Compose(Dual(Test(p1)), b)), q1)
+      case (p, Box(b, q1)) => Box(Compose(Dual(Test(p)), b), q1)
+      case (Box(a, p1), q) => Box(Compose(a,Compose(Dual(Test(p1)), Dual(Test(q)))), True)
+    }
+  }
 }
