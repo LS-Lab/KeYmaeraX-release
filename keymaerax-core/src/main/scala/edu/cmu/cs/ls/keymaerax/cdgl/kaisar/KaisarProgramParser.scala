@@ -153,7 +153,9 @@ object ExpressionParser {
   def atomicOde[_: P]: P[AtomicODE] = (P("") ~ variable.filter(_.isInstanceOf[DifferentialSymbol]) ~  "=" ~  term).
     map({case (x: DifferentialSymbol, f) => AtomicODE(x, f)})
 
-  def terminalProgram[_: P]: P[Program] = (parenProgram | atomicOde | test  | assignAny | assign)
+  def programConst[_: P]: P[ProgramConst] = (identString ~ ";").map(ProgramConst(_))
+
+  def terminalProgram[_: P]: P[Program] = (parenProgram | atomicOde | test  | assignAny | assign | programConst)
 
   // Note: ; needs to be optional since {} is an atomic program which doesn't need ; terminator. If we really care we could
   // do a flapmap and only use ; when not {}
