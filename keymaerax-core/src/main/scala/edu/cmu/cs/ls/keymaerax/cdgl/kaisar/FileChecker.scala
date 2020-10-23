@@ -51,7 +51,9 @@ object FileChecker {
                 case None => throw ProofCheckException("Couldn't find theorem named " + thmName)
                 case Some(td) =>
                   val Box(a, p) = asBox(conclusion)
-                  RefinementChecker(td.inPf, a);
+                  val proofCon = toProofContext(kc)
+                  val elabA = proofCon.elaborateFunctions(a, node = Triv())
+                  RefinementChecker(td.inPf, elabA);
                   Nil
               }
             case ConclusionDecl(thmName) =>

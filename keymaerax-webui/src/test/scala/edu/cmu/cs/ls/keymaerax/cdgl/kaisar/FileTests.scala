@@ -28,7 +28,7 @@ class FileTests extends TacticTestBase {
         |proof example begin
         | x := 0;
         |end
-        |proves example [x := 0;]true ;
+        |proves example ([game;]true) ;
         |""".stripMargin
     check(pfStr)
   }

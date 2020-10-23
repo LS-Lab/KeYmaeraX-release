@@ -172,7 +172,31 @@ case class Context(s: Statement) {
     :+(Assume(x, fml))
   }
 
-  /** The set of function symbols defined in a statement. This includes proofs which are defined under a branch or under
+  /** The set of program symbols defined in a statement. This includes symbols which are defined under a branch or under
+    * a binder. */
+  def programSignature: Map[ProgramConst, Program] = {
+    s match {
+      case LetSym(id, args, e: Program) => Map(ProgramConst(id.name) -> e)
+      case Block(ss) => ss.flatMap(s => Context(s).programSignature).toMap
+      case BoxChoice(l, r) => Context(l).programSignature ++ Context(r).programSignature
+      case Switch(sel, pats) => pats.map(_._3).flatMap(Context(_).programSignature).toMap
+      case Ghost(s) => Context(s).programSignature
+      case Was(now, was) => Context(now).programSignature
+      case While(_, _, body) => Context(body).programSignature
+      case For(_, _, _, _, _, body) => Context(body).programSignature
+      case BoxLoop(body, _) => Context(body).programSignature
+      case BoxLoopProgress(bl, progress) => Context(progress).programSignature
+      case WhileProgress(wh, prog) => Context(prog).programSignature
+      case ForProgress(fr, prog) => Context(prog).programSignature
+      case BoxChoiceProgress(bl, i, progress) => Context(progress).programSignature
+      case SwitchProgress(bl, i, progress) => Context(progress).programSignature
+      case Phi(s) => Context(s).programSignature
+      case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
+           | _: Label | _: Match | _: Pragma => Map()
+    }
+  }
+  
+  /** The set of function symbols defined in a statement. This includes symbols which are defined under a branch or under
     * a binder. */
   def signature: Map[Function, LetSym] = {
     s match {
@@ -598,6 +622,17 @@ case class Context(s: Statement) {
     }
   }
 
+  private def replaceProgs(hp: Program, node: ASTNode = Triv()): Option[Program] = {
+    hp match {
+      case pc: ProgramConst =>
+        programSignature.get(pc) match {
+          case Some(body) => Some(elaborateFunctions(body, node))
+          case None => None
+        }
+      case _ => None
+    }
+  }
+
   private def replacePreds(t: Formula, node: ASTNode = Triv()): Option[Formula] = {
     t match {
       case f: PredicationalOf =>
@@ -641,11 +676,17 @@ case class Context(s: Statement) {
         case Some(f) => Right(f)
         case None => Left(None)
       }
+    override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] =
+      replaceProgs(e, node) match {
+        case Some(f) => Right(f)
+        case None => Left(None)
+      }
   }
 
   /** Elaborate user-defined functions in an expression*/
   def elaborateFunctions(f: Term, node: ASTNode): Term = ExpressionTraversal.traverse(elabFunctionETF(node), f).getOrElse(f)
   def elaborateFunctions(fml: Formula, node: ASTNode): Formula = ExpressionTraversal.traverse(elabFunctionETF(node), fml).getOrElse(fml)
+  def elaborateFunctions(prog: Program, node: ASTNode): Program = ExpressionTraversal.traverse(elabFunctionETF(node), prog).getOrElse(prog)
   def elaborateFunctions(e: Expression, node: ASTNode): Expression = e match {case f: Term => elaborateFunctions(f, node) case fml: Formula => elaborateFunctions(fml, node)}
   def elaborateFunctions(pt: ProofTerm, node: ASTNode): ProofTerm =
     pt match {
