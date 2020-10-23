@@ -240,6 +240,7 @@ class ElaborationPass() {
             val rhs = kce.elaborateFunctions(e, s)
             LetSym(f, args, rhs)
           case LetSym(f, args, e: Formula) => LetSym(f, args, kce.elaborateFunctions(e, s))
+          case LetSym(_, _, _: Program) => throw ElaborationException("Lets of programs are only allowed in top-level declarations, not in proofs")
           case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
           case While(x, j, body) => While(x, kce.elaborateFunctions(j, s), body)
           case For(metX, metF, metIncr, guard, conv, body) =>

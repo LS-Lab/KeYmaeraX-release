@@ -327,6 +327,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse letfun" in {
     p("let square(x) = x*x;", pp.statement(_)) shouldBe LetSym("square".asVariable,  List("x".asVariable), Times(Variable("x"), Variable("x")))
     p("let prod(x,z) = x*z;", pp.statement(_)) shouldBe LetSym("prod".asVariable,  List("x".asVariable, "z".asVariable), Times(Variable("x"), Variable("z")))
+    p("let assign ::= { x := z; };", pp.statement(_)) shouldBe LetSym("assign".asVariable,  Nil, Assign(Variable("x"), Variable("z")))
   }
 
   it should "parse match" in {
