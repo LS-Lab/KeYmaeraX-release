@@ -49,7 +49,7 @@ class RefinementTests extends TacticTestBase {
   }
 
   it should "check specific cases" in {
-    val chosenCases = List(trivAssign)
+    val chosenCases = List(trivAssign, demonLoop, demonLoopGhostly)
     chosenCases.foreach(rtc => {
       println("Checking: " + rtc.name)
       didRefine(rtc.proof, rtc.game) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"

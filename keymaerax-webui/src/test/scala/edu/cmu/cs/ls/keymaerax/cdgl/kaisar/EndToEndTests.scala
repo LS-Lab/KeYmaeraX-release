@@ -417,6 +417,10 @@ class EndToEndTests extends TacticTestBase {
     testExampleSet(SharedModels.basicForNoConv :: Nil)
   }
 
+  it should "allow ghosts of invariants in loop induction proofs " in withMathematica { _ =>
+    testExampleSet(SharedModels.demonicLoopGhostly :: Nil)
+  }
+
   "QE" should "prove some formulas" in withMathematica { _ =>
     val fmlStr = "true"
     val fml = fmlStr.asFormula

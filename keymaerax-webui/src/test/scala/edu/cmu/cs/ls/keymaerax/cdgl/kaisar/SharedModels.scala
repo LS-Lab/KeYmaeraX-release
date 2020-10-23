@@ -87,18 +87,18 @@ object SharedModels {
       |{?(x>=0);}^@
       |{ x:=x+1;
       | {?(x>=0);}^@
-      |}
+      |}*
       |{?(x>=y);}^@
       |""".stripMargin
 
   val demonicLoopGhostly: String =
     """?yZero:(y := 0);
       |?xZero:(x := 0);
-      |!inv: (x >= 0);
+      |/++ !inv: (x >= 0); ++/
       |{x:=x+1;
-      | !inductiveStep: (x >= 0);
+      | /++ !inductiveStep: (x >= 0); ++/
       |}*
-      |!geq:(x >= y) using inv yZero by auto;
+      |/++ !geq:(x >= y) using inv yZero by auto; ++/
       |""".stripMargin
 
   /* Program which demonicLoop refines */
