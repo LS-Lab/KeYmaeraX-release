@@ -182,7 +182,7 @@ object AngelStrategy {
       case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) }))
       case While(x, j, s) => ALoop(j, body(s, isPhi))
       // @TODO: Test
-      case For(x, f, incr, guard, conv, s) => ALoop(guard.f, body(s, isPhi))
+      case For(metX, met0, metIncr, conv, guard, s) => ALoop(guard.f, body(s, isPhi))
       case BoxLoop(s, ih) => DLoop(body(s, isPhi))
       case pode: ProveODE =>
         val ode = ofODE(pode)
