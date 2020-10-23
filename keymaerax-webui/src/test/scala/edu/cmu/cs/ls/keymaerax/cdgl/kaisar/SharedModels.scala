@@ -78,6 +78,38 @@ object SharedModels {
       |!geq:(x >= y) using inv yZero by auto;
       |""".stripMargin
 
+
+  /* Program which demonicLoop refines */
+  val demonicLoopProgram: String =
+    """
+      |y:=0;
+      |x:=0;
+      |{?(x>=0);}^@
+      |{ x:=x+1;
+      | {?(x>=0);}^@
+      |}
+      |{?(x>=y);}^@
+      |""".stripMargin
+
+  val demonicLoopGhostly: String =
+    """?yZero:(y := 0);
+      |?xZero:(x := 0);
+      |!inv: (x >= 0);
+      |{x:=x+1;
+      | !inductiveStep: (x >= 0);
+      |}*
+      |!geq:(x >= y) using inv yZero by auto;
+      |""".stripMargin
+
+  /* Program which demonicLoop refines */
+  val demonicLoopGhostlyProgram: String =
+    """
+      |y:=0;
+      |x:=0;
+      |{ x:=x+1;
+      |}*
+      |""".stripMargin
+
   val straightODE: String =
     """x:= 0; y := 2;
       |{x' = 2, y' = -1 & ?dc:(y >= 0);};
@@ -143,11 +175,20 @@ object SharedModels {
       |!nonZero:(x > 0) using inv by auto;
       |""".stripMargin
 
+  /** Program which the ghost ODE refines */
+  val ghostODEProgram: String =
+  "x := 1; {x' = x}; {?(x > 0);}^@ "
+
   val inverseGhostODE: String =
     """z := 0;
       |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution;}
       |""".stripMargin
 
+  /** Program which the inverse ghost ODE refines */
+  val inverseGhostODEProgram: String =
+    """z := 0;
+      |{x' = y, y' = -1,  z'=1}
+      |""".stripMargin
 
   val superfluousGhost: String =
     """x:=0; /-- y := 25; z := -10; --/
