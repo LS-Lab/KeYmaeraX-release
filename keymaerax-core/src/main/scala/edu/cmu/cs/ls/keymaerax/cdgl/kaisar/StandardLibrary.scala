@@ -127,4 +127,13 @@ object StandardLibrary {
       case (Box(a, p1), q) => Box(Compose(a,Compose(Dual(Test(p1)), Dual(Test(q)))), True)
     }
   }
+
+  /** @param k must be >= 1
+    * Return list of k branches if g is a nested choice down its right spine, else None */
+  def unchoose(g: Program, k: Int): Option[List[Program]] = {
+    (g, k) match {
+      case (g, 1) => Some(List(g))
+      case (Choice(l, r), k) => unchoose(r, k-1).map(xs => l :: xs)
+    }
+  }
 }

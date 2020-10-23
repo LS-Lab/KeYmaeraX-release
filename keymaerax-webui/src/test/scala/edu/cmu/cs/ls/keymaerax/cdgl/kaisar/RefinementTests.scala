@@ -31,8 +31,16 @@ class RefinementTests extends TacticTestBase {
   val inverseGhostODE: RefinementTestCase = RefinementTestCase("Simple inverse differential ghost proof", SharedModels.inverseGhostODE, SharedModels.inverseGhostODEProgram)
   val demonLoop: RefinementTestCase = RefinementTestCase("Simple demonic increment loop", SharedModels.demonicLoop, SharedModels.demonicLoopProgram)
   val demonLoopGhostly: RefinementTestCase = RefinementTestCase("Demonic increment loop with hidden induction proofs", SharedModels.demonicLoopGhostly, SharedModels.demonicLoopGhostlyProgram)
-
-  val allCases: List[RefinementTestCase] = List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE)
+  val assertBranchesNonzero: RefinementTestCase = RefinementTestCase("Branching assert", SharedModels.assertBranchesNonzero, SharedModels.assertBranchesNonzeroProgram)
+  val switchLiterals: RefinementTestCase = RefinementTestCase("switch statement", SharedModels.switchLiterals, SharedModels.switchLiteralsProgram)
+  val annotatedAssign: RefinementTestCase = RefinementTestCase("annotated assignment", SharedModels.annotatedAssign, SharedModels.annotatedAssignProgram)
+  val annotatedAssignGame: RefinementTestCase = RefinementTestCase("annotated assignment game", SharedModels.annotatedAssign, SharedModels.annotatedAssignGame)
+  val noteAnd: RefinementTestCase = RefinementTestCase("note example", SharedModels.noteAnd, SharedModels.noteAndProgram)
+  val basicForNoConv: RefinementTestCase = RefinementTestCase("for loop no-conv", SharedModels.basicForNoConv, SharedModels.basicForNoConvProg)
+  val pldiModelSafeSimpleLets: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeSimpleLets, SharedModels.pldiModelSafeSimpleLetsProgram)
+  val allCases: List[RefinementTestCase] =
+    List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE, assertBranchesNonzero, switchLiterals,
+      annotatedAssign, annotatedAssignGame, basicForNoConv, pldiModelSafeSimpleLets, noteAnd)
 
   private def didRefine(pf: Statement, g: Program): Boolean = {
     try {
@@ -50,7 +58,7 @@ class RefinementTests extends TacticTestBase {
   }
 
   it should "check specific cases" in {
-    val chosenCases = List(inverseGhostODE)
+    val chosenCases = List(basicForNoConv)
     chosenCases.foreach(rtc => {
       println("Checking: " + rtc.name)
       didRefine(rtc.proof, rtc.game) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"

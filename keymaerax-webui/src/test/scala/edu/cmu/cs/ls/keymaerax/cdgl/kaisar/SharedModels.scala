@@ -34,6 +34,9 @@ object SharedModels {
       |!xNonzero:(x != 0);
       |""".stripMargin
 
+  val assertBranchesNonzeroProgram: String =
+    """{?(x<0); ++ ?(x>0);}{?(x != 0);}^@"""
+
   val switchLiterals: String =
     """switch {
       |  case xLow:(x <= 1) =>  !result:(x <= 2);
@@ -41,12 +44,18 @@ object SharedModels {
       |}
       |""".stripMargin
 
+  val switchLiteralsProgram: String =
+    "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
+
   val noteAnd: String =
     """?left:(x < 0);
       |?right:(y < 0);
       |note both = andI(left, right);
       |!sign:(x + y <= (x + y)^2);
       |""".stripMargin
+
+  val noteAndProgram: String =
+    """?(x<0);?(y<0);{?(x<0&y<0);}^@{?(x + y <= (x + y)^2);}^@"""
 
   val squareNonneg: String =
     """let square(x) = x*x;
@@ -66,6 +75,20 @@ object SharedModels {
       |y := x + 1;
       |?xFact:(z := y);
       |!compare:(z > x) using xFact ... by auto;
+      |""".stripMargin
+
+  val annotatedAssignProgram: String =
+    """x := *;
+      |y := x + 1;
+      |z := y;
+      |{?(z>x);}^@
+      |""".stripMargin
+
+  val annotatedAssignGame: String =
+    """x := *;
+      |y := x + 1;
+      |{z := *;}^@
+      |{?(z>x);}^@
       |""".stripMargin
 
   val demonicLoop: String =
@@ -285,6 +308,13 @@ object SharedModels {
       | }
       |""".stripMargin
 
+  val basicForNoConvProg: String =
+    """sum := 0;
+      |pos := 0;
+      |{{{sum := sum + 1;}^@ pos := pos + 1;}*}^@
+      |{?(pos >= 10);}^@
+      |""".stripMargin
+
   // gauss formula for triangle number
   val basicForConv: String =
     """
@@ -374,6 +404,30 @@ object SharedModels {
       |  !(inv());
       | }*
       | !(d >= 0);
+      |""".stripMargin
+
+  // only needed for testing early versions of refinement checker
+  val pldiModelSafeSimpleLets: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
+      | {
+      |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps);};}
+      |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
+  val pldiModelSafeSimpleLetsProgram: String =
+    """?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
+      |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
+      |{t := 0; {d' = -v, t' = 1 & (t <= eps)}}
+      |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
+      |}*
+      |{?(d>=0);}^@
       |""".stripMargin
 
   val pldiSandboxSafe: String =

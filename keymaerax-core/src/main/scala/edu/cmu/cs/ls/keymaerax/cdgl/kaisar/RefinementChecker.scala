@@ -58,29 +58,88 @@ object RefinementChecker {
     }
   }
 
+  private def isIgnored(s: Statement): Boolean ={
+    s match {
+      case Triv() | _: Label | _: LetSym | _: Ghost | _: PrintGoal | _: Pragma | _: Was | _: Match => true
+      case _ => false
+    }
+  }
+
+  private def uncons(game: Program): (Program, Program) = {
+    game match {
+      case Compose(Compose(l, x), r) => uncons(Compose(l, Compose(x, r)))
+      case Compose(l, r) => (l, r)
+      case l => (l, Test(True))
+    }
+  }
+
   /** @throws RefinementFailure if s does not refine game */
   private def refine(s: Statement, game: Program): Unit = {
-    // undo block constructors, drop ghosts
-    val ss = KaisarProof.flatten(List(s)).dropWhile({case _: Ghost => true case _ => false})
+    // undo block constructors, drop ghosts and lets
+    val ss = KaisarProof.flatten(List(s)).dropWhile(isIgnored)
     // use "triv" and "?true" as terminators
     (ss, game) match {
       case (Nil | Triv() :: Nil, Test(True)) => ()
       case (Nil, _) => throw RefinementFailure(Triv(), game, "Proof only proves fragment of game", s)
       case (shd :: stl, _) =>
-        val (ghd, gtl) = game match {case Compose(l, r) => (l ,r) case _ => (game, Test(True))}
+        val (ghd, gtl) = uncons(game)
         // compare head, which can be recursive
         (shd, ghd) match {
-            // @TODO:  ?,  x:=*, ++, switch, for, note, non-execution nodes,
           case (Modify(_ids, List((x, Some(f)))), Assign(xx, ff)) if x == xx && f == ff => ()
+          case (Modify(_ids, List((x, Some(f)))), Dual(AssignAny(xx))) if x == xx => ()
+          case (Modify(_ids, List((x, None))), AssignAny(xx)) if x == xx => ()
           case (Assert(_id, p, _m), Dual(Test(q))) if p == q => ()
+          case (Assume(_id, p), Test(q)) if p == q => ()
+          case (Note(x, pt, Some(fml)), Dual(Test(q))) if fml == q => ()
+          // @TODO: SSA will fix this
+          case (Note(x, pt, None), Dual(Test(q))) => throw RefinementFailure(shd, ghd, "Expected proved formula in note statement", s)
           case (pode: ProveODE, osys: ODESystem) => refine(pode, osys, odeIsAngelic = false)
           case (pode: ProveODE, Dual(osys: ODESystem)) => refine(pode, osys, odeIsAngelic = true)
-          case (BoxLoop(sbod, _), Loop(gbod)) =>
-            refine(sbod, gbod)
+          case (BoxLoop(sbod, _), Loop(gbod)) => refine(sbod, gbod)
+          case (BoxChoice(sl, sr), Choice(gl, gr)) => refine(sl, gl); refine(sr, gr)
+          case (Switch(_, pats), Dual(brGame: Choice)) =>
+            val nBranches = pats.length
+            StandardLibrary.unchoose(brGame, nBranches) match {
+              case None => throw RefinementFailure(shd, ghd, "Program did not have enough branches for proof")
+              case Some(gameBranches) =>
+                val pairs = pats.zip(gameBranches)
+                pairs.foreach({
+                  case ((_pat, fml, s), Compose(Test(q), g)) if fml == q => refine(s, Dual(g))
+                  case ((_pat, fml, s), g) => refine(s, g) // make guards optional
+                })
+            }
+          // Box(Compose(Compose(Assign(metX, met0),Dual(Loop(Compose(Dual(a), Assign(metX,metIncr))))), Dual(Test(theConcl))), True)
+          case (For(metX, met0, metIncr, conv, guard, body), assignMetZ) =>
+            gtl match {
+              // @TODO: More flexible pattern match
+              case Compose(Dual(Loop(Compose(Dual(a), incr))), after) =>
+                val (finalTest, gtl) = uncons(after)
+                if (assignMetZ != Assign(metX, met0))
+                  throw RefinementFailure(shd, ghd, "Game refined by for loop must start with initializer assignment")
+                if (incr != Assign(metX, metIncr))
+                  throw RefinementFailure(shd, ghd, "Game refined by for loop must have body ending in increment assignment")
+                val metric = Metric(metX, metIncr, guard.f, Set()) // Note: assume taboos checked elsewhere
+                val termCond = metric.guardPost(metX)
+                val theConcl = conv.map(_.f) match {
+                  case None => termCond
+                  case Some(f) => And(f, termCond)
+                }
+                finalTest match {
+                  case Dual(Test(concl)) if theConcl == concl => ()
+                  case Dual(Test(concl)) => throw RefinementFailure(shd, ghd, s"For loop terminates with $theConcl but program had final condition $concl")
+                  case fin => throw RefinementFailure(shd, ghd, s"For loop expects dual test at end of game, but got " + fin)
+                }
+                refine(body, a)
+                refine(KaisarProof.block(stl), gtl)
+              case _ => throw RefinementFailure(s, Compose(ghd, gtl), "For loop can only refine angelic loop containing increment, followed by assertion")
+            }
+          // @TODO: More specific error messages for tests etc
           case _ => throw RefinementFailure(shd, ghd, s"Proof connective ${PrettyPrinter.short(shd)} does not match program $ghd", shd)
         }
-        // recurse
-        refine (KaisarProof.block(stl), gtl)
+        // In lockstep cases, just recurse directly, else let the case handle recursion
+        val oneToOne = shd match {case _: For  => false case _ => true}
+        if (oneToOne)
+          refine (KaisarProof.block(stl), gtl)
     }
   }
 
