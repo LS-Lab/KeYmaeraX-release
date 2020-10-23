@@ -1,0 +1,25 @@
+package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
+
+import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
+import edu.cmu.cs.ls.keymaerax.tags._
+import fastparse.Parsed.{Failure, Success}
+import fastparse._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+class FileTests extends TacticTestBase {
+  val check: String => Unit = {s =>
+    ProofOptions.proofText = Some(s)
+    val decls = KaisarProgramParser.parseProof(s)
+    FileChecker(decls)
+  }
+
+  "file checker" should "check simple proof " in withMathematica { _ =>
+    val pfStr = "proof thm begin ?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto; end"
+    val ff = check(pfStr)
+    ff shouldBe "[?x_0>=1;x_1:=x_0;{x_2:=x_1+1; {?x_2>=1;}^@ x_1:=x_2;}*{?x_1>=0;}^@]true".asFormula
+  }
+
+}

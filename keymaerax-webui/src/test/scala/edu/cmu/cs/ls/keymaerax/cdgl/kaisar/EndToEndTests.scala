@@ -22,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 // @TODO: Discuss whether any compelling need for domain constraints at times other than initial and final
 
 class EndToEndTests extends TacticTestBase {
-  val check: String => Formula = Kaisar.apply
+  val check: String => Formula = Kaisar.single(_)._2
 
   "full proof checker" should "check box loop" in withMathematica { _ =>
       val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto;"
@@ -365,7 +365,7 @@ class EndToEndTests extends TacticTestBase {
     var checkErrors: List[(String, Throwable)] = Nil
     examples.foreach(s =>
       try {
-        Kaisar.parseProof(s)
+        KaisarProgramParser.parseSingle(s)
       } catch { case t: Throwable =>
         parseErrors = (s, t) :: parseErrors
         if (STOP_AFTER_FIRST) {

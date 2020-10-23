@@ -8,6 +8,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Kaisar.{MAX_CHAR, result}
+import fastparse.Parsed.Success
 import fastparse._
 // allow Scala-style comments and ignore newlines
 import ScalaWhitespace._
@@ -502,4 +504,38 @@ object KaisarProgramParser {
     val arr = IndexedParserInput(input).prettyIndex(index).split(':')
     (arr(0).toInt, arr(1).toInt)
   }
+
+  def parseSingle(s: String): Statement = {
+    val file = s"proof unnamed begin $s end"
+    KaisarProgramParser.parseProof(file) match {
+      case Decls(TheoremDecl(name, s, concl) :: Nil) => s
+      case dcl => throw ElaborationException("Expected single proof, got: " + dcl)
+    }
+  }
+
+  def parseProof(s: String): Decls =
+    parse(s, KaisarFileParser.file(_), verboseFailures = true) match {
+      case x: Success[Decls] =>
+        if (x.index < s.length) {
+          val snippet = if (x.index < MAX_CHAR) s.take(x.index) else "..." + s.take(x.index).takeRight(MAX_CHAR)
+          val (line, col) = KaisarProgramParser.prettyIndex(x.index, s)
+          val msg = s"Could not parse entire input, failed after ($line, $col):\n\t$snippet"
+          println(msg)
+          println("Displaying nested error message, error location not meaningful.")
+          print("Nested ") // prints as "Nested Parse error"
+          try {
+            val rest = s.drop(x.index)
+            parseProof(rest)
+            throw KaisarParseException(msg = msg, location = Some(x.index), source = s)
+          } catch {
+            case e: Throwable => throw KaisarParseException(msg = msg, location = Some(x.index), source = s)
+          }
+        }
+        x.value
+      case x: Failure =>
+        val exn = KaisarParseException(trace = Some(x.extra.trace(enableLogging = true)), location = Some(x.index), source = s, msg = x.msg)
+        println(exn.toString)
+        println("\n")
+        throw exn
+    }
 }

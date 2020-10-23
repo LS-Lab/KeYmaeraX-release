@@ -41,7 +41,7 @@ object FileChecker {
               List(ld)
             case TheoremDecl(name, pf, _conclusion) =>
               val proofCon = toProofContext(kc)
-              val (outCon, cncl) = ProofChecker(proofCon, pf)
+              val (outCon, cncl) = Kaisar.result(proofCon, pf)
               List(TheoremDecl(name, pf, cncl))
             case ProvesDecl(thmName, conclusion) =>
               // @TODO: Elaborate conclusion, apply SSA
