@@ -18,8 +18,19 @@ class FileTests extends TacticTestBase {
 
   "file checker" should "check simple proof " in withMathematica { _ =>
     val pfStr = "proof thm begin ?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto; end"
-    val ff = check(pfStr)
-    ff shouldBe "[?x_0>=1;x_1:=x_0;{x_2:=x_1+1; {?x_2>=1;}^@ x_1:=x_2;}*{?x_1>=0;}^@]true".asFormula
+    check(pfStr)
+  }
+
+  it should "refine trivial proof" in withMathematica { _ =>
+    val pfStr =
+      """
+        |let game ::= { x := 0; };
+        |proof example begin
+        | x := 0;
+        |end
+        |proves example [x := 0;]true ;
+        |""".stripMargin
+    check(pfStr)
   }
 
 }

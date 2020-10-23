@@ -20,8 +20,8 @@ object KaisarFileParser {
   def conclusionDecl[_: P]: P[ConclusionDecl] = ("conclusion" ~ ident ~ ";").map(ConclusionDecl)
   def theoremDecl[_: P]: P[TheoremDecl] = (("proof" ~ ident ~ "begin" ~ ProofParser.proof ~ "end")).
     map({case (name, ss) => TheoremDecl(name, KaisarProof.block(ss))})
-  def provesDecl[_: P]: P[ProvesDecl] = ("proves" ~ ident ~ ExpressionParser.formula).
+  def provesDecl[_: P]: P[ProvesDecl] = ("proves" ~ ident ~ ExpressionParser.formula ~ ";").
     map({case (id, fml) => ProvesDecl(id, fml)})
   def decl[_: P]: P[KaisarDecl] = letDecl | pragmaDecl | synthesizeDecl | conclusionDecl | theoremDecl | provesDecl
-  def file[_: P]: P[Decls] = decl.rep().map(dcls => Decls(dcls.toList))
+  def file[_: P]: P[Decls] = decl.rep(1).map(dcls => Decls(dcls.toList)) ~ ws
 }

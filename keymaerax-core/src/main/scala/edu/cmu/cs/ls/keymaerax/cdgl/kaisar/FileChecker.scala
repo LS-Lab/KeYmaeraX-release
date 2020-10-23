@@ -17,9 +17,9 @@ object FileChecker {
   type FileContext = List[KaisarDecl]
 
   /** Look up result of previous proof */
-  private def getTheorem(kc: FileContext, name: Ident): Option[(Statement, Formula)] = {
-    kc.flatMap({case td: TheoremDecl => if(td.name == name) List(td) else Nil case _ => Nil}).
-      map(td => (td.pf, td.conclusion)).headOption
+  private def getTheorem(kc: FileContext, name: Ident): Option[TheoremDecl] = {
+    kc.flatMap({case td: TheoremDecl => if(td.name == name) List(td) else Nil case _ => Nil}).headOption
+      //map(td => (td.in, td.conclusion)).headOption
   }
 
   /** Convert file-level context to proof-level context for individual proof checking */
@@ -39,35 +39,38 @@ object FileChecker {
             case PragmaDecl(pd) => Pragma.apply(pd); Nil
             case ld: LetDecl => // @TODO: check admissibility
               List(ld)
-            case TheoremDecl(name, pf, _conclusion) =>
+            case TheoremDecl(name, pf, outPf, _conclusion) =>
               val proofCon = toProofContext(kc)
               val (outCon, cncl) = Kaisar.result(proofCon, pf)
-              List(TheoremDecl(name, pf, cncl))
+              List(TheoremDecl(name, pf, outCon, cncl))
             case ProvesDecl(thmName, conclusion) =>
-              // @TODO: Elaborate conclusion, apply SSA
+              // @TODO: Elaborate conclusion formula
+              // @TODO: Decide whether need to use conclusion proof and SSA-ify both or whether source proof suffices
+              // partial answer: Will need SSA-ify pass if we want to refine proofs that contain @, which we probably do
               getTheorem(kc, thmName) match {
                 case None => throw ProofCheckException("Couldn't find theorem named " + thmName)
-                case Some((pf, _fml)) =>
+                case Some(td) =>
                   val Box(a, p) = asBox(conclusion)
-                  RefinementChecker(pf, a);
+                  RefinementChecker(td.inPf, a);
                   Nil
               }
             case ConclusionDecl(thmName) =>
               getTheorem(kc, thmName) match {
                 case None => throw ProofCheckException("Couldn't find theorem named " + thmName)
-                case Some((_pf, fml)) =>
-                  println(s"Printing conclusion of theorem $thmName:\n" + fml.prettyString)
+                case Some(td) =>
+                  println(s"Printing conclusion of theorem $thmName:\n" + td.conclusion.prettyString)
                   Nil
               }
             case SynthesizeDecl(thmName) =>
               getTheorem(kc, thmName) match {
                 case None => throw ProofCheckException("Couldn't find theorem named " + thmName)
-                case Some((pf, _fml)) =>
+                case Some(td) =>
                   // @TODO: Pretty-printer for strategies, or add command that executes them.
-                  val strat = SimpleStrategy(AngelStrategy(pf))
+                  val strat = SimpleStrategy(AngelStrategy(td.outPf))
                   println(s"Printing strategy synthesized from theorem $thmName:\n" + strat)
                   Nil
               }
+            case _: Decls => throw new Exception("Unreachable code by pattern match")
           }
         apply(kc ++ newDecls, decls)
     }

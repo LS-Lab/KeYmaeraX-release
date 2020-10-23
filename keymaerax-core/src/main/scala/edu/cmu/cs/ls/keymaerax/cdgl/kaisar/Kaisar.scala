@@ -26,7 +26,7 @@ object Kaisar {
       currentPass = "deterritorialize"
       val dt = DeterritorializePass(ssa)
       currentPass = "proofChecker"
-      val (s, ff) = ProofChecker(Context.empty, dt)
+      val (s, ff) = ProofChecker(kc, dt)
       (s.s, ff)
     } catch {
       case le: LocatedException =>
@@ -46,7 +46,7 @@ object Kaisar {
         throw le
     }
   }
-  
+
   /** Parse and check single proof string [[pf]]
     * @return The formula proved by [[pf]], if any, else raises an exception */
   def single(pf: String): (Statement, Formula) = {

@@ -508,7 +508,7 @@ object KaisarProgramParser {
   def parseSingle(s: String): Statement = {
     val file = s"proof unnamed begin $s end"
     KaisarProgramParser.parseProof(file) match {
-      case Decls(TheoremDecl(name, s, concl) :: Nil) => s
+      case Decls((td: TheoremDecl) :: Nil) => td.inPf
       case dcl => throw ElaborationException("Expected single proof, got: " + dcl)
     }
   }

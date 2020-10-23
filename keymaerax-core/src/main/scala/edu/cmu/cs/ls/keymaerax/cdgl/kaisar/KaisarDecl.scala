@@ -19,7 +19,7 @@ case class PragmaDecl(ls: PragmaSpec) extends KaisarDecl
 /** Define a function, predicate, or program which can be reused across proofs */
 case class LetDecl(ls: LetSym) extends KaisarDecl
 /** Check a proof of a strategy and give it a name */
-case class TheoremDecl(name: Ident, pf: Statement, conclusion: Formula = True) extends KaisarDecl
+case class TheoremDecl(name: Ident, inPf: Statement, outPf: Statement = Triv(), conclusion: Formula = True) extends KaisarDecl
 /** Check whether given conclusion follows from given proof */
 case class ProvesDecl(thmName: Ident, conclusion: Formula) extends KaisarDecl
 /** Display the already-proved conclusion of a proof */
