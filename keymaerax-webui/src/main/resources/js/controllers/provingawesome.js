@@ -973,7 +973,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.saveTaskName = function(newName, oldName) {
-      if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
+      if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: '"' + newName + '"' }]);
     }
 
     $scope.openLemmaProof = function(taskId) {
