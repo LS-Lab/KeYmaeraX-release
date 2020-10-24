@@ -690,26 +690,36 @@
                                       onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
                                     <small>
                                         <span>{{taskPrefixLabel(task.id)}}</span>
-                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                        <span ng-if="task.name !== 'label' && taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                               tooltip-append-to-body="true" tooltip-placement="auto top">
                                             <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                             {{taskPostfixLabel(task.id)}}
                                         </span>
                                         <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
                                     </small>
-                                    <span ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name !== 'label'" ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name === 'label'"
+                                          uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            {{taskPostfixLabel(task.id)}}
+                                    </span>
                                 </span>
                                 <span ng-if="!task.isSelected" ng-cloak>
                                     <small>
                                         <span>{{taskPrefixLabel(task.id)}}</span>
-                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                        <span ng-if="task.name !== 'label' && taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                               tooltip-append-to-body="true" tooltip-placement="auto top">
                                             <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                             {{taskPostfixLabel(task.id)}}
                                         </span>
                                         <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
                                     </small>
-                                    <span ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name !== 'label'" ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name === 'label'"
+                                          uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            {{taskPostfixLabel(task.id)}}
+                                    </span>
                                 </span>
                             </span>
                         </div>
@@ -725,27 +735,37 @@
                                       onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
                                     <small>
                                         <span>{{taskPrefixLabel(task.id)}}</span>
-                                        <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                        <span ng-if="task.name !== 'label' && taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                               tooltip-append-to-body="true" tooltip-placement="auto top">
                                             <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                             {{taskPostfixLabel(task.id)}}
                                         </span>
                                         <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
                                     </small>
-                                    <span ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name !== 'label'" ng-bind-html="task.name"></span>
+                                    <span ng-if="task.name === 'label'"
+                                          uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                            {{taskPostfixLabel(task.id)}}
+                                    </span>
                                 </span>
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
                                 <small>
                                     <span>{{taskPrefixLabel(task.id)}}</span>
-                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                    <span ng-if="task.name !=='label' && taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                           tooltip-append-to-body="true" tooltip-placement="auto top">
                                         <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                         {{taskPostfixLabel(task.id)}}
                                     </span>
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
                                 </small>
-                                <span ng-bind-html="task.name"></span>
+                                <span ng-if="task.name !== 'label'" ng-bind-html="task.name"></span>
+                                <span ng-if="task.name === 'label'"
+                                      uib-tooltip-html="taskLabels(task.id)"
+                                      tooltip-append-to-body="true" tooltip-placement="auto top">
+                                        {{taskPostfixLabel(task.id)}}
+                                </span>
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
