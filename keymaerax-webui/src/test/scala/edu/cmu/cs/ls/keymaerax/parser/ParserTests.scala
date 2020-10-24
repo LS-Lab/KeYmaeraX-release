@@ -598,6 +598,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     Parser(input)
   }
 
+  it should "bind annotations strongest" in {
+    val input = "x>=3 -> [x:=2; ++ x:=3; {x'=1}@invariant(x>=2)]x>=0"
+    val listener = mock[(Program, Formula) => Unit]
+    inSequence {
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
+    }
+    Parser.parser.setAnnotationListener(listener)
+    Parser(input)
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////

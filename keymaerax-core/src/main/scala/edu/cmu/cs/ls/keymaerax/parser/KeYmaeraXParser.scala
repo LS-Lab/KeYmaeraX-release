@@ -323,9 +323,23 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
   /** Whether p is compatible with @annotation */
-  private def isAnnotable(p: Program): Boolean =
-  //@note DifferentialProgramKind will ultimately be elaborated to ODESystem
-    p.isInstanceOf[Loop] || p.isInstanceOf[ODESystem] || p.kind==DifferentialProgramKind
+  @tailrec
+  private def isAnnotable(p: Program): Boolean = p match {
+    case _: Loop => true
+    case _: ODESystem => true
+    case Compose(_, r) => isAnnotable(r)
+    case Choice(_, r) => isAnnotable(r)
+    case p => p.kind == DifferentialProgramKind
+  }
+
+  @tailrec
+  private def annotatedProgram(p: Program): Program = p match {
+    case Compose(_, r) => annotatedProgram(r)
+    case Choice(_, r) => annotatedProgram(r)
+    case p =>
+      assert(isAnnotable(p), "Program " + p.prettyString + " cannot be annotated; only loops and differential equations support annotations")
+      p
+  }
 
 
   // parsing
@@ -347,12 +361,12 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // nonproductive: special notation for annotations
       case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ Token(LPAREN, _) :+ Expr(f1) :+ Token(RPAREN, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program],
+        reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
       case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ (lpar@Token(LPAREN, _)) :+ Expr(f1) :+ Token(COMMA, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program],
+        reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 2, Bottom, r :+ Expr(p) :+ tok :+ lpar)
       case r :+ Expr(p: Program) :+ Token(INVARIANT, _) :+ Token(LPAREN, _) :+ Expr(f1: Formula) if isAnnotable(p) =>
