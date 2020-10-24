@@ -687,11 +687,11 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    *          _3: The location of the beginning of the next string.
    */
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    if (s.isEmpty) None
-    else {
-      var next: Either[(String, Location, LexerMode), Option[(String, Token, Location)]] = Left(s, loc, mode)
-      while (next.isLeft) {
-        val (cs, cloc, cmode) = next.left.get
+    var next: Either[(String, Location, LexerMode), Option[(String, Token, Location)]] = Left(s, loc, mode)
+    while (next.isLeft) {
+      val (cs, cloc, cmode) = next.left.get
+      if (cs.isEmpty) next = Right(None)
+      else {
         val lexPrefix = lexers.view.map({ case (r, lexer) => r.findPrefixOf(cs).map(lexer(cs, cloc, cmode, _)) }).find(_.isDefined).flatten
         lexPrefix match {
           case Some(Left(lexed)) => next = Left(lexed._1, lexed._2, lexed._3)
@@ -699,8 +699,8 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
           case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s + "\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
         }
       }
-      next.right.get
     }
+    next.right.get
   }
 
   /**
