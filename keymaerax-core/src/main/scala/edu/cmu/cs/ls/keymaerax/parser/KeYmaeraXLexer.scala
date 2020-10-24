@@ -380,33 +380,19 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    * @param mode The mode of the lexer.
    * @return A token stream.
    */
-//  //@todo //@tailrec
-//  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
-//    if(input.trim.length == 0) {
-//      List(Token(EOF))
-//    }
-//    else {
-//      findNextToken(input, inputLocation, mode) match {
-//        case Some((nextInput, token, nextLoc)) =>
-//          //if (DEBUG) print(token)
-//          token +: lex(nextInput, nextLoc, mode)
-//        case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
-//      }
-//    }
-
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
     var remaining: String = input
     var loc: Location = inputLocation
     val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
-    while (!remaining.isEmpty) {
+    while (!remaining.trim.isEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
           output.append(token)
           remaining = nextInput
           loc = nextLoc
-        case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
-          output.append(Token(EOF, loc))
-          return replaceAnything(output).to
+        case None =>
+          //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          remaining = ""
       }
     }
     output.append(Token(EOF, loc))
@@ -414,6 +400,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   }
 
   /** Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA. */
+  @tailrec
   private def replaceAnything(output: scala.collection.mutable.ListBuffer[Token]): scala.collection.mutable.ListBuffer[Token] = {
     output.find(x => x.tok == ANYTHING) match {
       case None => output
@@ -699,17 +686,20 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
-  @tailrec
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    if (s.isEmpty) {
-      None
-    } else {
-      val lexPrefix = lexers.view.map({ case (r,lexer) => r.findPrefixOf(s).map(lexer(s, loc, mode, _)) }).find(_.isDefined).flatten
-      lexPrefix match {
-        case Some(Left(lexed)) => findNextToken(lexed._1, lexed._2, lexed._3)
-        case Some(Right(lexed)) => lexed
-        case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
+    if (s.isEmpty) None
+    else {
+      var next: Either[(String, Location, LexerMode), Option[(String, Token, Location)]] = Left(s, loc, mode)
+      while (next.isLeft) {
+        val (cs, cloc, cmode) = next.left.get
+        val lexPrefix = lexers.view.map({ case (r, lexer) => r.findPrefixOf(cs).map(lexer(cs, cloc, cmode, _)) }).find(_.isDefined).flatten
+        lexPrefix match {
+          case Some(Left(lexed)) => next = Left(lexed._1, lexed._2, lexed._3)
+          case Some(Right(lexed)) => next = Right(lexed)
+          case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s + "\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
+        }
       }
+      next.right.get
     }
   }
 
