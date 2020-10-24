@@ -2102,7 +2102,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         | Definitions Real f() = 5*g() + *h(); End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:33 Unexpected token cannot be parsed
+    ) should have message """2:33 Unexpected token in definition
                             |Found:    * at 2:33
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
@@ -2111,7 +2111,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f() = 5*g()""".stripMargin
-    ) should have message """2:30 Missing ';' at definition end
+    ) should have message """2:30 Unexpected token in definition
                             |Found:    <EOF> at 2:30 to EOF$
                             |Expected: ;""".stripMargin
   }
@@ -2134,7 +2134,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         | Definitions Bool p() <-> f()+5^ > g(); End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:34 Unexpected token cannot be parsed
+    ) should have message """2:34 Unexpected token in definition
                             |Found:    > at 2:34
                             |Expected: <BeginningOfExpression>""".stripMargin
   }

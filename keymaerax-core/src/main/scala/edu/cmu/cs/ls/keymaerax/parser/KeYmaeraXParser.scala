@@ -1274,6 +1274,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case INVARIANT => sNone
       //case
       case sEOF.op => sEOF
+      case o => throw ParseException("Unknown operator " + o, st)
     }
   } ensures(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
 

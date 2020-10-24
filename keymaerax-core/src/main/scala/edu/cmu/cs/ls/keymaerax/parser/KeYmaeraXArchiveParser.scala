@@ -1057,7 +1057,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
             if (lastSemiIdx >= 0) {
               val (funcDefBlock, nextDefStart) = parsedOk.splitAt(lastSemiIdx)
               (funcDefBlock, nextDefStart ++ remainder)
-            } else throw ex
+            } else throw ex.copy(msg = "Unexpected token in definition", expect = ex.expect.replaceAllLiterally("<EOF>", SEMI.img))
           }
         case None => throw ex
       }
