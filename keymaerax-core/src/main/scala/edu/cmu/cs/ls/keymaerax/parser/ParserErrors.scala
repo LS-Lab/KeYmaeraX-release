@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core.Expression
 import edu.cmu.cs.ls.keymaerax.core.ProverException
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{ParseState, TokenStream}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.collection.immutable.StringOps
 
@@ -57,9 +58,6 @@ object ParseException {
 
   def apply(msg: String, state: ParseState /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.la.description, "", state.topString, state.toString /*, cause*/)
-
-  def apply(msg: String, state: edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.ParserState/*, cause: Throwable = null*/): ParseException =
-    new ParseException(msg, state.location, state.input.headOption.toString, "", state.topString, state.toString /*, cause*/)
 
   def apply(msg: String, state: ParseState, expect: List[Expected] /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.la.description, expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)

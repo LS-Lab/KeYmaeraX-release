@@ -186,7 +186,7 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPANDALLDEFS, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPAND, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+          case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR | DEPRECATED_SEQ_COMBINATOR, _) :+ ParsedBelleExpr(right, rightLoc) =>
@@ -205,7 +205,7 @@ object BelleParser extends TacticParser with Logging {
         case Some(BelleToken(IDENT(_), _)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(PARTIAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+        case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
         case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
       }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
@@ -225,7 +225,7 @@ object BelleParser extends TacticParser with Logging {
       //region Branch combinator
       case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) => st.input.headOption match {
         case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(_) => throw ParseException("A branching combinator should be followed by an open paren", st)
+        case Some(_) => throw BelleParseException("A branching combinator should be followed by an open paren", st)
         case None => throw ParseException("Tactic script cannot end with a combinator", combinatorLoc)
       }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+ ParsedBelleExprList(branchTactics) =>
@@ -314,7 +314,7 @@ object BelleParser extends TacticParser with Logging {
       //region tactic
       case r :+ BelleToken(TACTIC, loc) => st.input match {
         case BelleToken(IDENT(name), _) :: BelleToken(AS, _) :: tail =>
-          if (tacticDefs.defs.contains(name)) throw ParseException(s"Tactic definition: unique name '$name' expected in scope", st)
+          if (tacticDefs.defs.contains(name)) throw BelleParseException(s"Tactic definition: unique name '$name' expected in scope", st)
           val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs, expandAll)
           tacticDefs.defs(name) = DefTactic(name, innerExpr)
           ParserState(r :+ ParsedBelleExpr(DefTactic(name, innerExpr), loc.spanTo(innerLoc)), remainder)
@@ -338,7 +338,7 @@ object BelleParser extends TacticParser with Logging {
             case SystemConst(n, _) => n == x.name
           }) match {
             case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc)), tail)
-            case None => throw ParseException(s"Expression definition not found: '${x.prettyString}'", st)
+            case None => throw BelleParseException(s"Expression definition not found: '${x.prettyString}'", st)
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
@@ -399,9 +399,9 @@ object BelleParser extends TacticParser with Logging {
         ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc)), st.input)
 
       case _ :+ BelleToken(PARTIAL, _) => st.input.headOption match {
-        case None => throw ParseException("Found bare use of partial keyword", st)
+        case None => throw BelleParseException("Found bare use of partial keyword", st)
         case Some(BelleToken(OPEN_PAREN, _)) =>  ParserState(st.stack :+ st.input.head, st.input.tail)
-        case _ => throw ParseException("Unrecognized token stream", st)
+        case _ => throw BelleParseException("Unrecognized token stream", st)
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc) =>
@@ -466,10 +466,10 @@ object BelleParser extends TacticParser with Logging {
         case Some(_) => ParserState(st.stack :+ st.input.head, st.input.tail)
         case None =>
           if (r == Bottom) ParserState(Bottom :+ BelleAccept(e), Nil)
-          else throw ParseException(s"Cannot continue parsing because detected an infinite loop with stack ${st.topString}", st)
+          else throw BelleParseException(s"Cannot continue parsing because detected an infinite loop with stack ${st.topString}", st)
       }
 
-      case _ => throw ParseException(s"Unrecognized token stream: ${st.topString}", st)
+      case _ => throw BelleParseException(s"Unrecognized token stream: ${st.topString}", st)
     }
   }
 
