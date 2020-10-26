@@ -37,31 +37,44 @@ class RefinementTests extends TacticTestBase {
   val annotatedAssignGame: RefinementTestCase = RefinementTestCase("annotated assignment game", SharedModels.annotatedAssign, SharedModels.annotatedAssignGame)
   val noteAnd: RefinementTestCase = RefinementTestCase("note example", SharedModels.noteAnd, SharedModels.noteAndProgram)
   val basicForNoConv: RefinementTestCase = RefinementTestCase("for loop no-conv", SharedModels.basicForNoConv, SharedModels.basicForNoConvProg)
-  val pldiModelSafeSimpleLets: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeSimpleLets, SharedModels.pldiModelSafeSimpleLetsProgram)
+  val pldiModelSafeSimpleLets: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeSimple, SharedModels.pldiModelSafeSimpleProgram)
   val allCases: List[RefinementTestCase] =
     List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE, assertBranchesNonzero, switchLiterals,
       annotatedAssign, annotatedAssignGame, basicForNoConv, pldiModelSafeSimpleLets, noteAnd)
 
-  private def didRefine(pf: Statement, g: Program): Boolean = {
+  private def didRefine(pf: Statement, g: Program, name: String): Boolean = {
+    val (outPf, ssaG) =
+      try {
+        val proofCon = Context.empty
+        val (outPf, cncl) = Kaisar.result(proofCon, pf)
+        val elabG = proofCon.elaborateFunctions(g, node = Triv())
+        val ssaG = SSAPass(elabG)
+        (outPf, ssaG)
+      } catch {
+        case th: Throwable =>
+          val msg = "All Kaisar proofs in Refinement tests are supposed to succeed, but proof failed for case " + name
+          throw new Exception(msg, th)
+      }
     try {
-      RefinementChecker(pf, g);
+      RefinementChecker(outPf, ssaG);
       true
     } catch {
       case _: RefinementFailure => false
     }
   }
 
-  "Refinement checker" should "check all cases" in {
-    allCases.foreach(rtc =>
-      didRefine(rtc.proof, rtc.game) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
-    )
+  "Refinement checker" should "check all cases" in withMathematica { _ =>
+    allCases.foreach(rtc => {
+      println("Checking: " + rtc.name)
+      didRefine(rtc.proof, rtc.game, rtc.name) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
+    })
   }
 
-  it should "check specific cases" in {
-    val chosenCases = List(basicForNoConv)
+  it should "check specific cases" in withMathematica { _ =>
+    val chosenCases = List(pldiModelSafeSimpleLets) // noteAnd basicForNoConv
     chosenCases.foreach(rtc => {
       println("Checking: " + rtc.name)
-      didRefine(rtc.proof, rtc.game) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
+      didRefine(rtc.proof, rtc.game, rtc.name) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
     })
     println("Finished checking chosen cases")
   }

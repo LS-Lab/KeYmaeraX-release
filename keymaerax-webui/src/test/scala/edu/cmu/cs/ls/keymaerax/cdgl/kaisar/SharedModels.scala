@@ -407,23 +407,23 @@ object SharedModels {
       |""".stripMargin
 
   // only needed for testing early versions of refinement checker
-  val pldiModelSafeSimpleLets: String =
+  val pldiModelSafeSimple: String =
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
       | {
-      |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
-      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps);};}
-      |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
+      |  {?before: (d >= eps*V); v:=*; ?range:(0<=v & v<=V);}
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol range before ... by auto ;
       | }*
       | !(d >= 0);
       |""".stripMargin
 
-  val pldiModelSafeSimpleLetsProgram: String =
+  val pldiModelSafeSimpleProgram: String =
     """?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
-      |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
+      |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V);}
       |{t := 0; {d' = -v, t' = 1 & (t <= eps)}}
       |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
       |}*
@@ -1391,7 +1391,10 @@ object SharedModels {
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
     )
 
-  val allExamples: List[String] = rssExamples ++ ijrrModels ++ thesisExamples
+  val pldiExamples: List[String] = List(pldiModelSafe, pldiModelSafeSimple, pldiSandboxSafe)
+
+  val thesisCaseStudies: List[String] = pldiExamples ++ rssExamples ++ ijrrModels
+  val allExamples: List[String] = pldiExamples ++ rssExamples ++ ijrrModels ++ thesisExamples
 
 
   // @TODO implement file format

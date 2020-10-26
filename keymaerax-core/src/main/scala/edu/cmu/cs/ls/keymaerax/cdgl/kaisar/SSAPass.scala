@@ -45,11 +45,21 @@ object SSAPass {
     else locate(Phi(locate(KaisarProof.block(asgns), locator)), locator)
   }
 
+  private def flatten(hp: Program): List[Program] = {
+    hp match {
+      case Compose(l, r) => flatten(l) ++ flatten(r)
+      case _ => List(hp)
+    }
+  }
+
   private def compose(asgns: List[Program]): Program = {
-    asgns match {
+    val atoms = asgns.flatMap(flatten)
+    atoms match {
       case Nil => Test(True)
       case asgn :: Nil => asgn
-      case _ => asgns.reduceRight(Compose)
+      case hps =>
+        val red = hps.reduceRight(Compose)
+        red
     }
   }
 
@@ -100,51 +110,83 @@ object SSAPass {
     *  We assume for simplicity that the hybrid program does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences in [[hp]] */
   def ssa(hp: Program, snapshot: Snapshot): (Program, Snapshot) = {
-    hp match {
-      case Test(cond) =>
-        val (fml, snap) = ssa(cond, snapshot)
-        (Test(fml), snap)
-      case Assign(x, f) =>
-        val g = ssa(f, snapshot)
-        val (y, snap) = snapshot.increment(x)
-        (Assign(y, g), snap)
-      case AssignAny(x) =>
-        val (y, snap) = snapshot.increment(x)
-        (AssignAny(y), snap)
-      case Choice(left, right) =>
-        val (leftS, leftSnap) = ssa(left, snapshot)
-        val (rightS, rightSnap) = ssa(right, snapshot)
-        val snap = leftSnap ++ rightSnap
-        val leftStutters = pstutters(leftSnap, snap)
-        val rightStutters = pstutters(rightSnap, snap)
-        (Choice(compose(leftS :: leftStutters :: Nil),
-          compose(rightS :: rightStutters :: Nil)), snap)
-      case Compose(left, right) =>
-        val (leftS, leftSnap) = ssa(left, snapshot)
-        val (rightS, rightSnap) = ssa(right, snapshot)
-        (compose(leftS :: rightS :: Nil), rightSnap)
-      case Dual(child) =>
-        val (childS, snap) = ssa(child, snapshot)
-        (Dual(childS), snap)
-      case Loop(child) =>
-         val boundVars = StaticSemantics(child).bv.toSet
-         val preSnap = snapshot.addSet(boundVars)
-         val (body, postSnap) = ssa(child, preSnap)
-         val baseStutters = pstutters(snapshot, preSnap)
-         val indStutters = pstutters(postSnap, preSnap)
-         val loop = Loop(compose(body :: indStutters :: Nil))
-         val res = compose(baseStutters :: loop :: Nil)
-         (res, preSnap)
-      case odes@ODESystem(ode, constraint) =>
-        val bound = StaticSemantics(odes).bv.toSet
-        val snap = snapshot.addSet(bound)
-        val ds1 = ssa(ode, snap)
-        val (dc1, _dcSnap) = ssa(constraint, snap)
-        val inStutter = pstutters(snapshot, snap)
-        val outOde = ODESystem(ds1, dc1)
-        (compose(inStutter:: outOde :: Nil), snap)
-      case _: AtomicDifferentialProgram | _: AtomicProgram | _: DifferentialProduct | _: CompositeProgram =>
-        throw TransformationException(s"Unexpected or unsupported program $hp in SSA pass")
+     def getAngelLoop(p: Program): Option[(Compose, Option[Program])] = {
+      p match {
+        case (cmp@Compose(a: Assign, dl@Dual(Loop(_)))) => Some((cmp, None))
+        case (cmp@Compose(a: Assign, Compose(Dual(Loop(b)), rest))) => Some((Compose(a, Dual(Loop(b))), Some(rest)))
+        case _ => None
+      }
+    }
+    getAngelLoop(hp) match {
+      // @TODO: Some soundness side condition needed on x := e
+      case Some((Compose(Assign(x, e), Dual(Loop(child))), maybeRest)) =>
+        val boundVars = StaticSemantics(child).bv.toSet.+(x)
+        val g = ssa(e, snapshot)
+        val headSnap = snapshot.addSet(boundVars.-(x))
+        val preSnap = snapshot.addSet(boundVars)
+        val (y, _snap) = snapshot.increment(x)
+        val init = Assign(y, g)
+        val (body, postSnap) = ssa(child, preSnap)
+        val baseStutters = pstutters(snapshot, headSnap)
+        val indStutters = pstutters(postSnap, preSnap)
+        val loop = Dual(Loop(compose(body :: indStutters :: Nil)))
+        maybeRest match {
+          case None =>
+            val res = compose(init :: baseStutters :: loop :: Nil)
+            (res, preSnap)
+          case Some(rest) =>
+            val (theRest, restSnap) = ssa(rest, preSnap)
+            val res = compose(init :: baseStutters :: loop :: theRest :: Nil)
+            (res, restSnap)
+        }
+      // for loop special case
+      case None =>
+        hp match {
+          case Test(cond) =>
+            val (fml, snap) = ssa(cond, snapshot)
+            (Test(fml), snap)
+          case Assign(x, f) =>
+            val g = ssa(f, snapshot)
+            val (y, snap) = snapshot.increment(x)
+            (Assign(y, g), snap)
+          case AssignAny(x) =>
+            val (y, snap) = snapshot.increment(x)
+            (AssignAny(y), snap)
+          case Choice(left, right) =>
+            val (leftS, leftSnap) = ssa(left, snapshot)
+            val (rightS, rightSnap) = ssa(right, snapshot)
+            val snap = leftSnap ++ rightSnap
+            val leftStutters = pstutters(leftSnap, snap)
+            val rightStutters = pstutters(rightSnap, snap)
+            (Choice(compose(leftS :: leftStutters :: Nil),
+              compose(rightS :: rightStutters :: Nil)), snap)
+          case Loop(child) =>
+            val boundVars = StaticSemantics(child).bv.toSet
+            val preSnap = snapshot.addSet(boundVars)
+            val (body, postSnap) = ssa(child, preSnap)
+            val baseStutters = pstutters(snapshot, preSnap)
+            val indStutters = pstutters(postSnap, preSnap)
+            val loop = Loop(compose(body :: indStutters :: Nil))
+            val res = compose(baseStutters :: loop :: Nil)
+            (res, preSnap)
+          case odes@ODESystem(ode, constraint) =>
+            val bound = StaticSemantics(odes).bv.toSet
+            val snap = snapshot.addSet(bound)
+            val ds1 = ssa(ode, snap)
+            val (dc1, _dcSnap) = ssa(constraint, snap)
+            val inStutter = pstutters(snapshot, snap)
+            val outOde = ODESystem(ds1, dc1)
+            (compose(inStutter :: outOde :: Nil), snap)
+          case Dual(child) =>
+            val (childS, snap) = ssa(child, snapshot)
+            (Dual(childS), snap)
+          case Compose(left, right) =>
+            val (leftS, leftSnap) = ssa(left, snapshot)
+            val (rightS, rightSnap) = ssa(right, leftSnap)
+            (Compose(leftS, rightS), rightSnap)
+          case _: AtomicDifferentialProgram | _: AtomicProgram | _: DifferentialProduct | _: CompositeProgram =>
+            throw TransformationException(s"Unexpected or unsupported program $hp in SSA pass")
+        }
     }
   }
 
@@ -332,7 +374,7 @@ object SSAPass {
         val stutterClauses = clauses.map({case ((x, f, bs), clauseSnap) =>
           val asgns = stutters(clauseSnap, maxSnap, s)
           (x, f, KaisarProof.block(asgns :: bs :: Nil))
-        }).reverse
+        })
         (Switch(scrut, stutterClauses), maxSnap)
       case Assume(pat, f) =>
         val (fml, _fmlSnap) = ssa(f, snapshot)
@@ -431,5 +473,15 @@ object SSAPass {
     val vars = vs.freeVars ++ vs.boundVars
     val snap = Snapshot.initial(vars)
     ssa(s, snap)._1
+  }
+
+  /** Apply SSA translation pass to hybrid program.
+    * Make sure you don't actually want apply(Statement).
+    * Hybrid program SSA is used, for example, to cross-check statements against CdGL theorem statements */
+  def apply(hp: Program): Program = {
+    val vs = StaticSemantics(hp)
+    val vars = vs.fv.toSet ++ vs.bv.toSet
+    val snap = Snapshot.initial(vars)
+    ssa(hp, snap)._1
   }
 }

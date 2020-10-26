@@ -27,7 +27,13 @@ class SSAPassTests extends TacticTestBase {
     (con.s, fml)
   }
 
-  "SSA pass" should "transform assignment" in {
+  "SSA for hybrid programs" should "have expected output on examples from refinement tests" in {
+    val in  = "y:=0;x:=0;{?x>=0;}^@{x:=x+1;{?x>=0;}^@}*{?x>=y;}^@".asProgram
+    val out = "y_1:=0;x_1:=0;{?x_1>=0;}^@ {x_2:=x_1;{{x_3:=x_2+1;{?x_3>=0;}^@ x_2 := x_3;}}*}{?x_2>=y_1;}^@".asProgram
+    SSAPass(in) shouldBe out
+  }
+
+  "SSA pass for statements" should "transform assignment" in {
     val pfStr = "x:=x+1;"
     pssa(pfStr) shouldBe Modify(Nil, List((Variable("x", Some(1)), Some(Plus(Variable("x", Some(0)), Number(1))))))
   }

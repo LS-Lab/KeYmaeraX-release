@@ -413,8 +413,20 @@ class EndToEndTests extends TacticTestBase {
     testExampleSet(SharedModels.thesisExamples)
   }
 
+  it should "parse and prove all PLDI studies" in withMathematica { _ =>
+    testExampleSet(SharedModels.pldiExamples)
+  }
+
+  it should "parse and prove all RSS studies" in withMathematica { _ =>
+    testExampleSet(SharedModels.rssExamples)
+  }
+
+  it should "parse and prove all IJRR studies" in withMathematica { _ =>
+    testExampleSet(SharedModels.ijrrModels)
+  }
+
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.basicForNoConv :: Nil)
+    testExampleSet(SharedModels.pldiModelSafeSimple :: Nil)
   }
 
   it should "allow ghosts of invariants in loop induction proofs " in withMathematica { _ =>
