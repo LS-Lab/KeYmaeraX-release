@@ -2,8 +2,8 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import java.util.concurrent._
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core.Ensures
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable
 

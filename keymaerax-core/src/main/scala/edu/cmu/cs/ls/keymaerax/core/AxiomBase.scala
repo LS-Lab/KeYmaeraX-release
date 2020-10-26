@@ -20,10 +20,11 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaerax.Logging
+
 import scala.collection.immutable
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
-import org.apache.logging.log4j.scala.Logging
 
 /**
   * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -148,7 +149,7 @@ private[core] object AxiomBase extends Logging {
       val res = KeYmaeraXAxiomParser(loadAxiomString())
       insist(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse of AxiomBase")
       res.map(k => (k._1 -> k._2)).toMap
-    } catch { case e: Exception => logger.fatal("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
+    } catch { case e: Exception => logger.error("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms after parsing */

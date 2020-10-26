@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -23,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import org.slf4j.LoggerFactory
 
 /**
   * Implements ODE tactics based on the differential equation axiomatization.
@@ -34,7 +34,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
 object ODEInvariance {
 
   private val namespace = "odeinvariance"
-  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+  private val logger = LoggerFactory.getLogger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
   private val debugTactic = false
 
   //Lie derivative
@@ -414,7 +414,7 @@ object ODEInvariance {
             //This is a workaround
             case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
           }
-          logger.debug(pr2)
+          logger.debug(pr2.toString)
           if(pr2.isProved)
             Some(f)
           else None

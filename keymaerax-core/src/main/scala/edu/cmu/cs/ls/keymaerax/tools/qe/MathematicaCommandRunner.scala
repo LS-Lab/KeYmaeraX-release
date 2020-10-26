@@ -5,11 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.{Expr, ExprFormatException, KernelLink, MathLinkException}
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaInapplicableMethodException, MathematicaMathlinkException, MathematicaUnknownCauseCriticalException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
-import org.apache.logging.log4j.scala.Logging
 
 /** Interface for running and cancelling a Mathematica command. */
 trait MathematicaCommandRunner {

@@ -7,8 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools.install
 import java.io.{File, FileOutputStream}
 import java.nio.channels.Channels
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 /**
   * Installs Pegasus in the KeYmaera X directory.

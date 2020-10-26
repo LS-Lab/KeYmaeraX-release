@@ -10,14 +10,13 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.{func, statementSemicolon}
-import org.apache.logging.log4j.scala.Logging
 
 /**
  * KeYmaera X parser items on the parser stack.
@@ -350,8 +349,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState, lax: Boolean): ParseState = {
     val ParseState(s, input@(Token(la,laloc) :: rest)) = st
-    logger.info(s)
-    logger.info(la)
+    logger.info(s.toString)
+    logger.info(la.toString)
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY

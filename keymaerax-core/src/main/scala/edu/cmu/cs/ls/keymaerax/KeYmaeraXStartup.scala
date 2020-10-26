@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 object KeYmaeraXStartup {
 
   /** Initializes and updates the lemma cache. */
-  def initLemmaCache(logger: (CharSequence, Throwable) => Unit =  (msg: CharSequence, ex: Throwable) => {
+  def initLemmaCache(logger: (String, Throwable) => Unit =  (msg: String, ex: Throwable) => {
     ex.printStackTrace()
     println(msg)
   }): Unit = {

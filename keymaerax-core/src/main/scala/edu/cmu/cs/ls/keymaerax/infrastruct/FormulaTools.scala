@@ -4,8 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
-import org.apache.logging.log4j.scala.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
 
 import scala.annotation.tailrec

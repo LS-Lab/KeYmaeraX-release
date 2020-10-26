@@ -4,10 +4,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, DerivationInfo, ProvableInfo}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.switch
 

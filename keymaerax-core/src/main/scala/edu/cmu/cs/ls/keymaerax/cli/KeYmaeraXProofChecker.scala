@@ -21,8 +21,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXExtendedLemmaParser, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.MarkerManager
-import org.apache.logging.log4j.scala.Logger
+import org.slf4j.{LoggerFactory, MarkerFactory}
 
 import scala.collection.immutable
 import scala.collection.immutable.{List, Nil}
@@ -227,8 +226,8 @@ object KeYmaeraXProofChecker {
     statistics.foreach(println)
 
     val csvStatistics = statistics.map(_.toCsv).mkString("\n")
-    val statisticsLogger = Logger(getClass)
-    statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
+    val statisticsLogger = LoggerFactory.getLogger(getClass)
+    statisticsLogger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
 
     if (statistics.exists(_.status=="disproved")) sys.exit(-3)
     if (statistics.exists(_.status=="failed")) sys.exit(-2)

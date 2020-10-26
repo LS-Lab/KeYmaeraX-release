@@ -9,18 +9,15 @@ assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar"
 
 scalaVersion := "2.12.8"
 
-
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
+libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.+"
+
+libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
+
 libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
-
-libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.11.2"
-
-libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.11.2"
-
-libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
 
 libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1"
 

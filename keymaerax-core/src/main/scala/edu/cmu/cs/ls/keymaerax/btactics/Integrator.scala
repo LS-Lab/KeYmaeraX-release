@@ -8,11 +8,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.tools.ext.ODESolverTool
-import org.apache.logging.log4j.scala.Logging
 
 /**
   * Solves the initial value problem for systems of differential equations.

@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, OptionArg}
-import org.apache.logging.log4j.scala.Logger
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
@@ -19,7 +19,7 @@ import scala.annotation.tailrec
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   */
 object UIIndex {
-  private val logger = Logger(UIIndex.getClass)
+  private val logger = LoggerFactory.getLogger(UIIndex.getClass)
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {

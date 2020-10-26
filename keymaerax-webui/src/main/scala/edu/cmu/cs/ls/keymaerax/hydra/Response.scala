@@ -22,7 +22,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
@@ -30,7 +30,6 @@ import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
@@ -313,7 +312,7 @@ case class CreatedIdResponse(id: String) extends Response {
 }
 
 class PossibleAttackResponse(val msg: String) extends Response with Logging {
-  logger.fatal(s"POSSIBLE ATTACK: $msg")
+  logger.error(s"POSSIBLE ATTACK: $msg")
   override def getJson: JsValue = new ErrorResponse(msg).getJson
 }
 

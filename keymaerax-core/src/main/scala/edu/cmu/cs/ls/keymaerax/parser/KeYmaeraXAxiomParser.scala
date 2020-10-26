@@ -4,9 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
-import org.apache.logging.log4j.scala.Logging
 
 /**
  * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory.

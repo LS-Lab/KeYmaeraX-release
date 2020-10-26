@@ -11,12 +11,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.message.Message
-import org.apache.logging.log4j.scala.Logging
 import java.util.UUID
 
 import cc.redberry.rings
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2.{BoundMap, StaticSingleAssignmentExpression}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
@@ -56,15 +54,7 @@ object TaylorModelTactics extends Logging {
   private def ppSubgoals(prv: ProvableSig) = {
     prv.subgoals.zipWithIndex.map{case (s, i) => "== Subgoal " + i + "==\n" + pp.stringify(s)}.mkString("\n")
   }
-  def debug(msg: Unit => String) : Unit = {
-    val message = new Message {
-      override def getFormattedMessage(): String = msg(():Unit)
-      override def getParameters: Array[AnyRef] = ???
-      override def getFormat(): String = ???
-      override def getThrowable(): Throwable = ???
-    }
-    logger.debug(message)
-  }
+  def debug(msg: Unit => String) : Unit = logger.debug(msg())
   def debug(name: String, e: Expression) : Unit = debug(_ => "=== " + name + "===\n" + pp.stringify(e))
   def debugTac(message: => String): StringInputTactic =
     new StringInputTactic("debugTac", message::Nil) {

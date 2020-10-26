@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 import edu.cmu.cs.ls.keymaerax.tools.qe.{KeYmaeraToMathematica, MathematicaOpSpec}
-import org.apache.logging.log4j.scala.Logging
 
 object SOSsolveTool {
   trait Result

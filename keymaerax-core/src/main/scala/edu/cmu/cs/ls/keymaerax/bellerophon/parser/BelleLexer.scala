@@ -1,9 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.apache.commons.lang3.StringUtils
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, StringOps}

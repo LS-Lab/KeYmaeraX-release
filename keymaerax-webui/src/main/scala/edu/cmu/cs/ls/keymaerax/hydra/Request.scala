@@ -31,7 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, UpdateChecker}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -52,7 +52,6 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signa
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.util.Try

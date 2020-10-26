@@ -4,14 +4,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import ProofRuleTactics.requireOneSubgoal
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.scala.{Logger, Logging}
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
@@ -25,7 +25,7 @@ object DebuggingTactics {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
-  private val logger = Logger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = throw e

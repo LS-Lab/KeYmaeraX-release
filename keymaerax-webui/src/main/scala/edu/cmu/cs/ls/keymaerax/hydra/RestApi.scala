@@ -15,9 +15,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import org.apache.logging.log4j.scala.Logging
 import akka.http.scaladsl.model.Multipart.FormData.BodyPart
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._

@@ -10,7 +10,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
