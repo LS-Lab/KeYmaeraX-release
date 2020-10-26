@@ -24,7 +24,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ProofTraversal.TraversalFunction
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Context._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.{Ident, LabelDef, LabelRef, TransformationException}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Snapshot._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ASTNode._
@@ -32,6 +32,35 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper}
 
 object SSAPass {
+
+  /** Collapse double option. */
+  private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
+
+  /** @return Stuttering assignment proofs which cause other state snapshot to match ours. */
+  private def stutters(ours: Snapshot, other: Snapshot, locator: ASTNode = Triv()): Statement = {
+    val allKeys = other.keySet.++(ours.keySet)
+    val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
+    val asgns = varDiff.toList.map(x => locate(Modify(Nil, List((Variable(x, opt(other.getOpt(x))), Some(Variable(x, opt(ours.getOpt(x))))))), locator))
+    if (asgns.isEmpty) Triv()
+    else locate(Phi(locate(KaisarProof.block(asgns), locator)), locator)
+  }
+
+  private def compose(asgns: List[Program]): Program = {
+    asgns match {
+      case Nil => Test(True)
+      case asgn :: Nil => asgn
+      case _ => asgns.reduceRight(Compose)
+    }
+  }
+
+  /** @return stuttering assignment programs which cause other state snapshot to match ours */
+  private def pstutters(ours: Snapshot, other: Snapshot): Program = {
+    val allKeys = other.keySet.++(ours.keySet)
+    val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
+    val asgns = varDiff.toList.map(x => Assign(Variable(x, opt(other.getOpt(x))), Variable(x, opt(ours.getOpt(x)))))
+    compose(asgns)
+  }
+
   private def snapRenameETF(snapshot: Snapshot): ExpressionTraversalFunction = new ExpressionTraversalFunction {
     override def preF(p: PosInExpr, fml: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] =
       (KaisarProof.getAt(fml, node = Triv()), fml) match {
@@ -70,30 +99,114 @@ object SSAPass {
   /**  SSA translation of a hybrid program/game.
     *  We assume for simplicity that the hybrid program does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences in [[hp]] */
-  def ssa(hp: Program, snapshot: Snapshot): Program = {
-    ExpressionTraversal.traverse(snapRenameETF(snapshot), hp).getOrElse(hp)
+  def ssa(hp: Program, snapshot: Snapshot): (Program, Snapshot) = {
+    hp match {
+      case Test(cond) =>
+        val (fml, snap) = ssa(cond, snapshot)
+        (Test(fml), snap)
+      case Assign(x, f) =>
+        val g = ssa(f, snapshot)
+        val (y, snap) = snapshot.increment(x)
+        (Assign(y, g), snap)
+      case AssignAny(x) =>
+        val (y, snap) = snapshot.increment(x)
+        (AssignAny(y), snap)
+      case Choice(left, right) =>
+        val (leftS, leftSnap) = ssa(left, snapshot)
+        val (rightS, rightSnap) = ssa(right, snapshot)
+        val snap = leftSnap ++ rightSnap
+        val leftStutters = pstutters(leftSnap, snap)
+        val rightStutters = pstutters(rightSnap, snap)
+        (Choice(compose(leftS :: leftStutters :: Nil),
+          compose(rightS :: rightStutters :: Nil)), snap)
+      case Compose(left, right) =>
+        val (leftS, leftSnap) = ssa(left, snapshot)
+        val (rightS, rightSnap) = ssa(right, snapshot)
+        (compose(leftS :: rightS :: Nil), rightSnap)
+      case Dual(child) =>
+        val (childS, snap) = ssa(child, snapshot)
+        (Dual(childS), snap)
+      case Loop(child) =>
+         val boundVars = StaticSemantics(child).bv.toSet
+         val preSnap = snapshot.addSet(boundVars)
+         val (body, postSnap) = ssa(child, preSnap)
+         val baseStutters = pstutters(snapshot, preSnap)
+         val indStutters = pstutters(postSnap, preSnap)
+         val loop = Loop(compose(body :: indStutters :: Nil))
+         val res = compose(baseStutters :: loop :: Nil)
+         (res, preSnap)
+      case odes@ODESystem(ode, constraint) =>
+        val bound = StaticSemantics(odes).bv.toSet
+        val snap = snapshot.addSet(bound)
+        val ds1 = ssa(ode, snap)
+        val (dc1, _dcSnap) = ssa(constraint, snap)
+        val inStutter = pstutters(snapshot, snap)
+        val outOde = ODESystem(ds1, dc1)
+        (compose(inStutter:: outOde :: Nil), snap)
+      case _: AtomicDifferentialProgram | _: AtomicProgram | _: DifferentialProduct | _: CompositeProgram =>
+        throw TransformationException(s"Unexpected or unsupported program $hp in SSA pass")
+    }
   }
 
   /**  SSA translation of a differential program
     *  We assume for simplicity that the program does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences */
-  def ssa(dp: DifferentialProgram, snapshot: Snapshot): DifferentialProgram = {
-    ExpressionTraversal.traverse(snapRenameETF(snapshot), dp).getOrElse(dp)
+  def ssa(dp: DifferentialProgram, snapshot: Snapshot): (DifferentialProgram) = {
+    dp match {
+      case AtomicODE(xp, e) =>
+        val x = Variable(xp.name, opt(snapshot.getOpt(xp.name)), xp.sort)
+        val dx = DifferentialSymbol(x)
+        AtomicODE(dx, ssa(e, snapshot))
+      case DifferentialProduct(l, r) => DifferentialProduct(ssa(l, snapshot), ssa(r, snapshot))
+    }
   }
 
   /**  SSA translation of a formula
     *  We assume for simplicity that the formula does not bind any of the variables subject to SSA, meaning
     *  we simply re-index free variable occurrences */
-  def ssa(fml: Formula, snapshot: Snapshot): Formula = {
-    ExpressionTraversal.traverse(snapRenameETF(snapshot), fml).getOrElse(fml)
+  def ssa(fml: Formula, snapshot: Snapshot): (Formula, Snapshot) = {
+    fml match {
+      case q: Quantified => {
+        // Note: Results in backwards list, which is then reversed
+        val (xxs, qSnap) = q.vars.foldLeft[(List[Variable], Snapshot)]((Nil, snapshot))({ case ((acc, accSnap), x) =>
+          val (xx, snap) = accSnap.increment(x)
+          (xx :: acc, snap)
+        })
+        val (finalChild, finalSnap) = ssa(q.child, qSnap)
+        (q.reapply(xxs.reverse, finalChild), finalSnap)
+      }
+      case m: Modal => {
+        val (finalProgram, programSnap) = ssa(m.program, snapshot)
+        val (finalChild, finalSnap) = ssa(m.child, programSnap)
+        (m.reapply(finalProgram, finalChild), finalSnap)
+      }
+      case PredOf(func, child) => (PredOf(func, ssa(child, snapshot)), snapshot)
+      case PredicationalOf(func, child) =>
+        val (finalChild, finalSnap) = ssa(child, snapshot)
+        (PredicationalOf(func, finalChild), finalSnap)
+      case cf: UnaryCompositeFormula =>
+        val (finalChild, finalSnap) = ssa(cf.child, snapshot)
+        (cf.reapply(finalChild), finalSnap)
+      case bf: BinaryCompositeFormula =>
+        val (lf, lSnap) = ssa(bf.left, snapshot)
+        val (rf, rSnap) = ssa(bf.right, snapshot)
+        val snap = lSnap ++ rSnap
+        (bf.reapply(lf, rf), snap)
+      case cmpF: ComparisonFormula =>
+        (cmpF.reapply(ssa(cmpF.left, snapshot), ssa(cmpF.right, snapshot)), snapshot)
+      case af: AtomicFormula => (af, snapshot)
+      case cf: CompositeFormula => throw TransformationException("Expected all composite formulas to be implemented, this exception should be unreachable")
+    }
   }
 
   /**  SSA translation of a hybrid program/game */
-  def ssa(exp: Expression, snapshot: Snapshot): Expression = {
+  def ssa(exp: Expression, snapshot: Snapshot): (Expression, Snapshot) = {
     exp match {
-      case e: Term => ssa(e, snapshot)
+      case e: Term => (ssa(e, snapshot), snapshot)
       case e: Formula => ssa(e, snapshot)
+      case e: DifferentialProgram => ssa(e, snapshot)
       case e: Program => ssa(e, snapshot)
+      case _ => throw TransformationException("Expected all cases implemented in SSA, this line should be unreachable")
     }
   }
 
@@ -132,7 +245,9 @@ object SSAPass {
         /* ProgramAssignments / ProgramVar(x) is used to search assignments of *all* versions of x, no re-index needed. */
         case ProgramAssignments(x, ssa) => ProgramAssignments(x, ssa)
         case ProgramVar(x) => ProgramVar(x)
-        case ProofInstance(e) => ProofInstance(ssa(e, snapshot))
+        case ProofInstance(e) =>
+          val (ee, _snap)  = ssa(e, snapshot)
+          ProofInstance(ee)
         case ProofApp(m, n) => ProofApp(ssa(m, snapshot), ssa(n, snapshot))
       }
     locate(node, pt)
@@ -150,17 +265,6 @@ object SSAPass {
     (locate(node, mod), snap)
   }
 
-  /** Collapse double option. */
-  private def opt[T](x: Option[Option[T]]): Option[T] = x match {case None => None case Some(None) => None case Some(Some(x)) => Some(x)}
-
-  /** @return Stuttering assignments which cause other state snapshot to match ours. */
-  private def stutters(ours: Snapshot, other: Snapshot, locator: ASTNode = Triv()): Statement = {
-    val allKeys = other.keySet.++(ours.keySet)
-    val varDiff = allKeys.filter(k => ours.getOpt(k) != other.getOpt(k))
-    val asgns = varDiff.toList.map(x => locate(Modify(Nil, List((Variable(x, opt(other.getOpt(x))), Some(Variable(x, opt(ours.getOpt(x))))))), locator))
-    if (asgns.isEmpty) Triv()
-    else locate(Phi(locate(KaisarProof.block(asgns), locator)), locator)
-  }
 
   /** Translate indices of label arguments */
   def ssa(ld: LabelDef, snapshot: Snapshot): LabelDef = {
@@ -199,7 +303,7 @@ object SSAPass {
         val (body, bodySnap) = ssa(inBody, snapshot)
         val baseStutters = stutters(snapshot, bodySnap, s)
         val indStutters = stutters(bodySnap, snapshot, s)
-        val (xx, jj) = (ssa(x, bodySnap), ssa(j, bodySnap))
+        val (xx, (jj, _jjSnap)) = (ssa(x, bodySnap), ssa(j, bodySnap))
         val whilst = locate(While(xx, jj, KaisarProof.block(body :: indStutters :: Nil)), s)
         (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
       case For(metX, met0, metIncr, conv, guard, inBody) =>
@@ -220,8 +324,8 @@ object SSAPass {
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {
-          val ff = ssa(f, snapshot)
-          val (ss, snap2) = ssa(s, snapshot)
+          val (ff, snap1) = ssa(f, snapshot)
+          val (ss, snap2) = ssa(s, snap1)
           ((x, ff, ss), snap2)
         }})
         val maxSnap = clauses.map(_._2).reduce(_ ++ _)
@@ -230,17 +334,23 @@ object SSAPass {
           (x, f, KaisarProof.block(asgns :: bs :: Nil))
         }).reverse
         (Switch(scrut, stutterClauses), maxSnap)
-      case Assume(pat, f) => (Assume(pat, ssa(f, snapshot)), snapshot)
+      case Assume(pat, f) =>
+        val (fml, _fmlSnap) = ssa(f, snapshot)
+        (Assume(pat, fml), snapshot)
       case Assert(pat, f, m) =>
-        val ff = ssa(f, snapshot)
+        val (ff, _fmlSnap) = ssa(f, snapshot)
         val mm = ssa(m, snapshot)
         (Assert(pat, ff, mm), snapshot)
-      case Note(x, proof, annotation) => (Note(x, ssa(proof, snapshot), annotation.map(ssa(_, snapshot))), snapshot)
+      case Note(x, proof, annotation) =>
+        val (ann, _annSnap) = annotation.map(ssa(_, snapshot)) match
+          {case Some((l, r)) => (Some(l), r) case None => (None, snapshot)}
+        (Note(x, ssa(proof, snapshot), ann), snapshot)
       case LetSym(f, args, e) => {
         // Don't SSA parameters, only state variables
         val bound = args.toSet
         val local = snapshot.filter({case (k, v) => !bound.contains(Variable(k))})
-        (LetSym(f, args, ssa(e, local)), snapshot)
+        val (loc, _locSnap) = ssa(e, local)
+        (LetSym(f, args, loc), snapshot)
       }
       case Ghost(s) =>
         val (ss, snap) = ssa(s, snapshot)
@@ -264,9 +374,11 @@ object SSAPass {
        * but that free variables may be introduced */
       case Match(pat: Expression, e: Expression) =>
         val snap = snapshot.addPattern(pat)
-        (Match(ssa(pat, snap), ssa(e, snapshot)), snap)
+        val (ee, _eSnap) = ssa(e, snapshot)
+        (Match(ssa(pat, snap), ee), snap)
       case Triv() => (Triv(), snapshot)
       case pr: Pragma => (pr, snapshot)
+      case meta: MetaNode => throw TransformationException(s"Cannot apply SSA to context-only node $meta")
     }
     (locate(node, s), snap)
   }
@@ -291,8 +403,12 @@ object SSAPass {
     * refers to the *final* state of the ODE. */
   def ssa(ds: DomainStatement, snapshot: Snapshot): DomainStatement = {
     val node = ds match {
-      case DomAssume(x, f) => (DomAssume(ssa(x, snapshot), ssa(f, snapshot)))
-      case DomAssert(x, f, child) => (DomAssert(ssa(x, snapshot), ssa(f, snapshot), ssa(child, snapshot)))
+      case DomAssume(x, f) =>
+        val (fml, _fmlSnap) = ssa(f, snapshot)
+        (DomAssume(ssa(x, snapshot), fml))
+      case DomAssert(x, f, child) =>
+        val (fml, _fmlSnap) = ssa(f, snapshot)
+        (DomAssert(ssa(x, snapshot), fml, ssa(child, snapshot)))
       case DomWeak(dc) =>
         val dc1 = ssa(dc, snapshot)
         DomWeak(dc1)
