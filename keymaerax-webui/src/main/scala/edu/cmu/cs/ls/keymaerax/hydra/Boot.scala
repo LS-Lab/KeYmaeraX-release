@@ -9,7 +9,7 @@ import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup, Logging}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
 
@@ -34,6 +34,8 @@ import scala.language.postfixOps
 object NonSSLBoot extends App with Logging {
   assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
+
+  Configuration.setConfiguration(FileConfiguration)
 
   //Initialize all tools.
   val url = HyDRAInitializer(args, HyDRAServerConfig.database)
@@ -96,6 +98,8 @@ object SSLBoot extends App with Logging {
     s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently not set. (Current Environemnt: ${System.getenv.keySet().toArray().toList.mkString(", ")}).")
   assert(System.getenv("HyDRA_SSL").equals("on"),
     s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently set to ${System.getenv("HyDRA_SSL")}")
+
+  Configuration.setConfiguration(FileConfiguration)
 
   //Initialize all tools.
   HyDRAInitializer(args, HyDRAServerConfig.database)
@@ -167,7 +171,7 @@ object HyDRAInitializer extends Logging {
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
-    KeYmaeraXStartup.initLemmaCache(logger.warn)
+    KeYmaeraXStartup.initLemmaCache(logger.warn(_, _))
 
     def proofUrl(userId: String, proofId: Int): String = {
       database.getUser(userId) match {

@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -38,6 +38,8 @@ import scala.collection.immutable._
   */
 class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
     with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
+
+  Configuration.setConfiguration(FileConfiguration)
 
   /** Default signaler for failAfter in tests without tools. */
   protected implicit val signaler: Signaler = { t: Thread =>

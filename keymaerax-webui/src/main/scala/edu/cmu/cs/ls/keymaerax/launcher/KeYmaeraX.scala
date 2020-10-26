@@ -8,7 +8,7 @@ import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -83,6 +83,7 @@ object KeYmaeraX {
       exit(1)
     }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
+    Configuration.setConfiguration(FileConfiguration)
     //@note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
       nextOption(Map('commandLine -> args.mkString(" ")), args.toList),
