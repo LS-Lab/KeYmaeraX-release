@@ -100,7 +100,7 @@ object SSLBoot extends App with Logging {
   //Initialize all tools.
   HyDRAInitializer(args, HyDRAServerConfig.database)
 
-  assert(Configuration.get[String](Configuration.Keys.JKS).isDefined,
+  assert(Configuration.getString(Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
   if (HyDRAServerConfig.host != "0.0.0.0")
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
@@ -167,7 +167,7 @@ object HyDRAInitializer extends Logging {
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
-    KeYmaeraXStartup.initLemmaCache(logger.warn(_, _))
+    KeYmaeraXStartup.initLemmaCache(logger.warn)
 
     def proofUrl(userId: String, proofId: Int): String = {
       database.getUser(userId) match {
@@ -181,8 +181,8 @@ object HyDRAInitializer extends Logging {
     options.get('open) match {
       case None => "" //@note start with model list
       case Some(archive) =>
-        if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
-          Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
             case None =>
               logger.warn("Unable to import archive: no default user configured")
               ""
@@ -221,7 +221,7 @@ object HyDRAInitializer extends Logging {
   }
 
   private def preferredToolFromConfig: String = {
-    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 }
 

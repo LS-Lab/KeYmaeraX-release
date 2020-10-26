@@ -10,13 +10,12 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.commons.configuration2.PropertiesConfiguration
 
-import scala.reflect.runtime.universe._
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 
 /** The KeYmaera X configuration.
   * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
-  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]] */
+  * @see [[edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX]] */
 object Configuration {
   /** Configuration keys */
   object Keys {
@@ -154,23 +153,23 @@ object Configuration {
   def apply(key: String): String = config.getString(key)
 
   /** Returns the value of `key` or None, if not present. */
-  def get[T](key: String)(implicit tag: TypeTag[T]): Option[T] = {
-    def safeGet(getter: String => Any): Option[T] = if (contains(key)) Some(getter(key).asInstanceOf[T]) else None
-    tag.tpe match {
-      case t if t =:= typeOf[Boolean]=> safeGet(config.getBoolean)
-      case t if t =:= typeOf[String] => safeGet(config.getString)
-      case t if t =:= typeOf[Int]    => safeGet(config.getInt)
-      case t if t =:= typeOf[Long]   => safeGet(config.getLong)
-      case t if t =:= typeOf[Float]  => safeGet(config.getFloat)
-      case t if t =:= typeOf[Double] => safeGet(config.getDouble)
-      case t if t =:= typeOf[BigInt] => safeGet(config.getBigInteger)
-      case t if t =:= typeOf[BigDecimal] => safeGet(config.getBigDecimal)
-    }
-  }
-
-  /** Returns the value of `key` or None, if not present. */
-  @deprecated("Use get instead")
-  def getOption(key: String): Option[String] = if (contains(key)) Some(apply(key)) else None
+  private def safeGet[T](key: String, getter: String => Any): Option[T] = if (contains(key)) Some(getter(key).asInstanceOf[T]) else None
+  /** Returns the value of `key` as Boolean or None, if not present. */
+  def getBoolean(key: String): Option[Boolean] = safeGet(key, config.getBoolean)
+  /** Returns the value of `key` as String or None, if not present. */
+  def getString(key: String):  Option[String]  = safeGet(key, config.getString)
+  /** Returns the value of `key` as Int or None, if not present. */
+  def getInt(key: String):     Option[Int]     = safeGet(key, config.getInt)
+  /** Returns the value of `key` as Long or None, if not present. */
+  def getLong(key: String):    Option[Long]    = safeGet(key, config.getLong)
+  /** Returns the value of `key` as Float or None, if not present. */
+  def getFloat(key: String):   Option[Boolean] = safeGet(key, config.getFloat)
+  /** Returns the value of `key` as Double or None, if not present. */
+  def getDouble(key: String):  Option[Double]  = safeGet(key, config.getDouble)
+  /** Returns the value of `key` as BigInt or None, if not present. */
+  def getBigInteger(key: String): Option[BigInt] = safeGet(key, config.getBigInteger)
+  /** Returns the value of `key` as BigDecimal or None, if not present. */
+  def getBigDecimal(key: String): Option[BigDecimal] = safeGet(key, config.getBigDecimal)
 
   /** Returns the configuration entry `key` as an absolute path with file separators. */
   def path(key: String): String = {
@@ -193,7 +192,7 @@ object Configuration {
 
   /** Executes `code` with a temporary configuration that gets reset after execution. */
   def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {
-    val origConfig = tempConfig.keys.map(k => k -> Configuration.get[String](k))
+    val origConfig = tempConfig.keys.map(k => k -> Configuration.getString(k))
     try {
       tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
       code
@@ -211,47 +210,47 @@ object Configuration {
   object Pegasus {
     def relativePath: String = apply(Configuration.Keys.Pegasus.PATH).replaceAllLiterally("/", File.separator)
     def absolutePath: String = Configuration.path(Configuration.Keys.Pegasus.PATH)
-    def mainFile(default: String): String = get[String](Configuration.Keys.Pegasus.MAIN_FILE).getOrElse(default)
-    def invGenTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVGEN_TIMEOUT).getOrElse(default)
-    def invCheckTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVCHECK_TIMEOUT).getOrElse(default)
-    def sanityTimeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.SANITY_TIMEOUT).getOrElse(default)
+    def mainFile(default: String): String = getString(Configuration.Keys.Pegasus.MAIN_FILE).getOrElse(default)
+    def invGenTimeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.INVGEN_TIMEOUT).getOrElse(default)
+    def invCheckTimeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT).getOrElse(default)
+    def sanityTimeout(default: Int = 0): Int = getInt(Configuration.Keys.Pegasus.SANITY_TIMEOUT).getOrElse(default)
     object DiffSaturation {
-      def minimizeCuts(default: Boolean = true): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS).getOrElse(default)
-      def strictMethodTimeouts(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS).getOrElse(default)
-      def useDependencies(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES).getOrElse(default)
+      def minimizeCuts(default: Boolean = true): Boolean = getBoolean(Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS).getOrElse(default)
+      def strictMethodTimeouts(default: Boolean = false): Boolean = getBoolean(Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS).getOrElse(default)
+      def useDependencies(default: Boolean = false): Boolean = getBoolean(Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES).getOrElse(default)
     }
     object PreservedStateHeuristic {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
     }
     object HeuristicInvariants {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
     }
     object FirstIntegrals {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
-      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.DEGREE).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.FirstIntegrals.DEGREE).getOrElse(default)
     }
     object LinearFirstIntegrals {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT).getOrElse(default)
     }
     object LinearGenericMethod {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT).getOrElse(default)
-      def rationalsOnly(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.LinearGenericMethod.RATIONALS_ONLY).getOrElse(default)
-      def rationalPrecision(default: Int = 10): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.RATIONAL_PRECISION).getOrElse(default)
-      def firstIntegralDegree(default: Int = 2): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.FIRST_INTEGRAL_DEGREE).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT).getOrElse(default)
+      def rationalsOnly(default: Boolean = false): Boolean = getBoolean(Configuration.Keys.Pegasus.LinearGenericMethod.RATIONALS_ONLY).getOrElse(default)
+      def rationalPrecision(default: Int = 10): Int = getInt(Configuration.Keys.Pegasus.LinearGenericMethod.RATIONAL_PRECISION).getOrElse(default)
+      def firstIntegralDegree(default: Int = 2): Int = getInt(Configuration.Keys.Pegasus.LinearGenericMethod.FIRST_INTEGRAL_DEGREE).getOrElse(default)
     }
     object Darboux {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.TIMEOUT).getOrElse(default)
-      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.DEGREE).getOrElse(default)
-      def staggered(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.Darboux.STAGGERED).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.Darboux.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.Darboux.DEGREE).getOrElse(default)
+      def staggered(default: Boolean = false): Boolean = getBoolean(Configuration.Keys.Pegasus.Darboux.STAGGERED).getOrElse(default)
     }
     object Barrier {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.TIMEOUT).getOrElse(default)
-      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.DEGREE).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.Barrier.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.Barrier.DEGREE).getOrElse(default)
     }
     object InvariantExtractor {
-      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.TIMEOUT).getOrElse(default)
-      def sufficiencyTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
-      def dwTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT).getOrElse(default)
+      def timeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.InvariantExtractor.TIMEOUT).getOrElse(default)
+      def sufficiencyTimeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
+      def dwTimeout(default: Int = -1): Int = getInt(Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT).getOrElse(default)
     }
   }
 
@@ -259,7 +258,7 @@ object Configuration {
   object SOSsolve {
     def relativePath: String = apply(Configuration.Keys.SOSsolve.PATH).replaceAllLiterally("/", File.separator)
     def absolutePath: String = Configuration.path(Configuration.Keys.SOSsolve.PATH)
-    def mainFile(default: String): String = get[String](Configuration.Keys.SOSsolve.MAIN_FILE).getOrElse(default)
+    def mainFile(default: String): String = getString(Configuration.Keys.SOSsolve.MAIN_FILE).getOrElse(default)
   }
 
   //</editor-fold>

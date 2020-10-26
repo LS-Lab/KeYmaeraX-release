@@ -22,7 +22,7 @@ object ToolConfiguration {
   /** Returns the Mathematica configuration. */
   def mathematicaConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
     def tcpip: String = {
-      Configuration.get[String](Configuration.Keys.MATH_LINK_TCPIP).
+      Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("false")
     }
 
@@ -30,8 +30,8 @@ object ToolConfiguration {
       Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
         "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
     } else {
-      Configuration.get[String](Configuration.Keys.MATHEMATICA_LINK_NAME) match {
-        case Some(l) => Configuration.get[String](Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
+      Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
+        case Some(l) => Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
           //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
           case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
           case None =>
@@ -47,7 +47,7 @@ object ToolConfiguration {
   /** Returns the Wolfram Engine configuration. */
   def wolframEngineConfig(preferred: Map[String, String] = Map.empty): Map[String, String] = {
     def tcpip: String = {
-      Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_TCPIP).
+      Configuration.getString(Configuration.Keys.WOLFRAMENGINE_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("true")
     }
 
@@ -55,8 +55,8 @@ object ToolConfiguration {
       Map("mathkernel" -> preferred("mathkernel"), "linkName" -> preferred("mathkernel"),
         "jlink" -> preferred("jlink"), "libDir" -> preferred("jlink"), "tcpip" -> preferred.getOrElse("tcpip", tcpip))
     } else {
-      Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
-        case Some(l) => Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
+      Configuration.getString(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
+        case Some(l) => Configuration.getString(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
           //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
           case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
           case None =>

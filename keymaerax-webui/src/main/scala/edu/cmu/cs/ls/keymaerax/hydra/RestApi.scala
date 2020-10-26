@@ -86,11 +86,11 @@ object RestApi extends Logging {
 
   def completeRequest(r: Request, t: SessionToken): StandardRoute = t match {
     case NewlyExpiredToken(_) =>
-      assert(!Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true"), "Default user is not supposed to expire, but did.")
+      assert(!Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true"), "Default user is not supposed to expire, but did.")
       complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
-      else if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(new ErrorResponse("Unexpected internal error: default user lacks permission; please reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register an ordinary local login name.") :: Nil))
+      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(new ErrorResponse("Unexpected internal error: default user lacks permission; please reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register an ordinary local login name.") :: Nil))
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
@@ -140,8 +140,8 @@ object RestApi extends Logging {
     respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
       if (!HyDRAServerConfig.isHosted) {
         // on non-hosted instance: offer default login feature
-        if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
-          Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
             case Some(userName) => database.getUser(userName) match {
               case Some(user) =>
                 // login default user and show models
@@ -155,10 +155,10 @@ object RestApi extends Logging {
             // default user not set (this should not happen, but if it does): show login page
             case _ => getFromResource("index_bootstrap.html")
           }
-        } else if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("false")) {
+        } else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) {
           // user opted out of localhost default login, show login page
           getFromResource("index_bootstrap.html")
-        } else if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("ask")) {
+        } else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("ask")) {
           // first time use by a user with a prior installation without default user feature
           getFromResource("index_bootstrap.html")
         } else getFromResource("index_bootstrap.html")
@@ -1384,7 +1384,7 @@ object SessionManager {
       } else {
         remove(key)
         // on local host, recreate default user token
-        if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
           Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
           createToken(key, user)
         } else NewlyExpiredToken(key)
@@ -1421,7 +1421,7 @@ object SessionManager {
     val c = Calendar.getInstance()
     val expiresIn =
       // local user: sessions don't expire
-      if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+      if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
         Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
         Int.MaxValue
       } else 7

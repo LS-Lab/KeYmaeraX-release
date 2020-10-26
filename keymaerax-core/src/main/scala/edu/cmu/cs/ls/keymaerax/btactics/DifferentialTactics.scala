@@ -1266,7 +1266,7 @@ private object DifferentialTactics extends Logging {
             cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
               // Some additional cases
               //(solve(pos) & ?(timeoutQE)) |
-              doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
+              doIfElse((_: ProvableSig) => Configuration.getBoolean(Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
                 ODEInvariance.dRI(pos) |
                 invCheck(
                   //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants

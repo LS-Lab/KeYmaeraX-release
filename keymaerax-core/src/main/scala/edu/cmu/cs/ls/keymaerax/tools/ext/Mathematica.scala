@@ -50,7 +50,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
   private var qeMaxTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
 
-  private val memoryLimit: Long = Configuration.get[String](Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
+  private val memoryLimit: Long = Configuration.getLong(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).getOrElse(-1)
 
   override def init(config: Map[String,String]): Unit = {
     mQE.memoryLimit = memoryLimit
@@ -167,7 +167,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
-    mCEX.timeout = Integer.parseInt(Configuration.get[String](Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
+    mCEX.timeout = Configuration.getInt(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse(10)
     mCEX.findCounterExample(formula)
   }
 

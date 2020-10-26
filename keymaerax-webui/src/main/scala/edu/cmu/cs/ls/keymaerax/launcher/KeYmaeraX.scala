@@ -127,7 +127,7 @@ object KeYmaeraX {
   def help: String = stats + "\n" + usage
 
   private def configFromFile(defaultTool: String): OptionMap = {
-    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
         ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
       case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++

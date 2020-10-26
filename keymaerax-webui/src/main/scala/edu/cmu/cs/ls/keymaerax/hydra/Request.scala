@@ -177,8 +177,8 @@ class SetDefaultUserRequest(db: DBAbstraction, userId: String, password: String,
 
 class LocalLoginRequest(db: DBAbstraction, userId: String, password: String) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true") && userId == "local") {
-      Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+    if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") && userId == "local") {
+      Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
         case Some(userId) => db.getUser(userId) match {
           case Some(user) =>
             val sessionToken = Some(SessionManager.add(user))
@@ -529,8 +529,8 @@ class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Read
     val kyxConfig = "KeYmaera X version: " + VERSION + newline +
       "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
       "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
-      "LinkName: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline +
-      "jlinkLibDir: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+      "LinkName: " + Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline +
+      "jlinkLibDir: " + Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
     new KyxConfigResponse(kyxConfig) :: Nil
   }
 }
@@ -788,13 +788,13 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String) ex
           new MathematicaConfigurationResponse(
             Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
             Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
-            Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
+            Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
           ) :: Nil
       case "wolframengine" if Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) && Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) =>
         new MathematicaConfigurationResponse(
           Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
           Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
-          Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("")
+          Configuration.getString(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("")
         ) :: Nil
       case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
     }

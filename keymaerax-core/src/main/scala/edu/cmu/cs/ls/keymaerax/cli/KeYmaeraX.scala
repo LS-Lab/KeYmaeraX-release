@@ -188,7 +188,7 @@ object KeYmaeraX {
 
   /** Reads configuration from keymaerax.conf. */
   def configFromFile(defaultTool: String): OptionMap = {
-    ToolConfiguration.config(Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
+    ToolConfiguration.config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
       map({ case (k,v) => Symbol(k) -> v })
   }
 

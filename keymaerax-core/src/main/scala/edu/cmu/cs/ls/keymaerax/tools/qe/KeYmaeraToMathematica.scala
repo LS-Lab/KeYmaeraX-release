@@ -36,7 +36,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
    * Converts KeYmaera expressions into Mathematica expressions.
    */
   private[tools] def convert(e: KExpr): MExpr = {
-    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     insist(convertInterpretedSymbols || StaticSemantics.symbols(e).forall({case Function(_, _, _, _, interpreted) => !interpreted case _ => true}),
       "Interpreted functions not allowed in soundness-critical conversion to Mathematica")
     insist(StaticSemantics.symbols(e).forall({case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true}),

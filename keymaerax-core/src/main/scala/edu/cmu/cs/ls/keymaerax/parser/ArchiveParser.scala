@@ -237,7 +237,7 @@ object ArchiveParser extends ArchiveParser {
   type InputSignature = (List[NamedSymbol], Option[Expression])
 
   /* @note mutable state for switching out the default parser. */
-  private[this] var p: ArchiveParser = Configuration.get[String](Configuration.Keys.PARSER) match {
+  private[this] var p: ArchiveParser = Configuration.getString(Configuration.Keys.PARSER) match {
     case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
     case Some("DLParser") => DLArchiveParser
   }

@@ -70,7 +70,7 @@ private object ToolTactics {
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
-    val convertInterpretedSymbols = Configuration.get[Boolean](Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
+    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     val expand =
       if (convertInterpretedSymbols) skip
       else EqualityTactics.expandAll &

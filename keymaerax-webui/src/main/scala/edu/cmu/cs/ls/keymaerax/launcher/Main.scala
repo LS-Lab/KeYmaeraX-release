@@ -493,7 +493,7 @@ object Main {
   }
 
   /** Print debug message `s`. */
-  def launcherDebug(s: String): Unit = if (Configuration.getOption(Configuration.Keys.DEBUG).contains("true")) {
+  def launcherDebug(s: String): Unit = if (Configuration.getString(Configuration.Keys.DEBUG).contains("true")) {
     val prefix = "[launcherDebug] "
     println(prefix + s)
   }
