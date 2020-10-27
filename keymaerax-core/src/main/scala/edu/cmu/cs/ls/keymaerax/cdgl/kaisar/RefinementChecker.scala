@@ -137,7 +137,7 @@ object RefinementChecker {
 
   // Some statements, especially auto-generated ones, can be arranged in silly orders but are commutative anyway.
   // commute statements to agree with game when possible
-  // @TODO: Support any dependency-free block assignment, not just free. Also check conditions even in phi case. Also change SSA pass not to do silly assignment orders
+  // @TODO: Support any dependency-free block assignment, not just free. Also check free variableness conditions even in phi case. Also change SSA pass not to do silly assignment orders
   // in phi blocks
   private def sortBy(ss: List[Statement], ghd: Program): List[Statement] = {
     (ss, ghd) match {
@@ -194,18 +194,16 @@ object RefinementChecker {
     val fullS = Block(ss)
     val games = asPhiBlock(game)
     val ssAssigns = ss.map({case Modify(_, List((x, Some(f)))) => Assign(x, f) case _ => throw new Exception("Bad pattern match in RefinementChecker.forHeaderAgrees")})
-    // @TODO: Need to be more exact and make sure rhs of each assignment is correct even though they're different for base case and main case
-    val lSet = ssAssigns.toSet.map((asgn: Assign) => asgn.x)
-    val rSet = games.toSet.map((asgn: Assign) => asgn.x)
+    val lSet = ssAssigns.toSet
+    val rSet = games.toSet
     val lDiff = lSet -- rSet
     val rDiff = rSet -- lSet
-    // @TODO: get exact SSA indices
-    val lAdmiss = lDiff.filter({case x if x.name == loopIndex.name => false case _ => true})
+    val lAdmiss = lDiff.filter({case x if x.x == loopIndex => false case _ => true})
     if (rDiff.nonEmpty) {
-      throw RefinementFailure(fullS, game, s"For-loop header of game had extra assignments to: $rDiff")
+      throw RefinementFailure(fullS, game, s"For-loop header or footer of game had extra assignments to: $rDiff")
     }
     if (lAdmiss.nonEmpty) {
-      throw RefinementFailure(fullS, game, s"For-loop header of proof had extra assignments to: $lAdmiss")
+      throw RefinementFailure(fullS, game, s"For-loop header or footer of proof had extra assignments to: $lAdmiss")
     }
   }
 
@@ -257,12 +255,13 @@ object RefinementChecker {
                   }})
             }
           case (Block((phi: Phi) :: (fr@For(metX, met0, metIncr, conv, guard, body)) :: Nil), assignMetZ) =>
-            def stripLoopFooter(s: Statement): Statement = {
+            def stripLoopFooter(s: Statement): (Statement, Phi) = {
               val ss = KaisarProof.flatten(List(s))
               if(!ss.last.isInstanceOf[Phi])
                 throw RefinementFailure(shd, ghd, "Could not find phi nodes in footer of proof loop body")
-              KaisarProof.block(ss.dropRight(1))
+              (KaisarProof.block(ss.dropRight(1)), ss.last.asInstanceOf[Phi])
             }
+            val metXFooter = Variable(metX.name, metX.index.map(i => i + 1))
             val (gamePhi, loopAndCont) = unappend(gtl)
             val (loopGame, cont) = loopAndCont match {
               case (Compose(loop@Dual(Loop(_)), after)) => (loop, Some(after))
@@ -276,16 +275,17 @@ object RefinementChecker {
               case _ => throw RefinementFailure(fr, loopGame, "Refining for-loop, loop body must have fixed format {body;^@; assigns}  or {body; assigns}^@")
             }
             val (incr: Assign, bodyPhi) = uncons(bodyAssigns)
-            // @TODO: Stronger test which gets SSA renames exactly right but is also sonud
-            if (incr.x.name != metX.name) {
+            if (incr != Assign(metXFooter, metIncr)) {
               throw RefinementFailure(fr, loopGame, "Refining for-loop, loop body must have fixed format  {{body;}^@ incr;} where incr increments the loop index")
             }
             if(assignMetZ != Assign(metX, met0)) {
               val mod = Modify(Nil, List((metX, Some(met0))))
               throw RefinementFailure(mod, ghd, "Refining for-loop, game must start with assignment of index variable to initial value")
             }
+            val (plainBody, Phi(proofBodyRawPhi)) = stripLoopFooter(body)
+            val proofBodyPhi = Phi(KaisarProof.block(Modify(Nil, List((metX, Some(metXFooter)))) :: proofBodyRawPhi :: Nil))
             checkForHeaderAgrees(phi, gamePhi, metX)
-            checkForHeaderAgrees(phi, bodyPhi, metX)
+            checkForHeaderAgrees(proofBodyPhi, bodyPhi, metX)
             val metric = Metric(metX, metIncr, guard.f, Set()) // Note: assume taboos checked elsewhere
             val termCond = metric.guardPost(metX)
             val theConcl = conv.map(_.f) match {
@@ -302,7 +302,6 @@ object RefinementChecker {
                 case Some(k)  => k // there was no test of termination condition, whole continuation should be treated as "after the loop"
               }
             // body ends in phi node, take everything but phi
-            val plainBody = stripLoopFooter(body)
             val kcp = kc.:+(phi)
             val bodCon = kcp.:+(ForProgress(fr, Triv()))
             val tailCon = kcp.:+(fr)

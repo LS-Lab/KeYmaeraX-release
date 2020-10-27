@@ -72,7 +72,7 @@ class RefinementTests extends TacticTestBase {
   }
 
   it should "check specific cases" in withMathematica { _ =>
-    val chosenCases = List(pldiModelSafeSimpleLets) // noteAnd basicForNoConv
+    val chosenCases = List(basicForNoConv) // noteAnd basicForNoConv
     chosenCases.foreach(rtc => {
       println("Checking: " + rtc.name)
       didRefine(rtc.proof, rtc.game, rtc.name) shouldBe rtc.shouldRefine withClue s"in testcase ${rtc.prettyString}"
