@@ -135,6 +135,16 @@ object RefinementChecker {
     }
   }
 
+  /** @return whether ss is a block of Modify statements which can be soundly reordered */
+  private def commutativeMods(ss: List[Statement]): Boolean = {
+    val mods = ss.flatMap({case mod: Modify => List(mod) case _ => Nil})
+    if (mods.length < ss.length)
+      return false // because some statement was not a Modify
+    val fvs = mods.map(mod => mod.freeVars).reduce(_ ++ _)
+    val bvs = mods.map(mod => mod.boundVars).reduce(_ ++ _)
+    fvs.intersect(bvs).isEmpty
+  }
+
   // Some statements, especially auto-generated ones, can be arranged in silly orders but are commutative anyway.
   // commute statements to agree with game when possible
   // @TODO: Support any dependency-free block assignment, not just free. Also check free variableness conditions even in phi case. Also change SSA pass not to do silly assignment orders
@@ -143,7 +153,7 @@ object RefinementChecker {
     (ss, ghd) match {
       case (Block((_: Phi) :: (_: For) :: _) :: _, _) => ss
       // For now, only sort phis, but not for-loop phis
-      case (Phi(Block(ss)) :: tail, as: Assign) =>
+      case (Phi(Block(ss)) :: tail, as: Assign) if commutativeMods(ss)=>
         val (same, diff) = ss.partition({
           case Modify(_, List((x, Some(f)))) if x == as.x && f == as.e => true
           case _ => false
