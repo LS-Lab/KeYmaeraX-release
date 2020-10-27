@@ -99,7 +99,12 @@ object RefinementChecker {
     }
   }
 
-  // destructor for games which peels off blocks of SSA assignments
+  /** Greedily split hybrid program into front and back, where "front" heuristically tries to find longest possible
+    * sequence of SSA phi-assignments, if possible.
+    *
+    * @param game Hybrid program
+    * @return (hd, tl) where hd is an initial block and tl is the remainder of the program, if any
+    */
   private def unappend(game: Program): (Program, Program) = {
     def isAssign(hp: Program): Boolean = hp match {
       case Assign(_, _: Variable) | Dual(Assign(_, _: Variable)) | Dual(Dual(Assign(_, _: Variable))) => true
@@ -127,7 +132,9 @@ object RefinementChecker {
     }
   }
 
-  // Phi has no effect on dynamics of program, can delete in refinement comparisons
+  /** @param s Statement
+    * @return Statement s with any top-level [[Phi]] node stripped. Return value has same dynamics as [[s]]
+    */
   private def unphi(s: Statement): Statement = {
     s match {
       case phi: Phi => phi.asgns
@@ -145,8 +152,12 @@ object RefinementChecker {
     fvs.intersect(bvs).isEmpty
   }
 
-  // Some statements, especially auto-generated ones, can be arranged in silly orders but are commutative anyway.
-  // commute statements to agree with game when possible, especially in phi blocks
+  /** Attempts to soundly reorder statement list so that statement corresponding to a game appears first.
+    * This is particularly useful when auto-generated proof statements are generated in some unknown arbitrary order.
+    * @param ss List of Kaisar statements to be reordered
+    * @param ghd Game by which to reorder ss. Is "head" in list traversal of games
+    * @return Statement list equivalent to ss which, if possible, begins with statement corresponding to game ghd
+    */
   private def sortBy(ss: List[Statement], ghd: Program): List[Statement] = {
     def sortBlock(ss: List[Statement], tail: List[Statement], as: Assign, isPhi: Boolean): List[Statement] = {
       val (same, diff) = ss.partition({
@@ -172,6 +183,10 @@ object RefinementChecker {
     }
   }
 
+  /** @param s Kaisar proof statement
+    * @param gvs Set of variables mentioned in games (non-ghost variable set)
+    * @return s with no-op statements stripped: explicit ghosts, implicit ghost phi assignments, meta nodes
+    */
   // Ignore ghosts, phi-ghosts, meta nodes, etc
   private def beIgnorant(s: Statement, gvs: Set[Variable]): List[Statement] = {
     def ignorePhiGhost(maybePhi: Statement): List[Statement] = {
