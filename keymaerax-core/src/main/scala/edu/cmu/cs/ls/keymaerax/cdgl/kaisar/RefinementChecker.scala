@@ -210,7 +210,7 @@ object RefinementChecker {
   }
 
   /** @throws RefinementFailure if s does not refine game */
-  private def refine(s: Statement, game: Program, gvs: Set[Variable]): Unit = {
+  private def refine(kc: Context, s: Statement, game: Program, gvs: Set[Variable]): Unit = {
     // undo block constructors, drop ghosts and lets
     val ss = beIgnorant(s, gvs)
     val (ghd, gtl) = uncons(game)
@@ -227,23 +227,34 @@ object RefinementChecker {
           case (Assert(_id, p, _m), Dual(Test(q))) if p == q => ()
           case (Assume(_id, p), Test(q)) if p == q => ()
           case (Note(x, pt, Some(fml)), Dual(Test(q))) if fml == q => ()
-          // @TODO: SSA will fix this
           case (Note(x, pt, None), Dual(Test(q))) =>
             throw RefinementFailure(shd, ghd, "Expected proved formula in note statement", s)
           case (pode: ProveODE, osys: ODESystem) => refine(pode, osys, odeIsAngelic = false)
           case (pode: ProveODE, Dual(osys: ODESystem)) => refine(pode, osys, odeIsAngelic = true)
-          case (BoxLoop(sbod, _), Loop(gbod)) => refine(sbod, gbod, gvs)
-          case (BoxChoice(sl, sr), Choice(gl, gr)) => refine(sl, gl, gvs); refine(sr, gr, gvs)
-          case (Switch(_, pats), Dual(brGame: Choice)) =>
+          case (bl@BoxLoop(sbod, _), Loop(gbod)) => {
+            val con = kc.:+(BoxLoopProgress(bl, Triv()))
+            refine(con, sbod, gbod, gvs)
+          }
+          case (bc@BoxChoice(sl, sr), Choice(gl, gr)) => {
+            val conL = kc.:+(BoxChoiceProgress(bc, 0, Triv()))
+            val conR = kc.:+(BoxChoiceProgress(bc, 1, Triv()))
+            refine(conL, sl, gl, gvs)
+            refine(conR, sr, gr, gvs)
+          }
+          case (sw@Switch(_, pats), Dual(brGame: Choice)) =>
             val nBranches = pats.length
             StandardLibrary.unchoose(brGame, nBranches) match {
               case None => throw RefinementFailure(shd, ghd, "Program did not have enough branches for proof")
               case Some(gameBranches) =>
                 val pairs = pats.zip(gameBranches)
-                pairs.foreach({
-                  case ((_pat, fml, s), Compose(Test(q), g)) if fml == q => refine(s, Dual(g), gvs)
-                  case ((_pat, fml, s), g) => refine(s, g, gvs) // make guards optional
-                })
+                var which = 0
+                pairs.foreach( br => {
+                  val con = kc.:+(SwitchProgress(sw, which, Triv()))
+                  which = which + 1
+                  br match {
+                    case ((_pat, fml, s), Compose(Test(q), g)) if fml == q => refine(con, s, Dual(g), gvs)
+                    case ((_pat, fml, s), g) => refine(con, s, g, gvs) // make guards optional
+                  }})
             }
           case (Block((phi: Phi) :: (fr@For(metX, met0, metIncr, conv, guard, body)) :: Nil), assignMetZ) =>
             def stripLoopFooter(s: Statement): Statement = {
@@ -292,16 +303,20 @@ object RefinementChecker {
               }
             // body ends in phi node, take everything but phi
             val plainBody = stripLoopFooter(body)
-            refine(plainBody, gameBody, gvs)
-            refine(KaisarProof.block(stl), theTail, gvs)
-
+            val kcp = kc.:+(phi)
+            val bodCon = kcp.:+(ForProgress(fr, Triv()))
+            val tailCon = kcp.:+(fr)
+            refine(bodCon,plainBody, gameBody, gvs)
+            refine(tailCon, KaisarProof.block(stl), theTail, gvs)
           // @TODO: More specific error messages for tests etc
           case _ => throw RefinementFailure(shd, ghd, s"Proof connective ${PrettyPrinter.short(shd)} does not match program $ghd", shd)
         }
         // In lockstep cases, just recurse directly, else let the case handle recursion
         val oneToOne = shd match {case (Block((_: Phi) :: (_: For) :: _))=> false case _ => true}
-        if (oneToOne)
-          refine (KaisarProof.block(stl), gtl, gvs)
+        if (oneToOne) {
+          val con = kc.:+(shd)
+          refine (con, KaisarProof.block(stl), gtl, gvs)
+        }
     }
   }
 
@@ -309,7 +324,7 @@ object RefinementChecker {
     try {
       val vs = StaticSemantics(game)
       val gvs = vs.fv.toSet ++ vs.bv.toSet
-      refine(s, game, gvs)
+      refine(Context.empty, s, game, gvs)
     } catch {
         case rf: RefinementFailure =>
           throw ProofCheckException(s"Proof did not refine game $game", cause = rf)
