@@ -146,25 +146,28 @@ object RefinementChecker {
   }
 
   // Some statements, especially auto-generated ones, can be arranged in silly orders but are commutative anyway.
-  // commute statements to agree with game when possible
-  // @TODO: Support any dependency-free block assignment, not just free. Also check free variableness conditions even in phi case. Also change SSA pass not to do silly assignment orders
-  // in phi blocks
+  // commute statements to agree with game when possible, especially in phi blocks
   private def sortBy(ss: List[Statement], ghd: Program): List[Statement] = {
+    def sortBlock(ss: List[Statement], tail: List[Statement], as: Assign, isPhi: Boolean): List[Statement] = {
+      val (same, diff) = ss.partition({
+        case Modify(_, List((x, Some(f)))) if x == as.x && f == as.e => true
+        case _ => false
+      })
+      same match {
+        // maintain flattenedness
+        case found :: Nil =>
+          val diffBlock = if(diff.isEmpty) Nil else if (isPhi) List(Phi(Block(diff))) else List(Block(diff))
+          (if(isPhi) Phi(found) else found) :: (diffBlock ++ tail)
+        case _ => ss
+      }
+    }
     (ss, ghd) match {
       case (Block((_: Phi) :: (_: For) :: _) :: _, _) => ss
       // For now, only sort phis, but not for-loop phis
       case (Phi(Block(ss)) :: tail, as: Assign) if commutativeMods(ss)=>
-        val (same, diff) = ss.partition({
-          case Modify(_, List((x, Some(f)))) if x == as.x && f == as.e => true
-          case _ => false
-        })
-        same match {
-            // maintain flattenedness
-          case found :: Nil =>
-            val diffBlock = if(diff.nonEmpty) List(Phi(Block(diff))) else Nil
-            Phi(found) :: (diffBlock ++ tail)
-          case _ => ss
-        }
+        sortBlock(ss, tail, as, isPhi = true)
+      case (Block(ss) :: tail, as: Assign) if commutativeMods(ss)=>
+        sortBlock(ss, tail, as, isPhi = false)
       case _ => ss
     }
   }
