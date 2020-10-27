@@ -13,7 +13,7 @@ libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
-libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.+"
+libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+"
 
 libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
 

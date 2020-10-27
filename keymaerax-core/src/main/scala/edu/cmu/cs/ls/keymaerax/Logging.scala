@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax
 
-import org.slf4j.{Logger, LoggerFactory}
+import slogging.LazyLogging
 
 /** Provides a class-specific logger. */
-trait Logging {
-  val logger: Logger = LoggerFactory.getLogger(getClass)
+trait Logging extends LazyLogging {
+
 }
