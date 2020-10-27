@@ -144,18 +144,23 @@ case class RBranch(l: ContextResult, r: ContextResult) extends ContextResult {
   // This operation erases naming information. However, naming information should be non-essential in the
   // *result* of a query.
   override def asList: List[(Option[Ident], Formula)] = {
+    def conjoin(fmls: List[Formula]): Formula = fmls match {case Nil => True case _ => fmls.reduce(And)}
     def setted(lst: List[(Option[Ident], Formula)]): Set[Formula] =
       lst.foldLeft[Set[Formula]](Set())({ case (acc, x) => acc.+(x._2) })
     val (llst, rlst) = (l.asList, r.asList)
-    val (lSet, rSet) = (setted(llst), setted(rlst))
-    val (inter, lDiff, rDiff) = (lSet.intersect(rSet), lSet.--(rSet), rSet.--(lSet))
-    val (lBranch, rBranch) = (lDiff.toList.fold(True)(And), rDiff.toList.fold(True)(And))
-    val fmls = (lBranch, rBranch) match {
-      // if either branch is true, then P | true simplifies to True
-      case (True, _) | (_, True) => inter.toList
-      case _ => Or(lBranch, rBranch) :: inter.toList
+    if (llst == rlst)
+      llst
+    else {
+      val (lSet, rSet) = (setted(llst), setted(rlst))
+      val (inter, lDiff, rDiff) = (lSet.intersect(rSet), lSet.--(rSet), rSet.--(lSet))
+      val (lBranch, rBranch) = (conjoin(lDiff.toList), conjoin(rDiff.toList))
+      val fmls = (lBranch, rBranch) match {
+        // if either branch is true, then P | true simplifies to True
+        case (True, _) | (_, True) => inter.toList
+        case _ => Or(lBranch, rBranch) :: inter.toList
+      }
+      fmls.map(x => (None, x))
     }
-    fmls.map(x => (None, x))
   }
 }
 
