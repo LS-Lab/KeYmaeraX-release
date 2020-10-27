@@ -38,9 +38,10 @@ class RefinementTests extends TacticTestBase {
   val noteAnd: RefinementTestCase = RefinementTestCase("note example", SharedModels.noteAnd, SharedModels.noteAndProgram)
   val basicForNoConv: RefinementTestCase = RefinementTestCase("for loop no-conv", SharedModels.basicForNoConv, SharedModels.basicForNoConvProg)
   val pldiModelSafeSimpleLets: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeSimple, SharedModels.pldiModelSafeSimpleProgram)
+  val pldiModelSafeFull: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeFull, SharedModels.pldiModelSafeFullProgram)
   val allCases: List[RefinementTestCase] =
     List(trivAssign, demonLoop, demonLoopGhostly, ghostODE, inverseGhostODE, assertBranchesNonzero, switchLiterals,
-      annotatedAssign, annotatedAssignGame, basicForNoConv, pldiModelSafeSimpleLets, noteAnd)
+      annotatedAssign, annotatedAssignGame, basicForNoConv, pldiModelSafeSimpleLets, pldiModelSafeFull, noteAnd)
 
   private def didRefine(pf: Statement, g: Program, name: String): Boolean = {
     val (outPf, ssaG) =

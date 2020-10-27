@@ -426,7 +426,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.pldiModelSafeSimple :: Nil)
+    testExampleSet(SharedModels.pldiModelSafeFull :: Nil)
   }
 
   it should "allow ghosts of invariants in loop induction proofs " in withMathematica { _ =>

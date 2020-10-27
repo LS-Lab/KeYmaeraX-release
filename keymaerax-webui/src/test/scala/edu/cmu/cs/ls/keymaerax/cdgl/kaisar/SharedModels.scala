@@ -393,17 +393,30 @@ object SharedModels {
       |}*
       |""".stripMargin
 
-  val pldiModelSafe: String =
+  val pldiModelSafeFull: String =
     """
+      |pragma option "time=true";
+      |pragma option "trace=true";
+      |pragma option "debugArith=true";
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       | !(inv());
       | {
       |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
       |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps);};}
-      |  !(inv());
+      |  !brk:(inv());
       | }*
       | !(d >= 0);
+      |""".stripMargin
+
+  val pldiModelSafeFullProgram: String =
+    """?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
+      |{{?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
+      |{t := 0; {d' = -v, t' = 1 & (t <= eps)}}
+      |{?((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));}^@
+      |}*
+      |{?(d>=0);}^@
       |""".stripMargin
 
   // only needed for testing early versions of refinement checker
@@ -1277,7 +1290,7 @@ object SharedModels {
       |      pox := *; poy := *; ?curve() & safe();}}
       |  }
       | t:=0;
-      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar, 
+      | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
       |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
       |  & ?vr >= 0 & t <= T}
       |}*
@@ -1391,7 +1404,7 @@ object SharedModels {
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
     )
 
-  val pldiExamples: List[String] = List(pldiModelSafe, pldiModelSafeSimple, pldiSandboxSafe)
+  val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)
 
   val thesisCaseStudies: List[String] = pldiExamples ++ rssExamples ++ ijrrModels
   val allExamples: List[String] = pldiExamples ++ rssExamples ++ ijrrModels ++ thesisExamples

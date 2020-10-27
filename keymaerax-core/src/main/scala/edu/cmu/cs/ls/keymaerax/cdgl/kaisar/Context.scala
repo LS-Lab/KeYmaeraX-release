@@ -726,8 +726,6 @@ object Context {
   // fact identifier, fact formula, whether fact is from an assignment
   type Finder = ((Ident, Formula, Boolean)) => Boolean
 
-  val unnamedVar: BaseVariable = BaseVariable("unnamedVar")
-
   sealed trait GhostMode
   case object NonGhostMode extends GhostMode
   case object ForwardGhostMode extends GhostMode
@@ -755,7 +753,7 @@ object Context {
   private def matchAssume(e: Expression, f: Formula, node: ASTNode = Triv()): ContextResult = {
     e match {
       // [[Nothing]] represents an assumption with no left-hand side, which cannot be referenced by name, but can be searched by program-vars.
-      case Nothing => RSuccess(Set((Some(unnamedVar), f)))
+      case Nothing => RSuccess(Set((None, f)))
       case BaseVariable(x, _, _) => RSuccess(Set((Some(Variable(x)), f)))
       case p: Pair =>
         val bindings = StandardLibrary.factBindings(e, f)

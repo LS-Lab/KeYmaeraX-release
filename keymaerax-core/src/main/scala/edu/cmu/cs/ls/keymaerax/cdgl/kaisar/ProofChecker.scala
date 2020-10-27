@@ -613,6 +613,10 @@ object ProofChecker {
       case Assert(x , f, m) =>
         val taboo: Set[Variable] = if (con.isGhost) Set() else VariableSets(con).tabooVars
         val elabF = con.elaborateStable(f)
+        val debugNames: Set[String] = Set()
+        if(debugNames.map(Variable(_): Term).contains(x)) {
+          println("Checking debug assertion: " + x)
+        }
         apply(con, elabF, m, s)
         val conflict = taboo.intersect(StaticSemantics(elabF).fv.toSet)
         if (conflict.nonEmpty)
