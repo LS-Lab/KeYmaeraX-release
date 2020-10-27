@@ -510,7 +510,7 @@ object SharedModels {
       |{body:
       |  {
       |    {
-      |      { ?aB:(a := -b); ?tZ:(t := 0);
+      |      { ?aB:(a := -b); ?tZ:(t := 0); xo := xo; yo := yo;
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
       |          t' = 1 & ?dc:(t <= T & v >= 0);
@@ -526,22 +526,22 @@ object SharedModels {
       |        let b4() <-> (yo-y > stopDist(v));
       |        switch (safeDist) {
       |          case far:((x - xo > stopDist(v))@body) =>
-      |            !prog:(x-xo >= stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
+      |            !prog:(x-xo > stopDist(v)) using far andEL(xBound) vSol dc bnds tSign by auto;
       |            note infInd = orIL(prog, "b2() | b3() | b4()");
       |          case far:((xo-x > stopDist(v))@body) =>
       |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |            note infInd = orIR("b1()", orIL(prog, "b3()| b4()"));
       |          case far:((y-yo > stopDist(v))@body) =>
       |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(prog, "b4()")));
       |         case far:((yo-y > stopDist(v))@body) =>
       |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", prog)));
       |        }
       |        /*!infInd: (infdistGr(x, y, xo, yo, stopDist(v))) using safeDist xBound yBound vSol dc bnds tSign aB tZ by auto;  vSign */
       |      }
       |      ++
-      |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0);
+      |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0); xo := xo; yo := yo; /* @TODO: Better SSA phi rename handling */
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |          t' = 1 & ?dc:(t <= T & v >= 0);
@@ -561,13 +561,13 @@ object SharedModels {
       |            note infInd = orIL(prog, "b2() | b3() | b4()");
       |          case far:((xo-x > stopDist(v))@body) =>
       |            !prog:(xo-x > stopDist(v)) using far xSol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |            note infInd = orIR("b1()", orIL(prog, "b3()|b4()"));
       |          case far:((y-yo > stopDist(v))@body) =>
       |            !prog:(y-yo > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(prog, "b4()")));
       |          case far:((yo-y > stopDist(v))@body) =>
       |            !prog:(yo-y > stopDist(v)) using far ySol vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", prog)));
       |        }
       |      }
       |        ++
@@ -599,13 +599,13 @@ object SharedModels {
       |            note infInd = orIL(prog, "b2() | b3() | b4()");
       |          case far:((xo-x > admissibleSeparation(v))@monitor) =>
       |            !prog:(xo-x > stopDist(v)) using far andER(xBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIL(orIL(prog, "b3()"), "b4()"));
+      |            note infInd = orIR("b1()", orIL(prog, "b3()|b4()"));
       |          case far:((y-yo > admissibleSeparation(v))@monitor) =>
       |            !prog:(y-yo > stopDist(v)) using far andEL(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIL(far, "b4()")));
+      |            note infInd = orIR("b1()", orIR("b2()", orIL(prog, "b4()")));
       |          case far:((yo-y > admissibleSeparation(v))@monitor) =>
       |            !prog:(yo-y > stopDist(v)) using far andER(yBound) vSol dc bnds tSign by auto;
-      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", far)));
+      |            note infInd = orIR("b1()", orIR("b2()", orIR("b3()", prog)));
       |        }
       |      }
       |    }
@@ -1271,7 +1271,7 @@ object SharedModels {
       | !(waypointStartDist(xg) < xr);
       |""".stripMargin
 
-  val ijrrModels: List[String] = List(ijrrPassiveFriendlySafety, ijrrPassiveSafety, ijrrStaticSafetyRough, ijrrStaticSafetySimplified, ijrrVelocityPassiveSafety)
+  val ijrrModels: List[String] = List(ijrrStaticSafetySimplified, ijrrStaticSafetyRough /*, ijrrPassiveFriendlySafety, ijrrPassiveSafety, ijrrVelocityPassiveSafety*/)
   val robixDynamicWindowPassive: String =
     """let norm(x, y) = (x^2 + y^2)^(1/2);
       |let infdist(xl, yl, xr, yr) = max(abs(xl - xr), abs(yl - yr));
@@ -1395,8 +1395,8 @@ object SharedModels {
       |
       |""".stripMargin
 
-  val rssExamples: List[String] = List(robixDynamicWindowPassive, robixDynamicWindowFriendly, robixRefinedObstacle,
-    robixSensorUncertainty, robixActuatorUncertainty)
+  val rssExamples: List[String] = List(/*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
+    robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/)
 
   val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
