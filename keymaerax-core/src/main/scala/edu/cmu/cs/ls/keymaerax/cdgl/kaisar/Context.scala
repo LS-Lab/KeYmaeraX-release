@@ -279,7 +279,11 @@ case class Context(s: Statement) {
         val right = reapply(r).searchAll(cq, tabooProgramVars, tabooFactVars)
         RBranch(left, right)
       case switch@Switch(sel, pats) =>
-        val eachResult = pats.map({ case (v, e, s) => reapply(s).searchAll(cq, tabooProgramVars, tabooFactVars) })
+        val eachResult = pats.map({ case (v, e, s) =>
+          val guard = matched(v, e)
+          val body = reapply(s).searchAll(cq, tabooProgramVars, tabooFactVars)
+          guard.++(body)
+        })
         if (eachResult.isEmpty) ContextResult.unit
         else eachResult.reduce(RBranch)
       case Ghost(s) => reapply(s).withGhost.searchAll(cq, tabooProgramVars, tabooFactVars)
