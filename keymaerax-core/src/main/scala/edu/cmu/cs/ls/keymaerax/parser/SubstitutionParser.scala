@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Unif
 
 /** Parses substitutions. */
 object SubstitutionParser {
+  private lazy val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r
+
   /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
   def parseSubstitutionPair(s: String): SubstitutionPair = {
     //@note workaround for unification messing up indices when 0-based
@@ -37,5 +39,22 @@ object SubstitutionParser {
       else Parser.parser.programParser(exprs(0))
     val result = UnificationMatch(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1)).usubst.subsDefsInput.head
     result.copy(what = incrementDotIdxs(result.what, -1), repl = incrementDotIdxs(result.repl, -1))
+  }
+
+  /** Parses a list of substitution pairs `what~>repl, what2~>repl2, ..., whatn~>repln`, optionally enclosed in parentheses. */
+  def parseSubstitutionPairs(s: String): List[SubstitutionPair] = {
+    val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
+    val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
+    val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
+    val hasOuterParens = exprStrings.headOption.exists(_.trim.startsWith("(")) && exprStrings.lastOption.exists(_.trim.endsWith(")"))
+    val trimmed =
+      if (hasOuterParens) {
+        exprStrings.zipWithIndex.map({ case (s, i) =>
+          if (i == 0) s.trim.stripPrefix("(")
+          else if (i == exprStrings.length - 1) s.trim.stripSuffix(")")
+          else s.trim
+        })
+      } else exprStrings.map(_.trim)
+    trimmed.map(parseSubstitutionPair)
   }
 }
