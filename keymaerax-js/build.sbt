@@ -1,6 +1,3 @@
-import java.io.FileInputStream
-import java.util.Properties
-
 name := "KeYmaeraX-JS"
 
 scalaVersion in ThisBuild := "2.12.8"
@@ -54,27 +51,6 @@ scalacOptions in Compile ++= Seq(
 libraryDependencies += "biz.enef" %%% "slogging" % "0.6.+"
 
 libraryDependencies += "com.lihaoyi" %%% "fastparse" % "2.2.+"
-
-////////////////////////////////////////////////////////////////////////////////
-// Mathematica Interop
-////////////////////////////////////////////////////////////////////////////////
-//{
-//  def read(fileName: String): Option[Properties] = {
-//    try {
-//      val prop = new Properties()
-//      prop.load(new FileInputStream(fileName))
-//      Some(prop)
-//    } catch {
-//      case e: Throwable =>
-//        println("local.properties not found: please copy default.properties and adapt the paths to your system")
-//        None
-//    }
-//  }
-//  val properties: Properties = read("../local.properties").orElse(read("../default.properties")).get
-//  val jlinkJarLoc: String = properties.getProperty("mathematica.jlink.path")
-//  if (jlinkJarLoc == null) throw new Exception("Need 'mathematica.jlink.path' set to location of the Mathematica JLink.jar file in 'local.properties' before building project.")
-//  unmanagedJars in Compile += file(jlinkJarLoc)
-//}
 
 def coreSources(dir: File): Vector[File] = {
   (dir * "*.scala").get.toVector ++ (dir * "*.java").get.toVector
