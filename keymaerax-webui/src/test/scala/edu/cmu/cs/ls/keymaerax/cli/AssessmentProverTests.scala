@@ -656,7 +656,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game Shapes", 2) ::
+      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game shapes", 2) ::
         ("Truth Identification", 10) :: Nil
     run(problems)
   }

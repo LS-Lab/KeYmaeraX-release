@@ -11,17 +11,21 @@ object Submission {
   object GradeJsonFormat {
     import spray.json.DefaultJsonProtocol._
 
+    private val PROBLEMS = "problems"
     private val SCORES = "scores"
 
     implicit val scoreJsonFormat: JsonFormat[List[(Submission.Problem, Double)]] = new RootJsonFormat[List[(Submission.Problem, Double)]] {
       override def write(scores: List[(Submission.Problem, Double)]): JsValue =
-        JsObject(SCORES -> JsObject(scores.map({ case (p, s) => (p.rank + ": " + p.title + " (" + p.points + " pts)") -> s.toJson }).toMap))
+        JsObject(
+          PROBLEMS -> JsObject(scores.map({ case (p, _) => p.title -> p.points.toJson }).toMap),
+          SCORES -> JsObject(scores.map({ case (p, s) => p.title -> s.toJson }).toMap)
+        )
 
       override def read(json: JsValue): List[(Problem, Double)] = {
-        json.asJsObject.fields(SCORES).asJsObject.fields.toList.map({ case (k, JsNumber(v)) =>
-          val extractProblemInfo = """(\d+):(.*)\((\d+(?:\.\d+)) pts\)""".r("rank", "title", "points")
-          val (rank, title, points) = extractProblemInfo.findFirstMatchIn(k).map(m => (m.group("rank"), m.group("title"), m.group("points"))).get
-          (Problem(-1, rank.toLong, "-1", title.trim, "", points.toDouble, Nil), v.toDouble)
+        val problems = json.asJsObject.fields(PROBLEMS).asJsObject.fields
+        json.asJsObject.fields(SCORES).asJsObject.fields.toList.map({ case (title, JsNumber(v)) =>
+          val JsNumber(points) = problems(title)
+          (Problem(-1, -1, "-1", title.trim, "", points.toDouble, Nil), v.toDouble)
         })
       }
     }
