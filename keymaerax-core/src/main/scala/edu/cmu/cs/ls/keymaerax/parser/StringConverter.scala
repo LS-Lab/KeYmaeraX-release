@@ -58,5 +58,5 @@ class StringConverter(val s: String) {
   def asSequent: Sequent = SequentParser.parseSequent(s)
 
   /** Converts to a substitution pair. */
-  def asSubstitutionPair: SubstitutionPair = SubstitutionParser.parseSubstitutionPair(s)
+  def asSubstitutionPair: SubstitutionPair = UnificationSubstitutionParser.parseSubstitutionPair(s)
 }

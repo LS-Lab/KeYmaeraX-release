@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyOfArtifact, ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, SubstitutionArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.SubstitutionParser
+import edu.cmu.cs.ls.keymaerax.parser.UnificationSubstitutionParser
 
 import scala.util.Try
 import scala.util.matching.Regex
@@ -150,7 +150,7 @@ object QuizExtractor {
                 val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
                 val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
                 val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
-                Try(SubstitutionParser.parseSubstitutionPairs(s)).toOption match {
+                Try(UnificationSubstitutionParser.parseSubstitutionPairs(s)).toOption match {
                   case Some(s) => SubstitutionArtifact(s)
                   case None =>
                     if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))

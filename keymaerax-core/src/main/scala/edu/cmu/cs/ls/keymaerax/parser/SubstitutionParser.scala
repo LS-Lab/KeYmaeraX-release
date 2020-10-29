@@ -7,14 +7,15 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Expression, Formula, FormulaKind, Program, SubstitutionPair, Term, TermKind}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 
 /** Parses substitutions. */
 object SubstitutionParser {
   private lazy val EXPR_LIST_SPLITTER = """(?:\{[^{}]*})|(,)""".r
 
-  /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
-  def parseSubstitutionPair(s: String): SubstitutionPair = {
+  /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. Provide a `matcher` to perform
+    * post-processing, e.g., unification between `what` and `repl`. */
+  def parseSubstitutionPair(s: String, matcher: (Expression, Expression) => SubstitutionPair = SubstitutionPair): SubstitutionPair = {
     //@note workaround for unification messing up indices when 0-based
     def incrementer(increment: Int) = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
@@ -37,7 +38,7 @@ object SubstitutionParser {
       if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
       else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
       else Parser.parser.programParser(exprs(0))
-    val result = UnificationMatch(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1)).usubst.subsDefsInput.head
+    val result = matcher(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1))
     result.copy(what = incrementDotIdxs(result.what, -1), repl = incrementDotIdxs(result.repl, -1))
   }
 
@@ -55,6 +56,6 @@ object SubstitutionParser {
           else s.trim
         })
       } else exprStrings.map(_.trim)
-    trimmed.map(parseSubstitutionPair)
+    trimmed.map(parseSubstitutionPair(_))
   }
 }
