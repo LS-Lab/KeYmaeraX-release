@@ -147,14 +147,14 @@ object QuizExtractor {
             Try(BelleParser(s)).toOption match {
               case Some(t) => TacticArtifact(s, t)
               case None =>
-                val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
-                val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
-                val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
-                Try(UnificationSubstitutionParser.parseSubstitutionPairs(s)).toOption match {
-                  case Some(s) => SubstitutionArtifact(s)
-                  case None =>
-                    if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
-                    else ExpressionArtifact(s)
+                if (s.contains("~>")) {
+                  SubstitutionArtifact(UnificationSubstitutionParser.parseSubstitutionPairs(s))
+                } else {
+                  val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
+                  val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
+                  val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
+                  if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
+                  else ExpressionArtifact(s)
                 }
             }
         }
