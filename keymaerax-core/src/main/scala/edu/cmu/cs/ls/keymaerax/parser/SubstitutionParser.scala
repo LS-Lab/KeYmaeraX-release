@@ -33,11 +33,23 @@ object SubstitutionParser {
       if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>")
       else s.split("~>")
     assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
-    val repl = Parser(exprs(1))
-    val what =
+    val repl = try {
+      Parser(exprs(1))
+    } catch {
+      case ex: ParseException =>
+        val newLines = exprs(0).count(_ == '\n')
+        val columns = exprs(0).length + "~>".length - (if (newLines>0) exprs(0).lastIndexOf('\n') else 0)
+        throw ex.copy(loc = Region(ex.loc.begin.line + newLines, ex.loc.begin.column + columns))
+    }
+    val what = try {
       if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
       else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
       else Parser.parser.programParser(exprs(0))
+    } catch {
+      case ex: ParseException =>
+        if (s.startsWith("(")) throw ex.copy(loc = Region(ex.loc.begin.line, ex.loc.begin.column+1))
+        else throw ex
+    }
     val result = matcher(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1))
     result.copy(what = incrementDotIdxs(result.what, -1), repl = incrementDotIdxs(result.repl, -1))
   }
@@ -56,6 +68,13 @@ object SubstitutionParser {
           else s.trim
         })
       } else exprStrings.map(_.trim)
-    trimmed.map(parseSubstitutionPair(_))
+    trimmed.zipWithIndex.map({ case (s, i) => try {
+      parseSubstitutionPair(s)
+    } catch {
+      case ex: ParseException =>
+        val trimmedLength = exprStrings(i).indexOf(s)
+        throw ex.copy(loc = Region(ex.loc.begin.line, ex.loc.begin.column + indices(i).head + trimmedLength + 1))
+    }}
+    )
   }
 }

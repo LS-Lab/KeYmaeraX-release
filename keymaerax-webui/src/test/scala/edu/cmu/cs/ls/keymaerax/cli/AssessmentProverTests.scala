@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, SubstitutionParser}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
@@ -516,6 +517,28 @@ class AssessmentProverTests extends TacticTestBase {
   it should "partially accept medium answers" in {
     AskGrader(Some(AskGrader.Modes.EXPLANATION_CHECK), Map.empty, TextArtifact(Some("An acceptable answer that requires a little more words"))).check(TextArtifact(Some("Medium short"))).
       left.value.conclusion shouldBe "==> explanation&min<->explanation&min".asSequent
+  }
+
+  "Substitution parser" should "adjust positions in exceptions" in {
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5**4") should have message
+      """1:10 Unexpected token cannot be parsed
+        |Found:    * at 1:10
+        |Expected: <BeginningOfTerm>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5 , d() ~> *4") should have message
+      """1:19 Unexpected token cannot be parsed
+        |Found:    * at 1:19
+        |Expected: <BeginningOfExpression>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5, d() ~> 4    ,   e() ~> *3") should have message
+      """1:34 Unexpected token cannot be parsed
+        |Found:    * at 1:34
+        |Expected: <BeginningOfExpression>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs(" ( c() ~> 5, (d() ~> 4  )  ,   e() ~> *3)") should have message
+      """1:39 Unexpected token cannot be parsed
+        |Found:    * at 1:39
+        |Expected: <BeginningOfExpression>""".stripMargin
   }
 
   "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
