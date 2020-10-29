@@ -26,7 +26,7 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.state(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * 0.8)) shouldBe true
+    (env.state(Variable("x")) >=  (goal * number(0.8))) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }
 
@@ -40,7 +40,7 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.get(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * 0.8)) shouldBe true
+    (env.state(Variable("x")) >=  (goal * number(0.8))) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }
 }
@@ -50,7 +50,8 @@ class EssentialsSafeCar1DBasicStrategy(val env: Environment) extends BasicDemonS
   val readInitState: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
-      Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1)
+      Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
+      map({case (k,v) => (k, number(v))})
 
   def readDemonLoop(id: NodeID): Boolean = {
     iterationsLeft = iterationsLeft - 1;
@@ -64,12 +65,12 @@ class EssentialsSafeCar1DBasicStrategy(val env: Environment) extends BasicDemonS
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: Play.number = if (aVal >= 0) T else T.min(vVal) / -aVal
+    val dur: Play.number = if (aVal >= number(0)) T else T.min(vVal) / -aVal
     x match {
       case "t" => dur
       case "v" => vVal + aVal * dur
-      case "x" => xVal + vVal * dur + aVal * dur * dur * 0.5
-      case "t'" => 1
+      case "x" => xVal + vVal * dur + aVal * dur * dur * number(0.5)
+      case "t'" => number(1)
       case "v'" => aVal
       case "x'" => vVal + aVal * dur
       case _ => throw new DemonException("Demon does not know how to assign variable: " + x)
@@ -83,7 +84,8 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
   val initValues: Map[Ident, Play.number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
-      Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1)
+      Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
+      map({case (k,v) => (k, number(v))})
 
   var iterationsLeft: Int = 100
 
@@ -128,12 +130,12 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: Play.number = if (aVal >= 0) T else T.min(vVal) / -aVal
+    val dur: Play.number = if (aVal >= number(0)) T else T.min(vVal) / -aVal
     x match {
       case BaseVariable("t", _, _) => updated(xSSA, dur)
       case BaseVariable("v", _, _) => updated(xSSA, vVal + aVal * dur)
-      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * 0.5)
-      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, 1)
+      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * number(0.5))
+      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, number(1))
       case DifferentialSymbol(BaseVariable("v", _, _)) => updated(xSSA, aVal)
       case DifferentialSymbol(BaseVariable("x", _, _)) => updated(xSSA, vVal + aVal * dur)
       case _ =>

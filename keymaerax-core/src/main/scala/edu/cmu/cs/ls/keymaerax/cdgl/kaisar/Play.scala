@@ -65,7 +65,7 @@ class Environment {
   /** Evaluate computable term at current state */
   def eval(f: Term): number = {
     f match {
-      case n: core.Number => Rational(n.value)
+      case n: core.Number => number(n.value)
       case Plus(l, r) => eval(l) + eval(r)
       case Minus(l, r) => eval(l) - eval(r)
       case Times(l, r) => eval(l) * eval(r)
@@ -73,14 +73,13 @@ class Environment {
       case Divide(l, r) => eval(l) / eval(r)
       case Power(l, r: core.Number) if r.value.isValidInt =>
         val n = r.value.intValue()
-        eval(l).pow(n)
+        eval(l).pow(n, 1)
       // @TODO: Hack. For rational roots, convert rational to algebraic, compute root, convert back
       case Power(l, Divide(num: core.Number, denom: core.Number)) if num.value.isValidInt  && denom.value.isValidInt =>
         val v = eval(l)
         val n = num.value.intValue()
         val d = denom.value.intValue()
-        val alg = v.toAlgebraic.nroot(d).pow(n)
-        Rational(alg.toBigDecimal(ROUNDING_SCALE, RoundingMode.HALF_DOWN))
+        v.pow(n, d)
       case FuncOf(f, args) if f.interpreted =>
         (f.name, args) match {
           case ("max", Pair(l, r)) => eval(l).max(eval(r))
@@ -100,12 +99,12 @@ class Environment {
         throw NoValueException()
     }
   }
-
 }
 
 /** Interpreter for strategies */
 object Play {
-  type number = Rational
+  type number = RatNum
+  val number: (Rational => number) = RatNum
   type state = Map[Ident, number]
   /** For printing,  etc. */
   val ROUNDING_SCALE = 5
