@@ -26,10 +26,71 @@ trait Numeric[T, Truth] { this: T =>
   def <=(rhs: T): Truth
   def >(rhs: T): Truth
   def >=(rhs: T): Truth
+  def eq(rhs: T): Truth
+  def diseq(rhs: T): Truth
   def unary_- : T
 }
 
-sealed trait Ternary
+trait NumberFactory[Truth, N <: Numeric[N, Truth]] {
+  type T = N
+  val number: (Rational => T)
+}
+
+object RatFactory extends NumberFactory[Boolean, RatNum] {
+  override type T = RatNum
+  override val number: (Rational => RatNum) = RatNum
+}
+
+object RatIntFactory extends NumberFactory[Ternary, RatIntNum] {
+  override type T = RatIntNum
+  override val number: (Rational => RatIntNum) = (rat => RatIntNum(rat, rat))
+}
+
+case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extends Numeric[TernaryNumber[number], Ternary] {
+  override def +(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num + rhs.num)
+  override def -(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num - rhs.num)
+  override def *(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num * rhs.num)
+  override def /(rhs : TernaryNumber[number]) : TernaryNumber[number] = TernaryNumber(num / rhs.num)
+  override def pow(n: Int, denom: Int): TernaryNumber[number] = TernaryNumber(num.pow(n, denom))
+  override def max(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num.max(rhs.num))
+  override def min(rhs: TernaryNumber[number]): TernaryNumber[number] = TernaryNumber(num.min(rhs.num))
+  override def abs: TernaryNumber[number] = TernaryNumber(num.abs)
+
+  override def <(rhs: TernaryNumber[number]): Ternary = if (num < rhs.num) KnownTrue() else KnownFalse()
+  override def <=(rhs: TernaryNumber[number]): Ternary = if (num <= rhs.num) KnownTrue() else KnownFalse()
+  override def >(rhs: TernaryNumber[number]): Ternary = if (num > rhs.num) KnownTrue() else KnownFalse()
+  override def >=(rhs: TernaryNumber[number]): Ternary = if (num >= rhs.num) KnownTrue() else KnownFalse()
+  override def eq(rhs: TernaryNumber[number]): Ternary = if (num.eq(rhs.num)) KnownTrue() else KnownFalse()
+  override def diseq(rhs: TernaryNumber[number]): Ternary = if (num.diseq(rhs.num)) KnownTrue() else KnownFalse()
+  override def unary_- : TernaryNumber[number] = TernaryNumber(-num)
+}
+
+case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N]) extends NumberFactory[Ternary, TernaryNumber[N]] {
+  override type T = TernaryNumber[N]
+  override val number: (Rational => T) = (rat => TernaryNumber(factory.number(rat)))
+}
+
+sealed trait Ternary {
+  def unary_! : Ternary = this match {case KnownTrue() => KnownFalse() case KnownFalse() => KnownTrue() case Unknown() => Unknown ()}
+  def ||(other: Ternary): Ternary =
+    (this, other) match {
+      case (KnownTrue(), _) | (_, KnownTrue()) => KnownTrue()
+      case (Unknown(), _) | (_, Unknown()) => Unknown()
+      case _ => KnownFalse()
+    }
+  def &&(other: Ternary): Ternary =
+    (this, other) match {
+      case (KnownFalse(), _) | (_, KnownFalse()) => KnownFalse()
+      case (Unknown(), _) | (_, Unknown()) => Unknown()
+      case _ => KnownTrue()
+    }
+  def iff(other: Ternary): Ternary =
+    (this, other, this == other) match {
+      case (_, _, true) => KnownTrue()
+      case (KnownTrue(), KnownFalse(), _) | (KnownFalse(), KnownTrue(), _) => KnownFalse()
+      case _ => Unknown()
+    }
+}
 case class KnownTrue() extends Ternary
 case class KnownFalse() extends Ternary
 case class Unknown() extends Ternary
@@ -60,6 +121,8 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
   override def >(rhs: RatNum): Boolean = n > rhs.n
   override def >=(rhs: RatNum): Boolean = n >= rhs.n
   override def unary_- : RatNum = RatNum(-n)
+  override def eq(other: RatNum): Boolean = (n == other.n)
+  override def diseq(other: RatNum): Boolean = (n != other.n)
 }
 
 /** Interval of rational numbers. */
@@ -145,6 +208,14 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     if (rhs.u <= l) KnownTrue()
     else if (rhs.l > u) KnownFalse()
     else Unknown()
+  override def eq(rhs: RatIntNum): Ternary =
+    if (l == u && rhs.l == rhs.u && l == rhs.l) KnownTrue()
+    else if ((l <= rhs.l && rhs.l <= u) || (l <= rhs.u && rhs.u <= u)) Unknown()
+    else KnownFalse()
+  override def diseq(rhs: RatIntNum): Ternary =
+    if (l == u && rhs.l == rhs.u && l == rhs.l) KnownFalse()
+    else if ((l <= rhs.l && rhs.l <= u) || (l <= rhs.u && rhs.u <= u)) Unknown()
+    else KnownTrue()
   override def unary_- : RatIntNum = RatIntNum(-u, -l)
 }
 

@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import java.math.RoundingMode
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{ROUNDING_SCALE, number, state}
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{, number, state}
 import edu.cmu.cs.ls.keymaerax.core
 import spire.math._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -24,40 +24,42 @@ case class NoValueException(nodeID: Int = -1) extends Exception
 case class TestFailureException(nodeID: Int) extends Exception
 
 /** Runtime state of executed strategy */
-class Environment {
+class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactory[Ternary, number]) {
   /** Raw program variable state */
-  var state: Play.state = Map()
+  var state: Play.state[number] = Map()
 
   /** Is variable dynamically defined? */
   def contains(x: Ident): Boolean = state.contains(x)
 
   /** Unindexed variable x always represents "current value," but indexed "x_i" also remembered for history. This sets both. */
-  def set(x: Ident, v: Play.number): Unit = {
+  def set(x: Ident, v: number): Unit = {
     val base = x match {case bv: BaseVariable => Variable(bv.name) case ds: DifferentialSymbol => DifferentialSymbol(Variable(ds.name))}
     (state = state.+(x -> v).+(base -> v))
   }
 
   /** Get current state of value, which must be defined */
-  def get(x: Ident): Play.number = state(x)
+  def get(x: Ident): number = state(x)
+
+//  private def ternaryCmp(l: => number, r: => number, op: (number, number) => Boolean)
 
   /** Evaluate decidable formula at current state */
-  def holds(fml: Formula): Boolean = {
+  def holds(fml: Formula): Ternary = {
     fml match {
       case Less(l, r) => eval(l) < eval(r)
       case LessEqual(l, r) => eval(l) <= eval(r)
       case Greater(l, r) => eval(l) > eval(r)
       case GreaterEqual(l, r) => eval(l) >= eval(r)
-      case Equal(l, r) => eval(l) == eval(r)
-      case NotEqual(l, r) => eval(l) != eval(r)
+      case Equal(l, r) => eval(l).eq(eval(r))
+      case NotEqual(l, r) => eval(l).diseq(eval(r))
       // @TODO dangerous
       case Not(f) => !holds(f)
       case Or(l, r) => holds(l) || holds(r)
       case And(l, r) => holds(l) && holds(r)
       // @TODO dangerous
       case Imply (l, r) =>  holds(r) || !holds(l)
-      case Equiv (l, r) =>  holds(r) == holds(l)
-      case True => true
-      case False => false
+      case Equiv (l, r) =>  holds(r).iff(holds(l))
+      case True => KnownTrue()
+      case False => KnownFalse()
       case _ => throw NoValueException()
     }
   }
@@ -65,7 +67,7 @@ class Environment {
   /** Evaluate computable term at current state */
   def eval(f: Term): number = {
     f match {
-      case n: core.Number => number(n.value)
+      case n: core.Number => factory.number(n.value)
       case Plus(l, r) => eval(l) + eval(r)
       case Minus(l, r) => eval(l) - eval(r)
       case Times(l, r) => eval(l) * eval(r)
@@ -101,28 +103,31 @@ class Environment {
   }
 }
 
-/** Interpreter for strategies */
 object Play {
-  type number = RatNum
-  val number: (Rational => number) = RatNum
-  type state = Map[Ident, number]
+  type state[T] = Map[Ident, T]
   /** For printing,  etc. */
   val ROUNDING_SCALE = 5
+}
+
+/** Interpreter for strategies */
+class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
+  type number = N
+  val number: (Rational => number) = factory.number
 
   /** Interpret given angel strategy against given demon strategy */
-  def apply(as: AngelStrategy, ds: DemonStrategy[number]): Environment = {
-    val env = new Environment()
+  def apply(as: AngelStrategy, ds: DemonStrategy[number]): Environment[number] = {
+    val env = new Environment(factory)
     // in-place updates to environment
     apply(env, as, ds)
     env
   }
 
   /** Interpret given angel strategy against given demon strategy in given environment. */
-  def apply(env: Environment, as: AngelStrategy, ds: DemonStrategy[number]): Unit = {
+  def apply(env: Environment[number], as: AngelStrategy, ds: DemonStrategy[number]): Unit = {
     as match {
       case DTest(f) =>
         try {
-          if (!env.holds(f)) {
+          if (env.holds(f) != KnownTrue()) {
             println(s"""Test \"$f\" failed in state ${env.state}""")
             throw TestFailureException(as.nodeID)
           }

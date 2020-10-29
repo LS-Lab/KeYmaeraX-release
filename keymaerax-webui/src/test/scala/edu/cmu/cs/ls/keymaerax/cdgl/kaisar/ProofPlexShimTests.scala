@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.number
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.number
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
 import edu.cmu.cs.ls.keymaerax.tags._
@@ -19,39 +19,42 @@ class ProofPlexShimTests extends TacticTestBase {
   "ProofPlex Interpreter" should "execute 1D car against trivial demon" in withMathematica { _ =>
     val pf = check(SharedModels.essentialsSafeCar1D)
     val angel = SimpleStrategy(AngelStrategy(pf))
-    val env = new Environment()
+    val factory = UnknowingFactory(RatFactory)
+    val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val demon = new EssentialsSafeCar1DShim(env)
     demon.init()
     // @TODO: Braking case test v >= B/T eventually fails after reaching destination
-    a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
+    a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.state(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * number(0.8))) shouldBe true
+    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }
 
   "Simple Strategy Wrapper" should "execute 1D car against simple demon strategy" in withMathematica { _ =>
     val pf = check(SharedModels.essentialsSafeCar1D)
     val angel = SimpleStrategy(AngelStrategy(pf))
-    val env = new Environment()
+    val factory = UnknowingFactory(RatFactory)
+    val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val demon = new WrappedDemonStrategy(new EssentialsSafeCar1DBasicStrategy(env))(env)
     demon.init()
     // @TODO: Braking case test v >= B/T eventually fails after reaching destination
-    a[TestFailureException] shouldBe thrownBy(Play(env, angel, demon))
+    a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.get(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * number(0.8))) shouldBe true
+    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe true
     (env.state(Variable("x")) <=  goal) shouldBe true
   }
 }
 
-class EssentialsSafeCar1DBasicStrategy(val env: Environment) extends BasicDemonStrategy {
+class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val env: Environment[number]) extends BasicDemonStrategy[number] {
+  //val play = new Play(env.factory)
   var iterationsLeft: Int = 100
   val readInitState: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
       Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
-      map({case (k,v) => (k, number(v))})
+      map({case (k,v) => (k, env.factory.number(v))})
 
   def readDemonLoop(id: NodeID): Boolean = {
     iterationsLeft = iterationsLeft - 1;
@@ -65,12 +68,12 @@ class EssentialsSafeCar1DBasicStrategy(val env: Environment) extends BasicDemonS
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: Play.number = if (aVal >= number(0)) T else T.min(vVal) / -aVal
+    val dur: number = if (aVal >= env.factory.number(0) == KnownTrue()) T else T.min(vVal) / -aVal
     x match {
       case "t" => dur
       case "v" => vVal + aVal * dur
-      case "x" => xVal + vVal * dur + aVal * dur * dur * number(0.5)
-      case "t'" => number(1)
+      case "x" => xVal + vVal * dur + aVal * dur * dur * env.factory.number(0.5)
+      case "t'" => env.factory.number(1)
       case "v'" => aVal
       case "x'" => vVal + aVal * dur
       case _ => throw new DemonException("Demon does not know how to assign variable: " + x)
@@ -80,12 +83,12 @@ class EssentialsSafeCar1DBasicStrategy(val env: Environment) extends BasicDemonS
     println(s"Controller updated $x -> $f (full name: ${x}_$varIndex)")
 }
 
-class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.number] {
-  val initValues: Map[Ident, Play.number] =
+class EssentialsSafeCar1DShim[number <: Numeric[number, Ternary]] (val env: Environment[number]) extends DemonStrategy[number] {
+  val initValues: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
       Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
-      map({case (k,v) => (k, number(v))})
+      map({case (k,v) => (k, env.factory.number(v))})
 
   var iterationsLeft: Int = 100
 
@@ -99,11 +102,11 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     val accelFml = "((v + T*A)^2/(2*B) <= (d - (x + v*T + (A*T^2)/2)))".asFormula
     val brakeFml = "((v + T*A)^2/(2*B)  + 1 >= (d - (x + v*T + (A*T^2)/2)))".asFormula
     val (a, b) = (env.holds(accelFml), env.holds(brakeFml))
-    assert(a || b)
-    !a // false = accelerate, favor acceleration in case a && b
+    assert((a || b) == KnownTrue())
+    KnownTrue() == !a // false = accelerate, favor acceleration in case a && b
   }
 
-  private def updated(x: Ident, v: Play.number): Play.number = { env.set(x, v); v}
+  private def updated(x: Ident, v: number): number = { env.set(x, v); v}
 
   private def plainVar(v: Variable): Variable = {
     v match {
@@ -113,7 +116,7 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
   }
 
   // in case values are accessed before initialization
-  private def valFor(x: Ident): Play.number = {
+  private def valFor(x: Ident): number = {
     if (env.contains(x)) env.get(x)
     else  {
       val v = initValues(x)
@@ -122,7 +125,7 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     }
   }
 
-  override def readAssign(id: NodeID, xSSA: Ident): Play.number = {
+  override def readAssign(id: NodeID, xSSA: Ident): number = {
     val x = plainVar(xSSA)
     // initialization
     if(!env.contains(x)) return valFor(x)
@@ -130,12 +133,12 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: Play.number = if (aVal >= number(0)) T else T.min(vVal) / -aVal
+    val dur: number = if (KnownTrue() == aVal >= env.factory.number(0)) T else T.min(vVal) / -aVal
     x match {
       case BaseVariable("t", _, _) => updated(xSSA, dur)
       case BaseVariable("v", _, _) => updated(xSSA, vVal + aVal * dur)
-      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * number(0.5))
-      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, number(1))
+      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * env.factory.number(0.5))
+      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, env.factory.number(1))
       case DifferentialSymbol(BaseVariable("v", _, _)) => updated(xSSA, aVal)
       case DifferentialSymbol(BaseVariable("x", _, _)) => updated(xSSA, vVal + aVal * dur)
       case _ =>
@@ -143,7 +146,7 @@ class EssentialsSafeCar1DShim (val env: Environment) extends DemonStrategy[Play.
     }
   }
 
-  override def writeAssign(id: NodeID, xSSA: Ident, f: Play.number): Unit = {
+  override def writeAssign(id: NodeID, xSSA: Ident, f: number): Unit = {
     val x = plainVar(xSSA)
     env.set(x, f)
     println(s"Controller updated $x -> $f (full name: $xSSA)")

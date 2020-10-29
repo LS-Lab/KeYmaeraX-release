@@ -9,7 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.number
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.number
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, DifferentialSymbol}
 
 class DemonException(val msg: String) extends Exception (msg)
@@ -40,9 +40,9 @@ trait DemonStrategy[T] {
   * Also simplifies initial-state computation.
   * @see [[DemonStrategy]]
   * @see WrappedDemonStrategy*/
-trait BasicDemonStrategy {
+trait BasicDemonStrategy[number <: Numeric[number, Ternary]] {
   type NodeID = Int
-  val env: Environment
+  val env: Environment[number]
   val readInitState: Map[Ident, number]
   def readDemonLoop(id: NodeID): Boolean
   def readDemonChoice(id: NodeID): Boolean
@@ -51,7 +51,7 @@ trait BasicDemonStrategy {
   def writeAngelAssign(id: NodeID, baseVar: String, varIndex: Option[Int], value: number): Unit
 
   /** Get the current value for variable [[x]], initializing if necessary */
-  def valFor(x: Ident): Play.number = {
+  def valFor(x: Ident): number = {
     if (env.contains(x)) env.get(x)
     else  {
       val v = readInitState(x)
@@ -67,12 +67,12 @@ trait BasicDemonStrategy {
   * the ambient Angelic strategy, and makes Demon simulate those Angelic choices automatically, leaving you to implement
   * only the true Demon operations.
   * */
-class WrappedDemonStrategy (bds: BasicDemonStrategy)(val env: Environment) extends DemonStrategy[number] {
+class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonStrategy[number])(val env: Environment[number]) extends DemonStrategy[number] {
   val initState: Map[Ident, number] = bds.readInitState
   override def readLoop(id: NodeID): Boolean =
     (IDCounter.getOriginal(id), IDCounter.get(id)) match {
       case (Some(ALoop(conv, body)), _) =>
-        !env.holds(conv) // if formula holds, continue
+        env.holds(conv) != KnownTrue() // if formula holds, continue
       case (Some(_), _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
       case (None, Some(DLoop(_body))) => bds.readDemonLoop(id)
       case (None, _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
@@ -81,7 +81,7 @@ class WrappedDemonStrategy (bds: BasicDemonStrategy)(val env: Environment) exten
   override def readChoice(id: NodeID): Boolean =
     (IDCounter.getOriginal(id), IDCounter.get(id)) match {
       case (Some(ASwitch((fml, as) :: _right :: _)), _) =>
-        env.holds(fml) // if formula holds, left branch
+        env.holds(fml) == KnownTrue() // if formula holds, left branch
       case (Some(_), _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")
       case (None, Some(DChoice(l, r))) => bds.readDemonChoice(id)
       case (None, _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")
