@@ -3,8 +3,9 @@ package edu.cmu.cs.ls.keymaerax.js
 import edu.cmu.cs.ls.keymaerax.{Configuration, MapConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, Parser, SubstitutionParser}
 import scala.scalajs.js.Dictionary
+import scala.util.Try
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 
@@ -50,34 +51,34 @@ object KeYmaeraX {
       case _ => "Parsed OK, but not a hybrid game/program"
     })
   }
+  
+  @JSExportTopLevel("parsesAsSubstitution")
+  def parsesAsSubstitution(answer: String, solution: String): Dictionary[Any] = {
+    Try(Parser(answer)).toOption match {
+      case Some(Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))) if a=="a" && n=="n" =>
+        fillDictionary("Parsed OK", 1.0)
+      case _ => parseCheck(answer, SubstitutionParser.parseSubstitutionPairs, (_: List[SubstitutionPair]) => "Parsed OK")
+    }
+  }
 
   private def parseCheck[T](answer: String, parser: String=>T, check: T=>String): Dictionary[Any] = {
     Configuration.setConfiguration(MapConfiguration)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     try {
-      Dictionary(
-        "is_error" -> false,
-        "is_correct" -> false,
-        "ratio" -> 1.0,
-        "feedback" -> check(parser(answer))
-      )
+      fillDictionary(check(parser(answer)), 1.0)
     } catch {
       case ex: ParseException =>
         val answerLines = answer.linesWithSeparators.toList
         val info = answerLines.patch(ex.loc.line-1, answerLines(ex.loc.line-1).patch(ex.loc.column-1, " ⚠ ", 0), 1).mkString("")
-        Dictionary(
-          "is_error" -> false,
-          "is_correct" -> false,
-          "ratio" -> 0.0,
-          "feedback" -> ("Parse error: " + info + " (" + ex.getMessage + ")")
-        )
-      case ex: Throwable =>
-        Dictionary(
-          "is_error" -> false,
-          "is_correct" -> false,
-          "ratio" -> 0.0,
-          "feedback" -> ("Parsing failed: " + ex.getMessage)
-        )
+        fillDictionary("Parse error: " + info + " (" + ex.getMessage + ")", 0.0)
+      case ex: Throwable => fillDictionary( "Parsing failed: " + ex.getMessage, 0.0)
     }
   }
+
+  private def fillDictionary(feedback: String, ratio: Double): Dictionary[Any] = Dictionary(
+    "is_error" -> false,
+    "is_correct" -> false,
+    "ratio" -> ratio,
+    "feedback" -> feedback
+  )
 }
