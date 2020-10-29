@@ -10,6 +10,9 @@ import scala.util.Try
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 object KeYmaeraX {
+  Configuration.setConfiguration(MapConfiguration)
+  PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+
   @JSExportTopLevel("parsesAsExpression")
   def parsesAsExpression(answer: String, solution: String): Dictionary[Any] = {
     parseCheck(answer, Parser, (_: Expression) => "Parsed OK")
@@ -51,7 +54,7 @@ object KeYmaeraX {
       case _ => "Parsed OK, but not a hybrid game/program"
     })
   }
-  
+
   @JSExportTopLevel("parsesAsSubstitution")
   def parsesAsSubstitution(answer: String, solution: String): Dictionary[Any] = {
     Try(Parser(answer)).toOption match {
@@ -62,15 +65,13 @@ object KeYmaeraX {
   }
 
   private def parseCheck[T](answer: String, parser: String=>T, check: T=>String): Dictionary[Any] = {
-    Configuration.setConfiguration(MapConfiguration)
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     try {
       fillDictionary(check(parser(answer)), 1.0)
     } catch {
       case ex: ParseException =>
         val answerLines = answer.linesWithSeparators.toList
         val info = answerLines.patch(ex.loc.line-1, answerLines(ex.loc.line-1).patch(ex.loc.column-1, " ⚠ ", 0), 1).mkString("")
-        fillDictionary("Parse error: " + info + " (" + ex.getMessage + ")", 0.0)
+        fillDictionary("Parse error: " + info + "\n" + ex.getMessage, 0.0)
       case ex: Throwable => fillDictionary( "Parsing failed: " + ex.getMessage, 0.0)
     }
   }

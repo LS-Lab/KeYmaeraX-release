@@ -19,7 +19,8 @@ object MapConfiguration extends Configuration {
   /** The hard-coded configuration. */
   private val config = Map(
     "LAX" -> "true",
-    "DEBUG" -> "false"
+    "DEBUG" -> "false",
+    "PARSER" -> "KeYmaeraXParser"
   )
 
   /** Indicates whether or not the configuration contains the `key`. */
