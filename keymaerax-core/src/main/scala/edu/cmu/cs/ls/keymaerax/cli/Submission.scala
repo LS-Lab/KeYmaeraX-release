@@ -158,7 +158,7 @@ object Submission {
           case (None | Some(JsBoolean(false)), None | Some(JsBoolean(false))) =>
             val bodySrc = fields(BODY_SRC) match { case JsString(s) =>
               //@note sometimes ~ and \testsol and \nosols show up
-              val trimmed = s.replaceAllLiterally("~", " ").trim.linesWithSeparators.filter(l => {
+              val trimmed = s.replaceAll("~(?!>)", " ").trim.linesWithSeparators.filter(l => {
                 val ltrimmed = l.trim
                 !ltrimmed.startsWith("\\testsol") && !ltrimmed.startsWith("\\nosol")
               }).mkString.trim
