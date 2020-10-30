@@ -45,6 +45,20 @@ class ProofPlexShimTests extends TacticTestBase {
     (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
     (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
+
+  it should "execute 1D car with native interval type" in withMathematica { _ =>
+    val pf = check(SharedModels.essentialsSafeCar1D)
+    val angel = SimpleStrategy(AngelStrategy(pf))
+    val factory = RatIntFactory
+    val env: Environment[RatIntNum] = new Environment(factory)
+    val demon = new WrappedDemonStrategy(new EssentialsSafeCar1DBasicStrategy(env))(env)
+    demon.init()
+    a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
+    println("Final state: " + env.state)
+    val goal = env.get(Variable("d"))
+    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
+  }
 }
 
 class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val env: Environment[number]) extends BasicDemonStrategy[number] {
