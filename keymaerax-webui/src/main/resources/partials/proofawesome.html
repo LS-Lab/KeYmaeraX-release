@@ -462,6 +462,61 @@
                                 </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('assignd', 'R')"
+                                       uib-popover-template="fetchRuleHelp('assignd')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;:=&rangle;</span><code class="pull-right">assignd</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('randomd', 'R')"
+                                       uib-popover-template="fetchRuleHelp('randomd')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;:*&rangle;</span><code class="pull-right">randomd</code></a></li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('testd', 'R')"
+                                       uib-popover-template="fetchRuleHelp('testd')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;?&rangle;</span><code class="pull-right">testd</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('choiced', 'R')"
+                                       uib-popover-template="fetchRuleHelp('choiced')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;&cup;&rangle;</span><code class="pull-right">choiced</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('composed', 'R')"
+                                       uib-popover-template="fetchRuleHelp('composed')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;;&rangle;</span><code class="pull-right">composed</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('iterated', 'R')"
+                                       uib-popover-template="fetchRuleHelp('iterated')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>&langle;*&rangle;</span><code class="pull-right">iterated</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('con', 'R')"
+                                       uib-popover-template="fetchRuleHelp('con')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Convergence ...</span><code class="pull-right">con</code>
+                                    </a>
+                                </li>
+                                <li role="separator" class="divider"></li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('boxAnd', 'R')"
                                   uib-popover-template="fetchRuleHelp('boxAnd')"
                                   popover-class="k4-rulemenu-helppopover"
