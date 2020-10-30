@@ -81,7 +81,7 @@ class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonS
   override def readChoice(id: NodeID): Boolean =
     (IDCounter.getOriginal(id), IDCounter.get(id)) match {
       case (Some(ASwitch((fml, as) :: _right :: _)), _) =>
-        env.holds(fml) == KnownTrue() // if formula holds, left branch
+        env.holds(fml) != KnownTrue() // return value true ==> go right, so go left when formula is true or unknown
       case (Some(_), _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")
       case (None, Some(DChoice(l, r))) => bds.readDemonChoice(id)
       case (None, _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")

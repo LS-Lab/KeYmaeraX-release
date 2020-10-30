@@ -157,9 +157,9 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
         children.foreach(x => apply(env, x, ds))
       case DChoice(l, r) =>
         if (ds.readChoice(as.nodeID))
-          apply(env, l, ds)
-        else
           apply(env, r, ds)
+        else
+          apply(env, l, ds)
       case _ => throw UnsupportedStrategyException(as.nodeID)
     }
   }
