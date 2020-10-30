@@ -443,6 +443,33 @@ object SharedModels {
       |{?(d>=0);}^@
       |""".stripMargin
 
+  val pldiStreamlined: String =
+    """
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
+      | {
+      |  {v:=*; ?admiss:(d >= eps*v & 0<=v & v<=V);}
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol admiss ... by auto ;
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
+  val pldiStreamlinedSandbox: String =
+    """
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
+      | {
+      |  {  {v:=*; ?admiss:(d >= eps*v & 0<=v & v<=V);}
+      |  ++
+      |     {v:=0; !admiss:(d >= eps*v & 0<=v & v<=V);}
+      |  }
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol admiss ... by auto ;
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
   val pldiSandboxSafe: String =
     """
       |  let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
