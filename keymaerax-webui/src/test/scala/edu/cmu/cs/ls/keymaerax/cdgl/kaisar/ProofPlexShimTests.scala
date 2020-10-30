@@ -1,13 +1,16 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Test synthesizer by running synthesized code with simple shim code
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
-//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.number
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
-import edu.cmu.cs.ls.keymaerax.tags._
-import fastparse.Parsed.{Failure, Success}
-import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 
@@ -62,7 +65,6 @@ class ProofPlexShimTests extends TacticTestBase {
 }
 
 class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val env: Environment[number]) extends BasicDemonStrategy[number] {
-  //val play = new Play(env.factory)
   var iterationsLeft: Int = 100
   val readInitState: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,

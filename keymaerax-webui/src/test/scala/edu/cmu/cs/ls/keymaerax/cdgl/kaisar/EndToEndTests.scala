@@ -1,10 +1,16 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Test Kaisar proofs, applying all passes of Kaisar end-to-end
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, RandomFormula, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
-import edu.cmu.cs.ls.keymaerax.tags._
 import fastparse.Parsed.{Failure, Success}
 import fastparse._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -419,6 +425,10 @@ class EndToEndTests extends TacticTestBase {
 
   it should "parse and prove all PLDI studies" in withMathematica { _ =>
     testExampleSet(SharedModels.pldiExamples)
+  }
+
+  it should "parse and prove PLDI streamlined versions too" in withMathematica { _ =>
+    testExampleSet(List(SharedModels.pldiStreamlined, SharedModels.pldiStreamlinedSandbox))
   }
 
   it should "parse and prove all RSS studies" in withMathematica { _ =>

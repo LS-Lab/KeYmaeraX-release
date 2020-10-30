@@ -1,3 +1,11 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Test refinement engine for testing whether given proof proves given formula
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
