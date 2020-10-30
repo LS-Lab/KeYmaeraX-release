@@ -37,8 +37,10 @@ object UIIndex {
   def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None,
                  substs: List[SubstitutionPair] = Nil): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
-    //@note the truth-value of isAnte is nonsense if !isTop ....
+    //@note the truth-value of isAnte/isSucc is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
+    val isSucc = pos.nonEmpty && pos.get.isSucc
+
     val alwaysApplicable = "chaseAt" :: Nil
     logger.debug("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
@@ -80,8 +82,7 @@ object UIIndex {
             case _ => alwaysApplicable
           }
         "derive" :: tactics
-      case Box(a, True) if isTop && !isAnte && FormulaTools.dualFree(a) =>
-        "[]T system" :: Nil
+      case Box(a, True) if isTop && isSucc && FormulaTools.dualFree(a) => "[]T system" :: Nil
 
       case Box(a, post) =>
         val maybeSplit = post match {
@@ -103,7 +104,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: "chaseAt" :: Nil else Nil)
+        val rules = maybeSplit ++  (if (isAnte) Nil else "GV" :: "MR" :: "chaseAt" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -112,7 +113,9 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
-          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
+          case _: Loop =>
+            if (isTop && isSucc) "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
+            else maybeSplit ++ ("[*] iterate" :: Nil)
           //@note intermediate steps in dI
           case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: (maybeSplit :+ "GV" :+ "MR")
