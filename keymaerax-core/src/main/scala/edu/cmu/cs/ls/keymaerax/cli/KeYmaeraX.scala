@@ -53,6 +53,7 @@ object KeYmaeraX {
     val (options, unprocessedArgs) = nextOption(Map('commandLine -> args.mkString(" ")), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
     try {
+      Configuration.setConfiguration(FileConfiguration)
       runCommand(options, Usage.cliUsage)
     } finally {
       shutdownProver()
