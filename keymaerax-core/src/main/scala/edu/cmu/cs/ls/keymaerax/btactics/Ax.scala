@@ -4694,7 +4694,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("all stutter", key = "0", recursor = "")
+  @Axiom("all stutter", key = "0", recursor = "", displayLevel = "internal")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4709,7 +4709,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("exists stutter", key = "0", recursor = "")
+  @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)
