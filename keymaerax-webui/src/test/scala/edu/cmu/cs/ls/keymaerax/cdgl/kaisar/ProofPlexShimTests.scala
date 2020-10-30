@@ -27,8 +27,8 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.state(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe true
-    (env.state(Variable("x")) <=  goal) shouldBe true
+    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
 
   "Simple Strategy Wrapper" should "execute 1D car against simple demon strategy" in withMathematica { _ =>
@@ -42,8 +42,8 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.get(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe true
-    (env.state(Variable("x")) <=  goal) shouldBe true
+    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
 }
 
