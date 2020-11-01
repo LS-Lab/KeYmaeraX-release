@@ -1117,7 +1117,9 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         }
 
         override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-          case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+          case PredOf(fn, _) =>
+            if (cex.contains(fn)) Right(cex(fn).asInstanceOf[Formula])
+            else Left(None)
           case _ => Left(None)
         }
       }, fml).get

@@ -323,16 +323,21 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 val fml = sequent.toFormula
                 Try(ProgramSearchNode(fml)(qeTool)).toOption match {
                   case Some(snode) =>
-                    val search = new BoundedDFS(10)
-                    try {
-                      search(snode) match {
-                        case None => nonfoError(sequent)
-                        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                    if (FormulaTools.dualFree(snode.prog)) {
+                      try {
+                        val search = new BoundedDFS(10)
+                        search(snode) match {
+                          case None => nonfoError(sequent)
+                          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                        }
+                      } catch {
+                        // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+                        // When that happens, just tell the user they need to simplify the formula more.
+                        case _: NotImplementedError => nonfoError(sequent)
                       }
-                    } catch {
-                      // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
-                      // When that happens, just tell the user they need to simplify the formula more.
-                      case _ : NotImplementedError => nonfoError(sequent)
+                    } else {
+                      // no automated counterexamples for games yet
+                      nonfoError(sequent)
                     }
                   case None => new CounterExampleResponse("cex.wrongshape") :: Nil
                 }
@@ -355,7 +360,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 }
                 case None => new CounterExampleResponse("cex.notool") :: Nil
               }
-              case None => new CounterExampleResponse("cex.none") :: Nil
+              case None => nonfoError(sequent)
             }
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
