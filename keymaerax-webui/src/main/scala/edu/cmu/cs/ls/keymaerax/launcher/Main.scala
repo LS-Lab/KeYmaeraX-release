@@ -7,10 +7,9 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.{Configuration, Version, UpdateChecker, core}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, Version, core}
 import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
-
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -47,6 +46,8 @@ object Main {
       println(KeYmaeraX.help)
       sys.exit(1)
     }
+
+    Configuration.setConfiguration(FileConfiguration)
 
     // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
     val isFirstLaunch = if (args.length >= 1) {
