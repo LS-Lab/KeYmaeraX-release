@@ -573,9 +573,11 @@ object BelleParser extends TacticParser with Logging {
       def arguments(al: List[BelleToken]): List[TacticArg] = al match {
         case Nil => Nil
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
-          assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
-          assert(nonPosArgCount < DerivationInfo(codeName).persistentInputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).persistentInputs.length} but found at least ${nonPosArgCount + 1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).persistentInputs(nonPosArgCount)))(tok, loc) match {
+          if (!DerivationInfo.hasCodeName(codeName)) throw ParseException("Unknown tactic '" + codeName + "'", loc)
+          val expectedInputs = DerivationInfo(codeName).persistentInputs
+          if (nonPosArgCount >= expectedInputs.length) throw ParseException(
+            s"Too many expr arguments were passed to $codeName (expected ${expectedInputs.map(_.name)} but found at least ${nonPosArgCount + 1} arguments)", loc)
+          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)))(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case Left(v: List[Any]) => Left(v.map({
               case e: Expression => expand(e)
