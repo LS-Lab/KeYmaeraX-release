@@ -1877,10 +1877,10 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
     val infos = axiomId match {
       case Some(aid) =>
         val di = Try(DerivationInfo.ofCodeName(aid)).toOption
-        di.map(info => (info, UIIndex.comfortOf(aid).flatMap(s => Try(DerivationInfo.ofCodeName(s)).toOption))).toList
+        di.map(info => (info, UIIndex.comfortOf(aid))).toList
       case None => DerivationInfo.allInfo.
-        filter({case (name, di) => di.displayLevel != 'internal}).
-        map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList
+        filter({case (_, di) => di.displayLevel != 'internal}).
+        map({case (_, di) => (di, UIIndex.comfortOf(di.codeName))}).toList
     }
     ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil
   }
@@ -2007,7 +2007,7 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
               case _ => Nil
             }
             UIIndex.theStepAt(fml, Some(pos), None, substs) match {
-              case Some(step) => ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
+              case Some(step) => ApplicableAxiomsResponse((step, None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
               case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
             }
           case _ => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
@@ -2910,7 +2910,7 @@ object RequestHelper {
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos, Some(sequent), session.defs.substs) match {
-              case Some(step) => Right(DerivationInfo(step))
+              case Some(step) => Right(step)
               case None => Left(tacticId)
             }
           case _ => Right(DerivationInfo.ofCodeName(tacticId))
@@ -2919,7 +2919,7 @@ object RequestHelper {
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
-              case Some(step) => Right(DerivationInfo(step))
+              case Some(step) => Right(step)
               case None => Left(tacticId)
             }
         }

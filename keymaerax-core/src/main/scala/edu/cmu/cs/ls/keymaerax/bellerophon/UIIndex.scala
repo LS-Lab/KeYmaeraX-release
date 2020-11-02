@@ -24,20 +24,19 @@ object UIIndex {
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally
     * considering that this expression occurs at the indicated position pos in the given sequent.
     * Disregard tactics that require input. */
-  def theStepAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent], substs: List[SubstitutionPair]): Option[String] = expr match {
+  def theStepAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent], substs: List[SubstitutionPair]): Option[DerivationInfo] = expr match {
     case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
-    case _ => allStepsAt(expr, pos, sequent, substs).find(DerivationInfo(_).inputs.forall(_.isInstanceOf[OptionArg]))
+    case _ => allStepsAt(expr, pos, sequent, substs).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
   }
 
   /** Give the canonical (derived) axiom name or tactic names that apply at positions `pos1` and `pos2` in `sequent`.
     * Disregard tactics that require input. */
-  def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] =
-    allTwoPosSteps(pos1, pos2, sequent).find(DerivationInfo(_).inputs.forall(_.isInstanceOf[OptionArg]))
+  def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[DerivationInfo] =
+    allTwoPosSteps(pos1, pos2, sequent).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  //@todo change return type to List[DerivationInfo]
   def allStepsAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent],
-                 substs: List[SubstitutionPair]): List[String] = autoPad(pos, sequent, {
+                 substs: List[SubstitutionPair]): List[DerivationInfo] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte/isSucc is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
@@ -219,12 +218,12 @@ object UIIndex {
           }
         }
     }
-  })
+  }).map(DerivationInfo(_))
 
-  def allTwoPosSteps(pos1: Position, pos2: Position, sequent: Sequent): List[String] = {
+  def allTwoPosSteps(pos1: Position, pos2: Position, sequent: Sequent): List[DerivationInfo] = {
     val expr1 = sequent.sub(pos1)
     val expr2 = sequent.sub(pos2)
-    (pos1, pos2, expr1, expr2) match {
+    ((pos1, pos2, expr1, expr2) match {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
@@ -234,7 +233,7 @@ object UIIndex {
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
       //@todo more drag-and-drop support
-    }
+    }).map(DerivationInfo(_))
   }
 
   @tailrec
@@ -244,7 +243,7 @@ object UIIndex {
     case _ => false
   }
 
-  def comfortOf(stepName: String): Option[String] = stepName match {
+  def comfortOf(stepName: String): Option[DerivationInfo] = stepName match {
     //case "diffCut" => Some("diffInvariant")
     //case "diffInd" => Some("autoDiffInd")
     //case "diffSolve" => Some("autoDiffSolve")
