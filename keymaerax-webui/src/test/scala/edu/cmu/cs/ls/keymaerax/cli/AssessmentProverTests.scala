@@ -5,7 +5,7 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, InapplicableUnificationKeyFailure, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AnyOfArtifact, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AnyOfArtifact, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, SubstitutionArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
 import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -715,6 +715,15 @@ class AssessmentProverTests extends TacticTestBase {
     run(problems)
   }
 
+  it should "prove quiz 19" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/19/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Check the monitor quality", 8) :: ("Controller monitor for runaround robot", 2) ::
+        ("Monitors for velocity controlled car", 4) :: ("Controller monitor for event-triggered ping-pong ball", 2) ::
+        ("Controller monitor for time-triggered ping-pong", 2) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 20" in withZ3 { _ =>
     // most questions flagged INSPECT, those need Mathematica
     val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
@@ -826,6 +835,31 @@ class AssessmentProverTests extends TacticTestBase {
   it should "grade random quiz 16 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qgameproofs") }
+  }
+
+  it should "grade random quiz 17 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qaxiomaticgames") }
+  }
+
+  it should "grade random quiz 18 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/18/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qusubst") }
+  }
+
+  it should "grade random quiz 19 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/19/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qmodelplex") }
+  }
+
+  it should "grade random quiz 20 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qvirteq") }
+  }
+
+  it should "grade random quiz 21 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/21/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qvirtreal") }
   }
 
   it should "handle empty text answers" in withZ3 { _ =>
@@ -1040,6 +1074,7 @@ class AssessmentProverTests extends TacticTestBase {
       case TacticArtifact(s, _) => s
       case TextArtifact(text) => text.getOrElse("")
       case ArchiveArtifact(s) => s
+      case SubstitutionArtifact(s) => "(" + s.map(_.toString).mkString(",") + ")"
     }
 
     def artifactSrcString(a: Artifact): String = a match {
@@ -1050,6 +1085,7 @@ class AssessmentProverTests extends TacticTestBase {
       case _: TacticArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TextArtifact => artifactString(a)
       case _: ArchiveArtifact => """{\begin{lstlisting}""" + artifactString(a) + """\end{lstlisting}}"""
+      case _: SubstitutionArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case AnyOfArtifact(a) => "{" + a.map(artifactSrcString).map(_.stripPrefix("{").stripSuffix("}")).mkString + "}"
     }
 
@@ -1057,7 +1093,7 @@ class AssessmentProverTests extends TacticTestBase {
       val graderCookie = createGraderCookie(grader)
       a match {
         case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact |
-             _: TacticArtifact | _: ArchiveArtifact =>
+             _: TacticArtifact | _: ArchiveArtifact | _: SubstitutionArtifact =>
           //@note guesses solfin from presence of grader question with placeholders
           val (name, answer, expected) = grader match {
             case AskGrader(_, args, _) => args.get("question") match {
