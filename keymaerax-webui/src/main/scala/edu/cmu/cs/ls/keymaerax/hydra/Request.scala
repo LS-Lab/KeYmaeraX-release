@@ -2334,6 +2334,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
               case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
               case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
+              case e: ParseException => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, e.loc, e.getMessage), e) :: Nil
             }
         }
       }
