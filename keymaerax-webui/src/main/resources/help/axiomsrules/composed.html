@@ -1,6 +1,6 @@
 <div>
   <p>
-      <kbd>composed</kbd> splits the liveness of a sequential composition <code>a;b</code>, which runs <code>a</code> followed by <code>b</code>, into successive liveness properties <code>&langle;a&rangle;&langle;b&rangle;P</code>.  This shows after a run of <code>a</code> it is the case that there is a run of <code>b</code> to satisfy <code>P</code>.
+      <kbd>composed</kbd> splits the sequential composition <code>a;b</code>, which runs <code>a</code> followed by <code>b</code>, into successive properties <code>&langle;a&rangle;&langle;b&rangle;P</code>.  This shows there is a un of <code>a</code> after which there is a run of <code>b</code> that satisfies <code>P</code> in the end.
 </p>
 <p>
 Other tactics such as <kbd>chase</kbd> and <kbd>unfold</kbd> also use this axiom.
