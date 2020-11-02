@@ -300,7 +300,7 @@ trait SequentCalculus {
   })
 
   /** Universal monotonicity in antecedent: replace `p(x)` with a characteristic property `q(x)`. */
-  @Tactic("∀Lim",
+  @Tactic("M∀L",
     inputs = "q(x):formula",
     premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     conclusion = "Γ, ∀x p(x) |- Δ")
@@ -358,7 +358,7 @@ trait SequentCalculus {
   })
 
   /** Existential monotonicity in succedent: replace `p(x)` with a characteristic property `q(x)`. */
-  @Tactic("∃Rim",
+  @Tactic("M∃R",
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
