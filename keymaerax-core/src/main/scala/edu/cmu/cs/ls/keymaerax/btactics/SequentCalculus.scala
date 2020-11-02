@@ -376,6 +376,14 @@ trait SequentCalculus {
     }
     }
 
+  /** Inverse all skolemize, i.e., introduces a universally quantified variable `x` for term `f()`. */
+  @Tactic("∀Ri",
+    premises = "Γ |- ∀x p(x), Δ",
+    conclusion = "Γ |- p(f()), Δ")
+  def allRi(x: Variable, f: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon {
+    (pos: Position) => FOQuantifierTactics.allInstantiateInverse(f.getOrElse(x) -> x)(pos)
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // closing tactics
 
