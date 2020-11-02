@@ -97,8 +97,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   protected override def emit(q: PosInExpr, s: String): String = {
     val hasStep = plainText || (topExpr match {
-      case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None).isEmpty
-      case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None).isEmpty
+      case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None, Nil).isEmpty
+      case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None, Nil).isEmpty
       case _ => false
     })
 

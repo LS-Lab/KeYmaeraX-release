@@ -1772,8 +1772,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
-          strict=strict, convertPending=false)
+          RequestHelper.listenerFactory(db, session(proofId).asInstanceOf[ProofSession]),
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()
@@ -2002,7 +2002,11 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
       case Some(goal) =>
         goal.sub(pos) match {
           case Some(fml: Formula) =>
-            UIIndex.theStepAt(fml, Some(pos)) match {
+            val substs = session(proofId) match {
+              case ps: ProofSession => ps.defs.substs
+              case _ => Nil
+            }
+            UIIndex.theStepAt(fml, Some(pos), None, substs) match {
               case Some(step) => ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
               case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
             }
@@ -2167,7 +2171,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
     val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator]) =
-      if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2) match {
+      if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, session(proofId).asInstanceOf[ProofSession]) match {
         case Left(s) => (s, pos, pos2)
         //@note improve tactic maintainability by position search with formula shape on universally applicable tactics
         case Right(t: PositionTacticInfo) if t.codeName == "hideL" || t.codeName == "hideR" => pos match {
@@ -2272,11 +2276,13 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
 
               val ruleName =
-                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
+                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString,
+                  session(proofId).asInstanceOf[ProofSession])
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
+                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
+                  RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
                   ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
@@ -2887,21 +2893,23 @@ object RequestHelper {
   /* String representation of the actual step (if tacticId refers to stepAt, otherwise tacticId).
      For display purposes only. */
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator],
-                      what: DerivationInfo => String): String =  getSpecificName(tacticId, sequent, l1, l2) match {
-    case Left(s) => s
-    case Right(t) => what(t)
-  }
+                      what: DerivationInfo => String, session: ProofSession): String =
+    getSpecificName(tacticId, sequent, l1, l2, session) match {
+      case Left(s) => s
+      case Right(t) => what(t)
+    }
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
-  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator]): Either[String,DerivationInfo] = {
+  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator],
+                      session: ProofSession): Either[String,DerivationInfo] = {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
       case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
-            UIIndex.theStepAt(fml, pos) match {
+            UIIndex.theStepAt(fml, pos, Some(sequent), session.defs.substs) match {
               case Some(step) => Right(DerivationInfo(step))
               case None => Left(tacticId)
             }
@@ -2920,10 +2928,11 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+  def listenerFactory(db: DBAbstraction, session: ProofSession)(proofId: Int)(tacticName: String, parentInTrace: Int,
+                                                                              branch: Int): Seq[IOListener] = {
     DBTools.listener(db, (tn: String) => {
       val codeName = tn.split("\\(").head
-      Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)).getOrElse(tn)
+      Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName, session)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)
   }
 

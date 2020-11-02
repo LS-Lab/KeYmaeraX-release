@@ -701,7 +701,7 @@ object Helpers {
     if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
 
   private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
-    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None).nonEmpty
+    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None, Nil).nonEmpty
     val parent = if (q.pos.isEmpty) None else topExpr match {
       case t: Term => t.sub(q.parent)
       case f: Formula => f.sub(q.parent)
