@@ -112,7 +112,7 @@ trait SequentCalculus {
     *   G, a, G', b, G'' |- D
     * }}}
     */
-  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
+  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = PropositionalTactics.andLi(pos1, pos2, keepLeft)
   val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
@@ -337,6 +337,7 @@ trait SequentCalculus {
     premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
   val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
+
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
@@ -488,6 +489,7 @@ trait SequentCalculus {
         }
     }
   }
+
   // alternative implementation
   /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search
