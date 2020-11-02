@@ -549,7 +549,7 @@
                                         <span>Convergence ...</span><code class="pull-right">con</code>
                                     </a>
                                 </li>
-                                <li role="separator" class="divider" ng-if="menu.hpmenu.kind=='box'"></li>
+                                <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('boxAnd', 'R')"
                                   uib-popover-template="fetchRuleHelp('boxAnd')"
@@ -571,7 +571,12 @@
                                     <a ng-click="agenda.items().length <= 0 || doSearch('boxd', 'R')"
                                   uib-popover-template="fetchRuleHelp('boxd')"
                                   popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>[·]</span><code class="pull-right">boxd</code></a></li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('diamondd', 'R')"
+                                       uib-popover-template="fetchRuleHelp('diamondd')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>&langle;·&rangle;</span><code class="pull-right">diamondd</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('discreteGhost', 'R')"
