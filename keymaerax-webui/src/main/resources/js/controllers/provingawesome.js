@@ -772,6 +772,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         derivationInfos.byName($scope.userId, $scope.proofId, $scope.nodeId, codeName).then(function(response) {
           if (response.data.length > 0) {
             $scope.rulehelp.derivationInfo = response.data[0].standardDerivation;
+          } else {
+            $scope.rulehelp.derivationInfo = undefined;
           }
         });
       }
