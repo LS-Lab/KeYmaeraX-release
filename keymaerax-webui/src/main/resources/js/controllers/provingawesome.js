@@ -482,6 +482,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       busypoller: Poller.poll("tools/vitalSigns", 2000 /*2s*/),
       connectionTestResult: undefined
     };
+
+    $scope.menu = {
+      hpmenu: {
+        kind: 'box'
+      }
+    }
+
     sequentProofData.tactic.reset();
 
     $scope.$on('$destroy', function() {
