@@ -337,6 +337,11 @@ trait SequentCalculus {
     premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
   val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
+  @Tactic("∃Li",
+    inputs = "f:term;;x[x]:option[variable]",
+    premises = "Γ, ∃x p(f(x)) |- Δ",
+    conclusion = "Γ, p(f(y)) |- Δ", displayLevel = "browse")
+  def existsLi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.existsGen(x, t)(_: Position) }
 
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))

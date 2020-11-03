@@ -399,6 +399,12 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span>&forall;Ri</span><code class="pull-right">allRi</code></a></li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('existsLi', 'L')"
+                                       uib-popover-template="fetchRuleHelp('existsLi')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>∃Li</span><code class="pull-right">existsLi</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('allLim', 'L')"

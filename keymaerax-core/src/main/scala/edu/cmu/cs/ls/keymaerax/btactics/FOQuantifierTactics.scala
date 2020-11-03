@@ -312,6 +312,59 @@ protected object FOQuantifierTactics {
   })
 
   /**
+    * Converse of exists instantiate.
+    * @param x The existentially quantified variable to introduce.
+    * @param t The term to generalize.
+    * @return The position tactic.
+    * @example {{{\exists z \exists x x^2 >= -z^2 |-
+    *            ----------------------------------- existsGen(z, f())
+    *                     \exists x x^2 >= -f()^2 |-
+    * }}}
+    * @example {{{\exists z \exists x x^2 >= -z^2 |-
+    *            ----------------------------------- existsGen(z, y+5)
+    *                   \exists x x^2 >= -(y+5)^2 |-
+    * }}}
+    */
+  def existsGen(x: Option[Variable], t: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    val quantified: Variable = x match {
+      case Some(xx) => xx
+      case None =>
+        val bv = StaticSemantics.boundVars(sequent)
+        t match {
+          case v: Variable if !bv.contains(v) => v
+          case v: Variable if  bv.contains(v) => TacticHelper.freshNamedSymbol(v, sequent)
+          case FuncOf(fn, _) =>
+            val funcVar = Variable(fn.name, fn.index, fn.sort)
+            if (bv.contains(funcVar)) {
+              val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
+              Variable(fresh.name, fresh.index, fresh.sort)
+            } else funcVar
+          case _ => throw new InputFormatFailure("Please provide second argument with variable name to use for generalizing term " + t.prettyString)
+        }
+    }
+
+    val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
+      case Some(f: Formula) if quantified == t =>
+        val subst = (s: Option[Subst]) => s match {
+          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+        }
+        (Exists(Seq(quantified), f), Ax.existse, subst)
+      case Some(f: Formula) if quantified != t =>
+        val subst = (s: Option[Subst]) => s match {
+          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+        }
+        (Exists(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), Ax.existsGeneralize, subst)
+      case Some(e) => throw new TacticInapplicableFailure("existsGen only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+    cutAt(genFml)(pos) <(
+      /* use */ skip,
+      /* show */ useAt(axiomLemma, PosInExpr(1::Nil), subst)('Rlast, PosInExpr(1 +: pos.inExpr.pos)) &
+      useAt(Ax.implySelf)('Rlast) & closeT & done
+    )
+  })
+
+  /**
    * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
    * Reverse alphabetical order for non-mentioned variables (for all variables if order == Nil).
    * @example {{{
