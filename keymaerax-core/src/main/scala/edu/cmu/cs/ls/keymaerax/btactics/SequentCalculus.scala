@@ -304,7 +304,7 @@ trait SequentCalculus {
     inputs = "q(x):formula",
     premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     conclusion = "Γ, ∀x p(x) |- Δ")
-  def allLim(q: Formula)             : DependentPositionWithAppliedInputTactic =
+  def allLmon(q: Formula)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
       //@todo faster implementation uses derived axiom Ax.existsDistElim
       case Some(Forall(x, _)) => cutL(Forall(x, q))(pos) <(
@@ -368,7 +368,7 @@ trait SequentCalculus {
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
-  def existsRim(q: Formula)             : DependentPositionWithAppliedInputTactic =
+  def existsRmon(q: Formula)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
       case Some(Exists(x, _)) => cutR(Exists(x, q))(pos) <(
         label(BelleLabels.cutUse),
