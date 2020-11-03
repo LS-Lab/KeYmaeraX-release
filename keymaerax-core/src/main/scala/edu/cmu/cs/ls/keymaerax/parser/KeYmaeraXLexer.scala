@@ -10,7 +10,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
@@ -313,7 +313,7 @@ private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
 }
 private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-  def regexp: Regex = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
+  def regexp: Regex = "\"{4}(([^\"]*|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
 //  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
@@ -380,33 +380,19 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    * @param mode The mode of the lexer.
    * @return A token stream.
    */
-//  //@todo //@tailrec
-//  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
-//    if(input.trim.length == 0) {
-//      List(Token(EOF))
-//    }
-//    else {
-//      findNextToken(input, inputLocation, mode) match {
-//        case Some((nextInput, token, nextLoc)) =>
-//          //if (DEBUG) print(token)
-//          token +: lex(nextInput, nextLoc, mode)
-//        case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
-//      }
-//    }
-
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
     var remaining: String = input
     var loc: Location = inputLocation
     val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
-    while (!remaining.isEmpty) {
+    while (!remaining.trim.isEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
           output.append(token)
           remaining = nextInput
           loc = nextLoc
-        case None => //note: This case can happen if the input is e.g. only a comment or only whitespace.
-          output.append(Token(EOF, loc))
-          return replaceAnything(output).to
+        case None =>
+          //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          remaining = ""
       }
     }
     output.append(Token(EOF, loc))
@@ -414,6 +400,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   }
 
   /** Replace all instances of LPAREN,ANYTHING,RPAREN with LBANANA,RBANANA. */
+  @tailrec
   private def replaceAnything(output: scala.collection.mutable.ListBuffer[Token]): scala.collection.mutable.ListBuffer[Token] = {
     output.find(x => x.tok == ANYTHING) match {
       case None => output
@@ -572,7 +559,14 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     }),
     DOUBLE_QUOTES_STRING_PAT.startPattern -> ((s: String, loc: Location, mode: LexerMode, str: String) => mode match {
       case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
-        Right(consumeColumns(s, str.length, DOUBLE_QUOTES_STRING(str.stripPrefix("\"").stripSuffix("\"")), loc))
+        val terminal = DOUBLE_QUOTES_STRING(str.stripPrefix("\"").stripSuffix("\""))
+        val n = str.count(_ == '\n')
+        val c = if (n>0) str.length - str.lastIndexOf('\n') else loc.begin.column + str.length
+        val strLoc = Region(loc.begin.line, loc.begin.column, loc.begin.line + n, c) // endcolumn with \n character
+        Right(Some((
+          s.substring(str.length),
+          Token(terminal, Region(loc.begin.line, loc.begin.column, loc.begin.line + n, c-1)), // without \n character
+          SuffixRegion(strLoc.end.line, strLoc.end.column))))
       case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
     }),
     //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
@@ -692,18 +686,23 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
-  @tailrec
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    if (s.isEmpty) {
-      None
-    } else {
-      val lexPrefix = lexers.view.map({ case (r,lexer) => r.findPrefixOf(s).map(lexer(s, loc, mode, _)) }).find(_.isDefined).flatten
-      lexPrefix match {
-        case Some(Left(lexed)) => findNextToken(lexed._1, lexed._2, lexed._3)
-        case Some(Right(lexed)) => lexed
-        case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
+    var next: Either[(String, Location, LexerMode), Option[(String, Token, Location)]] = Left(s, loc, mode)
+    while (next.isLeft) {
+      val (cs, cloc, cmode) = next.left.get
+      if (cs.isEmpty) next = Right(None)
+      else {
+        val lexPrefix = lexers.view.map({ case (r, lexer) => r.findPrefixOf(cs).map(lexer(cs, cloc, cmode, _)) }).find(_.isDefined).flatten
+        lexPrefix match {
+          case Some(Left(lexed)) => next = Left(lexed._1, lexed._2, lexed._3)
+          case Some(Right(lexed)) => next = Right(lexed)
+          case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +
+            //@note getNumericValue instead of toInt returns more reliable result but not supported in Scala.js
+            "\n` beginning with character `" + s(0) + "`=" + s(0).toInt, loc).inInput(s)
+        }
       }
     }
+    next.right.get
   }
 
   /**

@@ -1,0 +1,188 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      6485,        180]
+NotebookOptionsPosition[      5704,        161]
+NotebookOutlinePosition[      6037,        176]
+CellTagsIndexPosition[      5994,        173]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Makes", " ", "the", " ", "directory", " ", 
+    RowBox[{"Pegasus", "/"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SetDirectory", "[", 
+    RowBox[{"ParentDirectory", "[", 
+     RowBox[{"ParentDirectory", "[", 
+      RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], "]"}], ";", 
+   RowBox[{"Needs", "[", 
+    RowBox[{"\"\<Primitives`\>\"", ",", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"Directory", "[", "]"}], ",", "\"\<Primitives\>\"", ",", 
+        "\"\<Primitives.m\>\""}], "}"}], "]"}]}], "]"}], " ", 
+   ";"}]}]], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.76278128104568*^9, 3.7627812963899393`*^9}, {
+  3.763047112232011*^9, 3.763047153714343*^9}, {3.7867948090227003`*^9, 
+  3.786794814796836*^9}},
+ CellLabel->"In[2]:=",ExpressionUUID->"6b3cadf1-f28a-49a8-90cf-e708abba129c"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Polynomial", " ", "total", " ", "degree"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"PolynomDegree", "[", 
+     RowBox[{
+      RowBox[{"x", "*", "y"}], ",", 
+      RowBox[{"{", "x", "}"}]}], "]"}], " ", "\[Equal]", " ", "1"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"PolynomDegree", "[", 
+     RowBox[{"x", "*", "y"}], "]"}], "\[Equal]", "2"}]}]}]], "Input",
+ CellChangeTimes->{{3.76278129984638*^9, 3.762781303509128*^9}, {
+  3.762781651018383*^9, 3.7627817440572166`*^9}, {3.7627818731946287`*^9, 
+  3.762781887292953*^9}, {3.762781987435916*^9, 3.762781989867481*^9}, {
+  3.762782332447692*^9, 3.762782333950472*^9}},
+ CellLabel->"In[3]:=",ExpressionUUID->"e8186881-d54b-45bb-85c3-cbf87365d8bd"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Lie", " ", "derivatives"}], " ", "*)"}], "\n", 
+  RowBox[{"Lf", "[", 
+   RowBox[{
+    RowBox[{"x", "+", "y", "+", "z"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"x", "+", "z"}], ",", 
+      RowBox[{"z", "-", "x", "+", "y"}]}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"x", ",", "y"}], "}"}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.76278163869709*^9, 3.7627816408564777`*^9}, {
+   3.762781864221572*^9, 3.762781867242223*^9}, 
+   3.786794832519417*^9},ExpressionUUID->"812f2421-d4cf-4eb9-a89c-\
+67334ade706f"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Rational", " ", "bounds"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"UpperRat", "[", 
+    RowBox[{
+     RowBox[{"Sqrt", "[", "2", "]"}], ",", "1"}], "]"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"LowerRat", "[", 
+    RowBox[{
+     RowBox[{"Sqrt", "[", "2", "]"}], ",", "1"}], "]"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"NearestRat", "[", 
+    RowBox[{
+     RowBox[{"Sqrt", "[", "2", "]"}], ",", "1"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.762782258687272*^9, 3.7627823263823338`*^9}, {
+  3.762783795659266*^9, 3.7627838544439287`*^9}},
+ CellLabel->"In[6]:=",ExpressionUUID->"9a872844-e3d3-4f89-9308-63286312dd6b"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "rational", " ", "rounding", " ", "bounds", " ", "for", " ", "a", " ", 
+    "polynomial", " ", 
+    RowBox[{"w", ".", "r", ".", "t", ".", " ", "variables"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"NearestRatCoeffs", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{"Sqrt", "[", "2", "]"}], "x"}], " ", "+", " ", 
+      RowBox[{
+       RowBox[{"Sqrt", "[", "3", "]"}], "x", "*", "y"}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", "y"}], "}"}], ",", "10"}], "]"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"LowerRatCoeffs", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{"Sqrt", "[", "2", "]"}], "x"}], " ", "+", " ", 
+      RowBox[{
+       RowBox[{"Sqrt", "[", "3", "]"}], "x", "*", "y"}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x", ",", "y"}], "}"}], ",", "10"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.762782368415608*^9, 3.762782434175499*^9}, {
+   3.762782585363379*^9, 3.762782585504867*^9}, 3.762783725549206*^9, {
+   3.762783761149125*^9, 3.76278377642969*^9}, {3.762784813174377*^9, 
+   3.762784833956229*^9}, {3.762784909222632*^9, 3.762784943496435*^9}, {
+   3.762785000633451*^9, 3.762785015333878*^9}},
+ CellLabel->"In[9]:=",ExpressionUUID->"300ef40f-e54f-4f4d-a988-12296530362d"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"DNF", " ", "Normalization"}], " ", "*)"}], "\n", 
+  RowBox[{
+   RowBox[{"DNFNormalizeGtGeq", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"z", "+", "1"}], "<", "0"}], "&&", 
+     RowBox[{
+      RowBox[{"y", "*", "x"}], ">", "0"}]}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"DNFNormalizeLtLeq", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"x", "+", "y"}], " ", "\[Equal]", "0"}], "\[Implies]", 
+     RowBox[{"x", "<", "0"}]}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"DNFNormalizeGtGeq", "[", 
+    RowBox[{
+     RowBox[{"1", "-", "x"}], "==", "0"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.762785741134048*^9, 3.7627857452438393`*^9}, 
+   3.786794837592601*^9},ExpressionUUID->"ea126d3f-9539-460a-8912-\
+a3e6ddc70de0"]
+},
+WindowSize->{960, 1148},
+WindowMargins->{{Automatic, 0}, {0, Automatic}},
+FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 932, 22, 94, "Input",ExpressionUUID->"6b3cadf1-f28a-49a8-90cf-e708abba129c",
+ InitializationCell->True],
+Cell[1493, 44, 804, 19, 78, "Input",ExpressionUUID->"e8186881-d54b-45bb-85c3-cbf87365d8bd"],
+Cell[2300, 65, 585, 16, 55, "Input",ExpressionUUID->"812f2421-d4cf-4eb9-a89c-67334ade706f"],
+Cell[2888, 83, 699, 18, 101, "Input",ExpressionUUID->"9a872844-e3d3-4f89-9308-63286312dd6b"],
+Cell[3590, 103, 1320, 33, 78, "Input",ExpressionUUID->"300ef40f-e54f-4f4d-a988-12296530362d"],
+Cell[4913, 138, 787, 21, 101, "Input",ExpressionUUID->"ea126d3f-9539-460a-8912-a3e6ddc70de0"]
+}
+]
+*)
+

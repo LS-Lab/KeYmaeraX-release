@@ -7,8 +7,12 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.parser.Parser
 
 import scala.collection.immutable.Map
 
@@ -19,6 +23,11 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  */
 object KeYmaeraXTool extends Tool {
+  /** Configuration option: whether or not to initialize the axiom and tactic library (default: true) */
+  val INIT_DERIVATION_INFO_REGISTRY: String = "INIT_DERIVATION_INFO_REGISTRY"
+  /** Interpreter, one of "LazySequentialInterpreter" | "ExhaustiveSequentialInterpreter" */
+  val INTERPRETER: String = "INTERPRETER"
+
   /** @inheritdoc */
   override val name: String = "KeYmaera"
 
@@ -27,12 +36,31 @@ object KeYmaeraXTool extends Tool {
 
   /** @inheritdoc */
   override def init(config: Map[String,String]): Unit = {
-    if (KeYmaeraXParser.LAX_MODE)
+    //@note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
+    if (initialized) shutdown()
+    if (Configuration(Configuration.Keys.LAX) == "true")
       //@note Careful, this disables contract checking in printing!
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter.pp)
     else
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
-    //PrettyPrinter.setPrinter(new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter)
+
+    val interpreter = config.getOrElse(INTERPRETER, LazySequentialInterpreter.getClass.getSimpleName)
+    BelleInterpreter.setInterpreter(
+      if (interpreter == LazySequentialInterpreter.getClass.getSimpleName) LazySequentialInterpreter()
+      else if (interpreter == ExhaustiveSequentialInterpreter.getClass.getSimpleName) ExhaustiveSequentialInterpreter()
+      else throw new IllegalArgumentException("Unknown interpreter: " + interpreter + "; please use one of " +
+        LazySequentialInterpreter.getClass.getSimpleName + " | " + ExhaustiveSequentialInterpreter.getClass.getSimpleName)
+    )
+    val initLibrary = config.getOrElse(INIT_DERIVATION_INFO_REGISTRY, "true").toBoolean
+    Configuration.withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      DerivationInfoRegistry.init(initLibrary)
+    }
+
+    val generator = new ConfigurableGenerator[GenProduct]()
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true))))))
+    TactixInit.invSupplier = generator
+
     initialized = true
   }
 
@@ -42,6 +70,7 @@ object KeYmaeraXTool extends Tool {
   /** @inheritdoc */
   override def shutdown(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     initialized = false
   }
 

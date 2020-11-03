@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleLabel, BelleTopLevelLabel}
 
 /**
   * Default labels used by the KeYmaera X tactics.
@@ -13,17 +13,20 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
   */
 object BelleLabels {
   // loop induction
-  val useCase = BelleTopLevelLabel("Post")
-  val initCase = BelleTopLevelLabel("Init")
-  val indStep = BelleTopLevelLabel("Step")
+  val useCase: BelleLabel = BelleTopLevelLabel("Post")
+  val initCase: BelleLabel = BelleTopLevelLabel("Init")
+  val indStep: BelleLabel = BelleTopLevelLabel("Step")
 
   // cuts
-  val cutUse = BelleTopLevelLabel("Use")
-  val cutShow = BelleTopLevelLabel("Show")
+  val cutUse: BelleLabel = BelleTopLevelLabel("Use")
+  val cutShow: BelleLabel = BelleTopLevelLabel("Show")
+
+  // lemmas
+  def lemmaUnproved(name: String): BelleLabel = BelleTopLevelLabel("Lemma " + name)
 
   // QE
-  val QECEX = BelleTopLevelLabel("QE CEX")
+  val QECEX: BelleLabel = BelleTopLevelLabel("QE CEX")
 
-  val dIInit = BelleTopLevelLabel("dI Init")
-  val dIStep = BelleTopLevelLabel("dI Step")
+  val dIInit: BelleLabel = BelleTopLevelLabel("dI Init")
+  val dIStep: BelleLabel = BelleTopLevelLabel("dI Step")
 }

@@ -1,0 +1,38 @@
+#!/bin/sh
+IFS=$'\r\n' GLOBIGNORE='*' command eval 'ENTRIES=($(cat ./index480/basickyx.txt) $(cat ./index480/gameskyx.txt) $(cat ./index480/nonlinearkyx.txt) $(cat ./index480/advancedkyx.txt))'
+
+# scripted category (S)
+for i in "${ENTRIES[@]}"; do
+    IFS=$';' read -ra ENTRY <<< "$i"
+    java -Dlog4j.configurationFile="log4j2-statistics-s.xml" -Xss20M -jar keymaerax_480.jar -launch -prove "${ENTRY[0]}" -timeout ${ENTRY[1]} -tacticName "Scripted proof"
+done
+
+mv statistics-s.csv statistics-s-480.csv
+
+# hints category (H)
+for i in "${ENTRIES[@]}"; do
+    IFS=$';' read -ra ENTRY <<< "$i"
+    java -Dlog4j.configurationFile="log4j2-statistics-h.xml" -Xss20M -jar keymaerax_480.jar -launch -prove "${ENTRY[0]}" -timeout ${ENTRY[1]} -tacticName "Automated proof"
+done
+
+mv statistics-h.csv statistics-h-480.csv
+
+# strip all hints
+java -Xss20M -jar keymaerax_480.jar -launch -striphints "./kyx480/advanced.kyx" -out "./kyx480/advanced.kyx.stripped"
+java -Xss20M -jar keymaerax_480.jar -launch -striphints "./kyx480/basic.kyx" -out "./kyx480/basic.kyx.stripped"
+java -Xss20M -jar keymaerax_480.jar -launch -striphints "./kyx480/games.kyx" -out "./kyx480/games.kyx.stripped"
+java -Xss20M -jar keymaerax_480.jar -launch -striphints "./kyx480/nonlinear.kyx" -out "./kyx480/nonlinear.kyx.stripped"
+
+# automated category (A)
+for i in "${ENTRIES[@]}"; do
+    IFS=$';' read -ra ENTRY <<< "$i"
+    FIND=".kyx"
+    REPLACE=".kyx.stripped"
+    STRIPPEDNAME=${ENTRY[0]//$FIND/$REPLACE}
+    echo $STRIPPEDNAME
+    java -Dlog4j.configurationFile="log4j2-statistics-a.xml" -Xss20M -jar keymaerax_480.jar -launch -prove "$STRIPPEDNAME" -timeout ${ENTRY[1]} -tactic "expandAllDefs; master"
+done
+
+mv statistics-a.csv statistics-a-480.csv
+
+echo "Done running examples"

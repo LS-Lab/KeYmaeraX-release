@@ -16,7 +16,11 @@ import scala.annotation.tailrec
   * @see [[SequentialInterpreter]]
   */
 trait Interpreter {
-  /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable). */
+  /** Starts the interpreter. */
+  def start(): Unit
+
+  /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable).
+    * Interpreter must be started before executing tactics. */
   def apply(expr: BelleExpr, v: BelleValue): BelleValue
 
   /** Stops the interpreter and kills all its tactic executions. */
@@ -46,7 +50,7 @@ trait Interpreter {
       if (original.subgoals(n) == subderivation.conclusion) original
       else subst.map(exhaustiveSubst(original, _)).getOrElse(original)
     if (substituted.subgoals(n) != subderivation.conclusion)
-      throw new BelleThrowable(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst")
+      throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst", subderivation.underlyingProvable)
     val newProvable = substituted(subderivation, n)
     val nextIdx = if (subderivation.isProved) n else n + 1
     (newProvable, nextIdx)
@@ -66,6 +70,6 @@ trait Interpreter {
   */
 trait IOListener {
   def begin(input: BelleValue, expr: BelleExpr): Unit
-  def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue,BelleThrowable]): Unit
+  def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit
   def kill(): Unit
 }

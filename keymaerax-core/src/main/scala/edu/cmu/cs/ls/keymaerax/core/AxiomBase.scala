@@ -20,10 +20,11 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaerax.Logging
+
 import scala.collection.immutable
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
-import org.apache.logging.log4j.scala.Logging
 
 /**
   * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -36,8 +37,8 @@ import org.apache.logging.log4j.scala.Logging
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @author Andre Platzer
   * @author Yong Kiam Tan
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   */
 private[core] object AxiomBase extends Logging {
   /**
@@ -131,8 +132,8 @@ private[core] object AxiomBase extends Logging {
         */
       ("con convergence",
         (immutable.IndexedSeq(
-            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
-          Sequent(immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
+            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x::Nil)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
+          Sequent(immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x::Nil))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
     )
   }
 
@@ -148,7 +149,7 @@ private[core] object AxiomBase extends Logging {
       val res = KeYmaeraXAxiomParser(loadAxiomString())
       insist(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse of AxiomBase")
       res.map(k => (k._1 -> k._2)).toMap
-    } catch { case e: Exception => logger.fatal("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
+    } catch { case e: Exception => logger.error("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms after parsing */
@@ -208,22 +209,22 @@ private[core] object AxiomBase extends Logging {
     insist(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
       Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
     insist(axs("DG differential ghost") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y::Nil)),
+        AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y::Nil),Real), y), UnitFunctional("b",Except(y::Nil),Real)))
+      ), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG differential ghost")
     //@note in analogy to DG
     insist(axs("DG differential ghost constant") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y),Real))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost constant")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y::Nil)),
+        AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y::Nil),Real))
+      ), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
     insist(axs("DG inverse differential ghost") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real))),
-        DifferentialProgramConst("c",Except(y))),
-        UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG inverse differential ghost")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y::Nil),Real), y), UnitFunctional("b",Except(y::Nil),Real))),
+        DifferentialProgramConst("c",Except(y::Nil))),
+        UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG inverse differential ghost")
 
     /* DIFFERENTIAL AXIOMS FOR TERMS */
 
@@ -320,7 +321,7 @@ End.
 
 /* @todo soundness requires only vectorial x in p(||) */
 Axiom "DI differential invariance"
-  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
+  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
@@ -391,10 +392,23 @@ Axiom "RI& closed real induction >="
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
+Axiom "IVT"
+  <{c&q(||)}>(f(||)>=0&p(||)) -> f(||)<=0 -> <{c&q(||)}> (f(||)=0 & <{c&q(||)}>(f(||)>=0&p(||)))
+  /* @note formal proof IVTaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
+   * soundness requires f(||) to be continuous
+   */
+End.
+
+Axiom "DCC"
+  [{c&r(||)}](p(||)->q(||))<-(([{c&r(||)&p(||)}]q(||)) & ([{c&r(||)}](!p(||)->[{c&r(||)}]!p(||))))
+  /* @note formal proof DCCaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
+   * differential conditional cut (e.g., (40) in https://arxiv.org/abs/1903.00153v1) */
+End.
+
 /** DIFFERENTIAL AXIOMS */
 
 Axiom "c()' derive constant fn"
-  c()' = 0
+  (c())' = 0
 End.
 
 Axiom "x' derive var"
@@ -406,71 +420,71 @@ Axiom "-' derive neg"
 End.
 
 Axiom "+' derive sum"
-  (f(||) + g(||))' = f(||)' + g(||)'
+  (f(||) + g(||))' = (f(||))' + (g(||))'
 End.
 
 Axiom "-' derive minus"
-  (f(||) - g(||))' = f(||)' - g(||)'
+  (f(||) - g(||))' = (f(||))' - (g(||))'
 End.
 
 Axiom "*' derive product"
-  (f(||) * g(||))' = f(||)'*g(||) + f(||)*g(||)'
+  (f(||) * g(||))' = (f(||))'*g(||) + f(||)*(g(||))'
 End.
 
 Axiom "/' derive quotient"
-  (f(||) / g(||))' = (f(||)'*g(||) - f(||)*g(||)') / (g(||)^2)
+  (f(||) / g(||))' = ((f(||))'*g(||) - f(||)*(g(||))') / (g(||)^2)
 End.
 
 Axiom "chain rule"
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = f(y_)' * g(x_)' )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_))' * (g(x_))' )
 End.
 
 Axiom "^' derive power"
-	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- c()!=0
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- c()!=0
 End.
 
 Axiom "=' derive ="
-  (f(||) = g(||))' <-> f(||)' = g(||)'
+  (f(||) = g(||))' <-> ((f(||))' = (g(||))')
 End.
 
 Axiom ">=' derive >="
-  (f(||) >= g(||))' <-> f(||)' >= g(||)'
+  (f(||) >= g(||))' <-> ((f(||))' >= (g(||))')
 End.
 
 Axiom ">' derive >"
-  (f(||) > g(||))' <-> f(||)' >= g(||)'
+  (f(||) > g(||))' <-> ((f(||))' >= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "<=' derive <="
-  (f(||) <= g(||))' <-> f(||)' <= g(||)'
+  (f(||) <= g(||))' <-> ((f(||))' <= (g(||))')
 End.
 
 Axiom "<' derive <"
-  (f(||) < g(||))' <-> f(||)' <= g(||)'
+  (f(||) < g(||))' <-> ((f(||))' <= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "!=' derive !="
-  (f(||) != g(||))' <-> f(||)' = g(||)'
+  (f(||) != g(||))' <-> ((f(||))' = (g(||))')
   /* sic! */
 End.
 
 Axiom "&' derive and"
-  (p(||) & q(||))' <-> p(||)' & q(||)'
+  (p(||) & q(||))' <-> ((p(||))' & (q(||))')
 End.
 
 Axiom "|' derive or"
-  (p(||) | q(||))' <-> p(||)' & q(||)'
+  (p(||) | q(||))' <-> ((p(||))' & (q(||))')
   /* sic! yet <- */
 End.
 
 Axiom "forall' derive forall"
-  (\forall x_ p(||))' <-> \forall x_ p(||)'
+  (\forall x_ p(||))' <-> \forall x_ ((p(||))')
 End.
 
 Axiom "exists' derive exists"
-  (\exists x_ p(||))' <-> \forall x_ p(||)'
+  (\exists x_ p(||))' <-> \forall x_ ((p(||))')
   /* sic! yet <- */
 End.
 

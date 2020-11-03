@@ -57,15 +57,16 @@ object Sign extends Enumeration {
   def num(n: Number): Sign = if (n.value >= 0) Pos0 else /* n.value <= 0 */ Neg0
 
   def sign(term: Term)(implicit atoms: Map[Term, Sign] = Map()): Sign = atoms.getOrElse(term, term match {
-    case xp: DifferentialSymbol => Unknown
-    case x: Variable => Unknown
+    case _: DifferentialSymbol => Unknown
+    case _: Variable => Unknown
     case n: Number => num(n)
-    case f: FuncOf => Unknown
-    case edu.cmu.cs.ls.keymaerax.core.Neg(e)       => plusConverse(sign(e))
+    case _: FuncOf => Unknown
+    case Neg(e)       => plusConverse(sign(e))
     case Plus(l, r)   => plus(sign(l), sign(r))
     case Minus(l, r)  => minus(sign(l), sign(r))
     case Times(l, r)  => times(sign(l), sign(r))
     case Divide(l, r) => divide(sign(l), sign(r))
+    case Power(_, Divide(Number(n), Number(d))) if n==1 && d==2 => Pos0
     case Power(l, Number(r))  => power(sign(l), r.intValue()) //@note only works for small exponents
   })
 

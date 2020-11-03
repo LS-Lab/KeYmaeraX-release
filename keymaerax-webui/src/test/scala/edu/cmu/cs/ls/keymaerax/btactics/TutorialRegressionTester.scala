@@ -11,14 +11,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Program}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 import org.scalatest.AppendedClues
 import org.scalatest.exceptions.TestFailedException
 
@@ -50,26 +49,27 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     else throw new IllegalArgumentException(s"URL must end in either .json, .kya, or .kyx, but got $url")
   })
 
-  tutorialName should "parse all models" in {
+  tutorialName should "parse all models" in withZ3 { _ =>
     forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
-      withClue(tutorialName + "/" + name) { KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false) }
+      withClue(tutorialName + "/" + name) { ArchiveParser.parseProblem(model, parseTactics=false) }
     }
   }
 
-  it should "parse all tactics" in {
-    forEvery (tutorialEntries.filter(_._7.nonEmpty)) { (tutorialName, name, _, _, _, _, tactics, _) =>
+  it should "parse all tactics" in withZ3 { _ =>
+    forEvery (tutorialEntries.filter(_._7.nonEmpty)) { (tutorialName, name, model, _, _, _, tactics, _) =>
+      val defs = ArchiveParser.parseProblem(model, parseTactics=false).defs
       forEvery (table(tactics)) { ( tname, ttext) =>
-        withClue(tutorialName + "/" + name + "/" + tname) { BelleParser(ttext) }
+        withClue(tutorialName + "/" + name + "/" + tname) { BelleParser.parseWithInvGen(ttext, None, defs) }
       }
     }
   }
 
-  it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
-    prove("Mathematica" :: "Z3" :: Nil)
+  it should "prove all entries flagged as being provable with Mathematica" in withMathematica { tool => withDatabase {
+    prove(tool, "Mathematica" :: "Z3" :: Nil)
   }}
   it should "prove all entries flagged as being provable with Z3" in withZ3 { tool => withDatabase {
     tool.setOperationTimeout(30) // avoid getting stuck
-    prove("Z3" :: Nil)
+    prove(tool, "Z3" :: Nil)
   }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
@@ -78,7 +78,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
     tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
-      whenever(!Thread.currentThread().isInterrupted) {
+      whenever(tool.isInitialized) {
         try {
           runEntry(name, model, kind, tactic.head, db)
           fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
@@ -91,9 +91,9 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE("tool") (if any) match any of the tools */
-  private def prove(tools: List[String])(db: TempDBTools): Unit = {
+  private def prove(tool: Tool, tools: List[String])(db: TempDBTools): Unit = {
     forEvery (filterEntriesByTool(_.forall(m => tools.contains(m.group("toolName"))), replaceQE=false)) { (_, name, model, _, _, _, tactic, kind) =>
-      whenever(!Thread.currentThread().isInterrupted) { runEntry(name, model, kind, tactic.head, db) }
+      whenever(tool.isInitialized) { runEntry(name, model, kind, tactic.head, db) }
     }
   }
 
@@ -102,8 +102,10 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
       val (decls, invGen) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
       // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
-      val expandAll = decls.decls.exists(_._2._3.isDefined) && "(expand(?!All))|(expandAllDefs)".r.findFirstIn(tactic._2).isEmpty
-      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls, expandAll)
+      val hasDefinitions = decls.decls.exists(_._2._3.isDefined)
+      val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(tactic._2)
+      if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
+      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls, hasDefinitions && !tacticExpands)
 
       val start = System.currentTimeMillis()
       val proof = db.proveBy(model, t, l => LazySequentialInterpreter(l :+ new PrintProgressListener(t), throwWithDebugInfo = false), name)
@@ -138,15 +140,15 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
   /** Parse a problem file to find declarations and invariant annotations */
   private def parseProblem(model: String): (Declaration, Generator[GenProduct]) = {
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
-    TactixLibrary.invGenerator = generator
-    TactixLibrary.differentialInvGenerator =
-      (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
-    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
+    val entry = ArchiveParser.parseProblem(model, parseTactics=false)
+    TactixInit.invSupplier = generator
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    Parser.parser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.defs, generator)
   }
 

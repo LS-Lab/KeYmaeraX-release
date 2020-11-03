@@ -3,14 +3,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.{BRule, _}
 import edu.cmu.cs.ls.keymaerax.btactics.{Kaisar, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
+import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
 
 /**
   * Created by bbohrer on 12/3/16.
@@ -88,7 +85,7 @@ class KaisarTests extends TacticTestBase {
     dm shouldBe true
   }
 
-  "Proof with no programs" should "prove" in {
+  "Proof with no programs" should "prove" in withTactics {
     withZ3(qeTool => {
       val pr: Provable = Provable.startProof(Imply(pq, p))
       val up: UP = UP(List(Left("assm(x)".asExpr)), Auto())
@@ -97,7 +94,7 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
     })
   }
-  "Proof with one program that modifies nothing" should "prove" in {
+  "Proof with one program that modifies nothing" should "prove" in withTactics {
     withZ3(qeTool => {
       val box = "[?p();]p()".asFormula
       val prog = "?p();".asProgram
@@ -107,7 +104,7 @@ class KaisarTests extends TacticTestBase {
 
     })
   }
-  "Proof with one program that modifies a relevant variable" should "prove" in {
+  "Proof with one program that modifies a relevant variable" should "prove" in withTactics {
     withZ3(qeTool => {
       val box = "[x:=1;]x>0".asFormula
       val prog = "x:=1;".asProgram

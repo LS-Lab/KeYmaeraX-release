@@ -16,8 +16,8 @@ package edu.cmu.cs.ls.keymaerax
   *     - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
   *
   *   - Tactic tools
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex] AxiomIndex]: Axiom Indexing data structures for canonical proof strategies.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex] AxIndex]: Axiom Indexing data structures for canonical proof strategies.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
   *
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce
@@ -51,7 +51,7 @@ package edu.cmu.cs.ls.keymaerax
   *  import edu.cmu.cs.ls.keymaerax.core._
   *  // explicit proof certificate construction of |- !!p() <-> p()
   *  val proof = (Provable.startProof(
-  *    Sequent(IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+  *    "!!p() <-> p()".asFormula)
   *    (EquivRight(SuccPos(0)), 0)
   *    // right branch
   *      (NotRight(SuccPos(0)), 1)
@@ -112,13 +112,13 @@ package edu.cmu.cs.ls.keymaerax
   * `   __⟨v:=2*v+1;⟩v!=0__ <-> 2*v+1!=0 `
   *
   * it is enough to point to the highlighted position
-  * using the "<> diamond" axiom fact
+  * using the Ax.diamond axiom fact
   * `  ![a;]!p(||) <-> __⟨a;⟩p(||)__ `
   * at the highlighted position to reduce the proof to a proof of
   *
   * `  !__[v:=2*v+1;]!(v!=0)__ <-> 2*v+1!=0 `
   *
-  * which is, in turn, easy to prove by pointing to the highlighted position using the "[:=] assign" axiom
+  * which is, in turn, easy to prove by pointing to the highlighted position using the Ax.assignbAxiom axiom
   * `  __[x:=t();]p(x)__ <-> p(t())`
   * at the highlighted position to reduce the proof to
   *
@@ -140,18 +140,18 @@ package edu.cmu.cs.ls.keymaerax
   * import TactixLibrary._
   * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
   * val proof = TactixLibrary.proveBy("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula,
-  *   // use "<> diamond" axiom backwards at the indicated position on
+  *   // use Ax.diamond axiom backwards at the indicated position on
   *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
-  *   useExpansionAt("<> diamond")(1, 0::Nil) &
-  *   // use "[:=] assign" axiom forward at the indicated position on
+  *   useExpansionAt(Ax.diamond)(1, 0::Nil) &
+  *   // use Ax.assignbAxiom axiom forward at the indicated position on
   *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
-  *   useAt("[:=] assign")(1, 0::0::Nil) &
+  *   useAt(Ax.assignbAxiom(1, 0::0::Nil) &
   *   // use double negation at the indicated position on
   *   // |- __!!q(2*v+1)__ <-> q(2*v+1)
-  *   useAt("!! double negation")(1, 0::Nil) &
+  *   useAt(Ax.doubleNegation)(1, 0::Nil) &
   *   // close by (an instance of) reflexivity |- p() <-> p()
   *   // |- q(2*v+1) <-> q(2*v+1)
-  *   byUS("<-> reflexive")
+  *   byUS(Ax.equivReflexive)
   * )
   * }}}
   * Another example is:
@@ -159,18 +159,18 @@ package edu.cmu.cs.ls.keymaerax
   * import TactixLibrary._
   * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
   * val proof = TactixLibrary.proveBy("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula,
-  *   // use "<> diamond" axiom backwards at the indicated position on
+  *   // use Ax.diamond axiom backwards at the indicated position on
   *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
-  *   useExpansionAt("<> diamond")(1, 0::Nil) &
-  *   // use "[++] choice" axiom forward at the indicated position on
+  *   useExpansionAt(Ax.diamond)(1, 0::Nil) &
+  *   // use Ax.choiceb axiom forward at the indicated position on
   *   // |- !__[a;++b;]!p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
-  *   useAt("[++] choice")(1, 0::0::Nil) &
-  *   // use "<> diamond" axiom forward at the indicated position on
+  *   useAt(Ax.choiceb)(1, 0::0::Nil) &
+  *   // use Ax.diamond axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __&lt;a;&gt;p(x)__ | &lt;b;&gt;p(x)
-  *   useExpansionAt("<> diamond")(1, 1::0::Nil) &
-  *   // use "<> diamond" axiom forward at the indicated position on
+  *   useExpansionAt(Ax.diamond)(1, 1::0::Nil) &
+  *   // use Ax.diamond axiom forward at the indicated position on
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __&lt;b;&gt;p(x)__
-  *   useExpansionAt("<> diamond")(1, 1::1::Nil) &
+  *   useExpansionAt(Ax.diamond)(1, 1::1::Nil) &
   *   // use propositional logic to show
   *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
   *   prop
@@ -182,23 +182,23 @@ package edu.cmu.cs.ls.keymaerax
   *  import TactixLibrary._
   *  // Proof by pointing with steps of  |- ⟨a++b⟩p(x) <-> (⟨a⟩p(x) | ⟨b⟩p(x))
   *  val proof = TactixLibrary.proveBy("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula,
-  *    // use "<> diamond" axiom backwards at the indicated position on
+  *    // use Ax.diamond axiom backwards at the indicated position on
   *    // |- __⟨a++b⟩p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    useExpansionAt("<> diamond")(1, 0::Nil) &
+  *    useExpansionAt(Ax.diamond)(1, 0::Nil) &
   *    // |- !__[a;++b;]!p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    // step "[++] choice" axiom forward at the indicated position
+  *    // step Ax.choiceb axiom forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
   *    // |- __!([a;]!p(x) & [b;]!p(x))__  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step deMorgan forward at the indicated position
   *    stepAt(1, 0::Nil) &
   *    // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    // step "<> diamond" forward at the indicated position
+  *    // step Ax.diamond forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
   *    // |- ⟨a⟩p(x) | __![b;]!p(x)__  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    // step "<> diamond" forward at the indicated position
+  *    // step Ax.diamond forward at the indicated position
   *    stepAt(1, 0::1::Nil) &
   *    // |- ⟨a⟩p(x) | ⟨b⟩p(x)  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    byUS("<-> reflexive")
+  *    byUS(Ax.equivReflexive)
   *  )
   * }}}
   *
@@ -210,16 +210,16 @@ package edu.cmu.cs.ls.keymaerax
   *
   * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
   *
-  * and using the "[++] choice" axiom fact
+  * and using the Ax.choiceb axiom fact
   * `  __[a;++b;]p(||)__ <-> [a;]p(||) & [b;]p(||) `
   * to reduce the proof to a proof of
   *
   * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `
   *
-  * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
+  * which is, in turn, easy to prove by pointing to the assignments using Ax.assignbAxiom axioms
   * and ultimately asking propositional logic.
   *
-  * More proofs by pointing are shown in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]] source code.
+  * More proofs by pointing are shown in [[edu.cmu.cs.ls.keymaerax.btactics.Ax]] source code.
   *
   *
   * ===Proof by Congruence===
@@ -278,7 +278,7 @@ package edu.cmu.cs.ls.keymaerax
   *   // chase the differential prime away in the left postcondition
   *   chase(1, 0:: 1 :: Nil) &
   *   // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
-  *   byUS("<-> reflexive")
+  *   byUS(Ax.equivReflexive)
   * )
   * }}}
   * Yet [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]] is also useful to chase away other operators, say, modalities:
@@ -286,7 +286,7 @@ package edu.cmu.cs.ls.keymaerax
   * import TactixLibrary._
   * // proof by chase of |- [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1
   * val proof = TactixLibrary.proveBy(
-  *   Sequent(IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
+  *   "[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula,
   *   // chase the box in the succedent away
   *   chase(1,Nil) &
   *   // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)

@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
@@ -388,7 +390,7 @@ object Kaisar {
         case Auto() => TactixLibrary.master()
         case RCF() => TactixLibrary.QE()
         case SmartQE() => ArithmeticSpeculativeSimplification.speculativeQE
-        case CloseId() => TactixLibrary.closeId
+        case CloseId() => TactixLibrary.id
       }
     interpret(e, pr)
   }
@@ -649,7 +651,7 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
             ,  nil )
         ),
           DebuggingTactics.debug("e", doPrint = doPrint) &
-          /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
+          /* show */ cohideR(2) & useAt(Ax.K, PosInExpr(Nil))(1,Nil)) &
       hide(-1) &
           DebuggingTactics.debug("before recur", doPrint = doPrint)
       polyK(interpret(if(onSecond) { nil <(nil, e)} else {e}, pr), facts)
@@ -756,7 +758,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           else {
           def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = ElidingProvable(rotAnte(pr.underlyingProvable))
           val e =
-            TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
+            TacticFactory.anon((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
           e
         }
       val e:BelleExpr =
@@ -840,9 +842,9 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
 
 private def unsaveVars(pr:Provable, bvs:Set[Variable], rewritePost:Boolean = false, hide:Boolean = true):BelleExpr = {
   val poses = List.tabulate(bvs.size)({case i => AntePosition(bvs.size + pr.subgoals.head.ante.length - i)})
-  poses.foldLeft(nil)({case (acc, pos) =>
+  poses.foldLeft[BelleExpr](nil)({case (acc, pos) =>
     val numRens = pos.index0
-    val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft(nil)({case (acc,e) => acc & e})
+    val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft[BelleExpr](nil)({case (acc,e) => acc & e})
     val doHide = if(hide) {hideL(pos)} else nil
     val renss = if(rewritePost) {rens & DebuggingTactics.debug("Rewriting post " + pos, doPrint = true) & TactixLibrary.eqL2R(pos)(SuccPosition(1))} else rens
     acc & DebuggingTactics.debug("unsaving " + pos, doPrint = true) & /*(TactixLibrary.eqL2R(pos)('L)*)*/ renss & DebuggingTactics.debug("unsave huh " + pos, doPrint = true)& doHide & DebuggingTactics.debug("unsaved " + pos, doPrint = true)})
@@ -862,7 +864,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val hh = h.update(hp.x.name, theta)
           var gsub:Option[Provable] = None
           try {
-            gsub = Some(interpret(useAt("[:=] assign")(1), g))
+            gsub = Some(interpret(useAt(Ax.assignbAxiom)(1), g))
           } catch {
             case e : Throwable =>
               println("Doing equational assignment because of " + e)
@@ -902,7 +904,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           assert(pr2.isProved, "Failed to prove subgoal in subproof " + sp(1) + ", left behind provable " + pr2.prettyString)
           val pp1:Provable = saveVars(g,bvs.toSet, invCurrent = false)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
-          val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
+          val e = poses.foldLeft[BelleExpr](nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
           //
           //
           //
@@ -921,7 +923,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val ppb2 = interpret(boxAnd(1) & andR(1),ppb1)
           val ppc = Provable.startProof(ppb2.subgoals.tail.head)
           val ppc1 = interpret(e, ppc)
-          val ppc2 = interpret(useAt("V vacuous")(1), ppc1)
+          val ppc2 = interpret(useAt(Ax.V)(1), ppc1)
           val ppc3 = interpret(prop, ppc2)
           val ppd = Provable.startProof(ppb2.subgoals.head)
           val ppd1 = interpret(unsaveVars(g, bvs.toSet, rewritePost = false, hide = false), ppd)
@@ -1028,9 +1030,9 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
         case (RDSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]), _) => ???
         case (RDAssignAny(x:Variable, xVal:Term), _)  => ???
         case (_, Box(Compose(a,b),p)) =>
-          eval(brule, sp, h, c, interpret(useAt("[;] compose")(1), g))
+          eval(brule, sp, h, c, interpret(useAt(Ax.composeb)(1), g))
         case (_, Box(Test(_),p)) =>
-          eval(brule, sp, h, c, interpret(useAt("[?] test")(1), g))
+          eval(brule, sp, h, c, interpret(useAt(Ax.testb)(1), g))
         case (RBCase(pats), fml) =>
           fml match {
             case Box(Choice(a,b), p) =>
@@ -1064,7 +1066,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val upsucc = ifilter({case (x,i) => !hideInds.contains(i)}:((Formula,Int) => Boolean), {case (x,i) => x}:((Formula,Int) => Formula), succ)
       val cxts = upsucc.map(pmatch(expanded,_, c, g.subgoals.head.ante))
       val ccc = cxts.foldLeft(c)({case(acc,x) => x.concat(acc)})
-      val hideTac = hideInds.reverse.foldLeft(TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
+      val hideTac = hideInds.reverse.foldLeft[BelleExpr](TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
       val prIn = interpret(hideTac, g)
       val pr =eval(proof, h, ccc, prIn)
       assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString + "\\n\\n at " + g.prettyString)

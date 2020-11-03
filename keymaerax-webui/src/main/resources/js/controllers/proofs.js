@@ -114,7 +114,10 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
 
   $scope.deleteProof = function(proof) {
     $http.post('user/' + $scope.userId + "/proof/" + proof.id + "/delete").success(function(data) {
-       $route.reload();
+       if (data.success) {
+         var idx = $scope.proofs.indexOf(proof)
+         if (idx > -1) $scope.proofs.splice(idx, 1);
+       }
     });
   };
 
@@ -213,7 +216,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     });
     $scope.$emit('routeLoaded', {theview: 'proofs'});
   } else {
-    $http.get('models/users/' + $scope.userId + "/proofs").success(function(data) {
+    $http.get('proofs/users/' + $scope.userId).success(function(data) {
       $scope.proofs = data;
     });
     $scope.$emit('routeLoaded', {theview: 'allproofs'});

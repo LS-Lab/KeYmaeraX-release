@@ -7,6 +7,10 @@ Needs["MATLink`"]
 BeginPackage["BarrierCertificates`"];
 
 
+(* This should be at a higher level than primitives, probably... *)
+SplittingBarrierMATLAB::usage="SplittingBarrierMATLAB[problem_List] uses SOSBarrierMATLAB internally but automatically splits problems";
+
+
 SOSBarrierMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
 Options[SOSBarrierMATLAB]= {Lambda -> {}, MaxDeg -> 10};
 
@@ -107,13 +111,24 @@ DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars](*,JacobianDeterminant[vf,var
 
 
 SOSBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
-{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas},
+{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas,allvars,cvars,rvars,vfc,Qc,avars},
 
 Print["Attempting to generate a barrier certificate with SOS Programming"];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
 Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
+
+(* TODO: perhaps these should be passed in directly *)
+allvars=Union[Variables[init],Variables[unsafe],Variables[Q],Variables[vf]];
+cvars = Complement[allvars, vars];
+rvars = Complement[vars,cvars];
+avars=Join[rvars,cvars];
+
+Qc = Union[Q,Select[init,Intersection[Variables[#],rvars]=={}&]];
+
+(* Extend vf with constant equations *)
+vfc=Join[vf,ConstantArray[0,Length[cvars]]];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
@@ -129,18 +144,21 @@ sosprog="
 clear;
 % Inputs from Mathematica
 % Variables
-pvar "<>StringRiffle[Map[MmaToMatlab, vars], " "]<>";
-vars = "<>MmaToMatlab[vars]<>";
+pvar "<>StringRiffle[Map[MmaToMatlab, avars], " "]<>";
+vars = "<>MmaToMatlab[avars]<>";
+rvars= "<>MmaToMatlab[rvars]<>";
+cvars= "<>MmaToMatlab[cvars]<>";
 
 % Problem specification
 % The vector field for each coordinate
-field = "<>MmaToMatlab[vf]<>";
+field = "<>MmaToMatlab[vfc]<>";
 % Conj. Polynomials characterizing the initial set
 inits = "<>MmaToMatlab[init]<>";
 % Conj. Polynomials characterizing the unsafe set
 unsafes = "<>MmaToMatlab[unsafe]<>" ;
 % Conj. Polynomials characterizing the ev. domain
-dom = "<>MmaToMatlab[Q]<>" ;
+dom = "<>MmaToMatlab[Qc]<>" ;
+g = 1+0*vars(1) %"<>MmaToMatlab[1+Total[rvars^2]]<>";
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
@@ -165,8 +183,14 @@ dom_dim = length(dom);
 for deg = mindeg : maxdeg
     sosdeg = ceil(sqrt(deg));
     fprintf('monomial degree: %i sos degree: %i\\n', deg, sosdeg);
-    monvec = vertcat(monomials(vars,0:1:deg),monheu);
-    monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
+    if size(cvars) == 0
+        monvec = vertcat(monomials(rvars,0:1:deg),monheu);
+        monvec2 = vertcat(monomials(rvars,0:1:sosdeg),monheu2);        
+    else
+        monvec = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:deg}),monheu);
+        monvec2 = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:sosdeg}),monheu2);
+    end
+    % monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
     for i = 1 : length(lambdas)
         lambda = lambdas(i);
         fprintf('Trying lambda: \\n');
@@ -202,9 +226,15 @@ for deg = mindeg : maxdeg
               dB = dB+diff(B,vars(i))*field(i);
             end
 
-            % Constrain the Lie derivative
-            expr = lambda * B - dB;
+            dg = 0*vars(1);
+            for i = 1:length(vars)
+              dg = dg+diff(g,vars(i))*field(i);
+            end
 
+            % Constrain the Lie derivative
+            expr = lambda * B * g - dB*g+ B*dg;
+
+			% expr = lambda * B - dB;
             if dom_dim > 0
                 % SOSes for each barrier in domain
                 for i=1:dom_dim
@@ -216,8 +246,14 @@ for deg = mindeg : maxdeg
             end
 
             opt.params.fid = 0;
-        %try OLD position of try
+
+            lastwarn('');
             prog = sossolve(prog,opt);
+            [warnMsg, warnId] = lastwarn;
+            if (~isempty(warnMsg))
+               FAIL
+            end
+
             feasibility = prog.solinfo.info.feasratio;
             if feasibility >= minfeas
                 B2 = sosgetsol(prog,B)
@@ -230,6 +266,7 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
+
 sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (*Print[sosprog];*)
@@ -576,6 +613,17 @@ For[i=1,i<=OptionValue[MaxDeg],i++,
 	{lambda,heulambdas}]];
 Print["No feasible solution found by Linear Programming."];
 Throw[{}]]];
+
+
+SplittingBarrierMATLAB[{ pre_, ode_List, post_}]:=Catch[Module[
+{prenorm,postnorm,prei,posti},
+
+prenorm=Primitives`DNFNormalizeGtGeq[pre];
+postnorm=Primitives`CNFNormalizeGtGeq[post];
+
+Map[Function[{prev},Map[SOSBarrierMATLAB[{prev,ode,#}]&,postnorm]],prenorm]
+
+]]
 
 
 End[];

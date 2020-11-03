@@ -6,8 +6,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{Branches, TacticRecursors}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{BranchRecursor, Branches, TacticRecursor, TacticRecursors}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.annotation.switch
@@ -24,18 +25,27 @@ object TacticIndex {
   /** Branch recursors (parent tactics may branch). */
   type Branches = List[Branch]
 
+  /** Where to recurse on one branch. */
+  case class BranchRecursor(positions: List[PositionLocator])
+
+  /** Where to recurse on the many branches created by a tactic. */
+  case class TacticRecursor(branches: List[BranchRecursor])
+
   /**
     * Recursors list resulting siblings for subsequent chase (every recursor is itself
-    * a list, since tactics may branch).
+    * a list, since tactics may branch). Left=recursor on applying, Right=recursor on skipping (to chase inside)
     */
-  type TacticRecursors = List[(Sequent, Position) => Branches]
+  type TacticRecursors = (Sequent, Position) => Either[TacticRecursor, TacticRecursor]
 
   lazy val default: TacticIndex = new DefaultTacticIndex
 
-  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.forallStutter)
-  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.existsStutter)
+  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutter)
+  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
 }
 
+/**
+  * @see [[AxIndex]]
+  */
 trait TacticIndex {
   /** Recursors pointing to the result positions of `tactic`. */
   def tacticRecursors(tactic: BelleExpr): TacticRecursors
@@ -49,82 +59,102 @@ trait TacticIndex {
 
 class DefaultTacticIndex extends TacticIndex {
 
-  private def one(pos: PositionLocator): Branches = (pos :: Nil) :: Nil
+  private val stop: TacticRecursor = TacticRecursor(Nil)
+  private def one(pos: List[PositionLocator]): TacticRecursor = TacticRecursor(BranchRecursor(pos) :: Nil)
+  private def one(pos: PositionLocator): TacticRecursor = one(pos :: Nil)
+  private def two(p1: List[PositionLocator], p2: List[PositionLocator]): TacticRecursor = TacticRecursor(BranchRecursor(p1) :: BranchRecursor(p2) :: Nil)
+  private def two(p1: PositionLocator, p2: PositionLocator): TacticRecursor = two(p1 :: Nil, p2 :: Nil)
 
-  /**
-   * Return tactic index with list of recursors on other sibling, i.e., for chasing after the tactic is applied.
-   */
+
+  /** Return tactic index with list of recursors on other sibling, i.e., for chasing after the tactic is applied. */
   def tacticRecursors(tactic: BelleExpr): TacticRecursors = (tactic: @switch) match {
+    //@note IMPORTANT: add only tactics with tactic annotations here! otherwise, will match with whatever based on the name ANON
     //@note expected formulas are used to fall back to search
-    case TactixLibrary.notL =>
-      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length), child(s(p.top))))) :: Nil
-    case TactixLibrary.andL =>
-      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), right(s(p.top))))) ::
-      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length-1), left(s(p.top))))) :: Nil
-    case TactixLibrary.orL =>
-      ((s: Sequent, p: Position) => (new Fixed(p, left(s(p.top)))::Nil)::(new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
-    case TactixLibrary.implyL =>
-      ((s: Sequent, p: Position) =>
-        (Fixed(SuccPosition.base0(s.succ.length), left(s(p.top)))::Nil)::
-        (new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
-    case TactixLibrary.equivL =>
-      ((s: Sequent, p: Position) =>
-        (new Fixed(p, Some(And(left(s(p.top)).get, right(s(p.top)).get)))::Nil)::
-        (new Fixed(p, Some(And(Not(left(s(p.top)).get), Not(right(s(p.top)).get))))::Nil)::Nil) :: Nil
-    case TactixLibrary.notR =>
-      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), child(s(p.top))))) :: Nil
-    case TactixLibrary.implyR =>
-      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), left(s(p.top))))) ::
-      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.top))))) :: Nil
-    case TactixLibrary.orR =>
-      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length), right(s(p.top))))) ::
-      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.top))))) :: Nil
-    case TactixLibrary.andR =>
-      ((s: Sequent, p: Position) => (new Fixed(p, left(s(p.top)))::Nil)::(new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
-    case TactixLibrary.equivR =>
-      ((s: Sequent, p: Position) =>
-        (Fixed(AntePosition.base0(s.ante.length), left(s(p.top)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.top)))::Nil)::
-        (Fixed(AntePosition.base0(s.ante.length), right(s(p.top)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.top)))::Nil)::Nil) :: Nil
-    case TactixLibrary.step => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.allR => ((s: Sequent, p: Position) => one(new Fixed(p, child(s(p.top))))) :: Nil
-    case TacticIndex.allLStutter => ((s: Sequent, p: Position) => {
-      //@note skip ahead to programs
-      var (childPos, c) = (PosInExpr(0::Nil), child(s(p.top)))
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
-          case _: Modal => childPos = p; c = Some(e); Left(Some(ExpressionTraversal.stop))
-          case _ => Left(None)
-        }
-      }, s(p.top))
-      one(new Fixed(p ++ childPos, c))
-    }) :: Nil
-    case TactixLibrary.existsL => ((s: Sequent, p: Position) => one(new Fixed(p, child(s(p.top))))) :: Nil
-    case TacticIndex.existsRStutter => ((s: Sequent, p: Position) => {
-      //@note skip ahead to programs
-      var (childPos, c) = (PosInExpr(0::Nil), child(s(p.top)))
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
-          case _: Modal => childPos = p; c = Some(e); Left(Some(ExpressionTraversal.stop))
-          case _ => Left(None)
-        }
-      }, s(p.top))
-      one(new Fixed(p ++ childPos, c))
-    }) :: Nil
-    case TactixLibrary.ODE => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.solve => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.notL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(one(Fixed(SuccPosition.base0(s.succ.length), child(s(p.checkTop)))))
+      else Right(one(child(s, p)))
+    case TactixLibrary.andL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(
+        one(Fixed(AntePosition.base0(s.ante.length), right(s(p.checkTop))) ::
+            Fixed(AntePosition.base0(s.ante.length-1), left(s(p.checkTop))) :: Nil))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.orL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(two(Fixed(p, left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.implyL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(two(Fixed(SuccPosition.base0(s.succ.length), left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.equivL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(two(
+        Fixed(p, Some(And(left(s(p.checkTop)).get, right(s(p.checkTop)).get))),
+        Fixed(p, Some(And(Not(left(s(p.checkTop)).get), Not(right(s(p.checkTop)).get))))))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.notR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(one(Fixed(AntePosition.base0(s.ante.length), child(s(p.checkTop)))))
+      else Right(one(child(s, p)))
+    case TactixLibrary.implyR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(
+        one(Fixed(AntePosition.base0(s.ante.length), left(s(p.checkTop))) ::
+            Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.checkTop))) :: Nil))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.orR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(
+        one(Fixed(SuccPosition.base0(s.succ.length), right(s(p.checkTop))) ::
+            Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.checkTop))) :: Nil))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.andR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(two(Fixed(p, left(s(p.checkTop))), Fixed(p, right(s(p.checkTop)))))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.equivR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(two(
+        Fixed(AntePosition.base0(s.ante.length), left(s(p.checkTop))) :: Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.checkTop))) :: Nil,
+        Fixed(AntePosition.base0(s.ante.length), right(s(p.checkTop))) :: Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.checkTop))) :: Nil))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
+    case TactixLibrary.step => (_: Sequent, p: Position) => Left(one(Fixed(p)))
+    case TactixLibrary.allR => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(one(Fixed(p, child(s(p.checkTop)))))
+      else Right(one(child(s, p)))
+    case TacticIndex.allLStutter => (s: Sequent, p: Position) => {
+      val (childPos, c) = (PosInExpr(0::Nil), s.sub(p) match {
+        case Some(f: Forall) => child(f)
+        case _ => throw new IllFormedTacticApplicationException("Position " + p.prettyString + " does not point to universal quantifier in " + s.prettyString)
+      })
+      Left(one(new Fixed(p ++ childPos, c)))
+    }
+    case TactixLibrary.existsL => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(one(new Fixed(p, child(s(p.checkTop)))))
+      else Right(one(child(s, p)))
+    case TacticIndex.existsRStutter => (s: Sequent, p: Position) => {
+      val (childPos, c) = (PosInExpr(0::Nil), s.sub(p) match {
+        case Some(f: Exists) => child(f)
+        case _ => throw new IllFormedTacticApplicationException("Position " + p.prettyString + " does not point to existential quantifier in " + s.prettyString)
+      })
+      Left(one(new Fixed(p ++ childPos, c)))
+    }
+    case TactixLibrary.ODE => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
+    case TactixLibrary.solve => (_: Sequent, p: Position) => Left(one(new Fixed(p)))
+    case PropositionalTactics.autoMP => (s: Sequent, p: Position) =>
+      if (p.isTopLevel) Left(one(new Fixed(p.checkAnte.checkTop)))
+      else Right(one(left(s, p) :: right(s, p) :: Nil))
     // default position: stop searching
-    case _ => Nil
+    case _ => (_: Sequent, _: Position) => Left(stop)
   }
 
-  private def child(fml: Formula) = fml match {
-    case f: UnaryCompositeFormula => Some(f.child)
-    case Box(_, p) => Some(p)
-    case Diamond(_, p) => Some(p)
-    case Forall(_, p) => Some(p)
-    case Exists(_, p) => Some(p)
-  }
-  private def left(fml: Formula) = fml match { case f: BinaryCompositeFormula => Some(f.left) }
-  private def right(fml: Formula) = fml match { case f: BinaryCompositeFormula => Some(f.right) }
+  private def child[T <: Expression](e: Option[T]): Option[Formula] = e.map({
+    case f: UnaryCompositeFormula => f.child
+    case Box(_, p) => p
+    case Diamond(_, p) => p
+    case Forall(_, p) => p
+    case Exists(_, p) => p
+  })
+  private def child(fml: Formula): Option[Formula] = child(Some(fml))
+  private def child(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(0::Nil), child(s.sub(p)))
+  private def left(e: Option[Expression]): Option[Formula] = e.map({ case f: BinaryCompositeFormula => f.left })
+  private def left(fml: Formula): Option[Formula] = left(Some(fml))
+  private def left(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(0::Nil), left(s.sub(p)))
+  private def right(e: Option[Expression]): Option[Formula] = e.map({ case f: BinaryCompositeFormula => f.right })
+  private def right(fml: Formula): Option[Formula] = right(Some(fml))
+  private def right(s: Sequent, p: Position): PositionLocator = Fixed(p ++ PosInExpr(1::Nil), right(s.sub(p)))
 
   // lookup canonical axioms for an expression (index)
 
@@ -153,7 +183,7 @@ class DefaultTacticIndex extends TacticIndex {
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)
       case And(_, _) => (TactixLibrary.andL::Nil, TactixLibrary.andR::Nil)
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)
-      case Imply(_, _) => (TactixLibrary.implyL::Nil, TactixLibrary.implyR::Nil)
+      case Imply(_, _) => (PropositionalTactics.autoMP::TactixLibrary.implyL::Nil, TactixLibrary.implyR::Nil)
       case Equiv(_, _) => (TactixLibrary.equivL::Nil, TactixLibrary.equivR::Nil)
       case True => (Nil, ProofRuleTactics.closeTrue::Nil)
       case False => (ProofRuleTactics.closeFalse::Nil, Nil)

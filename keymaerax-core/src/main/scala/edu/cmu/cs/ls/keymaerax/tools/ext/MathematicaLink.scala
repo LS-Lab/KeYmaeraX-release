@@ -11,11 +11,10 @@ import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
-import org.apache.logging.log4j.scala.Logging
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,7 +37,7 @@ trait MathematicaLink {
   /** Runs command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
     * @ensures cmd is freed and should not ever be used again.
     */
-  def run[T](cmd: () => T, executor: ToolExecutor[T]): T
+  def run[T](cmd: () => T, executor: ToolExecutor): T
 
   /** Cancels the current request.
     *
@@ -78,17 +77,26 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-  protected val mathematicaExecutor: ToolExecutor[T] = new ToolExecutor(1)
+  protected var mathematicaExecutor: ToolExecutor = _
 
-  override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(memoryConstrained(timeConstrained(cmd)), m2k)
+  /** @inheritdoc */
+  override def runUnchecked(cmd: String): (String, T) = runUnchecked(cmd, m2k)
 
-  override def run(cmd: MExpr): (String, T) = {
+  /** @inheritdoc */
+  override def run(cmd: MExpr): (String, T) = run(cmd, m2k)
+
+  /** Run `cmd` with a local converter back from Mathematica. */
+  private[tools] def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
+    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
+
+  /** Run `cmd` with a local converter back from Mathematica. */
+  private[tools] def run[S](cmd: MExpr, localm2k: M2KConverter[S]): (String, S) = {
     val commandRunner = link match {
       case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.ml)
     }
     (cmd.toString, link.run(() => {
       try {
-        commandRunner.run(memoryConstrained(timeConstrained(cmd)), m2k)._2
+        commandRunner.run(memoryConstrained(timeConstrained(cmd)), localm2k)._2
       } catch {
         case ex: IllegalArgumentException =>
           throw ConversionException("Error executing " + cmd.toString + " command", ex)
@@ -96,15 +104,13 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
     }, mathematicaExecutor))
   }
 
-  def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
-    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
-
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
-  def shutdown(): Unit = mathematicaExecutor.shutdown()
+  def init(): Boolean = { mathematicaExecutor = new ToolExecutor(1); true }
+  def shutdown(): Unit = if (mathematicaExecutor != null) mathematicaExecutor.shutdown()
 
   protected def timeConstrained(cmd: MExpr): MExpr =
     if (timeout < 0) cmd
-    else new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(cmd, new MExpr(timeout)))
+    else MathematicaOpSpec.timeConstrained(cmd, MathematicaOpSpec.int(timeout))
 
   protected def timeConstrained(cmd: String): String =
     if (timeout < 0) cmd
@@ -112,7 +118,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
 
   protected def memoryConstrained(cmd: MExpr): MExpr =
     if (memoryLimit < 0) cmd
-    else new MExpr(new MExpr(Expr.SYMBOL,  "MemoryConstrained"), Array(cmd, new MExpr(memoryLimit*1000000)))
+    else MathematicaOpSpec.memoryConstrained(cmd, MathematicaOpSpec.long(memoryLimit*1000000))
 
   protected def memoryConstrained(cmd: String): String =
     if (memoryLimit < 0) cmd
@@ -178,14 +184,16 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         }
         val args =
           if (machine.isEmpty) {
-            val process = startKernel(linkName, port)
-            Thread.sleep(500) // wait for MathKernel to stay alive
-            process match {
-              case Some(process: Process) if process.isAlive() =>
-                mathProcess = Some(process)
-              case Some(process: Process) if !process.isAlive() =>
-                mathProcess = None
-                throw new IllegalStateException(engineName + " terminated with exit code " + process.exitValue() + "; check that your license is valid and your computer is online for license checking")
+            startKernel(linkName, port) match {
+              case Some(process: Process) =>
+                for (_ <- 1 to 10; if !process.isAlive()) {
+                  Thread.sleep(200) // wait for MathKernel to stay alive
+                }
+                if (process.isAlive()) mathProcess = Some(process)
+                else {
+                  mathProcess = None
+                  throw new IllegalStateException(engineName + " terminated with exit code " + process.exitValue() + "; check that your license is valid and your computer is online for license checking")
+                }
               case _ => mathProcess = None
             }
             ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::port::Nil).toArray
@@ -195,7 +203,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         MathLinkFactory.createKernelLink(args)
       } else {
         logger.info("Launching " + engineName)
-        val args = ("-linkmode"::"launch"::"-linkprotocol"::"tcpip"::"-linkname"::linkName + " -mathlink"::Nil).toArray
+        val args = ("-linkmode" :: "launch" :: "-linkprotocol" :: "tcpip" :: "-linkname" :: linkName+" -mathlink" :: Nil).toArray
         MathLinkFactory.createKernelLink(args)
       }
 
@@ -304,7 +312,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
+  override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     val taskId = executor.schedule(_ => { ml.synchronized { cmd() } })
 
@@ -318,7 +326,11 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
           executor.remove(taskId)
           throw ex
         case ex: ToolExternalException =>
-          logger.warn(ex)
+          // external but Mathematica still functional
+          executor.remove(taskId)
+          throw ex
+        case ex: ToolCriticalException =>
+          logger.warn(ex.getMessage, ex)
           executor.remove(taskId, force = true)
           try {
             restart()
@@ -338,13 +350,13 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   }
 
   def cancel(): Boolean = {
-    ml.abortEvaluation()
+    if (ml != null) ml.abortEvaluation()
     true
   }
 
   /** Returns the version. */
   private def getVersion: Version = {
-    ml.evaluate(MathematicaOpSpec.versionNumber.op)
+    ml.evaluate(MathematicaOpSpec.versionNumber.op.toString)
     ml.waitForAnswer()
     val (major, minor) = importResult(
       ml.getExpr,
@@ -354,7 +366,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else ("Unknown", "Unknown")
       })
-    ml.evaluate(MathematicaOpSpec.releaseNumber.op)
+    ml.evaluate(MathematicaOpSpec.releaseNumber.op.toString)
     ml.waitForAnswer()
     val release = importResult(ml.getExpr, _.toString)
     Version(major, minor, release)
@@ -397,7 +409,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         case e: ExprFormatException => logger.warn("WARNING: Unable to determine " + engineName + " expiration date\n cause: " + e, e); None
       }
 
-      ml.evaluate(MathematicaOpSpec.licenseExpirationDate.op)
+      ml.evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)
       ml.waitForAnswer()
       importResult(ml.getExpr, licenseExpiredConverter)
     } finally {
@@ -500,7 +512,7 @@ class WolframScript extends MathematicaLink with Logging {
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
+  override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     val taskId = executor.schedule(_ => { wolframProcess.synchronized { cmd() } })
 
     executor.wait(taskId) match {
@@ -512,7 +524,7 @@ class WolframScript extends MathematicaLink with Logging {
           executor.remove(taskId)
           throw ex
         case ex: ToolExternalException =>
-          logger.warn(ex)
+          logger.warn(ex.getMessage, ex)
           executor.remove(taskId, force = true)
           try {
             restart()

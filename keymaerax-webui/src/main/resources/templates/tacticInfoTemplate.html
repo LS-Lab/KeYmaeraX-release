@@ -1,5 +1,9 @@
 <script type="text/ng-template" id="nameAndCodeNameTooltip.html">
-    <span><span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming is
+    <span>
+        <span ng-if="tactic.selectedDerivation().name !== tactic.selectedDerivation().longName">
+            {{tactic.selectedDerivation().longName}}
+        </span>
+        <span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming is
         <code>{{tactic.selectedDerivation().codeName}}(pos)</code> at <code>pos</code>.
         For example, at absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
         search locator <samp>{{tactic.selectedDerivation().codeName}}('R)</samp>.</span>
@@ -11,6 +15,7 @@
                  tooltip-placement="auto top-left" tooltip-popup-delay="1000">
                 <a ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                       long-name="{{tactic.selectedDerivation().longName}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
@@ -38,6 +43,7 @@
                  tooltip-placement="auto top-left" tooltip-popup-delay="1000">
                 <a ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                       long-name="{{tactic.selectedDerivation().longName}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
@@ -61,22 +67,26 @@
                ng-class="{'disabled' : tacticForm.$invalid}"
                ng-click="applyTactic(tactic.selectedDerivation().id)">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
             </a>
             <!-- Rule link: execute if form is valid, otherwise open details -->
             <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
                ng-click="applyInputTactic(tactic.selectedDerivation())">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
             </a>
             <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
                ng-click="tactic.selectedDerivation().showMissingInputError = true">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
             </a>
             <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
                ng-click="tactic.isOpen = !tactic.isOpen">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   long-name="{{tactic.selectedDerivation().longName}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 <b> ...</b>
             </a>
@@ -94,9 +104,11 @@
             </div>
         </div>
         <div class="panel-body" uib-collapse="!tactic.isOpen">
+            <div class=row>
             <div class="col-sm-12">
                 <k4-sequent-rule-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                       tactic="tactic.selectedDerivation()"></k4-sequent-rule-info>
+            </div>
             </div>
         </div>
     </div>

@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.hydra.{StringToVersion, VersionString}
+import edu.cmu.cs.ls.keymaerax.Version
+import edu.cmu.cs.ls.keymaerax.Version.VersionString
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
@@ -26,34 +27,34 @@ class UpdateCheckerTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   private val invalidVersionStrings = "4" :: "4.1a22" :: "4.1a.2" :: "4.1.1a" :: Nil
 
   "Version string converter" should "convert correct version strings" in {
-    versionStrings.map({case (s, v) => (s, StringToVersion(s), v)}).
+    versionStrings.map({case (s, v) => (s, Version(s), v)}).
       foreach({case (s, actual, expected) => withClue(s"Parsed $s") { actual shouldBe expected}})
   }
 
   it should "refuse to convert invalid strings" in {
     invalidVersionStrings.foreach(s => withClue(s"Parsed $s") {
-      the [Exception] thrownBy StringToVersion(s) should have message s"requirement failed: Unexpected version string $s" })
+      the [Exception] thrownBy Version(s) should have message s"requirement failed: Unexpected version string $s" })
   }
 
   "Update checker" should "correctly compare versions" in {
     val versions: Map[String, Int] = versionStrings.map(_._1).zipWithIndex.toMap
-    versionStrings.map(_._1).combinations(2).foreach({case (s1 :: s2 :: Nil) =>
+    versionStrings.map(_._1).combinations(2).foreach({case s1 :: s2 :: Nil =>
       withClue (s"Comparing $s1 with $s2") {
-        StringToVersion(s1).compareTo(StringToVersion(s2)) shouldBe versions(s1).compareTo(versions(s2))
+        Version(s1).compareTo(Version(s2)) shouldBe versions(s1).compareTo(versions(s2))
       }
     })
   }
 
   it should "work" in {
-    StringToVersion("4.0b1") compareTo StringToVersion("4.0b1") shouldBe 0
-    StringToVersion("4.0b1") >= StringToVersion("4.0b1") shouldBe true
-    StringToVersion("4.0b1") > StringToVersion("4.0a9") shouldBe true
-    StringToVersion("5.0") > StringToVersion("4.0") shouldBe true
-    StringToVersion("4.0") > StringToVersion("4.0b9") shouldBe true
-    StringToVersion("4.1b1") > StringToVersion("4.0b1") shouldBe true
-    StringToVersion("4.1b1") >= StringToVersion("4.0b1") shouldBe true
-    StringToVersion("4.0b1") < StringToVersion("4.1b1") shouldBe true
-    StringToVersion("4.1b1") < StringToVersion("4.0b1") shouldBe false
+    Version("4.0b1") compareTo Version("4.0b1") shouldBe 0
+    Version("4.0b1") >= Version("4.0b1") shouldBe true
+    Version("4.0b1") > Version("4.0a9") shouldBe true
+    Version("5.0") > Version("4.0") shouldBe true
+    Version("4.0") > Version("4.0b9") shouldBe true
+    Version("4.1b1") > Version("4.0b1") shouldBe true
+    Version("4.1b1") >= Version("4.0b1") shouldBe true
+    Version("4.0b1") < Version("4.1b1") shouldBe true
+    Version("4.1b1") < Version("4.0b1") shouldBe false
   }
 
 }

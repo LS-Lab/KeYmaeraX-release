@@ -4,11 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import com.wolfram.jlink.{KernelLink, MathLinkException}
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, ToolCommunicationException, ToolExecutionException}
+import com.wolfram.jlink.{Expr, KernelLink, MathLinkException}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaInapplicableMethodException, MathematicaMathlinkException, MathematicaUnknownCauseCriticalException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
-import org.apache.logging.log4j.scala.Logging
 
 /** Interface for running and cancelling a Mathematica command. */
 trait MathematicaCommandRunner {
@@ -71,18 +71,19 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
 
   private val fetchMessagesCmd = "$MessageList"
 
+  private val useExprInterface = Configuration.getBoolean(Configuration.Keys.JLINK_USE_EXPR_INTERFACE).getOrElse(false)
   /** @inheritdoc */
   override def doRun[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T) = try {
     if (ml == null) throw ToolCommunicationException("No MathKernel set")
     val qidx: Long = ml.synchronized { JLinkMathematicaCommandRunner.queryIndex += 1; JLinkMathematicaCommandRunner.queryIndex }
-    val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
+    val indexedCmd = MathematicaOpSpec.list(MathematicaOpSpec.long(qidx), cmd)
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
     val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
     try {
-      logger.debug("Sending : " + checkErrorMsgCmd)
+      logger.debug("Sending : " + checkErrorMsgCmd.toString)
       ml.synchronized {
-        dispatch(checkErrorMsgCmd.toString)
-        getAnswer(qidx, m2k, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
+        dispatch(checkErrorMsgCmd)
+        getAnswer(qidx, m2k, indexedCmd) //@note disposes indexedCmd, do not use (except dispose) afterwards
       }
     } finally {
       //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
@@ -90,7 +91,10 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
       checkErrorMsgCmd.dispose()
     }
     //@note during normal execution, this disposes cmd twice (once via checkErrorMsgCmd) but J/Link ensures us this would be acceptable.
-  } finally { cmd.dispose() }
+  } finally {
+    cmd.dispose()
+    ml.newPacket() //@note done reading, clear the link for the next computation
+  }
 
   /** @inheritdoc */
   override def cancel(): Boolean = {
@@ -99,12 +103,13 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
   }
 
   /** Send command `cmd` for evaluation to Mathematica kernel straight away. */
-  private def dispatch(cmd: String): Unit = {
+  private def dispatch(cmd: Expr): Unit = {
     if (ml == null) throw ToolCommunicationException("No MathKernel set")
     try {
-      ml.evaluate(cmd)
+      if (useExprInterface) ml.evaluate(cmd)
+      else ml.evaluate(cmd.toString)
     } catch {
-      case ex: MathLinkException => throw ToolExecutionException("Error executing command " + cmd, ex)
+      case ex: MathLinkException => throw MathematicaMathlinkException("Error executing command " + cmd, ex)
     }
   }
 
@@ -120,34 +125,35 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
     * @throws ConversionException if the conversion back from Mathematica (using `converter`) fails
     * @return The result as string and converted to the expected result type.
     */
-  private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
+  private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: Expr): (String, T) = {
     if (ml == null) throw ToolCommunicationException("No MathKernel set")
     try {
       ml.waitForAnswer()
     } catch {
-      case ex: MathLinkException => throw ToolExecutionException("Error executing Mathematica command " + ctx, ex)
+      case ex: MathLinkException => throw MathematicaMathlinkException("Error executing Mathematica command " + ctx, ex)
     }
     importResult(ml.getExpr,
       res => {
         if (isAborted(res)) {
-          throw MathematicaComputationAbortedException(ctx)
+          throw MathematicaComputationAbortedException(ctx.toString)
         } else if (res == MathematicaOpSpec.exception.op) {
           // an exception occurred, rerun to get the messages
           ml.evaluate(ctx + ";" + fetchMessagesCmd)
           try {
             ml.waitForAnswer()
           } catch {
-            case ex: MathLinkException => throw ToolExecutionException("Error obtaining exception details for failed command " + ctx, ex)
+            case ex: MathLinkException => throw MathematicaMathlinkException("Error obtaining exception details for failed command " + ctx, ex)
           }
           val txtMsg = importResult(ml.getExpr, _.toString)
-          throw ToolExecutionException("Input " + ctx + " cannot be evaluated: " + txtMsg)
+          if (txtMsg.contains("nsmet")) throw MathematicaInapplicableMethodException("Input " + ctx + " is not solvable with the available methods, cause: " + txtMsg)
+          else throw ToolExecutionException("Input " + ctx + " cannot be evaluated, cause: " + txtMsg)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {
-            throw ToolExecutionException("JLink returned input as answer: " + res.toString)
+            throw MathematicaUnknownCauseCriticalException("JLink returned input as answer: " + res.toString)
           } else if (MathematicaOpSpec.list.applies(res) && res.args.length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
-            if (isAborted(theResult)) throw MathematicaComputationAbortedException(ctx)
+            if (isAborted(theResult)) throw MathematicaComputationAbortedException(ctx.toString)
             else (theResult.toString,
               try {
                 converter(theResult)
@@ -156,7 +162,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
                 case ex: Throwable => throw ConversionException("Error converting from Mathematica, returned result expression is: " + theResult.toString, ex)
               })
           } else {
-            throw ToolExecutionException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
+            throw MathematicaUnknownCauseCriticalException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
           }
         }
       })

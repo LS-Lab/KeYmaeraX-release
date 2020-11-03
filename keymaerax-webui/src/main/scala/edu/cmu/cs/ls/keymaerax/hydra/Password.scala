@@ -1,7 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
-import java.util.Base64
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
@@ -29,9 +30,7 @@ object Password {
    * which the Scala driver does not support. To get around this, make sure we only store NUL-free strings, it this
    * case by base-64 encoding them. Since base-conversions preserve entropy, this *shouldn't* damage the quality of
    * our passwords.*/
-  def sanitize(s:Array[Byte]): String = {
-    Base64.getEncoder.encode(s).toString
-  }
+  def sanitize(s: Array[Byte]): String = java.util.Base64.getEncoder.encodeToString(s)
 
   def hash(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
     val spec = new PBEKeySpec(password, salt, iterations, Math.min(160, salt.length*8))

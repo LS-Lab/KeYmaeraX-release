@@ -1,6 +1,21 @@
 {
-  "minVersion": "4.3.8",
+  "minVersion": "4.8",
   "autoUpgrades": [
-
+    {
+      "upgradeFrom": "4.3.8",
+      "scripts": [
+        {
+          "url": "/sql/upgrade438to480.sql"
+        }
+      ]
+    },
+    {
+      "upgradeFrom": "4.6.0",
+      "scripts": [
+        {
+          "url": "/sql/upgrade460to480.sql"
+        }
+      ]
+    }
   ]
 }

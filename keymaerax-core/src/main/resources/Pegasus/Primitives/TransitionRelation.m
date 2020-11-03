@@ -1,7 +1,8 @@
 (* ::Package:: *)
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* Load primitives package *)
-Needs["QualitativeAbstraction`",FileNameJoin[{Directory[],"Primitives","QualitativeAbstractionPolynomials.m"}]]
+Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]]
+Needs["ConicAbstractions`",FileNameJoin[{Directory[],"Primitives","ConicAbstractions.m"}]]
 
 
 (* ::Input:: *)
@@ -12,10 +13,24 @@ BeginPackage["TransitionRelation`"];
 
 
 ConstantDirections::usage="ConstantDirections[problem] determines if one of the coordinate axes has flow in constant direction"
+RightHandSideFactors::usage="Possibly used in TransitionRel"
+ConicAbstractionsFactors::usage="Possibly used in TransitionRel"
 TransitionRel::usage="Abstraction based on transition relation computation for neighboring cells";
 
 
 Begin["`Private`"]
+
+
+(* Here are a variety of methods for creating a partition *)
+RightHandSideFactors[problem_List] := Module[{},
+Return[Flatten[QualAbsPolynomials`SFactorList[problem]]];
+];
+
+
+(* This method for creating a partition uses techniques from Giacobbe's conic abstractions paper *)
+ConicAbstractionsFactors[problem_, splits_] := Module[{},
+Return[ConicAbstractions`ConicPartition[problem, splits]];
+];
 
 
 (*  Determine which directions the variables have to move in order to go from init to unsafe
@@ -86,16 +101,15 @@ Return[returnList];
 ]
 
 
-TransitionRel[problem_List]:=Module[{
+TransitionRel[problem_List, allPolyFactors_]:=Module[{
   pre,f,vars,Q,post,
   i, j, k, startRegion, partitionSpace, partitionSpaceSigns, newPartitionSpaceSigns, 
-  signList, signTuple, newPartitionSpace, componentIndex, componentList,allPolyFactors,fringeBeforeEval,
+  signList, signTuple, newPartitionSpace, componentIndex, componentList,fringeBeforeEval,
   moveDirectionInComponent, directionInComponent, evalAtList, reachableRegions,fringe, fringeElement, pointInRegion,
   invariantsCandidate, pointMap, regionIndex, signInRegion, samplePoints, polyChangeList, allInvariant,
   polyValInRegion, transitionSignList, transitionList, allTransitions,allTransitionsHelper, pointMapList, regionCandidate, positionOfRegionCand,pos},
 {pre,{f,vars,Q},post}=problem;
 (* factors from solving *)
-allPolyFactors = Flatten[QualitativeAbstraction`SFactorList[problem]];
 (*Print["all poly factors ",allPolyFactors];*)
 If[Length[allPolyFactors] == 0,
   Print["Unable to find partitioning polynomials"];

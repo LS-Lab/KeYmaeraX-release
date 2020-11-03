@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, MathematicaOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.{int, symbol}
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
@@ -13,76 +13,93 @@ object ExtMathematicaOpSpec {
 
   //<editor-fold desc="Literals">
 
-  val generatedParameters = LiteralMathOpSpec(symbol("GeneratedParameters"))
+  def generatedParameters: LiteralMathOpSpec = LiteralMathOpSpec(symbol("GeneratedParameters"))
 
-  val monomialOrder = LiteralMathOpSpec(symbol("MonomialOrder"))
+  def monomialOrder: LiteralMathOpSpec = LiteralMathOpSpec(symbol("MonomialOrder"))
 
-  val degreeReverseLexicographic = LiteralMathOpSpec(symbol("DegreeReverseLexicographic"))
+  def degreeReverseLexicographic: LiteralMathOpSpec = LiteralMathOpSpec(symbol("DegreeReverseLexicographic"))
 
-  val coefficientDomain = LiteralMathOpSpec(symbol("CoefficientDomain"))
+  def coefficientDomain: LiteralMathOpSpec = LiteralMathOpSpec(symbol("CoefficientDomain"))
 
-  val rationals = LiteralMathOpSpec(symbol("Rationals"))
+  def rationals: LiteralMathOpSpec = LiteralMathOpSpec(symbol("Rationals"))
+
+  def homeDirectory: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$HomeDirectory"))
+
+  def path: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Path"))
+
+  def infinity: Expr = applyFunc(symbol("DirectedInfinity"))(MathematicaOpSpec.int(1))
 
   //</editor-fold>
 
   //<editor-fold desc="Basic datastructures and operations">
 
-  val function = NaryMathOpSpec(symbol("Function"))
+  def function: NaryMathOpSpec = NaryMathOpSpec(symbol("Function"))
 
-  val map = NaryMathOpSpec(symbol("Map"))
+  def map: NaryMathOpSpec = NaryMathOpSpec(symbol("Map"))
 
-  val set = NaryMathOpSpec(symbol("Set"))
+  def set: NaryMathOpSpec = NaryMathOpSpec(symbol("Set"))
 
-  val setDelayed = NaryMathOpSpec(symbol("SetDelayed"))
+  def setDelayed: NaryMathOpSpec = NaryMathOpSpec(symbol("SetDelayed"))
 
-  val replaceAll = NaryMathOpSpec(symbol("ReplaceAll"))
+  def replaceAll: NaryMathOpSpec = NaryMathOpSpec(symbol("ReplaceAll"))
 
-  val module = NaryMathOpSpec(symbol("Module"))
+  def module: NaryMathOpSpec = NaryMathOpSpec(symbol("Module"))
 
-  val nestList = NaryMathOpSpec(symbol("NestList"))
+  def nestList: NaryMathOpSpec = NaryMathOpSpec(symbol("NestList"))
 
-  val compoundExpression = NaryMathOpSpec(symbol("CompoundExpression"))
+  def compoundExpression: NaryMathOpSpec = NaryMathOpSpec(symbol("CompoundExpression"))
 
-  val first = NaryMathOpSpec(symbol("First"))
+  def first: NaryMathOpSpec = NaryMathOpSpec(symbol("First"))
 
-  val slot = UnaryMathOpSpec(symbol("Slot"))
+  def appendTo: BinaryMathOpSpec = BinaryMathOpSpec(symbol("AppendTo"))
 
-  val placeholder = slot(int(1))
+  def fileNameJoin: UnaryMathOpSpec = UnaryMathOpSpec(symbol("FileNameJoin"))
+
+  def setDirectory: UnaryMathOpSpec = UnaryMathOpSpec(symbol("SetDirectory"))
+
+  def needs: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Needs"))
+
+  def applyFunc(fn: Expr): NaryMathOpSpec = NaryMathOpSpec(fn)
+
+  def quiet: NaryMathOpSpec = NaryMathOpSpec(symbol("Quiet"))
+
+  def slot: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Slot"))
+
+  def placeholder: Expr = slot(int(1))
 
   //</editor-fold>
 
   //<editor-fold desc="Arithmetic">
 
-  val findInstance = NaryMathOpSpec(symbol("FindInstance"))
+  def findInstance: NaryMathOpSpec = NaryMathOpSpec(symbol("FindInstance"))
 
-  val solve = NaryMathOpSpec(symbol("Solve"))
+  def solve: NaryMathOpSpec = NaryMathOpSpec(symbol("Solve"))
 
-  val fullSimplify = BinaryMathOpSpec(symbol("FullSimplify"))
+  def fullSimplify: BinaryMathOpSpec = BinaryMathOpSpec(symbol("FullSimplify"))
 
-  val polynomialQuotientRemainder = NaryMathOpSpec(symbol("PolynomialQuotientRemainder"))
+  def polynomialQuotientRemainder: NaryMathOpSpec = NaryMathOpSpec(symbol("PolynomialQuotientRemainder"))
 
-  val polynomialReduce = NaryMathOpSpec(symbol("PolynomialReduce"))
+  def polynomialReduce: NaryMathOpSpec = NaryMathOpSpec(symbol("PolynomialReduce"))
 
-  val groebnerBasis = NaryMathOpSpec(symbol("GroebnerBasis"))
+  def groebnerBasis: NaryMathOpSpec = NaryMathOpSpec(symbol("GroebnerBasis"))
 
-  val n = NaryMathOpSpec(symbol("N"))
+  def n: NaryMathOpSpec = NaryMathOpSpec(symbol("N"))
 
-  val nmaximize = BinaryMathOpSpec(symbol("NMaximize"))
+  def nmaximize: BinaryMathOpSpec = BinaryMathOpSpec(symbol("NMaximize"))
 
   //</editor-fold>
 
   //<editor-fold desc="Differential equation operations">
 
-  val derivative = UnaryMathOpSpec(symbol("Derivative"))
+  def derivative: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Derivative"))
 
-  val primed = UnaryMathOpSpec(derivative(new Expr(1)))
+  def primed: UnaryMathOpSpec = UnaryMathOpSpec(derivative(new Expr(1)))
 
   def dx(diffSymbol: Expr): UnaryMathOpSpec = UnaryMathOpSpec(diffSymbol)
 
-  val dsolve = NaryMathOpSpec(symbol("DSolve"))
+  def dsolve: NaryMathOpSpec = NaryMathOpSpec(symbol("DSolve"))
 
-  val d = BinaryMathOpSpec(symbol("D"))
-
+  def d: BinaryMathOpSpec = BinaryMathOpSpec(symbol("D"))
 
   //</editor-fold>
 

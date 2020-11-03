@@ -5,9 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUserGeneratedError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
@@ -23,11 +24,14 @@ import scala.collection.immutable
   * @author Nathan Fulton
   */
 object Transitivity {
-  val closeTransitive = "closeTransitive" by ((s: Sequent) => {
+
+  @Tactic(names = "Close Transitive",
+    conclusion = "a>=b, b >= c, c >= z |- a >= z")
+  val closeTransitive : DependentTactic = anon ((s: Sequent) => {
 
     val transitiveInequalities = search(s) match {
       case Some(fs) => fs
-      case None => throw new BelleUserGeneratedError(s"Could not find a set of transitive inequalities that imply the postcondition of ${s}")
+      case None => throw new TacticInapplicableFailure(s"Could not find a set of transitive inequalities that imply the postcondition of ${s}")
     }
 
     DebuggingTactics.debug(s"[closeTransitive] formulas: ${transitiveInequalities.map(_.prettyString).reduce(_ + "," + _)}", true)
@@ -38,7 +42,7 @@ object Transitivity {
       }).reduce(_ & _) & TactixLibrary.implyL('Llast) <(
         closeIds(transitiveInequalities)
         ,
-        TactixLibrary.closeId
+        TactixLibrary.id
       )
       ,
       TactixLibrary.cohideR('Rlast) & TactixLibrary.QE
@@ -47,8 +51,8 @@ object Transitivity {
   })
 
   def closeIds(formulas: List[Formula]) : BelleExpr = formulas match {
-    case e :: Nil => TactixLibrary.closeId
-    case e :: es => TactixLibrary.andR('Rlast) <(closeIds(es),TactixLibrary.closeId)
+    case e :: Nil => TactixLibrary.id
+    case e :: es => TactixLibrary.andR('Rlast) <(closeIds(es),TactixLibrary.id)
   }
 
   /** Computes the sequence of variable ~> term instantiations for the transitivity lemma.
@@ -80,7 +84,7 @@ object Transitivity {
 
     val (direction, start, end) = decomposeInequality(s.succ.head) match {
       case Some(x) => x
-      case None => throw new BelleUserGeneratedError(s"[closeTransitive] Expected succedent of form a ~ b but found ${s.succ(0).prettyString}")
+      case None => throw new TacticInapplicableFailure(s"[closeTransitive] Expected succedent of form a ~ b but found ${s.succ(0).prettyString}")
     }
 
     val startingPrefixes = initialSearchSet(s,direction,start).map(f => List(f)).toSet[List[Formula]]

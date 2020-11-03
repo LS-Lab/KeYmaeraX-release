@@ -1,19 +1,22 @@
 <div class="modal-header">
-    <div class="k4-inlineflex-fullwidth">
-        <k4-file-upload
-                data-intro="Load new .kyx archive files here."
-                data-position="bottom"
-                on-file-changed="updateModelContentFromFile(fileName, fileContent)"></k4-file-upload>
-        <input type="text" ng-model="model.modelName"
-               ng-class="{'form-control':true, 'has-success':(numKyxEntries(model.content)>0 || model.modelName) && model.content && model.content.length > 0 && model.content.indexOf('__________') < 0}"
-               name="modelName" id="modelName" placeholder="Or enter model name here and edit below"/>
-        <button ng-class="{'btn':true, 'btn-default':true,
-                           'disabled':(numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0}"
-           ng-click="uploadContent(false)" ng-cloak>Save</button>
-        <button ng-class="{'btn':true, 'btn-default':true,
-                           'disabled': (numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || numKyxTactics(model.content)>0}"
-           ng-click="uploadContent(true)" ng-cloak>Start Proof</button>
-        <button class="btn btn-default" ng-click="close()">Cancel</button></span>
+    <div class="row">
+        <div class="col-md-8">
+            <k4-file-upload
+                    data-intro="Load new .kyx archive files here."
+                    data-position="bottom"
+                    on-file-changed="updateModelContentFromFile(fileName, fileContent)"></k4-file-upload>
+        </div>
+        <div class="col-md-4 float-right">
+            <span class="pull-right">
+                <button ng-class="{'btn':true, 'btn-default':true,
+                               'disabled':(numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0}"
+                        ng-click="uploadContent(false)" ng-cloak>Save</button>
+                <button ng-class="{'btn':true, 'btn-default':true,
+                               'disabled': (numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || numKyxTactics(model.content)>0}"
+                        ng-click="uploadContent(true)" ng-cloak>Start Proof</button>
+                <button class="btn btn-link" ng-click="close()"><i class="fa fa-close fa-lg"></i></button>
+            </span>
+        </div>
     </div>
 </div>
 <div class="modal-body">

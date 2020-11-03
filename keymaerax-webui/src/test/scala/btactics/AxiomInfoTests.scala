@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -10,9 +15,10 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
   */
 @SummaryTest
 @UsualTest
-class AxiomInfoTests extends FlatSpec with Matchers with BeforeAndAfterEach {
- "Axiom Info" should "exist for all axioms" in {
+class AxiomInfoTests extends TacticTestBase with Matchers with BeforeAndAfterEach {
+ "Axiom Info" should "exist for all axioms" in withZ3 { _ =>
    try {
+     DerivationInfoRegistry.init()
      ProvableSig.axiom.keys.forall({ case axiomName => AxiomInfo(axiomName); true }) shouldBe true
    } catch {
      case e:AxiomNotFoundException =>

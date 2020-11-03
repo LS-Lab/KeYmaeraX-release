@@ -1,10 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.awt.GridLayout
-import javax.swing.{JLabel, JProgressBar, JWindow}
 
-import edu.cmu.cs.ls.keymaerax.core
-import org.apache.logging.log4j.scala.Logging
+import javax.swing.{JLabel, JProgressBar, JWindow}
+import edu.cmu.cs.ls.keymaerax.{Logging, core}
 
 /** The KeYmaera X loading splash screen.
   * @author Nathan Fulton

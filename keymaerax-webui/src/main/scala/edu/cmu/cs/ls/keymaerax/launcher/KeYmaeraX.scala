@@ -6,41 +6,29 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
-import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
 import java.security.Permission
-import java.util.concurrent.TimeUnit
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, Tools, _}
+import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
-import scala.collection.immutable
-import scala.compat.Platform
 import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
-import org.apache.logging.log4j.MarkerManager
-import org.apache.logging.log4j.scala.Logger
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.collection.immutable.{List, Nil}
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
-import scala.concurrent.duration.Duration
 import scala.reflect.io.File
 import resource._
 
@@ -67,78 +55,20 @@ import scala.annotation.tailrec
   * @see [[edu.cmu.cs.ls.keymaerax.launcher.Main]]
   */
 object KeYmaeraX {
-
-  private type OptionMap = Map[Symbol, Any]
-
-  /**
-    * Names of actions that KeYmaera X command line interface supports.
-    */
+  /** Names of actions that full KeYmaera X supports. */
   object Modes {
-    val CODEGEN: String = "codegen"
-    val MODELPLEX: String = "modelplex"
-    val PROVE: String = "prove"
-    val REPL: String = "repl"
-    val STRIPHINTS: String = "striphints"
+    val CODEGEN: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.CODEGEN
+    val MODELPLEX: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.MODELPLEX
+    val PROVE: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.PROVE
+    val REPL: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.REPL
+    val STRIPHINTS: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.STRIPHINTS
+    val SETUP: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.SETUP
     val UI: String = "ui"
-    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
+    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI, SETUP)
   }
 
-  /**
-    * Names of tools that KeYmaera X command line interface supports in `-tool`.
-    */
-  object Tools {
-    val MATHEMATICA: String = "mathematica"
-    val WOLFRAMENGINE: String = "wolframengine"
-    val WOLFRAMSCRIPT: String = "wolframscript"
-    val Z3: String = "z3"
-    val tools: Set[String] = Set(MATHEMATICA, WOLFRAMENGINE, WOLFRAMSCRIPT, Z3)
-  }
-
-  /** Usage -help information.
-    * @note Formatted to 80 characters terminal width. */
-  val usage: String =
-    """Usage: java -jar keymaerax.jar
-      |  -ui [web server options] |
-      |  -prove file.kyx [-conjecture file2.kyx] [-out file.kyp]
-      |     [-timeout seconds] [-verbose] |
-      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
-      |     [-sandbox] [-fallback prg] |
-      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
-      |     [-quantitative ctrl|model|plant] |
-      |  -striphints file.kyx -out fileout.kyx
-      |
-      |Actions:
-      |  -ui        start web user interface with optional server arguments (default)
-      |  -prove     run prover on given archive of models or proofs
-      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
-      |  -codegen   generate executable C code from given model file
-      |  -striphints remove all proof annotations from the model
-      |  -parse     return error code 0 if the given model file parses
-      |  -bparse    return error code 0 if given bellerophon tactic file parses
-      |  -repl      prove given model interactively from REPL command line
-      |
-      |Additional options:
-      |  -tool mathematica|z3 choose which tool to use for real arithmetic
-      |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
-      |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
-      |  -timeout  how many seconds to try proving before giving up, forever if <=0
-      |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
-      |  -vars     use ordered list of variables, treating others as constant functions
-      |  -interval guard reals by interval arithmetic in floating point (recommended)
-      |  -nointerval skip interval arithmetic presuming no floating point errors
-      |  -savept path export proof term s-expression from -prove to given path
-      |  -launch   use present JVM instead of launching one with a bigger stack
-      |  -lax      use lax mode with more flexible parser, printer, prover etc.
-      |  -strict   use strict mode with no flexibility in prover
-      |  -debug    use debug mode with exhaustive messages
-      |  -nodebug  disable debug mode to suppress intermediate messages
-      |  -security use security manager imposing some runtime security restrictions
-      |  -help     Display this usage information
-      |  -license  Show license agreement for using this software
-      |
-      |Copyright (c) Carnegie Mellon University.
-      |Use option -license to show the license conditions.""".stripMargin
-
+  /** Usage -help information. */
+  val usage: String = Usage.fullUsage
 
   private def launched(): Unit = {
     LAUNCH = true
@@ -146,47 +76,42 @@ object KeYmaeraX {
   }
   var LAUNCH: Boolean = false
 
+  /** main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line interfaces. */
   def main(args: Array[String]): Unit = {
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
       println(help)
       exit(1)
     }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
-    if (args.length == 0) launchUI(args)
-    else {
-      //@note 'commandLine is only passed in to preserve evidence of what generated the output.
-      val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+    Configuration.setConfiguration(FileConfiguration)
+    //@note 'commandLine to preserve evidence of what generated the output; default mode: UI
+    val options = combineConfigs(
+      nextOption(Map('commandLine -> args.mkString(" ")), args.toList),
+      Map('mode -> Modes.UI))
 
-      if(!options.contains('mode)) {
-        //@note this should be a bad state but apparently it happens.
-        launchUI(args)
-      } else if (options.get('mode).contains(Modes.CODEGEN)) {
-        //@note Mathematica needed for quantitative ModelPlex
-        if (options.get('quantitative).isDefined) {
-          initializeProver(
-            if (options.contains('tool)) options
-            else options ++ configFromFile(Tools.MATHEMATICA))
-        }
-        codegen(options)
-      } else if (!options.get('mode).contains(Modes.UI) ) {
-        try {
-          initializeProver(
-            if (options.contains('tool)) options
-            else options ++ configFromFile("z3"))
-
-          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
-          options.get('mode) match {
-            case Some(Modes.PROVE) => prove(options)
-            case Some(Modes.MODELPLEX) => modelplex(options)
-            case Some(Modes.CODEGEN) => codegen(options)
-            case Some(Modes.REPL) => repl(options)
-            case Some(Modes.STRIPHINTS) => stripHints(options)
-            case Some(Modes.UI) => assert(false, "already handled above since no prover needed"); ???
-          }
-        } finally {
-          shutdownProver()
-        }
+    try {
+      //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
+      options.get('mode) match {
+        case Some(Modes.CODEGEN) =>
+          val toolConfig =
+            if (options.contains('quantitative)) {
+              configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
+            } else {
+              configFromFile("z3")
+            }
+          initializeProver(combineConfigs(options, toolConfig), usage)
+          CodeGen.codegen(options, usage)
+        case Some(Modes.MODELPLEX) =>
+          initializeProver(combineConfigs(options, configFromFile("z3")), usage)
+          modelplex(options)
+        case Some(Modes.REPL) =>
+          initializeProver(combineConfigs(options, configFromFile("z3")), usage)
+          repl(options)
+        case Some(Modes.UI) => launchUI(args) //@note prover initialized in web UI launcher
+        case _ => runCommand(options, usage)
       }
+    } finally {
+      shutdownProver()
     }
   }
 
@@ -200,558 +125,80 @@ object KeYmaeraX {
   /**
     * KeYmaera X -help string.
     */
-  def help: String = {
-    stats + "\n" + usage
-  }
-
-
+  def help: String = stats + "\n" + usage
 
   private def configFromFile(defaultTool: String): OptionMap = {
-    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
-        ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
+        ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
       case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
-        ToolConfiguration.wolframEngineConfig.map({ case (k,v) => Symbol(k) -> v })
-      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
+        ToolConfiguration.wolframEngineConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
+      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config(Map.empty).map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
 
   private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
-    varNames.map(vn => KeYmaeraXParser(vn) match {
+    varNames.map(vn => Parser.parser(vn) match {
       case v: BaseVariable => v
       case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
     })
   }
 
   @tailrec
-  private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+  def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
       case "-help" :: _ => println(usage); exit(1)
-      case "-license" :: _ => println(license); exit(1)
       // actions
-      case "-parse" :: value :: tail =>
-        parseProblemFile(value); ???
-      case "-bparse" :: value :: tail =>
-        parseBelleTactic(value); ???
-      case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.PROVE, 'in -> value), tail)
-        else optionErrorReporter("-prove")
-      case "-verbose" :: tail =>
-        require(!map.contains('verbose)); nextOption(map ++ Map('verbose -> true), tail)
-      case "-savept" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
-        else optionErrorReporter("-savept")
       case "-sandbox" :: tail =>
         nextOption(map ++ Map('sandbox -> true), tail)
       case "-modelplex" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
-        else optionErrorReporter("-modelPlex")
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
+        else { Usage.optionErrorReporter("-modelPlex", usage); exit(1) }
       case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
       case "-codegen" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
-        else optionErrorReporter("-codegen")
-      case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
+        else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
+      case "-quantitative" :: tail => nextOption(map ++ Map('quantitative -> true), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
         val newMap = List('tactic, 'scaladefs).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
         if (model.nonEmpty  && !model.toString.startsWith("-"))
           nextOption(newMap ++ Map('mode -> Modes.REPL, 'model -> model), restArgs)
-        else optionErrorReporter("-repl")
-      case "-striphints" :: kyx :: tail =>
-        if (kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail)
-        else optionErrorReporter("-striphints")
-      case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> Modes.UI)
+        else { Usage.optionErrorReporter("-repl", usage); exit(1) }
+      case "-ui" :: tail => /*launchUI(tail.toArray);*/ nextOption(map ++ Map('mode -> Modes.UI), tail)
       // action options
       case "-out" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
-        else optionErrorReporter("-out")
-      case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('conjecture -> value), tail)
-        else optionErrorReporter("-conjecture")
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+        else { Usage.optionErrorReporter("-out", usage); exit(1) }
       case "-fallback" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
-        else optionErrorReporter("-fallback")
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
+        else { Usage.optionErrorReporter("-fallback", usage); exit(1) }
       case "-vars" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
-        else optionErrorReporter("-vars")
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+        else { Usage.optionErrorReporter("-vars", usage); exit(1) }
       case "-monitor" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
-        else optionErrorReporter("-monitor")
-      case "-tactic" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
-        else optionErrorReporter("-tactic")
-      case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tacticName -> value), tail)
-        else optionErrorReporter("-tacticName")
+        if(value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
+        else { Usage.optionErrorReporter("-monitor", usage); exit(1) }
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
-      case "-tool" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value.toLowerCase), tail)
-        else optionErrorReporter("-tool")
       // aditional options
-      case "-mathkernel" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
-        else optionErrorReporter("-mathkernel")
-      case "-jlink" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
-        else optionErrorReporter("-jlink")
       case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
       case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
       // global options
-      case "-lax" :: tail => Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(map, tail)
-      case "-strict" :: tail => Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(map, tail)
-      case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(map, tail)
-      case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(map, tail)
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
       case "-launch" :: tail => launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
-        else optionErrorReporter("-timeout")
-      case option :: tail => optionErrorReporter(option)
-    }
-  }
-
-  private def parseProblemFile(fileName: String) = {
-    try {
-      initializeProver(Map('tool -> "z3")) //@note parsing an archive with tactics requires prover (AxiomInfo)
-      KeYmaeraXArchiveParser.parseFromFile(fileName).foreach(e => {
-        println(e.name)
-        println(KeYmaeraXPrettyPrinter(e.model))
-        println("Parsed file successfully")
-      })
-      sys.exit(0)
-    } catch {
-      case e: Throwable =>
-        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
-        println(e.getMessage)
-        println(e.getCause)
-        println("Failed to parse file")
-        sys.exit(-1)
-    }
-  }
-
-  private def parseBelleTactic(fileName: String) = {
-    try {
-      initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
-      val fileContents: String = managed(scala.io.Source.fromFile(fileName)).apply(_.getLines().mkString("\n"))
-      BelleParser(fileContents)
-      println("Parsed file successfully")
-      sys.exit(0)
-    } catch {
-      case e: Throwable =>
-        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
-        println(e)
-        println("Failed to parse file")
-        sys.exit(-1)
-    }
-  }
-
-  /** Prints help messages for command line options. */
-  private def optionErrorReporter(option: String) = {
-    val noValueMessage = "[Error] No value specified for " + option + " option. "
-    option match {
-      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
-      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
-      case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage); exit(1)
-      case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
-      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
-      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
-      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
-      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|wolframengine|z3\n\n" + usage); exit(1)
-      case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage); exit(1)
-    }
-  }
-
-  /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
-  private def initializeProver(options: OptionMap): Unit = {
-    options('tool) match {
-      case Tools.MATHEMATICA => initMathematica(options)
-      case Tools.WOLFRAMENGINE => initWolframEngine(options)
-      case Tools.WOLFRAMSCRIPT => initWolframScript(options)
-      case Tools.Z3 => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
-    }
-
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-    KeYmaeraXTool.init(Map.empty)
-
-    val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
-
-    //@note just in case the user shuts down the prover from the command line
-    Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
-  }
-
-  /** Initializes Z3 from command line options. */
-  private def initZ3(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new Z3ToolProvider())
-  }
-
-  private def mathematicaConfig(options: OptionMap): Map[String, String] = {
-    assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
-      "\n[Error] Please always use command line option -mathkernel and -jlink together," +
-        "and specify the Mathematica link paths with:\n" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
-
-    val mathematicaConfig =
-      if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
-        "libDir" -> options('jlink).toString)
-      else DefaultConfiguration.defaultMathematicaConfig
-
-    val linkNamePath = mathematicaConfig.get("linkName") match {
-      case Some(path) => path
-      case _ => ""
-    }
-    val libDirPath = mathematicaConfig.get("libDir") match {
-      case Some(path) => path
-      case _ => ""
-    }
-    assert(linkNamePath!="" && libDirPath!="",
-      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
-        "(On your system, they could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} +
-        " and " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " + DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
-      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " + linkNamePath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} + ")\n" +
-        "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 + " file with command line option:" +
-        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-    assert(new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
-      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " + libDirPath+ "! " +
-        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
-        "Please specify the correct path that points to the directory contains " + DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
-        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
-        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
-
-    mathematicaConfig
-  }
-
-  /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(mathematicaConfig(options)) :: new Z3ToolProvider() :: Nil))
-  }
-
-  /** Initializes Wolfram Engine from command line options. */
-  private def initWolframEngine(options: OptionMap): Unit = {
-    Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(mathematicaConfig(options)) :: new Z3ToolProvider() :: Nil))
-  }
-
-  /** Initializes Wolfram Script from command line options. */
-  private def initWolframScript(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider :: new Z3ToolProvider() :: Nil))
-  }
-
-  /** Shuts down the backend solver and invariant generator. */
-  private def shutdownProver(): Unit = {
-    implicit val ec: ExecutionContext = ExecutionContext.global
-    Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
-    ToolProvider.setProvider(new NoneToolProvider())
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
-    KeYmaeraXTool.shutdown()
-    //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
-  }
-
-  /** Exit gracefully */
-  private def exit(status: Int): Nothing = {shutdownProver(); sys.exit(status)}
-
-  /** Generate a header stamping the source of a generated file */
-  //@todo Of course this has a security attack for non-letter characters like end of comments from command line
-  private def stampHead(options: OptionMap): String = "/* @evidence: generated by KeYmaeraX " + VERSION + " " + nocomment(options.getOrElse('commandLine, "<unavailable>").asInstanceOf[String]) + " */\n\n"
-
-  /** Replace C-style line-comments in command line (from wildcard paths) */
-  private def nocomment(s: String): String = s.replaceAllLiterally("/*", "/STAR").replaceAllLiterally("*/", "STAR/")
-
-  /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
-    * Default [[TactixLibrary.auto]] if `options` does not contain 'tactic. */
-  private def readTactic(options: OptionMap): Option[BelleExpr] = {
-    options.get('tactic) match {
-      case Some(t) if File(t.toString).exists =>
-        val fileName = t.toString
-        val source = managed(scala.io.Source.fromFile(fileName)).apply(_.mkString)
-        if (fileName.endsWith(".scala")) {
-          val tacticGenClasses = new ScalaTacticCompiler().compile(source)
-          assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
-          val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[()=> BelleExpr]
-          Some(tacticGenerator())
-        } else {
-          Some(BelleParser(source))
-        }
-      case Some(t) if !File(t.toString).exists => Some(BelleParser(t.toString))
-      case None => None
-    }
-  }
-
-  case class ProofStatistics(name: String, tacticName: String, status: String, witness: Option[ProvableSig], timeout: Long,
-                             duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
-    def summary: String =
-      s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
-         |Duration [ms]: $duration
-         |QE [ms]: $qeDuration
-         |Proof steps: $proofSteps
-         |Tactic size: $tacticSize""".stripMargin
-
-    override def toString: String = s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],steps=$proofSteps"
-
-    def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
-  }
-
-  /** Proves a single entry */
-  private def prove(name: String, input: Formula, fileContent: String, defs: Declaration,
-                    tacticName: String, tactic: BelleExpr, timeout: Long,
-                    outputFileName: Option[String], options: OptionMap): ProofStatistics = {
-    val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
-
-    //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val pw = outputFileName.map(new PrintWriter(_))
-
-    //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
-
-    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
-      case _ => false
-    })
-
-    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
-    val listeners =
-      if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
-      else qeDurationListener :: Nil
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
-
-    val proofStatistics = try {
-      qeDurationListener.reset()
-      val proofStart: Long = Platform.currentTime
-      implicit val ec: ExecutionContext = ExecutionContext.global
-      val witness = Await.result(
-        Future {
-          TactixLibrary.proveBy(inputSequent, tactic)
-        },
-        if (timeout>0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
-      )
-      val proofDuration = Platform.currentTime - proofStart
-      val qeDuration = qeDurationListener.duration
-      val proofSteps = witness.steps
-      val tacticSize = TacticStatistics.size(tactic)
-
-      if (witness.isProved) {
-        assert(witness.subgoals.isEmpty)
-        val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
-        //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-        insist(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
-        //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
-        insist(witness.proved == expected, "Expected to have proved the original problem and not something else, but proved witness deviates from input")
-        //@note check that proved conclusion is what we actually wanted to prove
-        insist(witness.conclusion == expected, "Expected proved conclusion to be original problem, but proved conclusion deviates from input")
-
-        //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
-        val evidence = ToolEvidence(List(
-          "tool" -> "KeYmaera X",
-          "model" -> fileContent,
-          "tactic" -> tactic.prettyString,
-          "proof" -> "" //@todo serialize proof
-        )) :: Nil
-
-        val lemma = outputFileName match {
-          case Some(_) =>
-            val lemma = Lemma(witness, evidence, Some(name))
-            //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-            assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.underlyingProvable, lemma.evidence),
-              "reparse of printed lemma is not original lemma")
-            Some(lemma)
-          case None => None
-        }
-
-        pw match {
-          case Some(w) =>
-            assert(lemma.isDefined, "Lemma undefined even though writer is present")
-            w.write(stampHead(options))
-            w.write("/* @evidence: parse of print of result of a proof */\n\n")
-            w.write(lemma.get.toString)
-            w.close()
-          case None =>
-            // don't save proof as lemma since no outputFileName
-        }
-
-        ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
-      } else {
-        // prove did not work
-        assert(!witness.isProved)
-        assert(witness.subgoals.nonEmpty)
-        //@note instantiating PrintWriter above has already emptied the output file
-        (pw, outputFileName) match {
-          case (Some(w), Some(outName)) =>
-            w.close()
-            File(outName).delete()
-          case _ =>
-        }
-
-        if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
-          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
-        } else {
-          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
-        }
-      }
-    } catch {
-      case _: TimeoutException =>
-        BelleInterpreter.kill()
-        // prover shutdown cleanup is done when KeYmaeraX exits
-        ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
-    }
-
-    proofStatistics
-  }
-
-  /**
-    * Proves all entries in the given archive file.
-    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-    *
-    * @param options The prover options.
-    */
-  def prove(options: OptionMap): Unit = {
-    if (options.contains('ptOut)) {
-      ProvableSig.PROOF_TERMS_ENABLED = true
-    } else {
-      ProvableSig.PROOF_TERMS_ENABLED = false
-    }
-
-    require(options.contains('in), usage)
-    val inputFileName = options('in).toString
-    val inFiles = findFiles(inputFileName)
-    val archiveContent = inFiles.map(p => p -> KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
-    println("Proving entries from " + archiveContent.size + " files")
-
-    val conjectureFileName = options.get('conjecture).map(_.toString)
-    val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
-    val conjectureContent = conjectureFiles.flatMap(p => KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
-      filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)).toMap
-    val duplicateConjectures = conjectureContent.filter(_._2.size > 1)
-    // conjectures must have unique names across files
-    assert(duplicateConjectures.isEmpty, "Duplicate entry names in conjecture files:\n" + duplicateConjectures.map(c => c._1 + " in " + c._2.map(_._2).mkString(",")))
-    // if exactly one conjecture and one solution: replace regardless of names; otherwise: insist on same entry names and replace by entry name
-    val entryNamesDiff = archiveContent.flatMap(_._2.map(_.name)).toSet.diff(conjectureContent.keySet)
-    assert(
-      conjectureContent.isEmpty
-        || (conjectureContent.map(_._2.size).sum == 1 && archiveContent.map(_._2.size).sum == 1)
-        || entryNamesDiff.isEmpty, "Conjectures and archives must agree on names, but got diff " + entryNamesDiff.mkString(","))
-    assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
-
-    val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
-    val outputFileSuffix = ".kyp"
-    //@note same archive entry name might be present in several .kyx files
-    val outputFileNames: Map[Path, Map[ParsedArchiveEntry, String]] =
-      if (archiveContent.size == 1 && archiveContent.head._2.size == 1)
-        Map(archiveContent.head._1 -> Map(archiveContent.head._2.head -> (outputFilePrefix + outputFileSuffix)))
-      else archiveContent.map({ case (path, entries) =>
-        path -> entries.map(e => e -> (outputFilePrefix + "-" + path.getFileName + "-"
-          + e.name.replaceAll("\\W", "_") + outputFileSuffix)).toMap
-      }).toMap
-
-    /** Replaces the conjecture of `entry` with the `conjecture`. */
-    def replace(entry: ParsedArchiveEntry, conjecture: ParsedArchiveEntry): ParsedArchiveEntry = {
-      conjecture.copy(tactics = entry.tactics)
-    }
-
-    val statistics = archiveContent.flatMap({case (path: Path, entries) =>
-      entries.flatMap(entry => proveEntry(
-        path,
-        replace(entry, conjectureContent.getOrElse(entry.name,
-          conjectureContent.headOption.map(_._2).getOrElse((entry -> path) :: Nil)).head._1),
-        outputFileNames(path)(entry),
-        options))
-    })
-
-    statistics.foreach(println)
-
-    val csvStatistics = statistics.map(_.toCsv).mkString("\n")
-    val statisticsLogger = Logger(getClass)
-    statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
-
-    if (statistics.exists(_.status=="disproved")) sys.exit(-2)
-    if (statistics.exists(_.status=="unfinished")) sys.exit(-1)
-  }
-
-  private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
-                         options: OptionMap): List[ProofStatistics] = {
-    def savePt(pt: ProvableSig): Unit = {
-      (pt, options.get('ptOut)) match {
-        case (ptp: TermProvable, Some(path: String)) =>
-          val conv = new IsabelleConverter(ptp.pt)
-          val source = conv.sexp
-          val writer = new PrintWriter(path)
-          writer.write(source)
-          writer.close()
-        case (_, None) => ()
-        case (_: TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
-      }
-    }
-
-    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
-      case _ => false
-    })
-
-    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
-    val tacticString = readTactic(options)
-    val reqTacticName = options.get('tacticName)
-    val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
-
-    //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    new PrintWriter(outputFileName)
-
-    val t = tacticString match {
-      case Some(tac) => ("user", "user", tac) :: Nil
-      case None =>
-        if (reqTacticName.isDefined) entry.tactics.filter(_._1 == reqTacticName.get)
-        else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil
-        else entry.tactics
-    }
-
-    println("Proving " + path + "#" + entry.name + " ...")
-    if (t.isEmpty) {
-      println("Unknown tactic " + reqTacticName + ", skipping entry")
-      ProofStatistics(entry.name, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
-    } else {
-      t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
-        val listeners =
-          if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
-          else qeDurationListener :: Nil
-        BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
-
-        val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
-          timeout, if (i == 0) Some(outputFileName) else None, options)
-
-        proofStat.witness match {
-          case Some(proof) =>
-            if (entry.kind == "lemma") {
-              val lemmaName = "user" + File.separator + entry.name
-              if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-              val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-                "tool" -> "KeYmaera X",
-                "model" -> entry.fileContent,
-                "tactic" -> entry.tactics.head._2
-              )) :: Nil)
-              LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-            }
-            savePt(proof)
-          case None => // nothing to do
-        }
-        proofStat
-      })
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
+        else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
+      case _ =>
+        val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
+        if (unprocessedArgs == list) {
+          Usage.optionErrorReporter(unprocessedArgs.head, usage)
+          exit(1)
+        } else nextOption(options, unprocessedArgs)
     }
   }
 
@@ -772,8 +219,8 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val inputEntry = KeYmaeraXArchiveParser.parseFromFile(in).head
-    val inputModel = inputEntry.model.asInstanceOf[Formula]
+    val inputEntry = ArchiveParser.parseFromFile(in).head
+    val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
@@ -829,7 +276,7 @@ object KeYmaeraX {
       val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
         val serializableTactic = db.extractSerializableTactic(fml, tactic)
         ParsedArchiveEntry(name, "lemma", "", "", Declaration(Map.empty), fml,
-          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
+          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)})
       // check and store lemmas
       lemmaEntries.foreach(entry => {
         println(s"Checking sandbox lemma ${entry.name}...")
@@ -848,7 +295,7 @@ object KeYmaeraX {
 
       val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
       val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", "", Declaration(Map.empty),
-        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
+        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)
       // check sandbox proof
       println("Checking sandbox safety...")
       assert(TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula],
@@ -871,11 +318,11 @@ object KeYmaeraX {
   }
 
   private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: OptionMap): Unit = {
-    val output = KeYmaeraXPrettyPrinter(fml)
-    val reparse = KeYmaeraXParser(output)
+    val output = PrettyPrinter(fml)
+    val reparse = Parser(output)
     assert(reparse == fml, "parse of print is identity")
     val pw = new PrintWriter(outputFileName)
-    pw.write(stampHead(options))
+    pw.write(EvidencePrinter.stampHead(options))
     pw.write("/* @evidence: parse of print of ModelPlex proof output */\n\n")
     pw.write("/************************************\n * Generated by KeYmaera X ModelPlex\n ************************************/\n\n")
     pw.write("/**\n * @param variables are for the state before the controller run\n * @param post() function symbols are for the state after the controller run\n * @param other function symbols are constant\n */\n\n")
@@ -903,169 +350,16 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx)).apply(_.mkString)
-    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
-    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
-    val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
+    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, "ISO-8859-1")).apply(_.mkString)
+    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
+    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
+    val inputFormula: Formula = ArchiveParser.parseAsFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
-  }
-
-  /**
-   * Code generation
-   * {{{CGenerator()(input)}}}
-   */
-  def codegen(options: OptionMap): Unit = {
-    require(options.contains('in), usage)
-
-    val inputFileName = options('in).toString
-    val inputFile =
-      if (inputFileName.contains("#")) File(inputFileName.substring(0, inputFileName.lastIndexOf("#")))
-      else File(inputFileName)
-
-    val inputFormulas = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
-    var outputFile = inputFile.changeExtension("c")
-    if (options.contains('out)) outputFile = File(options('out).toString)
-
-    val vars: Option[Set[BaseVariable]] =
-      if (options.contains('vars)) Some(options('vars).asInstanceOf[Array[BaseVariable]].toSet)
-      else None
-
-    val interval = options.getOrElse('interval, true).asInstanceOf[Boolean]
-    val head = stampHead(options)
-    val quantitative = options.get('quantitative)
-    val written = inputFormulas.map(e => {
-      val outputFileName =
-        if (inputFormulas.size <= 1) outputFile.toString()
-        else {
-          val ext = outputFile.extension
-          outputFile.addExtension(e.name.replaceAll("\\s", "_")).addExtension(ext).toString()
-        }
-      if (quantitative.isDefined) codegenQuantitative(e, outputFileName, head, vars, quantitative.get.toString)
-      else codegen(e, interval, outputFileName, head, vars)
-      outputFileName
-    })
-    println("Generated\n  " + written.mkString("\n  "))
-  }
-
-  def codegen(entry: ParsedArchiveEntry, interval: Boolean, outputFileName: String, head: String,
-              vars: Option[Set[BaseVariable]]): Unit = {
-    if (interval) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)")
-
-      println("Interval arithmetic: unfinished")
-      System.err.println("Interval arithmetic: unfinished")
-      //@todo wipe out output file PrintWriter above has already emptied the output file
-      //@todo pw.close()
-      exit(-1)
-      // TODO what to to when proof cannot be checked?
-    } else {
-      println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
-    }
-
-    val inputFormula = entry.model.asInstanceOf[Formula]
-
-    //@note codegen in C format only regardless of file extension
-    val theVars = vars match {
-      case Some(v) => v
-      case None => StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
-    }
-
-    val codegenStart = Platform.currentTime
-    //@todo input variables (nondeterministically assigned in original program)
-    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, theVars, Set(), outputFileName)
-    Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
-    val pw = new PrintWriter(outputFileName)
-    pw.write(head)
-    pw.write("/* @evidence: print of CGenerator of input */\n\n")
-    pw.write(output._1 + "\n" + output._2)
-    pw.close()
-  }
-
-  def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
-                          vars: Option[Set[BaseVariable]], kind: String): Unit = {
-    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-    val (monitorFml: Formula, monitorStateVars: Set[BaseVariable]) =
-      if (entry.model.asInstanceOf[Formula].isFOL) {
-        val stateVars = vars match {
-          case Some(v) => v
-          case None => StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
-        }
-        (entry.model.asInstanceOf[Formula], stateVars)
-      } else {
-        val model@Imply(_, Box(Loop(Compose(prg, _)), _)) = entry.model
-
-        val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox(entry.name, entry.tactics.head._3)(model)
-        val Imply(init, Box(Loop(Compose(
-          ctrl,
-          plant@Compose(x0Ghosts, Compose(Test(x0EvolDomain), Compose(nondetPlant, Test(evolDomain)))))), safe)) = nonlinearModelApprox._1
-
-        val monitorStateVars = vars match {
-          case Some(v) => v.toSeq
-          case None => kind match {
-            case "model" => StaticSemantics.boundVars(nonlinearModelApprox._1).symbols.toSeq
-            case "ctrl" => StaticSemantics.boundVars(ctrl).symbols.toSeq
-            case "plant" => StaticSemantics.boundVars(plant).symbols.toSeq
-          }
-        }
-
-        val (monitorInput, assumptions) = kind match {
-          case "model" => ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, monitorStateVars: _*)
-          case "ctrl" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), monitorStateVars: _*)
-          case "plant" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), monitorStateVars: _*)
-        }
-
-        val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
-          SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
-        val monitorTactic = DebuggingTactics.print("Deriving Monitor") &
-          ModelPlex.controllerMonitorByChase(1) &
-          DebuggingTactics.print("Chased") &
-          SaturateTactic(ModelPlex.optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions)(1)) &
-          DebuggingTactics.print("Quantifiers instantiated") &
-          simplifier(1) & DebuggingTactics.print("Monitor Result")
-
-        val monitorResult = TactixLibrary.proveBy(monitorInput, monitorTactic)
-        val monitorFml = monitorResult.subgoals.head.succ.head
-        (monitorFml, monitorStateVars.toSet)
-      }
-
-    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    //proveBy(Equiv(modelMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop)
-    val monitorProg = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
-    val inputs = CGenerator.getInputs(monitorProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator()))(monitorProg, monitorStateVars, inputs, "Monitor")
-
-    val pw = new PrintWriter(outputFileName)
-    pw.write(head)
-    pw.write("/* @evidence: print of CGenerator of input */\n\n")
-    pw.write(monitorCode._1 + "\n" + monitorCode._2)
-    pw.close()
-  }
-
-  /** Strips proof hints from the model. */
-  def stripHints(options: OptionMap): Unit = {
-    require(options.contains('in) && options.contains('out), usage)
-
-    val kyxFile = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(kyxFile)
-
-    //@note remove all tactics, e.model does not contain annotations anyway
-    //@note remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
-      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
-
-    val printer = new KeYmaeraXArchivePrinter()
-    val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
-
-    val outFile = options('out).toString
-    val pw = new PrintWriter(outFile)
-    pw.write(printedStrippedContent)
-    pw.close()
   }
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    val augmentedArgs = if (args.intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
+    val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) ("-" + Modes.UI) +: args else args
     if (LAUNCH) Main.main("-launch" +: augmentedArgs)
     else Main.main(augmentedArgs)
   }
@@ -1187,27 +481,6 @@ object KeYmaeraX {
     root
   }
 
-  /** Finds files matching the pattern in fileName (specific file or using glob wildcards). */
-  private def findFiles(fileName: String): List[Path] = {
-    // specific file, no wildcard support when referring to a specific entry
-    if (new java.io.File(fileName).exists || fileName.contains("#")) Paths.get(fileName).toAbsolutePath :: Nil
-    else {
-      val path = Paths.get(fileName).toAbsolutePath
-      val dir = path.getParent
-      val pattern = path.getFileName
-      val finder = new SimpleFileVisitor[Path] {
-        private val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
-        val files: ListBuffer[Path] = new ListBuffer[Path]()
-        override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
-          if (matcher.matches(file.getFileName)) files.append(file)
-          FileVisitResult.CONTINUE
-        }
-      }
-      Files.walkFileTree(dir, finder)
-      finder.files.toList
-    }
-  }
-
   //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
@@ -1225,137 +498,5 @@ object KeYmaeraX {
     """
       |  }
       |}
-    """.stripMargin
-
-
-  private val license: String =
-    """
-      |KeYmaera X
-      |SOFTWARE LICENSE AGREEMENT
-      |ACADEMIC OR NON-PROFIT ORGANIZATION NONCOMMERCIAL RESEARCH USE ONLY
-      |
-      |BY USING THE SOFTWARE, YOU ARE AGREEING TO THE TERMS OF THIS LICENSE
-      |AGREEMENT. IF YOU DO NOT AGREE WITH THESE TERMS, YOU MAY NOT USE OR
-      |DOWNLOAD THE SOFTWARE.
-      |
-      |This is a license agreement ("Agreement") between your academic
-      |institution or non-profit organization or self (called "Licensee" or
-      |"You" in this Agreement) and Carnegie Mellon University (called
-      |"Licensor" in this Agreement). All rights not specifically granted
-      |to you in this Agreement are reserved for Licensor.
-      |
-      |RESERVATION OF OWNERSHIP AND GRANT OF LICENSE:
-      |
-      |Licensor retains exclusive ownership of any copy of the Software (as
-      |defined below) licensed under this Agreement and hereby grants to
-      |Licensee a personal, non-exclusive, non-transferable license to use
-      |the Software for noncommercial research purposes, without the right
-      |to sublicense, pursuant to the terms and conditions of this
-      |Agreement. As used in this Agreement, the term "Software" means (i)
-      |the executable file made accessible to Licensee by Licensor pursuant
-      |to this Agreement, inclusive of backups, and updates permitted
-      |hereunder or subsequently supplied by Licensor, including all or any
-      |file structures, programming instructions, user interfaces and
-      |screen formats and sequences as well as any and all documentation
-      |and instructions related to it.
-      |
-      |CONFIDENTIALITY: Licensee acknowledges that the Software is
-      |proprietary to Licensor, and as such, Licensee agrees to receive all
-      |such materials in confidence and use the Software only in accordance
-      |with the terms of this Agreement. Licensee agrees to use reasonable
-      |effort to protect the Software from unauthorized use, reproduction,
-      |distribution, or publication.
-      |
-      |COPYRIGHT: The Software is owned by Licensor and is protected by
-      |United States copyright laws and applicable international treaties
-      |and/or conventions.
-      |
-      |PERMITTED USES: The Software may be used for your own noncommercial
-      |internal research purposes. You understand and agree that Licensor
-      |is not obligated to implement any suggestions and/or feedback you
-      |might provide regarding the Software, but to the extent Licensor
-      |does so, you are not entitled to any compensation related thereto.
-      |
-      |BACKUPS: If Licensee is an organization, it may make that number of
-      |copies of the Software necessary for internal noncommercial use at a
-      |single site within its organization provided that all information
-      |appearing in or on the original labels, including the copyright and
-      |trademark notices are copied onto the labels of the copies.
-      |
-      |USES NOT PERMITTED: You may not modify, translate, reverse engineer,
-      |decompile, disassemble, distribute, copy or use the Software except
-      |as explicitly permitted herein. Licensee has not been granted any
-      |trademark license as part of this Agreement and may not use the name
-      |or mark "KeYmaera X", "Carnegie Mellon" or any renditions thereof
-      |without the prior written permission of Licensor.
-      |
-      |You may not sell, rent, lease, sublicense, lend, time-share or
-      |transfer, in whole or in part, or provide third parties access to
-      |prior or present versions (or any parts thereof) of the Software.
-      |
-      |ASSIGNMENT: You may not assign this Agreement or your rights
-      |hereunder without the prior written consent of Licensor. Any
-      |attempted assignment without such consent shall be null and void.
-      |
-      |TERM: The term of the license granted by this Agreement is from
-      |Licensee's acceptance of this Agreement by clicking "I Agree" below
-      |or by using the Software until terminated as provided below.
-      |
-      |The Agreement automatically terminates without notice if you fail to
-      |comply with any provision of this Agreement. Licensee may terminate
-      |this Agreement by ceasing using the Software. Upon any termination
-      |of this Agreement, Licensee will delete any and all copies of the
-      |Software. You agree that all provisions which operate to protect the
-      |proprietary rights of Licensor shall remain in force should breach
-      |occur and that the obligation of confidentiality described in this
-      |Agreement is binding in perpetuity and, as such, survives the term
-      |of the Agreement.
-      |
-      |FEE: Provided Licensee abides completely by the terms and conditions
-      |of this Agreement, there is no fee due to Licensor for Licensee's
-      |use of the Software in accordance with this Agreement.
-      |
-      |DISCLAIMER OF WARRANTIES: THE SOFTWARE IS PROVIDED "AS-IS" WITHOUT
-      |WARRANTY OF ANY KIND INCLUDING ANY WARRANTIES OF PERFORMANCE OR
-      |MERCHANTABILITY OR FITNESS FOR A PARTICULAR USE OR PURPOSE OR OF
-      |NON-INFRINGEMENT. LICENSEE BEARS ALL RISK RELATING TO QUALITY AND
-      |PERFORMANCE OF THE SOFTWARE AND RELATED MATERIALS.
-      |
-      |SUPPORT AND MAINTENANCE: No Software support or training by the
-      |Licensor is provided as part of this Agreement.
-      |
-      |EXCLUSIVE REMEDY AND LIMITATION OF LIABILITY: To the maximum extent
-      |permitted under applicable law, Licensor shall not be liable for
-      |direct, indirect, special, incidental, or consequential damages or
-      |lost profits related to Licensee's use of and/or inability to use
-      |the Software, even if Licensor is advised of the possibility of such
-      |damage.
-      |
-      |EXPORT REGULATION: Licensee agrees to comply with any and all
-      |applicable U.S. export control laws, regulations, and/or other laws
-      |related to embargoes and sanction programs administered by the
-      |Office of Foreign Assets Control.
-      |
-      |SEVERABILITY: If any provision(s) of this Agreement shall be held to
-      |be invalid, illegal, or unenforceable by a court or other tribunal
-      |of competent jurisdiction, the validity, legality and enforceability
-      |of the remaining provisions shall not in any way be affected or
-      |impaired thereby.
-      |
-      |NO IMPLIED WAIVERS: No failure or delay by Licensor in enforcing any
-      |right or remedy under this Agreement shall be construed as a waiver
-      |of any future or other exercise of such right or remedy by Licensor.
-      |
-      |GOVERNING LAW: This Agreement shall be construed and enforced in
-      |accordance with the laws of the Commonwealth of Pennsylvania without
-      |reference to conflict of laws principles. You consent to the
-      |personal jurisdiction of the courts of this County and waive their
-      |rights to venue outside of Allegheny County, Pennsylvania.
-      |
-      |ENTIRE AGREEMENT AND AMENDMENTS: This Agreement constitutes the sole
-      |and entire agreement between Licensee and Licensor as to the matter
-      |set forth herein and supersedes any previous agreements,
-      |understandings, and arrangements between the parties relating hereto.
-      |
     """.stripMargin
 }

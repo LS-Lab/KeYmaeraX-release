@@ -6,38 +6,57 @@ Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 BeginPackage["DarbouxPolynomials`"];
 
 
-(* Version 1.1, with minor optimisations *)
+(*
+	Version 1.1, with minor optimisations
+	TODO: Add support for using the domains to all the methods
+*)
 DbxNaive::usage=
-"DbxNaive[degree_Integer, vf_List, vars_List] 
-A naive implementation for generating Darboux polynomials for the polynomial vector field 'vf', up to a given finite poylnomial degree 'deg'.";
+"DbxNaive[{vectorField_List,vars_List,domain}, degree_Integer?NonNegative] 
+A naive implementation for generating Darboux polynomials for the polynomial vector field, up to a given finite poylnomial degree.";
 
 ManPS1::usage=
-"ManPS1[degree_Integer, vf_List, vars_List]
-An implementation of Y.K. Man's algorithm for Darboux polynomial generation (up to given degree) for a polynomial vector field 'vf'.
+"ManPS1[{vectorField_List,vars_List,domain}, degree_Integer?NonNegative]
+An implementation of Y.K. Man's algorithm for Darboux polynomial generation (up to given degree) for a polynomial vector field.
 See algorithm ps_1 in Y.K. Man 'Computing Closed Form Solutions of First Order ODEs Using the Prelle-Singer Procedure', J. Symb. Comput., 1993.";
 
 ManPS2::usage=
-"ManPS2[degree_Integer, vf_List, vars_List] 
-An implementation of Y.K. Man's algorithm for Darboux polynomial generation (up to given degree) for a polynomial vector field 'vf'.
+"ManPS2[{vectorField_List,vars_List,domain}, degree_Integer?NonNegative] 
+An implementation of Y.K. Man's algorithm for Darboux polynomial generation (up to given degree) for a polynomial vector field.
 See alorithm new_ps_1 in Y.K. Man 'Computing Closed Form Solutions of First Order ODEs Using the Prelle-Singer Procedure', J. Symb. Comput., 1993.";
+
+DbxDefault::usage="DbxDefault[{vf,vars,domain},degree] Adds some bells and whistles to cleanup ManPS2,
+e.g. turns complex (or irrational) results into real ones";
 
 
 Begin["`Private`"];
 
 
-DbxNaive[deg_Integer,vf_List,vars_List]:=Catch[Module[
+DbxDefault[{vf_List,vars_List,domain_}, deg_Integer]:=Module[{dbx,realdbx,ratdbx,irratdbx,irratsq},
+dbx=DarbouxPolynomials`ManPS2[{vf,vars,domain}, deg];
+(* Hack: Set all remaining parameters to 1 *)
+dbx=Map[Primitives`InstantiateParameters[#,vars,1]&,dbx];
+(* deduplicated and noncomplexified polynomials*)
+realdbx=Map[If[Primitives`IsRealPolynomial[#], #, #*Primitives`ConjugatePolynomial[#]//Expand]&, dbx]//DeleteDuplicates;
+ratdbx=Select[realdbx,Primitives`IsRatPolynomial];
+irratdbx=Select[realdbx,Not[Primitives`IsRatPolynomial[#]]&];
+irratsq=Select[Map[Expand[#[[1]]*#[[2]]]&,Tuples[{irratdbx,irratdbx}]]//DeleteDuplicates,Primitives`IsRatPolynomial];
+Join[ratdbx,irratsq]//DeleteDuplicates
+]
+
+
+DbxNaive[{vf_List,vars_List,domain_}, degree_Integer?NonNegative]:=Catch[Module[
 {monbas, coeffs, template, MonBas, cofactCoeffs, 
 cofactBasis, cofactTemplate, Lftemplate, Lfdeg, lhs ,sol,
  problem, monomialOrder,
 (* Maximum total polynomial degree of the vector field *)
 m=Max[Map[Primitives`PolynomDegree[#,vars]&,vf]]},
 
-If[deg<=0, Throw[{}]];
+If[degree<=0, Throw[{}]];
 
 (* Compute monomial basis with given monomial order *)
 monomialOrder="DegreeReverseLexicographic";
 MonBas[maxdeg_]:=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
-monbas=MonBas[deg];
+monbas=MonBas[degree];
 
 (* Compute the symbolic coefficients of the polynomial template *)
 coeffs=Table[Symbol["COEFF"<>ToString[i]],{i,1,Length[monbas]}];
@@ -76,7 +95,7 @@ Throw[Most[UpperTriangularize[Table[If[i==j,1,Symbol["\[Alpha]"<>ToString[j]]],{
 ]]
 
 
-ManPS1[deg_Integer,vf_List,vars_List]:=Catch[Module[
+ManPS1[{vf_List,vars_List,domain_}, deg_Integer?NonNegative]:=Catch[Module[
 {monicTemplates,Sfg,k, Dfi, monomialOrder,
 LT,LC, MonBas, ltfi,ltDfi,n, cofactBasis, 
 cofactCoeffs,gi,eqns,geqns,feqns,geqnsol,feqnsol},
@@ -124,7 +143,7 @@ Throw[Sfg//DeleteDuplicates];
 
 
 (* Implementation of new_ps_1 algorithm from Y.K. Man's 1993 JSC paper *)
-ManPS2[deg_Integer,vf_List,vars_List]:=Catch[Module[
+ManPS2[{vf_List,vars_List,domain_}, deg_Integer]:=Catch[Module[
 {monbas, moncoeffs, monictemplate, LieD, MonBas, cofactCoeffs, cofactBasis, 
 cofactTemplate, Lftemplate, Lfdeg, lhs ,sol, problem, LT, LC, n, gi, indivisible, 
 eqns,feqns,geqns, elimvar, s, geqnsol,feqnsol,Sfg,irreducibles,monomialOrder,k,monicTemplates},

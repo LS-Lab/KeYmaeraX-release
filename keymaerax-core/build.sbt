@@ -9,19 +9,15 @@ assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar"
 
 scalaVersion := "2.12.8"
 
-//scalacOptions ++= Seq("-Xno-patmat-analysis")
-
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
+libraryDependencies += "biz.enef" %% "slogging-slf4j" % "0.6.+"
+
+libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
+
 libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
-
-libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.11.2"
-
-libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.11.2"
-
-libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
 
 libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1"
 
@@ -32,6 +28,9 @@ libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
 libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
 libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
+
+resolvers += Resolver.sonatypeRepo("releases")
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 

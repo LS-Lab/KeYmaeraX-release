@@ -70,6 +70,7 @@ object DependencyAnalysis {
           val (d, f) = dependencies(p, s.union(inn),ignoreTest) //More to add
           (d, f.union(funcs))
         }
+      case Dual(p) => dependencies(p, s, ignoreTest)
       case _ => ???
     }
 
@@ -145,8 +146,14 @@ object DependencyAnalysis {
       return transitiveAnalysis(vs,s.union(newvars._1),f.union(newvars._2))
   }
 
-  //Dependency Analysis for ODEs
-  def analyseODE(p:ODESystem,s:Set[BaseVariable],ignoreTest:Boolean) : (Set[BaseVariable],Set[Function]) = {
+  /** Dependency Analysis for ODEs
+    * @param p the ODE system to analyse
+    * @param s the set of variables concerned with
+    * @param ignoreTest whether to check the domain constraint
+    * @param checkLinear whether to account for linearity
+    * @return the sets of variables and function symbols that s depends on in the ODE
+    */
+  def analyseODE(p:ODESystem,s:Set[BaseVariable],ignoreTest:Boolean, checkLinear:Boolean=true) : (Set[BaseVariable],Set[Function]) = {
     val ode = p.ode
     val dom = p.constraint
     val (fvdom:Set[BaseVariable]) = if (ignoreTest) Set.empty else freeVars(dom)
@@ -162,21 +169,22 @@ object DependencyAnalysis {
     //Otherwise, transitively close over the set
     val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
 
-    //Compute the transitive closure T
+    //Compute the transitive closure
     val (vars,funcs) = transitiveAnalysis(ds,s.union(fvdom),fvsig)
 
-//    println("T analysis",vars,funcs)
-
-    //Check that the remainder of the ODE is linear
-    if (isLinearODE(odels -- vars)) {
-      (vars, funcs)
+    if(checkLinear) {
+      //Check that the remainder of the ODE is linear
+      if (isLinearODE(odels -- vars)) {
+        (vars, funcs)
+      }
+      //Otherwise, give up and return the whole ODE
+      else {
+        val odedom = odels.values.map(t => freeVars(t)).foldLeft(s.union(odels.keySet))((s, t) => s.union(t))
+        val odesig = odels.values.map(t => signature(t)).foldLeft(Set[Function]())((s, t) => s.union(t))
+        (odedom.union(fvdom), odesig.union(fvsig))
+      }
     }
-    //Otherwise, give up and return the whole ODE
-    else {
-       val odedom = odels.values.map(t => freeVars(t)).foldLeft(s.union(odels.keySet))((s, t) => s.union(t))
-       val odesig = odels.values.map(t => signature(t)).foldLeft(Set[Function]())((s, t) => s.union(t))
-       (odedom.union(fvdom), odesig.union(fvsig))
-    }
+    else (vars,funcs)
   }
 
   def analyseModalVars(p:Program,ls:Set[BaseVariable],ignoreTest:Boolean = false) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
@@ -190,9 +198,9 @@ object DependencyAnalysis {
   }
 
   //Finds the SCC on the ODE variables, and ignores any variables that do not occur in the ODE 'ed variables
-  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false)  : Map[BaseVariable,Set[BaseVariable]] = {
+  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false, checkLinear:Boolean = true)  : Map[BaseVariable,Set[BaseVariable]] = {
     val vars = odevars(p)
-    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest)._1.intersect(vars))).toMap
+    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest,checkLinear)._1.intersect(vars))).toMap
   }
 
   // Naive DFS starting from a variable

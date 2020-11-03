@@ -1,0 +1,55 @@
+ArchiveEntry "TRM Tangential Roundabout Maneuver"
+
+/**
+ * Essentials of Tangential Roundabout Maneuver (TRM) in Air Traffic Control (ATC)
+ * @author Andre Platzer
+ * @see "Andre Platzer. Differential-algebraic dynamic logic for differential-algebraic programs.Journal of Logic and Computation, 20(1), pages 309-352, 2010."
+ */
+Definitions
+  Real p;  /* protected zone radius */
+End.
+
+ProgramVariables
+  Real x1, x2, d1, d2, om;   /* aircraft 1: (x,y)-position, (x,y)-direction, and angular velocity */
+  Real y1, y2, e1, e2, omy;   /* aircraft 2: (x,y)-position  and (x,y)-direction, and angular velocity */
+  Real c1, c2;   /* (x,y)-position of center of roundabout circle */
+End.
+
+Problem
+    (x1-y1)^2 + (x2-y2)^2 >= p^2
+  ->
+   [{
+      {
+         om:=*;omy:=*;
+         {x1'=d1,x2'=d2, d1'=-om*d2,d2'=om*d1, y1'=e1,y2'=e2, e1'=-omy*e2,e2'=omy*e1 &
+          ((x1-y1)^2 + (x2-y2)^2 >= p^2)}
+       }*@invariant((x1-y1)^2 + (x2-y2)^2 >= p^2);
+       c1:=*;c2:=*; om:=*;
+       d1:=-om*(x2-c2); d2:=om*(x1-c1);
+       e1:=-om*(y2-c2); e2:=om*(y1-c1);
+       {x1'=d1,x2'=d2, d1'=-om*d2,d2'=om*d1, y1'=e1,y2'=e2, e1'=-om*e2,e2'=om*e1}
+       /* @invariant(d1-e1=-om*(x2-y2)&d2-e2=om*(x1-y1)) */
+    }*@invariant((x1-y1)^2 + (x2-y2)^2 >= p^2)
+  ] (x1-y1)^2 + (x2-y2)^2 >= p^2
+End.
+
+Tactic "TRM Tangential Roundabout Maneuver: Interactive Proof"
+  implyR(1) ; loop("(x1-y1)^2+(x2-y2)^2>=p^2", 1) ; <(
+  id,
+  id,
+  composeb(1) ; loop("(x1-y1)^2+(x2-y2)^2>=p^2", 1) ; <(
+    id,
+    composeb(1) ; randomb(1) ; allR(1) ; composeb(1) ; randomb(1) ; allR(1) ; composeb(1) ; randomb(1) ; allR(1) ; composeb(1) ; assignb(1) ; composeb(1) ; assignb(1) ; composeb(1) ; assignb(1) ; composeb(1) ; assignb(1) ; dC("d1-e1=-om*(x2-y2)&d2-e2=om*(x1-y1)", 1) ; <(
+      dI(1),
+      dI(1)
+      ),
+    composeb(1) ; randomb(1) ; allR(1) ; composeb(1) ; randomb(1) ; allR(1) ; dW(1) ; prop
+    )
+  )
+End.
+       
+Tactic "TRM Tangential Roundabout Maneuver: Automatic Proof"
+  master
+End.
+
+End.

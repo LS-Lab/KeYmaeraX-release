@@ -39,7 +39,7 @@ trait EquationSolverTool extends ToolInterface {
     * @return The solution if found; None otherwise
     *         The solution should be a conjunction of explicit equations for the vars.
     *         Or a disjunction of a conjunction of explicit equations for the vars.
-    * @example{{{
+    * @example {{{
     *           solve("z+1=3&x+5=z-1".asFormula, Variable("z")::Variable("x")::Nil) == Some("z=2&x=-4")
     * }}}
     */
@@ -89,7 +89,7 @@ trait SimplificationTool extends ToolInterface {
     * @param assumptions The list of logical formulas whose conjunction is assumed to hold during the simplification.
     *                   The assumptions are allowed to contain additional conjunctions.
     * @return A simplified version of `expr`.
-    * @example{{{
+    * @example {{{
     *           simplify("a*x^2+b^2 > a*x^3+b*abs(b)".asFormula, "x>1".asFormula :: "b>0".asFormula::Nil) == "a<0".asFormula
     *           simplify("a*x^2+b^2 > a*x^3+b*abs(b)".asFormula, "x>1 && b>0".asFormula::Nil) == "a<0".asFormula
     * }}}
@@ -107,7 +107,7 @@ trait SimplificationTool extends ToolInterface {
 trait AlgebraTool extends ToolInterface {
   /**
     * Computes the quotient and remainder of `term` divided by `div`.
-    * @example{{{
+    * @example {{{
     *           quotientRemainder(6*x^2+4*x+8, 2*x, x) == (3*x+2, 8)
     * }}}
     */

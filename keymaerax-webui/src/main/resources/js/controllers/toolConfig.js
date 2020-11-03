@@ -1,7 +1,8 @@
 angular.module('keymaerax.services').service('ToolConfigService', function($http) {
   var systemInfo = {
     info: undefined,
-    warning: undefined
+    warning: undefined,
+    isLocal: false
   }
 
   var toolStatus = {
@@ -15,10 +16,35 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
     isUnconfigured: function(t) { return this.tool===t && !this.initializing && !this.configured && this.error === undefined; },
   }
 
+  var config = {
+    content: undefined,
+    origContent: undefined
+  }
+
   this.fetchSystemInfo = function() {
-    $http.get("/config/systeminfo").then(function(response) {
-      systemInfo.info = response.data;
-      systemInfo.error = response.data.jvmArchitecture.includes("32");
+    $http.get('/isLocal').success(function(data) {
+      if (data.errorThrown) systemInfo.isLocal = false
+      else systemInfo.isLocal = data.success;
+
+      if (systemInfo.isLocal) {
+        $http.get("/config/systeminfo").then(function(response) {
+          systemInfo.info = response.data;
+          systemInfo.error = response.data.jvmArchitecture.includes("32");
+        });
+      }
+    });
+  }
+
+  this.fetchFullConfig = function() {
+    $http.get('/isLocal').success(function(data) {
+      if (data.errorThrown) systemInfo.isLocal = false
+      else systemInfo.isLocal = data.success;
+      if (systemInfo.isLocal) {
+        $http.get("/config/fullContent").then(function(response) {
+          config.content = response.data.content;
+          config.origContent = response.data.content;
+        });
+      }
     });
   }
 
@@ -64,19 +90,52 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
 
   this.getToolStatus = function() { return toolStatus; }
   this.getSystemInfo = function() { return systemInfo; }
+  this.getConfig = function() { return config; }
 
   this.getTool();
   this.fetchSystemInfo();
 });
 
 angular.module('keymaerax.controllers').controller('ToolConfig',
-  function($scope, $uibModalInstance, ToolConfigService) {
+  function($scope, $uibModalInstance, $http, $uibModal, ToolConfigService) {
     $scope.toolStatus = ToolConfigService.getToolStatus();
     $scope.systemInfo = ToolConfigService.getSystemInfo();
     $scope.toolChange = ToolConfigService.toolChange;
 
+    $scope.config = {
+      mode: "toolConfig",
+      full: ToolConfigService.getConfig()
+    }
+
     $scope.close = function() {
       $uibModalInstance.close();
+    }
+
+    $scope.setMode = function(mode) {
+      if (mode === 'advancedConfig') ToolConfigService.fetchFullConfig();
+      $scope.config.mode = mode
+    }
+
+    $scope.saveFullConfig = function() {
+      var uri     = "/config/fullContent"
+      var dataObj = { content: $scope.config.full.content };
+      $http.post(uri, dataObj)
+        .success(function(data) {
+          $scope.close();
+          var modalInstance = $uibModal.open({
+            templateUrl: 'templates/modalMessageTemplate.html',
+            controller: 'ModalMessageCtrl',
+            size: 'md',
+            resolve: {
+              title: function() { return "Restart required"; },
+              message: function() { return "Please restart KeYmaera X for configuration changes to take effect"; },
+              mode: function() { return "ok"; }
+            }
+          });
+        })
+        .error(function(data) {
+          showCaughtErrorMessage($uibModal, data, "Error saving configuration")
+        })
     }
 
     $scope.$watch('toolStatus.tool', function(newValue, oldValue, scope) {

@@ -1,0 +1,227 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.2' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      7865,        219]
+NotebookOptionsPosition[      7117,        200]
+NotebookOutlinePosition[      7510,        216]
+CellTagsIndexPosition[      7467,        213]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Makes", " ", "the", " ", "directory", " ", 
+    RowBox[{"Pegasus", "/"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"SetDirectory", "[", 
+     RowBox[{"ParentDirectory", "[", 
+      RowBox[{"ParentDirectory", "[", 
+       RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], "]"}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"Needs", "[", 
+    RowBox[{"\"\<DiffSaturation`\>\"", ",", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"Directory", "[", "]"}], ",", "\"\<Strategies\>\"", ",", 
+        "\"\<DiffSaturation.m\>\""}], "}"}], "]"}]}], "]"}], " "}]}]], "Input",\
+
+ InitializationCell->True,
+ CellChangeTimes->{{3.7360017260021544`*^9, 3.7360017613121357`*^9}, {
+   3.736007974789966*^9, 3.7360079956451187`*^9}, 3.743335048603017*^9, {
+   3.7433352915898123`*^9, 3.743335295420651*^9}, {3.7433475162294683`*^9, 
+   3.743347518435987*^9}, 3.75725976766162*^9, {3.757260749947414*^9, 
+   3.757260760706072*^9}, {3.757261013121355*^9, 3.7572610945212593`*^9}, {
+   3.762261531179131*^9, 3.762261538262669*^9}, {3.762261788727005*^9, 
+   3.762261796322566*^9}, {3.7622621138382463`*^9, 3.762262116551819*^9}, {
+   3.762263245862213*^9, 3.7622632481926317`*^9}, {3.763378241953643*^9, 
+   3.763378257901204*^9}, 3.763391663192554*^9, 3.763391835573155*^9, {
+   3.763392456492168*^9, 3.7633924566490173`*^9}, 3.763392512350732*^9, 
+   3.763393514580377*^9, {3.789530827656342*^9, 3.7895308682909613`*^9}, {
+   3.789531527374798*^9, 3.789531528942685*^9}},
+ EmphasizeSyntaxErrors->True,
+ CellLabel->"In[1]:=",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Differential", " ", "Saturation", " ", "tests"}], " ", 
+  "*)"}]], "Input",
+ CellChangeTimes->{{3.7633888185143833`*^9, 3.763388857928627*^9}, 
+   3.763390857789421*^9, {3.789531535591571*^9, 
+   3.789531542764839*^9}},ExpressionUUID->"a7d5b96c-a2fb-45b5-acf4-\
+6fdb184e9f3d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"x", " ", "\[GreaterEqual]", " ", "5"}], ",", " ", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"x", "^", "2"}], "+", 
+         RowBox[{"a", "*", 
+          RowBox[{"x", "^", "2"}]}]}], "}"}], ",", 
+       RowBox[{"{", "x", "}"}], ",", " ", "True"}], "}"}], ",", 
+     "\[IndentingNewLine]", "  ", 
+     RowBox[{"x", ">", "0"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", "a", "}"}], ",", 
+       RowBox[{"a", ">", "0"}]}], "}"}]}], "\[IndentingNewLine]", "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"res", "=", 
+  RowBox[{"DiffSat", "[", "prob", "]"}]}]}], "Input",
+ CellChangeTimes->{{3.7895315540901003`*^9, 3.789531563655895*^9}, {
+   3.789531627554302*^9, 3.7895316612905283`*^9}, 3.7897185485614557`*^9, {
+   3.78997272642745*^9, 3.7899727383000526`*^9}, 3.791577513037219*^9, {
+   3.7943532527042227`*^9, 3.7943532673766747`*^9}},
+ CellLabel->"In[3]:=",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"And", "[", 
+      RowBox[{
+       RowBox[{"And", "[", 
+        RowBox[{
+         RowBox[{"Equal", "[", 
+          RowBox[{"kyx`x", ",", "1"}], "]"}], ",", 
+         RowBox[{"Equal", "[", 
+          RowBox[{"kyx`y", ",", 
+           RowBox[{"-", "1"}]}], "]"}]}], "]"}], ",", 
+       RowBox[{"Not", "[", "False", "]"}]}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"Plus", "[", 
+          RowBox[{
+           RowBox[{"Power", "[", 
+            RowBox[{"kyx`x", ",", "2"}], "]"}], ",", 
+           RowBox[{"Divide", "[", 
+            RowBox[{
+             RowBox[{"Plus", "[", 
+              RowBox[{"kyx`x", ",", "kyx`y"}], "]"}], ",", "2"}], "]"}]}], 
+          "]"}], ",", 
+         RowBox[{"Divide", "[", 
+          RowBox[{
+           RowBox[{"Plus", "[", 
+            RowBox[{
+             RowBox[{"Minus", "[", "kyx`x", "]"}], ",", 
+             RowBox[{"Times", "[", 
+              RowBox[{"3", ",", "kyx`y"}], "]"}]}], "]"}], ",", "2"}], 
+          "]"}]}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"kyx`x", ",", "kyx`y"}], "}"}], ",", "True"}], "}"}], ",", 
+     RowBox[{"Not", "[", 
+      RowBox[{"Greater", "[", 
+       RowBox[{"kyx`y", ",", "0"}], "]"}], "]"}]}], "}"}]}], ";", 
+  RowBox[{"DiffSat", "[", 
+   RowBox[{"Join", "[", 
+    RowBox[{"prob", ",", 
+     RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", "}"}], ",", "True"}], "}"}], "}"}]}], "]"}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.791578426146194*^9, 3.7915784267869864`*^9}, {
+  3.7929267915125628`*^9, 3.7929267947977753`*^9}},
+ CellLabel->"In[5]:=",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"x", "-", "2"}], ")"}], "^", "2"}], "+", 
+        RowBox[{"y", "^", "2"}]}], "\[LessEqual]", 
+       RowBox[{"1", "/", "5"}]}], "||", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"x", "+", "2"}], ")"}], "^", "2"}], "+", 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"y", "-", "2"}], ")"}], "^", "2"}]}], "\[LessEqual]", 
+       RowBox[{"1", "/", "3"}]}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"-", "4"}], " ", "y"}], ",", "x"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", "y"}], "}"}], ",", "True"}], "}"}], ",", 
+     RowBox[{
+      RowBox[{"y", "\[LessEqual]", "4"}], "&&", 
+      RowBox[{"y", "\[GreaterEqual]", 
+       RowBox[{"-", "4"}]}], "&&", 
+      RowBox[{"Not", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"x", "^", "2"}], "+", 
+         RowBox[{"y", "^", "2"}]}], "\[LessEqual]", 
+        RowBox[{"1", "/", "3"}]}], "]"}]}]}], "}"}]}], ";"}], "\n", 
+ RowBox[{"res", "=", 
+  RowBox[{"DiffSat", "[", 
+   RowBox[{"Join", "[", 
+    RowBox[{"prob", ",", 
+     RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", "}"}], ",", "True"}], "}"}], "}"}]}], "]"}], 
+   "]"}]}]}], "Input",
+ CellChangeTimes->{{3.7946287035968037`*^9, 3.794628720204877*^9}},
+ CellLabel->"In[3]:=",ExpressionUUID->"d9ef4461-cf01-4fd4-bdf4-b84f2d6b9ff1"]
+},
+WindowSize->{960., 767.25},
+WindowMargins->{{Automatic, 0}, {0, Automatic}},
+FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"02ee4122-c3e5-4726-8c83-6e1404bdaecb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 1700, 34, 87, "Input",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8",
+ InitializationCell->True],
+Cell[2261, 56, 322, 7, 29, "Input",ExpressionUUID->"a7d5b96c-a2fb-45b5-acf4-6fdb184e9f3d"],
+Cell[2586, 65, 1152, 28, 154, "Input",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"],
+Cell[3741, 95, 1770, 51, 92, "Input",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"],
+Cell[5514, 148, 1599, 50, 71, "Input",ExpressionUUID->"d9ef4461-cf01-4fd4-bdf4-b84f2d6b9ff1"]
+}
+]
+*)
+

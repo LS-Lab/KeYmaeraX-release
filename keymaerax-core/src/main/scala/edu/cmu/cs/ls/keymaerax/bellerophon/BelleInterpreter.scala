@@ -15,10 +15,14 @@ object BelleInterpreter extends Interpreter {
   def setInterpreter(i: Interpreter): Unit = {
     if (interpreter != null) kill()
     theInterpreter = i
+    start()
   }
 
   /** Returns the interpreter. */
   def interpreter: Interpreter = theInterpreter
+
+  /** Starts the interpreter. */
+  override def start(): Unit = interpreter.start()
 
   /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable). */
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = interpreter(expr, v)

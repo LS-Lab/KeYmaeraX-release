@@ -2,6 +2,8 @@
   <p>
   The <kbd>allR</kbd> proof rule proves a universal formula <code>∀x p(x)</code> by fixing a fresh variable <code>y</code> and proving that <code>p(y)</code> holds.
   Because <code>y</code> was an arbitrary new name about which nothing was assumed, <code>∀x p(x)</code> follows.
+  Since KeYmaera&#160;X renames <code>x</code> to a fresh <code>y</code> in <code>Γ,Δ</code>,
+  it suffices to prove <code>Γ |- p(x), Δ</code>
 </p>
 <p>
 Learning resources

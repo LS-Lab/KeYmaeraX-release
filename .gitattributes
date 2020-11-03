@@ -1,0 +1,12 @@
+* text=auto
+
+*.nb text
+*.scala text
+*.java text
+*.m text
+*.kyx text
+*.kyt text
+*.kyp text
+*.kya text
+*.js text
+*.sbt text

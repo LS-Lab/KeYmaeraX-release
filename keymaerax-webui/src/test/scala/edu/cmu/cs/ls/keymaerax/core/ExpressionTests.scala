@@ -4,19 +4,18 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import testHelper.KeYmaeraXTestTags._
 
-import scala.collection.immutable
 import scala.collection.immutable._
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests basic expression data structures
   *
  * @author Andre Platzer
  */
+@CheckinTest
 class ExpressionTests extends FlatSpec with Matchers {
   "Expressions" should "refuse empty names" in {
     a [CoreException] shouldBe thrownBy(Variable("",None,Real))

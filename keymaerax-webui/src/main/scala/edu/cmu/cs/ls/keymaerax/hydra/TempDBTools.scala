@@ -9,9 +9,9 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, Real, Sequent, Sort, StaticSemantics, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, Sort, StaticSemantics, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -47,18 +47,18 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
           else throw new Exception("Unknown sort: " + fn.sort)
         ).mkString("\n  ")
         val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
-        s"""Functions.
+        s"""Definitions
            |  $fnDecls
            |End.
-           |ProgramVariables.
+           |ProgramVariables
            |  $varDecls
            |End.
-           |Problem.
+           |Problem
            |  $content
            |End.""".stripMargin
       }
 
-    augmentDeclarations(content, KeYmaeraXArchiveParser.parseAsProblemOrFormula(content))
+    augmentDeclarations(content, ArchiveParser.parseAsFormula(content))
   }
 
   /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
@@ -79,10 +79,16 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
                          interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false),
                          proofId: Option[Int] = None,
                          modelName: String = ""): (Int, ProvableSig) = {
-    val entry = KeYmaeraXArchiveParser.parse(modelContent).head
+    val (entry, archiveContent) = try {
+      (ArchiveParser(modelContent).head, modelContent)
+    } catch {
+      case _: ParseException =>
+        val archiveContent = s"""ArchiveEntry "Test" Problem $modelContent End. End."""
+        (ArchiveParser(archiveContent).head, archiveContent)
+    }
     val pId = proofId match {
       case Some(id) => id
-      case None => createProof(modelContent, modelName)
+      case None => createProof(archiveContent, modelName)
     }
     val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula])
     val expectedSubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.expandedModel.asInstanceOf[Formula]))
@@ -148,7 +154,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       tactic
     } catch {
       case _: Throwable =>
-        val modelContent = KeYmaeraXPrettyPrinter(fml)
+        val modelContent = PrettyPrinter.printer(fml)
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
         val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, DBTools.listener(db),

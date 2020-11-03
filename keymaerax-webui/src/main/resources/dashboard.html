@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KeYmaera&#160;X Prover User Interface">
     <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
-    <link rel="icon" href="../../favicon.ico">
 
     <title>KeYmaera&#160;X Prover</title>
 
@@ -59,7 +58,7 @@
                         <li><a ng-click="openNewModelDialog()">New Model...</a></li>
                         <li><a href="dashboard.html?#/models"><i class="fa fa-file-code-o"></i> Models</a></li>
                         <li><a href="dashboard.html?#/proofs"><i class="fa fa-book"></i> Proofs</a></li>
-                        <li><a ng-click="openPreferences()" ng-show="isLocal"><i class="fa fa-wrench"></i> Preferences</a></li>
+                        <li><a ng-click="openPreferences()" ng-show="systemInfo.isLocal"><i class="fa fa-wrench"></i> Preferences</a></li>
                     </ul>
                 </li>
             </ul>
@@ -84,8 +83,8 @@
                     <ul class="dropdown-menu" role="menu">
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a ng-click="showOverlayHelp()"><i class="fa fa-question-circle"></i> Quick Usage Help</a></li>
-                        <!--li><a href="dashboard.html?#/tutorials"><i class="fa fa-info-circle"></i> Tutorials</a></li-->
                         <li><a target="_blank" href="http://video.keymaeraX.org/"><i class="fa fa-info-circle"></i> User Videos</a></li>
+                        <li><a href="http://keymaeraX.org/Xtutorial.html"><i class="fa fa-info-circle"></i> KeYmaera&#160;X Tutorial</a></li>
                         <!--<li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>-->
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X</a></li>
                         <li class="divider"></li>
@@ -94,7 +93,7 @@
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <li class="divider"></li>
-                        <li><a ng-click="extractdb()" ng-show="isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
+                        <li><a ng-click="extractdb()" ng-show="systemInfo.isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
                         <li><a target="_blank" href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
                     </ul>
                 </li>
@@ -106,7 +105,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
+                    <a ng-click="shutdown()" ng-show="systemInfo.isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
                 </li>
                 <li class="nav-item">
                     <a ng-click="logoff()" uib-tooltip="Log off" tooltip-placement="auto bottom"><i class="fa fa-sign-out"></i></a>
@@ -117,6 +116,13 @@
 </div>
 
 <div class="container">
+
+<noscript>
+  <div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>JavaScript</b> in your browser!</div>
+</noscript>
+<script type="text/javascript"><!--
+  if (!navigator.cookieEnabled) document.write('<div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>Cookies</b> in your browser!<br/> After enabling Cookies, restart the  KeYmaera&#160;X user interface</div>')
+  --></script>
 
 <div ng-controller="ToolStatus">
     <div class="alert alert-warning" role="alert"
@@ -210,6 +216,7 @@
 <script src="/js/controllers/mathematicaConfig.js"></script>
 <script src="/js/controllers/wolframEngineConfig.js"></script>
 <script src="/js/controllers/wolframScriptConfig.js"></script>
+<script src="/js/controllers/z3Config.js"></script>
 <script src="/js/controllers/proofRuleChoice.js"></script>
 <script src="/js/controllers/proofs.js"></script>
 <script src="/js/controllers/provingawesome.js"></script>

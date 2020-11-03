@@ -101,7 +101,7 @@ class ApproximatorTests extends TacticTestBase {
   "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs KeYmaeraXTestTags.DeploymentTest in {
     val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
-    print shouldBe """expApproximate("e","10",1)"""
+    print shouldBe """expApproximate("e", "10", 1)"""
     print.asTactic shouldBe t
   }
 
@@ -116,7 +116,7 @@ class ApproximatorTests extends TacticTestBase {
   it should "properly print and parse top-level autoApproximate tactic" taggedAs KeYmaeraXTestTags.DeploymentTest in {
     val t = Approximator.autoApproximate(Number(10))(1)
     val print = t.prettyString
-    print shouldBe """autoApproximate("10",1)"""
+    print shouldBe """autoApproximate("10", 1)"""
     print.asTactic shouldBe t
   }
 

@@ -4,17 +4,17 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, BelleThrowable, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.List
 
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
-  * @see [[TactixLibrary.invGenerator]]
+  * @see [[TactixLibrary.invSupplier]]
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
   * @see Andre Platzer and Edmund M. Clarke. [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
   */
@@ -128,35 +128,29 @@ object InvariantGenerator extends Logging {
       )
   }
 
-  /** Default invariant generator used in Bellerophon tactics if no specific generator is requested. */
-  lazy val defaultInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos)).distinct)
-
   /** A differential invariant generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
+  lazy val differentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
+    (TactixLibrary.invSupplier(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
-  )
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
-  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
+  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
     sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos).distinct
-  )
 
   /** A loop invariant generator.
     * @author Andre Platzer */
-  lazy val loopInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (TactixLibrary.invGenerator(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
-  )
+  lazy val loopInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
+    (TactixLibrary.invSupplier(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
+  lazy val differentialInvariantCandidates: Generator[GenProduct] = (sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
-      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent, pos)).distinct)
+    //@note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
+    // since flagged as truly invariant and not just a guess like the simple candidates
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -166,12 +160,27 @@ object InvariantGenerator extends Logging {
   /** A simplistic invariant and differential invariant candidate generator.
     * @author Andre Platzer */
   lazy val simpleInvariantCandidates: Generator[GenProduct] = (sequent,pos) => {
-    def combinedAssumptions(loop: Loop): Formula = {
-      sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
+    def combinedAssumptions(loop: Loop, post: Formula): List[Formula] = {
+      val anteConjuncts = sequent.ante.toList.flatMap(FormulaTools.conjuncts)
+      val postConjuncts = FormulaTools.conjuncts(post)
+      val loopBV = StaticSemantics.boundVars(loop)
+      val combined = anteConjuncts.
+        filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
+      val anteInvCandidate = combined.reduceRightOption(And).getOrElse(True)
+      //@todo pre -> post counterexample is not strong enough to indicate what to filter (need to consult loop body).
+      if (ToolProvider.cexTool().isDefined) {
+        //@note used to be Imply, now filter only duplicate information
+        postConjuncts.filter(fml => fml.isFOL && TactixLibrary.findCounterExample(Equiv(anteInvCandidate, fml)).isDefined) match {
+          case Nil => combined
+          case missingPost => missingPost ++ combined
+        }
+      } else postConjuncts ++ combined
     }
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).distinct.map(_ -> None).toStream.distinct
-      case Some(Box(l: Loop, post))      => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).map(_ -> None).toStream.distinct
+      case Some(Box(l: Loop, post))      =>
+        val combined = combinedAssumptions(l, post).distinct
+        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
@@ -181,37 +190,26 @@ object InvariantGenerator extends Logging {
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
   def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
-      def strictInequality(fml: Formula): Boolean = {
-        FormulaTools.atomicFormulas(fml).exists({
-          case _: Less => true
-          case _: Greater => true
-          case _: NotEqual => true
-          case _ => false
-        })
-      }
-
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
-          def pegasusInvs =
-            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).reduceRightOption(Or).getOrElse(False)), post)
-          def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
-            case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
-            case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
-          }).map({
-            case Left(l) => Right((l.map(_._1).reduce(And), "Unknown") :: Nil)
-            case Right(r) => Right((r.map(_._1).reduce(And), "Unknown") :: Nil)
-          })
-          def invs: Stream[GenProduct] =
+          lazy val pegasusInvs: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
+            val succFmls = sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL)
+            val assumptions =
+              if (succFmls.isEmpty) sequent.ante
+              else sequent.ante :+ Not(succFmls.reduceRight(Or))
+            tool.invgen(ode, assumptions, post)
+          }
+          lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
-              (pegasusInvs ++ conjunctiveCandidates).toStream.flatMap({
+              pegasusInvs.flatMap({
                 case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          invs
+          invs.toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
@@ -224,8 +222,8 @@ object InvariantGenerator extends Logging {
     */
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) => {
     import FormulaTools._
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a computer algebra tool")
-    if (ToolProvider.pdeTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a PDE Solver")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a computer algebra tool")
+    if (ToolProvider.pdeTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a PDE Solver")
     val (ode, constraint, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
@@ -235,9 +233,9 @@ object InvariantGenerator extends Logging {
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode).toStream.distinct
     } catch {
-      case e: Throwable => throw new BelleThrowable("inverseCharacteristic generation unsuccessful", e)
+      case e: Throwable => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", e)
     }
-    if (solutions.isEmpty) throw new BelleThrowable("No solutions found that would construct invariants")
+    if (solutions.isEmpty) throw new BelleNoProgress("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
       case Equal(p,q)        => Minus(p,q)
       case GreaterEqual(p,q) => Minus(p,q)

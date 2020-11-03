@@ -62,6 +62,10 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
         console.error(response.data.textStatus);
         // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
         return $q.reject(response);
+      } else if (response.data !== undefined && response.data !== null && response.data.type === 'uncaught') {
+        console.error(response.data.textStatus);
+        // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
+        return $q.reject(response);
       }
       return response;
     },
@@ -235,7 +239,7 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
   $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.userDescription = undefined
-  $scope.subjectText = "KeYmaera X error report"
+  $scope.subjectText = "KeYmaera X help request"
 
   encodeText = function(str) {
     // replace characters not encoded by encodeURIComponent manually

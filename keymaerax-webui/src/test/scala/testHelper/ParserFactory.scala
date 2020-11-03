@@ -5,7 +5,7 @@
 package testHelper
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 
 /**
  * Created by ran on 2/4/15.
@@ -25,6 +25,6 @@ object ParserFactory {
   def parseToSequent(in: String): Sequent = {
     Sequent(
       collection.immutable.IndexedSeq[Formula](),
-      collection.immutable.IndexedSeq[Formula](KeYmaeraXArchiveParser.parseAsProblemOrFormula(in)))
+      collection.immutable.IndexedSeq[Formula](ArchiveParser.parseAsFormula(in)))
   }
 }

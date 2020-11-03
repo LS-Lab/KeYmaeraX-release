@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
@@ -37,7 +37,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
-    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS("<-> reflexive")
+    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS(Ax.equivReflexive)
     val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
     proveBy(fml, e) shouldBe 'proved
   }
@@ -135,6 +135,21 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.loneElement shouldBe "==> x=1&v=2&a=0 -> \\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
+  it should "solve inside another solution" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("x>=0, y>=0 ==> [{x'=1}][{y'=x}]y>=0".asSequent, AxiomaticODESolver()(1) & AxiomaticODESolver()(1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "x>=0, y>=0 ==> \\forall t__0 (t__0>=0->\\forall t_ (t_>=0->(t__0+x)*t_+y>=0))".asSequent
+  }
+
+  it should "solve in the context of an assignment to t_" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("x>=0, y>=0 ==> [t_:=4;][{x'=y*t_}]x>=0".asSequent, AxiomaticODESolver()(1, 1::Nil)).subgoals.
+      loneElement shouldBe "x>=0, y>=0 ==> [t__0:=4;]\\forall t_ (t_>=0->y*t__0*t_+x>=0)".asSequent
+  }
+
+  it should "solve in the context of a system constant" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    proveBy("==> [a;][{x'=1}]x>=0".asSequent, AxiomaticODESolver()(1, 1::Nil)).subgoals.
+      loneElement shouldBe " ==> [a;]\\forall t_ (t_>=0->t_+x>=0)".asSequent
+  }
+
   it should "still introduce internal time even if own time is present" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
@@ -204,8 +219,16 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve simple nested ODEs" in withMathematica { _ =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), solve(1))
-    result.subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asSequent
+    val sequent = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula))
+    proveBy(sequent, solve(1)).subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asSequent
+    proveBy(sequent, solve(1, 1::Nil)).subgoals.loneElement shouldBe "x>0 ==> [{x'=2}]\\forall t_ (t_>=0 -> 3*t_+x > 0)".asSequent
+  }
+
+  it should "fail fast on unsolvable ODEs" in withMathematica { _ =>
+    the [BelleTacticFailure] thrownBy proveBy("x>0 ==> [{x'=x}]x>0".asSequent, solve(1)) should
+      have message "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve()."
+    the [BelleTacticFailure] thrownBy proveBy("x>0 ==> [{x'=2}][{x'=x}]x>0".asSequent, solve(1, PosInExpr(1::Nil))) should
+      have message "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().".stripMargin
   }
 
   it should "solve in universal context in ante" in withMathematica { _ =>
@@ -455,7 +478,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo unsound bananas in post condition
   "DS& differential equation solution" should "be careful in postcondition" in withMathematica { _ =>
     val fml = "[{x'=1}] t_>=0".asFormula
-    val result = proveBy(fml, useAt("DS& differential equation solution")(1) & normalize)
+    val result = proveBy(fml, useAt(Ax.DS)(1) & normalize)
     result shouldBe 'proved
   }
 
@@ -503,7 +526,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
                     |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
                     |End.
                     |""".stripMargin
-      val problem: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model)
+      val problem: Formula = ArchiveParser.parseAsFormula(model)
 
       val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve()(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & QE
 
@@ -562,14 +585,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
-    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message
-      """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
-        |The error occurred on
-        |Provable{
-        |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
-        |  from
-        |   -1:  x=1&v=2&a=0&t=0	And
-        |==> 1:  [kyxtime_0:=0;][{x'=v,v'=x,t'=1,kyxtime_0'=1&true}]x^3>=1	Box}""".stripMargin
+    the [BelleThrowable] thrownBy proveBy(f, t) should have message
+      "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve()."
   }
   //endregion
 

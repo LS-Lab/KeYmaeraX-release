@@ -6,28 +6,30 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
+import org.scalatest.LoneElement._
 
 /**
  * Base class for KeYmaera X system tests without tactics need.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase]]
  */
 class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Test setup */
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
   }
 
   /* Test teardown */
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
   }
 
 
   /** Removes all whitespace for string comparisons in tests.
-    * @example{{{
+    * @example {{{
     *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
     * }}}
     */
@@ -37,9 +39,5 @@ class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def toString: String = "whiteSpaceRemoved"
     }
 
-  def loneSucc(p: ProvableSig) = {
-    assert(p.subgoals.length==1)
-    assert(p.subgoals.last.succ.length==1)
-    p.subgoals.last.succ.last
-  }
+  def loneSucc(p: ProvableSig): Formula = p.subgoals.loneElement.succ.loneElement
 }

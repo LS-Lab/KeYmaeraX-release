@@ -30,58 +30,58 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   //@note this test case points out something that's kind-of a problem with our current setup -- print(parse(x)) != x even if parse(print(x)) = x.
   //In order to get the actually correct behavior we would need DerivedAxiomInfo to be a bidirectional map and then we would need to always prefer that map's
   //names over the actual tactic that was created at the end of the day.
-  "built-in printer" should "print a built-in expr" in { roundTrip("nil") }
+  "built-in printer" should "print a built-in expr" in withTactics { roundTrip("nil") }
 
-  it should "print e(1)" in { roundTrip("andR(1)") }
+  it should "print e(1)" in withTactics { roundTrip("andR(1)") }
 
-  it should "print e('L)" in { roundTrip("andR('L)") }
+  it should "print e('L)" in withTactics { roundTrip("andR('L)") }
 
-  it should "print e('R)" in { roundTrip("andR('R)") }
+  it should "print e('R)" in withTactics { roundTrip("andR('R)") }
 
-  "seq printer" should "print e ; e" in { roundTrip("nil ; nil") }
+  "seq printer" should "print e ; e" in withTactics { roundTrip("nil ; nil") }
 
-  it should "print e ; e ; e" in { roundTrip("nil ; nil ; nil") }
+  it should "print e ; e ; e" in withTactics { roundTrip("nil ; nil ; nil") }
 
-  it should "print (e ; e) ; e" in { roundTrip("(nil ; nil) ; nil") }
+  it should "print (e ; e) ; e" in withTactics { roundTrip("(nil ; nil) ; nil") }
 
-  it should "print e | e" in { roundTrip("nil | nil") }
+  it should "print e | e" in withTactics { roundTrip("nil | nil") }
 
-  "doall" should "print e ; doall(e)" in { roundTrip("andR(1) ; doall(andL(1))") }
+  "doall" should "print e ; doall(e)" in withTactics { roundTrip("andR(1) ; doall(andL(1))") }
 
-  "transform" should "print with formula" in {
+  "transform" should "print with formula" in withTactics {
     val tactic = TactixLibrary.transform("x>0".asFormula)(1)
     BellePrettyPrinter(tactic) shouldBe "transform(\"x>0\", 1)"
     roundTrip("transform(\"x>0\", 1)")
   }
 
-  "Applied position tactics" should "print position" in {
+  "Applied position tactics" should "print position" in withTactics {
     val tactic = TactixLibrary.implyR(1)
     BellePrettyPrinter(tactic) shouldBe "implyR(1)"
     roundTrip("implyR(1)")
   }
 
-  "Applied position with input tactics" should "print input and position" in {
+  "Applied position with input tactics" should "print input and position" in withTactics {
     val tactic = TactixLibrary.loop("x>0".asFormula)(1)
     BellePrettyPrinter(tactic) shouldBe "loop(\"x>0\", 1)"
     roundTrip("loop(\"x>0\", 1)")
   }
 
-  "useLemmaAt" should "print key correctly" in {
+  "useLemmaAt" should "print key correctly" in withTactics {
     BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt(\"the lemma\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", 1)")
     BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt(\"the lemma\", \"1\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", \"1\", 1)")
   }
 
-  "Operator precedence" should "bind saturate * stronger than ;" in { roundTrip("implyR(1) ; andL('L)*") }
+  "Operator precedence" should "bind saturate * stronger than ;" in withTactics { roundTrip("implyR(1) ; andL('L)*") }
 
-  it should "parenthesize ; in saturate *" in { roundTrip("(implyR(1) ; andL('L))*") }
+  it should "parenthesize ; in saturate *" in withTactics { roundTrip("(implyR(1) ; andL('L))*") }
 
-  it should "bind repeat *times stronger than ;" in { roundTrip("implyR(1) ; andL('L)*2") }
+  it should "bind repeat *times stronger than ;" in withTactics { roundTrip("implyR(1) ; andL('L)*2") }
 
-  it should "parenthesize partial" in { roundTrip("implyR(1) ; (andL(1) partial)") }
+  it should "parenthesize partial" in withTactics { roundTrip("implyR(1) ; (andL(1) partial)") }
 
-  it should "parenthesize tactic combinators" in {
+  it should "parenthesize tactic combinators" in withTactics {
     parser(BellePrettyPrinter(SaturateTactic(TactixLibrary.alphaRule))) shouldBe SaturateTactic(TactixLibrary.alphaRule)
   }
 

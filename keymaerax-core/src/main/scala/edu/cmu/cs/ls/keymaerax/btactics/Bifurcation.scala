@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleFriendlyUserMessage}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicationException, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -30,20 +30,22 @@ object Bifurcation {
     }
 
   /** Splits the proof using the [[bifurcationTool]] and does nothing on each of the branches. */
-  val biSplit = "biSplit" by ((pos: Position, seq: Sequent) => {
+  val biSplit = anon ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
-      case _ => throw new BelleFriendlyUserMessage(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
+      case Some(e) => throw new TacticInapplicableFailure("biSplit only applicable to ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     nestedCuts(TactixLibrary.nil, bifurcationTool(odes).toSeq)
   })
 
   /** Splits the proof using the [[bifurcationTool]] and runs [[TactixLibrary.ODE]] on each of the remaining branches. */
-  val biSplitAuto = "biSplitAuto" by ((pos: Position, seq: Sequent) => {
+  val biSplitAuto = anon ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
-      case _ => throw new BelleFriendlyUserMessage(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
+      case Some(e) => throw new TacticInapplicableFailure("biSplitAuto only applicable to ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     nestedCuts(TactixLibrary.ODE(pos), bifurcationTool(odes).toSeq)

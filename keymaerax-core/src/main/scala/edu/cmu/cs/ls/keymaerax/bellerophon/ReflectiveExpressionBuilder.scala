@@ -1,14 +1,16 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.annotation.tailrec
 import scala.reflect.runtime.universe.typeTag
+import DerivationInfoAugmentors._
 
 /**
   * Constructs a [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]] from a tactic name
@@ -35,20 +37,23 @@ object ReflectiveExpressionBuilder extends Logging {
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
-      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe =>
-        println(s)
-        expr(s)
+      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
+      case (expr: TypedFunc[PosInExpr, _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[PosInExpr].tpe => expr(pie)
       case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe => expr(fml)
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
       case (expr: TypedFunc[Expression, _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Expression].tpe => expr(ex)
-      case (expr: TypedFunc[USubst, _], (ex: USubst) :: Nil) if expr.argType.tpe <:< typeTag[USubst].tpe => expr(ex)
+      case (expr: TypedFunc[SubstitutionPair, _], (ex: SubstitutionPair) :: Nil) if expr.argType.tpe <:< typeTag[SubstitutionPair].tpe => expr(ex)
       case (expr: TypedFunc[Option[Formula], _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Option[Formula]].tpe  => expr(Some(fml))
       case (expr: TypedFunc[Option[Variable], _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Option[Variable]].tpe => expr(Some(y))
       case (expr: TypedFunc[Option[Term], _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Option[Term]].tpe => expr(Some(term))
       case (expr: TypedFunc[Option[Expression], _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Option[Expression]].tpe => expr(Some(ex))
       case (expr: TypedFunc[Option[String], _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[Option[String]].tpe => expr(Some(s))
+      case (expr: TypedFunc[Option[PosInExpr], _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[Option[PosInExpr]].tpe => expr(Some(pie))
       case (expr: TypedFunc[Seq[Expression], _], fmls: Seq[Expression]) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(fmls)
+      case (expr: TypedFunc[Seq[Expression], _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(Seq(fml))
+      case (expr: TypedFunc[Seq[SubstitutionPair], _], ex: Seq[SubstitutionPair]) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(ex)
+      case (expr: TypedFunc[Seq[SubstitutionPair], _], (ex: SubstitutionPair) :: Nil) if expr.argType.tpe <:< typeTag[Seq[SubstitutionPair]].tpe => expr(Seq(ex))
       case (expr: TypedFunc[_, _], _) => throw new ReflectiveExpressionBuilderExn(s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName)
       case _ => throw new ReflectiveExpressionBuilderExn("Expected a TypedFunc (cannot match due to type erasure)")
     }
@@ -59,6 +64,7 @@ object ReflectiveExpressionBuilder extends Logging {
       case e: TypedFunc[Option[Term], _]     if e.argType.tpe <:< typeTag[Option[Term]].tpe     => fillOptions(e(None))
       case e: TypedFunc[Option[Variable], _] if e.argType.tpe <:< typeTag[Option[Variable]].tpe => fillOptions(e(None))
       case e: TypedFunc[Option[String], _]   if e.argType.tpe <:< typeTag[Option[String]].tpe   => fillOptions(e(None))
+      case e: TypedFunc[Option[PosInExpr], _] if e.argType.tpe <:< typeTag[Option[PosInExpr]].tpe => fillOptions(e(None))
       case e => e
     }
 
@@ -85,6 +91,14 @@ object ReflectiveExpressionBuilder extends Logging {
     }
   }
 
+  /**
+    * Create the BelleExpr tactic expression `name(arguments)`.
+    * @param name The codeName of the Bellerophon tactic to create according to [[TacticInfo.codeName]].
+    * @param arguments the list of arguments passed to the tactic, either expressions or positions.
+    * @param generator invariant generators passed to the tactic, if any.
+    * @param defs
+    * @return `name(arguments)` as a BelleExpr.
+    */
   def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
             generator: Option[Generator.Generator[GenProduct]], defs: Declaration) : BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {

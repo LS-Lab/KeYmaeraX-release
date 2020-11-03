@@ -11,10 +11,12 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import scala.language.implicitConversions
 
 /**
- * Positions identify subexpressions of an expression.
- * A position is a finite sequence of binary numbers where
- * 0 identifies the left or only subexpression of an expression and
- * 1 identifies the right subexpression of an expression.
+  * Positions identify subexpressions of an expression.
+  * A position is a finite sequence of binary numbers where
+  *   - `0` identifies the left or only subexpression of an expression and
+  *   - `1` identifies the right subexpression of an expression.
+  * For example, `0.1` is the right child of the left child.
+  * And, `0.1.0.0` is the left child of the left child of the right child of the left child.
  *
  * @example
  * {{{
@@ -74,6 +76,12 @@ object PosInExpr {
 
   /** Parses the binary representation of an int into a PosInExpr */
   def parseInt(i: Int): PosInExpr = if (i > 1) parseInt(i/2) ++ i%2 else PosInExpr(i::Nil)
+  /** Parses the representation of a string into a PosInExpr.
+    * @example {{{
+    *         // left child of left child of right child of right child of left child
+    *         parse("0.1.1.0.0") = PosInExpr(0::1::1::0::0::Nil)
+    *         }}}
+    */
   def parse(s: String): PosInExpr = PosInExpr(s.stripPrefix(".").split("\\.").map(_.toInt).toList)
 }
 
@@ -202,8 +210,9 @@ trait TopPosition extends Position {
   final override def isTopLevel: Boolean = true
 }
 
-/** A position guaranteed to identify an antecedent position
+/** A position guaranteed to identify an antecedent position, so on the left-hand side of the sequent turnstile.
   * @see [[AntePos]]
+  * @see [[Sequent]]
   */
 trait AntePosition extends Position {
   final override def isAnte: Boolean = true
@@ -220,8 +229,9 @@ trait AntePosition extends Position {
   def ++(child : PosInExpr): AntePosition
 }
 
-/** A position guaranteed to identify a succedent position
+/** A position guaranteed to identify a succedent position, so on the right-hand side of the sequent turnstile.
   * @see [[SuccPos]]
+  * @see [[Sequent]]
   */
 trait SuccPosition extends Position {
   final override def isAnte: Boolean = false
@@ -238,7 +248,7 @@ trait SuccPosition extends Position {
   def ++(child : PosInExpr): SuccPosition
 }
 
-/** A top-level anteedent position */
+/** A top-level antecedent position */
 trait TopAntePosition extends AntePosition with TopPosition {
   final override def checkTop: AntePos = top
 }
@@ -250,15 +260,18 @@ trait TopSuccPosition extends SuccPosition with TopPosition {
 
 // Pseudo-Constructors
 
+/** An antecedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
 object AntePosition {
   def apply(top: AntePos): TopAntePosition = new AntePositionImpl(top, HereP) with TopAntePosition
   def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
+  /** A top-level antecedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
+  def apply(seqIdx: Int): TopAntePosition = apply(seqIdx2AntePos(seqIdx))
+  /** An antecedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
+  def apply(seqIdx: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(seqIdx2AntePos(seqIdx), PosInExpr(inExpr))
 
+  /** An antecedent position of a sequent indexed base 1, so positions 0, 1, 2, ...  */
   def base0(index: Int, inExpr: PosInExpr = HereP): AntePosition = AntePosition.apply(AntePos(index), inExpr)
 
-
-  def apply(seqIdx: Int): TopAntePosition = apply(seqIdx2AntePos(seqIdx))
-  def apply(seqIdx: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(seqIdx2AntePos(seqIdx), PosInExpr(inExpr))
   private def seqIdx2AntePos(base1: Int): AntePos = {
     require(base1>0, "positive indexing base 1: " + base1)
     AntePos(base1-1)
@@ -266,13 +279,17 @@ object AntePosition {
 
 }
 
+/** A succedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
 object SuccPosition {
   def apply(top: SuccPos): TopSuccPosition = new SuccPositionImpl(top, HereP) with TopSuccPosition
   def apply(top: SuccPos, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(top,inExpr)
-  def base0(index: Int, inExpr: PosInExpr = HereP): SuccPosition = SuccPosition.apply(SuccPos(index), inExpr)
-
+  /** A top-level succedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
   def apply(seqIdx: Int): TopSuccPosition = apply(seqIdx2SuccPos(seqIdx))
+  /** A succedent position of a sequent indexed base 1, so positions 1, 2, 3, ...  */
   def apply(seqIdx: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(seqIdx2SuccPos(seqIdx), PosInExpr(inExpr))
+
+  /** A succedent position of a sequent indexed base 0, so positions 0, 1, 2, ...  */
+  def base0(index: Int, inExpr: PosInExpr = HereP): SuccPosition = SuccPosition.apply(SuccPos(index), inExpr)
 
   private def seqIdx2SuccPos(base1: Int): SuccPos = {
     require(base1>0, "positive indexing base 1: " + base1)

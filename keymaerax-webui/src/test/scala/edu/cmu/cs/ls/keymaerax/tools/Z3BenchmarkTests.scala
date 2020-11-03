@@ -21,11 +21,11 @@ class Z3BenchmarkTests extends TacticTestBase {
 
   private val haveQeLogPath = qeLogPath + "haveqe.txt"
 
-  "Z3" should "prove all recorded actual QE calls" in withZ3 { _ =>
+  "Z3" should "prove all recorded actual QE calls" in withZ3 { tool =>
     val logEntries = QELogger.parseLog(haveQeLogPath).map({case (name, sequents) => name -> sequents.head._2}).toList
     val examples = Table(("Name", "Sequent"), logEntries:_*)
     forEvery(examples) { (name, seq) =>
-      whenever(!Thread.currentThread().isInterrupted) {
+      whenever(tool.isInitialized) {
         println(s"Proving $name with Z3 ${seq.prettyString}")
         proveBy(seq, TactixLibrary.QE(Nil, None, qeTimeout)) shouldBe 'proved
       }

@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -24,6 +24,8 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.time.SpanSugar._
+
+import scala.reflect.io.File
 
 /**
  * Tactix Library Test.
@@ -134,7 +136,7 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j()".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
-      ) & byUS("= reflexive")
+      ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
@@ -148,7 +150,7 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j(||)".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
-      ) & byUS("= reflexive")
+      ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
@@ -163,7 +165,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j(x)".asTerm)(1) &
         derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -178,7 +180,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j()".asTerm)(1) &
           derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -193,7 +195,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j()".asTerm)(1) &
         derive(1, 1::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj jj=(x+x*y)'".asFormula))
     proof shouldBe 'proved
   }
@@ -207,7 +209,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j(||)".asTerm)(1) &
           derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -217,7 +219,7 @@ class TactixLibraryTests extends TacticTestBase {
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case _ => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case _ => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 
@@ -260,17 +262,72 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-  it should "eventually run out of ideas" taggedAs SlowTest in {
+  it should "eventually run out of ideas" taggedAs SlowTest in withQE { _ =>
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
-    failAfter(20 seconds) {
-      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(InvariantGenerator.defaultInvariantGenerator)(1))
-      result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
+    failAfter(50 seconds) {
+      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
+      result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
     }
   }
 
-  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+  //@todo why do these tests fail with ill-positioning?
+  "SnR Loop Invariant" should "by loopSR find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val proof = proveBy(fml,
+      implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val proof = proveBy(fml,
+      implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val jj = "j(.)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, assignb(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val jj = "j(.)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, step(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -285,7 +342,6 @@ class TactixLibraryTests extends TacticTestBase {
     proof shouldBe 'proved
     proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
-
 
   "Normalize" should "prove simple formula" in {
     val f = "y>0 -> [x:=y;]x>0".asFormula
@@ -323,6 +379,33 @@ class TactixLibraryTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "y>0, -1>=0 ==> ".asSequent
     result.subgoals(1) shouldBe "y>0 ==> y>=-1".asSequent
+  }
+
+  it should "unfold non-predicatefree-FOL formulas" in withQE { _ =>
+    val f = "(y>0->p(x)) -> p(y)".asFormula
+    val result = proveBy(f, normalize)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe " ==> p(y), y>0".asSequent
+    result.subgoals(1) shouldBe "p(x) ==> p(y)".asSequent
+  }
+
+  it should "auto modus ponens" in withQE { _ =>
+    val f = "(y>0->p(x)) -> (y>0 -> p(y))".asFormula
+    //@todo chase first traverse into autoMP in antecedent before working on implyR, so autoMP creates an additional
+    // y>0 since it is not available verbatim yet
+    proveBy(f, normalize).subgoals.loneElement shouldBe "p(x), y>0, y>0 ==> p(y)".asSequent
+  }
+
+  it should "not fail when trying to chase non-toplevel" in {
+    val f = "X>x&\\forall a (x<a&a<=X->a<=Y) -> \\exists a (a>x&a<=Y)".asFormula
+    //@note master does not yet instantiate quantifiers, but tries to chase inside
+    proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
+  }
+
+  it should "chase non-toplevel" in {
+    val f = "X>x&\\forall a ([x:=2;]x<a&a<=X->[z:=Y;]a<=z) -> \\exists a (a>x&a<=Y)".asFormula
+    //@note master does not yet instantiate quantifiers, but tries to chase inside
+    proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (2<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
   }
 
   it should "unfold in succedent and antecedent" in {
@@ -374,7 +457,7 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Fail")
+      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Skip QE", new TacticInapplicableFailure(_))
           & QE(Nil, None, Some(7))) | new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -384,34 +467,39 @@ class TactixLibraryTests extends TacticTestBase {
     case _ => // nothing to test
   }
 
-  "Tactic chase" should "not infinite recurse" in {
+  "Tactic chase" should "not infinite recurse" in withQE { _ =>
     var i = 0
-    val count = "ANON" by ((_: Position, _: Sequent) => { i=i+1; skip })
+    val count = anon ((_: Position, _: Sequent) => { i=i+1; skip })
 
-    failAfter(1 second) {
+    failAfter(2 seconds) {
       val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))
-      result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
+      // master uses solve after count does not make progress
+      result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent
     }
 
     i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
   }
 
-  it should "exhaustively apply propositional" in {
+  it should "not apply stutter axioms infinitely" in withQE { _ =>
+    proveBy("[x:=x+1;][{x'=1}]j(x)".asFormula, chase(1))
+  }
+
+  it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 
-  it should "chase at position" in {
+  it should "chase at position" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, tacticChase()(implyR,step)(None)(2))
     result.subgoals.loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
   }
 
-  it should "search for expected formula if positions shifted" in {
+  it should "search for expected formula if positions shifted" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
       implyR(1) & tacticChase()(implyR,step)(Some("y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula))(2))
     result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
-  it should "chase everywhere" in {
+  it should "chase everywhere" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, allTacticChase()(implyR,step))
     result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
@@ -522,8 +610,10 @@ class TactixLibraryTests extends TacticTestBase {
   }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
-    val problem = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
-      """  x < -4
+    val problem = ArchiveParser.parser(
+      """Theorem ""
+        |Problem
+        |x < -4
         |  ->
         |  [
         |     t := 0;
@@ -531,13 +621,15 @@ class TactixLibraryTests extends TacticTestBase {
         |     {x' = v, t' = 1 & t <= 1};
         |     a := 8/x;
         |     {x' = v, v' = a & v >= 0}
-        |  ] x <= 0""".stripMargin)
+        |  ] x <= 0
+        |End.
+        |End.""".stripMargin).head.model.asInstanceOf[Formula]
 
     proveBy(problem, master()) shouldBe 'proved
   }
 
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
-    val problem = KeYmaeraXArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
+    val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kya")).mkString).get.model.asInstanceOf[Formula]
     proveBy(problem, master()) shouldBe 'proved
   }
@@ -566,28 +658,55 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(problem2, master()) shouldBe 'proved
   }
 
-  "useLemmaAt" should "apply at provided key" in {
+  it should "try the postcondition" in withQE { _ =>
+    val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=y; } }*]x<=y".asFormula
+    proveBy(fml, master()) shouldBe 'proved
+  }
+
+  it should "try the preocondition" in withQE { _ =>
+    val fml = "x<y -> [{if (x>0) { x:=-x; } else { x:=x-1/(y-x); } }*]x<=y".asFormula
+    proveBy(fml, master()) shouldBe 'proved
+  }
+
+  it should "apply safeabstraction and find the correct recursors" in withQE { _ =>
+    // provable with safeabstraction, which is an anon tactic; triggers master autoTacticIndex comparison with loop and
+    // returns wrong recursor if autoTacticIndex comparison bug
+    proveBy("x>=0 -> [y:=2;]x>=0".asFormula, master()) shouldBe 'proved
+  }
+
+  it should "use auto modus ponens" in withQE { _ =>
+    val s = "Y>y, X>y, y < x&x<=Y->P(x) ==>  y < x&x<=min(X,Y)->P(x)".asSequent
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  it should "not fail when trying to chase non-toplevel" in withQE { _ =>
+    val f = "\\exists X (X>x&\\forall a (x<a&a<=X->P(a)))->\\exists a (a>x&P(a))".asFormula
+    //@note master does not yet instantiate quantifiers
+    proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
+  }
+
+  "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(1::Nil)))(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }
 
-  it should "apply with default key .1 in succedent" in {
+  it should "apply with default key .1 in succedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, None)(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
   }
 
-  it should "apply with default key .0 in antecedent" in {
+  it should "apply with default key .0 in antecedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }
 

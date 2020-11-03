@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
@@ -22,6 +23,7 @@ import scala.collection.immutable
   * @author Brandon Bohrer
  * @see [[ProofTerm]]
  * @see [[ProvableSig]]
+  * @todo Currently not operational: fixme
  */
 object ProofChecker {
 
@@ -49,13 +51,14 @@ object ProofChecker {
             val node = proofNode(axiomFml)
             //@TODO: Why?
             //Just do an empty uniform substitution...
-            proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
+            //
+            ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
           } catch {
             // If derived axioms didn't do it, try core axioms too
             case e:Exception =>
               val axiomFml = AxiomInfo(axiomName).provable.conclusion
               val node = proofNode(axiomFml)
-              proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
+              ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
         }
 
@@ -105,7 +108,7 @@ object ProofChecker {
           if(ProvableSig.rules.contains(name))
             ProvableSig.rules(name)
          else
-            DerivedRuleInfo.allInfo.find(info => info.storedName == name).get.provable
+            ProvableInfo.ofStoredName(name).asInstanceOf[DerivedRuleInfo].provable
 
         case ForwardNewConsequenceTerm(child, con, rule) =>
           val pschild = apply(child)

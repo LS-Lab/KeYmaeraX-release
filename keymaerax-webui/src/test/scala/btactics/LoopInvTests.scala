@@ -275,8 +275,7 @@ class LoopInvTests extends TacticTestBase {
   }
 
   it should "prove the invariants of first a branch informative (scripted) nosolve" in withMathematica { _ =>
-    //todo: invariant annotation doesn't help proof
-    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v*v<=10-x),(v=0&x<=10))}}*]x<=10".asFormula
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((v'=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v'=-1->v*v<=10-x),(v'=0->v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
 
@@ -287,7 +286,6 @@ class LoopInvTests extends TacticTestBase {
   }
 
   it should "prove the invariants of first a branch informative (scripted) 2 nosolve" in withMathematica { _ =>
-    //todo: invariant annotation doesn't help proof
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((v'=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v'=-1->v*v<=10-x),(v'=0->v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
@@ -299,25 +297,25 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative (scripted) nosolve" taggedAs SlowTest in withMathematica { _ =>
+  it should "find an invariant when first a branch informative (scripted) nosolve" taggedAs SlowTest ignore withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v=0&x<=10" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when first a branch informative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when first a branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when middle branch informative" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when middle branch informative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -326,7 +324,7 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when middle branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when middle branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -335,7 +333,7 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch uninformative" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when first a branch uninformative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -344,7 +342,7 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch uninformative nosolve" taggedAs TodoTest in withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant when first a branch uninformative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -353,8 +351,7 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for the Ahmadi Parillo Kristic benchmark example" taggedAs TodoTest in withMathematica { _ =>
-    //todo: Pegasus never gets asked with precondition
+  it should "find an invariant for the Ahmadi Parillo Kristic benchmark example" in withMathematica { _ =>
     val fml = "1/2*x<=x & x<=7/10 & 0<=y & y<=3/10 -> [{{x'=-x+x*y, y'=-y}}*]!(-8/10>=x & x>=-1 & -7/10>=y & y>=-1)".asFormula
     val invs = ("y<=0" :: "y>=0" :: "y=0" :: Nil).map(_.asFormula -> None).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
@@ -362,8 +359,7 @@ class LoopInvTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for a simple time-triggered example" taggedAs TodoTest in withMathematica { _ =>
-    //todo
+  it should "FEATURE_REQUEST: find an invariant for a simple time-triggered example" taggedAs TodoTest in withMathematica { _ =>
     val fml =
       """v=0 & A>=0 & b>0 & x<=m & ep>=0
         | -> [
@@ -376,42 +372,44 @@ class LoopInvTests extends TacticTestBase {
       """.stripMargin.asFormula
     val invs = ("v<=0" :: "v^2<=2*b*(m-x)" :: Nil).map(_.asFormula).map(_ -> None).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //todo generate invariant candidates
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{y:=y+1;{x'=x+y}}*]x>=1" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{y:=y+1;{x'=x+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y}}*]x>=1" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{y:=y+1;{x'=x+y,y'=5}}*]x>=1" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{y:=y+1;{x'=x+y,y'=5}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y,y'=5}}*]x>=1" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y,y'=5}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=1 -> [{y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" in withMathematica { _ =>
     val fml = "x>=5 & y>=1 -> [{y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
-    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_,_)=>invs.toStream)(1)) shouldBe 'proved
   }
 
   def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
@@ -419,11 +417,11 @@ class LoopInvTests extends TacticTestBase {
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case Nil => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case Nil => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 
-  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -436,10 +434,10 @@ class LoopInvTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;}*]x>=0" in withMathematica { qeTool =>
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -454,10 +452,10 @@ class LoopInvTests extends TacticTestBase {
     proof shouldBe 'proved
     //Note: dependency analysis generates (x,y) instead of just x
     val invs2 = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0)))))(_) -> None)
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
- it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
+ it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
@@ -470,7 +468,7 @@ class LoopInvTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { _ =>
@@ -487,32 +485,32 @@ class LoopInvTests extends TacticTestBase {
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
     val invs2 = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0)))))(_) -> None)
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
+  it should "FEATURE_REQUEST: prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
+  it should "FEATURE_REQUEST: prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
       odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" ignore withMathematica{ _ =>
+  it should "FEATURE_REQUEST: prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
     // Failing test case because of equilibrium at x=0,y=0
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
       odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest ignore withMathematica { _ =>
+  it should "FEATURE_REQUEST: find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest in withMathematica { _ =>
     // Failing test case
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
 
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
@@ -524,7 +522,7 @@ class LoopInvTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_,_)=>invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
 }

@@ -1,14 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.{Configuration, core}
+import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 
 /**
@@ -19,94 +19,16 @@ import org.apache.logging.log4j.scala.Logging
  * @see [[SequentCalculus]]
  */
 private object ProofRuleTactics extends Logging {
-  //@note Rule.LAX_MODE not accessible outside core
-  val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
-
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "apply " + rule)
       provable(rule, 0)
-    }
-  }
-
-  def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
-    override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
-      override def result(provable: ProvableSig): ProvableSig = {
-        provable(core.Cut(f), 0)
-      }
-    } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
-  }
-
-  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutL") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutL(" + f + ")")
-        provable(core.CutLeft(f, pos.checkAnte.top), 0)
-      }
-    }
-  })
-
-  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutR") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutR(" + f + ")")
-        provable(core.CutRight(f, pos.checkSucc.top), 0)
-      }
-    }
-  })
-
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutLR") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutLR(" + f + ")")
-        if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
-        else provable(core.CutRight(f, pos.checkSucc.top), 0)
-      }
-    }
-  })
-
-  def hide: DependentPositionTactic = new DependentPositionTactic("hide") {
-    //@todo this should not be a dependent tactic, just a by(Position=>Belle)
-    override def factory(pos: Position): DependentTactic = pos match {
-      case p: AntePosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = hideL(p)
-      }
-      case p: SuccPosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = hideR(p)
-      }
-    }
-  }
-
-
-  def coHide = new DependentPositionTactic("cohide") {
-    override def factory(pos: Position): DependentTactic = pos match {
-      case p: AntePosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = SequentCalculus.cohideL(p)
-      }
-      case p: SuccPosition => new DependentTactic(name) {
-        override def computeExpr(v: BelleValue): BelleExpr = SequentCalculus.cohideR(p)
-      }
-    }
-  }
-
-//  def exchangeL = new BuiltInTwoPositionTactic("ExchangeL") {
-//    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
-//      requireOneSubgoal(provable)
-//      require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
-//      provable(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
-//    }
-//  }
-
-  def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
-    def computeResult(provable : ProvableSig, posOne: Position, posTwo: Position) : ProvableSig = {
-      require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
-      provable(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
     }
   }
 
@@ -116,18 +38,17 @@ private object ProofRuleTactics extends Logging {
     * @param what What variable to replace (along with its associated DifferentialSymbol).
     * @param repl The target variable to replace what with.
     * @return
+    * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRenaming(what: Variable, repl: Variable): InputTactic = "uniformRename" byWithInputs(what::repl::Nil,
-    new BuiltInTactic("UniformRenaming") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
-        provable(core.UniformRenaming(what, repl), 0)
-      }
+  @Tactic("UR",
+    premises = "P(y) |- Q(y)",
+    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
+  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanonP {(provable: ProvableSig) =>
+      requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
+      provable(core.UniformRenaming(what, repl), 0)
     }
-  )
 
-  import TacticFactory._
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
     *
@@ -137,8 +58,15 @@ private object ProofRuleTactics extends Logging {
     * @incontext
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     * @see [[UnifyUSCalculus.boundRename()]]
+    * @throws RenamingClashException if this bound renaming is not admissible for s at the indicated position
+    *                                because repl,repl',what' already occurred, or
+    *                                because a semantic symbol occurs, or
+    *                                because the formula at `pos` has the wrong shape.
     */
-  def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "boundRename" byWithInputs (List(what, repl), (pos:Position, sequent:Sequent) =>
+  @Tactic("BR",
+    premises = "Γ |- ∀y Q(y), Δ",
+    conclusion = "Γ |- ∀x Q(x), Δ", inputs = "x:variable;;y:variable")
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       topBoundRenaming(what,repl)(pos)
     else {
@@ -165,15 +93,28 @@ private object ProofRuleTactics extends Logging {
           (Close(AntePos(0), SuccPos(0)), 0)
         )
         TactixLibrary.CEat(side)(pos)
-    })
+    }}
 
-  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = new BuiltInPositionTactic("BoundRenaming") {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
-      require(pos.isTopLevel, "bound renaming rule only at top-level")
-      provable(core.BoundRenaming(what, repl, pos.top), 0)
+  /** Bound renaming at a position (must point to universal quantifier or assignment). */
+  @Tactic("BRat",
+    premises = "Γ |- ∀y Q(y), Δ",
+    conclusion = "Γ |- ∀x Q(x), Δ", inputs = "y:variable", displayLevel = "browse")
+  def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
+    sequent.sub(pos) match {
+      case Some(Forall(v :: Nil, _)) => boundRename(v, repl)(pos)
+      case Some(Box(Assign(v, _), _)) => boundRename(v, repl)(pos)
+      case Some(Box(AssignAny(v), _)) => boundRename(v, repl)(pos)
+      case Some(Diamond(Assign(v, _), _)) => boundRename(v, repl)(pos)
+      case Some(Diamond(AssignAny(v), _)) => boundRename(v, repl)(pos)
+      case ex => throw new TacticInapplicableFailure("Expected quantifier or assignment at position " + pos.prettyString + ", but got " + ex.map(_.prettyString))
     }
   }
+
+  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = anon { (provable: ProvableSig, pos: Position) => {
+    requireOneSubgoal(provable, "BoundRenaming(" + what + "~~>" + repl + ")")
+    require(pos.isTopLevel, "bound renaming rule only at top-level")
+    provable(core.BoundRenaming(what, repl, pos.top), 0)
+  }}
 
   /** contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
     *
@@ -181,9 +122,9 @@ private object ProofRuleTactics extends Logging {
     *               work on top-level left and right
     *               and only leave a single goal with one single formula changed.
     * @author Andre Platzer
-    * @note Implementation analogous to [[ProofRuleTactics.boundRenaming()]]
+    * @note Implementation analogous to [[ProofRuleTactics.boundRename()]]
     */
-  def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula=>Formula): DependentPositionTactic = "contextualize(" + tactic.prettyString + ")" by ((pos:Position, sequent:Sequent) =>
+  def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula=>Formula): DependentPositionTactic = anon ((pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       tactic(pos)
     else {
@@ -221,27 +162,28 @@ private object ProofRuleTactics extends Logging {
       shapeCheck(TactixLibrary.proveBy(fml, tactic(1))).subgoals.head.succ.head
     })
 
-  def skolemizeR = new BuiltInRightTactic("skolemizeR") {
-    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      require(pos.isTopLevel, "Skolemization only at top-level")
-      provable(core.Skolemize(pos.top), 0)
-    }
-  }
+  /** @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the sequent.
+    *                              Use [[BoundRenaming]] to resolve.
+    */
+  @Tactic(premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ", codeName = "skolem")
+  val skolemizeR: BuiltInRightTactic = anon {(provable: ProvableSig, pos: SuccPosition) => {
+    require(pos.isTopLevel, "Skolemization only at top-level")
+    provable(core.Skolemize(pos.top), 0)
+  }}
 
   @deprecated("Use SequentCalculus.closeT instead")
-  private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseTrue(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeTrue: BuiltInRightTactic = anon {(provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "closeTrue")
+    provable(core.CloseTrue(pos.top), 0)
   }
 
   @deprecated("Use SequentCalculus.closeF instead")
-  private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseFalse(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeFalse: BuiltInLeftTactic = anon { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "closeFalse")
+    provable(core.CloseFalse(pos.top), 0)
   }
+
 }

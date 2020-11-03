@@ -3,9 +3,15 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import cc.redberry.rings.bigint.BigInteger
 import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
-import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith
+import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.JavaConverters._
 
@@ -271,6 +277,31 @@ class RingsLibrary(terms: Traversable[Term]) {
     val poly = mapToKeep(keep)
     val rest = mapToKeep(!keep(_))
     (poly, rest)
+  }
+
+  private val namespace = "ringsalgebratool"
+
+  private def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
+
+  private lazy val normalizeLemma = remember("a_() <= b_() <-> 0 <= b_() - a_()".asFormula, QE & done)
+
+  /** a<=b to 0<=a-b, with the standard representation of a-b (distributive and according to the variable order of [[ring]],
+    * also distributes over conjunctions... */
+  def normalizeLessEquals(qeTac: BelleExpr): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      // TODO: generalize, chase?
+      case Some(And(f1, f2)) =>
+        normalizeLessEquals(qeTac)(pos ++ PosInExpr(0 :: Nil)) & normalizeLessEquals(qeTac)(pos ++ PosInExpr(1 :: Nil))
+      case Some(LessEqual(a, b)) => {
+        val d = fromRing(toRing(b) - toRing(a))
+        useAt(normalizeLemma)(pos) &
+          SequentCalculus.cut(Equal(Minus(b, a), d)) &
+          Idioms.<(
+            eqL2R(-seq.ante.length - 1)(pos) & hideL(-seq.ante.length - 1),
+            cohideR('Rlast) & qeTac & done
+          )
+      }
+    }
   }
 
   /** encapsulates information relevant for working with ODEs with the Rings library */

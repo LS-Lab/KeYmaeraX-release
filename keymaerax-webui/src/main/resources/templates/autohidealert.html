@@ -1,19 +1,26 @@
-<div class="alert alert-warning alert-dismissible k4-narrowalert" role="alert" ng-show="isVisible" ng-cloak>
+<div ng-class="{'alert alert-warning alert-dismissible k4-narrowalert' : severity!=='uncaught',
+                'alert alert-danger alert-dismissible k4-narrowalert' : severity==='uncaught'
+               }" role="alert" ng-show="isVisible" ng-cloak>
     <button type="button" class="close" ng-click="isVisible=false;"><i class="fa fa-close"></i></button>
-    <i class="fa fa-exclamation-triangle"></i> <span ng-bind-html="formattedMessage(message)"></span>&nbsp;
+    <span ng-bind-html="formattedMessage(message)"></span>
     <span ng-if="(details && details !== '') || (causeMsg && causeMsg !== '')"
           uib-popover-template="'proofmessagedetails.html'"
           popover-placement="auto bottom" popover-trigger="'outsideClick'"
           popover-class="tacticalert-popover"
           popover-append-to-body="true"
           class="pull-right"
-          style="border-bottom: 1px dashed;">Internal Tactic Log</span><!--&nbsp;
+          style="border-bottom: 1px dashed;">Internal Log</span><!--&nbsp;
     <span style="border-bottom: 1px dashed;" ng-click="$parent.stepwiseTactic(taskStepwiseRequest)">-->
         <!--<i class="fa fa-book"></i> Progress until error</span>-->
 </div>
 
 <script type="text/ng-template" id="proofmessagedetails.html">
     <div>
+        <div class="row" ng-if="severity==='uncaught'">
+            <div class="col-md-12">
+                <button class="btn btn-danger pull-right" ng-click="report()">Request Help</button>
+            </div>
+        </div>
         <div class="row" ng-if="causeMsg && causeMsg != ''">
             <div class="col-md-12" ng-bind-html="formattedMessage(causeMsg)"></div>
         </div>

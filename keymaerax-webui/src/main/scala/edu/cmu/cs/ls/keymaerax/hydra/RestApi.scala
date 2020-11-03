@@ -9,15 +9,14 @@ import java.util.{Calendar, Date}
 
 import akka.http.scaladsl.model.{Multipart, StatusCodes}
 import akka.http.scaladsl.server.{ExceptionHandler, Route, StandardRoute}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import org.apache.logging.log4j.scala.Logging
 import akka.http.scaladsl.model.Multipart.FormData.BodyPart
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
@@ -26,6 +25,7 @@ import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
 import StatusCodes._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
+import scala.annotation.tailrec
 import scala.language.postfixOps
 
 /**
@@ -85,9 +85,12 @@ object RestApi extends Logging {
     }
 
   def completeRequest(r: Request, t: SessionToken): StandardRoute = t match {
-    case NewlyExpiredToken(_) => complete(Unauthorized, Nil, s"Session $t expired")
+    case NewlyExpiredToken(_) =>
+      assert(!Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true"), "Default user is not supposed to expire, but did.")
+      complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
+      else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(new ErrorResponse("Unexpected internal error: default user lacks permission; please reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register an ordinary local login name.") :: Nil))
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
@@ -137,13 +140,13 @@ object RestApi extends Logging {
     respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
       if (!HyDRAServerConfig.isHosted) {
         // on non-hosted instance: offer default login feature
-        if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
-          Configuration.getOption(Configuration.Keys.DEFAULT_USER) match {
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
             case Some(userName) => database.getUser(userName) match {
               case Some(user) =>
                 // login default user and show models
                 SessionManager.defaultUserTokenKey = Some(SessionManager.add(user))
-                redirect("/dashboard.html?#/models", StatusCodes.TemporaryRedirect)
+                getFromResource("index_localhost.html") //@note auto-forwards to models
               case _ =>
                 // database does not know default user: first time use by a user with a fresh database, show license and
                 // ask for preferred user mode
@@ -152,10 +155,10 @@ object RestApi extends Logging {
             // default user not set (this should not happen, but if it does): show login page
             case _ => getFromResource("index_bootstrap.html")
           }
-        } else if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("false")) {
+        } else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) {
           // user opted out of localhost default login, show login page
           getFromResource("index_bootstrap.html")
-        } else if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("ask")) {
+        } else if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("ask")) {
           // first time use by a user with a prior installation without default user feature
           getFromResource("index_bootstrap.html")
         } else getFromResource("index_bootstrap.html")
@@ -168,7 +171,6 @@ object RestApi extends Logging {
   //region Users
 
   val users: Route = pathPrefix("user" / Segment / Segment / "mode" / Segment) { (username, password, mode) => {
-    implicit val sessionUser = None
     pathEnd {
       get {
         val request = new LoginRequest(database,username, password)
@@ -176,6 +178,15 @@ object RestApi extends Logging {
       } ~
       post {
         val request = new CreateUserRequest(database, username, password, mode)
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }}
+
+  val defaultLogin: Route = pathPrefix("user" / Segment / Segment / "defaultLogin") { (username, password) => {
+    pathEnd {
+      get {
+        val request = new LocalLoginRequest(database,username, password)
         completeRequest(request, EmptyToken())
       }
     }
@@ -233,8 +244,8 @@ object RestApi extends Logging {
   }}
 
   // GET /models/user returns a list of all models belonging to this user. The cookie must be set.
-  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
-    val request = new GetModelListRequest(database, userId)
+  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / Segment.?) {(userId, folder) => { pathEnd { get {
+    val request = new GetModelListRequest(database, userId, folder)
     completeRequest(request, t)
   }}}}
 
@@ -254,15 +265,6 @@ object RestApi extends Logging {
       }
     }
   }}}
-
-  val userModelFromFormula: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelFromFormula" / Segment) {modelName => {pathEnd {
-    post {
-      entity(as[String]) {formula => {
-        val request = new CreateModelFromFormulaRequest(database, userId, modelName, formula)
-        completeRequest(request, t)
-      }}
-    }
-  }}}}}
 
   val importExampleRepo: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { userId => { pathEnd {
     post {
@@ -448,6 +450,19 @@ object RestApi extends Logging {
       }
     }}}
 
+    val openOrCreateLemmaProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "openOrCreateLemmaProof") { (userId, modelName) => { pathEnd {
+      post {
+        entity(as[String]) { x => {
+          val obj = x.parseJson
+          val parentProofId = obj.asJsObject.getFields("parentProofId").last.asInstanceOf[JsString].value
+          val parentTaskId = obj.asJsObject.getFields("parentTaskId").last.asInstanceOf[JsString].value
+
+          val request = new OpenOrCreateLemmaProofRequest(database, userId, modelName, parentProofId, parentTaskId)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
     val createModelTacticProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
       post {
         entity(as[String]) { _ => {
@@ -464,7 +479,7 @@ object RestApi extends Logging {
       }
     }}}
 
-    val proofList: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
+    val proofList: SessionToken=>Route = (t: SessionToken) => path("proofs" / "users" / Segment) { (userId) => { pathEnd {
       get {
         val request = new ProofsForUserRequest(database, userId)
         completeRequest(request, t)
@@ -488,6 +503,13 @@ object RestApi extends Logging {
     val initProofFromTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
       get {
         val request = new InitializeProofFromTacticRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val getProofLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "usedLemmas") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetProofLemmasRequest(database, userId, proofId)
         completeRequest(request, t)
       }
     }}}
@@ -824,13 +846,6 @@ object RestApi extends Logging {
       }
     }}}
 
-
-    val getAgendaItem: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
-      get {
-        val request = GetAgendaItemRequest(database, userId, proofId, nodeId)
-        completeRequest(request, t)
-      }}}}
-
     val proofProgressStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
       get {
         val request = new GetProofProgressStatusRequest(database, userId, proofId)
@@ -966,6 +981,14 @@ object RestApi extends Logging {
     }
   }
 
+  val z3ConfSuggestion: Route = path("config" / "z3" / "suggest") {
+    pathEnd {
+      get {
+        completeRequest(new GetZ3ConfigSuggestionRequest(), EmptyToken())
+      }
+    }
+  }
+
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
@@ -1026,6 +1049,36 @@ object RestApi extends Logging {
             completeRequest(request, EmptyToken())
           }}
         }
+    }
+  }
+
+  val z3Config: Route = path("config" / "z3") {
+    pathEnd {
+      get {
+        completeRequest(new GetZ3ConfigurationRequest(), EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { params => {
+          val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value)
+          assert(p.contains("z3Path"), "z3 path not in: " + p.keys.toString())
+          val z3Path: String = p("z3Path")
+          completeRequest(new ConfigureZ3Request(z3Path), EmptyToken())
+        }}
+      }
+    }
+  }
+
+  val fullConfig: Route = path("config" / "fullContent") {
+    pathEnd {
+      get {
+        completeRequest(new GetFullConfigRequest(), EmptyToken())
+      } ~
+      post {
+        entity(as[String]) { params => {
+          val content = params.parseJson.asJsObject.fields("content") match { case JsString(s) => s }
+          completeRequest(new SaveFullConfigRequest(content), EmptyToken())
+        }}
+      }
     }
   }
 
@@ -1139,7 +1192,7 @@ object RestApi extends Logging {
   val validateProof: Route = path("validate") { pathEnd {
     post {
       entity(as[String]) { archiveFileContents => {
-        val entries = KeYmaeraXArchiveParser.parse(archiveFileContents)
+        val entries = ArchiveParser.parse(archiveFileContents)
 
         if(entries.length != 1)
           complete(completeResponse(new ErrorResponse(s"Expected exactly one model in the archive but found ${entries.length}") :: Nil))
@@ -1191,19 +1244,23 @@ object RestApi extends Logging {
     extractdb          ::
     shutdown           ::
     users              ::
+    defaultLogin       ::
     setDefaultUser     ::
     cookie_echo        ::
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
     wolframEngineConfig ::
+    z3Config           ::
     toolStatus         ::
     tool               ::
     guestBrowseArchiveRequest ::
     systemInfo         ::
+    fullConfig         ::
     mathConfSuggestion ::
     wolframEngineConfSuggestion ::
     wolframScriptConfSuggestion::
+    z3ConfSuggestion   ::
     devAction          ::
     checkProofValidation ::
     validateProof      ::
@@ -1224,8 +1281,10 @@ object RestApi extends Logging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
+    openOrCreateLemmaProof ::
     createModelTacticProof::
     initProofFromTactic   ::
+    getProofLemmas        ::
     importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
@@ -1233,7 +1292,6 @@ object RestApi extends Logging {
     downloadAllProofs     :: //@note before openProof to match correctly
     downloadModelProofs   ::
     openProof             ::
-    getAgendaItem         ::
     changeProofName       ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
@@ -1279,7 +1337,6 @@ object RestApi extends Logging {
     modelplexMandatoryVars::
     exportSequent         ::
     testSynthesis         ::
-    userModelFromFormula  ::
     examples              ::
     stepwiseTrace         ::
     updateUserModel       ::
@@ -1323,15 +1380,24 @@ object SessionManager {
   def token(key: String): SessionToken = sessionMap.get(key) match {
     case Some((user, timeout)) =>
       if (new Date().before(timeout)) {
-        //@HACK need better way of mapping user levels to tokens
-        if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
-        else if (user.level == 3) ReadonlyToken(key, user.userName)
-        else ???
+        createToken(key, user)
       } else {
         remove(key)
-        NewlyExpiredToken(key)
+        // on local host, recreate default user token
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+          Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
+          createToken(key, user)
+        } else NewlyExpiredToken(key)
       }
     case None => EmptyToken()
+  }
+
+  /** Creates a token with token `key` representing `user`. */
+  private[this] def createToken(key: String, user: UserPOJO): SessionToken = {
+    //@HACK need better way of mapping user levels to tokens
+    if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
+    else if (user.level == 3) ReadonlyToken(key, user.userName)
+    else ???
   }
 
   def add(user: UserPOJO): String = {
@@ -1353,10 +1419,17 @@ object SessionManager {
 
   private def timeoutDate : Date = {
     val c = Calendar.getInstance()
-    c.add(Calendar.DATE, 7)
+    val expiresIn =
+      // local user: sessions don't expire
+      if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+        Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
+        Int.MaxValue
+      } else 7
+    c.add(Calendar.DATE, expiresIn)
     c.getTime
   }
 
+  @tailrec
   private def generateToken(): String = {
     val random: SecureRandom = new SecureRandom()
     val bytes = Array[Byte](20)

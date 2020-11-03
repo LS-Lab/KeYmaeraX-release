@@ -7,8 +7,9 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
-
 import org.scalatest.OptionValues._
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * @author Nathan Fulton
@@ -30,7 +31,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         | (x*y >= 0)
         |End.""".stripMargin
 
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser(f)
+    val ex = the [ParseException] thrownBy ArchiveParser.parser(f)
     ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 8
@@ -61,7 +62,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |
         |End.""".stripMargin
 
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseAsProblemOrFormula(f)
+    val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
     ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 15
@@ -71,7 +72,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "work from file input" in {
     val f = " ProgramVariables.\n\n   R x. R y. R z. \n\n   End.  \n\n   Problem.\n\n   (x*x*y >= 0 & x >= 0 & z >= x) \n\n   -> \n\n   [\n\n   {x := 2x; y := 2y;}\n\n  ]\n\n (x*y >= 0)\n\nEnd."
 
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseAsProblemOrFormula(f)
+    val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
     ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 15
@@ -97,7 +98,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val result = KeYmaeraXArchiveParser(theProblem)
+    val result = ArchiveParser.parser(theProblem)
     result should have size 1
     result.head.model shouldBe "x > 0 -> [x := x + 1;] x > 0".asFormula
   }
@@ -115,7 +116,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    KeYmaeraXArchiveParser(declProblem).head.model shouldBe KeYmaeraXParser(problem)
+    ArchiveParser.parser(declProblem).head.model shouldBe Parser(problem)
   }
 
   "Interpretation parser" should "parse simple function declarations" in {
@@ -130,15 +131,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Real
+      argNames shouldBe Some(Nil)
       interpretation.value shouldBe Number(5)
     }
-    entry.model shouldBe KeYmaeraXParser("f()>3")
+    entry.model shouldBe Parser("f()>3")
   }
 
   it should "parse function declarations with one parameter" in {
@@ -153,15 +155,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Real
       sort shouldBe Real
+      argNames shouldBe Some((("\\cdot", Some(0)), Real) :: Nil)
       interpretation.value shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))
     }
-    entry.model shouldBe KeYmaeraXParser("f(4)>3")
+    entry.model shouldBe Parser("f(4)>3")
   }
 
   it should "parse n-ary function declarations" in {
@@ -176,15 +179,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
+      argNames shouldBe Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: (("\\cdot", Some(2)), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
     }
-    entry.model shouldBe KeYmaeraXParser("f(2,3,4)>3")
+    entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
 
   it should "detect undeclared dots" in {
@@ -199,8 +203,8 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val thrown = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseProblem(problem)
-    thrown.getMessage should include ("Function/predicate f((•_0,•_1,•_2)) defined using undeclared •_3")
+    val thrown = the [ParseException] thrownBy ArchiveParser.parseProblem(problem)
+    thrown.getMessage should include ("Function/predicate f(•_0,•_1,•_2) defined using undeclared •_3")
   }
 
   it should "replace names with the appropriate dots" in {
@@ -214,15 +218,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
+      argNames shouldBe Some((("x", None), Real) :: (("y", None), Real) :: (("z", None), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
     }
-    entry.model shouldBe KeYmaeraXParser("f(2,3,4)>3")
+    entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
 
   it should "not confuse arguments of same name across definitions" in {
@@ -237,22 +242,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 2
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
+      argNames shouldBe Some((("x", None), Real) :: (("y", None), Real) :: (("z", None), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
     }
     entry.defs.decls should contain key ("g", None)
-    entry.defs.decls(("g", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("g", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real,Real))
       sort shouldBe Real
+      argNames shouldBe Some((("a", None), Real) :: (("x", None), Real) :: (("y", None), Real) :: Nil)
       interpretation.value shouldBe FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real),
         Pair(DotTerm(Real, Some(1)), Pair(DotTerm(Real, Some(2)), DotTerm(Real, Some(0)))))
     }
-    entry.model shouldBe KeYmaeraXParser("f(1,2,3)>0 -> g(3,1,2)>0")
+    entry.model shouldBe Parser("f(1,2,3)>0 -> g(3,1,2)>0")
   }
 
   it should "correctly dottify in the presence of unused arguments" in {
@@ -266,15 +273,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Real)
       sort shouldBe Real
+      argNames shouldBe Some((("x", None), Real) :: (("y", None), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real, Some(1)), Number(3))
     }
-    entry.model shouldBe KeYmaeraXParser("f(1,2)>0")
+    entry.model shouldBe Parser("f(1,2)>0")
   }
 
   it should "replace argument name of unary function with non-indexed dot (for backwards compatibility)" in {
@@ -288,15 +296,16 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Real
       sort shouldBe Real
+      argNames shouldBe Some((("x", None), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
     }
-    entry.model shouldBe KeYmaeraXParser("f(2)>3")
+    entry.model shouldBe Parser("f(2)>3")
   }
 
   it should "allow both . and explicit ._0 in unary function definition" ignore {
@@ -310,25 +319,27 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem("._0"))
+    val entry = ArchiveParser.parseProblem(problem("._0"))
     entry.defs.decls should have size 1
     entry.defs.decls should contain key ("f", None)
-    entry.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Real
       sort shouldBe Real
+      argNames shouldBe 'empty
       interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
     }
-    entry.model shouldBe KeYmaeraXParser("f(2)>3")
+    entry.model shouldBe Parser("f(2)>3")
 
-    val entry2 = KeYmaeraXArchiveParser.parseProblem(problem("."))
+    val entry2 = ArchiveParser.parseProblem(problem("."))
     entry2.defs.decls should have size 1
     entry2.defs.decls should contain key ("f", None)
-    entry2.defs.decls(("f", None)) match { case (domain, sort, interpretation, _) =>
+    entry2.defs.decls(("f", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Real
       sort shouldBe Real
+      argNames shouldBe 'empty
       interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
     }
-    entry2.model shouldBe KeYmaeraXParser("f(2)>3")
+    entry2.model shouldBe Parser("f(2)>3")
   }
 
   it should "parse program definitions" in {
@@ -348,14 +359,15 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key ("a", None)
-    entry.defs.decls(("a", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("a", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
+      argNames shouldBe 'empty
       interpretation.value shouldBe "x:=*; ?x<=5; ++ x:=y;".asProgram
     }
-    entry.model shouldBe "y<=5 -> [a;]x<=5".asFormula
+    entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
   }
 
   it should "parse functions and predicates in program definitions" in {
@@ -377,14 +389,15 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key ("a", None)
-    entry.defs.decls(("a", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("a", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
+      argNames shouldBe 'empty
       interpretation.value shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
     }
-    entry.model shouldBe "y<=5 -> [a;]x<=5".asFormula
+    entry.model shouldBe "y<=5 -> [a{|^@|};]x<=5".asFormula
   }
 
   it should "parse annotations" in {
@@ -405,22 +418,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
         |End.
       """.stripMargin
 
-    var annotation: Option[(Program, Formula)] = None
-    KeYmaeraXParser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    val annotations = ListBuffer.empty[(Program, Formula)]
+    Parser.parser.setAnnotationListener((prg, fml) => annotations.append(prg -> fml))
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key ("a", None)
-    entry.defs.decls(("a", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("a", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      interpretation.value shouldBe "x:=1; {loopBody;}*".asProgram
+      argNames shouldBe 'empty
+      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(("loopBody", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("loopBody", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
+      argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
-    annotation shouldBe Some("{loopBody;}*".asProgram, "p(x,1)".asFormula)
-    entry.model shouldBe "[a;]x>=1".asFormula
+    annotations.toList should contain theSameElementsInOrderAs ("{loopBody{|^@|};}*".asProgram, "p(x,1)".asFormula) :: ("{loopBody{|^@|};}*".asProgram, "x>=1".asFormula) :: Nil
+    entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 
   it should "be allowed to ignore later definitions when elaborating annotations" in {
@@ -442,22 +457,24 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.stripMargin
 
     var annotation: Option[(Program, Formula)] = None
-    KeYmaeraXParser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
-    val entry = KeYmaeraXArchiveParser.parseProblem(problem)
+    Parser.parser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
+    val entry = ArchiveParser.parseProblem(problem)
     entry.defs.decls should contain key ("a", None)
-    entry.defs.decls(("a", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("a", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
-      interpretation.value shouldBe "x:=1; {loopBody;}*".asProgram
+      argNames shouldBe 'empty
+      interpretation.value shouldBe "x:=1; {loopBody{|^@|};}*".asProgram
     }
-    entry.defs.decls(("loopBody", None)) match { case (domain, sort, interpretation, _) =>
+    entry.defs.decls(("loopBody", None)) match { case (domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Unit
       sort shouldBe Trafo
+      argNames shouldBe 'empty
       interpretation.value shouldBe "x:=x+2;".asProgram
     }
     annotation shouldBe 'defined
-    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody;}*".asProgram))
+    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody{|^@|};}*".asProgram))
     annotation.get._2 should (be ("x>=1".asFormula) or be ("p(x,1)".asFormula))
-    entry.model shouldBe "[a;]x>=1".asFormula
+    entry.model shouldBe "[a{|^@|};]x>=1".asFormula
   }
 }

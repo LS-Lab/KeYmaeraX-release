@@ -1,4 +1,4 @@
-ArchiveEntry "STTT Tutorial Example 1"
+ArchiveEntry "STTT16/Tutorial Example 1"
 
 Description "A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.".
 Title "Uncontrolled continuous car".
@@ -23,7 +23,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 2"
+ArchiveEntry "STTT16/Tutorial Example 2"
 
 Description "A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.".
 Title "Simple Hybrid Car".
@@ -50,7 +50,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 2"
-implyR(1); (andL('L)*); loop({`v >= 0`}, 1); <(
+implyR(1); (andL('L)*); loop("v >= 0", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); <(
@@ -63,9 +63,22 @@ implyR(1); (andL('L)*); loop({`v >= 0`}, 1); <(
 )
 End.
 
+Tactic "Proof STTT Tutorial Example 2 with delayed invariant predicate expansion"
+  implyR('R);
+  andL('L)*;
+  loop("J(v)",'R); <(
+    nil,
+    nil,
+    chase('R); prop; doall(solve('R))
+  );
+  US("J(.) ~> .>=0");
+  doall(QE);
+  done
 End.
 
-ArchiveEntry "STTT Tutorial Example 3a"
+End.
+
+ArchiveEntry "STTT16/Tutorial Example 3a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The requirement to prove is that the car never runs the stop sign.".
 Title "Event-triggered car control".
@@ -100,7 +113,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 3a"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -115,7 +128,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 3b"
+ArchiveEntry "STTT16/Tutorial Example 3b"
 
 Description "A hybrid car model where the controller runs when some yet-to-be-discovered condition is met. The example illustrates how KeYmaera X can be used to discover constraints.".
 Title "Incomplete event-triggered car control".
@@ -150,7 +163,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4a"
+ArchiveEntry "STTT16/Tutorial Example 4a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that certain modeling pitfalls result in vacuous proofs.".
 Title "Pitfalls in event-triggered car control: safety proof for correct controller".
@@ -181,7 +194,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4a"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); doall(
@@ -192,7 +205,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4b"
+ArchiveEntry "STTT16/Tutorial Example 4b"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that overly strong evolution domain constraints can result in a vacuous proof.".
 Title "Pitfalls in event-triggered car control: vacuous proof for faulty controller".
@@ -220,7 +233,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4b"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); assignb(1); ODE(1); QE; done
@@ -229,7 +242,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4c"
+ArchiveEntry "STTT16/Tutorial Example 4c"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates the correct modeling idiom to prevent vacuous proofs from evolution domain constraints.".
 Title "Pitfalls in event-triggered car control: correct modeling idiom".
@@ -261,7 +274,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 4c"
-implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
+implyR(1); (andL('L)*); loop("v<=V()", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); doall(
@@ -272,7 +285,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 5"
+ArchiveEntry "STTT16/Tutorial Example 5"
 
 Description "A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.".
 Title "Time-triggered car control".
@@ -307,7 +320,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 5"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -320,9 +333,22 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
 )
 End.
 
+Tactic "Proof STTT Tutorial Example 5 with delayed invariant predicate expansion"
+  implyR(1);
+  andL('L)*;
+  loop("J(v,x,B(),S())",1); <(
+    nil,
+    nil,
+    chase(1); unfold; doall(solve('R))
+  );
+  US("J(._0,._1,._2,._3) ~> ._0>=0 & ._1+._0^2/(2*._2) <= ._3");
+  doall(QE);
+  done
 End.
 
-ArchiveEntry "STTT Tutorial Example 6"
+End.
+
+ArchiveEntry "STTT16/Tutorial Example 6"
 
 Description "A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.".
 Title "Non-deterministic acceleration".
@@ -357,16 +383,16 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 6"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
     composeb(1) ; testb(1) ; implyR(1) ; composeb(1) ; randomb(1) ; allR(1) ; testb(1) ; implyR(1) ; composeb(1) ;
-    assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done),
+    assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done),
     choiceb(1) ; andR(1) ; <(
-      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done)
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done)
       ,
-      assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL({`t_`}, 'Llast) ; QE ; done)
+      assignb(1) ; composeb(1) ; assignb(1) ; (ODE(1) ; done | solve(1) ; allR(1) ; (implyR(1)*2) ; allL("t_", 'Llast) ; QE ; done)
     )
   )
 )
@@ -374,7 +400,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 7"
+ArchiveEntry "STTT16/Tutorial Example 7"
 
 Description "A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.".
 Title "Non-deterministic approximation of braking".
@@ -410,8 +436,8 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 7"
-/* requires QE({`Mathematica`}) */
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*b()) <= S()`}, 1) ; <(
+/* requires QE("Mathematica") */
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & x+v^2/(2*b()) <= S()", 1) ; <(
   QE ; done,
   QE ; done,
   composeb(1) ; choiceb(1) ; andR(1) ; <(
@@ -426,7 +452,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9a"
+ArchiveEntry "STTT16/Tutorial Example 9a"
 
 Description "A PD controlled car. The requirement to prove is that the Lyapunov function is a differential invariant.".
 Title "PD controller Lyapunov function".
@@ -452,7 +478,7 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 9a"
-implyR(1); (andL('L)*); dC({`5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()`}, 1); <(
+implyR(1); (andL('L)*); dC("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()", 1); <(
   dW(1); QE; done,
   dI(1); done
 )
@@ -460,7 +486,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9b"
+ArchiveEntry "STTT16/Tutorial Example 9b"
 
 Description "A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.".
 Title "PD controlled car".
@@ -493,21 +519,21 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 9b"
-implyR(1); (andL('L)*); loop({`v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2`}, 1); <(
+implyR(1); (andL('L)*); loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2", 1); <(
   QE; done,
   QE; done,
   (andL('L)*); composeb(1); choiceb(1); andR(1); <(
     composeb(1); assignb(1); composeb(1); assignb(1); testb(1); implyR(1);
-      dC({`xm <= x`}, 1); <(
-        dC({`5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2`}, 1); <(
+      dC("xm <= x", 1); <(
+        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1); <(
           dW(1); QE; done,
           dI(1); done
         ),
         dI(1); done
       ),
     testb(1); implyR(1);
-      dC({`xm <= x`}, 1); <(
-        dC({`5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2`}, 1); <(
+      dC("xm <= x", 1); <(
+        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1); <(
           dW(1); QE; done,
           dI(1); done
         ),
@@ -520,7 +546,7 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 10"
+ArchiveEntry "STTT16/Tutorial Example 10"
 
 Description "A car with steering. The requirement to prove is that the car always stays inside the lane boundaries.".
 Title "Steering car".
@@ -565,17 +591,17 @@ Problem
 End.
 
 Tactic "Proof STTT Tutorial Example 10"
-implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()`}, 1) <(
+implyR(1) ; (andL('L)*) ; loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()", 1) <(
   QE ; done,
   QE ; done,
   chase('R) ; normalize ; <(
-    hideL(-15=={`abs(y-ly())+v^2/(2*b()) < lw()`}) ; dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)+a*c`}, 1) ; <(
-          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
+    hideL(-15=="abs(y-ly())+v^2/(2*b()) < lw()") ; dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)+a*c", 1) ; <(
+          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
             (andL('L)*) ; dW(1) ;
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) ;
-            transformEquality({`ep()=c`}, -13=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
+            transformEquality("ep()=c", -13=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()") ;
             prop ; doall(smartQE; done),
             dI(1) ; done
           ),
@@ -585,10 +611,10 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) ; done
       ),
-    dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)`}, 1) ; <(
-          dC({`-c*v <= y - old(y) & y - old(y) <= c*v`}, 1) ; <(
+    dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)", 1) ; <(
+          dC("-c*v <= y - old(y) & y - old(y) <= c*v", 1) ; <(
             (andL('L)*) ; dW(1) ; prop ; doall(smartQE; done),
             dI(1) ; done
             ),
@@ -598,10 +624,10 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
         ),
       dI(1) ; done
       ),
-    dC({`c>=0`}, 1) ; <(
-      dC({`dx^2+dy^2=1`}, 1) ; <(
-        dC({`v=old(v)+a*c`}, 1) ; <(
-          dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
+    dC("c>=0", 1) ; <(
+      dC("dx^2+dy^2=1", 1) ; <(
+        dC("v=old(v)+a*c", 1) ; <(
+          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
             (andL('L)*) ; dW(1) ; prop ; doall(smartQE; done),
             dI(1) ; done
             ),

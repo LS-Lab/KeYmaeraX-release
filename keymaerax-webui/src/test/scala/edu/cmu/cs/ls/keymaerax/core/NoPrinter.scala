@@ -5,12 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
-import scala.collection.immutable
 
-import scala.collection.immutable._
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Tests printing for no pretty printer.

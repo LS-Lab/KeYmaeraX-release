@@ -9,9 +9,9 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io._
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -33,15 +33,8 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** Provides a unique index for identifying the next query, incremented on every Z3 query. */
   private var queryIndex = 0
 
-  /** The expected version and hash code */
-  private val version :: hash :: Nil =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream("/z3/VERSION")).getLines().toList
-
-  /** Lightweight check that we are communicating with Z3 in the expected version and build hash. */
-  insist({
-    val versionOutput = runZ3(z3Path + " -version", -1)
-    versionOutput.startsWith("Z3 version " + version) && versionOutput.endsWith(hash)
-  }, "Z3 not of the expected version and build hash")
+  /** Z3 version information. */
+  val versionInfo: String = runZ3(z3Path + " -version", -1)
 
   /** Return Z3 QE result and the proof evidence */
   def qe(f: Formula): Formula = {
@@ -97,13 +90,10 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
         throw SMTQeException("Error executing Z3, exit value " + exitVal)
       }
     } catch {
-      case ex: TimeoutException =>
-        p.destroy()
-        throw ToolCommunicationException(s"Z3 timeout of ${timeout}s exceeded", ex)
-      case ex: InterruptedException =>
-        p.destroy
-        throw ToolCommunicationException(s"Z3 interrupted", ex)
+      case ex: TimeoutException => throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
+      case ex: InterruptedException => throw ToolCommunicationException(s"Z3 interrupted", ex)
     } finally {
+      p.destroy
       z3Process = None
     }
   }

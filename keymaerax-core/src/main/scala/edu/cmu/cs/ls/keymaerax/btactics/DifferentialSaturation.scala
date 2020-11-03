@@ -1,12 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.bellerophon.ProverSetupException
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SubstitutionHelper, UnificationMatch}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -21,7 +21,7 @@ import scala.collection.mutable.ListBuffer
 object DifferentialSaturation extends Logging {
 
   def pQE(f: Formula): Formula = {
-    val qe = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None"))
+    val qe = ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None"))
     qe.qe(f).fact.conclusion.succ.head
   }
 

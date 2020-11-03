@@ -31,12 +31,12 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
   }
 
   it should "parse the actual axiom file" in {
-    val axioms = ProvableSig.axiom
+    ProvableSig.axiom
   }
 
-  val p = Function("p", None, Real, Bool)
-  val x = Variable("x", None, Real)
-  val t = FuncOf(Function("t", None, Unit, Real), Nothing)
+  private val p = Function("p", None, Real, Bool)
+  private val x = Variable("x", None, Real)
+  private val t = FuncOf(Function("t", None, Unit, Real), Nothing)
 
   it should "parse all instantiate (found failure case)" in {
     val input =

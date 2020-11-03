@@ -4,15 +4,18 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent, StaticSemantics, SubstitutionPair, USubst}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map}
@@ -42,8 +45,7 @@ trait ProofTreeNode {
   val id: ProofTreeNodeId
 
   /** The proof that this proof node is a part of. */
-  val proofId: String
-
+  val proof: ProofTree
 
   // kernel interface with actual provables that this proof tree node contains
 
@@ -111,14 +113,13 @@ trait ProofTreeNode {
       // single-position tactics
       goal.map(g => (g, g.sub(pos))) match {
         case Some((goal, Some(subFormula))) =>
-          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal)).map(axiom =>
-            (DerivationInfo(axiom), UIIndex.comfortOf(axiom).map(DerivationInfo(_))))
+          UIIndex.allStepsAt(subFormula, Some(pos), Some(goal), proof.substs).map(axiom =>
+            (axiom, UIIndex.comfortOf(axiom.codeName)))
         case _ => Nil
       }
     case Some(p2) =>
       // two-pos tactics
-      UIIndex.allTwoPosSteps(pos, p2, goal.get).map(step =>
-        (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
+      UIIndex.allTwoPosSteps(pos, p2, goal.get).map(step => (step, UIIndex.comfortOf(step.codeName)))
   }
 
   /** Returns suggestions for tactic argument inputs, argument info according to UIIndex and DerivationInfo. */
@@ -141,16 +142,44 @@ trait ProofTreeNode {
 
   /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
     * Returns `goal` if `sub` is not applicable at `i`. */
-  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]) = {
-    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]): (ProvableSig, List[SubstitutionPair]) = {
+    /** Unify goal with sub-conclusion to find missing substitutions.
+      * @note sub may originate from a lemma that was proved with expanded definitions; find by unification,
+      *       but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
+      *       may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
+      */
+    def unificationSubst(goal: ProvableSig, sub: ProvableSig, subst: USubst): (ProvableSig, List[SubstitutionPair]) = {
+      val substGoal = exhaustiveSubst(goal, subst)
+      val substSub = exhaustiveSubst(sub, subst)
+      try {
+        val downSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+      } catch {
+        case _: UnificationException =>
+          try {
+            val upSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+            substGoal(exhaustiveSubst(substSub, upSubst), i) -> (substs ++ upSubst.subsDefsInput)
+          } catch {
+            case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
+              //@note proof step introduced function symbols with delayed substitution,
+              // but may not yet be done and so back-substitution fails
+              substGoal -> subst.subsDefsInput.toList
+          }
+      }
+    }
+
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i) -> substs
     else if (substs.nonEmpty) {
       // apply only substitutions for difference between goal and sub
       val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
       val subSig = StaticSemantics.signature(sub.conclusion)
       val sigDiff = goalSig -- subSig
       val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
-      exhaustiveSubst(goal, RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst)(sub, i)
-    } else goal
+      val subst = RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst
+      unificationSubst(goal, sub, subst)
+    } else {
+      unificationSubst(goal, sub, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)
+    }
   }
 
 
@@ -159,7 +188,7 @@ trait ProofTreeNode {
   /** Merges all descendent provables into the local provable. */
   private lazy val theProvable: ProvableSig = {
     if (localProvable.isProved) localProvable
-    else (applyWithSubst(localProvable, _, goalIdx, _)).tupled(mergedDescendentProvable)
+    else (applyWithSubst(localProvable, _: ProvableSig, goalIdx, _: List[SubstitutionPair])._1).tupled(mergedDescendentProvable)
   }
 
   /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
@@ -181,9 +210,9 @@ trait ProofTreeNode {
         myProvable -> substs
       } else children.map(c => (c.mergedDescendentProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
         val ms = makerSubst(subMaker)
-        val preSubsts = (globalSubsts ++ subSubsts)
+        val preSubsts = globalSubsts ++ subSubsts
         val substs = (preSubsts ++ ms).distinct
-        applyWithSubst(global, sub, i, substs) -> substs
+        applyWithSubst(global, sub, i, substs)
       })
     }
   }
@@ -196,15 +225,24 @@ trait ProofTreeNode {
     else substituted
   }
 
-  private lazy val usMatcher = """(US\(")([^"]*)("\))""".r
+  private lazy val usMatcher = """US\("([^"]*)"\)""".r("subst")
+  private lazy val expandMatcher = """expand\s*"([^"]*)"""".r("name")
 
   /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
   private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
-    if (m.contains("US(")) {
+    if (m.contains("expandAllDefs")) {
+      proof.substs
+    } else if (m.contains("expand \"")) {
+      expandMatcher.findAllMatchIn(m).map(_.group("name")).flatMap(n => proof.substs.find(_.what match {
+        case FuncOf(fn, _) => fn.prettyString == n
+        case PredOf(fn, _) => fn.prettyString == n
+        case _ => false
+      })).toList
+    } else if (m.contains("US(")) {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       // collect substitutions of expandAll (serializes to sequence of US), and
       // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; master"
-      usMatcher.findAllMatchIn(m).map(m => m.group(2).trim).map(_.asSubstitutionPair).toList.distinct
+      usMatcher.findAllMatchIn(m).map(_.group("subst").trim).map(_.asSubstitutionPair).toList.distinct
     } else Nil
   }).getOrElse(Nil)
 
@@ -226,7 +264,6 @@ trait ProofTree {
     * @see [[ProofTreeNode.isProved]]
     * @see [[done]] */
   def isProved: Boolean = { load(); root.provable.isProved }
-
 
   // proof tree navigation
 
@@ -254,7 +291,7 @@ trait ProofTree {
   def locate(id: String): Option[ProofTreeNode] = nodeIdFromString(id).flatMap(locate)
 
   /** Converts a string representation to a node ID.
-    * @see [[locate(ProofTreeNodeId) */
+    * @see [[locate(ProofTreeNodeId)]] */
   def nodeIdFromString(id: String): Option[ProofTreeNodeId]
 
   /** Prefetch all nodes in a proof tree from the database. Does not include provables by default (expensive to load).
@@ -273,6 +310,9 @@ trait ProofTree {
 
   /** The proof info with meta information about this proof, e.g., its name. */
   def info: ProofPOJO
+
+  /** Substitutions known from the input model. */
+  def substs: List[SubstitutionPair]
 
   override def toString: String = printBelow(root, "")
 
@@ -300,19 +340,25 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
 /**
   * A [[ProofTreeNode]] that happens to be stored in the database `db`.
   * @param db The database that this proof tree node is stored in.
-  * @param proofId the identifier for the proof that this proof tree node belongs to.
+  * @param proof the proof that this proof tree node belongs to.
   */
-abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends ProofTreeNode {
+abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends ProofTreeNode {
   /** Runs a tactic on this node. */
   override def runTactic(userId: String, interpreter: List[IOListener] => Interpreter, tactic: BelleExpr,
                          shortName: String, executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val listener = new TraceRecordingListener(db, proofId.toInt, stepId, localProvable,
+    val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
       goalIdx, recursive = false, shortName)
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)),
       interpreter(listener::Nil))
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 
@@ -322,7 +368,14 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
-    if (wait) executor.wait(taskId)
+    if (wait) {
+      executor.wait(taskId)
+      // report tactic execution problems upon completion
+      executor.getResult(taskId) match {
+        case Some(Right(ex)) => throw ex
+        case _ => // either cancelled or succeeded
+      }
+    }
     taskId
   }
 
@@ -346,7 +399,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
     case Some((goal, Some(subFormula))) =>
       //@HACK assumes that the currently loaded proof and this tree's proof are the same
       //      to avoid reparsing the model on every call to tacticInputSuggestions.
-      val generator = TactixLibrary.invGenerator
+      val generator = TactixLibrary.invSupplier
       //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
       //@HACK for loop and dG
       subFormula match {
@@ -366,7 +419,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
     case Nil => // nothing to do
     case (c: DbProofTreeNode)::tail =>
       assert(tail.forall(_.asInstanceOf[DbProofTreeNode].stepId == c.stepId), "Expected same step in all children")
-      db.deleteExecutionStep(proofId.toInt, c.stepId.get) //@note database does cascade delete of all substeps
+      db.deleteExecutionStep(proof.info.proofId, c.stepId.get) //@note database does cascade delete of all substeps
   }
 
   /** Execution step recording: predecessor step ID. */
@@ -376,10 +429,10 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
 object DbPlainExecStepProofTreeNode extends Logging {
   /** Initializes a proof tree node from a recorded execution step. The branch identifies the subgoal created by the
     * execution step. If None, the node refers to the steps source node. */
-  def fromExecutionStep(db: DBAbstraction, proofId: String)(step: ExecutionStepPOJO, branch: Option[Int]): DbPlainExecStepProofTreeNode = branch match {
-    case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proofId,
-      () => { logger.debug("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
-    case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proofId,
+  def fromExecutionStep(db: DBAbstraction, proof: ProofTree)(step: ExecutionStepPOJO, branch: Option[Int]): DbPlainExecStepProofTreeNode = branch match {
+    case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proof,
+      () => { logger.debug("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proof.info.proofId, step.previousStep.get).get})
+    case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proof,
       () => step)
   }
 }
@@ -388,9 +441,9 @@ object DbPlainExecStepProofTreeNode extends Logging {
   * node where step was executed, an ID Some(step),Some(branch) represents a proxy for the branch subgoal created by
   * step and searches the actual successor step on demand. */
 case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
-                                   override val id: ProofTreeNodeId, override val proofId: String,
+                                   override val id: ProofTreeNodeId, override val proof: ProofTree,
                                    stepLoader: () => ExecutionStepPOJO)
-    extends DbProofTreeNode(db, proofId) with Logging {
+    extends DbProofTreeNode(db, proof) with Logging {
   /** Loads the step on demand. */
   private lazy val step = stepLoader()
 
@@ -426,25 +479,25 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
   }
 
   private lazy val dbParent = step.previousStep match {
-    case None => Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proofId))
+    case None => Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proof))
     case Some(pId) =>
       logger.debug(s"Node $id: querying parent")
       // this step knows on which branch it was executed
-      val parentBranch = db.getPlainExecutionStep(proofId.toInt, stepId.get).map(_.branchOrder)
-      Some(DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(Some(pId), parentBranch), proofId,
-        () => { logger.debug("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proofId.toInt, pId).get}))
+      val parentBranch = db.getPlainExecutionStep(proof.info.proofId, stepId.get).map(_.branchOrder)
+      Some(DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(Some(pId), parentBranch), proof,
+        () => { logger.debug("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proof.info.proofId, pId).get}))
   }
 
   private lazy val dbSubgoals = {
     logger.debug(s"Node $id: querying subgoals")
     // subgoals are the steps that have this.stepId as previousStep and this.goalIdx as branchOrder
-    val successors = db.getPlainStepSuccessors(proofId.toInt, stepId.get, goalIdx)
+    val successors = db.getPlainStepSuccessors(proof.info.proofId, stepId.get, goalIdx)
     assert(successors.size <= 1, "Expected unique successor step for node " + id + ", but got " + successors)
-    val successorSteps = successors.flatMap(s => db.getPlainExecutionStep(proofId.toInt, s.stepId.get))
+    val successorSteps = successors.flatMap(s => db.getPlainExecutionStep(proof.info.proofId, s.stepId.get))
     successorSteps.flatMap(s =>
       if (s.numSubgoals > 0) (0 until s.numSubgoals).map(sgi =>
-        DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(sgi)))
-      else DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(-1))::Nil
+        DbPlainExecStepProofTreeNode.fromExecutionStep(db, proof)(s, Some(sgi)))
+      else DbPlainExecStepProofTreeNode.fromExecutionStep(db, proof)(s, Some(-1))::Nil
     )
   }
 
@@ -453,9 +506,9 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
 
 /** A loaded node (root if step=None, then also parent=None, maker=None, makerShortName=None). */
 case class DbLoadedProofTreeNode(db: DBAbstraction,
-                                 override val id: ProofTreeNodeId, override val proofId: String,
+                                 override val id: ProofTreeNodeId, override val proof: ProofTree,
                                  override val children: List[ProofTreeNode],
-                                 step: Option[ExecutionStep]) extends DbProofTreeNode(db, proofId) {
+                                 step: Option[ExecutionStep]) extends DbProofTreeNode(db, proof) {
   /** Build tree */
   children.foreach({
     case c: DbLoadedProofTreeNode => c.theParent = Some(this)
@@ -485,7 +538,7 @@ case class DbLoadedProofTreeNode(db: DBAbstraction,
   /** A local provable, whose subgoals are filled in by the node's children. Triggers a database operation if the node's
     * step is loaded without provables. */
   override def localProvable: ProvableSig = step match {
-    case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+    case None => db.getProvable(proof.info.provableId.get).provable
     case Some(s) => s.local
   }
 
@@ -504,7 +557,7 @@ case class DbLoadedProofTreeNode(db: DBAbstraction,
   }
 }
 
-case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNodeId, override val proofId: String) extends DbProofTreeNode(db, proofId) {
+case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNodeId, override val proof: ProofTree) extends DbProofTreeNode(db, proof) {
   /** The node's parent, None if root. */
   override def parent: Option[ProofTreeNode] = None
 
@@ -531,19 +584,17 @@ case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNode
 
   // cached database query results
   private lazy val theSubgoals: List[ProofTreeNode] = {
-    db.getFirstExecutionStep(proofId.toInt) match {
+    db.getFirstExecutionStep(proof.info.proofId) match {
       case None => Nil
       case Some(step) =>
-        val s = db.getPlainExecutionStep(proofId.toInt, step.stepId.get).get
+        val s = db.getPlainExecutionStep(proof.info.proofId, step.stepId.get).get
         if (s.numSubgoals > 0) (0 until s.numSubgoals).map(sgi =>
-          DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(sgi))).toList
-        else DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(s, Some(-1))::Nil
+          DbPlainExecStepProofTreeNode.fromExecutionStep(db, proof)(s, Some(sgi))).toList
+        else DbPlainExecStepProofTreeNode.fromExecutionStep(db, proof)(s, Some(-1))::Nil
     }
   }
 
-  private lazy val dbProofInfo = db.getProofInfo(proofId)
-
-  private lazy val dbLocal = db.getProvable(dbProofInfo.provableId.get).provable
+  private lazy val dbLocal = db.getProvable(proof.info.provableId.get).provable
 }
 
 /** Builds proof trees from database-recorded step executions, starting at the specified root step (None: proof root). */
@@ -551,9 +602,9 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   /** Locates a node in the proof tree relative to its parent. */
   override def locate(id: ProofTreeNodeId): Option[ProofTreeNode] = id match {
     case DbStepPathNodeId(None, _) =>
-      Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proofId))
+      Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), this))
     case DbStepPathNodeId(Some(stepId), branch) =>
-      db.getPlainExecutionStep(proofId.toInt, stepId).map(DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(_, branch))
+      db.getPlainExecutionStep(proofId.toInt, stepId).map(DbPlainExecStepProofTreeNode.fromExecutionStep(db, this)(_, branch))
   }
 
   /** Locates the tree root. */
@@ -579,7 +630,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
     val goalNodes: List[ProofTreeNode] =
       if (root.children.isEmpty && !root.isProved) root::Nil
       else finalOpenBranches.flatMap({ case (fs, subgoals) => subgoals.map(sgi =>
-        DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(fs, Some(sgi))
+        DbPlainExecStepProofTreeNode.fromExecutionStep(db, this)(fs, Some(sgi))
       )})
 
     goalNodes
@@ -606,14 +657,14 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
     val linkedStepNodes = trace.steps.foldRight(Map[ProofTreeNodeId, List[ProofTreeNode]]())({case (s, children) =>
       val stepResultNodes: List[ProofTreeNode] =
         if (s.subgoalsCount > 0) (0 until s.subgoalsCount).map(i =>
-          DbLoadedProofTreeNode(db, DbStepPathNodeId(Some(s.stepId), Some(i)), proofId,
+          DbLoadedProofTreeNode(db, DbStepPathNodeId(Some(s.stepId), Some(i)), this,
             children.getOrElse(DbStepPathNodeId(Some(s.stepId), Some(i)), Nil), Some(s))).toList
-        else DbLoadedProofTreeNode(db, DbStepPathNodeId(Some(s.stepId), None), proofId, Nil, Some(s))::Nil // QE, close etc.
+        else DbLoadedProofTreeNode(db, DbStepPathNodeId(Some(s.stepId), None), this, Nil, Some(s))::Nil // QE, close etc.
 
       children + (DbStepPathNodeId(s.prevStepId, Some(s.branch)) -> stepResultNodes)
     })
 
-    loadedRoot = Some(DbLoadedProofTreeNode(db, DbStepPathNodeId(None, None), proofId,
+    loadedRoot = Some(DbLoadedProofTreeNode(db, DbStepPathNodeId(None, None), this,
       linkedStepNodes.getOrElse(DbStepPathNodeId(None, Some(0)), Nil), None))
 
     loadedNodes = loadedRoot.get :: linkedStepNodes.values.flatten.toList.sortBy(_.id match {
@@ -625,6 +676,9 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 
   /** The proof info. */
   override def info: ProofPOJO = dbProofInfo
+
+  /** The known substitutions. */
+  override def substs: List[SubstitutionPair] = dbSubsts
 
   /** Converts a string representation to a node ID. */
   override def nodeIdFromString(id: String): Option[ProofTreeNodeId] =
@@ -640,6 +694,13 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 
   // cached db query results
   private lazy val dbProofInfo = db.getProofInfo(proofId)
+
+  private lazy val dbSubsts = {
+    info.modelId.map(db.getModel).map(m => ArchiveParser.parser(m.keyFile)) match {
+      case Some(e :: Nil) => e.defs.substs
+      case _ => Nil
+    }
+  }
 
   private lazy val dbRoot = locate(DbStepPathNodeId(None, None)).get
 

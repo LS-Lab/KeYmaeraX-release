@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -46,20 +46,20 @@ class ModelplexTacticTests extends TacticTestBase {
 //    println("Number of branches (open/all): " + proof.subgoals.size + "/" + numBranches(proof))
   }
 
-  "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in {
+  "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/simple.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("x"))
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
       // no equational assignments
-      case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-      case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+      case Box(Assign(_, _), _) => Ax.assignbAxiom :: Ax.assignbup :: Nil
+      case Diamond(Assign(_, _), _) => Ax.assigndAxiom :: Ax.assigndup :: Nil
       // remove loops
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       // remove ODEs for controller monitor
-      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
+      case Diamond(ODESystem(_, _), _) => Ax.Dskipd :: Nil
+      case _ => AxIndex.axiomsFor(e)
     })
 
     val result = TactixLibrary.proveBy(modelplexInput, modelPlex(1))
@@ -69,17 +69,17 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(Variable("x")::Nil, 'ctrl, None)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
-    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & auto) shouldBe 'proved
+    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe 'proved
 
   }
 
-  it should "chase away a loop by updateCalculus implicationally" in {
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
+  it should "chase away a loop by updateCalculus implicationally" in withTactics {
+    val model = ArchiveParser.parseAsFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("x"))
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
+      case _ => AxIndex.axiomsFor(e)
     })
 
     val result = proveBy(modelplexInput, modelPlex(1))
@@ -101,7 +101,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -126,7 +126,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor condition" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
@@ -203,7 +203,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor condition by chase" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
@@ -213,8 +213,8 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> (-1<=fpost&fpost<=(m()-l)/ep())&0 < ep()&(((((cpost=0&(fpost=0|fpost!=0))&(l=0|l=lpost))&l>=0)&(lpost=0|l=lpost))&(lpost=0|l>0)|(cpost>0&ep()>=cpost)&(fpost=0&(l=0&lpost=0|l=lpost&l>0)|cpost*fpost+l=lpost&(cpost*fpost+l>=0&fpost < 0|fpost>0&l>=0)))".asSequent
   }
 
-  "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+  "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in withTactics {
+    val s = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
@@ -231,7 +231,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "find correct controller monitor condition by chase" in withMathematica { tool =>
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val model = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
 
@@ -253,7 +253,7 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "chase controller monitor condition to tests" in withMathematica { tool =>
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+    val model = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
     val Imply(_, Box(prg, _)) = model
@@ -286,18 +286,18 @@ class ModelplexTacticTests extends TacticTestBase {
         |if ((0.0L <= pre.l) && (0.0L <= params->ep)) {
         |if (curr.l == pre.l) {
         |if (curr.c == 0.0L) {
-        |verdict result = { .id=1, .val=((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep)))) }; return result;
+        |verdict result = { .id=1, .val=(1.0L)/(((1.0L)/(-(fmaxl(-((curr.f)-((-1.0L))), -((((params->m)-(pre.l))/(params->ep))-(curr.f))))))+((1.0L)/(-(fmaxl(-(pre.l), -(params->ep)))))) }; return result;
         |} else {
-        |printf("Failed %d=%s\n", -1, "cpost=0"); verdict result = { .id=-1, .val=-1.0L }; return result;
+        |printf("Failed %d=%s\n", -1, "cpost=0"); verdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.c, -(curr.c)))) }; return result;
         |}
         |} else {
-        |printf("Failed %d=%s\n", -2, "lpost=l"); verdict result = { .id=-2, .val=-1.0L }; return result;
+        |printf("Failed %d=%s\n", -2, "lpost=l"); verdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.l)-(pre.l), -((curr.l)-(pre.l))))) }; return result;
         |}
         |} else {
-        |printf("Failed %d=%s\n", -3, "0<=l&0<=ep()"); verdict result = { .id=-3, .val=((-1.0L))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep)))) }; return result;
+        |printf("Failed %d=%s\n", -3, "0<=l&0<=ep()"); verdict result = { .id=-3, .val=((-1.0L))+(-(fmaxl(-(pre.l), -(params->ep)))) }; return result;
         |}
         |} else {
-        |printf("Failed %d=%s\n", -4, "-1<=fpost&fpost<=(m()-l)/ep()"); verdict result = { .id=-4, .val=((-1.0L))+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))) }; return result;
+        |printf("Failed %d=%s\n", -4, "(-1)<=fpost&fpost<=(m()-l)/ep()"); verdict result = { .id=-4, .val=((-1.0L))+(-(fmaxl(-((curr.f)-((-1.0L))), -((((params->m)-(pre.l))/(params->ep))-(curr.f))))) }; return result;
         |};
         |}
         |
@@ -337,9 +337,9 @@ class ModelplexTacticTests extends TacticTestBase {
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) { p.waitFor() shouldBe 0 }
   }
 
-  it should "find correct controller monitor condition from model file" ignore {
+  it should "find correct controller monitor condition from model file" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("f"), Variable("l"), Variable("c"))
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
@@ -354,9 +354,9 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
-  it should "find correct controller monitor condition without intermediate Optimization 1" in {
+  it should "find correct controller monitor condition without intermediate Optimization 1" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1) & ModelPlex.optimizationOne()(1)
     val result = proveBy(model, tactic)
 
@@ -370,7 +370,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
-  it should "work using the command line interface" taggedAs IgnoreInBuildTest in {
+  it should "work using the command line interface" taggedAs IgnoreInBuildTest in withTactics {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
@@ -382,7 +382,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val expectedFileContent = "(-1<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+    Parser(actualFileContent) shouldBe expectedFileContent
   }
 
 //
@@ -417,9 +417,9 @@ class ModelplexTacticTests extends TacticTestBase {
 //    report(expected, result, "Watertank model")
 //  }
 //
-  "Local lane control modelplex in place" should "find correct controller monitor condition" ignore {
+  "Local lane control modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
     val result = proveBy(model, tactic)
 
@@ -455,9 +455,9 @@ class ModelplexTacticTests extends TacticTestBase {
 //    report(expected, result, "LLC controller monitor (backward tactic, from pre-fabricated conjecture)")
 //  }
 //
-  it should "find correct controller monitor from model" ignore {
+  it should "find correct controller monitor from model" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
 
@@ -475,7 +475,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
 
@@ -501,7 +501,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "Fixedwing" should "find correct controller monitor" in withMathematica { implicit tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fixedwing_simple_nobound.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("a"), Variable("w"), Variable("xo"), Variable("theta"), Variable("dxy"), Variable("y"), Variable("t"), Variable("v"), Variable("dx"), Variable("w"), Variable("yo"), Variable("dz"), Variable("x"), Variable("dy"))
 
@@ -526,9 +526,9 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   // works but is super-slow (46min vs. 2s next with chase)
-  "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" ignore {
+  "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1)
     val result = proveBy(model, tactic)
     result.subgoals should have size 1
@@ -540,7 +540,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 //  ignore should "find correct controller monitor condition from model" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/icfem08/safetylemma.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
 //      Variable("state"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
 //      Variable("a"))
@@ -558,7 +558,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("vdes"), Variable("SB"), Variable("v"),
       Variable("state"), Variable("do"), Variable("z"), Variable("t"), Variable("mo"), Variable("m"), Variable("d"),
       Variable("a"))
@@ -566,13 +566,13 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "(\\forall do (do=d->\\forall mo (mo=m->\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b()*(m-mo)&vdes>=0)&vdespost=vdes&SBpost=SB&vpost=v&statepost=state&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)))|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&\\exists a ((a>=-b()&a<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|!(m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))|v>=vdes&\\exists a ((a < 0&a>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|!(m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))".asFormula
+    foResult.subgoals.head.succ should contain only "(\\forall do (do=d->\\forall mo (mo=m->\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b()*(m-mo)&vdes>=0)&vdespost=vdes&SBpost=SB&vpost=v&statepost=state&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)))|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&\\exists a ((a>=-b()&a<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))|v>=vdes&\\exists a ((a < 0&a>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))".asFormula
 
     // Opt. 1
     val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
-    opt1Result.subgoals.head.succ should contain only "((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&vdespost=vdespost&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&mpost=mpost&dpost=dpost&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|!(m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|!(m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)".asFormula
+    opt1Result.subgoals.head.succ should contain only "((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&vdespost=vdespost&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&mpost=mpost&dpost=dpost&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)".asFormula
 
     // simplify
     val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
@@ -585,7 +585,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -617,7 +617,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally with Z3" in withZ3 { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -643,9 +643,9 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   // works but is super-slow
-  it should "find the correct controller monitor condition from the input model" ignore {
+  it should "find the correct controller monitor condition from the input model" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -662,7 +662,7 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expectedSucc, result, "RSS controller monitor (backward tactic)")
   }
 
-  it should "work using the command line interface" taggedAs IgnoreInBuildTest in {
+  it should "work using the command line interface" taggedAs IgnoreInBuildTest in withTactics {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
@@ -674,12 +674,12 @@ class ModelplexTacticTests extends TacticTestBase {
     val expectedFileContent = "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&tpost=0)".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+    Parser(actualFileContent) shouldBe expectedFileContent
   }
 
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("a"), Variable("r"),
       Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
       Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t"), Variable("v"), Variable("talpha"),
@@ -707,7 +707,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety curve straight" should "find correct controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -734,7 +734,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor test program" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
@@ -748,7 +748,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   "RSS passive safety curve straight curvature" should "find correct controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight_curvature.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("k"), Variable("t"))
@@ -772,7 +772,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 //  ignore should "extract the correct controller monitor" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("a"), Variable("r"),
 //      Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
 //      Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t"), Variable("v"), Variable("talpha"),
@@ -792,9 +792,9 @@ class ModelplexTacticTests extends TacticTestBase {
 //    report(result.openGoals().head.sequent.succ.head, result, "RSS passive orientation safety controller monitor (backward tactic)")
 //  }
 //
-  "Hybrid quadcopter" should "extract the correct controller monitor" ignore {
+  "Hybrid quadcopter" should "extract the correct controller monitor" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("href"), Variable("v"), Variable("h"))
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
@@ -811,7 +811,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, Variable("href"), Variable("v"), Variable("h"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -833,9 +833,9 @@ class ModelplexTacticTests extends TacticTestBase {
     report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Hybrid quadcopter controller monitor (forward chase)")
   }
 
-  "VSL modelplex in place" should "find correct controller monitor condition" ignore {
+  "VSL modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl-ctrl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
     val result = proveBy(model, tactic)
 
@@ -850,9 +850,9 @@ class ModelplexTacticTests extends TacticTestBase {
     report(expected, result, "VSL controller (backward tactic from prefabricated conjecture)")
   }
 
-  it should "find correct controller monitor condition from input file" ignore {
+  it should "find correct controller monitor condition from input file" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
 
@@ -871,7 +871,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
 
@@ -917,7 +917,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("a"), Variable("t"))
 
@@ -936,7 +936,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign with direct v control" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("t"))
 
@@ -954,7 +954,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct controller monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
@@ -972,24 +972,24 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor for stopsign" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("a"), Variable("t"))
 
     val mxResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1))
-    mxResult.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)&xpost=A/2*t_^2+v*t_+x&vpost=A*t_+v&apost=A&tpost=t_+0)|v=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+v>=0&s_+0<=ep)&xpost=0/2*t_^2+v*t_+x&vpost=0*t_+v&apost=0&tpost=t_+0)|\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)&xpost=(-b)/2*t_^2+v*t_+x&vpost=(-b)*t_+v&apost=-b&tpost=t_+0)".asSequent
+    mxResult.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)&xpost=A*(t_^2/2)+v*t_+x&vpost=A*t_+v&apost=A&tpost=t_+0)|v=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+v>=0&s_+0<=ep)&xpost=0*(t_^2/2)+v*t_+x&vpost=0*t_+v&apost=0&tpost=t_+0)|\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)&xpost=(-b)*(t_^2/2)+v*t_+x&vpost=(-b)*t_+v&apost=-b&tpost=t_+0)".asSequent
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
     val result = proveBy(mxResult, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
-    result.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|v=0&((A>=0&b>0)&ep>0)&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0|((A>=0&b>0)&ep>0)&((((v=0&vpost=0)&x=xpost)&apost+b=0)&tpost=0|(v>0&apost+b=0)&((tpost=0&v=vpost)&x=xpost|(0.5*b*tpost^2+xpost=tpost*v+x&ep>=tpost)&(b*tpost=v&vpost=0|(b*tpost+vpost=v&vpost>0)&vpost < v)))".asSequent
+    result.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=1/2*A*tpost^2+x|(A*tpost+v=vpost&xpost=1/2*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=1/2*A*tpost^2+x|(A*tpost+v=vpost&xpost=1/2*A*tpost^2+tpost*v+x)&v>0)))|v=0&((A>=0&b>0)&ep>0)&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0|((A>=0&b>0)&ep>0)&((((v=0&vpost=0)&x=xpost)&apost+b=0)&tpost=0|(v>0&apost+b=0)&((tpost=0&v=vpost)&x=xpost|(1/2*b*tpost^2+xpost=tpost*v+x&ep>=tpost)&(b*tpost=v&vpost=0|(b*tpost+vpost=v&vpost>0)&vpost < v)))".asSequent
     val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
-    acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))".asFormula
+    acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=1/2*A*tpost^2+x|(A*tpost+v=vpost&xpost=1/2*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=1/2*A*tpost^2+x|(A*tpost+v=vpost&xpost=1/2*A*tpost^2+tpost*v+x)&v>0)))".asFormula
     coast shouldBe "v=0&((A>=0&b>0)&ep>0)&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0".asFormula
-    brake shouldBe "((A>=0&b>0)&ep>0)&((((v=0&vpost=0)&x=xpost)&apost+b=0)&tpost=0|(v>0&apost+b=0)&((tpost=0&v=vpost)&x=xpost|(0.5*b*tpost^2+xpost=tpost*v+x&ep>=tpost)&(b*tpost=v&vpost=0|(b*tpost+vpost=v&vpost>0)&vpost < v)))".asFormula
+    brake shouldBe "((A>=0&b>0)&ep>0)&((((v=0&vpost=0)&x=xpost)&apost+b=0)&tpost=0|(v>0&apost+b=0)&((tpost=0&v=vpost)&x=xpost|(1/2*b*tpost^2+xpost=tpost*v+x&ep>=tpost)&(b*tpost=v&vpost=0|(b*tpost+vpost=v&vpost>0)&vpost < v)))".asFormula
   }
 
   it should "find correct model monitor for stopsign with direct v control" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("t"))
 
@@ -1005,7 +1005,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find correct model monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
@@ -1022,14 +1022,14 @@ class ModelplexTacticTests extends TacticTestBase {
   "PLDI17" should "prove velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.model.asInstanceOf[Formula]
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("d"), Variable("v"), Variable("t"))
@@ -1043,14 +1043,14 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "prove controller monitor correctness" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ => withDatabase { db =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
@@ -1075,29 +1075,29 @@ class ModelplexTacticTests extends TacticTestBase {
     val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
       val serializableTactic = db.extractSerializableTactic(fml, tactic)
       ParsedArchiveEntry(name, "lemma", "", "", defs(fml), fml,
-      (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
+      (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)})
     val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
-    checkArchiveEntries(KeYmaeraXArchiveParser.parse(lemmaTempArchive))
+    checkArchiveEntries(ArchiveParser.parse(lemmaTempArchive))
 
     val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", "", defs(sandbox),
-      sandbox, (entry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
+      sandbox, (entry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)
 
     val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
-    checkArchiveEntries(KeYmaeraXArchiveParser.parse(archive))
+    checkArchiveEntries(ArchiveParser.parse(archive))
   }}
 
   it should "prove fallback preserves controller monitor" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
+    val entry = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "check all archive entries" taggedAs IgnoreInBuildTest in withMathematica { _ =>
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entries = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx")
+    val entries = ArchiveParser.parser.parseFromFile(s"$baseDir/velocitycar_dist.kyx")
     checkArchiveEntries(entries)
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Safety"))
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Plant Preserves Invariant"))
@@ -1107,7 +1107,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "generate a quantitative monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ctrlMonitorStateVars = List(Variable("d"), Variable("v"), Variable("t"))
@@ -1128,14 +1128,14 @@ class ModelplexTacticTests extends TacticTestBase {
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val ctrlInputs = CGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
-    ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double V;\n  long double ep;\n} parameters;\n\ntypedef struct state {\n  long double d;\n  long double t;\n  long double v;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;\n\nverdict OrLeft1804549307(state pre, state curr, const parameters* const params) {\n  if (pre.d >= (params->V)*(params->ep)) {\nif (0.0L <= curr.v) {\nif (curr.v <= params->V) {\nif (curr.d == pre.d) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=(((0.0L)+(-(((params->V)*(params->ep))-(pre.d))))+(-((0.0L)-(curr.v))))+(-((curr.v)-(params->V))) }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=((-1.0L))+(-((curr.v)-(params->V))) }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=((-1.0L))+(-((0.0L)-(curr.v))) }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+(-(((params->V)*(params->ep))-(pre.d))) }; return result;\n}\n}\n\nverdict OrRight1719041710(state pre, state curr, const parameters* const params) {\n  if (curr.d == pre.d) {\nif (curr.v == 0.0L) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=0.0L }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n}"
-    ctrlMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (params->V >= 0.0L) {\nif (params->ep >= 0.0L) {\nverdict leftDist = OrLeft1804549307(pre,curr,params);\nverdict rightDist = OrRight1719041710(pre,curr,params);\nint verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;\nverdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };\nreturn result;\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(-((0.0L)-(params->ep))) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(-((0.0L)-(params->V))) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
+    ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double V;\n  long double ep;\n} parameters;\n\ntypedef struct state {\n  long double d;\n  long double t;\n  long double v;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;\n\nverdict OrLeft1896387834(state pre, state curr, const parameters* const params) {\n  if (pre.d >= (params->V)*(params->ep)) {\nif (0.0L <= curr.v) {\nif (curr.v <= params->V) {\nif (curr.d == pre.d) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=(1.0L)/(((1.0L)/((pre.d)-((params->V)*(params->ep))))+(((1.0L)/(curr.v))+((1.0L)/((params->V)-(curr.v))))) }; return result;\n} else {\nverdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.d)-(pre.d), -((curr.d)-(pre.d))))) }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=((-1.0L))+((params->V)-(curr.v)) }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=((-1.0L))+(curr.v) }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+((pre.d)-((params->V)*(params->ep))) }; return result;\n}\n}\n\nverdict OrRight1981114317(state pre, state curr, const parameters* const params) {\n  if (curr.d == pre.d) {\nif (curr.v == 0.0L) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=0.0L }; return result;\n} else {\nverdict result = { .id=-1, .val=((-1.0L))+(-(fmaxl(curr.t, -(curr.t)))) }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=((-1.0L))+(-(fmaxl(curr.v, -(curr.v)))) }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=((-1.0L))+(-(fmaxl((curr.d)-(pre.d), -((curr.d)-(pre.d))))) }; return result;\n}\n}"
+    ctrlMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (params->V >= 0.0L) {\nif (params->ep >= 0.0L) {\nverdict leftDist = OrLeft1896387834(pre,curr,params);\nverdict rightDist = OrRight1981114317(pre,curr,params);\nint verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;\nverdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };\nreturn result;\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(params->ep) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(params->V) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
   }
 
   "Waypoint navigation" should "generate a controller monitor" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
     val model = entry.model.asInstanceOf[Formula]
     val Imply(_, Box(prg, _)) = model
 
@@ -1155,7 +1155,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "generate monitors from plant overapproximation" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory (e.g., keymaerax-webui/src/main/resources/keymaerax-projects/ral)
     val baseDir = System.getProperty("TEST_BASE_DIR")
-    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val entry = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
     val model = entry.model.asInstanceOf[Formula]
     val Imply(_, Box(Loop(Compose(prg, _)), _)) = model
 
@@ -1206,6 +1206,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val ctrlMonitorProg = proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val ctrlInputs = CGenerator.getInputs(ctrlMonitorProg)
     val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(ctrlMonitorProg, ctrlMonitorStateVars.toSet, ctrlInputs, "Monitor")
+    //@todo update expected code
     ctrlMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double eps;\n} parameters;\n\ntypedef struct state {\n  long double a;\n  long double k;\n  long double t;\n  long double v;\n  long double vh;\n  long double vl;\n  long double xg;\n  long double yg;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
     ctrlMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (curr.yg > 0.0L) {\nif ((fabsl(curr.k))*(params->eps) <= 100.0L) {\nif ((((curr.k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L) < ((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))) {\nif (((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)) < (((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)) {\nif (0.0L <= curr.vl) {\nif (curr.vl < curr.vh) {\nif ((params->A)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {\nif ((params->B)*(params->T) <= (10.0L)*((curr.vh)-(curr.vl))) {\nif (-(params->B) <= curr.a) {\nif (curr.a <= params->A) {\nif (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= 0.0L) {\nif (((pre.v <= curr.vh) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) <= (10.0L)*(curr.vh))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh))))) <= ((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {\nif (((curr.vl <= pre.v) && (((10.0L)*(pre.v))+((curr.a)*(params->T)) >= (10.0L)*(curr.vl))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T)))))) <= ((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))) {\nif (curr.v == pre.v) {\nif (curr.t == 0.0L) {\nverdict result = { .id=1, .val=(((((((((((((0.0L)+(-((0.0L)-(curr.yg))))+(-(((fabsl(curr.k))*(params->eps))-(100.0L))))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))))))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))))+(-((0.0L)-(curr.vl))))+(-((curr.vl)-(curr.vh))))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-((-(params->B))-(curr.a))))+(-((curr.a)-(params->A))))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T))))))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))) }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=((-1.0L))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))) }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=((-1.0L))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))) }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T))))) }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=((-1.0L))+(-((curr.a)-(params->A))) }; return result;\n}\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(-((-(params->B))-(curr.a))) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))) }; return result;\n}\n} else {\nverdict result = { .id=-9, .val=((-1.0L))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))) }; return result;\n}\n} else {\nverdict result = { .id=-10, .val=((-1.0L))+(-((curr.vl)-(curr.vh))) }; return result;\n}\n} else {\nverdict result = { .id=-11, .val=((-1.0L))+(-((0.0L)-(curr.vl))) }; return result;\n}\n} else {\nverdict result = { .id=-12, .val=((-1.0L))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))) }; return result;\n}\n} else {\nverdict result = { .id=-13, .val=((-1.0L))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))))) }; return result;\n}\n} else {\nverdict result = { .id=-14, .val=((-1.0L))+(-(((fabsl(curr.k))*(params->eps))-(100.0L))) }; return result;\n}\n} else {\nverdict result = { .id=-15, .val=((-1.0L))+(-((0.0L)-(curr.yg))) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
 
@@ -1215,64 +1216,65 @@ class ModelplexTacticTests extends TacticTestBase {
     val plantMonitorProg = proveBy(reassociatedPlantMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     val plantInputs = CGenerator.getInputs(plantMonitorProg)
     val plantMonitorCode = (new CGenerator(new CMonitorGenerator()))(plantMonitorProg, plantMonitorStateVars.toSet, plantInputs, "Monitor")
+    //@todo update expected code
     plantMonitorCode._1.trim shouldBe "/**************************\n * Monitor.c\n * Generated by KeYmaera X\n **************************/\n\n#include <math.h>\n#include <stdbool.h>\n\ntypedef struct parameters {\n  long double A;\n  long double B;\n  long double T;\n  long double a;\n  long double eps;\n  long double k;\n  long double vh;\n  long double vl;\n} parameters;\n\ntypedef struct state {\n  long double t;\n  long double t_0;\n  long double v;\n  long double v_0;\n  long double xg;\n  long double xg_0;\n  long double yg;\n  long double yg_0;\n} state;\n\ntypedef struct input input;\n\ntypedef struct verdict { int id; long double val; } verdict;"
     plantMonitorCode._2.trim shouldBe "/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */\nverdict boundaryDist(state pre, state curr, const parameters* const params) {\n  if (pre.v >= 0.0L) {\nif (pre.t <= params->T) {\nif (((pre.t >= 0.0L) && (((((params->k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L) < ((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))-((((2.0L)*(pre.xg))*(100.0L))*(10.0L))) && (((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))-((((2.0L)*(pre.xg))*(100.0L))*(10.0L)) < (((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))) || ((((10.0L)*(pre.v))+((params->a)*((params->T)-(pre.t))) >= 0.0L) && ((((params->a >= 0.0L) && (((10.0L)*(pre.v))+((params->a)*((params->T)-(pre.t))) <= (10.0L)*(params->vh))) || (((params->a <= 0.0L) && (pre.v <= params->vh)) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)-(pre.t)))*(10.0L))+((params->a)*(((params->T)-(pre.t))*((params->T)-(pre.t))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))*(((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t)))))-(((10.0L)*(params->vh))*((10.0L)*(params->vh))))) <= ((((2.0L)*(params->B))*((pre.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)-(pre.t)))*(10.0L))+((params->a)*(((params->T)-(pre.t))*((params->T)-(pre.t))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))*(((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t)))))-(((10.0L)*(params->vh))*((10.0L)*(params->vh))))) <= ((((2.0L)*(params->B))*((fabsl(pre.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))) && (((params->a >= 0.0L) && (pre.v >= params->vl)) || (((params->a <= 0.0L) && (((10.0L)*(pre.v))+((params->a)*((params->T)-(pre.t))) >= (10.0L)*(params->vl))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)-(pre.t)))*(10.0L))+((params->a)*(((params->T)-(pre.t))*((params->T)-(pre.t))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))-((((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))*(((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))))) <= ((((2.0L)*(params->A))*((pre.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)-(pre.t)))*(10.0L))+((params->a)*(((params->T)-(pre.t))*((params->T)-(pre.t))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))-((((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))*(((pre.v)*(10.0L))+((params->a)*((params->T)-(pre.t))))))) <= ((((2.0L)*(params->A))*((fabsl(pre.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))))) {\nif (curr.v >= 0.0L) {\nif (curr.t <= params->T) {\nif (((curr.t >= 0.0L) && (((((params->k)*((params->eps)*(params->eps)))-((200.0L)*(params->eps)))*(100.0L) < ((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))) && (((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)) < (((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))) || ((((10.0L)*(curr.v))+((params->a)*((params->T)-(curr.t))) >= 0.0L) && ((((params->a >= 0.0L) && (((10.0L)*(curr.v))+((params->a)*((params->T)-(curr.t))) <= (10.0L)*(params->vh))) || (((params->a <= 0.0L) && (curr.v <= params->vh)) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)-(curr.t)))*(10.0L))+((params->a)*(((params->T)-(curr.t))*((params->T)-(curr.t))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))*(((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t)))))-(((10.0L)*(params->vh))*((10.0L)*(params->vh))))) <= ((((2.0L)*(params->B))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)-(curr.t)))*(10.0L))+((params->a)*(((params->T)-(curr.t))*((params->T)-(curr.t))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))*(((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t)))))-(((10.0L)*(params->vh))*((10.0L)*(params->vh))))) <= ((((2.0L)*(params->B))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L))))) && (((params->a >= 0.0L) && (curr.v >= params->vl)) || (((params->a <= 0.0L) && (((10.0L)*(curr.v))+((params->a)*((params->T)-(curr.t))) >= (10.0L)*(params->vl))) || (((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)-(curr.t)))*(10.0L))+((params->a)*(((params->T)-(curr.t))*((params->T)-(curr.t))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))-((((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))*(((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))))) <= ((((2.0L)*(params->A))*((curr.yg)-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)) || ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)-(curr.t)))*(10.0L))+((params->a)*(((params->T)-(curr.t))*((params->T)-(curr.t))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))-((((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))*(((curr.v)*(10.0L))+((params->a)*((params->T)-(curr.t))))))) <= ((((2.0L)*(params->A))*((fabsl(curr.xg))-((10.0L)*(params->eps))))*(10000.0L))*(100.0L)))))))) {\nif (curr.t_0 == pre.t) {\nif (curr.v_0 == pre.v) {\nif (curr.xg_0 == pre.xg) {\nif (curr.yg_0 == pre.yg) {\nverdict result = { .id=1, .val=((((((0.0L)+(-((0.0L)-(pre.v))))+(-((pre.t)-(params->T))))+(-(fminl(fmaxl((0.0L)-(pre.t), fmaxl(((((params->k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))+(-((((2.0L)*(pre.xg))*(100.0L))*(10.0L)))), (((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))+(-((((2.0L)*(pre.xg))*(100.0L))*(10.0L))))-((((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))), fmaxl((0.0L)-(((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t))))), fmaxl(fminl(fmaxl((0.0L)-(params->a), (((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t)))))-((10.0L)*(params->vh))), fminl(fmaxl(params->a, (pre.v)-(params->vh)), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((pre.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((fabsl(pre.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))), fminl(fmaxl((0.0L)-(params->a), (params->vl)-(pre.v)), fminl(fmaxl(params->a, ((10.0L)*(params->vl))-(((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t)))))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))))))-(((((2.0L)*(params->A))*((pre.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))))))-(((((2.0L)*(params->A))*((fabsl(pre.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))))))+(-((0.0L)-(curr.v))))+(-((curr.t)-(params->T))))+(-(fminl(fmaxl((0.0L)-(curr.t), fmaxl(((((params->k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))), (((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))), fmaxl((0.0L)-(((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t))))), fmaxl(fminl(fmaxl((0.0L)-(params->a), (((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t)))))-((10.0L)*(params->vh))), fminl(fmaxl(params->a, (curr.v)-(params->vh)), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))), fminl(fmaxl((0.0L)-(params->a), (params->vl)-(curr.v)), fminl(fmaxl(params->a, ((10.0L)*(params->vl))-(((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t)))))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))))) }; return result;\n} else {\nverdict result = { .id=-1, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-2, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-3, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-4, .val=-1.0L }; return result;\n}\n} else {\nverdict result = { .id=-5, .val=((-1.0L))+(-(fminl(fmaxl((0.0L)-(curr.t), fmaxl(((((params->k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))), (((params->k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))), fmaxl((0.0L)-(((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t))))), fmaxl(fminl(fmaxl((0.0L)-(params->a), (((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t)))))-((10.0L)*(params->vh))), fminl(fmaxl(params->a, (curr.v)-(params->vh)), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+(((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))), fminl(fmaxl((0.0L)-(params->a), (params->vl)-(curr.v)), fminl(fmaxl(params->a, ((10.0L)*(params->vl))-(((10.0L)*(curr.v))+((params->a)*((params->T)+(-(curr.t)))))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(curr.v))*((params->T)+(-(curr.t))))*(10.0L))+((params->a)*(((params->T)+(-(curr.t)))*((params->T)+(-(curr.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t)))))*(((curr.v)*(10.0L))+((params->a)*((params->T)+(-(curr.t))))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))))) }; return result;\n}\n} else {\nverdict result = { .id=-6, .val=((-1.0L))+(-((curr.t)-(params->T))) }; return result;\n}\n} else {\nverdict result = { .id=-7, .val=((-1.0L))+(-((0.0L)-(curr.v))) }; return result;\n}\n} else {\nverdict result = { .id=-8, .val=((-1.0L))+(-(fminl(fmaxl((0.0L)-(pre.t), fmaxl(((((params->k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))+(-((((2.0L)*(pre.xg))*(100.0L))*(10.0L)))), (((params->k)*(((pre.xg)*(pre.xg))+((pre.yg)*(pre.yg))))+(-((((2.0L)*(pre.xg))*(100.0L))*(10.0L))))-((((params->k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))), fmaxl((0.0L)-(((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t))))), fmaxl(fminl(fmaxl((0.0L)-(params->a), (((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t)))))-((10.0L)*(params->vh))), fminl(fmaxl(params->a, (pre.v)-(params->vh)), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((pre.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->B)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+(((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))+(-(((10.0L)*(params->vh))*((10.0L)*(params->vh)))))))-(((((2.0L)*(params->B))*((fabsl(pre.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))), fminl(fmaxl((0.0L)-(params->a), (params->vl)-(pre.v)), fminl(fmaxl(params->a, ((10.0L)*(params->vl))-(((10.0L)*(pre.v))+((params->a)*((params->T)+(-(pre.t)))))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))))))-(((((2.0L)*(params->A))*((pre.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(params->k)))*(100.0L)))+(((params->eps)*(params->eps))*((params->k)*(params->k))))*(((params->A)*(((((2.0L)*(pre.v))*((params->T)+(-(pre.t))))*(10.0L))+((params->a)*(((params->T)+(-(pre.t)))*((params->T)+(-(pre.t)))))))+((((params->vl)*(10.0L))*((params->vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t)))))*(((pre.v)*(10.0L))+((params->a)*((params->T)+(-(pre.t))))))))))-(((((2.0L)*(params->A))*((fabsl(pre.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))))) }; return result;\n}\n} else {\nverdict result = { .id=-9, .val=((-1.0L))+(-((pre.t)-(params->T))) }; return result;\n}\n} else {\nverdict result = { .id=-10, .val=((-1.0L))+(-((0.0L)-(pre.v))) }; return result;\n};\n}\n\n/* Evaluates monitor condition in prior and current state */\nbool monitorSatisfied(state pre, state curr, const parameters* const params) {\n  return boundaryDist(pre,curr,params).val >= 0.0L;\n}\n\n/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\nstate monitoredCtrl(state curr, const parameters* const params, const input* const in,\n                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {\n  state pre = curr;\n  state post = (*ctrl)(pre,params,in);\n  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);\n  else return post;\n}"
   }
 
-  "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>
+  "ModelPlex formula metric" should "convert simple formula" in withMathematica { _ =>
     val fml = "x>=y & a=b & c<=d+e".asFormula
-    ModelPlex.toMetric(fml) shouldBe "max(y-x, max(max(a-b, b-a), c-(d+e)))<=0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "max(-(x-y),max(max(a-b,-(a-b)),-(d+e-c)))<=0".asFormula
   }
 
-  it should "convert formulas with function symbols" in withMathematica { tool =>
+  it should "convert formulas with function symbols" in withMathematica { _ =>
     val fml = "x()>=y & a=b & c<=d+e(f(),g())".asFormula
-    ModelPlex.toMetric(fml) shouldBe "max(y-x(), max(max(a-b, b-a), c-(d+e(f(),g()))))<=0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "max(-(x()-y),max(max(a-b,-(a-b)),-(d+e(f(),g())-c)))<=0".asFormula
   }
 
-  it should "convert simple formula 2" in withMathematica { tool =>
+  it should "convert simple formula 2" in withMathematica { _ =>
     val fml = "x>=y&a=b | c<=d+e".asFormula
-    ModelPlex.toMetric(fml) shouldBe "min((max((y-x,max((a-b,b-a)))),c-(d+e)))<=0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(max(-(x-y),max(a-b,-(a-b))),-(d+e-c))<=0".asFormula
   }
 
   it should "convert simple formula 3" in withMathematica { tool =>
     val fml = "x>=y&a=b&c<=d | c<=d+e | f<=g&h<=0".asFormula
     val metric = ModelPlex.toMetric(fml)
-    metric shouldBe "min((max((y-x,max((max((a-b,b-a)),c-d)))),min((c-(d+e),max((f-g,h))))))<=0".asFormula
+    metric shouldBe "min(max(-(x-y),max(max(a-b,-(a-b)),-(d-c))),min(-(d+e-c),max(-(g-f),--h)))<=0".asFormula
     tool.findCounterExample(metric)
   }
 
   it should "convert simple formula 4" in withMathematica { tool =>
     val fml = "xpost>=x+5&ypost=y&cpost<=d | cpost>=d+e | fpost<=f&hpost<=0".asFormula
     val metric = ModelPlex.toMetric(fml)
-    metric shouldBe "min((max((x+5-xpost,max((max((ypost-y,y-ypost)),cpost-d)))),min((d+e-cpost,max((fpost-f,hpost))))))<=0".asFormula
+    metric shouldBe "min(max(-(xpost-(x+5)),max(max(ypost-y,-(ypost-y)),-(d-cpost))),min(-(cpost-(d+e)),max(-(f-fpost),--hpost)))<=0".asFormula
     tool.findCounterExample(metric)
   }
 
   it should "convert inequalities" in withMathematica { _ =>
     val fml = "x!=y | x>4&y!=3".asFormula
-    ModelPlex.toMetric(fml) shouldBe "min(min(y-x,x-y),max(4-x,min(3-y,y-3))) < 0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(min(x-y,-(x-y)),max(-(x-4),min(y-3,-(y-3)))) < 0".asFormula
   }
 
-  it should "convert mixed open/closed formula" in withMathematica { tool =>
+  it should "convert mixed open/closed formula" in withMathematica { _ =>
     val fml = "x>=y & a<b".asFormula
-    ModelPlex.toMetric(fml) shouldBe "max(y-x, a-b)<0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "max(-(x-y),-(b-a)) < 0".asFormula
   }
 
-  it should "convert disjunctions of mixed open/closed formula" in withMathematica { tool =>
+  it should "convert disjunctions of mixed open/closed formula" in withMathematica { _ =>
     val fml = "x<5 & y>=2 | x>=y & a<b".asFormula
-    ModelPlex.toMetric(fml) shouldBe "min(max(x-5,2-y),max(y-x,a-b)) < 0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(max(-(5-x),-(y-2)),max(-(x-y),-(b-a))) < 0".asFormula
   }
 
   it should "convert disjunction of mixed open/closed formula" in withMathematica { _ =>
     val fml = "x<=5 | x>=y & a<b".asFormula
     //@todo metric evaluates to false at the boundary, when x=5 and y>5
-    ModelPlex.toMetric(fml) shouldBe "min(x-5,max(y-x,a-b)) < 0".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(-(5-x),max(-(x-y),-(b-a))) < 0".asFormula
   }
 
 //
 //  "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
 //    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
-//    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+//    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 //    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("h"), Variable("v"), Variable("kp"),
 //      Variable("kd"), Variable("href"))
 //
@@ -1293,7 +1295,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //
 ////  private def compareControllerMonitorTactics(modelFile: String, vars: Variable*) = {
 ////    val in = getClass.getResourceAsStream(modelFile)
-////    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
+////    val model = KeYmaeraXArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
 ////    val modelplexInput = createMonitorSpecificationConjecture(model, vars:_*)
 ////
 ////    val chaseTime = config(

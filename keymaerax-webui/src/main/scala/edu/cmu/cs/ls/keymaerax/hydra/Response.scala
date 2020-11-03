@@ -22,13 +22,14 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
@@ -103,7 +104,8 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
     "numAllProofSteps" -> JsNumber(modelpojo.numAllProofSteps),
-    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile))
+    "isExercise" -> JsBoolean(ArchiveParser.isExercise(modelpojo.keyFile)),
+    "folder" -> (if (modelpojo.name.contains("/")) JsString(modelpojo.name.substring(0, modelpojo.name.indexOf('/'))) else JsNull)
   ))
 
   def getJson = JsArray(objects:_*)
@@ -160,7 +162,7 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
 class GetModelResponse(model: ModelPOJO) extends Response {
 
   private def illustrationLinks(): List[String] = {
-    KeYmaeraXArchiveParser(model.keyFile).flatMap(_.info.get("Illustration"))
+    ArchiveParser.parser(model.keyFile).flatMap(_.info.get("Illustration"))
   }
 
   def getJson = JsObject(
@@ -175,7 +177,7 @@ class GetModelResponse(model: ModelPOJO) extends Response {
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse("")),
     "numAllProofSteps" -> JsNumber(model.numAllProofSteps),
-    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(model.keyFile))
+    "isExercise" -> JsBoolean(ArchiveParser.isExercise(model.keyFile))
   )
 }
 
@@ -300,21 +302,21 @@ class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String])
     "key" -> JsString("userId"),
     "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
-    "askUseDefaultUser" -> (if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
+    "askUseDefaultUser" -> (if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
     "type" -> JsString("LoginResponse")
   )
 }
 
-class CreatedIdResponse(id: String) extends Response {
-  def getJson = JsObject("id" -> JsString(id))
+case class CreatedIdResponse(id: String) extends Response {
+  def getJson: JsValue = JsObject("id" -> JsString(id))
 }
 
 class PossibleAttackResponse(val msg: String) extends Response with Logging {
-  logger.fatal(s"POSSIBLE ATTACK: $msg")
+  logger.error(s"POSSIBLE ATTACK: $msg")
   override def getJson: JsValue = new ErrorResponse(msg).getJson
 }
 
-class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
+class ErrorResponse(val msg: String, val exn: Throwable = null, val severity: String = "error") extends Response {
   private lazy val writer = new StringWriter
   private lazy val stacktrace =
     if (exn != null) {
@@ -334,7 +336,7 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
     "textStatus" -> (if (msg != null) JsString(msg.replaceAllLiterally("[Bellerophon Runtime]", "")) else JsString("")),
     "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replaceAllLiterally("[Bellerophon Runtime", "")) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
-    "type" -> JsString("error")
+    "type" -> JsString(severity)
   )
 }
 
@@ -357,20 +359,26 @@ case class ParseErrorResponse(override val msg: String, expect: String, found: S
   ))
 }
 
+case class DefaultLoginResponse(triggerRegistration: Boolean) extends Response {
+  override def getJson: JsObject = JsObject(Map(
+    "type" -> JsString("LoginResponse"),
+    "triggerRegistration" -> JsBoolean(triggerRegistration)))
+}
+
 class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
     extends ErrorResponse(msg, exn) {
   override def getJson: JsObject = exn match {
     case ex: BelleUnexpectedProofStateError =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
+        "tacticMsg" -> JsString(tacticMsg)
       ))
-    case ex: CompoundException =>
+    case ex: CompoundCriticalException =>
       val exceptions = flatten(ex)
       val messages = exceptions.size + " tactic attempts failed:\n" + exceptions.zipWithIndex.map({
         case (x: BelleUnexpectedProofStateError, i) =>
-          (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "") +
+          (i+1) + ". " + x.getMessage +
             ":\n" + x.proofState.subgoals.map(_.toString).mkString(",")
-        case (x, i) => (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "")
+        case (x, i) => (i+1) + ". " + x.getMessage
       }).mkString("\n") + "\n"
       JsObject(super.getJson.fields.filter(_._1 != "textStatus") ++ Map(
         "textStatus" -> JsString(messages),
@@ -378,12 +386,12 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
       ))
     case _ =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
+        "tacticMsg" -> JsString(tacticMsg)
       ))
   }
 
   private def flatten(ex: BelleThrowable): List[BelleThrowable] = ex match {
-    case ex: CompoundException => flatten(ex.left) ++ flatten(ex.right)
+    case ex: CompoundCriticalException => flatten(ex.left) ++ flatten(ex.right)
     case _ => ex :: Nil
   }
 }
@@ -514,9 +522,18 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
-class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
-  override val schema = Some("proof.js")
-  def getJson = JsObject(
+case class ProofLemmasResponse(lemmas: List[(String, Int)]) extends Response {
+  def getJson: JsValue = JsObject({
+    "lemmas" -> JsArray(lemmas.map(l => JsObject(
+      "name" -> JsString(l._1),
+      "proofId" -> JsNumber(l._2)
+    )):_*)
+  })
+}
+
+case class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
+  override val schema: Option[String] = Some("proof.js")
+  def getJson: JsValue = JsObject(
     "id" -> JsString(proof.proofId.toString),
     "name" -> JsString(proof.name),
     "description" -> JsString(proof.description),
@@ -684,7 +701,7 @@ object Helpers {
     if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
 
   private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
-    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None).nonEmpty
+    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None, Nil).nonEmpty
     val parent = if (q.pos.isEmpty) None else topExpr match {
       case t: Term => t.sub(q.parent)
       case f: Formula => f.sub(q.parent)
@@ -726,7 +743,8 @@ object Helpers {
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp, "topop")::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp, "topop")::printJson(q ++ 1, t.right, fp)::Nil
     case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
-    case c: ProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
+    case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
 
   private def printRecPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
@@ -741,7 +759,8 @@ object Helpers {
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp)::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp)::printJson(q ++ 1, t.right, fp)::Nil
     case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
-    case c: ProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
+    case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
 
   /** Only first node's sequent is printed. */
@@ -797,10 +816,10 @@ object Helpers {
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]): JsValue = {
     val belleTerm = ruleName.split("\\(")(0)
-    val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
-      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, ruleName,
-          ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
-      case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
+    val (name, codeName, asciiName, longName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
+      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, di.longDisplayName, ruleName,
+          ApplicableAxiomsResponse(Nil, Map.empty, topLevel=true, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
+      case None => (ruleName, ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
     JsObject(
@@ -808,7 +827,8 @@ object Helpers {
       "name" -> JsString(name),
       "codeName" -> JsString(codeName),
       "asciiName" -> JsString(asciiName),
-      "maker" -> JsString(maker),
+      "longName" -> JsString(longName),
+      "maker" -> JsString(maker), //@note should be equal to codeName
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")
@@ -878,7 +898,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
         "name" -> JsString(i.canonicalName),
         "codeName" -> JsString(i.codeName),
         "defaultKeyPos" -> {
-          val key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          val key = AxIndex.axiomIndex(i)._1
           JsString(key.pos.mkString("."))
         },
         "displayInfo" -> (i.display match {
@@ -892,7 +912,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
 }
 
 case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
-                                    suggestedInput: Map[ArgInfo, Expression],
+                                    suggestedInput: Map[ArgInfo, Expression], topLevel: Boolean,
                                     suggestedPosition: Option[PositionLocator] = None) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
@@ -902,11 +922,11 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
           "param" -> JsString(name),
           "value" -> JsString(e.prettyString)
         )
-      case (_, ListArg(name, elementSort, _)) => //@todo suggested input for Formula*
+      case (_, ListArg(ai)) => //@todo suggested input for Formula*
         JsObject(
           "type" -> JsString(input.sort),
-          "elementType" -> JsString(elementSort),
-          "param" -> JsString(name)
+          "elementType" -> JsString(ai.sort),
+          "param" -> JsString(ai.name)
         )
       case _ =>
         JsObject (
@@ -934,18 +954,24 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       (info, info.display) match {
         case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
         case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
-        case (info:AxiomInfo, _) => info.formula.prettyString
+        case (info: AxiomInfo, _) => info.formula.prettyString
       }
     JsObject(
       "type" -> JsString("axiom"),
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
-      "defaultKeyPos" -> {
-        val key = AxiomIndex.axiomIndex(info.canonicalName)._1
-        JsString(key.pos.mkString("."))
-      },
-      "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(info),
+      "longName" -> JsString(info.longDisplayName),
+      "defaultKeyPos" -> (info match {
+        case pi: ProvableInfo =>
+          val key = AxIndex.axiomIndex(pi)._1
+          JsString(key.pos.mkString("."))
+        case _ => JsString("0")
+      }),
+      "displayInfoParts" -> (info match {
+        case pi: ProvableInfo => RequestHelper.jsonDisplayInfoComponents(pi)
+        case _ => JsNull
+      }),
       "input" -> inputsJson(info.inputs),
       "help" -> helpJson(info.codeName)
     )
@@ -985,10 +1011,16 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def derivationJson(derivationInfo: DerivationInfo): JsObject = {
     val derivation = derivationInfo match {
       case info: AxiomInfo => axiomJson(info)
-      case info: DerivationInfo => info.display match {
-        case _: SimpleDisplayInfo => tacticJson(info)
-        case _: AxiomDisplayInfo => axiomJson(info)
-        case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
+      case info: DerivationInfo => (info, info.display) match {
+        case (_, _: SimpleDisplayInfo) => tacticJson(info)
+        case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
+        case (pi: DerivationInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
+        case (_, RuleDisplayInfo(_, conclusion, premises)) => ruleJson(info, conclusion, premises)
+        case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem)) =>
+          if (topLevel) ruleJson(info, conclusion, premises)
+          else ruleJson(info, ctxConc, ctxPrem)
+        case (_, (_: AxiomDisplayInfo) | (_: InputAxiomDisplayInfo)) =>
+          throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }
     }
     JsObject(
@@ -996,6 +1028,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "name" -> new JsString(derivationInfo.display.name),
       "asciiName" -> new JsString(derivationInfo.display.asciiName),
       "codeName" -> new JsString(derivationInfo.codeName),
+      "longName" -> new JsString(derivationInfo.longDisplayName),
       "derivation" -> derivation
     )
   }
@@ -1021,7 +1054,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       )
   }
 
-  def getJson = JsArray(derivationInfos.map(derivationJson):_*)
+  def getJson: JsValue = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
 case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])]) extends Response {
@@ -1033,7 +1066,9 @@ case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Op
         "what" -> JsString(ne.prettyString),
         "repl" -> JsString(s match {
           case Some(is) => is._2.map(_.prettyString).getOrElse("")
-          case None => re.map(_.prettyString).getOrElse("")
+          case None =>
+            //@todo replace dots with arguments from ne (input signature no longer available from simplified parser, is always None)
+            re.map(_.prettyString).getOrElse("")
         }),
         "editable" -> JsBoolean(s.isEmpty)
       )
@@ -1082,7 +1117,9 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         }
 
         override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-          case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+          case PredOf(fn, _) =>
+            if (cex.contains(fn)) Right(cex(fn).asInstanceOf[Formula])
+            else Left(None)
           case _ => Left(None)
         }
       }, fml).get
@@ -1208,6 +1245,13 @@ class ConfigureMathematicaResponse(linkNamePrefix: String, jlinkLibDirPrefix: St
   )
 }
 
+class ConfigureZ3Response(z3Path: String, success: Boolean) extends Response {
+  def getJson: JsValue = JsObject(
+    "z3Path" -> JsString(z3Path),
+    "success" -> { if(success) JsTrue else JsFalse }
+  )
+}
+
 class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestionFound: Boolean,
                                           suggestion: ToolConfiguration.ConfigSuggestion,
                                           allSuggestions: List[ToolConfiguration.ConfigSuggestion]) extends Response {
@@ -1229,6 +1273,10 @@ class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestio
   )
 }
 
+class Z3ConfigSuggestionResponse(defaultPath: String) extends Response {
+  def getJson: JsValue = JsObject("z3Path" -> JsString(defaultPath))
+}
+
 //@todo these are a mess.
 class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVendor: String,
                          jvmVersion: String, jvmBits: String) extends Response {
@@ -1247,6 +1295,18 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String, jl
     "linkName" -> JsString(linkName),
     "jlinkLibDir" -> JsString(jlinkLibDir),
     "jlinkTcpip" -> JsString(jlinkTcpip)
+  )
+}
+
+class Z3ConfigurationResponse(z3Path: String) extends Response {
+  def getJson: JsValue = JsObject(
+    "z3Path" -> JsString(z3Path)
+  )
+}
+
+class FullConfigurationResponse(content: String) extends Response {
+  override def getJson: JsValue = JsObject(
+    "content" -> JsString(content)
   )
 }
 

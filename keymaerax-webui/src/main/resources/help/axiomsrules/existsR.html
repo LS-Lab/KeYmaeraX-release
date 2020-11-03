@@ -1,6 +1,8 @@
 <div>
   <p>
   The <kbd>existsR</kbd> proof rule proves an existential formula <code>∃x p(x)</code> by specifying an arbitrary term <code>e</code> as a witness and proving <code>p(e)</code>.
+  Since KeYmaera&#160;X renames <code>x</code> to a fresh <code>y</code> in <code>Γ,Δ</code>,
+  it suffices to prove <code>p(x), Γ |- Δ</code>.
 </p>
 <p>
 Learning resources

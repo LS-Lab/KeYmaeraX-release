@@ -7,11 +7,10 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Nil
 
@@ -45,9 +44,9 @@ class ExamplePOJO(val id: Int, val title: String, val description: String, val i
  * @param description The description of the model.
  * @param pubLink Link to additional information (paper) on the model.
  */
-class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
-                val description:String, val pubLink:String, val title:String, val tactic : Option[String],
-                val numAllProofSteps: Int, val temporary: Boolean) //the other guys on this linke should also be optional.
+case class ModelPOJO(modelId: Int, userId: String, name: String, date: String, keyFile: String,
+                     description: String, pubLink: String, title: String, tactic: Option[String],
+                     numAllProofSteps: Int, temporary: Boolean) //the other guys on this linke should also be optional.
 
 /**
   * Data object for users.

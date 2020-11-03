@@ -90,7 +90,10 @@ object MathematicaOpSpec {
   /** Creates a Mathematica String. */
   def string(s: String): Expr = new Expr(s)
 
-  val list = NaryMathOpSpec(Expr.SYM_LIST)
+  /** Creates a Mathematica Boolean. */
+  def bool(b: Boolean): Expr = if (b) Expr.SYM_TRUE else Expr.SYM_FALSE
+
+  def list: NaryMathOpSpec = NaryMathOpSpec(Expr.SYM_LIST)
 
   /** Mathematica function application f(args). */
   def apply(f: Expr): Seq[Expr] => Expr = (args: Seq[Expr]) => new Expr(f, args.toArray)
@@ -99,22 +102,22 @@ object MathematicaOpSpec {
 
   //<editor-fold desc="Terms">
 
-  val neg: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Minus"))
+  def neg: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Minus"))
 
-  val plus: NaryMathOpSpec = NaryMathOpSpec(symbol("Plus"))
+  def plus: NaryMathOpSpec = NaryMathOpSpec(symbol("Plus"))
 
-  val minus: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Subtract"))
+  def minus: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Subtract"))
 
-  val times: NaryMathOpSpec = NaryMathOpSpec(symbol("Times"))
+  def times: NaryMathOpSpec = NaryMathOpSpec(symbol("Times"))
 
-  val divide: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Divide"))
+  def divide: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Divide"))
 
-  val rational: BinaryMathOpSpec = BinaryMathOpSpec(Expr.SYM_RATIONAL)
+  def rational: BinaryMathOpSpec = BinaryMathOpSpec(Expr.SYM_RATIONAL)
 
-  val power: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Power"))
+  def power: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Power"))
 
   // implicit function application name[args]
-  val func: NameMathOpSpec = NameMathOpSpec(
+  def func: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {
       require(args.length <= 2, "Functions expected to have at most 2 arguments (nothing, single argument, or converted pair)")
       new Expr(MathematicaNameConversion.toMathematica(name), args)
@@ -122,17 +125,17 @@ object MathematicaOpSpec {
     e => MathematicaNameConversion.isConvertibleName(e.head) && e.args().length <= 2
   )
   // explicit function application Apply[name, args]
-  val mapply: NaryMathOpSpec = new NaryMathOpSpec(symbol("Apply")) {
+  def mapply: NaryMathOpSpec = new NaryMathOpSpec(symbol("Apply")) {
     override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
   }
 
-  val abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), Function("abs", None, Real, Real, interpreted=true))
+  def abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), Function("abs", None, Real, Real, interpreted=true))
 
-  val min: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Min"), Function("min", None, Tuple(Real, Real), Real, interpreted=true))
+  def min: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Min"), Function("min", None, Tuple(Real, Real), Real, interpreted=true))
 
-  val max: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Max"), Function("max", None, Tuple(Real, Real), Real, interpreted=true))
+  def max: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Max"), Function("max", None, Tuple(Real, Real), Real, interpreted=true))
 
-  val variable: NameMathOpSpec = NameMathOpSpec(
+  def variable: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {
       require(args.isEmpty, "Unexpected arguments")
       MathematicaNameConversion.toMathematica(name)
@@ -140,7 +143,7 @@ object MathematicaOpSpec {
     MathematicaNameConversion.isConvertibleName
   )
 
-  val pair: BinaryMathOpSpec = new BinaryMathOpSpec(Expr.SYM_LIST) {
+  def pair: BinaryMathOpSpec = new BinaryMathOpSpec(Expr.SYM_LIST) {
     //@note inherited apply gets pairs as lists of length 2 each
     override def applies(e: Expr): Boolean = e.listQ && e.args().length == 2
   }
@@ -149,79 +152,79 @@ object MathematicaOpSpec {
 
   //<editor-fold desc="Comparison formulas">
 
-  val equal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equal"))
+  def equal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equal"))
 
   // x!=y
-  val unequal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Unequal"))
+  def unequal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Unequal"))
 
   // x<y<=z
-  val inequality: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Inequality"))
+  def inequality: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Inequality"))
 
-  val greater: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Greater"))
+  def greater: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Greater"))
 
-  val greaterEqual: BinaryMathOpSpec = BinaryMathOpSpec(symbol("GreaterEqual"))
+  def greaterEqual: BinaryMathOpSpec = BinaryMathOpSpec(symbol("GreaterEqual"))
 
-  val less: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Less"))
+  def less: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Less"))
 
-  val lessEqual: BinaryMathOpSpec = BinaryMathOpSpec(symbol("LessEqual"))
+  def lessEqual: BinaryMathOpSpec = BinaryMathOpSpec(symbol("LessEqual"))
 
   //</editor-fold>
 
   //<editor-fold desc="Formulas">
 
-  val ltrue: LiteralMathOpSpec = LiteralMathOpSpec(Expr.SYM_TRUE)
+  def ltrue: LiteralMathOpSpec = LiteralMathOpSpec(Expr.SYM_TRUE)
 
-  val lfalse: LiteralMathOpSpec = LiteralMathOpSpec(Expr.SYM_FALSE)
+  def lfalse: LiteralMathOpSpec = LiteralMathOpSpec(Expr.SYM_FALSE)
 
-  val not: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Not"))
+  def not: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Not"))
 
-  val and: NaryMathOpSpec = NaryMathOpSpec(symbol("And"))
+  def and: NaryMathOpSpec = NaryMathOpSpec(symbol("And"))
 
-  val or: NaryMathOpSpec = NaryMathOpSpec(symbol("Or"))
+  def or: NaryMathOpSpec = NaryMathOpSpec(symbol("Or"))
 
-  val implies: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Implies"))
+  def implies: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Implies"))
 
-  val equivalent: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equivalent"))
+  def equivalent: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equivalent"))
 
-  val forall: QuantifiedMathOpSpec = QuantifiedMathOpSpec(symbol("ForAll"))
+  def forall: QuantifiedMathOpSpec = QuantifiedMathOpSpec(symbol("ForAll"))
 
-  val exists: QuantifiedMathOpSpec = QuantifiedMathOpSpec(symbol("Exists"))
+  def exists: QuantifiedMathOpSpec = QuantifiedMathOpSpec(symbol("Exists"))
 
   //</editor-fold>
 
   //<editor-fold desc="Arithmetic">
 
-  val rule = BinaryMathOpSpec(symbol("Rule"))
+  def rule: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Rule"))
 
-  val reduce = NaryMathOpSpec(symbol("Reduce"))
+  def reduce: NaryMathOpSpec = NaryMathOpSpec(symbol("Reduce"))
 
-  val resolve = NaryMathOpSpec(symbol("Resolve"))
+  def resolve: NaryMathOpSpec = NaryMathOpSpec(symbol("Resolve"))
 
-  val reals = LiteralMathOpSpec(symbol("Reals"))
+  def reals: LiteralMathOpSpec = LiteralMathOpSpec(symbol("Reals"))
 
   //</editor-fold>
 
   //<editor-fold desc="Diagnostics">
 
-  val aborted = LiteralMathOpSpec(symbol("$Aborted"))
+  def aborted: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Aborted"))
 
-  val abort = LiteralMathOpSpec(new Expr(symbol("Abort"), Array.empty[Expr]))
+  def abort: LiteralMathOpSpec = LiteralMathOpSpec(new Expr(symbol("Abort"), Array.empty[Expr]))
 
-  val failed = LiteralMathOpSpec(symbol("$Failed"))
+  def failed: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Failed"))
 
-  val exception = LiteralMathOpSpec(symbol("$Exception"))
+  def exception: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Exception"))
 
-  val versionNumber = LiteralMathOpSpec(symbol("$VersionNumber"))
+  def versionNumber: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$VersionNumber"))
 
-  val releaseNumber = LiteralMathOpSpec(symbol("$ReleaseNumber"))
+  def releaseNumber: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$ReleaseNumber"))
 
-  val licenseExpirationDate = LiteralMathOpSpec(symbol("$LicenseExpirationDate"))
+  def licenseExpirationDate: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$LicenseExpirationDate"))
 
-  val check = NaryMathOpSpec(symbol("Check"))
+  def check: NaryMathOpSpec = NaryMathOpSpec(symbol("Check"))
 
-  val timeConstrained = BinaryMathOpSpec(symbol("TimeConstrained"))
+  def timeConstrained: BinaryMathOpSpec = BinaryMathOpSpec(symbol("TimeConstrained"))
 
-  val memoryConstrained = BinaryMathOpSpec(symbol("MemoryConstrained"))
+  def memoryConstrained: BinaryMathOpSpec = BinaryMathOpSpec(symbol("MemoryConstrained"))
 
   //</editor-fold>
 }

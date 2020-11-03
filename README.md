@@ -3,28 +3,33 @@ KeYmaera X Theorem Prover for Hybrid Systems
 
 Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we increasingly entrust our lives to computers and therefore should strive for nothing but the highest safety standards - mathematical correctness proof. Proofs for such cyber-physical systems can be constructed with the KeYmaera X prover. As a _hybrid systems_ theorem prover, KeYmaera X analyzes the control program and the physical behavior of the controlled system together in _differential dynamic logic_.
 
-KeYmaera X features a minimal core of just about 1700 lines of code that isolates all soundness-critical reasoning. Such a small and simple prover core makes it much easier to trust verification results. Pre-defined and custom tactics built on top of the core drive automated proof search. KeYmaera X comes with a web-based front-end that provides a clean interface for both interactive and automated proving, highlighting the most crucial parts of a verification activity. Besides hybrid systems, KeYmaera X also supports the verification of _hybrid games_ in _differential game logic_.
+KeYmaera X features a minimal core of just about 2000 lines of code that isolates all soundness-critical reasoning. Such a small and simple prover core makes it much easier to trust verification results. Pre-defined and custom tactics built on top of the core drive automated proof search. KeYmaera X comes with a web-based front-end that provides a clean interface for both interactive and automated proving, highlighting the most crucial parts of a verification activity. Besides hybrid systems, KeYmaera X also supports the verification of _hybrid games_ in _differential game logic_.
 
 **More information** and precompiled binaries are available at:
   http://keymaeraX.org/
 
-* [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
-* [Informal KeYmaera X Syntax](https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics)
+* [Differential dynamic logic grammar](http://keymaeraX.org/doc/dL-grammar.md)
+* [KeYmaera X Tutorial](http://keymaeraX.org/Xtutorial.html)
 
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
-[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and start from command line
+[keymaerax.jar](http://keymaeraX.org/keymaerax.jar) and start from command line:
 
     java -jar keymaerax.jar
 
-First ensure that the following software is installed
-- [Java Development Kit JDK](https://java.com/download)
-  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended.)
-- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
-  The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
-  Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+For this to succeed, ensure that the following software is installed:
+- [Oracle Java Development Kit JDK/Java Runtime Environment JRE](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK/JRE](https://openjdk.java.net/)
+  (version 1.8 or later, tested up to Java15)
+- Use any number of the following real arithmetic solvers:
+  - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
+    (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
+    The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
+    Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+  - [Wolfram Engine](http://www.wolfram.com/engine)
+    free alternative to Wolfram Mathematica that needs an active internet connection.
+  - [Z3 Solver](http://www.wolfram.com/engine)
+    comes built-in without installation but still provides less functionality.
 
 See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
 
@@ -53,13 +58,25 @@ Windows, 64bit, Mathematica 10.4+
 Building
 ========
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, install the right software and run the following to build `keymaerax.jar`:
+In a nutshell, install
+
+* [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java13 onwards does not work)
+* SBT 0.13.17
+* Scala 2.12.8 
+
+and run the following to build `keymaerax.jar`:
 
     sbt clean assembly
 
-[ScalaDoc API documentation for KeYmaera X](http://keymaerax.org/scaladoc) can be generated locally with:
+or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
+
+    sbt "project core" clean assembly
+
+[ScalaDoc API documentation for KeYmaera X](http://keymaeraX.org/scaladoc) can be generated locally with:
 
     sbt unidoc
+
+This will generate ScalaDoc into `target/scala-2.12/unidoc/index.html`
 
 Publications
 ============
@@ -71,6 +88,7 @@ https://www.ls.cs.cmu.edu/publications.html
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
 Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+Extended version of [CADE'15](https://doi.org/10.1007/978-3-319-21401-6_32).
 
 2. André Platzer.
 [Logics of dynamical systems](https://doi.org/10.1109/LICS.2012.13).
@@ -86,8 +104,7 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, Cham, 2018.
-[DOI](https://doi.org/10.1007/978-3-319-63588-0)
+Springer, Cham, 2018. [DOI](https://doi.org/10.1007/978-3-319-63588-0)
 
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus.
 
@@ -124,18 +141,26 @@ In Pascal Fontaine, editor, International Conference on Automated Deduction, CAD
 Automatic proofs for differential equation invariants are based on:
 
 12. André Platzer and Yong Kiam Tan. 
-[Differential equation axiomatization: The impressive power of differential ghosts](https://doi.org/10.1145/3209108.3209147). 
-In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
+[Differential equation invariance axiomatization](https://doi.org/10.1145/3380825). 
+J. ACM 67(1), 2020. 
+Extended version of [LICS'18](https://doi.org/10.1145/3209108.3209147). 
+
+Liveness proofs for differential equations are based on:
+
+13. Yong Kiam Tan and André Platzer. 
+[An axiomatic approach to liveness for differential equations](https://doi.org/10.1007/978-3-030-30942-8_23). 
+In Maurice ter Beek, Annabelle McIver, and José N. Oliviera, editors, FM 2019: Formal Methods - The Next 30 Years, volume 11800 of LNCS, pp. 371-388. Springer, 2019.
 
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
 
-13. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
-[Pegasus: A framework for sound continuous invariant generation](https://doi.org/10.1145/3209108.3209147). 
-In Maurice ter Beek, Annabelle McIver, and José N. Oliviera, editors, FM 2019: Formal Methods - The Next 30 Years, volume 11800 of LNCS, pp. 138-157. Springer, 2019.
+14. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
+[Pegasus: Sound continuous invariant generation](https://arxiv.org/abs/2005.09348).
+Formal Methods in System Design. To appear. 
+Special issue for selected papers from [FM'19](https://doi.org/10.1145/3209108.3209147).
 
 The design principles for the user interface of KeYmaera X are described in:
 
-14. Stefan Mitsch and André Platzer. 
+15. Stefan Mitsch and André Platzer. 
 [The KeYmaera X proof IDE: Concepts on usability in hybrid systems theorem proving](https://doi.org/10.4204/EPTCS.240.5). 
 In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on Formal Integrated Development Environment F-IDE 2016, volume 240 of EPTCS, pp. 67-81, 2017.
 

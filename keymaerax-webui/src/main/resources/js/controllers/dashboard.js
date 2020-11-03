@@ -16,8 +16,8 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
     }
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService',
-    function ($scope, $uibModal, $http, sessionService) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService', 'ToolConfigService',
+    function ($scope, $uibModal, $http, sessionService, ToolConfigService) {
   $scope.intro = {
     introOptions: {},
     firstTime: false
@@ -38,11 +38,13 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
   });
 
   $scope.openPreferences = function() {
-    $uibModal.open({
-      templateUrl: 'partials/tool_config.html',
-      controller: 'ToolConfig',
-      size: 'fullwidth'
-    });
+    if (ToolConfigService.getSystemInfo().isLocal) {
+      $uibModal.open({
+        templateUrl: 'partials/tool_config.html',
+        controller: 'ToolConfig',
+        size: 'fullscreen'
+      });
+    }
   };
 
   $scope.openNewModelDialog = function() {
@@ -53,12 +55,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     });
   };
 
-  $scope.isLocal = false;
-  $http.get('/isLocal')
-      .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not determine if the KeYmaera X server is running locally")
-          $scope.isLocal = data.success;
-      });
+  $scope.systemInfo = ToolConfigService.getSystemInfo();
 
   $scope.shutdown = function() {
       var modalInstance = $uibModal.open({

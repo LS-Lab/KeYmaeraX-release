@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -11,13 +11,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint,
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
-import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
@@ -27,10 +26,20 @@ import org.scalatest.time._
 import scala.collection.immutable._
 
 /**
- * Base class for tactic tests.
- */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
+  * Base class for tactic tests.
+  * @param registerAxTactics Whether or not to initialize the library of derived axioms and register tactics
+  *                          (needed e.g. when using the tactic parser or running tactics, but not e.g. when
+  *                          parsing formulas):
+  *                          - Some("mathematica") to initialize with Mathematica
+  *                          - Some("z3") to initialize with Z3
+  *                          - None to skip initialization (if only some tests in a suite need tactics use
+  *                            None here and withTactics/withMathematica/withZ3 on the test to register tactics for
+  *                            only those tests)
+  */
+class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
     with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
+
+  Configuration.setConfiguration(FileConfiguration)
 
   /** Default signaler for failAfter in tests without tools. */
   protected implicit val signaler: Signaler = { t: Thread =>
@@ -61,53 +70,18 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     def asOption: Option[T] = option
   }
 
-  def configFileMathematicaConfig: Map[String, String] = {
-    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME)) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, DefaultConfiguration.defaultMathematicaConfig("linkName"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-      Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, DefaultConfiguration.defaultMathematicaConfig("libDir"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)) {
-      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, DefaultConfiguration.defaultMathematicaConfig("tcpip"), saveToFile = false)
-    }
-    Map(
-      "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
-      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR),
-      "tcpip" -> Configuration(Configuration.Keys.MATH_LINK_TCPIP))
-  }
-
-  def configFileWolframEngineConfig: Map[String, String] = {
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, DefaultConfiguration.defaultWolframEngineConfig("linkName"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, DefaultConfiguration.defaultWolframEngineConfig("libDir"), saveToFile = false)
-    }
-    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
-      Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, DefaultConfiguration.defaultWolframEngineConfig("tcpip"), saveToFile = false)
-    }
-    Map(
-      "linkName" -> Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
-      "libDir" -> Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR),
-      "tcpip" -> Configuration(Configuration.Keys.WOLFRAMENGINE_TCPIP))
-  }
-
   /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
   class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
+    override def init(): Boolean = p.init()
     override def shutdown(): Unit = {} // do not shut down between tests and when switching providers in ToolProvider.setProvider
     def doShutdown(): Unit = super.shutdown()
   }
 
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
-  private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
+  private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
 
-  //@note Initialize once per test class, but only if requested in a withMathematica call
-  private var mathematicaProvider =
-    if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
-    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
-    else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
-    else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
+  //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
+  private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = _
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
@@ -131,40 +105,73 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** For tests that want to record proofs in the database. */
   def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
 
-  /**
-   * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
-   * axioms that are proved by QE.
-   * @example{{{
-   *    "My test" should "prove something with Mathematica" in withMathematica { qeTool =>
-   *      // ... your test code here
-   *    }
-   * }}}
-   * */
-  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1): Unit = mathematicaProvider.synchronized {
-    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    withTemporaryConfig(Map(
-        Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
-        Configuration.Keys.QE_TOOL -> "mathematica",
-        Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
+  def withTactics(testcode: => Any): Unit = {
+    if (!DerivationInfoRegistry.isInit) {
+      val oldProvider = ToolProvider.provider
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
       val tool = provider.defaultTool() match {
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "true",
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
+      tool.cancel()
+      tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
+      mathematicaProvider.synchronized {
+        mathematicaProvider().doShutdown() //@note see [[afterAll]]
+        provider.shutdown()
+        mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
+      }
+      ToolProvider.setProvider(oldProvider)
+    }
+    testcode
+  }
 
-      val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = (t: Thread) => {
-        theInterpreter.kill()
-        tool.cancel()
-        t.interrupt()
-        mathematicaProvider.synchronized {
-          mathematicaProvider().doShutdown() //@note see [[afterAll]]
-          provider.shutdown()
-          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+  /**
+   * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
+   * axioms that are proved by QE.
+   * @example {{{
+   *    "My test" should "prove something with Mathematica" in withMathematica { qeTool =>
+   *      // ... your test code here
+   *    }
+   * }}}
+   * */
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = mathematicaProvider.synchronized {
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    val common = Map(
+      Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
+      Configuration.Keys.QE_TOOL -> WOLFRAM)
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    withTemporaryConfig(common) {
+      val provider = mathematicaProvider()
+      ToolProvider.setProvider(provider)
+      val tool = provider.defaultTool() match {
+        case Some(m: Mathematica) => m
+        case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
+      }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
+      withTemporaryConfig(uninterp) {
+        val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
+        implicit val signaler: Signaler = (_: Thread) => {
+          theInterpreter.kill()
+          tool.cancel()
+          tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
+          mathematicaProvider.synchronized {
+            mathematicaProvider().doShutdown() //@note see [[afterAll]]
+            provider.shutdown()
+            mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
+          }
+        }
+        failAfter(to) {
+          testcode(tool)
         }
       }
-      failAfter(to) { testcode(tool) }
     }
   }
 
@@ -172,40 +179,60 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * Creates and initializes Z3 for tests that want to use QE. Also necessary for tests that use derived
     * axioms that are proved by QE.
     * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-    * @example{{{
+    * @example {{{
     *    "My test" should "prove something with Z3" in withZ3 { qeTool =>
     *      // ... your test code here
     *    }
     * }}}
     * */
-  def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
-    withTemporaryConfig(Map(Configuration.Keys.QE_TOOL -> "z3")) {
+  def withZ3(testcode: Z3 => Any, timeout: Int = -1, initLibrary: Boolean = true) {
+    val common = Map(Configuration.Keys.QE_TOOL -> "z3")
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    withTemporaryConfig(common) {
       val provider = new Z3ToolProvider
       ToolProvider.setProvider(provider)
+      ToolProvider.init()
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
-      val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = { t: Thread =>
-        theInterpreter.kill()
-        tool.cancel()
-        t.interrupt()
-        provider.shutdown()
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
+      withTemporaryConfig(uninterp) {
+        val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
+        implicit val signaler: Signaler = { t: Thread =>
+          theInterpreter.kill()
+          tool.cancel()
+          t.interrupt()
+          provider.shutdown()
+        }
+        failAfter(to) {
+          testcode(tool)
+        }
       }
-      failAfter(to) { testcode(tool) }
     }
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETacticTool => Any, timeout: Int = -1): Unit = {
-    withClue("Mathematica") { withMathematica(testcode, timeout) }
+  def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
+    withClue("Mathematica") { withMathematica(testcode, timeout, initLibrary) }
     afterEach()
     beforeEach()
-    withClue("Z3") { withZ3(testcode, timeout) }
+    withClue("Z3") { withZ3(testcode, timeout, initLibrary) }
   }
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
-  def withMathematicaMatlab(testcode: Mathematica => Any) {
-    withMathematica { tool =>
+    //@todo skip if not matlink set up
+  def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true) {
+    if (System.getProperty("KILL_MATLAB") == "true") {
+      var killExit = 0
+      while (killExit == 0) {
+        val p = Runtime.getRuntime.exec("pkill -9 MATLAB")
+        p.waitFor()
+        killExit = p.exitValue()
+      }
+    }
+    withMathematica (initLibrary = initLibrary, timeout = timeout, testcode = { tool =>
       val getLink = PrivateMethod[JLinkMathematicaLink]('link)
       val link = tool invokePrivate getLink()
       link.runUnchecked("""Needs["MATLink`"]""", new M2KConverter[KExpr]() {
@@ -218,22 +245,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         override def convert(e: MExpr): KExpr = throw new Exception("Unexpected call to convert")
       })
       testcode(tool)
-    }
+    })
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any) {
-    val origConfig = tempConfig.keys.map(k => k -> Configuration.getOption(k))
-    try {
-      tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
-      testcode
-    } finally {
-      origConfig.foreach({
-        case (k, None) => Configuration.remove(k, saveToFile = false)
-        case (k, Some(v)) => Configuration.set(k, v, saveToFile = false)
-      })
-    }
-  }
+  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
+    Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   /** Test setup */
   override def beforeEach(): Unit = {
@@ -247,19 +264,22 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[GenProduct]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+    Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
-    TactixLibrary.invGenerator = generator
-    TactixLibrary.differentialInvGenerator =
-      (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
+    TactixInit.invSupplier = generator
+    // reinitialize with empty caches for test case separation
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     //@note Mathematica is expected to shut down only in afterAll(), but setting provider shuts down the current provider
     if (!mathematicaProvider.isInitialized) ToolProvider.setProvider(new NoneToolProvider())
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
+    LemmaDBFactory.lemmaDB.removeAll("qecache")
   }
 
   /* Test teardown */
   override def afterEach(): Unit = {
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
+    LemmaDBFactory.lemmaDB.removeAll("qecache")
     try {
       interpreters.foreach(i => try { i.kill() } catch { case ex: Throwable => ex.printStackTrace() })
       interpreters = Nil
@@ -271,8 +291,27 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         dbTester().db.session.close()
         dbTester = null
       }
-      TactixLibrary.invGenerator = FixedGenerator(Nil)
-      TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
+      TactixInit.invSupplier = FixedGenerator(Nil)
+      TactixInit.differentialInvGenerator = FixedGenerator(Nil)
+      TactixInit.loopInvGenerator = FixedGenerator(Nil)
+    }
+  }
+
+  /** Test suite setup */
+  override def beforeAll(): Unit = {
+    mathematicaProvider =
+      if (WOLFRAM.equalsIgnoreCase("mathematica")) new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM))))
+      else if (WOLFRAM.equalsIgnoreCase("wolframengine")) new Lazy(new DelayedShutdownToolProvider(WolframEngineToolProvider(ToolConfiguration.config(WOLFRAM))))
+      else if (WOLFRAM.equalsIgnoreCase("wolframscript")) new Lazy(new DelayedShutdownToolProvider(WolframScriptToolProvider(ToolConfiguration.config(WOLFRAM))))
+      else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
+
+    registerAxTactics match {
+      case Some("mathematica") => withMathematica(initLibrary = true, testcode = { _ => })
+      case Some("z3") => withZ3(initLibrary = true, testcode = { _ => })
+      case None => KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
     }
   }
 
@@ -284,6 +323,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     }
     ToolProvider.shutdown()
     ToolProvider.setProvider(new NoneToolProvider())
+    KeYmaeraXTool.shutdown()
   }
 
   /** Registers an interpreter for cleanup after test. Returns the registered interpreter. */
@@ -342,9 +382,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Execute a task with tactic progress.
-    * @example{{{
+    * @example {{{
     *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
-    *   withTacticProgress("master".asTactic, "master"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
+    *   withTacticProgress("auto".asTactic, "auto"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
     * }}}
     */
   def withTacticProgress(tactic: BelleExpr, stepInto: List[String] = Nil)(task: BelleExpr => ProvableSig): ProvableSig = {
@@ -367,7 +407,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
   def checkArchiveEntry(archive: String, entryName: String, tacticName: Option[String] = None): Unit = {
-    val entry = KeYmaeraXArchiveParser.getEntry(entryName, io.Source.fromInputStream(
+    val entry = ArchiveParser.getEntry(entryName, io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString).get
 
     val tactic = tacticName match {
@@ -405,7 +445,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   /** Checks all entries from a bundled archive. */
   def checkArchiveEntries(archive: String): Unit = {
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+    val entries = ArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
     checkArchiveEntries(entries)
   }
@@ -466,7 +506,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db)(proofId)(tacticName, parentInTrace, branch)
 
   /** Removes all whitespace for string comparisons in tests.
-    * @example{{{
+    * @example {{{
     *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
     * }}}
     */

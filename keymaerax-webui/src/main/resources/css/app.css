@@ -25,6 +25,8 @@ dl {
 /* Convert Bootstrap absolute font sizes into relative font sizes */
 pre {
   font-size: 100%;
+  background-color: white;
+  border: 0px;
 }
 
 output {
@@ -82,6 +84,14 @@ output {
   font-size: var(--lsfontsize);
 }
 
+.k4-tactics-navitem-dropdown {
+  display: inline-flex !important;
+}
+
+.k4-tactics-navitem-dropdown > span {
+  padding-right: 0px !important;
+}
+
 .navbar {
   min-height: 30px;
 }
@@ -120,6 +130,25 @@ output {
 }
 }
 
+.nav-pills .nav-link {
+  border-radius: 0.25rem;
+  padding: .5rem 1rem;
+}
+
+.nav-pills .nav-link.active {
+  color: white;
+  background-color: #337ab7;
+}
+
+.nav .nav-fill {
+  display: flex;
+}
+
+.nav-fill .nav-item {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
 .k4-tactics-navbar {
   min-height: inherit;
   margin-bottom: 5px;
@@ -138,16 +167,18 @@ output {
 
 .k4-tactics-nav-first > li > a {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-first > li > span {
   padding-top: 5px;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
+  margin-bottom: -3px;
 }
 
 .k4-tactics-nav-last > li > a {
-  padding-top: 2px;
+  padding-top: 5px;
   padding-bottom: 5px;
 }
 
@@ -834,6 +865,10 @@ del {
 
 }
 
+.modal-errorreport {
+  z-index: 2000 !important; /* larger than internal log popover */
+}
+
 .k4-vertical-fill-flex {
   flex: 1;
   display: flex;
@@ -901,7 +936,9 @@ del {
 }
 
 .k4-sequentRule {
-  width: calc(100% - 2em);
+  width: 100%;
+  padding-left: 2em;
+  padding-right: 2em;
   text-align: center;
 }
 
@@ -913,8 +950,8 @@ del {
   width: 2em;
   display: block;
   position: absolute;
-  left: 0em;
-  top: 50%;
+  left: 1.5em;
+  top: 40%;
 }
 .k4-sequentRule > ul:first-child > li {
   height: 3ex;
@@ -973,11 +1010,11 @@ del {
 .k4-goalwithsiblings > ul:last-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1ex 0 0 0;
+  margin: 0 0 0 0;
   text-align: right;
   display: block;
   position: absolute;
-  top: -50%;
+  bottom: 0;
   right: 0;
 }
 .k4-goalwithsiblings > ul:last-child li {

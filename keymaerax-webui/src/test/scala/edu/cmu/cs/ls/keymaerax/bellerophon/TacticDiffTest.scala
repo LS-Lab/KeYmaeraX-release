@@ -21,12 +21,12 @@ import org.scalatest.Inside._
 @UsualTest
 class TacticDiffTest extends TacticTestBase {
 
-  "Tactic diff" should "match same builtin tactics" in {
+  "Tactic diff" should "match same builtin tactics" in withTactics {
     val t = BelleParser("hideR(1)")
     TacticDiff.diff(t, t) shouldBe (ReplacementBelleContext(t), Map(), Map())
   }
 
-  it should "find difference in builtin tactics" in {
+  it should "find difference in builtin tactics" in withTactics {
     val t1 = BelleParser("hideR(1)")
     val t2 = BelleParser("hideL(-1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -35,7 +35,7 @@ class TacticDiffTest extends TacticTestBase {
     diff._3 should contain theSameElementsAs List((diff._1.t, t2))
   }
 
-  it should "find difference with nil" in {
+  it should "find difference with nil" in withTactics {
     val t1 = BelleParser("nil")
     val t2 = BelleParser("hideR(1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -44,12 +44,12 @@ class TacticDiffTest extends TacticTestBase {
     diff._3 should contain theSameElementsAs List((diff._1.t, t2))
   }
 
-  it should "match same sequential tactics" in {
+  it should "match same sequential tactics" in withTactics {
     val t = BelleParser("notL(-1) & hideR(1)")
     TacticDiff.diff(t, t) shouldBe (ReplacementBelleContext(t), Map(), Map())
   }
 
-  it should "find difference in sequential tactics" in {
+  it should "find difference in sequential tactics" in withTactics {
     val t1 = BelleParser("notL(-1) & hideR(1)")
     val t2 = BelleParser("hideL(-1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -58,7 +58,7 @@ class TacticDiffTest extends TacticTestBase {
     diff._3 should contain theSameElementsAs List((diff._1.t, t2))
   }
 
-  it should "find difference in left child of sequential tactics" in {
+  it should "find difference in left child of sequential tactics" in withTactics {
     val t1 = BelleParser("notL(-1) & hideR(1)")
     val t2 = BelleParser("notR(1)  & hideR(1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -70,7 +70,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "find difference in right child of sequential tactics" in {
+  it should "find difference in right child of sequential tactics" in withTactics {
     val t1 = BelleParser("notL(-1) & hideR(1)")
     val t2 = BelleParser("notL(-1) & hideR(2)")
     val diff = TacticDiff.diff(t1, t2)
@@ -82,7 +82,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "find difference with sequential nil" in {
+  it should "find difference with sequential nil" in withTactics {
     val t1 = BelleParser("hideR(1) & nil")
     val t2 = BelleParser("hideR(1) & hideL(-1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -94,12 +94,12 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "match same branching tactics" in {
+  it should "match same branching tactics" in withTactics {
     val t = BelleParser("notL(-1) & <(hideR(1), hideR(2), hideR(3))")
     TacticDiff.diff(t, t) shouldBe (ReplacementBelleContext(t), Map(), Map())
   }
 
-  it should "find difference in first child of branching tactics" in {
+  it should "find difference in first child of branching tactics" in withTactics {
     val t1 = BelleParser("notL(-1) & <(hideR(1), hideR(2), hideR(3))")
     val t2 = BelleParser("notL(-1) & <(hideL(-1), hideR(2), hideR(3))")
     val diff = TacticDiff.diff(t1, t2)
@@ -111,7 +111,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "find difference in all children of branching tactics" in {
+  it should "find difference in all children of branching tactics" in withTactics {
     val t1 = BelleParser("notL(-1) & <(hideR(1), hideR(2), hideR(3))")
     val t2 = BelleParser("notL(-1) & <(hideL(-1), hideL(-2), hideL(-3))")
     val diff = TacticDiff.diff(t1, t2)
@@ -122,12 +122,12 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "match same input tactics" in {
+  it should "match same input tactics" in withTactics {
     val t = BelleParser("cut({`x>0`})")
     TacticDiff.diff(t, t) shouldBe (ReplacementBelleContext(t), Map(), Map())
   }
 
-  it should "find difference of input tactics" in {
+  it should "find difference of input tactics" in withTactics {
     val t1 = BelleParser("cut({`x>0`})")
     val t2 = BelleParser("cut({`y<0`})")
     val diff = TacticDiff.diff(t1, t2)
@@ -136,7 +136,7 @@ class TacticDiffTest extends TacticTestBase {
     diff._3 should contain theSameElementsAs List((diff._1.t, t2))
   }
 
-  it should "find difference of input position tactics" in {
+  it should "find difference of input position tactics" in withTactics {
     val t1 = BelleParser("andL(-1) & nil")
     val t2 = BelleParser("andL(-1) & loop({`x>0`},1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -147,7 +147,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "find multiple differences" in {
+  it should "find multiple differences" in withTactics {
     val t1 = BelleParser("notL(-1) & <(nil, hideR(2), hideR(3))")
     val t2 = BelleParser("notR(1) & <(hideL(-1), hideR(2), andR(1) & <(hideR(3), hideR(4)))")
     val diff = TacticDiff.diff(t1, t2)
@@ -159,7 +159,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential composition" in {
+  it should "extend a sequential composition" in withTactics {
     val t1 = BelleParser("implyR(1) ; andL(-1)")
     val t2 = BelleParser("implyR(1) ; andL(-1) ; orR(1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -172,7 +172,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential composition 2" in {
+  it should "extend a sequential composition 2" in withTactics {
     val t1 = BelleParser("implyR(1) ; andL(-1)")
     val t2 = BelleParser("(implyR(1) ; andL(-1)) ; orR(1)")
     val diff = TacticDiff.diff(t1, t2)
@@ -185,7 +185,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend an atom underneath a branch" in {
+  it should "extend an atom underneath a branch" in withTactics {
     val t1 = BelleParser("orL(-1) ; <(nil, andL(-1))")
     val t2 = BelleParser("orL(-1) ; <(nil, andL(-1) ; orR(1))")
     val diff = TacticDiff.diff(t1, t2)
@@ -199,7 +199,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential composition underneath a branch" in {
+  it should "extend a sequential composition underneath a branch" in withTactics {
     val t1 = BelleParser("orL(-1) ; <(nil, andL(-1) ; andL(-2))")
     val t2 = BelleParser("orL(-1) ; <(nil, andL(-1) ; andL(-2) ; orR(1))")
     val diff = TacticDiff.diff(t1, t2)
@@ -214,7 +214,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend an atom inside either" in {
+  it should "extend an atom inside either" in withTactics {
     val t1 = BelleParser("andL(-1) | andL(-2) ")
     val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3))")
     val diff = TacticDiff.diff(t1, t2)
@@ -227,7 +227,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential inside either" in {
+  it should "extend a sequential inside either" in withTactics {
     val t1 = BelleParser("andL(-1) | (andL(-2) ; andL(-3))")
     val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3) ; andL(-4))")
     val diff = TacticDiff.diff(t1, t2)
@@ -241,7 +241,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend an atom inside saturate" in {
+  it should "extend an atom inside saturate" in withTactics {
     val t1 = BelleParser("andL(-1)*")
     val t2 = BelleParser("(andL(-1) ; andL(-2))*")
     val diff = TacticDiff.diff(t1, t2)
@@ -253,7 +253,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential inside saturate" in {
+  it should "extend a sequential inside saturate" in withTactics {
     val t1 = BelleParser("(andL(-1) ; andL(-2))*")
     val t2 = BelleParser("(andL(-1) ; andL(-2) ; andL(-3))*")
     val diff = TacticDiff.diff(t1, t2)
@@ -266,7 +266,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend an atom inside repeat" in {
+  it should "extend an atom inside repeat" in withTactics {
     val t1 = BelleParser("andL(-1)*3")
     val t2 = BelleParser("(andL(-1) ; andL(-2))*3")
     val diff = TacticDiff.diff(t1, t2)
@@ -278,7 +278,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential inside repeat" in {
+  it should "extend a sequential inside repeat" in withTactics {
     val t1 = BelleParser("(andL(-1) ; andL(-2))*3")
     val t2 = BelleParser("(andL(-1) ; andL(-2) ; andL(-3))*3")
     val diff = TacticDiff.diff(t1, t2)
@@ -291,7 +291,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend an atom inside onall" in {
+  it should "extend an atom inside onall" in withTactics {
     val t1 = BelleParser("doall(andL(-1))")
     val t2 = BelleParser("doall(andL(-1) ; andL(-2))")
     val diff = TacticDiff.diff(t1, t2)
@@ -303,7 +303,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "extend a sequential inside onall" in {
+  it should "extend a sequential inside onall" in withTactics {
     val t1 = BelleParser("doall(andL(-1) ; andL(-2))")
     val t2 = BelleParser("doall(andL(-1) ; andL(-2) ; andL(-3))")
     val diff = TacticDiff.diff(t1, t2)
@@ -317,7 +317,7 @@ class TacticDiffTest extends TacticTestBase {
   }
 
   //@todo not yet supported in diff
-  it should "extend an atom inside let" ignore {
+  it should "extend an atom inside let" ignore withTactics {
     val t1 = BelleParser("let ({`x=y`}) in (andL(-1))")
     val t2 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2))")
     val diff = TacticDiff.diff(t1, t2)
@@ -330,7 +330,7 @@ class TacticDiffTest extends TacticTestBase {
   }
 
   //@note not yet supported in diff
-  it should "extend a sequential inside let" ignore {
+  it should "extend a sequential inside let" ignore withTactics {
     val t1 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2))")
     val t2 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2) ; andL(-3))")
     val diff = TacticDiff.diff(t1, t2)
@@ -343,13 +343,13 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "match tactic definitions" in {
+  it should "match tactic definitions" in withTactics {
     val t1 = BelleParser("tactic t as (implyR(1))")
     val t2 = BelleParser("tactic t as (implyR(1))")
     TacticDiff.diff(t1, t2)._1.t shouldBe DefTactic("t", BelleParser("implyR(1)"))
   }
 
-  it should "match inside tactic definitions" in {
+  it should "match inside tactic definitions" in withTactics {
     val t1 = BelleParser("tactic t as (implyR(1))")
     val t2 = BelleParser("tactic t as (andR(1))")
     val diff = TacticDiff.diff(t1, t2)
@@ -360,7 +360,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "match applied tactic defs" in {
+  it should "match applied tactic defs" in withTactics {
     val t1 = BelleParser("tactic t as (implyR(1)); t")
     val t2 = BelleParser("tactic t as (implyR(1)); t")
     val t = DefTactic("t", BelleParser("implyR(1)"))
@@ -372,7 +372,7 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
-  it should "find diff after applied tactic defs" in {
+  it should "find diff after applied tactic defs" in withTactics {
     val t1 = BelleParser("tactic t as (implyR(1)); t; andL(1)")
     val t2 = BelleParser("tactic t as (implyR(1)); t; (andL(1) | andL(2))")
     val t = DefTactic("t", BelleParser("implyR(1)"))

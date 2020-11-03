@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
@@ -22,7 +22,7 @@ class DBTests extends TacticTestBase {
       "/examples/tutorials/fm/fm.kyx" ::
       "/examples/tutorials/basic/basictutorial.kyx" :: Nil).
       map(getClass.getResourceAsStream(_)).
-      flatMap(i => KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(i).mkString)).
+      flatMap(i => ArchiveParser.parse(io.Source.fromInputStream(i).mkString)).
       flatMap(e => e.tactics.zipWithIndex.map(t => (e.name + " " + t._2, e.fileContent, t._1._3)))
 
     val tactics = Table(("name", "fileContent", "tactic"), entries:_*)

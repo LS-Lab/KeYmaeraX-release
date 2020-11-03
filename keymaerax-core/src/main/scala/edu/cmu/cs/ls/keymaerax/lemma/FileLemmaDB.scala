@@ -10,8 +10,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.io.{File, IOException, PrintWriter}
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.reflect.io.Directory
 
@@ -63,7 +62,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   }))
 
   /** @inheritdoc */
-  final override def writeLemma(id: LemmaID, lemma: String): Unit = {
+  final override def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
     val f = file(id)
     if (!f.getParentFile.exists() && !f.getParentFile.mkdirs()) throw new IllegalStateException("Unable to create lemma " + id)
     val pw = new PrintWriter(f)

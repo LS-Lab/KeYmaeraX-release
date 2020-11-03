@@ -6,10 +6,10 @@ import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 
@@ -23,8 +23,8 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[SequentCalculus.implyR]]
    */
-  lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
-  def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = "implyRi" by ((p: ProvableSig, a: Position, s: Position) => {
+  private[btactics] lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
+  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = anon ((p: ProvableSig, a: Position, s: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val sequent = p.subgoals.head
     require(a.isIndexDefined(sequent) && s.isIndexDefined(sequent),
@@ -41,21 +41,20 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
-  lazy val orRi: DependentTactic = orRi()
-  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = new SingleGoalDependentTactic("inverse or right") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(pos1 != pos2, "Two distinct positions required")
-      require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
-        "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has succ size " + sequent.succ.length)
-      val left = sequent.succ(pos1.getIndex)
-      val right = sequent.succ(pos2.getIndex)
-      val cutUsePos = AntePos(sequent.ante.length)
-      cut(Or(left, right)) <(
-        /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
-        /* show */
-          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2))
-          else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1))
-        )
+  private[btactics] lazy val orRi: DependentTactic = orRi()
+  private[btactics] def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = anon { (sequent: Sequent) => {
+    require(pos1 != pos2, "Two distinct positions required")
+    require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
+      "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has succ size " + sequent.succ.length)
+    val left = sequent.succ(pos1.getIndex)
+    val right = sequent.succ(pos2.getIndex)
+    val cutUsePos = AntePos(sequent.ante.length)
+    cut(Or(left, right)) <(
+      /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
+      /* show */
+        if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2))
+        else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1))
+      )
     }
   }
 
@@ -65,23 +64,20 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
-  lazy val andLi: DependentTactic = andLi()
-  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = new SingleGoalDependentTactic("inverse and left") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(pos1 != pos2, "Two distinct positions required")
-      require(sequent.ante.length > pos1.getIndex && sequent.ante.length > pos2.getIndex,
-        "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has ante size " + sequent.ante.length)
-      val left = sequent.ante(pos1.getIndex)
-      val right = sequent.ante(pos2.getIndex)
-      val cutUsePos = SuccPos(sequent.succ.length)
-      cut(And(left, right)) <(
-        /* use */
-          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideL(pos1) & assertE(right, "")(pos2) & hideL(pos2))
-          else (assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & hideL(pos1)),
-        /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
-        )
-    }
-  }
+  private[btactics] lazy val andLi: DependentTactic = andLi()
+  private[btactics] def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = anon((sequent: Sequent) => {
+    require(pos1 != pos2, "Two distinct positions required")
+    require(sequent.ante.length > pos1.getIndex && sequent.ante.length > pos2.getIndex,
+      "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has ante size " + sequent.ante.length)
+    val left = sequent.ante(pos1.getIndex)
+    val right = sequent.ante(pos2.getIndex)
+    val cutUsePos = SuccPos(sequent.succ.length)
+    cut(And(left, right)) <(
+      /* use */
+      if (pos1.getIndex > pos2.getIndex) assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)) & assertE(right, "")(pos2) & hideL(pos2)
+      else assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)),
+      /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
+    )})
 
   /**
    * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not
@@ -89,7 +85,7 @@ private object PropositionalTactics extends Logging {
  *
    * @see [[UnifyUSCalculus.CMon(Context)]]
    * @see [[UnifyUSCalculus.CE(Context)]]
-   * @example{{{
+   * @example {{{
    *                  z=1 |- z>0
    *         --------------------------propCE(PosInExpr(1::Nil))
    *           x>0 -> z=1 |- x>0 -> z>0
@@ -97,6 +93,7 @@ private object PropositionalTactics extends Logging {
    * @param at Points to the position to unpeel.
    * @return The tactic.
    */
+  //@todo optimizable a lot by using technique from TactixLibrary.stepAt index instead of |
   def propCMon(at: PosInExpr): DependentTactic = new SingleGoalDependentTactic("Prop. CMon") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.length == 1 && sequent.succ.length == 1 &&
@@ -106,29 +103,56 @@ private object PropositionalTactics extends Logging {
       // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
       // will branch and one of these branches will close by identity. on the other branch, we have to hide
       // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-      (((notL(-1) & notR(1) & assertT(1, 1))
-        | ((andL(-1) & andR(1) <((close | (hideL(-2))), (close | (hideL(-1)))) & assertT(1, 1))
-        | ((orR(1) & orL(-1) <((close | (hideR(2))), (close | (hideR(1)))) & assertT(1, 1))
-        | ((implyR(1) & implyL(-1) <((close | (hideR(1))), (close | (hideL('Llast)))) & assertT(1, 1))
-        | ((monb)
-        | ((mond)
-        | ((allR(1) & allL(-1))
-        | (existsL(-1) & existsR(1))
-       ))))))))*at.pos.length
+      if (at.pos.length <= 0) skip
+      else (sequent.succ.headOption match {
+        case Some(_: Not) => notL(-1) & notR(1) & assertT(1, 1)
+        case Some(_: And) => andL(-1) & andR(1) <(close | hideL(-2), close | hideL(-1)) & assertT(1, 1)
+        case Some(_: Or) => orR(1) & orL(-1) <(close | hideR(2), close | hideR(1)) & assertT(1, 1)
+        case Some(_: Imply) => implyR(1) & implyL(-1) <(close | hideR(1), close | hideL('Llast)) & assertT(1, 1)
+        case Some(_: Box) => monb
+        case Some(_: Diamond) => mond
+        case Some(_: Forall) => allR(1) & allL(-1)
+        case Some(_: Exists) => existsL(-1) & existsR(1)
+        case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
+        // redundant to exception raised by .at(...) in contract above
+        case None => throw new IllFormedTacticApplicationException("Prop. CMon: no more formulas left to descend into " + at.prettyString)
+      }) & propCMon(at.child)
     }
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
-  def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
-      //@note adapted to use implyL instead of implyLOld
-      implyL(implication) <(
-        cohide2(p, SuccPos(sequent.succ.length)) & close
-        //@todo shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
-        ,
-        Idioms.ident
-        )
+  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = anon { seq: Sequent =>
+    val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
+    //@note adapted to use implyL instead of implyLOld
+    implyL(implication) <(
+      closeId(p, SuccPos(seq.succ.length))
+      //cohide2(p, SuccPos(sequent.succ.length)) & close
+      //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
+      ,
+      Idioms.ident
+      )
+  }
+
+  /** Automated modus ponens for p->q ==> ; tries to automatically prove p from the rest of the assumptions. */
+  @Tactic()
+  private[btactics] val autoMP: DependentPositionTactic = anon { (pos: Position, seq: Sequent) => seq(pos.checkAnte.checkTop) match {
+      case Imply(p, _) =>
+        val pi = seq.ante.indexWhere(_ == p)
+        if (pi >= 0) modusPonens(AntePos(pi), pos.checkAnte.checkTop)
+        else {
+          val notsuccs = seq.succ.map(Not).map(SimplifierV3.formulaSimp(_, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1)
+          val antes = seq.ante.patch(pos.index0, List.empty, 1)
+          val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
+          val mpShow = Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
+          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & prop & OnAll(QE))
+
+          if (mpLemma.isProved) {
+            cut(p) < (
+              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop),
+              useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & prop & done)
+          } else throw new TacticInapplicableFailure("Failed to prove assumptions")
+        }
+      case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
     }
   }
 
@@ -143,14 +167,15 @@ private object PropositionalTactics extends Logging {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  val toSingleFormula: DependentTactic  = "toSingleFormula" by ((sequent: Sequent) => {
+  @Tactic()
+  val toSingleFormula: DependentTactic  = anon {(sequent: Sequent) =>
     cut(sequent.toFormula) <(
       /* use */ implyL('Llast) <(
         hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
         hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
       /* show */ cohide('Rlast)
       )
-  })
+  }
 
   //region Equivalence Rewriting
 
@@ -186,42 +211,43 @@ private object PropositionalTactics extends Logging {
     *   \forall x. p(x) <-> q(z), p(x) |-
     * }}}
     */
-    val equivRewriting: DependentTwoPositionTactic = "equivRewriting" byTactic ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
-      assert(p.subgoals.length == 1, "Assuming one subgoal.")
-      val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
-      p.subgoals(0)(equivPos) match {
-        case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
-        case fa: Forall =>
-          /*
-           * Game plan:
-           *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
-           *   2. Cut in a new quantified equivalence
-           *   3. Perform instantiations on this new quantified equivalence.
-           *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
-           *   5. Hide the instantiated equivalence OR the original assumption.
-           */
-          //1
-          val instantiation = computeInstantiation(fa, target)
+  @Tactic("equivRewriting", conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ", premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ")
+  val equivRewriting: DependentTwoPositionTactic =  anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+    assert(p.subgoals.length == 1, "Assuming one subgoal.")
+    val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
+    p.subgoals(0)(equivPos) match {
+      case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
+      case fa: Forall =>
+        /*
+         * Game plan:
+         *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
+         *   2. Cut in a new quantified equivalence
+         *   3. Perform instantiations on this new quantified equivalence.
+         *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
+         *   5. Hide the instantiated equivalence OR the original assumption.
+         */
+        //1
+        val instantiation = computeInstantiation(fa, target)
 
-          //2: input is p and output is postCut
-          val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
-          val cutExpr = TactixLibrary.cut(fa) <(
-            Idioms.nil,
-            TactixLibrary.close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
-          )
+        //2: input is p and output is postCut
+        val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
+        val cutExpr = TactixLibrary.cut(fa) <(
+          Idioms.nil,
+          TactixLibrary.closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
+        )
 
-          //3: input is postCut and output is instantiatedEquivalence
-          val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
-            e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
-          })
+        //3: input is postCut and output is instantiatedEquivalence
+        val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
+          e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
+        })
 
-          //step 5.
-          val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
+        //step 5.
+        val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
 
-          //4 & 5
-          instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
-      }
-    })
+        //4 & 5
+        instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
+    }
+  })
 
   private def computeInstantiation(fa: Forall, target: Formula): RenUSubst = {
     val equiv = bodyOf(fa)
@@ -287,7 +313,7 @@ private object PropositionalTactics extends Logging {
     *   P<->Q, Q |-
     * }}}
     */
-  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position) = {
+  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position): ProvableSig = {
     import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
@@ -362,7 +388,8 @@ private object PropositionalTactics extends Logging {
         .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
     }
   }
-  val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  @Tactic("instantiatedEquivRewriting")
+  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
   /** @todo explain why this exists and maybe find a better name. */
   private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
     override def result(p:ProvableSig) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)

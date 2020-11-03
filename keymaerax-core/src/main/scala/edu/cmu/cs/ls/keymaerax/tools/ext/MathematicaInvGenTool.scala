@@ -1,19 +1,20 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import java.io.{File, FileOutputStream}
-import java.nio.channels.Channels
-
-import edu.cmu.cs.ls.keymaerax.Configuration
+import com.wolfram.jlink.Expr
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
 
 import scala.collection.immutable.Seq
-import scala.util.Try
 
 /**
  * A continuous invariant implementation using Mathematica over the JLink interface.
@@ -23,74 +24,148 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
-  init()
+  private val PEGASUS_NAMESPACE = "Pegasus`"
+  private val GENERICNONLINEAR_NAMESPACE = "GenericNonLinear`"
+  private val GENERICLINEAR_NAMESPACE = "GenericLinear`"
+  private val DIFFSATURATION_NAMESPACE = "DiffSaturation`"
+  private val INVARIANTEXTRACTOR_NAMESPACE = "InvariantExtractor`"
+  private val LZZ_NAMESPACE = "LZZ`"
+  private val REFUTE_NAMESPACE = "Refute`"
+  private val CLASSIFIER_NAMESPACE = "Classifier`"
 
-  private val pegasusPath = File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
-  private val joinedPath = "FileNameJoin[{$HomeDirectory," + scala.reflect.io.File(pegasusPath).segments.map(seg => "\"" + seg + "\"").mkString(",") + "}]"
-  private val setPathsCmd =
-    s"""
-      |SetDirectory[$joinedPath];
-      |AppendTo[$$Path, $joinedPath];""".stripMargin.trim
+  private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
+  private def gnlsymbol(s: String) = symbol(GENERICNONLINEAR_NAMESPACE + s)
+  private def glsymbol(s: String) = symbol(GENERICLINEAR_NAMESPACE + s)
+  private def dssymbol(s: String) = symbol(DIFFSATURATION_NAMESPACE + s)
+  private def invexsymbol(s: String) = symbol(INVARIANTEXTRACTOR_NAMESPACE + s)
 
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]] = {
+  private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
+  private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
+  private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
+  private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
+
+  /** @inheritdoc */
+  override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
+    timeout = -1 // reap must be outermost, so do not set tool timeout (which is automatically translated to timeconstrained), but instead use commandTimeout in timeConstrained below
+    val commandTimeout = Configuration.Pegasus.invGenTimeout(-1)
 
-    val vars = DifferentialHelper.getPrimedVariables(ode)
-    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
-    val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
-    val problem = "{ " +
-      k2m(assumptions.reduceOption(And).getOrElse(True)) + ", { " +
-      vectorField + ", " +
-      stringVars + ", " +
-      k2m(ode.constraint) + " }, " +
-      k2m(postCond) + " }"
+    val primedVars = DifferentialHelper.getPrimedVariables(ode)
+    val atomicODEs = DifferentialHelper.atomicOdes(ode)
+    val constantSlopeVars = atomicODEs.filter(_.e.isInstanceOf[Number]).map(_.xp.x)
+//    val isTimeTriggered = FormulaTools.conjuncts(ode.constraint).exists({
+//      //@todo most common case
+//      case LessEqual(x, y) => y match {
+//        case t: Term if StaticSemantics.freeVars(t).intersect(primedVars.toSet).isEmpty => constantSlopeVars.contains(x)
+//        case _ => false
+//      }
+//      case _ => false
+//    })
+//
+//    if (isTimeTriggered) throw new TacticInapplicableFailure("Pegasus does not yet support time-triggered systems")
 
-    val sanityTimeout = "SanityTimeout -> " + Configuration.getOption(Configuration.Keys.PEGASUS_SANITY_TIMEOUT).getOrElse(0)
-
+    val vars = list(primedVars.map(k2m):_*)
+    val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
+    val problem = list(
+      k2m(assumptions.reduceOption(And).getOrElse(True)),
+      list(vectorField, vars, k2m(ode.constraint)),
+      k2m(postCond)
+    )
     logger.debug("Raw Mathematica input into Pegasus: " + problem)
 
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
+    def timeoutExpr(t: Int) = if (t >= 0) int(t) else infinity
 
-    val pegasusMain = Configuration.getOption(Configuration.Keys.PEGASUS_MAIN_FILE).getOrElse("Pegasus.m")
-    val command = s"""
-       |$setPathsCmd
-       |Needs["Pegasus`","$pegasusMain"];
-       |Pegasus`InvGen[$problem,$sanityTimeout]""".stripMargin.trim()
+    val setOptions = applyFunc(symbol("SetOptions"))
+    val options = compoundExpression(
+      setOptions(psymbol("InvGen"),
+        rule(psymbol("SanityCheckTimeout"), timeoutExpr(Configuration.Pegasus.sanityTimeout()))),
+      setOptions(gnlsymbol("PreservedState"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.PreservedStateHeuristic.timeout()))),
+      setOptions(gnlsymbol("HeuInvariants"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.HeuristicInvariants.timeout()))),
+      setOptions(gnlsymbol("FirstIntegrals"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.FirstIntegrals.degree()))),
+      setOptions(gnlsymbol("DbxPoly"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Darboux.timeout())),
+        rule(gnlsymbol("MaxDeg"), int(Configuration.Pegasus.Darboux.degree())),
+        rule(gnlsymbol("Staggered"), bool(Configuration.Pegasus.Darboux.staggered()))),
+      setOptions(glsymbol("FirstIntegralsLin"),
+        rule(glsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.LinearFirstIntegrals.timeout()))),
+      setOptions(glsymbol("LinearMethod"),
+        rule(glsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.LinearGenericMethod.timeout())),
+        rule(glsymbol("RationalsOnly"), bool(Configuration.Pegasus.LinearGenericMethod.rationalsOnly())),
+        rule(glsymbol("RationalPrecision"), int(Configuration.Pegasus.LinearGenericMethod.rationalPrecision())),
+        rule(glsymbol("FirstIntegralDegree"), int(Configuration.Pegasus.LinearGenericMethod.firstIntegralDegree()))),
+      setOptions(gnlsymbol("BarrierCert"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree()))),
+      setOptions(dssymbol("DiffSat"),
+        rule(dssymbol("MinimizeCuts"), bool(Configuration.Pegasus.DiffSaturation.minimizeCuts())),
+        rule(dssymbol("StrictMethodTimeouts"), bool(Configuration.Pegasus.DiffSaturation.strictMethodTimeouts())),
+        rule(dssymbol("UseDependencies"), bool(Configuration.Pegasus.DiffSaturation.useDependencies()))
+      ),
+      setOptions(invexsymbol("DWC"),
+        rule(invexsymbol("SufficiencyTimeout"), int(Configuration.Pegasus.InvariantExtractor.sufficiencyTimeout())),
+        rule(invexsymbol("DWTimeout"), int(Configuration.Pegasus.InvariantExtractor.dwTimeout()))
+      )
+    )
+
+    val reap = UnaryMathOpSpec(symbol("Reap"))
+    val timeConstrained = BinaryMathOpSpec(symbol("TimeConstrained"))
+    val set = BinaryMathOpSpec(symbol("Set"))
+    val mIf = NaryMathOpSpec(symbol("If"))
+    val part = BinaryMathOpSpec(symbol("Part"))
+    val failureQ = UnaryMathOpSpec(symbol("FailureQ"))
+    val length = UnaryMathOpSpec(symbol("Length"))
+    val trueQ = UnaryMathOpSpec(symbol("TrueQ"))
+
+    val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
+    //@note quiet suppresses messages, since translated into Exception in command runner
+    val command = quiet(compoundExpression(
+      setPathsCmd,
+      needs(string(PEGASUS_NAMESPACE), string(pegasusMain)),
+      options,
+      // without intermediate result extraction: applyFunc(psymbol("InvGen"))(problem)
+      compoundExpression(
+        set(
+          symbol("reaped"),
+          reap(timeConstrained(applyFunc(psymbol("InvGen"))(problem), int(commandTimeout))))
+        ),
+        mIf(
+          trueQ(and(failureQ(part(symbol("reaped"), int(1))), greater(length(part(symbol("reaped"), int(2))), int(0)))),
+          part(part(part(symbol("reaped"), int(2)), int(1)), int(-1)),
+          part(symbol("reaped"), int(1))
+        )
+      )
+    )
 
     try {
-      val (output, result) = runUnchecked(command)
+      val (output, result) = run(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
-        assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
-        if (flag == True) Left(invariants) else Right(invariants)
-      })
+      val (invariants, flag) = PegasusM2KConverter.extractResult(result)
+      assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
+      if (flag == True) Left(invariants) :: Nil else Right(invariants) :: Nil
     } catch {
-      case ex: ConversionException =>
-        logger.warn("Pegasus conversion exception", ex)
+      case ex: Throwable =>
+        logger.warn("Pegasus invariant generator exception", ex)
         Nil
     }
   }
 
-  def lzzCheck(ode: ODESystem, inv: Formula): Boolean = {
-    val vars = DifferentialHelper.getPrimedVariables(ode)
-    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
-    val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
-    val problem =
-      k2m(inv) + ", " +
-      vectorField + ", " +
-      stringVars + ", " +
-      k2m(ode.constraint)
+  /** @inheritdoc */
+  override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = {
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
-    logger.debug("Raw Mathematica input into Pegasus: " + problem)
+    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)):_*)
+    val command = compoundExpression(
+      setPathsCmd,
+      needs(string(LZZ_NAMESPACE), fileNameJoin(list(string("Primitives"), string("LZZ.m")))),
+      applyFunc(symbol(LZZ_NAMESPACE + "InvS"))(k2m(inv), vectorField, vars, k2m(ode.constraint))
+    )
 
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
-
-    val command = s"""
-                  |$setPathsCmd
-                  |Needs["LZZ`",FileNameJoin[{"Primitives","LZZ.m"}]];
-                  |LZZ`InvS[$problem]""".stripMargin.trim()
-
-    val (output, result) = runUnchecked(command)
+    val (output, result) = runUnchecked(command.toString)
     logger.debug("LZZ check: "+ result.prettyString + " from raw output " + output)
     result match {
       case True => true
@@ -100,12 +175,12 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     }
   }
 
+  /** @inheritdoc */
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = {
     require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
     require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
 
-    // LHS of ODEs
-    val odevars = DifferentialHelper.getPrimedVariables(ode)
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
     val rhs = DifferentialHelper.atomicOdes(ode).map(_.e)
     // All things that need to be considered as parameters (or variables)
@@ -114,31 +189,29 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
       .map({
-        case f@Function(_,_,Unit,_,_) =>
-          FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
+        case f@Function(_,_,Unit,_,_) => FuncOf(f, Nothing) //for k2m conversion to work reliably on constants
         case e => e
-      } )
+      })
 
-    val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
-    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
-    val vectorField = "{" + rhs.map(k2m(_)).mkString(", ") + "}"
-    val problem =
-      k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
-      k2m(postCond) + "," +
-      vectorField + ", " +
-      stringodeVars + ", " +
-      k2m(ode.constraint) + ", " +
-      stringVars
+    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
+    val varsList = list(vars.map(k2m):_*)
+    val vectorField = list(rhs.map(k2m):_*)
 
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
-
-    val command = s"""
-                     |$setPathsCmd
-                     |Needs["Refute`","Refute.m"];
-                     |Refute`RefuteS[$problem]""".stripMargin.trim()
+    val command = compoundExpression(
+      setPathsCmd,
+      needs(string(REFUTE_NAMESPACE), string("Refute.m")),
+      applyFunc(symbol(REFUTE_NAMESPACE + "RefuteS"))(
+        k2m(assumptions.reduceOption(And).getOrElse(True)),
+        k2m(postCond),
+        vectorField,
+        odeVars,
+        k2m(ode.constraint),
+        varsList
+      )
+    )
 
     try {
-      val (output, result) = runUnchecked(command, CEXM2KConverter)
+      val (output, result) = runUnchecked(command.toString, CEXM2KConverter)
       logger.debug("Counterexample: " + result + " from raw output " + output)
       result match {
         case Left(cex: Formula) => cex match {
@@ -165,86 +238,81 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     }
   }
 
+  /** @inheritdoc */
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = {
-    require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
-    require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
+    require(postCond.isFOL, "Unable to generate ODE conditions, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions)
 
-    // LHS of ODEs
-    val odevars = DifferentialHelper.getPrimedVariables(ode)
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
-    val rhs = DifferentialHelper.atomicOdes(ode).map(_.e)
-    // All things that need to be considered as parameters (or variables)
-    val fmlvars = (assumptions :+ postCond :+ ode.constraint).flatMap(StaticSemantics.symbols)
-    val trmvars = rhs.flatMap(StaticSemantics.symbols)
-
-    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
-      .map({
-        case f@Function(_,_,Unit,_,_) =>
-          FuncOf(f, Nothing) //for k2m conversion to work reliably on constants
-        case e => e
-      } )
-
-    val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
-    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
-    val vectorField = "{" + rhs.map(k2m(_)).mkString(", ") + "}"
-    val problem =
-      k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
-        k2m(postCond) + "," +
-        vectorField + ", " +
-        stringodeVars + ", " +
+    val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m):_*)
+    val command = compoundExpression(
+      setPathsCmd,
+      needs(string(REFUTE_NAMESPACE), string("Refute.m")),
+      applyFunc(symbol(REFUTE_NAMESPACE + "SeqFml"))(
+        k2m(assumptions.reduceOption(And).getOrElse(True)),
+        k2m(postCond),
+        vectorField,
+        odeVars,
         k2m(ode.constraint)
-
-    val command = s"""
-                     |$setPathsCmd
-                     |Needs["Refute`","Refute.m"];
-                     |Refute`SeqFml[$problem]""".stripMargin.trim()
-
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+      )
+    )
 
     try {
-      val (output, result) = runUnchecked(command)
+      val (output, result) = runUnchecked(command.toString)
       result match {
         case And(Equal(_, n: Number), And(And(And( And(i1, i2), n1), n2), n3)) =>
           assert(n.value.toInt == 5)
-          (List(i1, i2),List(n1, n2, n3))
+          (List(i1, i2), List(n1, n2, n3))
         case _ =>
           logger.warn("Incorrect pattern returned: " + output)
-          (List(),List())
+          (List(), List())
       }
     }
   }
 
-  private def init(): Unit = {
-    // copy Pegasus Mathematica notebooks
-    val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
-    if (!new File(pegasusTempDir).exists) new File(pegasusTempDir).mkdirs
+  /**
+    * Returns dimension and classification of the problem defined by `ode` with assumptions `assumptions` and
+    * postcondition `postCond`.
+    * @param ode The differential equation system including evolution domain constraint.
+    * @param assumptions Assumptions on the initial state.
+    * @param postCond Postcondition
+    * @return The dimension and classification of the problem.
+    */
+  def problemClassification(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (Int, String, Map[String, Map[String, String]]) = {
+    require(postCond.isFOL, "Unable to generate ODE conditions, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions)
 
-    val pegasusResourcePath = "/Pegasus/"
-    val pegasusResourceNames =
-      "Primitives/BarrierCertificates.m" ::
-      "Primitives/DarbouxPolynomials.m" ::
-      "Primitives/Dependency.m" ::
-      "Primitives/DiscreteAbstraction.m" ::
-      "Primitives/FirstIntegrals.m" ::
-      "Primitives/LZZ.m" ::
-      "Primitives/Primitives.m" ::
-      "Primitives/QualitativeAbstractionPolynomials.m" ::
-      "Strategies/GenericNonLinear.m" ::
-      "Strategies/OneDimensional.m" ::
-      "Refute.m" ::
-      "Classifier.m" ::
-      "InvariantExtractor.m" ::
-      "Pegasus.m" :: Nil
+    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m):_*)
+    val problem = list(
+      k2m(assumptions.reduceOption(And).getOrElse(True)),
+      list(vectorField, vars, k2m(ode.constraint)),
+      k2m(postCond)
+    )
 
-    pegasusResourceNames.foreach(n => {
-      val pegasusDestPath = pegasusTempDir + File.separator + n
-      if (!new File(pegasusDestPath).getParentFile.exists) new File(pegasusDestPath).getParentFile.mkdirs
-      val pegasusDest = new FileOutputStream(pegasusDestPath)
-      val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
-      pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
-    })
-    val pegasusAbsPaths = pegasusResourceNames.map(n => pegasusTempDir + File.separator + n)
-    assert(pegasusAbsPaths.forall(new File(_).exists()), "Missing Pegasus files")
+    val command = compoundExpression(
+      setPathsCmd,
+      needs(string(CLASSIFIER_NAMESPACE), string("NewClassifier.m")),
+      applyFunc(symbol(CLASSIFIER_NAMESPACE + "ClassifyProblem"))(problem)
+    )
+
+    val (_, result) = runUnchecked(command.toString, IdentityConverter)
+    val dimension :: classes :: details :: Nil = result.args().toList
+
+    def asTuple(t: Expr): (String, String) = {
+      require(rule.applies(t), "Expected Rule[String,String]")
+      val key :: value :: Nil = t.args().map(_.asString).toList
+      (key, value)
+    }
+
+    def asCategory(cat: Expr): (String, Map[String, String]) = {
+      require(rule.applies(cat), "Expected Rule[String, {...}]")
+      val key :: values :: Nil = cat.args().toList
+      (key.asString, values.args().map(asTuple).toMap)
+    }
+
+    (dimension.asInt(), classes.args().head.asString, details.args().map(asCategory).toMap)
   }
-
 }

@@ -1,11 +1,13 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
@@ -269,7 +271,7 @@ class PolynomialArithTests extends TacticTestBase {
       (AntePosition(3,1::Nil),"a".asTerm,"b/2+5/2-c".asTerm,"2".asTerm)
     )
     val elim = (rewriteEquality _).tupled
-    val pr = proveBy(Sequent(antes,succs), rewrites.foldLeft(nil)(_ & elim(_)))
+    val pr = proveBy(Sequent(antes,succs), rewrites.foldLeft[BelleExpr](nil)(_ & elim(_)))
     pr.subgoals should contain only
       Sequent(IndexedSeq("a+b=c","y=5/2*(F()+G()-x-z)","d*f=12&a=b/2+5/2-c").map(_.asFormula),
               IndexedSeq("z=k","g()=f()","K()=A+2*B+C").map(_.asFormula))
@@ -424,6 +426,18 @@ class PolynomialArithTests extends TacticTestBase {
 
     val pr = proveBy(Sequent(antes,succs), normaliseNNF)
     println(pr)
+
+  }
+
+  "normAntes1" should "correctly normalize" in withMathematica { _ =>
+    val fml = "\\exists g_ \\exists f_ (f_!=g_&f_<=g_&f_>=g_|f_=g_&(f_>g_|f_ < g_))".asFormula
+    val res = proveBy(Sequent(IndexedSeq(fml), IndexedSeq()),
+      PolynomialArith.normaliseNNF
+    )
+    res.subgoals(0) shouldBe Sequent("(f_ - g_) * wit_ - 1 = 0,f_ - g_ + wit__1^2 = 0,f_ - g_ - wit__0^2 = 0".split(',').map(_.asFormula).toIndexedSeq, IndexedSeq())
+  }
+
+  it should "&false" in withMathematica { _ =>
 
   }
 }

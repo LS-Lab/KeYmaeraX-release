@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 /**
  * Returns lemma database instances. Prefer using this factory over instantiating lemma databases directly.
  *
- * @example{{{
+ * @example {{{
  *   val lemmaDB = LemmaDBFactory.lemmaDB
  * }}}
  *

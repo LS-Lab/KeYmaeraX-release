@@ -256,7 +256,7 @@ object StaticSemantics {
     * The signature of expression e.
     *
     * @note Result will not be order stable, so order could be different on different runs of the prover.
-    * @example{{{
+    * @example {{{
     *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
     *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
     * }}}
@@ -425,15 +425,27 @@ object StaticSemantics {
 
   // helpers
 
+  /** The sequence of taboo and taboo' for all taboo in taboos,
+    * with taboo' only included for non-differential and real variables taboo
+    */
+  private[core] def spaceTaboos(taboos: immutable.Seq[Variable]): immutable.Seq[Variable] =
+    taboos.flatMap(
+      taboo =>
+        if (taboo.isInstanceOf[DifferentialSymbol] || taboo.sort!=Real) immutable.Seq(taboo)
+        else immutable.Seq(taboo, DifferentialSymbol(taboo))
+    )
+
   /** The variables and differential symbols that are in the given state space.
     * @param space The state space whose set (lattice) of variables and differential variables to compute.
     *              - `AnyArg` returns the [[SetLattice.allVars]].
-    *              - `Taboo(x)` returns [[SetLattice.except]](x) so all variables and differential variables
-    *              except the taboo x and x'.
+    *              - `Except(taboo)` returns all variables except [[spaceTaboos]](taboos), i.e.
+    *              all variables and differential variables except the taboo x and x'.
     */
   def spaceVars(space: Space): SetLattice[Variable] = space match {
     case AnyArg => SetLattice.allVars
-    case Except(taboo) => SetLattice.except(taboo)
+    case Except(taboos) =>
+      //@note this assumes no higher-order differential symbols
+      CoFiniteSet(spaceTaboos(taboos).toSet, Set.empty)
   }
 
 }

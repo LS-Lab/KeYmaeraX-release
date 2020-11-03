@@ -11,7 +11,10 @@ angular.module('keymaerax.controllers').factory('Models', function () {
           return model && model.length > 0 ? model[0] : undefined;
         },
         setModels: function(m) {
-            models = m;
+            models.length = 0;
+            for (var i = 0; i < m.length; i++) {
+                models.push(m[i]);
+            }
         },
         addModel: function(model) {
             models.push(model);

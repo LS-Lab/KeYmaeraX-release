@@ -734,6 +734,65 @@ object Provable {
   }
 
   /**
+    * Axiom schema for vectorial differential ghosts, schematic in dimension.
+    * Schema returns two Provables, one for each direction of the differential ghost axiom.
+    * This reduces duplication of code constructing the ghost vectors.
+    * {{{
+    *   [{y_'=g(||),c{|y_|}&q(|y_|)}] (||y_||^2) <= f(|y_|)
+    *   -> ( [{y_'=g(||),c{|y_|}&q(|y_|)}]p(|y_|) -> [{c{|y_|}&q(|y_|)}]p(|y_|) )
+    *
+    *   [{c{|y_|}&q(|y_|)}]p(|y_|) -> [{y_'=g(||),c{|y_|}&q(|y_|)}]p(|y_|)
+    * }}}
+    *
+    * @param dim The number of ghost variables
+    */
+  final def vectorialDG(dim : Int): (Provable,Provable) = {
+    insist(dim > 0, "Must introduce at least one vectorial differential ghost variable.")
+
+    // The list of variables y__1, y__2, ..., y__dim
+    val ghosts = (1 to dim).map(i => BaseVariable("y_", Some(i)))
+    // The list of RHS g1(||), g2(||), ..., gdim(||)
+    // @todo: UnitFunctionals may need an index argument
+    val ghostRHSs = (1 to dim).map(i => UnitFunctional("g"+i,AnyArg,Real))
+    // The list ghost ODEs y__1'=g1(||), y__2'=g2(||), ..., y__dim'=gdim(||)
+    val ghostODEList = (ghosts zip ghostRHSs).map{ case (y,rhs) => AtomicODE(DifferentialSymbol(y), rhs) }
+    // The list of ghost ODEs as a single ODE
+    val ghostODEs = ghostODEList.reduce(DifferentialProduct.apply)
+
+    // The base ODE c{|y_|}
+    val baseODE = DifferentialProgramConst("c",Except(ghosts))
+    // The base ODE extended with ghost ODEs
+    val extODE = DifferentialProduct(ghostODEs,baseODE)
+    val domain = UnitPredicational("q",Except(ghosts))
+    val post = UnitPredicational("p",Except(ghosts))
+
+    // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
+    val sqnorm = ghosts.map(e => Times(e, e)).reduceLeft(Plus)
+    // The bounding term f(|y__1,y__2,...,y__dim|)
+    val cofF = UnitFunctional("f_",Except(ghosts),Real)
+    // The norm bound required of the ghost ODEs (||y_||^2) <= f(|y_|)
+    val normBound = LessEqual(sqnorm,cofF)
+
+    val DGimply =
+      Imply(
+      // [{y_'=g(||),c{|y_|}&q(|y_|)}] ||y_||^2 <= f(|y_|) ->
+      Box(ODESystem(extODE,domain),normBound),
+      // [{y_'=g(||),c{|y_|}&q(|y_|)}]p(|y_|) -> [{c{|y_|}&q(|y_|)}]p(|y_|)
+      Imply(Box(ODESystem(extODE,domain),post), Box(ODESystem(baseODE,domain),post))
+      )
+
+    val DGylpmi =
+      // [{c{|y_|}&q(|y_|)}]p(|y_|) -> [{y_'=g(||),c{|y_|}&q(|y_|)}]p(|y_|)
+      Imply(Box(ODESystem(baseODE,domain),post), Box(ODESystem(extODE,domain),post))
+
+    //@note soundness-critical
+    (
+      oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(DGimply)), immutable.IndexedSeq()),
+      oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(DGylpmi)), immutable.IndexedSeq())
+    )
+  }
+
+  /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
     *
     * @param conclusion the desired conclusion.
@@ -1252,6 +1311,7 @@ object UniformRenaming {
   * @see [[URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @see [[BoundRenaming]]
+  * @see [[RenamingClashException]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
@@ -1310,6 +1370,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * @author Stefan Mitsch
   * @note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
   * @see [[UniformRenaming]]
+  * @see [[RenamingClashException]]
   */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1392,6 +1453,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   *  ---------------all generalize
   *  \forall x. p(x)
   * Kept because of the incurred cost.
+  * @see SkolemClashException
   */
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"

@@ -7,7 +7,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
@@ -16,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaNameConversion._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 import scala.annotation.tailrec
-import scala.collection.immutable._
 import scala.math.BigDecimal
 
 // favoring immutable Seqs
@@ -38,7 +36,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
    * Converts KeYmaera expressions into Mathematica expressions.
    */
   private[tools] def convert(e: KExpr): MExpr = {
-    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     insist(convertInterpretedSymbols || StaticSemantics.symbols(e).forall({case Function(_, _, _, _, interpreted) => !interpreted case _ => true}),
       "Interpreted functions not allowed in soundness-critical conversion to Mathematica")
     insist(StaticSemantics.symbols(e).forall({case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true}),
@@ -112,7 +110,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     case False => MathematicaOpSpec.lfalse.op
     case exists: Exists => convertQuantified(exists, MathematicaOpSpec.exists)
     case forall: Forall => convertQuantified(forall, MathematicaOpSpec.forall)
-    case _ => throw new ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
+    case _ => throw ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
   /** Converts a quantified formula, converts nested quantifiers into block quantifier. */

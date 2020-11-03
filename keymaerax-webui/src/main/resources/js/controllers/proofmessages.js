@@ -5,7 +5,8 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
     text: "",
     details: "",
     taskStepwiseRequest: undefined,
-    isVisible: false
+    isVisible: false,
+    severity: undefined
   }
 
   $rootScope.$on('agenda.updateWithoutProgress', function() {
@@ -18,6 +19,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
     $scope.proofMessage.details = message.errorThrown;
     $scope.proofMessage.causeMsg = message.causeMsg;
     $scope.proofMessage.taskStepwiseRequest = message.taskStepwiseRequest;
+    $scope.proofMessage.severity = message.type;
     $scope.proofMessage.isVisible = (message.textStatus !== "");
   });
 

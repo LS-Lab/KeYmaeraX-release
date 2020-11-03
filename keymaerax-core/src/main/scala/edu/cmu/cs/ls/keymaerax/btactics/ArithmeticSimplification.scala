@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -33,18 +34,23 @@ object ArithmeticSimplification {
 
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
     * Does not necessarily retain validity??? */
-  lazy val smartHide = new DependentTactic("smartHide") {
-    override def computeExpr(p: ProvableSig) = {
-      assert(p.subgoals.length == 1, s"${this.name} is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
+// todo: unsure
+  @Tactic(names="Smart Hide",
+    premises="Γ<sub>hide</sub> |- Δ",
+//     smartHide -------------------------
+    conclusion="Γ |- Δ",
+    displayLevel="browse")
+  lazy val smartHide: BuiltInTactic = anon ( (p : ProvableSig) => {
+    assert(p.subgoals.length == 1, s"smartHide is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
       //Should already be sorted highest-to-lowest, but check just in case.
       val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(x => x.index0).reverse
 
       //Build up a tactic that hides all non-relevant antecedent positions.
-      DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-      toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
-    }
-  }
+      proveBy(p,
+        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition)))
+    })
 
   /** Simplifies arithmetic by removing formulas that are **probably** unprovable from the current facts.
     * Does not necessarily retain validity??? */
@@ -66,7 +72,8 @@ object ArithmeticSimplification {
     * @author Stefan Mistch
     * @note Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant names is already available.
     */
-  def hideFactsAbout(irrelevant: String*): BelleExpr = "hideIrrelevant" by ((sequent: Sequent) => {
+  // was "hideIrrelevant"
+  def hideFactsAbout(irrelevant: String*): BelleExpr = anon ((sequent: Sequent) => {
     val irrelevantSet = irrelevant.map(_.asNamedSymbol).toSet
     val hideAnte = sequent.ante.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
       sortWith((l,r) => l._2 <= r._2).reverse.map {
@@ -84,15 +91,19 @@ object ArithmeticSimplification {
   /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
-  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic =
-    "transformEquality" byWithInput (equality, (pos, sequent) => {
+  @Tactic(names="Transform Equality",
+    premises="Γ |- equality ;; Γ |- P(equalityRHS) Δ",
+    //    transformEquality(equality f=g) -----------
+    conclusion="Γ |- P(equalityLHS), Δ",
+    displayLevel="browse")
+  def transformEquality(equality:Formula) : DependentPositionWithAppliedInputTactic = inputanon ((pos:Position, sequent:Sequent) => {
       assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
       val what = equality.asInstanceOf[Equal].left
       val to   = equality.asInstanceOf[Equal].right
       cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
         skip,
-        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE & done
-        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft(skip)((a, b) => a & b) & QE & done
+        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft[BelleExpr](skip)((a, b) => a & b) & QE & done
+        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft[BelleExpr](skip)((a, b) => a & b) & QE & done
       )})
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {

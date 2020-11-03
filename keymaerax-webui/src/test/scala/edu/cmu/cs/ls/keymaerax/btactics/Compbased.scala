@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
@@ -89,13 +89,13 @@ class Compbased extends TacticTestBase {
   }
 
   "STTT Examples" should "prove remote control contract compliance" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Remote Control Contract Compliance",
+    val entry = ArchiveParser.getEntry("Remote Control Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove obstacle contract compliance" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
+    val entry = ArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
@@ -106,7 +106,7 @@ class Compbased extends TacticTestBase {
       Box(Choice(a,b), p),
       Box(Compose(Choice(Compose(a, Assign(s, Number(1))), Assign(s, Number(0))), Choice(Compose(Test(Equal(s, Number(0))), b), Compose(Test(Not(Equal(s, Number(0)))), Test(True)))), p))
 
-    val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS("= reflexive") & done, prop & done))
+    val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS(Ax.equalReflexive) & done, prop & done))
     equalReflex shouldBe 'proved
 
     val falseImplies = proveBy("true <-> (false -> p())".asFormula, prop & done)
@@ -121,11 +121,11 @@ class Compbased extends TacticTestBase {
         composeb(1) & assignb(1, 1::Nil) & choiceb(1, 1::Nil) & composeb(1, 1::0::Nil) & testb(1, 1::0::Nil) & chase(1, 1::1::Nil) &
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::0::0::Nil) & useAt(falseImplies, PosInExpr(1::Nil))(1, 1::0::Nil) &
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::1::0::0::Nil) & useAt(notTrue, PosInExpr(0::Nil))(1, 1::1::0::0::Nil) &
-          useAt("!! double negation")(1, 1::1::0::Nil) & useAt("true->", PosInExpr(0::Nil))(1, 1::1::Nil) &
-          useAt("true&", PosInExpr(0::Nil))(1, 1::Nil) & closeId
+          useAt(Ax.doubleNegation)(1, 1::1::0::Nil) & useAt(Ax.trueImply, PosInExpr(0::Nil))(1, 1::1::Nil) &
+          useAt(Ax.trueAnd, PosInExpr(0::Nil))(1, 1::Nil) & id
         ,
         assignb(1) & choiceb(1) & andR(1) <(
-          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt("true->")(1) & closeId
+          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt(Ax.trueImply)(1) & id
           ,
           composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::0::Nil) &
             useAt(notTrue, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -145,7 +145,7 @@ class Compbased extends TacticTestBase {
     compileRegionTest shouldBe 'proved
     
     //@todo wrong sign (returns a formula with <= safe, > unsafe)
-    def toMetric = "toMetric" by ((pos: Position, seq: Sequent) =>
+    def toMetric = anon ((pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
       case Some(Diamond(Choice(Compose(Test(p: Equal), _), Compose(Test(Not(q: Equal)), Test(False))), _)) if p==q =>
         val metric = proveBy(Equiv(False, "<margin:=1;>margin<=0".asFormula), assignd(1, 1::Nil) & QE & done)
@@ -156,9 +156,11 @@ class Compbased extends TacticTestBase {
         val repl = proveBy(Imply(p, Equiv(True, Diamond(Assign(margin, metric), LessEqual(margin, Number(0))))),
           assignd(1, 1::1::Nil) & QE & done)
         useAt(repl, PosInExpr(1::0::Nil))(pos ++ PosInExpr(0::0::1::0::Nil))
+      case Some(e) => throw new TacticInapplicableFailure("toMetric only applicable to diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     })
 
-    val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
+    val entry = ArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
 
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
@@ -195,29 +197,29 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove robot contract compliance" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Robot Contract Compliance",
+    val entry = ArchiveParser.getEntry("Robot Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove compatibility of obstacle and robot" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Compatibility of Obstacle and Robot",
+    val entry = ArchiveParser.getEntry("Compatibility of Obstacle and Robot",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
-    val entry1 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Safety",
+    val entry1 = ArchiveParser.getEntry("Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3, defs = entry1.defs) shouldBe 'proved)
-    val entry2 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Liveness",
+    val entry2 = ArchiveParser.getEntry("Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3, defs = entry2.defs) shouldBe 'proved)
   }
 
   it should "prove system safety" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      val entry = KeYmaeraXArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
+      val entry = ArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
       proveBy(entry.model.asInstanceOf[Formula], ExpandAll(entry.defs.substs) & proveSystem(
         "robotcomponents/Robot Obstacle",
@@ -237,24 +239,24 @@ class Compbased extends TacticTestBase {
   }
 
   "Robix" should "prove the robot component" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Robot Component",
+    val entry = ArchiveParser.getEntry("Robot Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/robot.kyx")).mkString).get
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "prove the obstacle component" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Component",
+    val entry = ArchiveParser.getEntry("Obstacle Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/robix/obstacle.kyx")).mkString).get
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/compatibility.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
   it should "prove monolithic model" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/system.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/robix/system.kyx"))
 
     val invariant =
       """v >= 0
@@ -264,13 +266,13 @@ class Compbased extends TacticTestBase {
         |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "0<=t".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "0<=t".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & SaturateTactic(andL('L)) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
@@ -285,17 +287,17 @@ class Compbased extends TacticTestBase {
       /* base case */ print("Base case...") & simpQE & print("Base case done"),
       /* use case */ print("Use case...") & simpQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR) & printIndexed("After normalize") <(
-      print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
-      print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
-      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),
+      print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
+      print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
+      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),
       print("Acceleration branch 1") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
-        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 1 done"),
-      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Stopped branch 2 done"),
+      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 2 done"),
       print("Acceleration branch 2") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
-        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 2 done")
@@ -305,23 +307,23 @@ class Compbased extends TacticTestBase {
   }
 
   "Multiport local lane control" should "prove the leader component" in withMathematica { _ =>
-    val fml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_leader.kyx"))
+    val fml = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_leader.kyx"))
     proveBy(fml, master()) shouldBe 'proved
   }
 
   it should "prove the follower component" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Follower Component",
+    val entry = ArchiveParser.getEntry("Follower Component",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_follower.kyx")).mkString).get
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_compatibility.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
   it should "prove the monolithic system" in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Full System",
+    val entry = ArchiveParser.getEntry("Full System",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_system.kyx")).mkString).get
     withTacticProgress(entry.tactics.head._3) {
       proveBy(entry.model.asInstanceOf[Formula], _)
@@ -329,17 +331,17 @@ class Compbased extends TacticTestBase {
   }
 
   "ETCS" should "prove RBC component" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_rbc.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_rbc.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
   it should "prove train component" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_train.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_train.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
   it should "prove compatibility" in withMathematica { _ =>
-    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_compatibility.kyx"))
+    val s = ArchiveParser.parseAsFormula(getClass.getResourceAsStream("/examples/casestudies/components/etcs/multiport_compatibility.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 

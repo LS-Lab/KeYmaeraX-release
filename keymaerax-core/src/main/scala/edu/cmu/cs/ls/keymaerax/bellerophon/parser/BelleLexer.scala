@@ -1,12 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.apache.commons.lang3.StringUtils
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, StringOps}
+import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
 /**
@@ -38,18 +39,24 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     * @param inputLocation The location of this input.
     *                      If this is a recursive call, then inputLocation might not be (0,0).
     */
-  private def lex(input: String, inputLocation: Location): TokenStream =
-    if(input.trim.length == 0) {
-      List(BelleToken(EOF, inputLocation))
-    }
-    else {
-      findNextToken(input, inputLocation) match {
+  private def lex(input: String, inputLocation: Location): TokenStream = {
+    var remaining = input
+    var location = inputLocation
+    val tokens = ListBuffer.empty[BelleToken]
+    while (remaining.trim.nonEmpty) {
+      findNextToken(remaining, location) match {
         case Some((nextInput, token, nextLoc)) =>
-          //if (DEBUG) print(token)
-          token +: lex(nextInput, nextLoc)
-        case None => List(BelleToken(EOF, inputLocation)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          tokens += token
+          remaining = nextInput
+          location = nextLoc
+        case None =>
+          //note: This case can happen if the input is e.g. only a comment or only whitespace.
+          remaining = ""
       }
     }
+    tokens += BelleToken(EOF, location)
+    tokens.toList
+  }
 
   /**
     * Helper method for findNextToken
@@ -110,7 +117,6 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEQ_COMBINATOR, loc))),
     DEPRECATED_SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, DEPRECATED_SEQ_COMBINATOR, loc))),
     EITHER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EITHER_COMBINATOR, loc))),
-    AFTER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, AFTER_COMBINATOR, loc))),
     KLEENE_STAR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, KLEENE_STAR, loc))),
     SATURATE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SATURATE, loc))),
     BRANCH_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, BRANCH_COMBINATOR, loc))),
