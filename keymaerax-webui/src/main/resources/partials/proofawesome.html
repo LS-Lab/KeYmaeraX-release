@@ -458,6 +458,14 @@
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('assignEquality', 'R')"
+                                       uib-popover-template="fetchRuleHelp('assignEquality')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
+                                        <span>[:=]=</span><code class="pull-right">assignEquality</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('randomb', 'R')"
                                   uib-popover-template="fetchRuleHelp('randomb')"
                                   popover-class="k4-rulemenu-helppopover"
