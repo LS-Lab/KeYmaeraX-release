@@ -311,7 +311,7 @@ trait SequentCalculus {
         label(BelleLabels.cutUse),
         useAt(Ax.allDistElim)('Rlast) & allR('Rlast) & implyR('Rlast) & label(BelleLabels.cutShow)
       )
-      case Some(e) => throw new TacticInapplicableFailure("allLim only applicable to universal quantifiers on the right, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("allLmon only applicable to universal quantifiers on the right, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     }
@@ -376,7 +376,7 @@ trait SequentCalculus {
         // Implementation 2:
         useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(pos) & label(BelleLabels.cutShow)
       )
-      case Some(e) => throw new TacticInapplicableFailure("existsRim only applicable to existential quantifiers on the right, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("existsRmon only applicable to existential quantifiers on the right, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     }
