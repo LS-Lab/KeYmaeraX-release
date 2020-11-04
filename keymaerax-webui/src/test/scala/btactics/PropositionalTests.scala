@@ -81,6 +81,11 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
+  it should "keep left conjunct if asked" in withTactics {
+    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(AntePos(1), AntePos(0), keepLeft=true))
+    result.subgoals.loneElement shouldBe "b=3, x>0, b=3 & y>0 ==> a=2".asSequent
+  }
+
   private def succImplication(t: BelleExpr, check: Option[ProvableSig => Any] = None) {
     val result = proveBy("x>1 -> y>1".asFormula, t)
     check match {

@@ -14,15 +14,23 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
+/** Instantiate generic tester for KeYmaera X formula parser
+ *
+ * @author Brandon Bohrer
+ */
+class KeYmaeraXRandomParserTests extends RandomParserTests (KeYmaeraXParser.formulaParser)
+class KeYmaeraXDeterministicParserTests extends RandomParserTests (KeYmaeraXParser.formulaParser, rand = new RandomFormula(seed =0))
+
 /**
- * Tests the parser on pretty prints of randomly generated formulas
+ * Generic parser tester, tests some parser on pretty prints of randomly generated formulas
   *
   * @author Andre Platzer
+ *  @author Brandon Bohrer
  */
-class RandomParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
-  private val randomTrials = 4000
-  private val randomComplexity = 8
-  private val rand = new RandomFormula()
+class RandomParserTests (formulaParser: (String => Formula), rand: RandomFormula = new RandomFormula())
+  extends FlatSpec with Matchers with BeforeAndAfterAll {
+  val randomTrials = 4000
+  val randomComplexity = 8
   private val pp = KeYmaeraXPrettyPrinter
   private val parser = if (false) KeYmaeraXParser else DLParser
 
@@ -37,12 +45,12 @@ class RandomParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
     KeYmaeraXTool.shutdown()
   }
 
-  private def parseShouldBe(input: String, expr: Expression) = {
+  def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser.formulaParser(input)
     if (!(parse == expr)) {
       println("Reparsing" +
         "\nInput:      " + input +
-        "\nParsed:     " + parse + " @ " + parse.getClass.getSimpleName +
+        "\nParsed:     " + KeYmaeraXPrettyPrinter(parse) +  // + " @ " + parse.getClass.getSimpleName +
         "\nExpression: " + KeYmaeraXPrettyPrinter.fullPrinter(parse))
       parse shouldBe expr
     }

@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
@@ -15,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -355,7 +354,7 @@ object Ax extends Logging {
   @Axiom("[:=]", conclusion = "__[x':=c]p(x')__↔p(c)",
     key = "0", recursor = "*", unifier = "full")
   val Dassignb: CoreAxiomInfo = coreAxiom("[':=] differential assign")
-  @Axiom("[:*]", conclusion = "__[x:=*]p(x)__↔∀x p(x)", displayLevel = "all",
+  @Axiom("[:*]", conclusion = "__[x:=*]P__↔∀x P", displayLevel = "all",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val randomb: CoreAxiomInfo = coreAxiom("[:*] assign nondet")
   @Axiom("[?]", conclusion = "__[?Q]P__↔(Q→P)", displayLevel = "all",
@@ -1919,7 +1918,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("<:*>", key = "0", recursor = "0;*", unifier = "surjlinear", displayLevel = "all")
+  @Axiom("<:*>", conclusion = "__<x:=*>P__↔∃x P", key = "0", recursor = "0;*", unifier = "surjlinear", displayLevel = "all")
   lazy val randomd: DerivedAxiomInfo = derivedAxiom("<:*> assign nondet",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(||) <-> (\\exists x_ p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1938,7 +1937,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("<?>", key = "0", recursor = "1;0", unifier = "surjlinear", displayLevel = "all")
+  @Axiom("<?>", conclusion = "__<?Q>P__↔Q∧P", key = "0", recursor = "1;0", unifier = "surjlinear", displayLevel = "all")
   lazy val testd: DerivedAxiomInfo = derivedAxiom("<?> test",
     Sequent(IndexedSeq(), IndexedSeq("<?q_();>p_() <-> (q_() & p_())".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1975,7 +1974,7 @@ object Ax extends Logging {
     *
     * @todo first show de Morgan
     */
-  @Axiom(("<∪>", "<++>"), conclusion = "__<a∪b>P__↔<a>P∧<b>P", displayLevel = "all",
+  @Axiom(("<∪>", "<++>"), conclusion = "__<a∪b>P__↔<a>P∨<b>P", displayLevel = "all",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   lazy val choiced: DerivedAxiomInfo = derivedAxiom("<++> choice",
     Sequent(IndexedSeq(), IndexedSeq("<a_;++b_;>p_(||) <-> (<a_;>p_(||) | <b_;>p_(||))".asFormula)),
@@ -4695,7 +4694,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("all stutter", key = "0", recursor = "")
+  @Axiom("all stutter", key = "0", recursor = "", displayLevel = "internal")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4710,7 +4709,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("exists stutter", key = "0", recursor = "")
+  @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)

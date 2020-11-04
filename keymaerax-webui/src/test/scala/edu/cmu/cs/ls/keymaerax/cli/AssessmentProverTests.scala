@@ -5,12 +5,13 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, InapplicableUnificationKeyFailure, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AnyOfArtifact, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AnyOfArtifact, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, SubstitutionArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
 import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, SubstitutionParser}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import org.scalatest.Inside.inside
 import org.scalatest.prop.TableDrivenPropertyChecks._
@@ -156,6 +157,21 @@ class AssessmentProverTests extends TacticTestBase {
       case p :: Nil =>
         p.questions shouldBe
           List(AskQuestion(Some("loop"), Map("question" -> "x>=0 -> [{?\\%1; x:=x+1;}*@invariant(\\%2)]x>=0", "feedback" -> "3.4"),
+            ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
+            List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask
+        |\solfin
+        |\begin{lstlisting}
+        |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
+        |\end{lstlisting}
+        |\algog{qe(question="\%1->true",feedback="3.4")}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("qe"), Map("question" -> "\\%1->true", "feedback" -> "3.4"),
             ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
             List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
     }
@@ -503,6 +519,28 @@ class AssessmentProverTests extends TacticTestBase {
       left.value.conclusion shouldBe "==> explanation&min<->explanation&min".asSequent
   }
 
+  "Substitution parser" should "adjust positions in exceptions" in {
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5**4") should have message
+      """1:10 Unexpected token cannot be parsed
+        |Found:    * at 1:10
+        |Expected: <BeginningOfTerm>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5 , d() ~> *4") should have message
+      """1:19 Unexpected token cannot be parsed
+        |Found:    * at 1:19
+        |Expected: <BeginningOfExpression>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> 5, d() ~> 4    ,   e() ~> *3") should have message
+      """1:34 Unexpected token cannot be parsed
+        |Found:    * at 1:34
+        |Expected: <BeginningOfExpression>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs(" ( c() ~> 5, (d() ~> 4  )  ,   e() ~> *3)") should have message
+      """1:39 Unexpected token cannot be parsed
+        |Found:    * at 1:39
+        |Expected: <BeginningOfExpression>""".stripMargin
+  }
+
   "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
@@ -641,7 +679,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game Shapes", 2) ::
+      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game shapes", 2) ::
         ("Truth Identification", 10) :: Nil
     run(problems)
   }
@@ -665,12 +703,29 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 17" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Comparing systems versus games", 3) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
+      ("Comparing systems versus games", 4) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
         ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
     run(problems)
   }
 
+  it should "prove quiz 18" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/18/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Uniform substitution application", 13) :: ("Finding uniform substitutions", 8) :: ("Axiom for axiom schema", 4) :: Nil
+    run(problems)
+  }
+
+  it should "prove quiz 19" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/19/main.tex")
+    problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
+      ("Check the monitor quality", 8) :: ("Controller monitor for runaround robot", 2) ::
+        ("Monitors for velocity controlled car", 4) :: ("Controller monitor for event-triggered ping-pong ball", 2) ::
+        ("Controller monitor for time-triggered ping-pong", 2) :: Nil
+    run(problems)
+  }
+
   it should "prove quiz 20" in withZ3 { _ =>
+    // most questions flagged INSPECT, those need Mathematica
     val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Substitution of linear equations", 7) :: ("Square root arithmetic", 3) :: ("Eliminate quantifiers", 6) :: Nil
@@ -780,6 +835,31 @@ class AssessmentProverTests extends TacticTestBase {
   it should "grade random quiz 16 submissions" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qgameproofs") }
+  }
+
+  it should "grade random quiz 17 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qaxiomaticgames") }
+  }
+
+  it should "grade random quiz 18 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/18/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qusubst") }
+  }
+
+  it should "grade random quiz 19 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/19/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qmodelplex") }
+  }
+
+  it should "grade random quiz 20 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qvirteq") }
+  }
+
+  it should "grade random quiz 21 submissions" in withZ3 { _ =>
+    val problems = extractProblems(QUIZ_PATH + "/21/main.tex")
+    for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "ch:qvirtreal") }
   }
 
   it should "handle empty text answers" in withZ3 { _ =>
@@ -994,6 +1074,7 @@ class AssessmentProverTests extends TacticTestBase {
       case TacticArtifact(s, _) => s
       case TextArtifact(text) => text.getOrElse("")
       case ArchiveArtifact(s) => s
+      case SubstitutionArtifact(s) => "(" + s.map(_.toString).mkString(",") + ")"
     }
 
     def artifactSrcString(a: Artifact): String = a match {
@@ -1004,6 +1085,7 @@ class AssessmentProverTests extends TacticTestBase {
       case _: TacticArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case _: TextArtifact => artifactString(a)
       case _: ArchiveArtifact => """{\begin{lstlisting}""" + artifactString(a) + """\end{lstlisting}}"""
+      case _: SubstitutionArtifact => """{\kyxline"""" + artifactString(a) + """"}"""
       case AnyOfArtifact(a) => "{" + a.map(artifactSrcString).map(_.stripPrefix("{").stripSuffix("}")).mkString + "}"
     }
 
@@ -1011,7 +1093,7 @@ class AssessmentProverTests extends TacticTestBase {
       val graderCookie = createGraderCookie(grader)
       a match {
         case _: ExpressionArtifact | _: TexExpressionArtifact | _: ListExpressionArtifact | _: SequentArtifact |
-             _: TacticArtifact | _: ArchiveArtifact =>
+             _: TacticArtifact | _: ArchiveArtifact | _: SubstitutionArtifact =>
           //@note guesses solfin from presence of grader question with placeholders
           val (name, answer, expected) = grader match {
             case AskGrader(_, args, _) => args.get("question") match {

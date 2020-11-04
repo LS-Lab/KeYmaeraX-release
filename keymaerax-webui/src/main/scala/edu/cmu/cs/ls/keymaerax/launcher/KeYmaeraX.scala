@@ -8,7 +8,7 @@ import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
@@ -83,6 +83,7 @@ object KeYmaeraX {
       exit(1)
     }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
+    Configuration.setConfiguration(FileConfiguration)
     //@note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
       nextOption(Map('commandLine -> args.mkString(" ")), args.toList),
@@ -92,11 +93,12 @@ object KeYmaeraX {
       //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
       options.get('mode) match {
         case Some(Modes.CODEGEN) =>
-          val toolConfig = if (options.get('quantitative).isDefined) {
-            configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
-          } else {
-            configFromFile("z3")
-          }
+          val toolConfig =
+            if (options.contains('quantitative)) {
+              configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
+            } else {
+              configFromFile("z3")
+            }
           initializeProver(combineConfigs(options, toolConfig), usage)
           CodeGen.codegen(options, usage)
         case Some(Modes.MODELPLEX) =>
@@ -126,7 +128,7 @@ object KeYmaeraX {
   def help: String = stats + "\n" + usage
 
   private def configFromFile(defaultTool: String): OptionMap = {
-    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
         ToolConfiguration.mathematicaConfig(Map.empty).map({ case (k,v) => Symbol(k) -> v })
       case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
@@ -158,7 +160,7 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
         else { Usage.optionErrorReporter("-codegen", usage); exit(1) }
-      case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
+      case "-quantitative" :: tail => nextOption(map ++ Map('quantitative -> true), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
@@ -193,7 +195,10 @@ object KeYmaeraX {
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ =>
         val (options, unprocessedArgs) = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.nextOption(map, list, usage)
-        nextOption(options, unprocessedArgs)
+        if (unprocessedArgs == list) {
+          Usage.optionErrorReporter(unprocessedArgs.head, usage)
+          exit(1)
+        } else nextOption(options, unprocessedArgs)
     }
   }
 
@@ -215,7 +220,7 @@ object KeYmaeraX {
 
     val in = options('in).toString
     val inputEntry = ArchiveParser.parseFromFile(in).head
-    val inputModel = inputEntry.model.asInstanceOf[Formula]
+    val inputModel = inputEntry.defs.exhaustiveSubst(inputEntry.model.asInstanceOf[Formula])
 
     val verifyOption: Option[ProvableSig => Unit] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {

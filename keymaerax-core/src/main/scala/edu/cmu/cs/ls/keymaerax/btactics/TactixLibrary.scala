@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import org.apache.logging.log4j.scala.Logger
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.{List, _}
 import scala.util.Try
@@ -72,7 +72,7 @@ object TactixLibrary extends HilbertCalculus
   with HybridProgramCalculus {
   import Generator.Generator
 
-  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+  private val logger = LoggerFactory.getLogger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
 
   // active invariant generators etc.
 

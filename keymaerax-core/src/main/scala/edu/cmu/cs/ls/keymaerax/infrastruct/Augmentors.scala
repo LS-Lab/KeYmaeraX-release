@@ -359,6 +359,19 @@ object Augmentors {
       * and ignores all non-function symbols in `signature`. Also elaborates [[FuncOf]] to [[PredOf]] per sort
       * in `signature`. */
     def elaborateToFunctions(signature: Set[NamedSymbol]): Expression = {
+      def byNameIdx(symbols: Set[NamedSymbol]): Map[(String, Option[Int]), Set[NamedSymbol]] = symbols.groupBy(s => (s.name, s.index)).filter(_._2.size > 1)
+
+      def assertConsistentKinds(symbols: Set[NamedSymbol], msg: String): Unit = {
+        val groups = symbols.groupBy(s => (s.name, s.index)).filter(_._2.size > 1)
+        lazy val details = groups.map(s => "  Symbol " + s._1._1 + s._1._2.map("_" + _).getOrElse("") + " used with inconsistent kinds " + s._2.map(_.fullString).mkString(",")).mkString("\n  ")
+        assert(groups.isEmpty, msg + ":\n" + details)
+      }
+
+      def bySignature(s: NamedSymbol) : Boolean = signature.exists({
+        case Function(fn, fi, Unit, _, _) => fn == s.name && fi == s.index
+        case _ => false
+      })
+
       val elaboratableVars = StaticSemantics.symbols(e).filter({
         case BaseVariable(name, i, _) => signature.exists({
           case Function(fn, fi, Unit, _, _) => fn == name && fi == i
@@ -366,41 +379,37 @@ object Augmentors {
         })
         case _ => false
       }).map(_.asInstanceOf[BaseVariable])
-      val fnElaborated = elaboratableVars.foldLeft(e)((e, v) =>
-        e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+
+      val fnElaborated = elaboratableVars.foldLeft(e)((e, v) => {
+        //@note avoid elaborating to inconsistent kinds
+        val replaced = e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
+        if (byNameIdx(StaticSemantics.symbols(replaced).filter(bySignature)).isEmpty) replaced
+        else e
+      })
 
       val elaboratableFns = StaticSemantics.symbols(fnElaborated).flatMap({
         case fn: Function =>
           signature.find(ns => ns.name == fn.name && ns.index == fn.index) match {
             case Some(ns: Function) =>
-              if (ns.domain == fn.domain && ns.sort != fn.sort) Some(ns -> fn)
+              if (ns.domain == fn.domain && ns.sort != fn.sort) Some(fn -> ns)
               else None
             case _ => None
           }
         case _ => None
       }).toMap
 
-      fnElaborated match {
-        case f@FuncOf(fn: Function, c) => elaboratableFns.get(fn).map(PredOf(_, c)).getOrElse(f)
-        case p@PredOf(fn: Function, c) => elaboratableFns.get(fn).map(FuncOf(_, c)).getOrElse(p)
+      val predFnElaborated = fnElaborated match {
+        case f@FuncOf(fn: Function, c) =>
+          elaboratableFns.get(fn).map(PredOf(_, c)).getOrElse(f)
+        case p@PredOf(fn: Function, c) =>
+          elaboratableFns.get(fn).map(FuncOf(_, c)).getOrElse(p)
         case e => e
       }
 
-      val bySignature: NamedSymbol => Boolean = s => signature.exists({
-        case Function(fn, fi, Unit, _, _) => fn == s.name && fi == s.index
-        case _ => false
-      })
-
-      def check(symbols: Set[NamedSymbol], msg: String): Unit = {
-        val groups = symbols.groupBy(s => (s.name, s.index)).filter(_._2.size > 1)
-        lazy val details = groups.map(s => "  Symbol " + s._1._1 + s._1._2.map("_" + _).getOrElse("") + " used with inconsistent kinds " + s._2.map(_.fullString).mkString(",")).mkString("\n  ")
-        assert(groups.isEmpty, msg + ":\n" + details)
-      }
-
-      val elaboratingSymbols = StaticSemantics.symbols(e).filter(bySignature)
-      check(elaboratingSymbols, "Cannot elaborate")
+      val elaboratingSymbols = StaticSemantics.symbols(predFnElaborated).filter(bySignature)
+      assertConsistentKinds(elaboratingSymbols, "Cannot elaborate")
       val elaboratables = elaboratingSymbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
-      val replaced = elaboratables.foldLeft(e)((e, v) =>
+      val replaced = elaboratables.foldLeft(predFnElaborated)((e, v) =>
         try {
           e.replaceAll(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
         } catch {
@@ -409,7 +418,7 @@ object Augmentors {
               " in literal bound occurrence inside " + e.prettyString, ex)
         }
       )
-      check(StaticSemantics.symbols(replaced).filter(bySignature), "Elaboration results in inconsistent kinds")
+      assertConsistentKinds(StaticSemantics.symbols(replaced).filter(bySignature), "Elaboration results in inconsistent kinds")
       replaced
     }
 

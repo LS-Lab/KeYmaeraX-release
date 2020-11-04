@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
@@ -15,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simul
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.math.BigDecimal

@@ -6,13 +6,13 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.util.concurrent.ExecutionException
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -91,6 +91,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
   /** The spoon-feeding interpreter itself does not have listeners. */
   val listeners: scala.collection.immutable.Seq[IOListener] = Nil
+
+  override def start(): Unit = isDead = false
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (runningInner == null) {

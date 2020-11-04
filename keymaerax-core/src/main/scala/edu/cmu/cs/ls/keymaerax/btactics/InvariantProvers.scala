@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Augmentors, DependencyAnalysis, PosInExpr, Position}
-import org.apache.logging.log4j.scala.Logger
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
@@ -29,7 +29,7 @@ object InvariantProvers {
   import Generator.Generator
   import TactixLibrary._
 
-  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+  private val logger = LoggerFactory.getLogger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.

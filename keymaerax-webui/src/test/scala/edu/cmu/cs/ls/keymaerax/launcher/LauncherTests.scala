@@ -154,7 +154,6 @@ class LauncherTests extends TacticTestBase {
   it should "prove with wildcards from command line" in {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/*.kyx"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
-
     val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 255 //@note -1 since unfinished entries
     // JDK 11 requires explicit StringOps due to Scala bug:  https://github.com/scala/bug/issues/11125

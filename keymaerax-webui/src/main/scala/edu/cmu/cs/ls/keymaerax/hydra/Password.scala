@@ -4,6 +4,8 @@ import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 /**
   * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
   * @see www.owasp.org

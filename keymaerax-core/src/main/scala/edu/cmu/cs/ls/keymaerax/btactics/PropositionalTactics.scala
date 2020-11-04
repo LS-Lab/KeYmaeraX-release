@@ -6,11 +6,10 @@ import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 
@@ -66,7 +65,7 @@ private object PropositionalTactics extends Logging {
    * @see [[ProofRuleTactics.andL]]
    */
   private[btactics] lazy val andLi: DependentTactic = andLi()
-  private[btactics] def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = anon((sequent: Sequent) => {
+  private[btactics] def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = anon((sequent: Sequent) => {
     require(pos1 != pos2, "Two distinct positions required")
     require(sequent.ante.length > pos1.getIndex && sequent.ante.length > pos2.getIndex,
       "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has ante size " + sequent.ante.length)
@@ -75,8 +74,8 @@ private object PropositionalTactics extends Logging {
     val cutUsePos = SuccPos(sequent.succ.length)
     cut(And(left, right)) <(
       /* use */
-      if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideL(pos1) & assertE(right, "")(pos2) & hideL(pos2))
-      else (assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & hideL(pos1)),
+      if (pos1.getIndex > pos2.getIndex) assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)) & assertE(right, "")(pos2) & hideL(pos2)
+      else assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)),
       /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
     )})
 

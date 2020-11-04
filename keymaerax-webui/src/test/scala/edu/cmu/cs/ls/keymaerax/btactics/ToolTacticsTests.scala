@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests automatic
@@ -124,6 +125,11 @@ class ToolTacticsTests extends TacticTestBase {
   it should "exploit conditional equivalence from global facts" in withQE { _ =>
     val result = proveBy("b>0 ==> [x:=4;]2*x*b>=v*v".asSequent, transform("x>=v^2/(2*b)".asFormula)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "b>0 ==> [x:=4;]x>=v^2/(2*b)".asSequent
+  }
+
+  it should "exploit conditional equivalence from negated global facts" in withQE { _ =>
+    val result = proveBy("==> b<=0, [x:=4;]2*x*b>=v*v".asSequent, transform("x>=v^2/(2*b)".asFormula)(2, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> b<=0, [x:=4;]x>=v^2/(2*b)".asSequent
   }
 
   it should "exploit conditional equivalence from unmodified global facts deeply nested" in withQE { _ =>

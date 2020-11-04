@@ -6,11 +6,11 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -185,7 +185,7 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPANDALLDEFS, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPAND, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+          case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
         }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(SEQ_COMBINATOR | DEPRECATED_SEQ_COMBINATOR, _) :+ ParsedBelleExpr(right, rightLoc) =>
@@ -204,7 +204,7 @@ object BelleParser extends TacticParser with Logging {
         case Some(BelleToken(IDENT(_), _)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(PARTIAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
         case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+        case Some(_) => throw BelleParseException("A combinator should be followed by a full tactic expression", st)
         case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
       }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(EITHER_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
@@ -224,7 +224,7 @@ object BelleParser extends TacticParser with Logging {
       //region Branch combinator
       case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) => st.input.headOption match {
         case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-        case Some(_) => throw ParseException("A branching combinator should be followed by an open paren", st)
+        case Some(_) => throw BelleParseException("A branching combinator should be followed by an open paren", st)
         case None => throw ParseException("Tactic script cannot end with a combinator", combinatorLoc)
       }
       case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) :+ ParsedBelleExprList(branchTactics) =>
@@ -313,7 +313,7 @@ object BelleParser extends TacticParser with Logging {
       //region tactic
       case r :+ BelleToken(TACTIC, loc) => st.input match {
         case BelleToken(IDENT(name), _) :: BelleToken(AS, _) :: tail =>
-          if (tacticDefs.defs.contains(name)) throw ParseException(s"Tactic definition: unique name '$name' expected in scope", st)
+          if (tacticDefs.defs.contains(name)) throw BelleParseException(s"Tactic definition: unique name '$name' expected in scope", st)
           val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs, expandAll)
           tacticDefs.defs(name) = DefTactic(name, innerExpr)
           ParserState(r :+ ParsedBelleExpr(DefTactic(name, innerExpr), loc.spanTo(innerLoc)), remainder)
@@ -337,7 +337,7 @@ object BelleParser extends TacticParser with Logging {
             case SystemConst(n, _) => n == x.name
           }) match {
             case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc)), tail)
-            case None => throw ParseException(s"Expression definition not found: '${x.prettyString}'", st)
+            case None => throw BelleParseException(s"Expression definition not found: '${x.prettyString}'", st)
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
@@ -398,9 +398,9 @@ object BelleParser extends TacticParser with Logging {
         ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc)), st.input)
 
       case _ :+ BelleToken(PARTIAL, _) => st.input.headOption match {
-        case None => throw ParseException("Found bare use of partial keyword", st)
+        case None => throw BelleParseException("Found bare use of partial keyword", st)
         case Some(BelleToken(OPEN_PAREN, _)) =>  ParserState(st.stack :+ st.input.head, st.input.tail)
-        case _ => throw ParseException("Unrecognized token stream", st)
+        case _ => throw BelleParseException("Unrecognized token stream", st)
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc) =>
@@ -465,10 +465,10 @@ object BelleParser extends TacticParser with Logging {
         case Some(_) => ParserState(st.stack :+ st.input.head, st.input.tail)
         case None =>
           if (r == Bottom) ParserState(Bottom :+ BelleAccept(e), Nil)
-          else throw ParseException(s"Cannot continue parsing because detected an infinite loop with stack ${st.topString}", st)
+          else throw BelleParseException(s"Cannot continue parsing because detected an infinite loop with stack ${st.topString}", st)
       }
 
-      case _ => throw ParseException(s"Unrecognized token stream: ${st.topString}", st)
+      case _ => throw BelleParseException(s"Unrecognized token stream: ${st.topString}", st)
     }
   }
 
@@ -516,10 +516,11 @@ object BelleParser extends TacticParser with Logging {
   private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location,
                               tacticDefs: DefScope[String, DefTactic], g: Option[Generator.Generator[GenProduct]],
                               defs: Declaration) : BelleExpr = {
-    // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by makikng a bunch of one-tuples.
+    // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by making a bunch of one-tuples.
     val newArgs = args match {
       case None => Nil
       case Some(argList) => argList.map({
+        case Left(x :: xs) => Left(x :: xs)
         case Left(expression) => Left(Seq(expression))
         case Right(pl) => Right(pl)
       })
@@ -572,10 +573,16 @@ object BelleParser extends TacticParser with Logging {
       def arguments(al: List[BelleToken]): List[TacticArg] = al match {
         case Nil => Nil
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
-          assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
-          assert(nonPosArgCount < DerivationInfo(codeName).persistentInputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).persistentInputs.length} but found at least ${nonPosArgCount+1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).persistentInputs(nonPosArgCount)))(tok, loc) match {
+          if (!DerivationInfo.hasCodeName(codeName)) throw ParseException("Unknown tactic '" + codeName + "'", loc)
+          val expectedInputs = DerivationInfo(codeName).persistentInputs
+          if (nonPosArgCount >= expectedInputs.length) throw ParseException(
+            s"Too many expr arguments were passed to $codeName (expected ${expectedInputs.map(_.name)} but found at least ${nonPosArgCount + 1} arguments)", loc)
+          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)))(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
+            case Left(v: List[Any]) => Left(v.map({
+              case e: Expression => expand(e)
+              case e => e
+            }))
             case v => v
           }
           nonPosArgCount = nonPosArgCount + 1
@@ -619,61 +626,59 @@ object BelleParser extends TacticParser with Logging {
   }
 
   /**
-    *
+    * Parses a tactic argument token.
     * @param expectedType The expected type of the argument..
     * @param tok The argument token that's currently being processed.
     * @return The argument corresponding to the current token.
     */
-  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken, loc: Location) : TacticArg = tok.terminal match {
-    case terminal : TACTIC_ARGUMENT => terminal match {
+  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok: BelleToken, loc: Location): TacticArg = tok.terminal match {
+    case terminal: TACTIC_ARGUMENT => terminal match {
       case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location))
       case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location))
       case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location))
       case SEARCH_ANTECEDENT            => Right(Find.FindL(0, None)) //@todo 0?
       case SEARCH_SUCCEDENT             => Right(Find.FindR(0, None)) //@todo 0?
       case SEARCH_EVERYWHERE            => Right(new Find(0, None, AntePosition(1), exact = true)) //@todo 0?
-      case tok : EXPRESSION       =>
-        //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
+      case tok: EXPRESSION =>
         import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-        //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
-        def unwrappedExpectedType(ai: ArgInfo): ArgInfo = ai match {
-          case ListArg(argType) => unwrappedExpectedType(argType)
-          case OptionArg(argType) => unwrappedExpectedType(argType)
-          case argType => argType
-        }
-        unwrappedExpectedType(expectedType.get) match {
-          case _:PosInExprArg => Left(PosInExpr(tok.undelimitedExprString.split('.').filter(_ != "").map(_.toInt).toList))
-          case _:StringArg => Left(tok.undelimitedExprString)
-          case _:SubstitutionArg if tok.expression.isRight => Left(tok.expression.right.get)
-          case _:SubstitutionArg => throw ParseException(s"Could not parse ${tok.exprString} as a substitution pair, when a substitution pair was expected.", loc)
-          case _:FormulaArg if tok.expression.left.exists(_.isInstanceOf[Formula]) => Left(tok.expression.left.get)
-          case _:FormulaArg => try {
-            Left(tok.undelimitedExprString.asFormula)
-          } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: $exn", loc, exn)
-          }
-          case _:TermArg if tok.expression.left.exists(_.isInstanceOf[Term]) => Left(tok.expression.left.get)
-          case _:TermArg => try {
-            Left(tok.undelimitedExprString.asTerm)
-          } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Term, but a term was expected. Error: $exn", loc, exn)
-          }
-          case _:VariableArg if tok.expression.left.exists(_.isInstanceOf[Variable]) => Left(tok.expression.left.get)
-          case _:VariableArg => try {
-            Left(tok.undelimitedExprString.asVariable)
-          } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a variable was expected. Error: $exn", loc, exn)
-          }
-          case _:ExpressionArg if tok.expression.left.exists(_.isInstanceOf[Expression]) => Left(tok.expression.left.get)
-          case _:ExpressionArg => try {
-            Left(tok.undelimitedExprString.asExpr)
-          } catch {
-            case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as an Expression, but an expression was expected. Error: $exn", loc, exn)
-          }
-        }
 
-      case tok: EXPRESSION => Left(tok.expression) //@todo allow lists here as well. For now any consecutive list of formula arguments is parsed as a Seq[Formula]. See constructTactic.
+        def parseArg(ai: ArgInfo, undelim: String): TacticArg = ai match {
+          case _: PosInExprArg => Left(PosInExpr(undelim.split('.').filter(_.nonEmpty).map(_.toInt).toList))
+          case _: StringArg => Left(undelim)
+          case _: SubstitutionArg => try {
+            Left(undelim.asSubstitutionPair)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse $undelim as a substitution pair when a substitution pair was expected. Error: $exn", loc, exn)
+          }
+          case _: FormulaArg => try {
+            Left(undelim.asFormula)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse $undelim as a formula when a formula was expected. Error: $exn", loc, exn)
+          }
+          case _: TermArg => try {
+            Left(undelim.asTerm)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse $undelim as a term when a term was expected. Error: $exn", loc, exn)
+          }
+          case _: VariableArg => try {
+            Left(undelim.asVariable)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse $undelim as a variable when a variable was expected. Error: $exn", loc, exn)
+          }
+          case _: ExpressionArg => try {
+            Left(undelim.asExpr)
+          } catch {
+            case exn: ParseException => throw ParseException(s"Could not parse $undelim as an expression when an expression was expected. Error: $exn", loc, exn)
+          }
+          case OptionArg(ai) => parseArg(ai, undelim)
+          case ListArg(ai) =>
+            val listElems = undelim.split("::").map(_.trim)
+            if (listElems.length == 1) parseArg(ai, listElems.head) // allow single-element lists without ::nil notation
+            else if (listElems.last == "nil") Left(listElems.dropRight(1).map(parseArg(ai, _).left.get).toList)
+            else throw ParseException(s"Could not parse $undelim as a list when a list of ${ai.sort} was expected; lists must end in :: nil", loc)
+        }
+        parseArg(expectedType.get, tok.undelimitedExprString)
       case _ => throw ParseException(s"Expected a tactic argument (Belle Expression or position locator) but found ${terminal.img}", tok.location)
     }
     case _ => throw ParseException("Encountered non-tactic-argument terminal when trying to parse a tactic argument", tok.location)

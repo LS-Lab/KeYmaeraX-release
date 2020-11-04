@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -15,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map}
@@ -114,13 +114,12 @@ trait ProofTreeNode {
       goal.map(g => (g, g.sub(pos))) match {
         case Some((goal, Some(subFormula))) =>
           UIIndex.allStepsAt(subFormula, Some(pos), Some(goal), proof.substs).map(axiom =>
-            (DerivationInfo(axiom), UIIndex.comfortOf(axiom).map(DerivationInfo(_))))
+            (axiom, UIIndex.comfortOf(axiom.codeName)))
         case _ => Nil
       }
     case Some(p2) =>
       // two-pos tactics
-      UIIndex.allTwoPosSteps(pos, p2, goal.get).map(step =>
-        (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
+      UIIndex.allTwoPosSteps(pos, p2, goal.get).map(step => (step, UIIndex.comfortOf(step.codeName)))
   }
 
   /** Returns suggestions for tactic argument inputs, argument info according to UIIndex and DerivationInfo. */

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import java.io.FileWriter
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer

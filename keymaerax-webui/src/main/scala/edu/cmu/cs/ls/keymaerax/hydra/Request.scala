@@ -31,7 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, UpdateChecker}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -52,7 +52,6 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signa
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -178,8 +177,8 @@ class SetDefaultUserRequest(db: DBAbstraction, userId: String, password: String,
 
 class LocalLoginRequest(db: DBAbstraction, userId: String, password: String) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true") && userId == "local") {
-      Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+    if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true") && userId == "local") {
+      Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
         case Some(userId) => db.getUser(userId) match {
           case Some(user) =>
             val sessionToken = Some(SessionManager.add(user))
@@ -324,16 +323,21 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 val fml = sequent.toFormula
                 Try(ProgramSearchNode(fml)(qeTool)).toOption match {
                   case Some(snode) =>
-                    val search = new BoundedDFS(10)
-                    try {
-                      search(snode) match {
-                        case None => nonfoError(sequent)
-                        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                    if (FormulaTools.dualFree(snode.prog)) {
+                      try {
+                        val search = new BoundedDFS(10)
+                        search(snode) match {
+                          case None => nonfoError(sequent)
+                          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                        }
+                      } catch {
+                        // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+                        // When that happens, just tell the user they need to simplify the formula more.
+                        case _: NotImplementedError => nonfoError(sequent)
                       }
-                    } catch {
-                      // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
-                      // When that happens, just tell the user they need to simplify the formula more.
-                      case _ : NotImplementedError => nonfoError(sequent)
+                    } else {
+                      // no automated counterexamples for games yet
+                      nonfoError(sequent)
                     }
                   case None => new CounterExampleResponse("cex.wrongshape") :: Nil
                 }
@@ -356,7 +360,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
                 }
                 case None => new CounterExampleResponse("cex.notool") :: Nil
               }
-              case None => new CounterExampleResponse("cex.none") :: Nil
+              case None => nonfoError(sequent)
             }
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
@@ -530,8 +534,8 @@ class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Read
     val kyxConfig = "KeYmaera X version: " + VERSION + newline +
       "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
       "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
-      "LinkName: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline +
-      "jlinkLibDir: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+      "LinkName: " + Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline +
+      "jlinkLibDir: " + Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
     new KyxConfigResponse(kyxConfig) :: Nil
   }
 }
@@ -789,13 +793,13 @@ class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String) ex
           new MathematicaConfigurationResponse(
             Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
             Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
-            Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
+            Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
           ) :: Nil
       case "wolframengine" if Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) && Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) =>
         new MathematicaConfigurationResponse(
           Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
           Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
-          Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("")
+          Configuration.getString(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("")
         ) :: Nil
       case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
     }
@@ -1768,8 +1772,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
-          strict=strict, convertPending=false)
+          RequestHelper.listenerFactory(db, session(proofId).asInstanceOf[ProofSession]),
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()
@@ -1873,10 +1877,10 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
     val infos = axiomId match {
       case Some(aid) =>
         val di = Try(DerivationInfo.ofCodeName(aid)).toOption
-        di.map(info => (info, UIIndex.comfortOf(aid).flatMap(s => Try(DerivationInfo.ofCodeName(s)).toOption))).toList
+        di.map(info => (info, UIIndex.comfortOf(aid))).toList
       case None => DerivationInfo.allInfo.
-        filter({case (name, di) => di.displayLevel != 'internal}).
-        map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList
+        filter({case (_, di) => di.displayLevel != 'internal}).
+        map({case (_, di) => (di, UIIndex.comfortOf(di.codeName))}).toList
     }
     ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil
   }
@@ -1998,8 +2002,12 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
       case Some(goal) =>
         goal.sub(pos) match {
           case Some(fml: Formula) =>
-            UIIndex.theStepAt(fml, Some(pos)) match {
-              case Some(step) => ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
+            val substs = session(proofId) match {
+              case ps: ProofSession => ps.defs.substs
+              case _ => Nil
+            }
+            UIIndex.theStepAt(fml, Some(pos), None, substs) match {
+              case Some(step) => ApplicableAxiomsResponse((step, None) :: Nil, Map.empty, pos.isTopLevel) :: Nil
               case None => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
             }
           case _ => ApplicableAxiomsResponse(Nil, Map.empty, pos.isTopLevel) :: Nil
@@ -2163,7 +2171,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
     val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator]) =
-      if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2) match {
+      if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, session(proofId).asInstanceOf[ProofSession]) match {
         case Left(s) => (s, pos, pos2)
         //@note improve tactic maintainability by position search with formula shape on universally applicable tactics
         case Right(t: PositionTacticInfo) if t.codeName == "hideL" || t.codeName == "hideR" => pos match {
@@ -2268,11 +2276,13 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
 
               val ruleName =
-                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
+                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString,
+                  session(proofId).asInstanceOf[ProofSession])
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
+                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
+                  RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
                   ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
@@ -2287,6 +2297,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                     case None => throw ex
                   }
                 }
+
+                override def start(): Unit = inner.start()
 
                 override def kill(): Unit = inner.kill()
 
@@ -2322,6 +2334,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
               case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
               case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
+              case e: ParseException => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, e.loc, e.getMessage), e) :: Nil
             }
         }
       }
@@ -2881,22 +2894,24 @@ object RequestHelper {
   /* String representation of the actual step (if tacticId refers to stepAt, otherwise tacticId).
      For display purposes only. */
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator],
-                      what: DerivationInfo => String): String =  getSpecificName(tacticId, sequent, l1, l2) match {
-    case Left(s) => s
-    case Right(t) => what(t)
-  }
+                      what: DerivationInfo => String, session: ProofSession): String =
+    getSpecificName(tacticId, sequent, l1, l2, session) match {
+      case Left(s) => s
+      case Right(t) => what(t)
+    }
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
-  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator]): Either[String,DerivationInfo] = {
+  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator],
+                      session: ProofSession): Either[String,DerivationInfo] = {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
       case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
-            UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => Right(DerivationInfo(step))
+            UIIndex.theStepAt(fml, pos, Some(sequent), session.defs.substs) match {
+              case Some(step) => Right(step)
               case None => Left(tacticId)
             }
           case _ => Right(DerivationInfo.ofCodeName(tacticId))
@@ -2905,7 +2920,7 @@ object RequestHelper {
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
-              case Some(step) => Right(DerivationInfo(step))
+              case Some(step) => Right(step)
               case None => Left(tacticId)
             }
         }
@@ -2914,10 +2929,11 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+  def listenerFactory(db: DBAbstraction, session: ProofSession)(proofId: Int)(tacticName: String, parentInTrace: Int,
+                                                                              branch: Int): Seq[IOListener] = {
     DBTools.listener(db, (tn: String) => {
       val codeName = tn.split("\\(").head
-      Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)).getOrElse(tn)
+      Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName, session)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)
   }
 

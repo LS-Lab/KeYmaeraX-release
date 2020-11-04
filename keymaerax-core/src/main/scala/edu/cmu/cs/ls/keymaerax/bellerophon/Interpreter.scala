@@ -16,7 +16,11 @@ import scala.annotation.tailrec
   * @see [[SequentialInterpreter]]
   */
 trait Interpreter {
-  /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable). */
+  /** Starts the interpreter. */
+  def start(): Unit
+
+  /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable).
+    * Interpreter must be started before executing tactics. */
   def apply(expr: BelleExpr, v: BelleValue): BelleValue
 
   /** Stops the interpreter and kills all its tactic executions. */

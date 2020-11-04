@@ -1,0 +1,17 @@
+<div>
+  <p>
+  <kbd>assignb</kbd> reduces the assignment <code>[x:=e]p(x)</code> to <code>p(e)</code>, because <code>p</code> is true
+    of <code>x</code> after assigning <code>e</code> to <code>x</code> if and only if <code>p</code> is true of the new
+    value <code>e</code> that will be assigned to <code>x</code>.
+</p>
+<p>
+Other tactics such as <kbd>chase</kbd> and <kbd>unfold</kbd> also use this axiom.
+</p>
+<p>
+  See also
+  <ul>
+    <li><kbd>assignEquality</kbd> for equational assignment, which is also the effect of <kbd>assignb</kbd> if
+      substitution is not permissible.</li>
+  </ul>
+</p>
+</div>

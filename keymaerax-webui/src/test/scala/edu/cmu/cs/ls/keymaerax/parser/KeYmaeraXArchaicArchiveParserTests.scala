@@ -30,7 +30,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
       def apply(left: Declaration): MatchResult =
         MatchResult(
           //compare without locations
-          left.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3)) == right.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3)),
+          left.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3, v._2._4)) == right.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3, v._2._4)),
           left + " was not " + right,
           left + " was " + right
         )
@@ -355,6 +355,63 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         ("f", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "f()>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "parse a function definition with parentheses" in {
+    val input =
+      """ArchiveEntry "Entry 1".
+        | Definitions Real f(Real x) = (x+1)^2; End.
+        | Problem f(3)>=0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("f", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), Some("(.+1)^2".asTerm), UnknownLocation)
+      )))
+    entry.model shouldBe "f(3)>=0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "parse a predicate definition with nested programs" in {
+    val input =
+      """ArchiveEntry "Entry 1".
+        | Definitions Bool p(Real x) <-> [x:=x+1;]x>=1; End.
+        | Problem p(3) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), Some("[x:=.+1;]x>=1".asFormula), UnknownLocation)
+      )))
+    entry.model shouldBe "p(3)".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "parse a predicate definition with nested programs and exercises" in {
+    val input =
+      """ArchiveEntry "Entry 1".
+        | Definitions Bool p(Real x) <-> ( __________ -> [x:=x+1;]x>=1 ); End.
+        | Problem p(3) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), None, UnknownLocation)
+      )))
+    entry.model shouldBe "p(3)".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -1681,7 +1738,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
-      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula)) &
+      TactixLibrary.USX(SubstitutionPair("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil) &
         TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
@@ -1783,7 +1840,34 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
     entry.info shouldBe empty
   }
 
-  it should "accept exercises in definitions" in {
+  it should "accept exercises in function definitions" in {
+    val input =
+      """Exercise "Exercise 1".
+        | Definitions Real sq(Real x) = x*__________; End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> sq(x)>=sq(y) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Exercise 1"
+    entry.kind shouldBe "exercise"
+    entry.fileContent shouldBe
+      """Exercise "Exercise 1".
+        | Definitions Real sq(Real x) = x*__________; End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> sq(x)>=sq(y) End.
+        |End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("sq", None) -> (Some(Real), Real, Some((("x", None), Real) :: Nil), None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "false".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "accept exercises in predicate definitions" in {
     val input =
       """Exercise "Exercise 1".
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
@@ -2018,9 +2102,30 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         | Definitions Real f() = 5*g() + *h(); End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:33 Unexpected token cannot be parsed
+    ) should have message """2:33 Unexpected token in definition
                             |Found:    * at 2:33
                             |Expected: <BeginningOfExpression>""".stripMargin
+  }
+
+  it should "report missing archive structure when function definition parses ok just by itself" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f() = 5*g()""".stripMargin
+    ) should have message """2:30 Unexpected token in definition
+                            |Found:    <EOF> at 2:30 to EOF$
+                            |Expected: ;""".stripMargin
+  }
+
+  it should "report missing archive structure when function definition parses ok just by itself (2)" in {
+    the [ParseException] thrownBy parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f() = 5*g();""".stripMargin
+    ) should have message """2:31 Unexpected definition
+                            |Found:    <EOF> at 2:31 to EOF$
+                            |Expected: End
+                            |      or: Real
+                            |      or: Bool
+                            |      or: HP""".stripMargin
   }
 
   it should "report parse errors in predicate definitions" in {
@@ -2029,7 +2134,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         | Definitions Bool p() <-> f()+5^ > g(); End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:34 Unexpected token cannot be parsed
+    ) should have message """2:34 Unexpected token in definition
                             |Found:    > at 2:34
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
@@ -2213,20 +2318,18 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase with PrivateMeth
         | Definitions B p() <-> ( true; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
-                            |unmatched: LPAREN$ at 2:24--2:26 to 2:29
-                            |Found:    TRUE$ at 2:24 to 2:29
-                            |Expected: )""".stripMargin
+    ) should have message """2:24 Imbalanced parenthesis
+                            |Found:    ( at 2:24
+                            |Expected: """.stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions B p() <-> ( (true) | false; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
-                            |unmatched: LPAREN$ at 2:24--2:26
-                            |Found:    LPAREN$ at 2:24 to 2:26
-                            |Expected: )""".stripMargin
+    ) should have message """2:24 Imbalanced parenthesis
+                            |Found:    ( at 2:24
+                            |Expected: """.stripMargin
   }
 
   it should "report tactic parse errors at the correct location" in withTactics {

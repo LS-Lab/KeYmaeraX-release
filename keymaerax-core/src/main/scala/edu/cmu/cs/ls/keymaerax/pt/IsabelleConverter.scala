@@ -5,10 +5,10 @@ import java.io.{BufferedWriter, FileWriter, Writer}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core.{DotFormula, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID, IDEnum, IDLeft, IDRight, IDUnit, ISABELLE_IDS, Irule, Isequent}
-import org.apache.logging.log4j.scala.Logging
 
 /**
   * Convert proof terms to sublanguage + syntax used by Isabelle formalization
@@ -450,7 +450,7 @@ object Iaxiom extends Logging {
         //IADIGeq() // e.g. IADIGr()
       case "G goedel" => {
         val 2 = 1 + 1
-        logger.fatal("Encountered goedel axiom, thought it should be rule")
+        logger.error("Encountered goedel axiom, thought it should be rule")
         ???
       }
       case "<-> reflexive" => IAEquivReflexive()
@@ -695,7 +695,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
         case (Nil, id::idss) => None :: extendSub(Nil,idss)
         case (Nil, Nil) => Nil
         case (a::b, Nil) =>
-          logger.fatal("wot")
+          logger.error("wot")
           ???
       }
     }

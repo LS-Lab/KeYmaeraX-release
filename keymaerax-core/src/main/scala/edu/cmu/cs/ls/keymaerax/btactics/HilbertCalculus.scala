@@ -125,7 +125,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
   lazy val diamond            : DependentPositionTactic = useAt(Ax.diamond)
-  @Tactic(("<·>d", "<.>d"), conclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P")
+  @Tactic(("<·>", "<.>"), conclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P")
   lazy val diamondd            : DependentPositionTactic = HilbertCalculus.useAt(Ax.diamond, PosInExpr(1::Nil))
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation.
     * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
@@ -186,7 +186,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
   lazy val box  : DependentPositionTactic = useAt(Ax.box)
-  @Tactic(("[·]d", "[.]d"), conclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P")
+  @Tactic(("[·]", "[.]"), conclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P")
   lazy val boxd : DependentPositionTactic = HilbertCalculus.useAt(Ax.box, PosInExpr(1::Nil))
 
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */

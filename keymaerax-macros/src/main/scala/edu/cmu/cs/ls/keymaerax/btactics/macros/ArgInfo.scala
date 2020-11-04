@@ -55,8 +55,8 @@ case class OptionArg(arg: ArgInfo) extends ArgInfo {
   val sort: String = "option[" + arg.sort + "]"
   val allowsFresh: List[String] = arg.allowsFresh
 }
-@deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
-case class ListArg (arg: ArgInfo) extends ArgInfo {
+
+case class ListArg(arg: ArgInfo) extends ArgInfo {
   val name: String = arg.name
   val sort: String = "list[" + arg.sort + "]"
   val allowsFresh: List[String] = arg.allowsFresh

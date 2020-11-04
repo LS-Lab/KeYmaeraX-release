@@ -10,8 +10,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.io.{File, IOException, PrintWriter}
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.reflect.io.Directory
 

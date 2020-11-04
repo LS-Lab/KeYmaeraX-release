@@ -10,14 +10,13 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.{func, statementSemicolon}
-import org.apache.logging.log4j.scala.Logging
 
 /**
  * KeYmaera X parser items on the parser stack.
@@ -323,9 +322,23 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
   /** Whether p is compatible with @annotation */
-  private def isAnnotable(p: Program): Boolean =
-  //@note DifferentialProgramKind will ultimately be elaborated to ODESystem
-    p.isInstanceOf[Loop] || p.isInstanceOf[ODESystem] || p.kind==DifferentialProgramKind
+  @tailrec
+  private def isAnnotable(p: Program): Boolean = p match {
+    case _: Loop => true
+    case _: ODESystem => true
+    case Compose(_, r) => isAnnotable(r)
+    case Choice(_, r) => isAnnotable(r)
+    case p => p.kind == DifferentialProgramKind
+  }
+
+  @tailrec
+  private def annotatedProgram(p: Program): Program = p match {
+    case Compose(_, r) => annotatedProgram(r)
+    case Choice(_, r) => annotatedProgram(r)
+    case p =>
+      assert(isAnnotable(p), "Program " + p.prettyString + " cannot be annotated; only loops and differential equations support annotations")
+      p
+  }
 
 
   // parsing
@@ -336,8 +349,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState, lax: Boolean): ParseState = {
     val ParseState(s, input@(Token(la,laloc) :: rest)) = st
-    logger.info(s)
-    logger.info(la)
+    logger.info(s.toString)
+    logger.info(la.toString)
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
@@ -347,12 +360,12 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // nonproductive: special notation for annotations
       case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ Token(LPAREN, _) :+ Expr(f1) :+ Token(RPAREN, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program],
+        reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
       case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ (lpar@Token(LPAREN, _)) :+ Expr(f1) :+ Token(COMMA, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
-        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program],
+        reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 2, Bottom, r :+ Expr(p) :+ tok :+ lpar)
       case r :+ Expr(p: Program) :+ Token(INVARIANT, _) :+ Token(LPAREN, _) :+ Expr(f1: Formula) if isAnnotable(p) =>
@@ -1274,6 +1287,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case INVARIANT => sNone
       //case
       case sEOF.op => sEOF
+      case o => throw ParseException("Unknown operator " + o, st)
     }
   } ensures(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
 

@@ -2,11 +2,11 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, exit}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Compose, Formula, Imply, Loop, StaticSemantics, Test}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
@@ -50,7 +50,7 @@ object CodeGen {
           val ext = outputFile.extension
           outputFile.addExtension(e.name.replaceAll("\\s", "_")).addExtension(ext).toString()
         }
-      if (quantitative) codegenQuantitative(e, outputFileName, head, vars, quantitative.toString)
+      if (quantitative) codegenQuantitative(e, outputFileName, head, vars)
       else codegen(e, interval, outputFileName, head, vars)
       outputFileName
     })
@@ -68,12 +68,16 @@ object CodeGen {
       //@todo wipe out output file PrintWriter above has already emptied the output file
       //@todo pw.close()
       exit(-1)
-      // TODO what to to when proof cannot be checked?
+      // TODO what to do when proof cannot be checked?
     } else {
       println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
     }
 
     val inputFormula = entry.model.asInstanceOf[Formula]
+    if (!inputFormula.isFOL) {
+      println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
+      exit(-1)
+    }
 
     //@note codegen in C format only regardless of file extension
     val theVars = vars match {
@@ -93,55 +97,25 @@ object CodeGen {
   }
 
   def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
-                          vars: Option[Set[BaseVariable]], kind: String): Unit = {
-    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-    val (monitorFml: Formula, monitorStateVars: Set[BaseVariable]) =
-      if (entry.model.asInstanceOf[Formula].isFOL) {
-        val stateVars = vars match {
-          case Some(v) => v
-          case None => StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
-        }
-        (entry.model.asInstanceOf[Formula], stateVars)
-      } else {
-        val model@Imply(_, Box(Loop(Compose(prg, _)), _)) = entry.model
+                          vars: Option[Set[BaseVariable]]): Unit = {
+    val monitorFml = entry.model.asInstanceOf[Formula]
 
-        val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox(entry.name, entry.tactics.head._3)(model)
-        val Imply(init, Box(Loop(Compose(
-        ctrl,
-        plant@Compose(x0Ghosts, Compose(Test(x0EvolDomain), Compose(nondetPlant, Test(evolDomain)))))), safe)) = nonlinearModelApprox._1
+    if (!monitorFml.isFOL) {
+      println("Input is not an arithmetic formula; please use option '-modelplex' first to obtain a monitor formula")
+      exit(-1)
+    }
 
-        val monitorStateVars = vars match {
-          case Some(v) => v.toSeq
-          case None => kind match {
-            case "model" => StaticSemantics.boundVars(nonlinearModelApprox._1).symbols.toSeq
-            case "ctrl" => StaticSemantics.boundVars(ctrl).symbols.toSeq
-            case "plant" => StaticSemantics.boundVars(plant).symbols.toSeq
-          }
-        }
-
-        val (monitorInput, assumptions) = kind match {
-          case "model" => ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, monitorStateVars: _*)
-          case "ctrl" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), monitorStateVars: _*)
-          case "plant" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), monitorStateVars: _*)
-        }
-
-        val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
-          SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
-        val monitorTactic = DebuggingTactics.print("Deriving Monitor") &
-          ModelPlex.controllerMonitorByChase(1) &
-          DebuggingTactics.print("Chased") &
-          SaturateTactic(ModelPlex.optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions)(1)) &
-          DebuggingTactics.print("Quantifiers instantiated") &
-          simplifier(1) & DebuggingTactics.print("Monitor Result")
-
-        val monitorResult = TactixLibrary.proveBy(monitorInput, monitorTactic)
-        val monitorFml = monitorResult.subgoals.head.succ.head
-        (monitorFml, monitorStateVars.toSet)
-      }
+    val monitorStateVars = vars match {
+      case Some(v) => v
+      case None => StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+    }
 
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    //proveBy(Equiv(modelMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop)
-    val monitorProg = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+    val reassociation = TactixLibrary.proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop)
+    assert(reassociation.isProved, "Reassociated formula incorrectly: failed to prove\n" + reassociation.conclusion.prettyString)
+    val monitorProgProof = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2)
+    assert(monitorProgProof.subgoals.size == 1, "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString)
+    val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
     val inputs = CGenerator.getInputs(monitorProg)
     val monitorCode = (new CGenerator(new CMonitorGenerator()))(monitorProg, monitorStateVars, inputs, "Monitor")
 

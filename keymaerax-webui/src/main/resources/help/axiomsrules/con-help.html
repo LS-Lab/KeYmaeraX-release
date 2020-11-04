@@ -1,0 +1,16 @@
+<div>
+  <p>
+  The <kbd>con</kbd> rule proves liveness of a loop <code>&langle;a<sup>*</sup>&rangle;P</code> by a loop convergence condition <code>J(n)</code>:
+  <ol>
+    <li>initial case: <code>∃n J(n)</code> holds for some abstract distance <code>n</code></li>
+    <li>use case: <code>n≤0, J(n)</code> implies the postcondition <code>P</code></li>
+    <li>induction step: there is a way of running one iteration <code>a</code> to make <code>J(n-1)</code> true whenever <code>n>0, J(n)</code> was true before</li>
+  </ol>
+</p>
+<p>
+See also
+<ul>
+    <li><kbd>iterated</kbd> unwinds a loop once.</li>
+</ul>
+</p>
+</div>

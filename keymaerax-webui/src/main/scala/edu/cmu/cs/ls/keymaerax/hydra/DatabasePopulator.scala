@@ -2,12 +2,12 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.Calendar
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
-import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 

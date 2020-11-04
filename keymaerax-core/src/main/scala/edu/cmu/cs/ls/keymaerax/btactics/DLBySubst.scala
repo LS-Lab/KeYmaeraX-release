@@ -601,44 +601,45 @@ private object DLBySubst {
   private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon (discreteGhost(e, x, assignInContext = true)(_: Position))
   /** @see [[TactixLibrary.discreteGhost]] */
   def discreteGhost(e: Term, x: Option[Variable], assignInContext: Boolean = true): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
-    require(x match { case Some(g) => g != e case None => true }, "Expected ghost different from t, use stutter instead")
-    seq.sub(pos) match {
-      case Some(f: Formula) =>
-        // check specified name, or construct a new name for the ghost variable if None
-        def ghostV(f: Formula): Variable = x match {
-          case Some(gv) => require(gv == e || (!StaticSemantics.symbols(f).contains(gv))); gv
-          case None => e match {
-            case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-            case _ => TacticHelper.freshNamedSymbol(Variable("ghost"), seq)
+    if (x match { case Some(g) => g != e case None => true }) {
+      seq.sub(pos) match {
+        case Some(f: Formula) =>
+          // check specified name, or construct a new name for the ghost variable if None
+          def ghostV(f: Formula): Variable = x match {
+            case Some(gv) => require(gv == e || (!StaticSemantics.symbols(f).contains(gv))); gv
+            case None => e match {
+              case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+              case _ => TacticHelper.freshNamedSymbol(Variable("ghost"), seq)
+            }
           }
-        }
-        val theGhost = ghostV(f)
-        val theF = e match {
-          //@note first two cases: backwards compatibility with diffSolve and others
-          case _: Variable => f.replaceFree(e, DotTerm())
-          case _ if StaticSemantics.boundVars(f).intersect(StaticSemantics.freeVars(e)).isEmpty => f.replaceFree(e, DotTerm())
-          case _ => f //@note new: arbitrary term ghosts
-        }
+          val theGhost = ghostV(f)
+          val theF = e match {
+            //@note first two cases: backwards compatibility with diffSolve and others
+            case _: Variable => f.replaceFree(e, DotTerm())
+            case _ if StaticSemantics.boundVars(f).intersect(StaticSemantics.freeVars(e)).isEmpty => f.replaceFree(e, DotTerm())
+            case _ => f //@note new: arbitrary term ghosts
+          }
 
-        val subst = (us: Option[Subst]) => RenUSubst(
-          ("x_".asVariable, theGhost) ::
-          ("f()".asTerm, e) ::
-          ("p(.)".asFormula, theF) ::
-          Nil
-        )
+          val subst = (_: Option[Subst]) => RenUSubst(
+            ("x_".asVariable, theGhost) ::
+              ("f()".asTerm, e) ::
+              ("p(.)".asFormula, theF) ::
+              Nil
+          )
 
-        val execAssignment = assignEquality(pos) &
-          //@note allR2L does not allow rewriting numbers
-          (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
-            if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) // from implyR
-            else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
-          } else skip)
+          val execAssignment = assignEquality(pos) &
+            //@note allR2L does not allow rewriting numbers
+            (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
+              if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) // from implyR
+              else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
+            } else skip)
 
-        useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
-          (if (assignInContext || pos.isTopLevel) execAssignment else skip)
-      case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
+          useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
+            (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+        case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+      }
+    } else stutter(x.getOrElse("x_".asVariable))(pos)
   })
 
   /** Introduces ghost variables with a fresh name in `origSeq' for each of the terms `trms', before continuing with the

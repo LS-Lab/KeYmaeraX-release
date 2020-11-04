@@ -27,7 +27,7 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
       case ex: ConversionException => throw ex
       case ex: Throwable => throw ConversionException("Error converting to Mathematica: " + formula.prettyString, ex)
     }
-    val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
+    val method = Configuration.getString(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaOpSpec.reduce
       case "Resolve" => MathematicaOpSpec.resolve
       case m => throw ToolCommunicationException("Unknown Mathematica QE method '" + m + "'. Please configure either 'Reduce' or 'Resolve'.")

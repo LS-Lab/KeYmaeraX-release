@@ -4,6 +4,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{ASTNode, Statement, Triv}
 
 import scala.collection.immutable
 
@@ -24,7 +26,6 @@ import scala.collection.immutable
   * @todo Currently not operational: fixme
  */
 object ProofChecker {
-  case class ProofCheckException(str: String) extends Exception {}
 
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))

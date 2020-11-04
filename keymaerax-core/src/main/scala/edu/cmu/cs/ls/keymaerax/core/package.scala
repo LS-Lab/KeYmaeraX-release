@@ -14,7 +14,6 @@ package edu.cmu.cs.ls.keymaerax
 
 import scala.annotation.elidable
 import scala.collection.immutable
-import scala.io.Source
 
 /**
   * KeYmaera X Kernel is the soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X.
@@ -194,7 +193,7 @@ import scala.io.Source
   */
 package object core {
   /** KeYmaera X core kernel version number */
-  val VERSION = Source.fromInputStream(getClass.getResourceAsStream("/VERSION")).getLines().next
+  val VERSION: String = Version.VERSION
 
   /** The uniform substitution type to use */
   type USubst = USubstOne

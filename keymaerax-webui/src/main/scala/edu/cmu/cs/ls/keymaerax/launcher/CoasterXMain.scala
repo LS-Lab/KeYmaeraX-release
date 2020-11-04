@@ -262,7 +262,7 @@ object CoasterXMain {
   }
 
   private def preferredToolFromConfig: String = {
-    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 
   private def mathematicaConfig: ToolProvider.Configuration = {
@@ -276,15 +276,15 @@ object CoasterXMain {
   }
 
   private def getMathematicaLinkName: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME)
+    Configuration.getString(Configuration.Keys.MATHEMATICA_LINK_NAME)
   }
 
   private def getMathematicaLibDir: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+    Configuration.getString(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
   }
 
   private def getMathematicaTcpip: String = {
-    Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
+    Configuration.getString(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
   }
 
   private def exit(status: Int): Nothing = {sys.exit(status)}

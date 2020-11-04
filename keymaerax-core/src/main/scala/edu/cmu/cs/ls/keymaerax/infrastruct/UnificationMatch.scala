@@ -4,10 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.{List, Nil}
 

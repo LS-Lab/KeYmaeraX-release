@@ -36,8 +36,8 @@ object Usage {
       |     [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
-      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
-      |     [-quantitative ctrl|model|plant] |
+      |  -codegen file.kym [-vars var1,var2,..,varn] [-out file.c]
+      |     [-quantitative] |
       |  -striphints file.kyx -out fileout.kyx
       |  -setup
       |

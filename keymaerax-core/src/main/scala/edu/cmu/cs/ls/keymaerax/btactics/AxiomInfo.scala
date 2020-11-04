@@ -18,12 +18,11 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.HashMap
 import scala.language.implicitConversions
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics
+import edu.cmu.cs.ls.keymaerax.{Logging, btactics}
 
 import scala.collection.mutable
 import scala.reflect.macros

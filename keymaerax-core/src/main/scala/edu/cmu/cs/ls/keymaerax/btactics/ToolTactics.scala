@@ -70,7 +70,7 @@ private object ToolTactics {
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
-    val convertInterpretedSymbols = Configuration.get[Boolean](Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
+    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     val expand =
       if (convertInterpretedSymbols) skip
       else EqualityTactics.expandAll &
@@ -476,7 +476,9 @@ private object ToolTactics {
     }
 
     val boundVars = StaticSemantics.boundVars(sequent(pos.top))
-    val gaFull = if (pos.isSucc) sequent.ante.flatMap(FormulaTools.conjuncts) else sequent.ante.patch(pos.top.getIndex, Nil, 1).flatMap(FormulaTools.conjuncts)
+    val gaFull =
+      if (pos.isSucc) (sequent.ante ++ sequent.succ.patch(pos.top.getIndex, Nil, 1).map(Not)).flatMap(FormulaTools.conjuncts).filter(_.isFOL)
+      else (sequent.ante.patch(pos.top.getIndex, Nil, 1) ++ sequent.succ.map(Not)).flatMap(FormulaTools.conjuncts).filter(_.isFOL)
 
     @tailrec
     def proveFact(assumptions: IndexedSeq[Formula], filters: List[IndexedSeq[Formula]=>IndexedSeq[Formula]]): (ProvableSig, IndexedSeq[Formula]) = {
@@ -557,7 +559,6 @@ private object ToolTactics {
       case Some(e) => throw new TacticInapplicableFailure("ensureAt only applicable to formulas, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
-    lazy val ensuredFree = StaticSemantics.freeVars(ensuredFormula).toSet
     lazy val skipAt = anon ((_: Position, _: Sequent) => skip)
 
     lazy val step = seq(pos.top) match {
@@ -565,13 +566,9 @@ private object ToolTactics {
       case Box(Loop(_), _) => loop(ensuredFormula)(pos.top) & Idioms.<(master(), skip, master())
       case Box(Test(_), _) => testb(pos.top) & implyR(pos.top)
       case Box(_, _) => TactixLibrary.step(pos.top)
-      case Forall(v, _) if pos.isAnte =>
-        if (ensuredFree.intersect(v.toSet).isEmpty) ??? //@todo instantiate with something useful
-        else allL(v.head)(pos.top)
+      case Forall(v, _) if pos.isAnte => allL(v.head)(pos.top)
       case Forall(_, _) if pos.isSucc => allR(pos.top)
-      case Exists(v, _) if pos.isSucc =>
-        if (ensuredFree.intersect(v.toSet).isEmpty) ???
-        else existsR(v.head)(pos.top)
+      case Exists(v, _) if pos.isSucc => existsR(v.head)(pos.top)
       case Exists(_, _ ) if pos.isAnte => existsL(pos.top)
       //@todo resulting branches may not be provable when starting from wrong question, e.g., a>0&b>0 -> x=2 & a/b>0, even if locally a>0&b>0 -> (a/b>0 <-> a>0*b)
       case e if pos.isAnte => TacticIndex.default.tacticsFor(e)._1.headOption.getOrElse(skipAt)(pos.top)

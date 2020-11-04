@@ -6,8 +6,8 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import SubstitutionHelper.replaceFree
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.{List, Nil}
 import scala.util.Try

@@ -74,6 +74,7 @@ output {
 
 .dropdown-menu {
   font-size: var(--lsfontsize);
+  min-width: 200px;
 }
 
 .dropdown-header {
@@ -128,6 +129,25 @@ output {
 .navbar-nav > li > span {
   padding: 5px 15px 5px 5px;
 }
+}
+
+.nav-pills .nav-link {
+  border-radius: 0.25rem;
+  padding: .5rem 1rem;
+}
+
+.nav-pills .nav-link.active {
+  color: white;
+  background-color: #337ab7;
+}
+
+.nav .nav-fill {
+  display: flex;
+}
+
+.nav-fill .nav-item {
+  flex: 1 1 auto;
+  text-align: center;
 }
 
 .k4-tactics-navbar {

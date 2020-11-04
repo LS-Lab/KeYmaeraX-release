@@ -96,128 +96,189 @@ object DifferentialHelper {
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
     //Four cases contain both a and b: +a+b, +a-b, -a+b, -a-b
     //y' = ay + b
-    Try(UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
-      case None    =>
+    {
+      val shape = "{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = ay - b
-    Try(UnificationMatch.unifiable(" {y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //y' = -ay + b
-    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
-      case None =>
+    {
+      val shape = "{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape) == ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = -ay - b
-    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //Four cases contain both 1/a and b: +1/a+b, +1/a-b, -1/a+b, -1/a-b
     //y' = y/a + b
-    Try(UnificationMatch.unifiable("{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), s("b(|y_|)".asTerm))
-      case None    =>
+    {
+      val shape = "{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = y/a - b
-    Try(UnificationMatch.unifiable(" {y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //y' = -y/a + b
-    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
-      case None =>
+    {
+      val shape = "{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = -y/a - b
-    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //4 cases contain implicit a=1 and b: +y+b, +y-b, -y+b, -y-b
     //y' = y + b
-    Try(UnificationMatch.unifiable("{y_'=y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, s("b(|y_|)".asTerm))
-      case None    =>
+    {
+      val shape = "{y_'=y_+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = y - b
-    Try(UnificationMatch.unifiable(" {y_'=y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=y_-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //y' = -y + b
-    Try(UnificationMatch.unifiable("{y_'=-y_+b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, s("b(|y_|)".asTerm))
-      case None =>
+    {
+      val shape = "{y_'=-y_+b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
 
     //y' = -y - b
-    Try(UnificationMatch.unifiable("{y_'=-y_-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, Neg(s("b(|y_|)".asTerm)))
-      case None =>
+    {
+      val shape = "{y_'=-y_-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //2 cases contain just a: +a and -a
     //y' = ay
-    Try(UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=a(|y_|)*y_}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape) == ghost =>
+          return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
+        case _ =>
+      }
     }
 
     //y' = -ay
-    Try(UnificationMatch.unifiable("{y_'=-a(|y_|)*y_}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=-a(|y_|)*y_}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
+        case None =>
+      }
     }
 
     //2 cases contain just 1/a: +1/a and -1/a
     //y' = ay
-    Try(UnificationMatch.unifiable("{y_'=y_/a(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=y_/a(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), "0".asTerm)
+        case None =>
+      }
     }
 
     //y' = -ay
-    Try(UnificationMatch.unifiable("{y_'=-y_/a(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-1/a(|y_|)".asTerm), "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=-y_/a(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], s("-1/a(|y_|)".asTerm), "0".asTerm)
+        case None =>
+      }
     }
 
     //2 cases contain just b: +b and -b
     //y' = b
-    Try(UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
-      case None    =>
+    {
+      val shape = "{y_'=b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
+        case None =>
+      }
     }
     //y' = b
-    Try(UnificationMatch.unifiable("{y_'=-b(|y_|)}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, Neg(s("b(|y_|)".asTerm)))
-      case None    =>
+    {
+      val shape = "{y_'=-b(|y_|)}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, Neg(s("b(|y_|)".asTerm)))
+        case None =>
+      }
     }
 
     //Two cases contain neither a or b: y'=y and y'=-y
     //y' = y
-    Try(UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=y_}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+        case None =>
+      }
     }
 
     //y' = -y
-    Try(UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost)).toOption.flatten match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
-      case None    =>
+    {
+      val shape = "{y_'=-y_}".asDifferentialProgram
+      Try(UnificationMatch.unifiable(shape, ghost)).toOption.flatten match {
+        case Some(s) if s(shape)==ghost => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+        case None =>
+      }
     }
 
     //@note last because Darboux assumes shapes guaranteed by unification above

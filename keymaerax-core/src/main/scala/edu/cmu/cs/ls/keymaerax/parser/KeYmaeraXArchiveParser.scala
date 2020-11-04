@@ -400,34 +400,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
         reduce(st, 3, Bottom :+ next.extendLocation(endLoc.end), r :+ defs :+ defsBlock)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Bool => la match {
         case EQUIV =>
-          val (predDefBlock, endDef, remainder, endLoc) =
-            if (rest.head.tok == LPAREN) {
-              var openParens = 0
-              val (Token(LPAREN, _) :: predDefBlock, defEnd) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
-              if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening parenthesis in predicate definition", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
-              val (rparen@Token(RPAREN, endLoc)) :: remainder = defEnd
-              (predDefBlock, rparen, remainder, endLoc.end)
-            } else {
-              val (predDefBlock, remainder) = rest.span(_.tok != SEMI)
-              (predDefBlock, remainder.head, remainder, predDefBlock.last.loc.end)
-            }
-          val pred: Either[Option[Formula], List[Token]] = try {
-            if (!predDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
-              Left(Some(KeYmaeraXParser.formulaTokenParser(predDefBlock :+ Token(EOF, remainder.head.loc))))
-            } else {
-              Right(predDefBlock :+ Token(EOF, remainder.head.loc))
-            }
-          } catch {
-            case ex: ParseException =>
-              val (loc, found) = ex.loc match {
-                case UnknownLocation =>
-                  val defLoc = predDefBlock.head.loc.spanTo(endLoc)
-                  (defLoc, slice(text, defLoc))
-                case _ if ex.found != EOF.description => (ex.loc, ex.found)
-                case _ if ex.found == EOF.description => (ex.loc, endDef.description)
-              }
-              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
-          }
+          val (pred: Either[Option[Formula], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.formulaTokenParser)
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Bool"), currLoc) +: rest)
@@ -436,34 +409,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Real => la match {
         case EQ =>
-          val (funcDefBlock, endDef, remainder, endLoc) =
-            if (rest.head.tok == LPAREN) {
-              var openParens = 0
-              val (Token(LPAREN, _) :: funcDefBlock, defEnd) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
-              if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening parenthesis in function definition", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
-              val (rparen@Token(RPAREN, endLoc)) :: remainder = defEnd
-              (funcDefBlock, rparen, remainder, endLoc.end)
-            } else {
-              val (funcDefBlock, remainder) = rest.span(_.tok != SEMI)
-              (funcDefBlock, remainder.head, remainder, funcDefBlock.last.loc.end)
-            }
-          val term: Either[Option[Term], List[Token]] = try {
-            if (!funcDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
-              Left(Some(KeYmaeraXParser.termTokenParser(funcDefBlock :+ Token(EOF, remainder.head.loc))))
-            } else {
-              Right(funcDefBlock :+ Token(EOF, remainder.head.loc))
-            }
-          } catch {
-            case ex: ParseException =>
-              val (loc, found) = ex.loc match {
-                case UnknownLocation =>
-                  val defLoc = funcDefBlock.head.loc.spanTo(endLoc)
-                  (defLoc, slice(text, defLoc))
-                case _ if ex.found != EOF.description => (ex.loc, ex.found)
-                case _ if ex.found == EOF.description => (ex.loc, endDef.description)
-              }
-              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
-          }
+          val (term: Either[Option[Term], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.termTokenParser)
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Real"), currLoc) +: rest)
@@ -1013,7 +959,7 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
   }
 
   private def slice(text: String, loc: Location): String = {
-    val lines = (text: StringOps).lines.toList.slice(loc.begin.line - 1, loc.end.line).toList
+    val lines = (text: StringOps).lines.slice(loc.begin.line - 1, loc.end.line).toList
     if (loc.end.line > loc.begin.line) {
       val header = lines.head.drop(loc.begin.column - 1)
       val footer = lines.last.take(loc.end.column)
@@ -1053,6 +999,68 @@ object KeYmaeraXArchiveParser extends ArchiveParser {
       case l => l.addLines(offset.line - 1) //
     } else {
       loc.addLines(offset.line - 1)
+    }
+  }
+
+  /** Parses definition tokens `defTokens` with `parser` (using `text` to produce error messages). Returns the parsed
+    * expression, the end location of the definition, and the remainder tokens after the definition. */
+  private def parseDefinition[T <: Expression](defTokens: List[Token], text: String, parser: List[Token] => T): (Either[Option[T], List[Token]], Location, List[Token]) = {
+    val (defBlock: List[Token], remainder: List[Token]) = sliceDefinition(defTokens, parser)
+    val resultExpression = try {
+      if (!defBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+        Left(Some(parser(defBlock :+ Token(EOF, remainder.head.loc))))
+      } else {
+        Right(defBlock :+ Token(EOF, remainder.head.loc))
+      }
+    } catch {
+      case ex: ParseException =>
+        val (loc, found) = ex.loc match {
+          case UnknownLocation =>
+            val defLoc = defBlock.head.loc.spanTo(defBlock.last.loc.end)
+            (defLoc, slice(text, defLoc))
+          case _ if ex.found != EOF.description => (ex.loc, ex.found)
+          case _ if ex.found == EOF.description => (ex.loc, remainder.head.description)
+        }
+        throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
+    }
+    (resultExpression, defBlock.last.loc.end, remainder)
+  }
+
+  /** Runs `parser` on `rest` to find the longest parseable expression, with fallback for exercises enclosed in () or ending in a single ;.
+    * Returns the tokens of the longest parseable expression and the remaining tokens after that. */
+  private def sliceDefinition[T <: Expression](rest: List[Token], parser: List[Token] => T): (List[Token], List[Token]) = {
+    try {
+      parser(rest)
+      throw ParseException("Missing ';' at definition end", rest.last.loc, rest.last.tok.img, SEMI.img)
+    } catch {
+      case ex: ParseException => rest.find({
+        case Token(_, tl) => tl == ex.loc
+      }) match {
+        case Some(errorToken) =>
+          val (parsedOk: List[Token], remainder: List[Token]) = rest.splitAt(rest.indexOf(errorToken))
+          if (errorToken.tok == EXERCISE_PLACEHOLDER) {
+            // exercise must be either enclosed in () or contain exactly 1 ; (at the very end)
+            if (rest.head.tok == LPAREN) {
+              var openParens = 0
+              val (Token(LPAREN, _) :: funcDefBlock, defEnd) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
+              if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening parenthesis in function definition", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
+              val (rparen@Token(RPAREN, _)) :: remainder = defEnd
+              (funcDefBlock, remainder)
+            } else {
+              val (funcDefBlock, remainder) = rest.span(_.tok != SEMI)
+              (funcDefBlock, remainder)
+            }
+          } else if (errorToken.tok == SEMI || errorToken.tok == PERIOD) {
+            (parsedOk, remainder)
+          } else {
+            val lastSemiIdx = parsedOk.lastIndexWhere(t => t.tok == SEMI || t.tok == PERIOD)
+            if (lastSemiIdx >= 0) {
+              val (funcDefBlock, nextDefStart) = parsedOk.splitAt(lastSemiIdx)
+              (funcDefBlock, nextDefStart ++ remainder)
+            } else throw ex.copy(msg = "Unexpected token in definition", expect = ex.expect.replaceAllLiterally("<EOF>", SEMI.img))
+          }
+        case None => throw ex
+      }
     }
   }
 

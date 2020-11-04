@@ -482,6 +482,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       busypoller: Poller.poll("tools/vitalSigns", 2000 /*2s*/),
       connectionTestResult: undefined
     };
+
+    $scope.menu = {
+      hpmenu: {
+        kind: 'box'
+      }
+    }
+
     sequentProofData.tactic.reset();
 
     $scope.$on('$destroy', function() {
@@ -765,6 +772,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         derivationInfos.byName($scope.userId, $scope.proofId, $scope.nodeId, codeName).then(function(response) {
           if (response.data.length > 0) {
             $scope.rulehelp.derivationInfo = response.data[0].standardDerivation;
+          } else {
+            $scope.rulehelp.derivationInfo = undefined;
           }
         });
       }
@@ -973,7 +982,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.saveTaskName = function(newName, oldName) {
-      if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
+      if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: '"' + newName + '"' }]);
     }
 
     $scope.openLemmaProof = function(taskId) {

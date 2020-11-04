@@ -8,7 +8,7 @@ import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
@@ -53,6 +53,7 @@ object KeYmaeraX {
     val (options, unprocessedArgs) = nextOption(Map('commandLine -> args.mkString(" ")), args.toList, Usage.cliUsage)
     if (unprocessedArgs.nonEmpty) println("WARNING: Unknown arguments " + unprocessedArgs.mkString(" "))
     try {
+      Configuration.setConfiguration(FileConfiguration)
       runCommand(options, Usage.cliUsage)
     } finally {
       shutdownProver()
@@ -83,6 +84,8 @@ object KeYmaeraX {
 
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
   def initializeProver(options: OptionMap, usage: String): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+
     initializeBackend(options, usage)
 
     KeYmaeraXTool.init(Map(
@@ -188,7 +191,7 @@ object KeYmaeraX {
 
   /** Reads configuration from keymaerax.conf. */
   def configFromFile(defaultTool: String): OptionMap = {
-    ToolConfiguration.config(Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
+    ToolConfiguration.config(Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(defaultTool)).
       map({ case (k,v) => Symbol(k) -> v })
   }
 

@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, OptionArg}
-import org.apache.logging.log4j.scala.Logger
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
@@ -19,26 +19,29 @@ import scala.annotation.tailrec
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   */
 object UIIndex {
-  private val logger = Logger(UIIndex.getClass)
+  private val logger = LoggerFactory.getLogger(UIIndex.getClass)
 
-  /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
-  def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
+  /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally
+    * considering that this expression occurs at the indicated position pos in the given sequent.
+    * Disregard tactics that require input. */
+  def theStepAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent], substs: List[SubstitutionPair]): Option[DerivationInfo] = expr match {
     case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
-    case _ => allStepsAt(expr, pos).find(DerivationInfo(_).inputs.forall( p => p.isInstanceOf[OptionArg]))
+    case _ => allStepsAt(expr, pos, sequent, substs).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
   }
 
-
-
-  def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
-    find(DerivationInfo(_).inputs.forall( p => p.isInstanceOf[OptionArg]))
+  /** Give the canonical (derived) axiom name or tactic names that apply at positions `pos1` and `pos2` in `sequent`.
+    * Disregard tactics that require input. */
+  def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[DerivationInfo] =
+    allTwoPosSteps(pos1, pos2, sequent).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  //@todo change return type to List[DerivationInfo]
-  def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None,
-                 substs: List[SubstitutionPair] = Nil): List[String] = autoPad(pos, sequent, {
+  def allStepsAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent],
+                 substs: List[SubstitutionPair]): List[DerivationInfo] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
-    //@note the truth-value of isAnte is nonsense if !isTop ....
+    //@note the truth-value of isAnte/isSucc is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
+    val isSucc = pos.nonEmpty && pos.get.isSucc
+
     val alwaysApplicable = "chaseAt" :: Nil
     logger.debug("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
@@ -80,8 +83,7 @@ object UIIndex {
             case _ => alwaysApplicable
           }
         "derive" :: tactics
-      case Box(a, True) if isTop && !isAnte && FormulaTools.dualFree(a) =>
-        "[]T system" :: Nil
+      case Box(a, True) if isTop && isSucc && FormulaTools.dualFree(a) => "[]T system" :: Nil
 
       case Box(a, post) =>
         val maybeSplit = post match {
@@ -103,7 +105,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: "chaseAt" :: Nil else Nil)
+        val rules = maybeSplit ++  (if (isAnte) Nil else "GV" :: "MR" :: "chaseAt" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -112,7 +114,9 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
-          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
+          case _: Loop =>
+            if (isTop && isSucc) "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
+            else maybeSplit ++ ("[*] iterate" :: Nil)
           //@note intermediate steps in dI
           case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: (maybeSplit :+ "GV" :+ "MR")
@@ -132,7 +136,7 @@ object UIIndex {
 
       case Diamond(a, post) => 
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
-        val rules = maybeSplit ++ alwaysApplicable ++ ("diamondd" :: Nil)
+        val rules = maybeSplit ++ alwaysApplicable
         a match {
           case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignd" :: rules
@@ -141,7 +145,7 @@ object UIIndex {
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
-          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "diamondd"
+          case _: Loop => "con" +: maybeSplit :+ "<*> iterate"
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
               if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)
@@ -206,13 +210,11 @@ object UIIndex {
             case (_: Imply, false) => axioms ++ ("implyR" :: alwaysApplicable)
             case (_: Equiv, true) => "equivL" :: alwaysApplicable
             case (_: Equiv, false) => "equivR" :: alwaysApplicable
-            case (_: Forall, true) => "allL" :: "allLkeep" :: "allLimplicit" :: alwaysApplicable
+            case (_: Forall, true) => "allL" :: "allLkeep" :: "allLim" :: alwaysApplicable
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
-            case (_: Exists, false) => "existsR" :: "existsRimplicit" :: alwaysApplicable
-            case (Equal(_: Variable | _: FuncOf, _: Variable | _: FuncOf), true) => "allL2R" :: "allR2L" :: alwaysApplicable
-            case (Equal(_: Variable | _: FuncOf, _), true) => "allL2R" :: alwaysApplicable
-            case (Equal(_, _: Variable | _: FuncOf), true) => "allR2L" :: alwaysApplicable
+            case (_: Exists, false) => "existsR" :: "existsRim" :: alwaysApplicable
+            case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: alwaysApplicable
             case (FuncOf(fn, _), _) if substs.exists({ case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn case _ => false }) =>
               s"""expand "${fn.prettyString}"""" :: alwaysApplicable
             case (PredOf(fn, _), _) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false}) =>
@@ -221,12 +223,12 @@ object UIIndex {
           }
         }
     }
-  })
+  }).map(DerivationInfo(_))
 
-  def allTwoPosSteps(pos1: Position, pos2: Position, sequent: Sequent): List[String] = {
+  def allTwoPosSteps(pos1: Position, pos2: Position, sequent: Sequent): List[DerivationInfo] = {
     val expr1 = sequent.sub(pos1)
     val expr2 = sequent.sub(pos2)
-    (pos1, pos2, expr1, expr2) match {
+    ((pos1, pos2, expr1, expr2) match {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
@@ -236,7 +238,7 @@ object UIIndex {
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
       case _ => Nil
       //@todo more drag-and-drop support
-    }
+    }).map(DerivationInfo(_))
   }
 
   @tailrec
@@ -246,7 +248,7 @@ object UIIndex {
     case _ => false
   }
 
-  def comfortOf(stepName: String): Option[String] = stepName match {
+  def comfortOf(stepName: String): Option[DerivationInfo] = stepName match {
     //case "diffCut" => Some("diffInvariant")
     //case "diffInd" => Some("autoDiffInd")
     //case "diffSolve" => Some("autoDiffSolve")

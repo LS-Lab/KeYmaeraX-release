@@ -31,7 +31,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   private val zero = Number(new BigDecimal("0"))
 
-  private val origConfig = Configuration.get[String](Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
+  private val origConfig = Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
 
   private def num(n : Integer) = Number(new BigDecimal(n.toString))
 

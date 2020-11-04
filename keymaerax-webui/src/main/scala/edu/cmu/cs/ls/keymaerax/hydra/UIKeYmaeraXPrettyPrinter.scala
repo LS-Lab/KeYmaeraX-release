@@ -97,8 +97,8 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   protected override def emit(q: PosInExpr, s: String): String = {
     val hasStep = plainText || (topExpr match {
-      case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None).isEmpty
-      case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None).isEmpty
+      case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None, Nil).isEmpty
+      case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None, Nil).isEmpty
       case _ => false
     })
 
@@ -258,22 +258,24 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
   }
 
   private def printSpace(s: Space): String = s match {
-    case AnyArg => "" //s"(${HTML_OPEN}b$HTML_CLOSE${HTML_OPEN}i$HTML_CLOSE" + "x" + s"$HTML_OPEN/i$HTML_CLOSE$HTML_OPEN/b$HTML_CLOSE)"
+    case AnyArg => "⦅⦆" //s"(${HTML_OPEN}b$HTML_CLOSE${HTML_OPEN}i$HTML_CLOSE" + "x" + s"$HTML_OPEN/i$HTML_CLOSE$HTML_OPEN/b$HTML_CLOSE)"
     case Except(vs) => s"(${HTML_OPEN}s$HTML_CLOSE" + vs.map(printName).mkString(",") + s"$HTML_OPEN/s$HTML_CLOSE)"
   }
 
   protected override def pp(q: PosInExpr, fml: Formula): String = emit(q, fml match {
-    case PredOf(p, Nothing) => printName(p) + "()"
+    case PredOf(p, Nothing) => printName(p)
     case PredOf(p, arg) => printName(p) + "(" + pp(q++PosInExpr(0::Nil), arg) + ")"
+    case p@UnitPredicational(_, AnyArg) => printName(p).toUpperCase
     case p@UnitPredicational(_, s) => printName(p) + printSpace(s)
     case _ => super.pp(q, fml)
   })
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
-    case FuncOf(f, Nothing) => printName(f) + "()"
+    case FuncOf(f, Nothing) => printName(f)
     case FuncOf(f, arg) => printName(f) + "(" + pp(q++PosInExpr(0::Nil), arg) + ")"
     case v: BaseVariable => printName(v)
     case v: DifferentialSymbol => printName(v.x) + "'"
+    case f@UnitFunctional(_, AnyArg, _) => printName(f).toUpperCase
     case f@UnitFunctional(_, s, _) => printName(f) + printSpace(s)
     case t: Power =>
       wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE"

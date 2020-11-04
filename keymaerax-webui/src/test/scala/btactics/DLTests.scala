@@ -718,8 +718,9 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
   }
 
-  it should "not introduce self-assignment ghosts in the middle of formulas when bound" in withTactics {
-    a [BelleThrowable] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
+  it should "introduce self-assignment ghosts in the middle of formulas when bound" in withTactics {
+    proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [x:=x+1;][x:=x;][{x'=2}]x>0".asSequent
   }
 //
 //  ignore should "introduce ghosts in modality predicates" in {

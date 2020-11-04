@@ -11,11 +11,10 @@ import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
-import org.apache.logging.log4j.scala.Logging
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -331,7 +330,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
           executor.remove(taskId)
           throw ex
         case ex: ToolCriticalException =>
-          logger.warn(ex)
+          logger.warn(ex.getMessage, ex)
           executor.remove(taskId, force = true)
           try {
             restart()
@@ -525,7 +524,7 @@ class WolframScript extends MathematicaLink with Logging {
           executor.remove(taskId)
           throw ex
         case ex: ToolExternalException =>
-          logger.warn(ex)
+          logger.warn(ex.getMessage, ex)
           executor.remove(taskId, force = true)
           try {
             restart()

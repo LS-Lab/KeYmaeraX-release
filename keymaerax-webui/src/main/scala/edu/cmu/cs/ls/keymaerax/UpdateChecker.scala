@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax
 
 import java.net.{SocketTimeoutException, URL}
 
-import org.apache.logging.log4j.scala.Logging
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 

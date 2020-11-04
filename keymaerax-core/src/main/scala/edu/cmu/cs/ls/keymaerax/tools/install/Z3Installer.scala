@@ -8,8 +8,7 @@ import java.io.{File, FileOutputStream, InputStream, PrintWriter}
 import java.nio.channels.Channels
 import java.util.Locale
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 /**
   * Installs and/or updates the Z3 binary in the KeYmaera X directory.

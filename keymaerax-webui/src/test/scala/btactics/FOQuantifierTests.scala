@@ -275,7 +275,7 @@ class FOQuantifierTests extends TacticTestBase {
     // todo: this is hard and/or impossible since cannot "invent" an old name for y
   }
 
-  "exists generalize" should "only generalize the specified occurrences of t" in withTactics {
+  "restricted exists generalize" should "only generalize the specified occurrences of t" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-1))
     result.subgoals.loneElement shouldBe "\\exists z z=a+b ==> ".asSequent
@@ -290,6 +290,44 @@ class FOQuantifierTests extends TacticTestBase {
   it should "reject positions that refer to different terms" in withTactics {
     a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("a+b=a+c".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(-1))
+  }
+
+  "exists generalize" should "introduce a new existential quantifier" in withTactics {
+    val result = proveBy("\\forall x x^2 >= -f()^2 ==>".asSequent,
+      existsGen(Some(Variable("z")), FuncOf(Function("f", None, Unit, Real), Nothing))(-1))
+    result.subgoals.loneElement shouldBe "\\exists z \\forall x x^2 >= -z^2 ==>".asSequent
+  }
+
+  it should "introduce a new existential quantifier in context" in withTactics {
+    val result = proveBy("a=2 -> [x:=3;]\\forall x x^2 >= -f()^2 ==>".asSequent,
+      existsGen(Some(Variable("z")), FuncOf(Function("f", None, Unit, Real), Nothing))(-1, 1::1::Nil))
+    result.subgoals.loneElement shouldBe "a=2 -> [x:=3;]\\exists z \\forall x x^2 >= -z^2 ==>".asSequent
+  }
+
+  it should "introduce a new existential quantifier in context before an ODE" in withTactics {
+    val result = proveBy("a=2 -> [x:=3;][{x'=5}]x>0 ==>".asSequent,
+      existsGen(Some(Variable("x")), Variable("x"))(-1, 1::1::Nil))
+    result.subgoals.loneElement shouldBe "a=2 -> [x:=3;]\\exists x [{x'=5}]x>0 ==>".asSequent
+  }
+
+  it should "generalize terms" in withTactics {
+    val result = proveBy("\\forall x x^2 >= -(y+5)^2 ==>".asSequent, existsGen(Some(Variable("z")), "y+5".asTerm)(-1))
+    result.subgoals.loneElement shouldBe "\\exists z \\forall x x^2 >= -z^2 ==>".asSequent
+  }
+
+  it should "generalize only free occurrences" in withTactics {
+    val result = proveBy("(\\forall x x>5) & x<2 ==>".asSequent, existsGen(Some(Variable("z")), "x".asTerm)(-1))
+    result.subgoals.loneElement shouldBe "\\exists z ((\\forall x x>5) & z<2) ==>".asSequent
+  }
+
+  it should "pick a name when generalizing only free occurrences" in withTactics {
+    val result = proveBy("(\\forall x x>5) & x<2 ==>".asSequent, existsGen(None, "x".asTerm)(-1))
+    result.subgoals.loneElement shouldBe "\\exists x_0 ((\\forall x x>5) & x_0<2) ==>".asSequent
+  }
+
+  it should "not auto-generate names that overlap with bound variables and cause clashes" in withTactics {
+    proveBy("B()<=2 -> \\forall B B()<=2 ==>".asSequent, existsGen(None, "B()".asTerm)(-1)).
+      subgoals.loneElement shouldBe "\\exists B_0 (B_0<=2 -> \\forall B B_0<=2) ==>".asSequent
   }
 
   "all generalize" should "introduce a new universal quantifier" in withTactics {

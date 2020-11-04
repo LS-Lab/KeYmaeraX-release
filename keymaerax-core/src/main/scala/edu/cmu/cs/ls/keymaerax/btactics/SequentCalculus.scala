@@ -112,7 +112,7 @@ trait SequentCalculus {
     *   G, a, G', b, G'' |- D
     * }}}
     */
-  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
+  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = PropositionalTactics.andLi(pos1, pos2, keepLeft)
   val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
@@ -299,19 +299,19 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** all left implicit / universal monotonicity: instantiate a universal quantifier in the antecedent by something satisfying a characteristic property `q(x)` */
-  @Tactic("∀Li",
+  /** Universal monotonicity in antecedent: replace `p(x)` with a characteristic property `q(x)`. */
+  @Tactic("M∀L",
     inputs = "q(x):formula",
-    premises = "Γ, q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
+    premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
     conclusion = "Γ, ∀x p(x) |- Δ")
-  def allLimplicit(q: Formula)             : DependentPositionWithAppliedInputTactic =
+  def allLmon(q: Formula)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
       //@todo faster implementation uses derived axiom Ax.existsDistElim
-      case Some(Forall(x, p)) => cutL(Forall(x, q))(pos) <(
-        allL(pos),
-        useAt(Ax.allDistElim)('Rlast) & allR('Rlast) & implyR('Rlast)
+      case Some(Forall(x, _)) => cutL(Forall(x, q))(pos) <(
+        label(BelleLabels.cutUse),
+        useAt(Ax.allDistElim)('Rlast) & allR('Rlast) & implyR('Rlast) & label(BelleLabels.cutShow)
       )
-      case Some(e) => throw new TacticInapplicableFailure("allLimplicit only applicable to universal quantifiers on the right, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("allLim only applicable to universal quantifiers on the right, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     }
@@ -337,6 +337,12 @@ trait SequentCalculus {
     premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
   val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
+  @Tactic("∃Li",
+    inputs = "f:term;;x[x]:option[variable]",
+    premises = "Γ, ∃x p(f(x)) |- Δ",
+    conclusion = "Γ, p(f(y)) |- Δ", displayLevel = "browse")
+  def existsLi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.existsGen(x, t)(_: Position) }
+
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
@@ -357,21 +363,20 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** exists right implicit / existential monotonicity: instantiate an existential quantifier in the succedent by something satisfying a characteristic property `q(x)` */
-  @Tactic("∃Ri",
+  /** Existential monotonicity in succedent: replace `p(x)` with a characteristic property `q(x)`. */
+  @Tactic("M∃R",
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
-  def existsRimplicit(q: Formula)             : DependentPositionWithAppliedInputTactic =
+  def existsRmon(q: Formula)             : DependentPositionWithAppliedInputTactic =
     inputanon{ (pos: Position, seq: Sequent) => seq.sub(pos) match {
-        //@todo faster implementation uses derived axiom Ax.existsDistElim
-      case Some(Exists(x, p)) => cutR(Exists(x, q))(pos) <(
-        label(BelleLabels.cutShow),
+      case Some(Exists(x, _)) => cutR(Exists(x, q))(pos) <(
+        label(BelleLabels.cutUse),
         // Implementation 1: implyR(pos) & existsL('Llast) & existsR(pos)
         // Implementation 2:
-        useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(1)
+        useAt(Ax.existsDistElim)(pos) & allR(pos) & implyR(pos) & label(BelleLabels.cutShow)
       )
-      case Some(e) => throw new TacticInapplicableFailure("existsRimplicit only applicable to existential quantifiers on the right, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("existsRim only applicable to existential quantifiers on the right, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     }
@@ -481,11 +486,13 @@ trait SequentCalculus {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
-        val fmls = s.ante.intersect(s.succ)
-        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
-        closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+        s.ante.intersect(s.succ).headOption match {
+          case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+          case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
+        }
     }
   }
+
   // alternative implementation
   /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search

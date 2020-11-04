@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
 

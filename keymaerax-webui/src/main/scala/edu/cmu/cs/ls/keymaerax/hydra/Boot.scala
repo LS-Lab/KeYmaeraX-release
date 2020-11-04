@@ -9,10 +9,9 @@ import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.launcher.{KeYmaeraX, LoadingDialogFactory, SystemWebBrowser}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
@@ -35,6 +34,8 @@ import scala.language.postfixOps
 object NonSSLBoot extends App with Logging {
   assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
+
+  Configuration.setConfiguration(FileConfiguration)
 
   //Initialize all tools.
   val url = HyDRAInitializer(args, HyDRAServerConfig.database)
@@ -98,10 +99,12 @@ object SSLBoot extends App with Logging {
   assert(System.getenv("HyDRA_SSL").equals("on"),
     s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently set to ${System.getenv("HyDRA_SSL")}")
 
+  Configuration.setConfiguration(FileConfiguration)
+
   //Initialize all tools.
   HyDRAInitializer(args, HyDRAServerConfig.database)
 
-  assert(Configuration.get[String](Configuration.Keys.JKS).isDefined,
+  assert(Configuration.getString(Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
   if (HyDRAServerConfig.host != "0.0.0.0")
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
@@ -182,8 +185,8 @@ object HyDRAInitializer extends Logging {
     options.get('open) match {
       case None => "" //@note start with model list
       case Some(archive) =>
-        if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
-          Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+        if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.getString(Configuration.Keys.DEFAULT_USER) match {
             case None =>
               logger.warn("Unable to import archive: no default user configured")
               ""
@@ -222,7 +225,7 @@ object HyDRAInitializer extends Logging {
   }
 
   private def preferredToolFromConfig: String = {
-    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
+    Configuration.getString(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 }
 

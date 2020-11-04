@@ -7,11 +7,10 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Nil
 

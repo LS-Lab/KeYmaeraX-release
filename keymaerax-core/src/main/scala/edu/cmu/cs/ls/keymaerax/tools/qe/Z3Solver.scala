@@ -9,10 +9,9 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io._
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -91,13 +90,10 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
         throw SMTQeException("Error executing Z3, exit value " + exitVal)
       }
     } catch {
-      case ex: TimeoutException =>
-        p.destroy()
-        throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
-      case ex: InterruptedException =>
-        p.destroy
-        throw ToolCommunicationException(s"Z3 interrupted", ex)
+      case ex: TimeoutException => throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
+      case ex: InterruptedException => throw ToolCommunicationException(s"Z3 interrupted", ex)
     } finally {
+      p.destroy
       z3Process = None
     }
   }

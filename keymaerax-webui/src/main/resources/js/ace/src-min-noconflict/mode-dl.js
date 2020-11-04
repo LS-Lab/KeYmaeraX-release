@@ -294,7 +294,6 @@ var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
 var DLHighlightRules = require("./dl_highlight_rules").DLHighlightRules;
 var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
-var WorkerClient = require("../worker/worker_client").WorkerClient;
 var CstyleBehaviour = require("./behaviour/cstyle").CstyleBehaviour;
 var CStyleFoldMode = require("./folding/cstyle").FoldMode;
 
@@ -342,54 +341,12 @@ oop.inherits(Mode, TextMode);
         this.$outdent.autoOutdent(doc, row);
     };
 
-    this.createWorker = function(session) {
-        var worker = new WorkerClient(["ace"], "ace/mode/dl_worker", "DLWorker");
-        worker.attachToDocument(session.getDocument());
-
-//        worker.on("errors", function(e) {
-//            session.setAnnotations(e.data);
-//        });
-
-        worker.on("annotate", function(results) {
-            session.setAnnotations(results.data);
-        });
-
-        worker.on("terminate", function() {
-            session.clearAnnotations();
-        });
-
-        return worker;
-    };
-
     this.$id = "ace/mode/dl";
 }).call(Mode.prototype);
 
 exports.Mode = Mode;
 });
 
-/*
-ace.define("ace/mode/dl",["require","exports","module","ace/lib/oop","ace/mode/dl_highlight_rules"], function(require, exports, module) {
-"use strict";
-
-var oop = require("../lib/oop");
-var DLHighlightRules = require("./dl_highlight_rules").DLHighlightRules;
-
-var Mode = function() {
-    this.HighlightRules = DLHighlightRules;
-};
-//oop.inherits(Mode);
-
-(function() {
-    this.createWorker = function(session) {
-        return null;
-    };
-
-    this.$id = "ace/mode/dl";
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
-});
-*/
 (function() {
     ace.require(["ace/mode/dl"], function(m) {
         if (typeof module == "object" && typeof exports == "object" && module) {

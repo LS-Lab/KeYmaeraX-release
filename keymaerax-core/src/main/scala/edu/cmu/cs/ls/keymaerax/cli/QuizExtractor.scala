@@ -5,9 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyOfArtifact, ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyOfArtifact, ArchiveArtifact, Artifact, ExpressionArtifact, ListExpressionArtifact, SequentArtifact, SubstitutionArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.core.{And, Equal, False, Less, LessEqual, Neg, Number, Or, True, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.UnificationSubstitutionParser
 
 import scala.util.Try
 import scala.util.matching.Regex
@@ -146,11 +147,15 @@ object QuizExtractor {
             Try(BelleParser(s)).toOption match {
               case Some(t) => TacticArtifact(s, t)
               case None =>
-                val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
-                val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
-                val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
-                if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
-                else ExpressionArtifact(s)
+                if (s.contains("~>")) {
+                  SubstitutionArtifact(UnificationSubstitutionParser.parseSubstitutionPairs(s))
+                } else {
+                  val commaMatches = EXPR_LIST_SPLITTER.findAllMatchIn(s).filter(_.group(1) != null)
+                  val indices = (-1 +: commaMatches.map(_.start).toList :+ s.length).sliding(2).toList
+                  val exprStrings = indices.map({ case i :: j :: Nil => s.substring(i+1,j) })
+                  if (exprStrings.size > 1) ListExpressionArtifact(exprStrings.map(_.asExpr))
+                  else ExpressionArtifact(s)
+                }
             }
         }
       }

@@ -22,7 +22,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
@@ -30,7 +30,6 @@ import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
@@ -303,7 +302,7 @@ class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String])
     "key" -> JsString("userId"),
     "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
-    "askUseDefaultUser" -> (if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
+    "askUseDefaultUser" -> (if (Configuration.getString(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
     "type" -> JsString("LoginResponse")
   )
 }
@@ -313,7 +312,7 @@ case class CreatedIdResponse(id: String) extends Response {
 }
 
 class PossibleAttackResponse(val msg: String) extends Response with Logging {
-  logger.fatal(s"POSSIBLE ATTACK: $msg")
+  logger.error(s"POSSIBLE ATTACK: $msg")
   override def getJson: JsValue = new ErrorResponse(msg).getJson
 }
 
@@ -702,7 +701,7 @@ object Helpers {
     if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
 
   private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
-    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None).nonEmpty
+    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None, Nil).nonEmpty
     val parent = if (q.pos.isEmpty) None else topExpr match {
       case t: Term => t.sub(q.parent)
       case f: Formula => f.sub(q.parent)
@@ -945,7 +944,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   }
 
   private def helpJson(codeName: String): JsString = {
-    val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/$codeName.html")
+    val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/$codeName-help.html")
     if (helpResource == null) JsString("")
     else JsString(scala.io.Source.fromInputStream(helpResource)(scala.io.Codec.UTF8).mkString)
   }
@@ -1118,7 +1117,9 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         }
 
         override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-          case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+          case PredOf(fn, _) =>
+            if (cex.contains(fn)) Right(cex(fn).asInstanceOf[Formula])
+            else Left(None)
           case _ => Left(None)
         }
       }, fml).get

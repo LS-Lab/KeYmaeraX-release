@@ -3,8 +3,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, UnificationMatch}
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -17,97 +15,48 @@ object StringConverter {
   implicit def StringToStringConverter(s: String): StringConverter = new StringConverter(s)
 }
 
+/** Conversions of string `s` to core/tactic data structures. */
 class StringConverter(val s: String) {
+  /** Converts to an expression. */
   def asExpr: Expression = Parser(s)
 
+  /** Converts to a term. */
   def asTerm: Term = Parser.parser.termParser(s)
 
+  /** Converts to a named symbol. */
   def asNamedSymbol: NamedSymbol = Parser(s) match {
     case ns: NamedSymbol => ns
     case _ => throw new IllegalArgumentException("Input " + s + " is not a named symbol")
   }
 
+  /** Converts to a variable. */
   def asVariable: Variable = Parser.parser.termParser(s) match {
     case v: Variable => v
     case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
   }
 
+  /** Converts to a function symbol (elaborates variables). */
   def asFunction: Function = Parser.parser.termParser(s) match {
     case v: Variable  => Function(v.name, v.index, Unit, Real, interpreted=false)
     case FuncOf(f, _) => f
     case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
   }
 
+  /** Converts to a formula. */
   def asFormula: Formula = Parser.parser.formulaParser(s)
 
+  /** Converts to a program or game. */
   def asProgram: Program = Parser.parser.programParser(s)
 
+  /** Converts to a differential program. */
   def asDifferentialProgram: DifferentialProgram = Parser.parser.differentialProgramParser(s)
 
-  def asTactic : BelleExpr = BelleParser(s)
+  /** Converts to a tactic. */
+  def asTactic: BelleExpr = BelleParser(s)
 
-  //If a split failed to parse, merge it with the next formula and try again because it might have been split incorrectly
-  //e.g. max((a,b)) would be incorrectly split
-  private def smartFmlSplit(acc:String,ls:List[String]) : List[Formula] = {
-    ls match {
-      case Nil =>
-        if (acc!="")
-          List(Parser.parser.formulaParser(acc))
-        else
-          Nil
-      case l::lss =>
-        if (l == "") smartFmlSplit(acc,lss)
-        else {
-          try {
-            Parser.parser.formulaParser(acc + l) :: smartFmlSplit("", lss)
-          } catch {
-            case _: ParseException => smartFmlSplit(acc + l + ",", lss)
-          }
-        }
-    }
-  }
+  /** Converts to a sequent. */
+  def asSequent: Sequent = SequentParser.parseSequent(s)
 
-  def asSequent: Sequent = {
-    val splitter = ",(?![^{]*})"
-    val turnStileIdx = s.indexOf(TURNSTILE.img)
-    val ante::succ::Nil =
-      if (turnStileIdx >= 0) {
-        val (ante, succ) = s.splitAt(turnStileIdx)
-        List(
-          ante.trim.split(splitter).filter(_.nonEmpty).toList,
-          succ.trim.stripPrefix(TURNSTILE.img).trim.split(splitter).filter(_.nonEmpty).toList)
-      } else throw new IllegalArgumentException("String " + s + " is not a sequent (must contain turnstile ==>)")
-    Sequent(
-      smartFmlSplit("",ante).toIndexedSeq,
-      smartFmlSplit("",succ).toIndexedSeq
-    )
-  }
-
-  /** Converts a string `what ~> repl` or `(what ~> repl)` into a substitution pair. */
-  def asSubstitutionPair: SubstitutionPair = {
-    //@note workaround for unification messing up indices when 0-based
-    def incrementer(increment: Int) = new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case DotTerm(s, Some(i)) => Right(DotTerm(s, Some(i+increment)))
-        case _ => Left(None)
-      }
-    }
-    def incrementDotIdxs(x: Expression, increment: Int): Expression = x match {
-      case f: Formula => ExpressionTraversal.traverse(incrementer(increment), f).get
-      case t: Term => ExpressionTraversal.traverse(incrementer(increment), t).get
-      case p: Program => ExpressionTraversal.traverse(incrementer(increment), p).get
-    }
-
-    val exprs =
-      if (s.startsWith("(") && s.endsWith(")")) s.stripPrefix("(").stripSuffix(")").split("~>")
-      else s.split("~>")
-    assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
-    val repl = Parser(exprs(1))
-    val what =
-      if (repl.kind == FormulaKind) Parser.parser.formulaParser(exprs(0))
-      else if (repl.kind == TermKind) Parser.parser.termParser(exprs(0))
-      else Parser.parser.programParser(exprs(0))
-    val result = UnificationMatch(incrementDotIdxs(what, 1), incrementDotIdxs(repl, 1)).usubst.subsDefsInput.head
-    result.copy(what = incrementDotIdxs(result.what, -1), repl = incrementDotIdxs(result.repl, -1))
-  }
+  /** Converts to a substitution pair. */
+  def asSubstitutionPair: SubstitutionPair = UnificationSubstitutionParser.parseSubstitutionPair(s)
 }

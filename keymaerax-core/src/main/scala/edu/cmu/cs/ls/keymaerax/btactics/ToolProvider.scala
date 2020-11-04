@@ -4,12 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
 import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
-import org.apache.logging.log4j.scala.Logging
-
 
 /** Central repository providing access to arithmetic tools.
   * @note Never keep references to the tools, the tool provider may decide to shutdown/switch out tools and thereby

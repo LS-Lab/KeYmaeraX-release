@@ -10,14 +10,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.apache.logging.log4j.scala.Logging
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -82,7 +81,7 @@ private object DifferentialTactics extends Logging {
             ODESystem(AtomicODE(xp, t), h),
             Box(Assign(xp, t), p)
           )
-        case _ => logger.fatal("Unsure how to predict DE outcome for " + fml); ???
+        case _ => logger.error("Unsure how to predict DE outcome for " + fml); ???
       }
     }
 
@@ -561,7 +560,7 @@ private object DifferentialTactics extends Logging {
           )
         }
 
-        if (!singular.isEmpty)
+        if (singular.nonEmpty)
           throw new IllFormedTacticApplicationException("Possible singularities during DG(" + ghost + ") will be rejected: " +
             singular.mkString(",") + " in\n" + sequent.prettyString +
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
@@ -611,7 +610,7 @@ private object DifferentialTactics extends Logging {
   /** [[DifferentialEquationCalculus.dG]] */
   private[btactics] def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = anon (
       (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-        case Some(Box(ODESystem(_, h), _)) =>
+        case Some(Box(ODESystem(_, h), p)) =>
           val (_, a: Term, b: Term) = try {
             DifferentialHelper.parseGhost(ghost)
           } catch {
@@ -636,7 +635,11 @@ private object DifferentialTactics extends Logging {
           } else skip
           val doGhost = r match {
             case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
-              DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
+              DG(ghost)(pos) & (DW(pos ++ PosInExpr(0::Nil)) & transform(rr)(pos ++ PosInExpr(0::1::Nil)) | DebuggingTactics.error(
+                "Formula\n  " + rr.prettyString + "\ndoes not imply postcondition\n  " + p.prettyString +
+                  "\nor necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in\n",
+                new BelleUserCorrectableException(_) {}
+              ))
             case _ => DG(ghost)(pos) //@note no r or r==p
           }
           cutSingularities & doGhost
@@ -1263,7 +1266,7 @@ private object DifferentialTactics extends Logging {
             cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
               // Some additional cases
               //(solve(pos) & ?(timeoutQE)) |
-              doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
+              doIfElse((_: ProvableSig) => Configuration.getBoolean(Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
                 ODEInvariance.dRI(pos) |
                 invCheck(
                   //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants

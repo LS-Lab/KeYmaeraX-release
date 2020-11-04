@@ -4,11 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core.Provable
 import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable

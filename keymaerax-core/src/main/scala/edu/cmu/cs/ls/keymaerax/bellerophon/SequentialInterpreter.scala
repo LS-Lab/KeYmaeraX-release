@@ -6,14 +6,14 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.util.concurrent.{CancellationException, ExecutionException}
 
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,9 +33,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
   extends Interpreter with Logging {
   var isDead: Boolean = false
 
+  override def start(): Unit = isDead = false
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
-      //@todo kill the running tactic (cancel QE), here or in kill
+      //ToolProvider.tools().foreach(_.cancel()) //@todo breaks TimeoutAlternatives+Mathematica
       //@note end executing the interpreter when its thread gets interrupted
       throw new BelleAbort("Killed", "Execution stopped by killing the interpreter or interrupting the interpreter thread")
     }
@@ -59,7 +61,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         throw err
       case e: StackOverflowError =>
         // unable to recover, listeners are likely corrupted
-        logger.fatal("Fatal error: stack overflow, please restart KeYmaera X with increased stack size")
+        logger.error("Fatal error: stack overflow, please restart KeYmaera X with increased stack size")
         throw new ProverSetupException("Fatal error: stack overflow, please restart KeYmaera X with increased stack size", e)
       case e: Throwable =>
         listeners.foreach(_.end(v, expr, Right(e)))
@@ -203,7 +205,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     }
 
     case subst: InputTactic if subst.name == "US" =>
-      val substs = collection.immutable.Seq(subst.inputs.map(_.asInstanceOf[SubstitutionPair]).map(sp => sp.what -> sp.repl):_*)
+      val substs = collection.immutable.Seq(subst.inputs.head.asInstanceOf[List[SubstitutionPair]].map(sp => sp.what -> sp.repl):_*)
       apply(subst.computeExpr(), v) match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ RenUSubst(substs).usubst)
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, RenUSubst(substs).usubst)

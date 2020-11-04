@@ -159,10 +159,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
                   |End.
                 """.stripMargin
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """3:1 Unexpected token in function definition
+      """3:1 Unexpected token in definition
         |Found:    End at 3:1 to 3:3
-        |Expected: =
-        |      or: ;""".stripMargin
+        |Expected: ;
+        |      or: <FollowsExpression>""".stripMargin
   }
 
   it should "report useful message on missing semicolon in program definitions" in {
@@ -558,18 +558,17 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:21 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
-        |Found:    3>2) at 1:21 to 1:24
+      """1:20 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
+        |Found:    (3>2) at 1:20 to 1:24
         |Expected: Term""".stripMargin
   }
 
   it should "complain about non-delimited definitions" in {
     val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:20 Unmatched opening parenthesis in function definition
-        |unmatched: LPAREN$ at 1:20--1:21
-        |Found:    NUM(3) at 1:20 to 1:21
-        |Expected: )""".stripMargin
+      """1:26 Unexpected token in definition
+        |Found:    End at 1:26 to 1:28
+        |Expected: """.stripMargin
   }
 
   it should "populate easy ODE annotations" in {
@@ -594,6 +593,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     inSequence {
       (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
       (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once
+    }
+    Parser.parser.setAnnotationListener(listener)
+    Parser(input)
+  }
+
+  it should "bind annotations strongest" in {
+    val input = "x>=3 -> [x:=2; ++ x:=3; {x'=1}@invariant(x>=2)]x>=0"
+    val listener = mock[(Program, Formula) => Unit]
+    inSequence {
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
     }
     Parser.parser.setAnnotationListener(listener)
     Parser(input)

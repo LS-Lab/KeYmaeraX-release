@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -12,36 +12,37 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.Logging
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
-  private[bellerophon] def flattenArgs[T](args: Seq[T]): Seq[T] = {
-    args.flatMap{case arg: List[T] => flattenArgs(arg) case arg => Seq(arg) }
-  }
+
   // Don't persist generator arguments
   private[bellerophon] def persistable[T](args: Seq[T]): Seq[T] = {
-    val filtered = args.filter{case (_: Generator[_]) => false case _ => true}
-    flattenArgs(filtered)
+    args.filter{case _: Generator[_] => false case _ => true}
   }
 
   private[bellerophon] def prettyArgs(inputs: Seq[Any]): String = {
-    persistable(inputs).flatMap(printOne) match {
+    persistable(inputs).flatMap(printOne(_, inputs.size <= 1)) match {
       case Nil => ""
       case args => "(" + args.mkString(",") + ")"
     }
   }
 
-  @tailrec private[bellerophon] def printOne(x: Any): Option[String] = {
+  private[bellerophon] def printOne(x: Any, listAsVarArgs: Boolean): Option[String] = {
     x match {
       case None => None
-      case Some(y) => printOne(y)
+      case Some(y) => printOne(y, listAsVarArgs)
       case input: Expression => Some("\"" + input.prettyString + "\"")
       case input: USubst => Some(input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(","))
       case input: SubstitutionPair => Some("\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\"")
       case input: String => Some("\"" + input + "\"")
+      case (head: Expression)::Nil => Some("\"" + head.prettyString + "\"")
+      case (head: Expression)::tail =>
+        if (listAsVarArgs) Some((head :: tail).map(printOne(_, listAsVarArgs)).mkString(","))
+        else Some("\"" + (head :: tail).map(_.asInstanceOf[Expression].prettyString).mkString("::") + "::nil\"")
       case input => Some("\"" + input.toString + "\"")
     }
   }
@@ -556,7 +557,7 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
  * @param name The name of the tactic.
  * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
-abstract case class DependentTactic(name: String) extends NamedBelleExpr with Logging {
+abstract case class DependentTactic(name: String) extends NamedBelleExpr {
   def computeExpr(provable: ProvableSig): BelleExpr = throw new NotImplementedError
   def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
@@ -618,7 +619,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
     if (pt.inputs.nonEmpty) {
-      val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne)
+      val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne(_, pt.inputs.size <= 1))
       s"${pt.name}(${each.mkString(", ")}, ${locator.prettyString})"
     } else pt.name + "(" + locator.prettyString + ")"
 

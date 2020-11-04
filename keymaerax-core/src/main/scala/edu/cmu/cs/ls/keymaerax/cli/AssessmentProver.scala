@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{BufferedOutputStream, BufferedWriter, File, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
+import java.util.concurrent.TimeoutException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
@@ -142,6 +143,9 @@ object AssessmentProver {
   case class ArchiveArtifact(s: String) extends Artifact {
     lazy val entries: List[ParsedArchiveEntry] = ArchiveParser.parse(s, parseTactics=true)
     override def hintString: String = "Archive"
+  }
+  case class SubstitutionArtifact(s: List[SubstitutionPair]) extends Artifact {
+    override def hintString: String = "Uniform substitution"
   }
   case class ChoiceArtifact(selected: List[String]) extends Artifact {
     override def hintString: String = "Choice"
@@ -468,6 +472,8 @@ object AssessmentProver {
                 case h: ExpressionArtifact => runBelleProof(q, h.exprString :: Nil)
                 case ListExpressionArtifact(hs) => runBelleProof(q, hs.map(_.prettyString))
                 case SequentArtifact(goals) => runBelleProof(q, goals.map(_.toFormula).map(_.prettyString))
+                case SubstitutionArtifact(s) => runBelleProof(q, s.map(sp => sp.what.prettyString + "~>" + sp.repl.prettyString).
+                  mkString("", "::", "::nil") :: Nil)
                 case _ => Right("Answer must a a KeYmaera X expression or list of expressions, but got " + have.longHintString)
               }
             case None =>
@@ -639,6 +645,7 @@ object AssessmentProver {
       case Failure(BelleUnfinished(msg, _)) => Right(msg)
       case Failure(ex: BelleUserCorrectableException) => Right(ex.getMessage)
       case Failure(ex: TacticInapplicableFailure) if ex.getMessage.startsWith("QE with Z3 gives UNKNOWN") => Right(Messages.INSPECT)
+      case Failure(_: TimeoutException) => Right(Messages.INSPECT)
       case Failure(_) => Right(failHint.getOrElse(""))
     }
   }
@@ -1275,7 +1282,8 @@ object AssessmentProver {
             case Some(g) =>
               val (gr, args) = QuizExtractor.AskQuestion.graderInfoFromString(g.method)
               toExpectedArtifact(p) match {
-                case (Some(expected), a) => AskGrader(Some(gr), args ++ a, expected)
+                case (Some(expected), a) =>
+                  AskGrader(Some(gr), args ++ a.filter({ case (k, _) => !args.keySet.contains(k) }), expected)
                 case (None, _) => SkipGrader(null, Messages.INSPECT)
               }
             case None =>
@@ -1361,9 +1369,12 @@ object AssessmentProver {
   }
 
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
-    val scoreFields = grades.map({ case (problem, _, pg) =>
-      (problem.rank + ": " + problem.title + " (" + problem.points + " pts)") -> JsNumber(pg.map(_._2).sum) })
-    val jsonGrades = JsObject("scores" -> JsObject(scoreFields:_*))
+    val problemFields = grades.map({ case (problem, _, _) => problem.title -> JsNumber(problem.points) })
+    val scoreFields = grades.map({ case (problem, _, pg) => problem.title -> JsNumber(pg.map(_._2).sum) })
+    val jsonGrades = JsObject(
+      "problems" -> JsObject(problemFields:_*),
+      "scores" -> JsObject(scoreFields:_*)
+    )
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }
 
