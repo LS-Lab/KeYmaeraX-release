@@ -38,6 +38,20 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.close = function() { $uibModalInstance.close(); };
 
+     $scope.aceLoaded = function(editor) {
+       editor.focus();
+     }
+
+     $scope.aceChanged = function(e) {
+       var content = e[0];
+       var editor = e[1];
+       if (content.id == 1) {
+         // first edit (id==1) inserts the initial template text; move cursor to beginning of comment and select
+         editor.moveCursorTo(3, 2);
+         editor.getSelection().setSelectionRange(new ace.Range(3, 2, 3, 31), true);
+       }
+     }
+
      var upload = function(url, content, startProof) {
        spinnerService.show('caseStudyImportSpinner');
        $http.post(url, content)
