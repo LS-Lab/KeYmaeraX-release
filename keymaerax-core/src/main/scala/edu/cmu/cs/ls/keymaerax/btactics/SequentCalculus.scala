@@ -8,10 +8,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.useAt
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, useAt}
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -490,6 +490,97 @@ trait SequentCalculus {
           case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
           case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
         }
+    }
+  }
+
+  @Tactic(premises = "*",
+    conclusion = "Γ, x=y, P(x) |- P(y), Δ")
+  val idx: DependentTactic = new DependentTactic("idx") {
+    override def computeExpr(v : BelleValue): BelleExpr = v match {
+      case BelleProvable(provable, _) =>
+        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+        val s = provable.subgoals.head
+        s.ante.intersect(s.succ).headOption match {
+          case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+          case None =>
+            if (s.ante.exists({ case _: Equal => true case _ => false })) SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id
+            else throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
+        }
+    }
+  }
+
+  /** Alpha renaming of `what` to `to` at a specific position. Variable `to` must not occur free at the applied position.
+    * @example{{{
+    *   x=y |- [{y'=y}]y>=0      x=y |- [{x'=x}]x>=0, x=y
+    *   ------------------------------------------------- alphaRen("x","y",1)
+    *   x=y |- [{x'=x}]x>=0
+    * }}}
+    */
+  @Tactic("α-ren", longDisplayName = "Alpha Rename", conclusion = "Γ |- P(x), Δ", premises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y")
+  def alphaRen(what: Variable, to: Variable): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
+    if (!pos.isTopLevel) throw new TacticInapplicableFailure("Alpha renaming only applicable at top-level")
+    seq.sub(pos) match {
+      case Some(where: Formula) =>
+        if (pos.isAnte) {
+          cutL(And(Equal(what, to), Box(Assign(what, what), where)))(pos) <(
+            existsLi(what, Some(what))(pos) &
+            useAt(Ax.assignbequalityexists, PosInExpr(1::Nil))(pos) &
+            ProofRuleTactics.boundRenameAt(to)(pos ++ PosInExpr(1::Nil)) &
+            HilbertCalculus.assignb(pos)*2
+            ,
+            implyR('Rlast) & andR('Rlast) <(
+              Idioms.nil,
+              HilbertCalculus.assignb('Rlast) & id
+            )
+          )
+        } else {
+          cutR(Imply(Equal(what, to), Box(Assign(what, what), where)))(pos) <(
+            allRi(what, Some(what))(pos) &
+            useAt(Ax.assignbeq, PosInExpr(1::Nil))(pos) &
+            ProofRuleTactics.boundRenameAt(to)(pos ++ PosInExpr(1::Nil)) &
+            HilbertCalculus.assignb(pos)*2
+            ,
+            implyR(pos) & implyL('Llast) <(
+              Idioms.nil,
+              HilbertCalculus.assignb('Llast) & id
+            )
+          )
+        }
+      case e => throw new TacticInapplicableFailure("Alpha renaming only applicable at formulas, but got " + e.map(_.prettyString))
+    }
+  }
+
+  /** Alpha renaming of `what` to `to` everywhere in the sequent. Formulas that have variable `to` occur free
+    * are excluded from the renaming.
+    * @example{{{
+    *   [y:=0;]y>=0 |- [{y'=y}]y>=0, [x:=y;]x=y      [x:=0;]x>=0 |- [{x'=x}]x>=0, x:=y;]x=y, x=y
+    *   ---------------------------------------------------------------------------------------- alphaRenAll("x","y",1)
+    *   [x:=0;]x>=0 |- [{x'=x}]x>=0, [x:=y;]x=y
+    * }}}
+    */
+  @Tactic("α-renall", longDisplayName = "Alpha Rename All", conclusion = "Γ(x) |- Δ(x)", premises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y")
+  def alphaRenAll(what: Variable, to: Variable): InputTactic = inputanon { (seq: Sequent) =>
+    val anteIdxs = seq.ante.indices.filter(i => {
+        val fv = StaticSemantics.freeVars(seq.ante(i))
+        fv.contains(what) && !fv.contains(to)
+      })
+    val succIdxs = seq.succ.indices.filter(i => {
+      val fv = StaticSemantics.freeVars(seq.succ(i))
+      fv.contains(what) && !fv.contains(to)
+    })
+    val anteRewrite = anteIdxs.map(i => alphaRen(what, to)(AntePos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
+    val succRewrite = succIdxs.map(i => alphaRen(what, to)(SuccPos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
+    if (seq.ante.contains(Equal(what, to))) anteRewrite & succRewrite
+    else cut(Equal(what, to)) <(anteRewrite & succRewrite & hideL('Llast, Equal(what, to)), Idioms.nil)
+  }
+
+  /** Alpha renaming everywhere in the sequent using an equality at a specific position in the antecedent. */
+  @Tactic("α-renallby", longDisplayName = "Alpha Rename All By Equality", conclusion = "Γ(x), x=y |- Δ(x)", premises = "Γ(y), x=y |- Δ(y)")
+  val alphaRenAllBy: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    if (!pos.isAnte) throw new TacticInapplicableFailure("Alpha renaming all by position must point to an equality of variabes in the antecedent")
+    seq(pos.top) match {
+      case Equal(l: Variable, r: Variable) => alphaRenAll(l, r)
+      case e => throw new TacticInapplicableFailure("Alpha renaming all by position only applicable to an equality of variables, but got " + e.prettyString)
     }
   }
 

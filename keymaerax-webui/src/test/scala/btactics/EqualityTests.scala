@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 
@@ -420,5 +421,55 @@ class EqualityTests extends TacticTestBase {
     val f = "[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(-- (100*x^4+y*x^3-x^2+x+c))/max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c))))*dbxy_+0&c>x&max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c)))>0}]dbxy_>0".asFormula
     (the [ProverException] thrownBy proveBy(f, EqualityTactics.expandAll)).getMessage should startWith
       "Unable to create dependent tactic 'CMonCongruence'"
+  }
+
+  "Alpha renaming" should "rename in ODEs in succedent" in withQE { _ =>
+    val result = proveBy("x=y, [{y'=y}]y>=0 ==> [{x'=x}]x>=0".asSequent, SequentCalculus.alphaRen("x".asVariable, "y".asVariable)(1))
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "x=y, [{y'=y}]y>=0 ==> [{y'=y}]y>=0".asSequent,
+      "x=y, [{y'=y}]y>=0 ==> [{x'=x}]x>=0, x=y".asSequent)
+  }
+
+  it should "rename in ODEs in antecedent" in withQE { _ =>
+    val result = proveBy("y=x, [{y'=y}]y>=0 ==> [{x'=x}]x>=0".asSequent, SequentCalculus.alphaRen("y".asVariable, "x".asVariable)(-2))
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "y=x, [{x'=x}]x>=0 ==> [{x'=x}]x>=0".asSequent,
+      "y=x, [{y'=y}]y>=0 ==> [{x'=x}]x>=0, y=x".asSequent)
+  }
+
+  "Alpha renaming all" should "rename in ODEs in succedent" in withQE { _ =>
+    val result = proveBy("x=y, [{y'=y}]y>=0 ==> [{x'=x}]x>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
+    result.subgoals.loneElement shouldBe "x=y, [{y'=y}]y>=0 ==> [{y'=y}]y>=0".asSequent
+  }
+
+  it should "rename in ODEs in antecedent" in withQE { _ =>
+    val result = proveBy("x=y, [{x'=x}]x>=0 ==> [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
+    result.subgoals.loneElement shouldBe "x=y, [{y'=y}]y>=0 ==> [{y'=y}]y>=0".asSequent
+  }
+
+  it should "rename everywhere" in withQE { _ =>
+    val result = proveBy("x=y, [{x'=x}]x>=0 ==> [{y'=y}]y>=0, x>=4, [z:=2;][x:=x+1;]x>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
+    result.subgoals.loneElement shouldBe "x=y, [{y'=y}]y>=0 ==> [{y'=y}]y>=0, y>=4, [z:=2;][y:=y+1;]y>=0".asSequent
+  }
+
+  it should "not rename in formulas with free occurrences of right-hand side" in withQE { _ =>
+    val result = proveBy("x=y, [{x'=x+y}]x>=0 ==> [{y'=y}]y>=0, x>=4, [z:=2;][x:=x+1;]\\exists y y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
+    //@todo want \\exists y y>=0: add another bound renaming to undo the variable flip
+    result.subgoals.loneElement shouldBe "x=y, [{x'=x+y}]x>=0 ==> [{y'=y}]y>=0, y>=4, [z:=2;][y:=y+1;]\\exists x x>=0".asSequent
+  }
+
+  it should "cut equality" in withQE { _ =>
+    proveBy("[{x'=x}]x>=0 ==> [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "[{y'=y}]y>=0 ==> [{y'=y}]y>=0".asSequent,
+      "[{x'=x}]x>=0 ==> [{y'=y}]y>=0, x=y".asSequent)
+    proveBy("[{x'=x}]x>=0, !x!=y ==> [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "[{y'=y}]y>=0, !x!=y ==> [{y'=y}]y>=0".asSequent,
+      "[{x'=x}]x>=0, !x!=y ==> [{y'=y}]y>=0, x=y".asSequent)
+    proveBy("[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "[{y'=y}]y>=0, ==> x!=y, [{y'=y}]y>=0".asSequent,
+      "[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0, x=y".asSequent)
   }
 }
