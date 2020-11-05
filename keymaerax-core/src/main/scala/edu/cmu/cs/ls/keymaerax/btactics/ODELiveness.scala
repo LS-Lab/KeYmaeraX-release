@@ -1719,7 +1719,7 @@ object ODELiveness {
   @Tactic(names="dV",
     codeName="dV",
     longDisplayName="Differential Variant",
-    premises=" Γ |- \\exists eps (eps() > 0 & [x'=f(x)&Q&!P] (P)' >= eps()), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
+    premises=" Γ |- \\exists eps (eps > 0 & [x'=f(x)&Q&!P] (P)' >= eps), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
     conclusion="Γ |- < x'=f(x)&Q > P, Δ",
     displayLevel="all")
   def dV(eps:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) => {
