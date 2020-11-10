@@ -43,6 +43,8 @@ object QuizExtractor {
     private val TURNSTILE = "==>"
     private val GOAL_SEP = ";;"
     private val TEX_NO_BREAK_SPACE = "~"
+    private val TEX_WS = "(?:\\s|~(?!>))"
+    private val ANY_TEX_WS = TEX_WS + "*"
 
     // \solfin
     private def solfinBodyExtractor(capture: String) = """(?s)\\begin\{lstlisting}\s*(""" + capture + """.*?)\s*\\end\{lstlisting}"""
@@ -74,11 +76,12 @@ object QuizExtractor {
 
     private val ASK_EXTRACTOR = """\\""" + QUESTION_START + """(?:.*?)"""
     private val GROUPS: List[String] = List(KYX_SOL, TEX_MATH_SOL, LISTINGS_SOL, TEXT_SOL, SOLFIN, TEST_SOL, NO_SOL, GRADER, ARGS)
-    private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + """)\s*"""
+    private val ALL_SOL_EXTRACTOR = """(?:""" + SOL_EXTRACTOR + "|" + SOLFIN_EXTRACTOR + ")" + ANY_TEX_WS
     private val QUESTION_EXTRACTOR: Regex = ("(?s)" + ASK_EXTRACTOR + ALL_SOL_EXTRACTOR + TEST_SOL_EXTRACTOR + NO_SOL_EXTRACTOR + GRADER_EXTRACTOR).r(GROUPS:_*)
 
     def firstFromString(rawContent: String): Option[AskQuestion] = {
-      val graderInfo = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent).map(m => (
+      val firstMatch = QUESTION_EXTRACTOR.findFirstMatchIn(rawContent)
+      val graderInfo = firstMatch.map(m => (
         Option(m.group(KYX_SOL)), Option(m.group(TEX_MATH_SOL)), Option(m.group(LISTINGS_SOL)), Option(m.group(TEXT_SOL)),
         Option(m.group(SOLFIN)), m.group(TEST_SOL), m.group(NO_SOL),
         Option(m.group(GRADER)), Option(m.group(ARGS))))
@@ -102,6 +105,12 @@ object QuizExtractor {
         val noSolArtifacts = artifactsFromNSolContents(nosol, "\\\\nosol")
         val graderArgs = argsFromString(args)
         val uniqueSolArgs = solArgs.filter({ case (k, _) => !graderArgs.contains(k)}) // grader arguments override solution arguments
+        val firstAlgoIdx = rawContent.indexOf("\\algog")
+        val untilFirstAlgo = if (firstAlgoIdx >= 0) rawContent.substring(0, firstAlgoIdx) else rawContent
+        assert(firstAlgoIdx == -1
+          || untilFirstAlgo.indexOf("\\ask") != untilFirstAlgo.lastIndexOf("\\ask")
+          || grader.isDefined,
+          "Expected a grader since \\algog is defined for first question, but couldn't extract from " + rawContent)
         AskQuestion(grader, graderArgs ++ uniqueSolArgs, expectedArtifact, testSolArtifacts, noSolArtifacts)
       })
     }
