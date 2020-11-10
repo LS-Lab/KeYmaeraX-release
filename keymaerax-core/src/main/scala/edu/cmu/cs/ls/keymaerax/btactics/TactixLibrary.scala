@@ -355,8 +355,10 @@ object TactixLibrary extends HilbertCalculus
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, DLBySubst.safeabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
-          ((Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done) | ?(autoQE & (if (keepQEFalse) nil else done)))))))
+        Idioms.doIf(!_.isProved)(onAll(
+          //@note apply equalities inside | to undo in case branches do not close
+          (EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done)
+            | ?(EqualityTactics.applyEqualities & autoQE & (if (keepQEFalse) nil else done))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
