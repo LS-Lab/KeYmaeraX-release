@@ -709,4 +709,29 @@ class SequentialInterpreterTests extends TacticTestBase {
         id)
     ) shouldBe 'proved
   }
+
+  it should "support introducing variables for function symbols of closed provables" in withMathematica { _ =>
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |ProgramVariables Real x, y, r; End.
+        |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
+        |End.""".stripMargin).head
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      implyR(1) & cut("r>0".asFormula) <(
+        dC("x^2+y^2=r".asFormula)(1) <(
+          cut("r>1".asFormula)
+          ,
+          dIRule(1) <(QE, unfoldProgramNormalize & QE)
+        ),
+        ODE(1)
+      )
+    ).subgoals should contain theSameElementsInOrderAs List(
+      "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
+      "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
+    )
+
+    proveBy(entry.model.asInstanceOf[Formula], let("r()".asTerm, "r".asTerm, by(
+      proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe 'proved
+  }
 }

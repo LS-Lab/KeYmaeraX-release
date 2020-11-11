@@ -1,9 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.USubst
+import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 /**
   * Interpreter for Bellerophon tactic expressions that transforms [[BelleValue Bellerophon values]] using
@@ -46,13 +48,18 @@ trait Interpreter {
     */
   protected def replaceConclusion(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: Option[USubst]): (ProvableSig, Int) = {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
-    val substituted =
-      if (original.subgoals(n) == subderivation.conclusion) original
-      else subst.map(exhaustiveSubst(original, _)).getOrElse(original)
-    if (substituted.subgoals(n) != subderivation.conclusion)
-      throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst", subderivation.underlyingProvable)
-    val newProvable = substituted(subderivation, n)
-    val nextIdx = if (subderivation.isProved) n else n + 1
+    val (substParent, substChild) =
+      if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
+      else if (subderivation.isProved) {
+        val substOrig = subst.map(exhaustiveSubst(original, _)).getOrElse(original)
+        (substOrig, exhaustiveSubst(subderivation,
+          Try(UnificationMatch(subderivation.conclusion, substOrig.subgoals(n))).toOption.getOrElse(
+            UnificationMatch(substOrig.subgoals(n), subderivation.conclusion)).usubst))
+      } else (subst.map(exhaustiveSubst(original, _)).getOrElse(original), subderivation)
+    if (substParent.subgoals(n) != substChild.conclusion)
+      throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${substParent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst", subderivation.underlyingProvable)
+    val newProvable = substParent(substChild, n)
+    val nextIdx = if (substChild.isProved) n else n + 1
     (newProvable, nextIdx)
   }
 
