@@ -632,11 +632,19 @@
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                   <span>Diff. Weaken</span><code class="pull-right">dW</code></a></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || doSearch('dI', 'R')"
-                                       uib-popover-template="fetchRuleHelp('dI')"
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('dIRule', 'R')"
+                                       uib-popover-template="fetchRuleHelp('dIRule')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>Diff. Invariant</span><code class="pull-right">dI</code>
+                                    <span>Diff. Invariant</span><code class="pull-right">dIRule</code>
+                                    </a>
+                                </li>
+                                <li ng-class="{'disabled': agenda.items().length <= 0 }">
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('dIClose', 'R')"
+                                       uib-popover-template="fetchRuleHelp('dIClose')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
+                                        <span>Diff. Invariant</span><code class="pull-right">dIClose</code>
                                     </a>
                                 </li>
                                 <!-- TODO list further tactics -->
