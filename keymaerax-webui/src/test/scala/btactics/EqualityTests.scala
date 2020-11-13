@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 
@@ -419,8 +418,13 @@ class EqualityTests extends TacticTestBase {
 
   it should "not infinite recurse but report exception" in withQE { _ =>
     val f = "[{x'=100*x^4+y*x^3-x^2+x+c,c'=x+y+z,dbxy_'=(-(0--x)*(-- (100*x^4+y*x^3-x^2+x+c))/max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c))))*dbxy_+0&c>x&max(((0--x)*(0--x),-- (100*x^4+y*x^3-x^2+x+c)))>0}]dbxy_>0".asFormula
-    (the [ProverException] thrownBy proveBy(f, EqualityTactics.expandAll)).getMessage should startWith
+    (the [ProverException] thrownBy proveBy(f, expandAll)).getMessage should startWith
       "Unable to create dependent tactic 'CMonCongruence'"
+  }
+
+  it should "expand in the context of quantifiers" in withQE { _ =>
+    proveBy("\\exists t_ (t>=0 & \\forall s_ (0<=s_&s_<=t_ -> !(abs(x)<abs(x+s_))))".asFormula, expandAll).subgoals.
+      loneElement shouldBe "x>=0&abs_0=x|x < 0&abs_0=-x ==> \\exists t_ (t>=0 & \\forall s_ (0<=s_&s_<=t_->!(x+s_>=0&abs_0 < x+s_|x+s_ < 0&abs_0 < -(x+s_))))".asSequent
   }
 
   "Alpha renaming" should "rename in ODEs in succedent" in withQE { _ =>

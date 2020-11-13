@@ -434,7 +434,8 @@ private object EqualityTactics {
         case _ => None
       })
     )
-    tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip)
+    tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+      Idioms.doIf(_.subgoals.exists(StaticSemantics.symbols(_).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false })))(onAll(expandAll))
   })
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
   @Tactic(displayLevel = "internal")
