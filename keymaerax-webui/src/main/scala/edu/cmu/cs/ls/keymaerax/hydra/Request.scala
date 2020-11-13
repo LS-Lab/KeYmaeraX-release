@@ -2940,7 +2940,14 @@ object RequestHelper {
   /** Updates the definitions in `proofSession` to include the unexpanded symbols of the open goals in `node`. */
   def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
     val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
-    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s))
+    val elaboratedToFns = signatures.filter({
+      case Function(n, i, Unit, Real, _) => proofSession.defs.decls.exists({
+        case ((vn, vi), (None, Real, _, _, _)) => vn == n && vi == i
+        case _ => false
+      })
+      case _ => true
+    })
+    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
     val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
