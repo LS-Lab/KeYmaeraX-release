@@ -198,10 +198,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             })
 
             val result = provables.reverse.zipWithIndex.foldRight(p)({
-              case ((p: BelleDelayedSubstProvable, i), provable) => replaceConclusion(provable, i, p.p, p match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
-              })._1
+              case ((p: BelleDelayedSubstProvable, i), provable) =>
+                replaceConclusion(provable, i, p.p, Some(p.subst))._1
               case ((BelleProvable(cp, _), i), provable) =>
                 // provables may have expanded or not expanded definitions arbitrarily
                 if (provable.sub(i).subgoals.head == cp.conclusion) provable(cp, i)
@@ -468,7 +466,16 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                         runningInner = null
                         result
                       case BelleProvable(innerProvable, _) =>
-                        val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+                        val result =
+                          if (provable.subgoals(0) == innerProvable.conclusion) (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+                          else {
+                            // support for spoonfeeding constification (dIRule); will only work if the remaining
+                            // tactics are closing the open goals of innerProvable since outer interpreter will
+                            // try to plug conclusion of innerProvable into unconstified open goal of provable;
+                            // check that innerProvable is unifiable with that open goal
+                            UnificationMatch(innerProvable.conclusion, provable.subgoals(0))
+                            (BelleProvable(innerProvable, labels), ctx.store(tactic))
+                          }
                         runningInner = null
                         result
                     }

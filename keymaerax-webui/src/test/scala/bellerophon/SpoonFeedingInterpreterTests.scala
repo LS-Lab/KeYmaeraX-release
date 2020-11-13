@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, DifferentialEquationCalculus, Idioms, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.core.{Formula, SubstitutionClashException}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -1691,5 +1692,90 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
     interpreter(tactic, BelleProvable(p))
     db.extractTactic(proofId) shouldBe BelleParser("""implyR(1) ; pending("loop(\"x>0\", 1)")""")
+  }}
+
+  "Delayed substitution" should "support introducing variables for function symbols of closed provables" in withMathematica { _ => withDatabase { db =>
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |ProgramVariables Real x, y, r; End.
+        |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
+        |End.""".stripMargin).head
+
+    val proofId = db.createProof(entry.problemContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val tactic = BelleParser(
+      """implyR(1); cut("r>0"); <(
+        |  dC("x^2+y^2=r", 1); <(
+        |    cut("r>1"),
+        |    dIRule(1); <(
+        |      QE,
+        |      unfold; QE
+        |    )
+        |  ),
+        |  ODE(1)
+        |)""".stripMargin)
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) =>
+        p.subgoals should contain theSameElementsInOrderAs List(
+          "x^2+y^2=r, r>0, r>1 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent,
+          "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r, r>1".asSequent
+        )
+    }
+  }}
+
+  it should "support unfinished dIRule if sole open goal" in withMathematica { _ => withDatabase { db =>
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |ProgramVariables Real x, y, r; End.
+        |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
+        |End.""".stripMargin).head
+
+    val proofId = db.createProof(entry.problemContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val tactic = BelleParser(
+      """implyR(1); dIRule(1); <(
+        |  nil,
+        |  unfold; QE
+        |)""".stripMargin)
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r(), true ==> x^2+y^2=r()".asSequent
+    }
+  }}
+
+  it should "fail with unfinished dIRule when mixed with unconstified branches" in withMathematica { _ => withDatabase { db =>
+    //@note if dIRule does not finish there is no way for us to keep constified and non-constified branches consistent
+    // would need to be able to create a provable with, e.g.,
+    // subgoal 1: x^2+y^2=r   |- [{x'=-r*y,y'=r*x}]x^2+y^2=r
+    // subgoal 2: x^2+y^2=r() |- x^2+y^2=r()
+
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |ProgramVariables Real x, y, r; End.
+        |Problem x^2+y^2=r -> [{x'=r*y,y'=-r*x}]x^2+y^2=r End.
+        |End.""".stripMargin).head
+
+    val proofId = db.createProof(entry.problemContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val tactic = BelleParser(
+      """implyR(1); cut("r>0"); <(
+        |  dIRule(1); <(
+        |    nil,
+        |    unfold; QE
+        |  ),
+        |  nil
+        |)""".stripMargin)
+    the [SubstitutionClashException] thrownBy interpreter(tactic, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) should
+      have message """Substitution clash:
+                     |USubstOne{(r()~>r)}
+                     |is not (all)-admissible
+                     |for r
+                     |when substituting in r()
+                     |""".stripMargin
   }}
 }
