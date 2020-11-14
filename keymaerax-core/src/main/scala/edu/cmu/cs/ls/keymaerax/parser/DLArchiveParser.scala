@@ -108,7 +108,7 @@ object DLArchiveParser extends ArchiveParser {
     {case (kind, label, name, meta, decl, prob, tac, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label) throw ParseException("end label is optional but should be the same as the start label: " + label + " is not " + endlabel)
       // definitions elaboration to replace arguments by dots and do type analysis
-      KeYmaeraXArchiveParser.elaborate(ParsedArchiveEntry(
+      ArchiveParser.elaborate(ParsedArchiveEntry(
         name = name,
         kind = kind,
         fileContent = "???",
