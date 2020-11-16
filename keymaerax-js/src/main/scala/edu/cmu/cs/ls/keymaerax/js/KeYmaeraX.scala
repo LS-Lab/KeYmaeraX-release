@@ -3,15 +3,41 @@ package edu.cmu.cs.ls.keymaerax.js
 import edu.cmu.cs.ls.keymaerax.{Configuration, MapConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, Parser, SubstitutionParser}
-import scala.scalajs.js.Dictionary
-import scala.util.Try
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PositionLocator}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParseException, Parser, SubstitutionParser, KeYmaeraXArchiveParser}
 
+import scala.util.Try
+import scala.scalajs.js.{Array, Dictionary}
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 object KeYmaeraX {
   Configuration.setConfiguration(MapConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  ArchiveParser.setParser(KeYmaeraXArchiveParser)
+//  ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(
+//    (t: BelleExpr) => "",
+//    (t: String, args: List[Either[Seq[Any], PositionLocator]], defs: Declaration) => new BelleExpr())))
+
+  @JSExportTopLevel("parseArchive")
+  def parseArchive(input: String): Array[Dictionary[Any]] = {
+    try {
+      ArchiveParser(input)
+      List.empty.toJSArray
+    } catch {
+      case ex: ParseException => List(Dictionary(
+        "line" -> ex.loc.begin.line,
+        "column" -> ex.loc.begin.column,
+        "endLine" -> ex.loc.end.line,
+        "endColumn" -> ex.loc.end.column,
+        "message" -> ex.msg,
+        "found" -> ex.found,
+        "expect" -> ex.expect,
+        "hint" -> ex.hint
+      )).toJSArray
+    }
+  }
 
   @JSExportTopLevel("parsesAsExpression")
   def parsesAsExpression(answer: String, solution: String): Dictionary[Any] = {
