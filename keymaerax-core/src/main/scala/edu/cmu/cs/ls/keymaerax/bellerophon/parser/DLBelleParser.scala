@@ -14,37 +14,27 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
 import MultiLineWhitespace._
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 
 import scala.collection.immutable._
 
 /**
-  * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon tactics for KeYmaera X.
-  * @author Andre Platzer
-  */
-object DLBelleParser extends DLBelleParser {
-}
-
-/**
-  * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon tactics for KeYmaera X.
+  * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of
+  * Bellerophon tactics for KeYmaera X. It uses `tacticProvider` to map names and inputs to concrete tactic expressions.
   * @author Andre Platzer
   * @see [[BelleParser]]
   */
-class DLBelleParser extends TacticParser {
-
-  //@todo fill both vals with life
-  private val generator: Option[Generator.Generator[GenProduct]] = None
-  private val defs: Declaration = Declaration(Map.empty)
+class DLBelleParser(override val printer: BelleExpr => String,
+                    tacticProvider: (String, List[Either[Seq[Any], PositionLocator]], Declaration) => BelleExpr) extends DLTacticParser {
+  /** Definitions, should be provided by the outer parser through [[setDefs]]. */
+  private var defs: Declaration = Declaration(Map.empty)
 
   /** Which formula/term/program parser this archive parser uses. */
-  val expParser = DLParser
+  private val expParser = DLParser
 
   override val tacticParser: String => BelleExpr = this
   override val expressionParser: Parser = DLParser
-  override val printer: BelleExpr => String = BellePrettyPrinter
 
   /** Parse the input string as a Bellerophon tactic.
     *
@@ -54,6 +44,9 @@ class DLBelleParser extends TacticParser {
     */
   override def apply(input: String): BelleExpr = belleParser(input)
 
+  /** Sets the definitions to be used when parsing tactic expressions. Expected to be set
+    * before [[apply]] or [[tactic]] are used. */
+  override def setDefs(defs: Declaration): Unit = this.defs = defs
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   //@todo store the parser for speed
@@ -73,12 +66,12 @@ class DLBelleParser extends TacticParser {
   def argument[_: P]: P[Expression] = P("\"" ~~ expression ~~ "\"")
 
   def tacticSymbol[_: P]: P[String] = P( ident ).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
-  def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => ReflectiveExpressionBuilder(t, Nil, generator, defs))
+  def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => tacticProvider(t, Nil, defs))
   //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
   def at[_: P]: P[BelleExpr] = P( tacticSymbol ~~ "("
     ~ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
     ~ ")" ).
-    map({case (t,args) => ReflectiveExpressionBuilder(t, args.flatten.toList, generator, defs)})
+    map({case (t,args) => tacticProvider(t, args.flatten.toList, defs)})
   def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~ "(" ~ tactic ~ ")" ).
     map({case ("doall", t) => OnAll(t)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )

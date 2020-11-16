@@ -8,11 +8,12 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.parser.Parser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, Declaration, KeYmaeraXArchiveParser, Parser}
 
 import scala.collection.immutable.Map
 
@@ -60,6 +61,13 @@ object KeYmaeraXTool extends Tool {
     Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true))))))
     TactixInit.invSupplier = generator
+
+    ArchiveParser.setParser(Configuration.getString(Configuration.Keys.PARSER) match {
+      case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
+      case Some("DLParser") =>
+        new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
+          ReflectiveExpressionBuilder(_, _, Some(TactixInit.invSupplier), _)))
+    })
 
     initialized = true
   }

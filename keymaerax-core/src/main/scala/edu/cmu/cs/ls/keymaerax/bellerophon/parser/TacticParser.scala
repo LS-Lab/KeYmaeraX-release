@@ -13,8 +13,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.parser.Parser
-import edu.cmu.cs.ls.keymaerax.parser.ParseException
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, Parser}
+import fastparse.P
 
 /**
   * Parser interface for Bellerophon tactics of KeYmaera X.
@@ -52,4 +52,13 @@ trait TacticParser extends (String => BelleExpr) {
     */
   val printer: BelleExpr => String
 
+}
+
+/** DL tactic parser with fastparse-compatible entry point. */
+trait DLTacticParser extends TacticParser {
+  /** Parses a dL Bellerophon tactic. */
+  def tactic[_: P]: P[BelleExpr]
+
+  /** Sets the definitions to be used during parsing. */
+  def setDefs(defs: Declaration)
 }

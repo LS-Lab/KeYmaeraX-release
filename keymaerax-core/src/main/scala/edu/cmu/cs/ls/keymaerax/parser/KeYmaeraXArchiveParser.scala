@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Stat
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{BuiltinDefinitions, Name, declarationsOf, elaborate}
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{declarationsOf, elaborate}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.annotation.tailrec

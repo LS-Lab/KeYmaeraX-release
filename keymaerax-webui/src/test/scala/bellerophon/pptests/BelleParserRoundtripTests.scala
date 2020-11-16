@@ -2,7 +2,7 @@ package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, Idioms, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{AtomicODE, DifferentialSymbol, ODESystem, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -15,7 +15,9 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
   */
 @UsualTest
 class BelleParserRoundtripTests extends TacticTestBase {
-  private val belleParser: String=>BelleExpr = if (false) BelleParser else DLBelleParser
+  private val belleParser: String=>BelleExpr =
+    if (false) BelleParser
+    else new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _))
 
   private def roundTrip(tactic: String): Unit = BellePrettyPrinter(belleParser(tactic)) shouldBe tactic
   private def roundTrip(tactic: BelleExpr): Unit = belleParser(BellePrettyPrinter(tactic)) shouldBe tactic

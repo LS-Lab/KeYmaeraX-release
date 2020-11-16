@@ -9,7 +9,7 @@ import fastparse._
 import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
 
 import scala.collection.immutable._
 
@@ -36,10 +36,10 @@ import scala.collection.immutable._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   * @see [[KeYmaeraXArchiveParser]]
   */
-object DLArchiveParser extends ArchiveParser {
+class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Which formula/term/program parser this archive parser uses. */
-  val expParser = DLParser
+  private val expParser = DLParser
 
   /**
     * Parse an archive file string into a list of archive entries.
@@ -269,5 +269,5 @@ object DLArchiveParser extends ArchiveParser {
   /** odeprogram: Parses an ode system from [[expParser]]. */
   def odeprogram[_: P]: P[Program] = expParser.odeprogram
 
-  def tactic[_: P]: P[BelleExpr] = DLBelleParser.tactic
+  def tactic[_: P]: P[BelleExpr] = tacticParser.tactic
 }

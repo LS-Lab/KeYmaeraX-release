@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, PredOf, Program, ProgramConst, Real, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -237,10 +236,7 @@ object ArchiveParser extends ArchiveParser {
   type InputSignature = (List[NamedSymbol], Option[Expression])
 
   /* @note mutable state for switching out the default parser. */
-  private[this] var p: ArchiveParser = Configuration.getString(Configuration.Keys.PARSER) match {
-    case Some("KeYmaeraXParser") | None => KeYmaeraXArchiveParser
-    case Some("DLParser") => DLArchiveParser
-  }
+  private[this] var p: ArchiveParser = _
 
   /** The parser that is presently used per default. */
   def parser: ArchiveParser = p
