@@ -381,13 +381,13 @@ object ProofParser {
       if (incL ==  metX && increments(metIncr, metX)) => locate(
       For(metX, metF, metIncr, conv, guard, block(body.toList)), i)})
 
-  def let[_: P]: P[Statement] = (Index ~ "let" ~/
-          ( (ident ~/ ("(" ~/ ident.rep(sep = ",") ~/ ")").?).map(Left(_))
+  def let[_: P]: P[Statement] = (Index ~ "let" ~
+          ( (ident ~ ("(" ~/ ident.rep(sep = ",") ~ ")").?).map(Left(_))
            | term.map(Right(_)))
     ~ ("=" | "<->" | "::=").!).flatMap({
       // @TODO: Give nice errors when term and predicate are missing parens () or when program has parens
      case (i, Left((f, Some(xs))), "=") => term.map(e => locate(LetSym(f, xs.toList, e), i))
-     case (i, Right(pat), "=") => expression.map(e => locate(Match(pat, e), i))
+     case (i, Right(pat), "=") => term.map(e => locate(Match(pat, e), i))
      case (i, Left((f, Some(xs))), "<->") => formula.map(e => locate(LetSym(f, xs.toList, e), i))
      case (i, Left((f, None)), "::=") => (("{" ~ program ~ "}").map(e => locate(LetSym(f, Nil, e), i)))
   }) ~/ ";"
