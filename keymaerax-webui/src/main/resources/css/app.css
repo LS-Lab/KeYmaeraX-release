@@ -866,6 +866,10 @@ del {
 
 }
 
+.k4-fill-screen {
+  height: calc(100vh - 130px);
+}
+
 .modal-errorreport {
   z-index: 2000 !important; /* larger than internal log popover */
 }
