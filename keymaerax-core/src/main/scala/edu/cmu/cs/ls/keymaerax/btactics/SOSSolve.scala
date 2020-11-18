@@ -528,43 +528,37 @@ object SOSSolve {
   private lazy val eqZeroEquiv = AnonymousLemmas.remember("(F_() = 0 <-> G_() = 0) <- F_() = G_()".asFormula, QE, namespace).fact
 
   //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
-  lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
-    override def computeExpr(seq: Sequent): BelleExpr =
-    {
-      seq.succ.zipWithIndex.foldLeft[BelleExpr](ident) {(tac: BelleExpr, fi) =>
-        val ind = fi._2 + 1;
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
-          case GreaterEqual(f, g) =>  useAt(geSucc)(ind) & notR(ind)
-          case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
-          case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
-          case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
-          case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
-          case _ => ident
-        }) & tac
-      }
+  def clearSucc:DependentTactic = anon ((seq: Sequent) => {
+    seq.succ.zipWithIndex.foldLeft[BelleExpr](ident) {(tac: BelleExpr, fi) =>
+      val ind = fi._2 + 1;
+      (fi._1 match {
+        case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
+        case GreaterEqual(f, g) =>  useAt(geSucc)(ind) & notR(ind)
+        case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
+        case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
+        case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
+        case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
+        case _ => ident
+      }) & tac
     }
-  }
+  })
 
-  lazy val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
-          case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
-          case Equal(_, _) => useAt(eqAnte)(ind)
-          case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
-          case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
-          case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => ident
-        }) & tac
-      }
+  def normAnte:DependentTactic = anon ((seq: Sequent) => {
+    seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
+      val ind = -(fi._2 + 1);
+      (fi._1 match {
+        case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
+        case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
+        case Equal(_, _) => useAt(eqAnte)(ind)
+        case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
+        case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
+        case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
+        case _ => ident
+      }) & tac
     }
-  }
+  })
 
   lazy val prepareArith: BelleExpr = clearSucc & normAnte
-
 
   // Guided linear variable elimination at a top-level position (of shape A=B)
   // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
@@ -578,26 +572,24 @@ object SOSSolve {
   // <= (clhs-chrs=0) <-> (K*(lhs-rhs)=0)
   // <= clhs-chrs = K*(lhs-rhs) (by polynomial arithmetic)
 
-  def rewriteEquality(pos:Position, lhs:Term, rhs:Term, cofactor:Term): DependentTactic = new SingleGoalDependentTactic("rewrite equality") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.sub(pos) match {
-        case Some(Equal(clhs,crhs)) =>
-          val cofact = proveBy(NotEqual(cofactor,Number(0)),RCF)
-          val instMulZero = useFor(mulZero,PosInExpr(0::Nil))(Position(1))(cofact)
-          //println(pos,lhs,rhs,cofactor)
-          val pr =
-            proveBy(Equiv(Equal(clhs,crhs),Equal(lhs,rhs)),
-              useAt(eqAnte)(1,PosInExpr(0::Nil)) &
-                useAt(eqAnte)(1,PosInExpr(1::Nil)) &
-                useAt(instMulZero)(1,PosInExpr(1::Nil)) &
-                useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
-                PolynomialArithV2.equate(1)
-            )
-          useAt(pr)(pos)
-        case _ => ident
-      }
+  def rewriteEquality(pos:Position, lhs:Term, rhs:Term, cofactor:Term): DependentTactic = anon ((seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Equal(clhs,crhs)) =>
+        val cofact = proveBy(NotEqual(cofactor,Number(0)),RCF)
+        val instMulZero = useFor(mulZero,PosInExpr(0::Nil))(Position(1))(cofact)
+        //println(pos,lhs,rhs,cofactor)
+        val pr =
+          proveBy(Equiv(Equal(clhs,crhs),Equal(lhs,rhs)),
+            useAt(eqAnte)(1,PosInExpr(0::Nil)) &
+              useAt(eqAnte)(1,PosInExpr(1::Nil)) &
+              useAt(instMulZero)(1,PosInExpr(1::Nil)) &
+              useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
+              PolynomialArithV2.equate(1)
+          )
+        useAt(pr)(pos)
+      case _ => ident
     }
-  }
+  })
 
   //The actual linear elimination tactic takes a list
   def linearElim(ls:List[(Int,Term,Term,Term)]) : BelleExpr =
