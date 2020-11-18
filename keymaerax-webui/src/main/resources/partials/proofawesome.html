@@ -97,7 +97,7 @@
                                           uib-popover-template="fetchRuleHelp('auto')"
                                           popover-class="k4-rulemenu-helppopover"
                                           popover-trigger="'mouseenter'" popover-placement="auto right-top"
-                                          popover-popup-delay="1000"> Auto</span>
+                                          popover-popup-delay="200"> Auto</span>
                                     </span>
                                     <i class="fa fa-caret-down fa-lg"></i>
                                 </a>
@@ -106,14 +106,14 @@
                                         <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto')"
                                            uib-popover-template="fetchRuleHelp('auto')"
                                            popover-class="k4-rulemenu-helppopover"
-                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                                     </li>
                                     <li class="dropdown-item" ng-class="{'disabled': agenda.items().length <= 0 }">
                                         <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'explore')"
                                            uib-popover-template="fetchRuleHelp('explore')"
                                            popover-class="k4-rulemenu-helppopover"
-                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                                             <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
                                     </li>
                                 </ul>
@@ -123,7 +123,7 @@
                                data-intro="<center>Propositional proof</center>" data-position="top"
                                uib-popover-template="fetchRuleHelp('propClose')"
                                popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
                         </li>
                         <li class="nav-item" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
@@ -131,7 +131,7 @@
                                data-intro="<center>Unfold all operators</center>" data-position="top"
                                uib-popover-template="fetchRuleHelp('unfold')"
                                popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                             <span class="fa fa-map-o"><span class="k4-btn-optional-text"> Unfold</span></span>
                             </a>
                         </li>
@@ -140,7 +140,7 @@
                                data-intro="<center>Simplify formulas</center>" data-position="top"
                                uib-popover-template="fetchRuleHelp('fullSimplify')"
                                popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                             <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a>
                         </li>
                         <li class="nav-item dropdown k4-tactics-navitem-dropdown">
@@ -149,7 +149,7 @@
                                       data-intro="<center>Undo</center>" data-position="top"
                                       uib-popover-template="fetchRuleHelp('undo')"
                                       popover-class="k4-rulemenu-helppopover"
-                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                                     <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span>
                                 </span>
                                 <i class="fa fa-caret-down fa-lg "></i>
@@ -159,14 +159,14 @@
                                        data-intro="<center>Undo</center>" data-position="top"
                                        uib-popover-template="fetchRuleHelp('undo')"
                                        popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                                     <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
                                 </li>
                                 <li><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(agenda.modelId, '', '')"
                                        data-intro="<center>Restart</center>" data-position="top"
                                        uib-popover-template="fetchRuleHelp('restart')"
                                        popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                                     <span class="fa fa-eraser"><span class="k4-btn-optional-text"> Restart</span></span></a>
                                 </li>
                             </ul>
@@ -176,7 +176,7 @@
                                data-intro="<center>Switch edit/prove</center>" data-position="top"
                                uib-popover-template="fetchRuleHelp('edit')"
                                popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
                             <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item active" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
@@ -234,130 +234,302 @@
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'prop')"
-                                       uib-popover-template="fetchRuleHelp('prop')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>Exhaustive</span><code class="pull-right">prop</code></a></li>
+                                <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'prop')"
+                                   uib-popover-template="fetchRuleHelp('prop')"
+                                   popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                    <span>Exhaustive</span>
+                                    <span class="pull-right">
+                                        <code>prop</code>
+                                        <i class="fa fa-question-circle"
+                                           ng-click="$event.stopPropagation();fetchRuleHelp('prop')"
+                                           uib-popover-template="'rulehelp.html'"
+                                           popover-append-to-body="true"
+                                           popover-class="k4-rulemenu-helppopover-long"
+                                           popover-placement="auto bottom"
+                                           popover-trigger="'outsideClick'"></i>
+                                    </span>
+                                </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('cut', undefined)"
                                        uib-popover-template="fetchRuleHelp('cut')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                       <span><i class="fa fa-scissors"></i> Cut ...</span><code class="pull-right">cut</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span><i class="fa fa-scissors"></i> Cut ...</span>
+                                        <span class="pull-right">
+                                            <code>cut</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('cut')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'id')"
                                        uib-popover-template="fetchRuleHelp('id')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span><i class="fa fa-asterisk"></i> Identity</span><code class="pull-right">id</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span><i class="fa fa-asterisk"></i> Identity</span>
+                                        <span class="pull-right">
+                                            <code>id</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('id')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('notR', 'R')"
                                        uib-popover-template="fetchRuleHelp('notR')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&not;R</span><code class="pull-right">notR</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&not;R</span>
+                                        <span class="pull-right">
+                                            <code>notR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('notR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('notL', 'L')"
                                        uib-popover-template="fetchRuleHelp('notL')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&not;L</span><code class="pull-right">notL</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&not;L</span>
+                                        <span class="pull-right">
+                                            <code>notL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('notL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('andR', 'R')"
                                        uib-popover-template="fetchRuleHelp('andR')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&and;R</span><code class="pull-right">andR</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&and;R</span>
+                                        <span class="pull-right">
+                                            <code>andR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('andR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('andL', 'L')"
                                        uib-popover-template="fetchRuleHelp('andL')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&and;L</span><code class="pull-right">andL</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&and;L</span>
+                                        <span class="pull-right">
+                                            <code>andL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('andL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('orR', 'R')"
                                        uib-popover-template="fetchRuleHelp('orR')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&or;R</span><code class="pull-right">orR</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&or;R</span>
+                                        <span class="pull-right">
+                                            <code>orR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('orR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('orL', 'L')"
                                        uib-popover-template="fetchRuleHelp('orL')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&or;L</span><code class="pull-right">orL</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&or;L</span>
+                                        <span class="pull-right">
+                                            <code>orL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('orL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('implyR', 'R')"
                                        uib-popover-template="fetchRuleHelp('implyR')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&#8594;R</span><code class="pull-right">implyR</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8594;R</span>
+                                        <span class="pull-right">
+                                            <code>implyR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('implyR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('implyL', 'L')"
                                        uib-popover-template="fetchRuleHelp('implyL')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&#8594;L</span><code class="pull-right">implyL</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8594;L</span>
+                                        <span class="pull-right">
+                                            <code>implyL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('implyL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('equivR', 'R')"
                                        uib-popover-template="fetchRuleHelp('equivR')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&#8596;R</span><code class="pull-right">equivR</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8596;R</span>
+                                        <span class="pull-right">
+                                            <code>equivR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('equivR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('equivL', 'L')"
                                        uib-popover-template="fetchRuleHelp('equivL')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>&#8596;L</span><code class="pull-right">equivL</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8596;L</span>
+                                        <span class="pull-right">
+                                            <code>equivL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('equivL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'closeT')"
                                        uib-popover-template="fetchRuleHelp('closeT')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>True</span><code class="pull-right">closeT</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>True</span>
+                                        <span class="pull-right">
+                                            <code>closeT</code>
+                                            <!-- no long help -->
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'closeF')"
                                        uib-popover-template="fetchRuleHelp('closeF')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>False</span><code class="pull-right">closeF</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>False</span>
+                                        <span class="pull-right">
+                                            <code>closeF</code>
+                                            <!-- no long help -->
+                                        </span>
+                                    </a>
+                                </li>
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('commuteEquivR', 'R')"
-                                  uib-popover-template="fetchRuleHelp('commuteEquivR')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('commuteEquivR')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8596;CR</span>
+                                        <span class="pull-right">
+                                            <code>commuteEquivR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('commuteEquivR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('commuteEquivL', 'L')"
-                                  uib-popover-template="fetchRuleHelp('commuteEquivL')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('commuteEquivL')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&#8596;CL</span>
+                                        <span class="pull-right">
+                                            <code>commuteEquivL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('commuteEquivL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -367,59 +539,167 @@
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('allR', 'R')"
                                   uib-popover-template="fetchRuleHelp('allR')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>&forall;R</span><code class="pull-right">allR</code></a></li>
+                                  popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>&forall;R</span>
+                                        <span class="pull-right">
+                                            <code>allR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('allR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('allL', 'L')"
                                   uib-popover-template="fetchRuleHelp('allL')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>&forall;L ...</span><code class="pull-right">allL</code></a></li>
+                                  popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>&forall;L ...</span>
+                                        <span class="pull-right">
+                                            <code>allL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('allL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('allLkeep', 'L')"
                                        uib-popover-template="fetchRuleHelp('allLkeep')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                        <span>&forall;Lk ...</span><code class="pull-right">allLkeep</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>&forall;Lk ...</span>
+                                        <span class="pull-right">
+                                            <code>allLkeep</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('allLkeep')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('existsR', 'R')"
                                   uib-popover-template="fetchRuleHelp('existsR')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>&exist;R ...</span><code class="pull-right">existsR</code></a></li>
+                                  popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&exist;R ...</span>
+                                        <span class="pull-right">
+                                            <code>existsR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('existsR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || doSearch('existsL', 'R')"
+                                    <a ng-click="agenda.items().length <= 0 || doSearch('existsL', 'L')"
                                   uib-popover-template="fetchRuleHelp('existsL')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>&exist;L</span><code class="pull-right">existsL</code></a></li>
+                                  popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&exist;L</span>
+                                        <span class="pull-right">
+                                            <code>existsL</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('existsL')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('allRi', 'R')"
                                        uib-popover-template="fetchRuleHelp('allRi')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&forall;Ri</span><code class="pull-right">allRi</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&forall;Ri</span>
+                                        <span class="pull-right">
+                                            <code>allRi</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('allRi')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('existsLi', 'L')"
                                        uib-popover-template="fetchRuleHelp('existsLi')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>∃Li</span><code class="pull-right">existsLi</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>∃Li</span>
+                                        <span class="pull-right">
+                                            <code>existsLi</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('existsLi')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('allLmon', 'L')"
                                        uib-popover-template="fetchRuleHelp('allLmon')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>M&forall;L</span><code class="pull-right">allLmon</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>M&forall;L</span>
+                                        <span class="pull-right">
+                                            <code>allLmon</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('allLmon')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('existsRmon', 'R')"
                                        uib-popover-template="fetchRuleHelp('existsRmon')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>M&exist;R</span><code class="pull-right">existsRmon</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>M&exist;R</span>
+                                        <span class="pull-right">
+                                            <code>existsRmon</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('existsRmon')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('min', 'R')"><span>min</span><code class="pull-right">min</code></a></li>-->
                                 <!--<li><a ng-click="doSearch('max', 'R')"><span>max</span><code class="pull-right">max</code></a></li>-->
@@ -436,9 +716,21 @@
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('chase', 'R')"
                                   uib-popover-template="fetchRuleHelp('chase')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>Exhaustive</span><code class="pull-right">chase</code></a></li>
+                                  popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>Exhaustive</span>
+                                        <span class="pull-right">
+                                            <code>chase</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('chase')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li>
                                     <nav class="nav nav-pills nav-fill">
@@ -452,154 +744,374 @@
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('assignb', 'R')"
                                        uib-popover-template="fetchRuleHelp('assignb')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>[:=]</span><code class="pull-right">assignb</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[:=]</span>
+                                        <span class="pull-right">
+                                            <code>assignb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('assignb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('assignEquality', 'R')"
                                        uib-popover-template="fetchRuleHelp('assignEquality')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>[:=]=</span><code class="pull-right">assignEquality</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[:=]=</span>
+                                        <span class="pull-right">
+                                            <code>assignEquality</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('assignEquality')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('randomb', 'R')"
-                                  uib-popover-template="fetchRuleHelp('randomb')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>[:*]</span><code class="pull-right">randomb</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('randomb')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[:*]</span>
+                                        <span class="pull-right">
+                                            <code>randomb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('randomb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('testb', 'R')"
                                        uib-popover-template="fetchRuleHelp('testb')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>[?]</span><code class="pull-right">testb</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[?]</span>
+                                        <span class="pull-right">
+                                            <code>testb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('testb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('choiceb', 'R')"
                                        uib-popover-template="fetchRuleHelp('choiceb')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>[&cup;]</span><code class="pull-right">choiceb</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[&cup;]</span>
+                                        <span class="pull-right">
+                                            <code>choiceb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('choiceb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('composeb', 'R')"
                                        uib-popover-template="fetchRuleHelp('composeb')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>[;]</span><code class="pull-right">composeb</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[;]</span>
+                                        <span class="pull-right">
+                                            <code>composeb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('composeb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('iterateb', 'R')"
                                        uib-popover-template="fetchRuleHelp('iterateb')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>[*]</span><code class="pull-right">iterateb</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[*]</span>
+                                        <span class="pull-right">
+                                            <code>iterateb</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('iterateb')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('loop', 'R')"
                                        uib-popover-template="fetchRuleHelp('loop')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>Loop ...</span><code class="pull-right">loop</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Loop ...</span>
+                                        <span class="pull-right">
+                                            <code>loop</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('loop')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('assignd', 'R')"
                                        uib-popover-template="fetchRuleHelp('assignd')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;:=&rangle;</span><code class="pull-right">assignd</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;:=&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>assignd</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('assignd')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('randomd', 'R')"
                                        uib-popover-template="fetchRuleHelp('randomd')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;:*&rangle;</span><code class="pull-right">randomd</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;:*&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>randomd</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('randomd')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('testd', 'R')"
                                        uib-popover-template="fetchRuleHelp('testd')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;?&rangle;</span><code class="pull-right">testd</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;?&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>testd</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('testd')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('choiced', 'R')"
                                        uib-popover-template="fetchRuleHelp('choiced')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;&cup;&rangle;</span><code class="pull-right">choiced</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;&cup;&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>choiced</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('choiced')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('composed', 'R')"
                                        uib-popover-template="fetchRuleHelp('composed')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;;&rangle;</span><code class="pull-right">composed</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;;&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>composed</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('composed')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('iterated', 'R')"
                                        uib-popover-template="fetchRuleHelp('iterated')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>&langle;*&rangle;</span><code class="pull-right">iterated</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;*&rangle;</span>
+                                        <span class="pull-right">
+                                            <code>iterated</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('iterated')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('con', 'R')"
                                        uib-popover-template="fetchRuleHelp('con')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Converge ...</span><code class="pull-right">con</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Converge ...</span>
+                                        <span class="pull-right">
+                                            <code>con</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('con')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('boxAnd', 'R')"
-                                  uib-popover-template="fetchRuleHelp('boxAnd')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('boxAnd')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[]&and;</span>
+                                        <span class="pull-right">
+                                            <code>boxAnd</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('boxAnd')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('GV', 'R')"
-                                  uib-popover-template="fetchRuleHelp('GV')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000"><span>Abstract</span><code class="pull-right">GV</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('GV')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Abstract</span>
+                                        <span class="pull-right">
+                                            <code>GV</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('GV')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('MR', 'R')"
-                                  uib-popover-template="fetchRuleHelp('MR')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>Generalize ...</span><code class="pull-right">MR</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('MR')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Generalize ...</span>
+                                        <span class="pull-right">
+                                            <code>MR</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('MR')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='box'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('boxd', 'R')"
-                                  uib-popover-template="fetchRuleHelp('boxd')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000"><span>[·]</span><code class="pull-right">boxd</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('boxd')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>[·]</span>
+                                        <span class="pull-right">
+                                            <code>boxd</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('boxd')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }" ng-if="menu.hpmenu.kind=='diamond'">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('diamondd', 'R')"
                                        uib-popover-template="fetchRuleHelp('diamondd')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000"><span>&langle;·&rangle;</span><code class="pull-right">diamondd</code></a></li>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>&langle;·&rangle;</span><code class="pull-right">diamondd</code>
+                                        <!-- no long help -->
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('discreteGhost', 'R')"
-                                  uib-popover-template="fetchRuleHelp('discreteGhost')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>Discrete Ghost ...</span><code class="pull-right">discreteGhost</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('discreteGhost')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Discrete Ghost ...</span>
+                                        <span class="pull-right">
+                                            <code>discreteGhost</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('discreteGhost')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -612,39 +1124,93 @@
                             <ul class="dropdown-menu">
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('ODE', 'R')"
-                                  uib-popover-template="fetchRuleHelp('ODE')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>Auto</span><code class="pull-right">ODE</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('ODE')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>Auto</span>
+                                        <span class="pull-right">
+                                            <code>ODE</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('ODE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('solve', 'R')"
                                        uib-popover-template="fetchRuleHelp('solve')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>Solve</span><code class="pull-right">solve</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>Solve</span>
+                                        <span class="pull-right">
+                                            <code>solve</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('solve')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('dW', 'R')"
-                                  uib-popover-template="fetchRuleHelp('dW')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>Diff. Weaken</span><code class="pull-right">dW</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('dW')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>Diff. Weaken</span>
+                                        <span class="pull-right">
+                                            <code>dW</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('dW')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('dIRule', 'R')"
                                        uib-popover-template="fetchRuleHelp('dIRule')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>Diff. Invariant</span><code class="pull-right">dIRule</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Diff. Invariant</span>
+                                        <span class="pull-right">
+                                            <code>dIRule</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('dIRule')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('dIClose', 'R')"
                                        uib-popover-template="fetchRuleHelp('dIClose')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Diff. Invariant</span><code class="pull-right">dIClose</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Diff. Invariant</span>
+                                        <span class="pull-right">
+                                            <code>dIClose</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('dIClose')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <!-- TODO list further tactics -->
@@ -653,17 +1219,39 @@
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('dC', 'R')"
                                        uib-popover-template="fetchRuleHelp('dC')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                    <span>Diff. Cut ...</span><code class="pull-right">dC</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Diff. Cut ...</span>
+                                        <span class="pull-right">
+                                            <code>dC</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('dC')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('dG', 'R')"
-                                  uib-popover-template="fetchRuleHelp('dG')"
-                                  popover-class="k4-rulemenu-helppopover"
-                                  popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                  <span>Diff. Ghost ...</span><code class="pull-right">dG</code></a></li>
+                                       uib-popover-template="fetchRuleHelp('dG')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Diff. Ghost ...</span>
+                                        <span class="pull-right">
+                                            <code>dG</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('dG')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -681,78 +1269,172 @@
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'QE')"
                                        uib-popover-template="fetchRuleHelp('QE')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                        <span><i class="fa fa-calculator"></i> Real Arithmetic</span><code class="pull-right">QE</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span><i class="fa fa-calculator"></i> Real Arithmetic</span>
+                                        <span class="pull-right">
+                                            <code>QE</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('QE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-if="tool=='mathematica' || tool=='wolframengine' || tool=='wolframscript'"
                                     ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'M' }])"
                                        uib-popover-template="fetchRuleHelp('QE')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>... in Mathematica</span><code class="pull-right">QE("M")</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>... in Mathematica</span>
+                                        <span class="pull-right">
+                                            <code>QE("M")</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('QE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                 </a>
                                 </li>
                                 <li ng-if="tool=='mathematica'||tool=='wolframengine'||tool=='wolframscript'"
                                     ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'Z3' }])"
                                        uib-popover-template="fetchRuleHelp('QE')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>... in Z3</span><code class="pull-right">QE("Z3")</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                                        <span>... in Z3</span>
+                                        <span class="pull-right">
+                                            <code>QE("Z3")</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('QE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                 </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'smartQE')" uib-popover-template="fetchRuleHelp('smartQE')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Smart Arithmetic</span><code class="pull-right">smartQE</code>
+                                    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'smartQE')"
+                                       uib-popover-template="fetchRuleHelp('smartQE')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Smart Arithmetic</span>
+                                        <span class="pull-right">
+                                            <code>smartQE</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('smartQE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || getCounterExample()" uib-popover-template="fetchRuleHelp('findCounterexample')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
+                                    <a ng-click="agenda.items().length <= 0 || getCounterExample()">
                                         <span>Counterexample</span>
+                                        <span class="pull-right">
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('findCounterexample')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'pQE')" uib-popover-template="fetchRuleHelp('pQE')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Find Assumptions</span><code class="pull-right">pQE</code>
+                                    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'pQE')"
+                                       uib-popover-template="fetchRuleHelp('pQE')"
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Find Assumptions</span>
+                                        <span class="pull-right">
+                                            <code>pQE</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('pQE')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || getPegasusODECandidates()"
-                                       uib-popover-template="fetchRuleHelp('odeInvariantCandidates')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right"
-                                       popover-popup-delay="1000"><span>Find ODE Invariant Candidates</span></a></li>
+                                    <a ng-click="agenda.items().length <= 0 || getPegasusODECandidates()">
+                                        <span>Find ODE Invariant Candidates</span>
+                                        <span class="pull-right">
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('odeInvariantCandidates')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
+                                    </a>
+                                </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
-                                    <a ng-click="agenda.items().length <= 0 || getODEConditions()" uib-popover-template="fetchRuleHelp('odeConditions')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
+                                    <a ng-click="agenda.items().length <= 0 || getODEConditions()">
                                         <span>Find ODE Conditions</span>
+                                        <span class="pull-right">
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('odeConditions')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || doSearch('intervalArithmetic', 'R')"
                                        uib-popover-template="fetchRuleHelp('intervalArithmetic')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Interval Arithmetic</span><code class="pull-right">intervalArithmetic</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Interval Arithmetic</span>
+                                        <span class="pull-right">
+                                            <code>intervalArithmetic</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('intervalArithmetic')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li ng-class="{'disabled': agenda.items().length <= 0 }">
                                     <a ng-click="agenda.items().length <= 0 || openInputTacticDialog('intervalCutTerms', undefined)"
                                        uib-popover-template="fetchRuleHelp('intervalCutTerms')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="1000">
-                                        <span>Cut Interval Bounds...</span><code class="pull-right">intervalCutTerms</code>
+                                       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right" popover-popup-delay="200">
+                                        <span>Cut Interval Bounds...</span>
+                                        <span class="pull-right">
+                                            <code>intervalCutTerms</code>
+                                            <i class="fa fa-question-circle"
+                                               ng-click="$event.stopPropagation();fetchRuleHelp('intervalCutTerms')"
+                                               uib-popover-template="'rulehelp.html'"
+                                               popover-append-to-body="true"
+                                               popover-class="k4-rulemenu-helppopover-long"
+                                               popover-placement="auto bottom"
+                                               popover-trigger="'outsideClick'"></i>
+                                        </span>
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>

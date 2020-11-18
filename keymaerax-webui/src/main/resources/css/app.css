@@ -1363,6 +1363,14 @@ del {
   width: 400px;
 }
 
+.k4-rulemenu-helppopover-long {
+  max-width: 60%;
+}
+
+.k4-rulehelp-short .k4-rulehelp-long {
+  display: none;
+}
+
 /*
  *  Overridden UI-Tree
  */
