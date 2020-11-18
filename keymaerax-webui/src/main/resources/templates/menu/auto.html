@@ -67,14 +67,12 @@
     </a>
     <ul class="dropdown-menu dropdown-menu-right">
         <li><a ng-click="undoLastProofStep()"
-               data-intro="<center>Undo</center>" data-position="top"
                uib-popover-template="fetchRuleHelp('undo')"
                popover-class="k4-rulemenu-helppopover"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
             <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
         </li>
         <li><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(agenda.modelId, '', '')"
-               data-intro="<center>Restart</center>" data-position="top"
                uib-popover-template="fetchRuleHelp('restart')"
                popover-class="k4-rulemenu-helppopover"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
@@ -103,18 +101,22 @@
     </a>
     <ul class="dropdown-menu dropdown-menu-right">
         <li><a ng-click="agenda.items().length <= 0 || setFormulaMode('edit')"
-               data-intro="<center>Edit</center>" data-position="top"
                uib-popover-template="fetchRuleHelp('edit')"
                popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
             <span class="fa fa-pencil"><span class="k4-btn-optional-text"> Edit</span></span></a>
         </li>
         <li><a ng-click="agenda.items().length <=0 || openInputTacticDialog('alphaRenAll', undefined)"
-               data-intro="<center>Alpha Renaming</center>" data-position="top"
                uib-popover-template="fetchRuleHelp('alphaRenAll')"
                popover-class="k4-rulemenu-helppopover"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
             <span class="fa fa-edit"><span class="k4-btn-optional-text"> Alpha-Rename All ...</span></span></a>
+        </li>
+        <li><a ng-click="agenda.items().length <=0 || openInputTacticDialog('abbrv', undefined)"
+               uib-popover-template="fetchRuleHelp('abbrv')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-link"><span class="k4-btn-optional-text"> Abbreviate All ...</span></span></a>
         </li>
     </ul>
 
