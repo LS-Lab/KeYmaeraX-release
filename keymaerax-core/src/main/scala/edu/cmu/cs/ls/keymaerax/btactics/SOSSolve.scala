@@ -143,10 +143,15 @@ object SOSSolve {
         case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
         case fml => throw new IllegalArgumentException(name + " requires only formulas of the form 'poly = 0' in the antecedent but got " + fml)
       }.toList
+      val consts = polys.flatMap(StaticSemantics.signature(_).toSet).distinct.flatMap((e:Expression) =>
+        e match {
+          case bv:Function => Some(bv)
+          case _ => None
+        }).map( FuncOf(_,Nothing))
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct.sorted(variableOrdering)
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       val (sos, cofactors, lininst) = sosTimer.time {
-        sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
+        sosSolveTool.sosSolve(polys, consts++vars, degree, timeout) match {
           case Witness(sos, cofactors, lininst) => (sos, cofactors, lininst)
           case NoSOS => throw new SOSSolveNoSOS
           case Aborted => throw new SOSSolveAborted

@@ -86,7 +86,6 @@ class WitnessArithTests extends TacticTestBase {
     res shouldBe 'proved
   }
 
-  //todo: fix
   it should "solve Lecture 11 DI quartic dynamics (Example 11.7)" in withMathematica { qeTool =>
     val i = "x^3 >= -1 & a() >= 0 -> [{x'=(x-3)^4 +a()}] x^3 >= -1".asFormula
 
@@ -101,7 +100,6 @@ class WitnessArithTests extends TacticTestBase {
     res shouldBe 'proved
   }
 
-  //todo: fix
   it should "solve Lecture 11 DI damped oscillator" in withMathematica { qeTool =>
     val i = "w()^2*x^2 + y^2 <= c()^2 -> [{x'=y,y'=-w()^2*x-2*d()*w()*y & (w()>=0 & d()>=0)}]w()^2*x^2 + y^2 <= c()^2".asFormula
 
