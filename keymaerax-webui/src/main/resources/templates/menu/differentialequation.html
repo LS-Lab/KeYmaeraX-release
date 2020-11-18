@@ -1,0 +1,29 @@
+<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+   aria-haspopup="true" aria-expanded="false">Differential Equation <span class="caret"></span></a>
+<ul class="dropdown-menu">
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Auto" code-name="ODE" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Solve" code-name="solve" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Weaken" code-name="dW" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Invariant" code-name="dIRule" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Invariant" code-name="dIClose" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <!-- TODO list further tactics -->
+    <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
+    <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Cut ..." code-name="dC" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Ghost" code-name="dG" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+</ul>
