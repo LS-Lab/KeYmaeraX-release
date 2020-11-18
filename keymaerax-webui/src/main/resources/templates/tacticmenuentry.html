@@ -1,0 +1,22 @@
+<li ng-class="{'disabled': disabled }">
+    <a ng-click="disabled || run()"
+       ng-mouseenter="hideShortHelp || fetchHelp(helpName)"
+       popover-enable="!hideShortHelp"
+       uib-popover-template="'rulehelp.html'"
+       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+        <span ng-bind-html="name"></span>
+        <span class="pull-right">
+            <code ng-if="codeName">{{codeName}}</code>
+            <i class="fa fa-question-circle"
+               ng-if="!hideLongHelp"
+               ng-click="$event.stopPropagation();fetchHelp(helpName)"
+               uib-popover-template="'rulehelp.html'"
+               popover-append-to-body="true"
+               popover-enable="!hideLongHelp"
+               popover-class="k4-rulemenu-helppopover-long"
+               popover-placement="auto bottom"
+               popover-trigger="'outsideClick'"></i>
+        </span>
+    </a>
+</li>

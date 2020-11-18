@@ -74,7 +74,7 @@ output {
 
 .dropdown-menu {
   font-size: var(--lsfontsize);
-  min-width: 200px;
+  min-width: 220px;
 }
 
 .dropdown-header {
