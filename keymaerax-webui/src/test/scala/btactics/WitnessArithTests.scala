@@ -246,4 +246,11 @@ class WitnessArithTests extends TacticTestBase {
     println(res)
     res.map( pr => pr shouldBe 'proved)
   }
+
+  it should "prove a inequality" in withMathematica { _ =>
+    val pr = proveBy("a > 0 & b > 0 -> a*x^2+b*y^2 >= 0".asFormula,
+      SOSSolve.sos())
+    println(pr)
+    pr shouldBe 'proved
+  }
 }

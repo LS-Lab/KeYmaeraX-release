@@ -479,7 +479,7 @@ object SOSSolve {
           witnessTimer: Timer = NoTimer,
           skipPreprocessing: Boolean = false
          ): BelleExpr = anon {
-    val defaultTimeout = Some(60)
+    val defaultTimeout = Some(120)
     val defaultDegree = 100
     (if(skipPreprocessing) skip else preprocess(ratFormStrategy)) &
       TryCatch(
