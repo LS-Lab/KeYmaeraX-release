@@ -516,7 +516,10 @@ trait SequentCalculus {
     *   x=y |- [{x'=x}]x>=0
     * }}}
     */
-  @Tactic("α-ren", longDisplayName = "Alpha Rename", conclusion = "Γ |- P(x), Δ", premises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y")
+  @Tactic("α-ren", longDisplayName = "Alpha Rename",
+    premises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
+    conclusion = "Γ |- P(x), Δ",
+    inputs = "x:Variable;;y[y]:Variable")
   def alphaRen(what: Variable, to: Variable): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) =>
     if (!pos.isTopLevel) throw new TacticInapplicableFailure("Alpha renaming only applicable at top-level")
     seq.sub(pos) match {
@@ -558,7 +561,10 @@ trait SequentCalculus {
     *   [x:=0;]x>=0 |- [{x'=x}]x>=0, [x:=y;]x=y
     * }}}
     */
-  @Tactic("α-renall", longDisplayName = "Alpha Rename All", conclusion = "Γ(x) |- Δ(x)", premises = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y")
+  @Tactic("α-renall", longDisplayName = "Alpha Rename All",
+    premises   = "Γ(y) |- Δ(y) ;; Γ(x) |- Δ(x), x=y",
+    conclusion = "Γ(x) |- Δ(x)",
+    inputs = "x:Variable;;y[y]:Variable")
   def alphaRenAll(what: Variable, to: Variable): InputTactic = inputanon { (seq: Sequent) =>
     val anteIdxs = seq.ante.indices.filter(i => {
         val fv = StaticSemantics.freeVars(seq.ante(i))

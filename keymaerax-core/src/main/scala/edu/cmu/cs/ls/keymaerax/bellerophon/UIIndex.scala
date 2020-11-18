@@ -214,7 +214,7 @@ object UIIndex {
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
             case (_: Exists, false) => "existsR" :: "existsRmon" :: alwaysApplicable
-            case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: alwaysApplicable
+            case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: "alphaRenAllBy" :: alwaysApplicable
             case (FuncOf(fn, _), _) if substs.exists({ case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn case _ => false }) =>
               s"""expand "${fn.prettyString}"""" :: alwaysApplicable
             case (PredOf(fn, _), _) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false}) =>
