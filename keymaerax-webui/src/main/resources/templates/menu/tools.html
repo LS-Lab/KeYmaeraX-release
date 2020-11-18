@@ -31,6 +31,10 @@
             name="Smart Arithmetic" code-name="smartQE" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-long-help="true"
+            name="Real Arithmetic Witnesses" code-name="sossolve" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true"
             name="Counterexample" help-name="findCounterexample" exec="getCounterExample()"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
