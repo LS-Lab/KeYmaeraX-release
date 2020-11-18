@@ -67,7 +67,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     PolynomialArithV2
     TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
     proveBy(prob1, prop &
-      PolynomialArith.prepareArith &
+      SOSSolve.prepareArith &
       SOSSolve.witnessSOS(1, SOSSolve.lexicographicVariableOrdering)) shouldBe 'proved
   }
 

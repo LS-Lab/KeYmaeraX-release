@@ -1078,5 +1078,8 @@ object TactixLibrary extends HilbertCalculus
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-
+  /** Solve an arithmetic goal with sum-of-squares */
+  @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
+    displayLevel="all")
+  val sossolve : BelleExpr = anon ( SOSSolve.sos() )
 }

@@ -277,19 +277,19 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   // method parser
   "method parser" should "parse terminal methods" in {
-    p("by RCF", pp.method(_)) shouldBe Using(List(DefaultSelector), RCF())
-    p("by auto", pp.method(_)) shouldBe Using(List(DefaultSelector), Auto())
-    p("by prop", pp.method(_)) shouldBe Using(List(DefaultSelector), Prop())
+    p("by RCF;", pp.method(_)) shouldBe Using(List(DefaultSelector), RCF())
+    p("by auto;", pp.method(_)) shouldBe Using(List(DefaultSelector), Auto())
+    p("by prop;", pp.method(_)) shouldBe Using(List(DefaultSelector), Prop())
   }
 
   it should "parse using" in {
-    p("using x by auto", pp.method(_)) shouldBe Using(List(ForwardSelector(ProofVar("x".asVariable))), Auto())
+    p("using x by auto;", pp.method(_)) shouldBe Using(List(ForwardSelector(ProofVar("x".asVariable))), Auto())
   }
 
   it should "parse by-proof" in {
     p("true", pc.variableTrueFalse(_)) shouldBe True
     p("!(true) by auto;", pp.proof(_)) shouldBe List[Statement](Assert(Nothing, True, Using(List(DefaultSelector), (Auto()))))
-    p("proof !(true) by auto; end", pp.method(_)) shouldBe Using(List(DefaultSelector), ByProof(List[Statement](Assert(Nothing, True, Using(List(DefaultSelector), Auto())))))
+    p("proof !(true) by auto; end;", pp.method(_)) shouldBe Using(List(DefaultSelector), ByProof(List[Statement](Assert(Nothing, True, Using(List(DefaultSelector), Auto())))))
   }
 
   // proof-statement parser
@@ -331,7 +331,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse match" in {
-    p("let (x * y) = z;", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), Variable("z"))
+    p("let (x * y) = z ;", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), Variable("z"))
   }
 
   it should "parse block" in {
@@ -349,7 +349,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse box-choice" in {
     p("x := 2; ?x:(1 > 0); ++ x := 3; ?x:(x > 0);", pp.statement(_)) shouldBe BoxChoice(
       block(List(Modify(Nil, List((("x".asVariable), Some(Number(2))))), Assume(Variable("x"), Greater(Number(1), Number(0))))),
-      block(List(Modify(List("x".asVariable), List(("x".asVariable, (Some(Number(3)))))), Assume(Variable("x"), Greater(Variable("x"), Number(0))))))
+      block(List(Modify(List(), List(("x".asVariable, (Some(Number(3)))))), Assume(Variable("x"), Greater(Variable("x"), Number(0))))))
   }
 
   it should "parse while" in {
@@ -361,7 +361,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse boxloop" in {
     p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe
       BoxLoop(Block(List(Assume(Variable("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(Nil, List(("x".asVariable, Some(Minus(Variable("x"), Number(1)))))))),
-        Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))), None)))
+        None) // Some((Variable("x"), Equal(Variable("x"), Minus(Variable("x"), Number(1))), None))
   }
 
   it should "parse ghost" in {
@@ -373,12 +373,12 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse print-goal" in {
-    p("print \"hello\";", pp.statement(_)) shouldBe PrintGoal(PrintString("hello"))
+    p("print (\"hello\");", pp.statement(_)) shouldBe PrintGoal(PrintString("hello"))
   }
 
   // ODE proofs
   it should "parse simple atomic ode proof" in {
-    p("?true;", pp.domainStatement(_)) shouldBe DomAssume(Nothing, True)
+    p("?(true);", pp.domainStatement(_)) shouldBe DomAssume(Nothing, True)
   }
 
   it should "parse simple system proof" in {
@@ -401,7 +401,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffghost with cuts" in {
-    p("x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by auto", pp.proveODE(_)) shouldBe(
+    p("x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by auto;", pp.proveODE(_)) shouldBe(
       ProveODE(DiffProductStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Neg(BaseVariable("x")))),
         DiffGhostStatement(AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("y")), Times(Variable("y"), Divide(Number(1), Number(2))))))),
         DomAssert(Variable("inv"), Equal(Times(Variable("x"), Power(Variable("y"), Number(2))), Number(1)), Using(List(DefaultSelector), Auto()))
@@ -414,7 +414,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffweak" in {
-    p("x' = y & /-- ?dc:(x > 0) --/;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("{x' = y & /-- ?dc:(x > 0); --/}", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
     )), DomWeak(DomAssume(Variable("dc"), Greater(Variable("x"), Number(0)))))
   }
@@ -426,13 +426,13 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse dc-assign" in {
-    p("x' = y & t := T;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & ?(t := T);", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
     , DomModify(Nothing, Variable("t"), Variable("T")))
   }
 
   it should "parse conjunction" in {
-    p("x' = y & t := T & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & ?(t := T); & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
           DomModify(Nothing, Variable("t"), Variable("T")),
@@ -441,7 +441,7 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse example from 1d car" in {
     val nt = Nothing
-    p("{{x' = v, v' = a, t' = 1 & ?(t <= T & v>=0)}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(
+    p("{{x' = v, v' = a, t' = 1 & ?(t <= T & v>=0);}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(
       AtomicODEStatement(AtomicODE(dx, vv)), DiffProductStatement(AtomicODEStatement(AtomicODE(dv, va)), AtomicODEStatement(AtomicODE(dt, Number(1))))),
       DomAssume(nt, And(LessEqual(vt, vT), GreaterEqual(vv, Number(0)))))
     )
