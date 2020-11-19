@@ -486,6 +486,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.menu = {
       hpmenu: {
         kind: 'box'
+      },
+      odemenu: {
+        kind: 'box'
       }
     }
 

@@ -5,16 +5,28 @@
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Auto" code-name="ODE" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
+    <li>
+        <nav class="nav nav-pills nav-fill">
+            <a class="button nav-item nav-link" ng-class="{active: menu.odemenu.kind=='box'}"
+               ng-click="menu.odemenu.kind='box';$event.stopPropagation();">Box</a>
+            <a class="button nav-item nav-link" ng-class="{active: menu.odemenu.kind=='diamond'}"
+               ng-click="menu.odemenu.kind='diamond';$event.stopPropagation();">Diamond</a>
+        </nav>
+    </li>
+    <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Solve" code-name="solve" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Diff. Weaken" code-name="dW" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Diff. Invariant" code-name="dIRule" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Diff. Invariant" code-name="dIClose" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <!-- TODO list further tactics -->
@@ -24,6 +36,69 @@
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Diff. Cut ..." code-name="dC" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Diff. Ghost" code-name="dG" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Refine" code-name="dR" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Differential Variant" code-name="dV" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="ODE Unify" code-name="odeUnify" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="K&langle;&amp;&rangle;" code-name="kDomainDiamond" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Differential Refinement" code-name="dDR" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Compatible ODE Cut" code-name="compatCut" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Global Existence" code-name="gEx" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Closed Domain Refinement" code-name="closedRef" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Barrier" code-name="barrier" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Darboux" code-name="dbx" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Cut + Auto DI" code-name="diffInvariant" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Inverse Diff. Cut" code-name="dCi" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Inverse Diff. Ghost" code-name="dGi" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Unpack Evolution Domain" code-name="diffUnpackEvolDomain" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Split Weak Inequality" code-name="splitWeakInequality" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
 </ul>
