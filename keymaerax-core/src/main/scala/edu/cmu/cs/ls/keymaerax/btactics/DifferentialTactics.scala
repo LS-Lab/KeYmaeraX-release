@@ -399,8 +399,8 @@ private object DifferentialTactics extends Logging {
     * */
   @Tactic(names="Inverse Differential Cut",
     codeName="dCi", // todo: rename the tactic directly
-    premises="Γ |- [x'=f(x)&Q]P ;; Γ |- R, Δ",
-    conclusion="Γ |- [x'=f(x)&(Q∧R)]P, Δ",
+    premises="Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
+    conclusion="Γ |- [x'=f(x) & Q∧R]P, Δ",
     displayLevel="browse")
   val inverseDiffCut: DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -657,8 +657,8 @@ private object DifferentialTactics extends Logging {
     */
   @Tactic(names="Inverse Differential Ghost",
     codeName="dGi",  // todo: rename the tactic directly
-    premises="Γ |- [{x'=f(x) & Q}]P, Δ",
-    conclusion="Γ |- ∃y [{x'=f(x),E & Q}]P, Δ",
+    premises="Γ |- [x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- ∃y [x'=f(x),E & Q]P, Δ",
     displayLevel="browse")
   val inverseDiffGhost: DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -752,8 +752,8 @@ private object DifferentialTactics extends Logging {
    */
   @Tactic(names="Unpack evolution domain",
     codeName="diffUnpackEvolDomain", // todo: rename the tactic directly
-    premises="Γ, Q |- [x'=f(x)&Q]P, Δ",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    premises="Γ, Q |- [x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     displayLevel="browse")
   lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
@@ -771,9 +771,9 @@ private object DifferentialTactics extends Logging {
           codeName="dW", // todo: rename the tactic directly
           longDisplayName="Differential Weaken",
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
-          conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+          conclusion="Γ |- [x'=f(x) & Q]P, Δ",
           contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
-          contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+          contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
           displayLevel="all", revealInternalSteps=true)
   private[btactics] lazy val diffWeaken: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
@@ -809,9 +809,9 @@ private object DifferentialTactics extends Logging {
     codeName="dWplus", // todo: rename the tactic directly
     longDisplayName="Differential Weaken",
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="browse", revealInternalSteps=true)
   private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
@@ -1293,8 +1293,8 @@ private object DifferentialTactics extends Logging {
     * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
     * @author Nathan Fulton */
   @Tactic(names="Split weak inequality",
-    premises="Γ |- [x'=f(x)&Q] p > q, Δ ;; Γ |- [x'=f(x)&Q] p = q, Δ",
-    conclusion="Γ |- [x'=f(x)&Q] p >= q, Δ",
+    premises="Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
+    conclusion="Γ |- [{x'=f(x) & Q}] p≳q, Δ",
     displayLevel="browse")
   val splitWeakInequality : DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
@@ -1680,7 +1680,7 @@ private object DifferentialTactics extends Logging {
   @Tactic(names="Strict Barrier Certificate",
     codeName="barrier", // todo: rename the tactic directly
     premises="Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
-    conclusion="Γ |- [x'=f(x)&Q] p≳0, Δ",
+    conclusion="Γ |- [x'=f(x) & Q] p≳0, Δ",
     displayLevel="browse")
   val dgBarrier: DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     Dconstify(dgBarrierAux(pos))(pos)
@@ -1783,8 +1783,8 @@ private object DifferentialTactics extends Logging {
   })
 
   @Tactic(names="Darboux (in)equalities",
-    premises="Γ |- p≳0 ;; Q |- p' >= g p",
-    conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
+    premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
+    conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs="g:option[term]",
     displayLevel="browse")
   def dbx(g : Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ({ pos: Position =>

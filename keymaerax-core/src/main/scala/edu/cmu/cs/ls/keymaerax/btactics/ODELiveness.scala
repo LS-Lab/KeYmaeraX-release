@@ -840,8 +840,8 @@ object ODELiveness {
   @Tactic(names="compatCut",
     codeName="compatCut",
     longDisplayName="Compatible ODE Cut",
-    premises="Γ, [x'=f(x)&Q]R |- C(< x'=f(x)&Q >P), Δ ;; Γ |- [x'=f(x)&Q]R, Δ",
-    conclusion="Γ |- C(< x'=f(x)&Q >P), Δ",
+    premises="Γ, [x'=f(x) & Q]R |- C(⟨x'=f(x) & Q⟩P), Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
+    conclusion="Γ |- C(⟨x'=f(x) & Q⟩P), Δ",
     displayLevel="all",
     inputs = "R:formula")
   def compatCut(R:Formula) : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
@@ -869,8 +869,8 @@ object ODELiveness {
   */
   @Tactic(names="K<&>",
     codeName="kDomainDiamond",
-    premises="Γ |- < x'=f(x)&Q > R, Δ ;; Γ |- [ x'=f(x)&Q&!P ] !R, Δ",
-    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    premises="Γ |- ⟨x'=f(x) & Q⟩ R, Δ ;; Γ |- [x'=f(x) & Q∧¬P]¬R, Δ",
+    conclusion="Γ |- ⟨x'=f(x) & Q⟩ P, Δ",
     displayLevel="all")
   // was kDomD
   def kDomainDiamond(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
@@ -905,8 +905,8 @@ object ODELiveness {
   @Tactic(names="dDR",
     codeName="dDR",
     longDisplayName="Diamond Differential Refinement",
-    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- [x'=f(x)&R] Q, Δ",
-    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    premises="Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- [x'=f(x) & R]Q, Δ",
+    conclusion="Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayLevel="all")
   def dDR(R: Formula):DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
@@ -1564,8 +1564,8 @@ object ODELiveness {
   @Tactic(names="closedRef",
     codeName="closedRef",
     longDisplayName="Closed Domain Refinement",
-    premises="Γ |- < x'=f(x)&R > P, Δ ;; Γ |- g>0 && [x'=f(x)&R & !P & g>=0] g>0, Δ",
-    conclusion="Γ |- < x'=f(x)& g>=0 > P, Δ",
+    premises="Γ |- ⟨x'=f(x) & R⟩P, Δ ;; Γ |- g>0 & [x'=f(x) & R∧¬P∧g≳0]g>0, Δ",
+    conclusion="Γ |- ⟨x'=f(x) & g≳0⟩P, Δ",
     displayLevel="browse")
   def closedRef(R: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
@@ -1683,8 +1683,8 @@ object ODELiveness {
   @Tactic(names="dBDG",
     codeName="dBDG",
     longDisplayName="Bounded Diff Ghost",
-    premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- < x'=f(x)&Q > P, Δ",
-    conclusion="Γ |- < y'=g(x,y),x'=f(x)& Q > P, Δ",
+    premises="Γ |- [y'=g(x,y),x'=f(x) & Q]||y||^2 ≤ p(x) ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    conclusion="Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
     displayLevel="internal")
   def dBDG(p: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     dBDGInternal(p, 1)(pos, sequent)
@@ -1693,8 +1693,8 @@ object ODELiveness {
   @Tactic(names="dDDG",
     codeName="dDDG",
     longDisplayName="Differentially-bounded Diff Ghost",
-    premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- < x'=f(x)&Q > P, Δ",
-    conclusion="Γ |- < y'=g(x,y),x'=f(x)&Q > P, Δ",
+    premises="Γ |- [y'=g(x,y),x'=f(x) & Q](||y||^2)' <= L||y||+M ;; Γ |- ⟨x'=f(x) & Q⟩P, Δ",
+    conclusion="Γ |- ⟨y'=g(x,y),x'=f(x) & Q⟩P, Δ",
     displayLevel="internal")
   def dDDG(L:Term, M: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     dDDGInternal(L, M, 1)(pos, sequent)
@@ -1710,7 +1710,7 @@ object ODELiveness {
     codeName="gEx",
     longDisplayName="Global Existence",
     premises="* (hint)",
-    conclusion="Γ |- < x'=f(x),t'=1 > t > s(), Δ",
+    conclusion="Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
     displayLevel="all")
   def gEx(hint: Option[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
     odeReduce(strict = true, hint.toList)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done)
@@ -1719,8 +1719,8 @@ object ODELiveness {
   @Tactic(names="dV",
     codeName="dV",
     longDisplayName="Differential Variant",
-    premises=" Γ |- \\exists eps (eps > 0 & [x'=f(x)&Q&!P] (P)' >= eps), Δ ;; Γ |- ∀s < x'=f(x),t'=1&Q > t >= s, Δ",
-    conclusion="Γ |- < x'=f(x)&Q > P, Δ",
+    premises=" Γ |- ∃eps (eps>0 & [x'=f(x)& Q∧¬P](P)'≳eps), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
+    conclusion="Γ |- ⟨x'=f(x) & Q⟩P, Δ",
     displayLevel="all")
   def dV(eps:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) => {
     // Check if the postcondition is an atomic inequality
