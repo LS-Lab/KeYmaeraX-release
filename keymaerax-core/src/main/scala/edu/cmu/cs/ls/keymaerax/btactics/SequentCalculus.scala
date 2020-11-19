@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, useAt}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{exhaustiveEqL2R, uniformRename, useAt}
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -566,18 +566,24 @@ trait SequentCalculus {
     conclusion = "Γ(x) |- Δ(x)",
     inputs = "x:Variable;;y[y]:Variable")
   def alphaRenAll(what: Variable, to: Variable): InputTactic = inputanon { (seq: Sequent) =>
-    val anteIdxs = seq.ante.indices.filter(i => {
-        val fv = StaticSemantics.freeVars(seq.ante(i))
-        fv.contains(what) && !fv.contains(to)
-      })
-    val succIdxs = seq.succ.indices.filter(i => {
-      val fv = StaticSemantics.freeVars(seq.succ(i))
-      fv.contains(what) && !fv.contains(to)
-    })
+    val anteIdxs = seq.ante.indices.filter(i =>
+      StaticSemantics.boundVars(seq.ante(i)).contains(what) && !StaticSemantics.freeVars(seq.ante(i)).contains(to))
+    val succIdxs = seq.succ.indices.filter(i =>
+      StaticSemantics.boundVars(seq.succ(i)).contains(what) && !StaticSemantics.freeVars(seq.succ(i)).contains(to))
     val anteRewrite = anteIdxs.map(i => alphaRen(what, to)(AntePos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
     val succRewrite = succIdxs.map(i => alphaRen(what, to)(SuccPos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
-    if (seq.ante.contains(Equal(what, to))) anteRewrite & succRewrite
-    else cut(Equal(what, to)) <(anteRewrite & succRewrite & hideL('Llast, Equal(what, to)), Idioms.nil)
+
+    if (seq.ante.contains(Equal(what, to))) {
+      anteRewrite & succRewrite & exhaustiveEqL2R(hide=false)(AntePos(seq.ante.indexOf(Equal(what, to))))
+    } else if (seq.ante.zipWithIndex.filter({ case (_, i) => anteIdxs.contains(i) }).forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(what) })
+            && seq.succ.zipWithIndex.filter({ case (_, i) => succIdxs.contains(i) }).forall({ case (f, _) => !StaticSemantics.freeVars(f).contains(to) })) {
+      cut(Exists(List(what), Equal(what, to))) <(
+        existsL('Llast) & anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)('Llast) &
+          uniformRename(Variable(what.name, Some(what.index.map(_ + 1).getOrElse(0))), what),
+        cohide('Rlast) & existsR(to)(1) & TactixLibrary.byUS(Ax.equalReflexive))
+    } else {
+      cut(Equal(what, to)) <(anteRewrite & succRewrite & exhaustiveEqL2R(hide=true)('Llast), Idioms.nil)
+    }
   }
 
   /** Alpha renaming everywhere in the sequent using an equality at a specific position in the antecedent. */
