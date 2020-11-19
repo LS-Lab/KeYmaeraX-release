@@ -444,8 +444,26 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "expand special functions" in withQE { _ =>
-    the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
-      "Differential invariant must be preserved: expected to have proved, but got open goals"
+    proveBy("[{x'=3}]abs(x)>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+      "true ==> x>=0&x>=2 | x<0&-x>=2".asSequent,
+      "true ==> [x':=3;]((x'>=0&x'>=0) & x'<=0&-x'>=0)".asSequent
+    )
+    proveBy("[{x'=3}]max(x,4)>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+      "true ==> x>=4&x>=2 | x<4&4>=2".asSequent,
+      "true ==> [x':=3;]((x'>=0&x'>=0) & x'<=0&0>=0)".asSequent
+    )
+    proveBy("[{x'=3}]min(x,4)<=6".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+      "true ==> x<=4&x<=6 | x>4&4<=6".asSequent,
+      "true ==> [x':=3;]((x'<=0&x'<=0) & x'>=0&0<=0)".asSequent
+    )
+  }
+
+  it should "FEATURE_REQUEST: expand special functions and constify their abbreviation if possible" taggedAs TodoTest in withQE { _ =>
+    //@todo needs expand outside DConstify(...) with intermediate result between expand and DConstify stored in DB
+    proveBy("[{x'=3}]abs(f())>=2".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+      "f()>=0&abs_0()=f() | f()<0&abs_0()=-f(), true ==> abs_0()>=2".asSequent,
+      "f()>=0&abs_0()=f() | f()<0&abs_0()=-f(), true ==> [x':=3;]0>=0".asSequent
+    )
   }
 
   it should "work when not sole formula in succedent" in withQE { _ =>
@@ -455,6 +473,14 @@ class DifferentialTests extends TacticTestBase {
   it should "not be applicable on non-FOL postcondition" in withQE { _ =>
     the [TacticInapplicableFailure] thrownBy proveBy("x>=0, y>=1 ==> [{x'=2}][{x'=5&y>=2} ++ y:=y+1;](x>=0 & y>=2)".asSequent, dI()(1)) should
       have message "diffInd only applicable to FOL postconditions, but got [{x'=5&y>=2}++y:=y+1;](x>=0&y>=2)"
+  }
+
+  it should "leave uninterpreted function symbols untouched" in withMathematica { _ =>
+    proveBy("test(x)>=0 ==> [{x'=2}]test(x)>=0".asSequent, dI(auto='diffInd)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      "test(x)>=0, true ==> test(x)>=0".asSequent,
+      "test(x_0)>=0, true ==> [x':=2;](test(x))'>=0".asSequent
+    )
   }
 
   "Derive" should "FEATURE_REQUEST: derive quantifiers" taggedAs TodoTest in withTactics {
