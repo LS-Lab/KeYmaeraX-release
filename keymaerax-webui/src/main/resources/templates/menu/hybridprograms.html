@@ -26,6 +26,10 @@
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
+            name="[:=]D" code-name="assignbDual" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
             name="[:*]" code-name="randomb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
@@ -51,6 +55,10 @@
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
             name="&langle;:=&rangle;" code-name="assignd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&langle;:=&rangle;D" code-name="assigndDual" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
