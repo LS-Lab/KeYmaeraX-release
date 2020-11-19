@@ -148,10 +148,9 @@ object UIIndex {
           case _: Loop => "con" +: maybeSplit :+ "<*> iterate"
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
-              if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)
-              else ("solve" :: "compatCut" :: Nil) //todo
-            }
-            else ("solve" :: "compatCut" :: Nil) //todo
+              if (pos.forall(_.isTopLevel)) ("dV" :: "dC" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)
+              else ("dC" :: "solve" :: "compatCut" :: Nil) //todo
+            } else ("dC" :: "solve" :: "compatCut" :: Nil) //todo
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
             s"""expand "$name"""" :: rules
           case _ => rules
