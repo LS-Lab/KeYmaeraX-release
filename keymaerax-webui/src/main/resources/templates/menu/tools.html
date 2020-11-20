@@ -56,12 +56,12 @@
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
             name="Interval Arithmetic" code-name="intervalArithmetic"
-            exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
             name="Cut Interval Bounds ..." code-name="intervalCutTerms"
-            exec="openInputTacticDialog(codeName, undefined)"></k4-tactic-menu-entry>
+            exec="openTacticPosInputDialog(codeName, undefined)"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"

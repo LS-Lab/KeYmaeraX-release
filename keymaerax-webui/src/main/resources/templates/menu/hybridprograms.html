@@ -4,7 +4,7 @@
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="Exhaustive" code-name="chase" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Exhaustive" code-name="chase" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <li>
         <nav class="nav nav-pills nav-fill">
@@ -18,98 +18,98 @@
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[:=]" code-name="assignb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[:=]" code-name="assignb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[:=]=" code-name="assignEquality" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[:=]=" code-name="assignEquality" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[:=]D" code-name="assignbDual" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[:=]D" code-name="assignbDual" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[:*]" code-name="randomb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[:*]" code-name="randomb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[?]" code-name="testb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[?]" code-name="testb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[&cup;]" code-name="choiceb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[&cup;]" code-name="choiceb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[;]" code-name="composeb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[;]" code-name="composeb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[*]" code-name="iterateb" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[*]" code-name="iterateb" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="Loop ..." code-name="loop" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Loop ..." code-name="loop" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;:=&rangle;" code-name="assignd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;:=&rangle;" code-name="assignd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;:=&rangle;D" code-name="assigndDual" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;:=&rangle;D" code-name="assigndDual" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;:*&rangle;" code-name="randomd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;:*&rangle;" code-name="randomd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;?&rangle;" code-name="testd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;?&rangle;" code-name="testd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;&cup;&rangle;" code-name="choiced" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;&cup;&rangle;" code-name="choiced" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;;&rangle;" code-name="composed" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;;&rangle;" code-name="composed" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&langle;*&rangle;" code-name="iterated" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;*&rangle;" code-name="iterated" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="Converge ..." code-name="con" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Converge ..." code-name="con" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[]&and;" code-name="boxAnd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[]&and;" code-name="boxAnd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="Abstract" code-name="GV" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Abstract" code-name="GV" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="Generalize ..." code-name="MR" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Generalize ..." code-name="MR" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="[·]" code-name="boxd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="[·]" code-name="boxd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" proof-id="{{proofId}}" user-id="{{userId}}"
             disabled="agenda.items().length <= 0" hide-long-help="true"
-            name="&langle;·&rangle;" code-name="diamondd" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&langle;·&rangle;" code-name="diamondd" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Discrete Ghost ..." code-name="discreteGhost" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Discrete Ghost ..." code-name="discreteGhost" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <!-- TODO -->
     <!--<li role="separator" class="divider"></li>-->
-    <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
-    <!--<li><a ng-click="doSearch('DiamondChoice', 'R')"><span>&rang;++&lang;</span><code class="pull-right">choiced</code></a></li>-->
+    <!--<li><a ng-click="openTacticPosInputDialog('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
+    <!--<li><a ng-click="openTacticPosInputDialog('DiamondChoice', 'R')"><span>&rang;++&lang;</span><code class="pull-right">choiced</code></a></li>-->
 </ul>

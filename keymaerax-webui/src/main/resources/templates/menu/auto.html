@@ -106,13 +106,13 @@
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
             <span class="fa fa-pencil"><span class="k4-btn-optional-text"> Edit</span></span></a>
         </li>
-        <li><a ng-click="agenda.items().length <=0 || openInputTacticDialog('alphaRenAll', undefined)"
+        <li><a ng-click="agenda.items().length <=0 || openTacticPosInputDialog('alphaRenAll', undefined)"
                uib-popover-template="fetchRuleHelp('alphaRenAll')"
                popover-class="k4-rulemenu-helppopover"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
             <span class="fa fa-edit"><span class="k4-btn-optional-text"> Alpha-Rename All ...</span></span></a>
         </li>
-        <li><a ng-click="agenda.items().length <=0 || openInputTacticDialog('abbrv', undefined)"
+        <li><a ng-click="agenda.items().length <=0 || openTacticPosInputDialog('abbrv', undefined)"
                uib-popover-template="fetchRuleHelp('abbrv')"
                popover-class="k4-rulemenu-helppopover"
                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">

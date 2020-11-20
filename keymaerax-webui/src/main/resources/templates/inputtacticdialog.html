@@ -1,0 +1,48 @@
+<div class="modal-header">
+    <h3 class="modal-title"><span ng-bind-html="tactic.selectedDerivation().name"></span>
+        <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}}</span>
+        <span class="pull-right">
+            <button ng-class="{'disabled' : tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0, 'btn': true, 'btn-primary': true}"
+                    ng-if="!readOnly && !defaultPositionLocator"
+                    ng-click="applyInputTactic(tactic.selectedDerivation().derivation.input)"
+                    focus-if="tactic.selectedDerivation().missingInputNames().length == 0">Apply</button>
+            <a ng-click="cancel()"><span class="fa fa-close"></span></a>
+        </span>
+    </h3>
+</div>
+<div class="modal-body">
+    <div class="container row" ng-if="tactic.selectedDerivation().derivation.input.length > 0">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">Provide tactic input</div>
+                <div class="panel-body">
+
+                    <div class="k4-tactic-popover-entry" ng-repeat="tactic in [tactic.selectedDerivation()]">
+                    <div ng-if="tactic.derivation.type === 'axiom'">
+                        <div ng-bind-html="tactic.derivation.formula"></div>
+                    </div>
+                    <div ng-if="tactic.derivation.type === 'tactic'">
+                        <div ng-bind-html="tactic.derivation.formula"></div>
+                    </div>
+
+                    <div ng-if="tactic.derivation.type === 'sequentrule'"
+                         ng-include="'templates/sequentRuleTemplate.html'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container row" ng-if="defaultPositionLocator">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">Select formula (hover and click to select typical formulas, press <kbd>option/alt</kbd> key and click to select any term or formula).</div>
+                <div class="panel-body">
+                    <k4-sequent user-id="undefined" proof-id="undefined" node-id="undefined"
+                                sequent="sequent"
+                                read-only="false" collapsed="false" abbreviate="false"
+                                on-apply-tactic="formulaSelected(formulaId, tactic.selectedDerivation().derivation.input)"></k4-sequent>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

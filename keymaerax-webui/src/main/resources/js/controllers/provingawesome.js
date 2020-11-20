@@ -730,26 +730,34 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       }
     }
 
-    $scope.openInputTacticDialog = function(tacticName, positionLocator) {
+    $scope.openTacticPosInputDialog = function(tacticName, positionLocator) {
       var nodeId = sequentProofData.agenda.selectedId();
       var tactics = derivationInfos.byName($scope.userId, $scope.proofId, nodeId, tacticName)
         .then(function(response) {
           return response.data;
         });
 
+      var prevMode = sequentProofData.formulas.mode;
+      sequentProofData.formulas.mode = 'select';
+
       var modalInstance = $uibModal.open({
-        templateUrl: 'templates/derivationInfoDialog.html',
+        templateUrl: 'templates/inputtacticdialog.html',
         controller: 'DerivationInfoDialogCtrl',
         size: 'lg',
         resolve: {
           tactics: function() { return tactics; },
-          readOnly: function() { return false; }
+          readOnly: function() { return false; },
+          userId: function() { return $scope.userId; },
+          proofId: function() { return $scope.proofId; },
+          defaultPositionLocator: function() { return positionLocator; },
+          sequent: function() { return sequentProofData.proofTree.nodesMap[nodeId].getSequent(); }
         }
       });
 
-      modalInstance.result.then(function(derivation) {
-        if (positionLocator === undefined) $scope.doInputTactic(undefined, tacticName, derivation);
-        else $scope.doSearchInput(tacticName, positionLocator, derivation);
+      modalInstance.result.then(function(data) {
+        $scope.doInputTactic(data.position, tacticName, data.input);
+      }).finally(function() {
+        sequentProofData.formulas.mode = prevMode;
       })
     }
 

@@ -8,9 +8,9 @@ angular.module('formula')
     return {
         restrict: 'AE',
         scope: {
-            userId: '=',
-            proofId: '=',
-            nodeId: '=',
+            userId: '@',
+            proofId: '@',
+            nodeId: '@',
             formula: '=',
             highlight: '=',
             collapsed: '=?',

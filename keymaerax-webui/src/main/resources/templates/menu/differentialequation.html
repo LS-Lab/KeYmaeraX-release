@@ -3,7 +3,7 @@
 <ul class="dropdown-menu">
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Auto" code-name="ODE" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Auto" code-name="ODE" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <li>
         <nav class="nav nav-pills nav-fill">
@@ -16,89 +16,89 @@
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Solve" code-name="solve" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Solve" code-name="solve" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Weaken" code-name="dW" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Weaken" code-name="dW" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Invariant" code-name="dIRule" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Invariant" code-name="dIRule" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Invariant" code-name="dIClose" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Invariant" code-name="dIClose" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <!-- TODO list further tactics -->
-    <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
-    <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
+    <!--<li><a ng-click="openTacticPosInputDialog('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
+    <!--<li><a ng-click="openTacticPosInputDialog('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
     <k4-tactic-menu-entry
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Cut ..." code-name="dC" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
-    <k4-tactic-menu-entry
-            ng-if="menu.odemenu.kind=='box'"
-            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Ghost" code-name="dG" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Cut ..." code-name="dC" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Refine" code-name="dR" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Ghost" code-name="dG" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Diff. Refine" code-name="dR" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Differential Variant" code-name="dV" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Differential Variant" code-name="dV" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="ODE Unify" code-name="odeUnify" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="ODE Unify" code-name="odeUnify" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="K&langle;&amp;&rangle;" code-name="kDomainDiamond" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="K&langle;&amp;&rangle;" code-name="kDomainDiamond" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Differential Refinement" code-name="dDR" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Differential Refinement" code-name="dDR" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Compatible ODE Cut" code-name="compatCut" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Compatible ODE Cut" code-name="compatCut" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Global Existence" code-name="gEx" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Global Existence" code-name="gEx" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Closed Domain Refinement" code-name="closedRef" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Closed Domain Refinement" code-name="closedRef" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Barrier" code-name="barrier" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Barrier" code-name="barrier" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Darboux" code-name="dbx" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Darboux" code-name="dbx" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Cut + Auto DI" code-name="diffInvariant" exec="openInputTacticDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Diff. Cut + Auto DI" code-name="diffInvariant" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Inverse Diff. Cut" code-name="dCi" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Inverse Diff. Cut" code-name="dCi" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Inverse Diff. Ghost" code-name="dGi" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Inverse Diff. Ghost" code-name="dGi" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Unpack Evolution Domain" code-name="diffUnpackEvolDomain" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Unpack Evolution Domain" code-name="diffUnpackEvolDomain" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Split Weak Inequality" code-name="splitWeakInequality" exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+            name="Split Weak Inequality" code-name="splitWeakInequality" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
 </ul>

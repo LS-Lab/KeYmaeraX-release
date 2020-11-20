@@ -13,12 +13,14 @@
                 <li><a href="" ng-click="onTactic(f.id,'Hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
-                <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
+                <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                            goal-id="{{goalId}}" formula="f.formula"
                             on-tactic="onTactic(formulaId, tacticId)" highlight="true"></k4-formula>
             </div>
         </div>
         <div class="col-md-11 k4-formula k4-flexcell" ng-if="readOnly">
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
+            <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                        goal-id="{{goalId}}" formula="f.formula"
                         on-tactic="onTactic(formulaId, tacticId)" highlight="false"></k4-formula>
         </div>
     </div>
@@ -62,12 +64,14 @@
                 <li><a href="" ng-click="onTactic(f.id,'Hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
-                <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
+                <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                            goal-id="{{goalId}}" formula="f.formula"
                             on-tactic="onTactic(formulaId, tacticId)" highlight="true"></k4-formula>
             </div>
         </div>
         <div class="col-md-11 k4-formula k4-flexcell" ng-if="readOnly">
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" formula="f.formula"
+            <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                        goal-id="{{goalId}}" formula="f.formula"
                         on-tactic="onTactic(formulaId, tacticId)" highlight="false"></k4-formula>
         </div>
     </div>
