@@ -1719,9 +1719,9 @@ object ODELiveness {
   @Tactic(names="dV",
     codeName="dV",
     longDisplayName="Differential Variant",
-    premises=" Γ |- ∃eps (eps>0 & [x'=f(x)& Q∧¬P](P)'≳eps), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
+    premises=" Γ |- ∃ε (ε>0 ∧ [x'=f(x)& Q∧¬P](P)'≳ε), Δ ;; Γ |- ∀s ⟨x'=f(x),t'=1 & Q⟩t≳s, Δ",
     conclusion="Γ |- ⟨x'=f(x) & Q⟩P, Δ",
-    displayLevel="all")
+    displayLevel="all", inputs="ε:Option[Term]")
   def dV(eps:Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) => {
     // Check if the postcondition is an atomic inequality
     // Note: ill-formed applications are caught in the sub-tactics
