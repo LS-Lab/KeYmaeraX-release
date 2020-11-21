@@ -11,7 +11,8 @@ angular.module('keymaerax.ui.directives')
         helpName: '@',
         hideLongHelp: '@',
         hideShortHelp: '@',
-        exec: '&exec'
+        exec: '&exec',
+        optionExec: '&optionExec'
       },
       templateUrl: 'templates/tacticmenuentry.html',
       link: function(scope, element, attrs) {
@@ -33,7 +34,10 @@ angular.module('keymaerax.ui.directives')
           }
         }
         scope.run = function() {
-          scope.exec({codeName: scope.codeName})
+          scope.exec({codeName: scope.codeName});
+        }
+        scope.runOption = function() {
+          scope.optionExec({codeName: scope.codeName});
         }
       }
     }

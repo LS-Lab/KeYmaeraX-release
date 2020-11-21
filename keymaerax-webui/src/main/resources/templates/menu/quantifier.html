@@ -4,7 +4,8 @@
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&forall;R" code-name="allR" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&forall;R" code-name="allR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
@@ -20,25 +21,28 @@
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&exist;L" code-name="existsL" exec="openTacticPosInputDialog(codeName, 'L')"></k4-tactic-menu-entry>
+            name="&exist;L" code-name="existsL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="&forall;Ri" code-name="allRi" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="&forall;Ri" code-name="allRi"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="∃Li" code-name="existsLi" exec="openTacticPosInputDialog(codeName, 'L')"></k4-tactic-menu-entry>
+            name="∃Li" code-name="existsLi"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="M&forall;L" code-name="allLmon" exec="openTacticPosInputDialog(codeName, 'L')"></k4-tactic-menu-entry>
+            name="M&forall;L ..." code-name="allLmon" exec="openTacticPosInputDialog(codeName, 'L')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
-            name="M&exist;R" code-name="existsRmon" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+            name="M&exist;R ..." code-name="existsRmon" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <!--<li role="separator" class="divider"></li>-->
     <!--<li><a ng-click="openTacticPosInputDialog('min', 'R')"><span>min</span><code class="pull-right">min</code></a></li>-->
     <!--<li><a ng-click="openTacticPosInputDialog('max', 'R')"><span>max</span><code class="pull-right">max</code></a></li>-->

@@ -1,5 +1,6 @@
 <li ng-class="{'disabled': disabled }">
     <a ng-click="disabled || run()"
+       ng-alt-click="disabled || runOption()"
        ng-mouseenter="hideShortHelp || fetchHelp(helpName)"
        popover-enable="!hideShortHelp"
        uib-popover-template="'rulehelp.html'"
