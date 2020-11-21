@@ -11,12 +11,14 @@ angular.module('keymaerax.ui.directives')
         helpName: '@',
         hideLongHelp: '@',
         hideShortHelp: '@',
+        helpClass: '@?',
         exec: '&exec',
         optionExec: '&optionExec'
       },
       templateUrl: 'templates/tacticmenuentry.html',
       link: function(scope, element, attrs) {
         if (!scope.helpName) scope.helpName = scope.codeName;
+        if (!scope.helpClass) scope.helpClass = 'k4-rulemenu-helppopover'
         scope.rulehelp = {
           codeName: undefined,
           derivationInfo: undefined

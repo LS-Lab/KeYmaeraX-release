@@ -4,7 +4,7 @@
        ng-mouseenter="hideShortHelp || fetchHelp(helpName)"
        popover-enable="!hideShortHelp"
        uib-popover-template="'rulehelp.html'"
-       popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+       popover-class="{{helpClass}} k4-rulehelp-short"
        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
         <span ng-bind-html="name"></span>
         <span class="pull-right">

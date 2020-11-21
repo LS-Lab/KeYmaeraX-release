@@ -97,7 +97,7 @@
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
-            proof-id="{{proofId}}" user-id="{{userId}}"
+            proof-id="{{proofId}}" user-id="{{userId}}" help-class="k4-rulemenu-helppopover-medium"
             name="Converge ..." code-name="con" exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
     <k4-tactic-menu-entry

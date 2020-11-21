@@ -1363,6 +1363,10 @@ del {
   width: 400px;
 }
 
+.k4-rulemenu-helppopover-medium {
+  width: 700px;
+}
+
 .k4-rulemenu-helppopover-long {
   max-width: 60%;
 }

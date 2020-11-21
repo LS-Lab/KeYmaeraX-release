@@ -40,12 +40,12 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Cut ..." code-name="dC"
+            name="Diff. Cut ..." code-name="dC" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Diff. Ghost ..." code-name="dG"
+            name="Diff. Ghost ..." code-name="dG" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
@@ -55,12 +55,12 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Differential Variant ..." code-name="dV"
+            name="Differential Variant ..." code-name="dV" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="K&langle;&amp;&rangle; ..." code-name="kDomainDiamond"
+            name="K&langle;&amp;&rangle; ..." code-name="kDomainDiamond" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
@@ -71,12 +71,12 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Compatible ODE Cut ..." code-name="compatCut"
+            name="Compatible ODE Cut ..." code-name="compatCut" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="ODE Unify" code-name="odeUnify"
+            name="ODE Unify" code-name="odeUnify" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
@@ -86,7 +86,7 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Closed Domain Refinement ..." code-name="closedRef"
+            name="Closed Domain Refinement ..." code-name="closedRef" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider" ng-if="menu.odemenu.kind=='box'"></li>
     <k4-tactic-menu-entry
@@ -123,6 +123,6 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
-            name="Split Weak Inequality" code-name="splitWeakInequality"
+            name="Split Weak Inequality" code-name="splitWeakInequality" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
 </ul>
