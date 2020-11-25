@@ -396,8 +396,29 @@ del {
 .k4-nullary-fn { font-style: italic; }
 
 .k4-select-hover {
-  background-color: var(--lsmainback);
+  background-color: var(--lsgreen);
   border-style: none;
+}
+
+.k4-select-hover:before {
+  content: "\f124  Click to apply here";
+  color: var(--lsmain);
+  font-family: FontAwesome;
+  position: absolute;
+  top: -2ex;
+}
+
+.k4-select-selected {
+  background-color: var(--lsgreen);
+  border-style: none;
+}
+
+.k4-select-selected:before {
+  content: "\f124";
+  color: var(--lsmain);
+  font-family: FontAwesome;
+  position: absolute;
+  top: -2ex;
 }
 
 .k4-has-step.k4-prove-hover {
