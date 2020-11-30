@@ -29,7 +29,7 @@
         </li>
     </ul>
 </li>
-<li class="nav-item" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
     <a ng-click="agenda.items().length <= 0 || onTacticScript('propClose',false)"
        data-intro="<center>Propositional proof</center>" data-position="top"
        uib-popover-template="fetchRuleHelp('propClose')"
@@ -37,7 +37,7 @@
        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
         <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
 </li>
-<li class="nav-item" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'unfold')"
        data-intro="<center>Unfold all operators</center>" data-position="top"
        uib-popover-template="fetchRuleHelp('unfold')"
@@ -46,14 +46,33 @@
         <span class="fa fa-map-o"><span class="k4-btn-optional-text"> Unfold</span></span>
     </a>
 </li>
-<li class="nav-item" ng-class="{'nav-item': true, 'disabled': agenda.items().length <= 0 }">
-    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'fullSimplify')"
-       data-intro="<center>Simplify formulas</center>" data-position="top"
-       uib-popover-template="fetchRuleHelp('fullSimplify')"
-       popover-class="k4-rulemenu-helppopover"
-       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-        <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a>
+<li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="$event.stopPropagation();doTactic(undefined, 'fullSimplify')"
+              data-intro="<center>Simplify formulas</center>" data-position="top"
+              uib-popover-template="fetchRuleHelp('fullSimplify')"
+              popover-class="k4-rulemenu-helppopover"
+              popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+            <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="doTactic(undefined, 'fullSimplify')"
+               uib-popover-template="fetchRuleHelp('fullSimplify')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify All</span></span></a>
+        </li>
+        <li><a ng-click="openTacticPosInputDialog('simplify', 'R')"
+               uib-popover-template="fetchRuleHelp('simplify')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa"><span class="k4-btn-optional-text"> Simplify At Position</span></span></a>
+        </li>
+    </ul>
 </li>
+
 <li class="nav-item dropdown k4-tactics-navitem-dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown">
         <span ng-click="undoLastProofStep();$event.stopPropagation();"
