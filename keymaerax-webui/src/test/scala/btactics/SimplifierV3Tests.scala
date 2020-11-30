@@ -6,8 +6,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Created by yongkiat on 12/19/16.
@@ -244,6 +246,27 @@ class SimplifierV3Tests extends TacticTestBase {
     val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = fullEqualityIndex)
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     result.subgoals.loneElement shouldBe "==>  \\forall v (v=5*x+3 -> p(5*x+3))".asSequent
+  }
+
+  it should "work in programs" in withMathematica { _ =>
+    proveBy("==> [x:=1+0^3*x;]x>=0".asSequent, simpTac()(1, PosInExpr(0::1::Nil))).subgoals.
+      loneElement shouldBe "==> [x:=1;]x>=0".asSequent
+  }
+
+  it should "FEATURE_REQUEST: work in ODEs" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x>=0 ==> [{x'=1+0*y}]x>=0".asSequent, simpTac()(1, PosInExpr(0::0::1::Nil))).subgoals.
+      loneElement shouldBe "x>=0 ==> [{x'=1}]x>=0".asSequent
+    //@todo x is bound in ODE and occurs free in 0*x and therefore clashes/CQ aborts
+    proveBy("x>=0 ==> [{x'=1+0*x}]x>=0".asSequent, simpTac()(1, PosInExpr(0::0::1::Nil))).subgoals.
+      loneElement shouldBe "x>=0 ==> [{x'=1}]x>=0".asSequent
+  }
+
+  it should "FEATURE_REQUEST: work in loops" taggedAs TodoTest in withMathematica { _ =>
+    proveBy("x>=0 ==> [{x:=1+0*y;}*]x>=0".asSequent, simpTac()(1, PosInExpr(0::0::1::Nil))).subgoals.
+      loneElement shouldBe "x>=0 ==> [{x:=1;}*]x>=0".asSequent
+    //@todo x is bound in loop and occurs free in 0*x and therefore clashes/CQ aborts
+    proveBy("x>=0 ==> [{x:=1+0*x;}*]x>=0".asSequent, simpTac()(1, PosInExpr(0::0::1::Nil))).subgoals.
+      loneElement shouldBe "x>=0 ==> [{x:==1;}*]x>=0".asSequent
   }
 
   "Normalizer" should "do some normalization" in withMathematica { _ =>
