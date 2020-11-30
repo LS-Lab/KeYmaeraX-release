@@ -117,6 +117,12 @@ class ToolTacticsTests extends TacticTestBase {
       subgoals.loneElement shouldBe "==> \\forall x \\forall y (x>0 & y>0)".asSequent
   }
 
+  it should "work on a Robix example" in withQE { _ =>
+    val s = "A()>=0, b()>0, ep()>0, V()>=0, vxo^2+vyo^2<=V()^2, r!=0, abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V())), v_0>=0, -t*(v-A()/2*t)<=y-y_0, y-y_0<=t*(v-A()/2*t), -t*(v-A()/2*t)<=x-x_0, x-x_0<=t*(v-A()/2*t), v=v_0+A()*t, -t*V()<=yo-yo_1, yo-yo_1<=t*V(), -t*V()<=xo-xo_1, xo-xo_1<=t*V(), dx^2+dy^2=1, t>=0, t<=ep(), v>=0, v>0\n  ==>  abs(x-xo)>v^2/(2*b())+V()*v/b(), abs(y-yo)>v^2/(2*b())+V()*v/b()".asSequent
+    proveBy(s, TactixLibrary.transform("abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(-7)).subgoals.
+      loneElement shouldBe "A()>=0, b()>0, ep()>0, V()>=0, vxo^2+vyo^2<=V()^2, r!=0, abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V())), v_0>=0, -t*(v-A()/2*t)<=y-y_0, y-y_0<=t*(v-A()/2*t), -t*(v-A()/2*t)<=x-x_0, x-x_0<=t*(v-A()/2*t), v=v_0+A()*t, -t*V()<=yo-yo_1, yo-yo_1<=t*V(), -t*V()<=xo-xo_1, xo-xo_1<=t*V(), dx^2+dy^2=1, t>=0, t<=ep(), v>=0, v>0\n  ==>  abs(x-xo)>v^2/(2*b())+V()*v/b(), abs(y-yo)>v^2/(2*b())+V()*v/b()".asSequent
+  }
+
   "Transform in context" should "exploit equivalence" in withQE { _ =>
     val result = proveBy("[x:=4;]x>=v*v".asFormula, transform("x>=v^2".asFormula)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=4;]x>=v^2".asSequent

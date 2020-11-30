@@ -493,11 +493,16 @@ private object ToolTactics {
       if (pr.isProved || filters.tail.isEmpty) (pr, filteredAssumptions)
       else proveFact(assumptions, filters.tail)
     }
-    //@note first try to prove without assumptions, than with non-bound stuff, if all that fails with whole ante
     val (fact, ga) = proveFact(gaFull,
-      ((al: IndexedSeq[Formula]) => al.filter(_ => false))::
-        ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
-        ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
+      ( // first try without any assumptions
+        (al: IndexedSeq[Formula]) => al.filter(_ => false)) ::
+        // then without alternatives to prove and without irrelevant formulas (non-overlapping variables)
+        ((al: IndexedSeq[Formula]) => al.filter({ case Not(_) => false case _ => true }).
+          filter(StaticSemantics.freeVars(_).intersect(boundVars).isEmpty)) ::
+        // then without irrelevant formulas (non-overlapping variables)
+        ((al: IndexedSeq[Formula]) => al.filter(StaticSemantics.freeVars(_).intersect(boundVars).isEmpty)) ::
+        // then with full sequent
+        ((al: IndexedSeq[Formula]) => al.filter(_ => true)) :: Nil)
 
     def propPushLeftIn(op: (Formula, Formula) => Formula) = {
       val p = "p_()".asFormula
