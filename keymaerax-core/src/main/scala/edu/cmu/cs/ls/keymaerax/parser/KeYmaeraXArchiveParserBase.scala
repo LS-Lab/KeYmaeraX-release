@@ -129,7 +129,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
   type TokenStream = List[Token]
 
   /** Parses the input token stream (lexed from `text`); skips tactic parsing if parseTactics is false. */
-  private[parser] def parse(input: TokenStream, text: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
+  def parse(input: TokenStream, text: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
     require(!text.contains('\t'), "Tabs in input not supported, please replace with spaces")
 
