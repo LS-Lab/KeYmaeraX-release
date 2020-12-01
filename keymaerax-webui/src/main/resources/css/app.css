@@ -403,6 +403,7 @@ del {
 .k4-select-hover:before {
   content: "\f124  Click to apply here";
   color: var(--lsmain);
+  background-color: var(--lsmainback);
   font-family: FontAwesome;
   position: absolute;
   top: -2ex;
