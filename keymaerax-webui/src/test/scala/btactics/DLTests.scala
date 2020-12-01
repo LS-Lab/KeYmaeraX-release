@@ -790,4 +790,10 @@ class DLTests extends TacticTestBase {
     val result = proveBy("[x:=*;]x>0".asFormula, randomb(1))
     result.subgoals.loneElement shouldBe "==> \\forall x x>0".asSequent
   }
+
+  it should "work with a system/game constant" in withTactics {
+    proveBy("[x:=*;][a;]x>0".asFormula, randomb(1)).subgoals.loneElement shouldBe "==> \\forall x [a;]x>0".asSequent
+    proveBy("[x:=*;][a{|^@|};]x>0".asFormula, randomb(1)).subgoals.loneElement shouldBe "==> \\forall x [a{|^@|};]x>0".asSequent
+    proveBy("[x:=*;][{a;}^@]x>0".asFormula, randomb(1)).subgoals.loneElement shouldBe "==> \\forall x [{a;}^@]x>0".asSequent
+  }
 }
