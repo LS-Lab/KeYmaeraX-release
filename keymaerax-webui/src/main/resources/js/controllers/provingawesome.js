@@ -755,7 +755,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
 
       modalInstance.result.then(function(data) {
-        $scope.doInputTactic(data.position, tacticName, data.input);
+        if (data.input.length > 0) $scope.doInputTactic(data.position, tacticName, data.input);
+        else $scope.doTactic(data.position, tacticName);
       }).finally(function() {
         sequentProofData.formulas.mode = prevMode;
       })
