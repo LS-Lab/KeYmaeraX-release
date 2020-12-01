@@ -695,8 +695,8 @@ class DLTests extends TacticTestBase {
   }
 
   it should "use same variable if asked to do so" in withTactics {
-    val result = proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1))
-    result.subgoals.loneElement shouldBe "==> [y:=y;]y>0".asSequent
+    proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1)).subgoals.loneElement shouldBe "==> [y:=y;]y>0".asSequent
+    proveBy("y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1)).subgoals.loneElement shouldBe "==> [y:=y;]y>0".asSequent
   }
 
   it should "not accept variables present in f" in withTactics {
@@ -714,8 +714,10 @@ class DLTests extends TacticTestBase {
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in withTactics {
-    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, DLBySubst.stutter("y".asVariable)(1, 1::Nil))
-    result.subgoals.loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
+    proveBy("[x:=1;][y:=2;]y>0".asFormula, DLBySubst.stutter("y".asVariable)(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
+    proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [x:=1;][y:=y;][y:=2;]y>0".asSequent
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when bound" in withTactics {
