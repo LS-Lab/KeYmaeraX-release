@@ -168,7 +168,7 @@ trait UnifyUSCalculus {
   //@todo auto-weaken as needed (maybe even exchangeleft)
   @deprecated("use by(ProvableInfo) instead if possible.")
   // If no name is given, just record as anonymous tactic because ProvableSig serialization is not supported
-  def by(fact: ProvableSig, name:String="ANON")  : BuiltInTactic = new BuiltInTactic(name) {
+  def by(fact: => ProvableSig, name: String="ANON"): BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
