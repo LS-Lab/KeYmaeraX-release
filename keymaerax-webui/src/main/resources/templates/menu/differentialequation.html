@@ -123,6 +123,16 @@
     <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='box'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Domain Stuck" code-name="domainStuck"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='diamond'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="Differential Skip" code-name="dDX"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Split Weak Inequality" code-name="splitWeakInequality" help-class="k4-rulemenu-helppopover-medium"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
 </ul>
