@@ -718,4 +718,9 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  "domainStuck" should "work on a simple example" in withMathematica { _ =>
+    proveBy("x=1 ==> [{x'=-x & x>=1}]x=1".asSequent, domainStuck(1)).subgoals.
+      loneElement shouldBe "x=1, t_=0 ==> <{t_'=1,x'=-x&1-x>0|t_=0}>t_!=0".asSequent
+  }
 }

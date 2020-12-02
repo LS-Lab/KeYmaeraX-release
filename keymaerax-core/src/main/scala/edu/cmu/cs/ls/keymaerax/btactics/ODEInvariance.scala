@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -640,12 +640,21 @@ object ODEInvariance {
         cutL("<{c&!q(||)|r(||)}>(!r(||) | !p(||))".asFormula)(-1) <( skip , cohideR(3) & implyR(1) & mond & prop) &
         useAt(Ax.box,PosInExpr(1::Nil))(1) & notR(1) &
         cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
-        andLi & useAt(Ax.Uniq)(-1) & DWd(-1) &
+        andLi & useAt(Ax.Uniq, PosInExpr(0::Nil), (_: Option[Subst]) => {
+          RenUSubst(("c".asDifferentialProgram, "c".asDifferentialProgram) ::
+            ("p(||)".asFormula, "!r(||) | !p(||)".asFormula) ::
+            ("q(||)".asFormula, "!q(||) | r(||)".asFormula) ::
+            ("r(||)".asFormula, "q(||)".asFormula) :: Nil)
+        })(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
           implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
+  @Tactic(
+    premises="Γ, t=0 |- ⟨t'=1,x'=f(x) & ~Q ∨ t=0⟩ t!=0, Δ",
+    conclusion="Γ |- [x'=f(x) & Q}]P, Δ",
+    displayLevel="browse")
   def domainStuck : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     if(!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("domainStuck: position " + pos + " must point to a top-level succedent position")
@@ -658,7 +667,7 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val tvName = "stuck_"
+    val tvName = "t_"
     val timeOde = (tvName+"'=1").asDifferentialProgram
     val stuckDom = (tvName+"=0").asFormula
     val odedim = getODEDim(seq,pos)
@@ -670,9 +679,10 @@ object ODEInvariance {
 
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(Ax.commaCommute)(pos)) * odedim &
-    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
-      timeBound(pos), //closes assuming P(init)
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & useAt(Ax.commaCommute)(pos)*odedim &
+    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos) <(
+      timeBound(pos) & done //closes assuming P(init)
+      ,
       useAt(stuckRefine,PosInExpr(1::Nil))(pos) &
       //Clean up the goal a little bit
       chase(pos.checkTop.getPos,PosInExpr(1::Nil)) & useAt(propt.get)(pos.checkTop.getPos,PosInExpr(0::1::0::Nil))
