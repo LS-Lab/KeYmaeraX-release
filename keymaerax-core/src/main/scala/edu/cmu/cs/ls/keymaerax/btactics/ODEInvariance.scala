@@ -58,6 +58,11 @@ object ODEInvariance {
           useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
       ), namespace)
 
+  // unconditional cont with true in the domain constraint
+  private lazy val contAxTrue =
+    remember("<{t_'=1,c&1 > 0}>t_!=0".asFormula,
+          cutR("1 > 0".asFormula)(1) <( QE,  byUS(Ax.Cont)), namespace)
+
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
   private lazy val refOrL =
@@ -67,6 +72,18 @@ object ODEInvariance {
 
   private lazy val refOrR =
     remember("<{c& q(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      namespace)
+
+  // The specific | distribution needed for LP
+  private lazy val distOr =
+    remember("<{c& (p(||) | s(||)) | (q(||) | s(||)) }>r(||) -> <{c& (p(||) | q(||)) | s(||)}>r(||)".asFormula,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      namespace)
+
+  // The specific & distribution needed for LP
+  private lazy val distAnd =
+    remember("<{c& (p(||) | s(||)) & (q(||) | s(||)) }>r(||) -> <{c& (p(||) & q(||)) | s(||)}>r(||)".asFormula,
       useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
@@ -219,7 +236,7 @@ object ODEInvariance {
         ))
   })
 
-  // Helper tactic proving p*>0 -> <x'=f(x)& p*>=0>O
+  // Helper tactic proving p*>0 -> <t'=1, x'=f(x)& p>=0> t!=0
   private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
       useAt(contAx,PosInExpr(1::Nil))(1) & id
@@ -230,6 +247,8 @@ object ODEInvariance {
         hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound-1))
       )
 
+  //Proves t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
+  // Note that the 2nd antecedent is only important when Q reduces the rank
   private def lpclosed(inst:Inst) : BelleExpr = {
     val tac =
     inst match {
@@ -269,10 +288,63 @@ object ODEInvariance {
               dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
-      case GtFml(r) =>
-        //TODO: decide what to do here
-        ???
+      case GtFml(r) => ???
     }
+    tac
+  }
+
+  // Proves t_=0, <t_'=1,x'=f(x)&Q>t_!=0, P* |- <t_'=1,x'=f(x)&P | t_=0>t_!=0
+  // Note that the 2nd antecedent is only important when Q reduces the rank
+  //todo: eventually, this should just replace lpclosed
+  def lpgen(inst:Inst) : BelleExpr = {
+    val tac =
+      inst match {
+        case DisjFml(l, r) =>
+          DebuggingTactics.debug("DISJ", doPrint = debugTactic) &
+            useAt(distOr, PosInExpr(1 :: Nil))(1) & // Distribute t_ = 0 disjunct in domain of progress fml
+            orL(-3) < (
+              useAt(refOrL, PosInExpr(1 :: Nil))(1) & lpgen(l),
+              useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpgen(r))
+        case ConjFml(l, r) =>
+          DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
+            useAt(distAnd, PosInExpr(1 :: Nil))(1) & // Distribute t_ = 0 disjunct in domain of progress fml
+            andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
+            hideL(-4) & lpgen(l),
+            hideL(-3) & lpgen(r)
+          )
+        case GeqFml(r, gs, cofs) =>
+          DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
+            useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
+            DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
+            (
+              if(gs.isEmpty) {
+                cohideOnlyL(-3) & lpgeq(r - 1)
+              }
+              else {
+                orL(-3) < (
+                  cohideOnlyL(-3) & lpgeq(r - 1),
+                  implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
+                    dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
+                )
+              }
+            )
+        case EqFml(r, gs, cofs) =>
+          DebuggingTactics.debug("= case", doPrint = debugTactic) &
+            useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
+            (
+              if(gs.isEmpty) {
+                closeF
+              }
+              else {
+                implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+                  dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
+              }
+            )
+        case GtFml(r) =>
+          DebuggingTactics.debug("> case, rank: "+r, doPrint = debugTactic) &
+          hideL(-2) &
+          lpgt(r)
+      }
     tac
   }
 
@@ -370,6 +442,21 @@ object ODEInvariance {
       )
   })
 
+
+  // Similar to lpgeq but proves the unlocked version
+  // t=0 , p*>0 -> <t'=1, x'=f(x)& p - t^(2k) >=0> t!=0
+  private def lpgeqUnlock(bound:Int) : BelleExpr =
+    if (bound <= 1)
+      useAt(contAx,PosInExpr(1::Nil))(1) & exhaustiveEqL2R(-1) & hideL(-1) & QE
+    else //Could also make this fallback to the continuity step for early termination
+      andL(-2) & lpstep(1) &
+      < (
+        hideL(-3) & useAt(geq)(-2) & exhaustiveEqL2R(-1) & hideL(-1) & QE,
+        hideL(-2) & implyL(-2) & <(
+          exhaustiveEqL2R(-1) & hideL(-1) & hideR(1) & QE,
+          hideL(-3) & lpgeqUnlock(bound-1))
+      )
+
   //"unlocks" a strict inequality q > 0 | t = 0 by turning it into q - t^2*bound >= 0
   //as above, assumes local progress for q is in antecedent (-1) and the progress in succedent (1)
   //additionally, the domain is assumed to be exactly g>0 | t=0
@@ -384,7 +471,7 @@ object ODEInvariance {
     //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
     dR(unlocked)(1)<(
-      lpgeq(bound),
+      lpgeqUnlock(bound),
       diffWeakenG(1) & byUS(boundPr))
   })
 
@@ -667,9 +754,10 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val tvName = "t_"
-    val timeOde = (tvName+"'=1").asDifferentialProgram
-    val stuckDom = (tvName+"=0").asFormula
+    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
+    val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
+
+    val stuckDom = Equal(timevar,Number(0))
     val odedim = getODEDim(seq,pos)
 
     val (negDom, propt) = semiAlgNormalize(Not(dom))
@@ -677,15 +765,30 @@ object ODEInvariance {
     if(propt.isEmpty)
       throw new UnsupportedTacticFeature("Unexpected failure in normalization of "+Not(dom))
 
+    val (pf,inst) = try {
+      fStar(ODESystem(ode,True),negDom)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & useAt(Ax.commaCommute)(pos)*odedim &
-    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos) <(
+    DifferentialTactics.dG(timer,None)(pos) & existsR(Number(0))(pos) & useAt(Ax.commaCommute)(pos)*odedim &
+    cutR(Box(ODESystem(DifferentialProduct(timer,ode),stuckDom),post))(pos) <(
       timeBound(pos) & done //closes assuming P(init)
       ,
       useAt(stuckRefine,PosInExpr(1::Nil))(pos) &
       //Clean up the goal a little bit
-      chase(pos.checkTop.getPos,PosInExpr(1::Nil)) & useAt(propt.get)(pos.checkTop.getPos,PosInExpr(0::1::0::Nil))
+      chase(pos.checkTop.getPos,PosInExpr(1::Nil)) & useAt(propt.get)(pos.checkTop.getPos,PosInExpr(0::1::0::Nil)) &
+      cutR(pf)(pos) <(
+        DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
+        cohideOnlyL('Llast) &
+          cohideOnlyR(1) &
+          cutR(Diamond(ODESystem(DifferentialProduct(timer,ode),Greater(Number(1),Number(0))),NotEqual(timevar,Number(0))))(1) <(
+            cohideR(1) & byUS(contAxTrue),
+            implyR(1) & implyR(1) & lpgen(inst)
+          )
+      )
     )
   })
 

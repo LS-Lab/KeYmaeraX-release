@@ -720,7 +720,18 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   "domainStuck" should "work on a simple example" in withMathematica { _ =>
-    proveBy("x=1 ==> [{x'=-x & x>=1}]x=1".asSequent, domainStuck(1)).subgoals.
-      loneElement shouldBe "x=1, t_=0 ==> <{t_'=1,x'=-x&1-x>0|t_=0}>t_!=0".asSequent
+    val pr = proveBy("x=1 ==> [{x'=-x & x>=1}]x=1".asSequent,
+      domainStuck(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "work on a parametric example" in withMathematica { _ =>
+    val pr = proveBy("x=1 & v = 0 & a = 0 & b() < 0 & c() > 0 ==> [{v'=a,x'=c() * v,a'=b() & x>=1 | x^2>=1 & x >= -5 | x <= -2 }]x <= 5".asSequent,
+      domainStuck(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
   }
 }
