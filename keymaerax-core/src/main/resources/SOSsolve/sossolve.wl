@@ -551,7 +551,7 @@ SolveNorm[f_,test_]:=Block[{eqs,norm,c},
 (* Turns a convex hull (facets as produced by NDConvexHull
 	into its constraint representation. The convex hull must be full dimensional
 *)
-ConstraintRep[msco_]:=Block[{pts,facets,chullpts,mid,facetsraw,hyps,dim},
+ConstraintRep[msco_,hullbound_]:=Block[{pts,facets,chullpts,mid,facetsraw,hyps,dim},
 	Print["No. input points: ",Length[msco]];
 	If[Length[msco]==0,Return[{}]];
 	dim=Length[msco[[1]]];
@@ -580,8 +580,13 @@ ConstraintRep[msco_]:=Block[{pts,facets,chullpts,mid,facetsraw,hyps,dim},
 		Print["WARNING: convex hull may not be full dimensional."];
 		(* Arbitrarily extend points in all directions *)
 		ff=Function[{a},Map[#+a&,IdentityMatrix[dim]]];
-		msco2=Flatten[Map[ff,msco],1]//DeleteDuplicates;
-		Return[ConstraintRep[msco2]]]
+		msco2=Flatten[Map[ff,msco],1]//DeleteDuplicates; 
+		(* Swap to a bounding box *)
+		If[dim^2*Length[msco2] > hullbound (*hullbound*),
+		Print["Switched to bounding box"];
+		msco2=Join[{ConstantArray[0,dim]},DiagonalMatrix[Map[Max,Transpose[msco2]]]]
+		];
+		Return[ConstraintRep[msco2,hullbound]]]
 	];
 	Return[hyps];
 ];
@@ -666,7 +671,7 @@ FindWitness[polysPre_List, ineqs_List,
 
 	(* Some of these can be made parameters, but these defaults should be more or less representative *)
 	maxcofdeg=15; (* Max degree of cofactors *)
-	hullbound=2000; (*stops using convex hull if (number of points * dimension^2) is above this number *)	
+	hullbound=5000; (*stops using convex hull if (number of points * dimension^2) is above this number *)	
 	
 	trunclim=15; (* Controls rounding truncation when attempting to round solution 10^-0, 10^-1, ..., 10^-trunclim*) 
 	primaltrunclim=15; (* Same as above but used for the final primal truncation *)
@@ -737,7 +742,7 @@ FindWitness[polysPre_List, ineqs_List,
 		msco=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Map[Max,Transpose[msco]]]]
 	];
 	(* hullconstraints is a list of constraints *)
-	hullconstraints = ConstraintRep[msco];
+	hullconstraints = ConstraintRep[msco,hullbound];
 	vv = IdentityMatrix[Length[ivars]];
 	
 	(* Some book-keeping:
@@ -765,7 +770,7 @@ FindWitness[polysPre_List, ineqs_List,
 		If[monomials=={},
 			(* All monomials up to the degree bound and filtered under the Newton polytope *)
 			prem = allMonomials[ivars,deg];
-			Print["Initial length: ",Length[prem]];	
+			Print["Initial length: ",Length[prem]];
 			{tt,prem} = Timing[FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder]];
 			Print["After Newton polytope: ",Length[prem], " Time: ",tt];
 			Print["Heuristics: ",lsmons//Sort//DeleteDuplicates];
