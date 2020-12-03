@@ -75,7 +75,7 @@ class QETests extends TacticTestBase {
   it should "not branch to be clever with predicates" in withMathematica { tool =>
     //@note otherwise may split too extensively; master makes up for it with autoMP
     the [TacticInapplicableFailure] thrownBy proveBy("(2<3->p(x)) -> p(x)".asFormula,ToolTactics.fullQE(tool)) should
-      have message "Uninterpreted predicate symbols not supported in QE"
+      have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
   }
 
   it should "not fail when already proved" in withMathematica { tool =>
@@ -109,6 +109,16 @@ class QETests extends TacticTestBase {
     val s = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, w_0*r=v_0, abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V())), t_0=0, v_0>=0, dx_0^2+dy_0^2=1, r_0!=0, -t*V()<=xo-xo_0, xo-xo_0<=t*V(), -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(x-xo)>v^2/(2*B())+V()*(v/B())".asSequent
     proveBy(s, QE()) shouldBe 'proved
   }, 2) should have message "The code passed to failAfter did not complete within 2 seconds." }
+
+  it should "not translate quantified predicates verbatim" in withMathematica { _ =>
+    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x p(x) ==> p(y)".asSequent, QE()) should
+      have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
+  }
+
+  it should "not translate quantified functions verbatim" in withMathematica { _ =>
+    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x f(x)=0 ==> f(y)=0".asSequent, QE()) should
+      have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
+  }
 
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))

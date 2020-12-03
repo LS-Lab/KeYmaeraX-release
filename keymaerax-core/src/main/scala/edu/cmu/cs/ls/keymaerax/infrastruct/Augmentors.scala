@@ -152,6 +152,25 @@ object Augmentors {
     def isPredicateFreeFOL: Boolean = fml.isFOL &&
       StaticSemantics.signature(fml).forall({ case Function(_, _, _, Bool, false) => false case _ => true })
 
+    /** Indicates whether the arguments of uninterpreted functions are free. */
+    def isFuncFreeArgsFOL: Boolean = {
+      val bv = StaticSemantics.boundVars(fml)
+      var result = true
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        // isFOL (duplicated here to avoid repeated traversal) + arguments are not bound
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Box(_, _) => result = false; Left(Some(ExpressionTraversal.stop))
+          case Diamond(_, _) => result = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case FuncOf(_, args) if !bv.intersect(StaticSemantics.freeVars(args)).isEmpty => result = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, fml)
+      result
+    }
+
     /** Returns the universal closure of formula `fml`. */
     def universalClosure: Formula = {
       assert(fml.isFOL, "Universal closure on FOL formulas only")
@@ -215,6 +234,7 @@ object Augmentors {
     /** Returns true if all formulas in the sequent are FOL, false otherwise. */
     def isFOL: Boolean = seq.ante.forall(_.isFOL) && seq.succ.forall(_.isFOL)
     def isPredicateFreeFOL: Boolean = seq.ante.forall(_.isPredicateFreeFOL) && seq.succ.forall(_.isPredicateFreeFOL)
+    def isFuncFreeArgsFOL: Boolean = seq.ante.forall(_.isFuncFreeArgsFOL) && seq.succ.forall(_.isFuncFreeArgsFOL)
     /** Returns a copy without the position `pos`. */
     def without(pos: SeqPos): Sequent =
       if (pos.isAnte) Sequent(seq.ante.patch(pos.getIndex, Nil, 1), seq.succ)
