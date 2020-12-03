@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness.vDG
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
@@ -754,7 +755,7 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val timevar = TacticHelper.freshNamedSymbol("t".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
     val stuckDom = Equal(timevar,Number(0))
@@ -771,9 +772,14 @@ object ODEInvariance {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
     }
 
+    // Gross way of inserting time ODE in a stable way (copied from ODELiveness)
+    val timetac =
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+        vDG(timer)(pos)
+
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timer,None)(pos) & existsR(Number(0))(pos) & useAt(Ax.commaCommute)(pos)*odedim &
+    timetac &
     cutR(Box(ODESystem(DifferentialProduct(timer,ode),stuckDom),post))(pos) <(
       timeBound(pos) & done //closes assuming P(init)
       ,
@@ -783,7 +789,7 @@ object ODEInvariance {
       cutR(pf)(pos) <(
         DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
         cohideOnlyL('Llast) &
-          cohideOnlyR(1) &
+          cohideOnlyR(pos) &
           cutR(Diamond(ODESystem(DifferentialProduct(timer,ode),Greater(Number(1),Number(0))),NotEqual(timevar,Number(0))))(1) <(
             cohideR(1) & byUS(contAxTrue),
             implyR(1) & implyR(1) & lpgen(inst)
