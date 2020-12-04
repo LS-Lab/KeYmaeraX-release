@@ -1080,6 +1080,9 @@ object TactixLibrary extends HilbertCalculus
 
   /** Solve an arithmetic goal with sum-of-squares */
   @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
+    premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
+    //    sossolve -----------
+    conclusion="Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
     displayLevel="all")
   val sossolve : BelleExpr = anon ( SOSSolve.sos() )
 }
