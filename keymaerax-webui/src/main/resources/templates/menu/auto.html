@@ -138,11 +138,21 @@
             <span class="fa fa-link"><span class="k4-btn-optional-text"> Abbreviate All ...</span></span></a>
         </li>
     </ul>
-
 </li>
-<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
-    <a ng-click="agenda.items().length <= 0 || openProofstepBrowser()"
-       data-intro="<center>Browse all rules</center>" data-position="top">
-        <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span>
+<li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="$event.stopPropagation();openProofstepBrowser()"
+              data-intro="<center>Browse all rules and lemmas</center>" data-position="top">
+            <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
     </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="openProofstepBrowser()">
+            <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse all ...</span></span></a>
+        </li>
+        <li><a ng-click="openTacticPosInputDialog('useLemma', undefined)">
+            <span class="fa"><span class="k4-btn-optional-text"> Create new lemma ...</span></span></a>
+        </li>
+    </ul>
 </li>
