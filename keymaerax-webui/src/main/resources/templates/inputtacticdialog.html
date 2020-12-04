@@ -16,15 +16,32 @@
             <div class="panel panel-default">
                 <div class="panel-heading">Provide tactic input</div>
                 <div class="panel-body">
-
                     <div class="k4-tactic-popover-entry" ng-repeat="tactic in [tactic.selectedDerivation()]">
                     <div ng-if="tactic.derivation.type === 'axiom'">
                         <div ng-bind-html="tactic.derivation.formula"></div>
                     </div>
                     <div ng-if="tactic.derivation.type === 'tactic'">
                         <div ng-bind-html="tactic.derivation.formula"></div>
+                        <div class="row" ng-if="!tactic.derivation.formula">
+                            <div class="col-md-12">
+                                <span ng-bind-html="tactic.name"></span>
+                                <span>(</span>
+                                <span ng-repeat="input in tactic.derivation.input">
+                                    <span ng-if="input.type=='string' || input.type=='option[string]'">"</span>
+                                    <div class="popover-wrapper">
+                                        <a href="#" id="{{input.param}}" class="k4-axiomtactic-input"
+                                           e-name="{{input.param}}" e-placeholder="{{input.param}}"
+                                           e-label="{{input.param}}"
+                                           editable-text="input.value" onbeforesave="saveValue(input, $data)"
+                                           e-required=!input.type.startsWith('option')>{{input.value || input.param}}</a>
+                                    </div>
+                                    <span ng-if="input.type=='string' || input.type=='option[string]'">"</span>
+                                    <span ng-if="!$last">,</span>
+                                </span>
+                                <span>)</span>
+                            </div>
+                        </div>
                     </div>
-
                     <div ng-if="tactic.derivation.type === 'sequentrule'"
                          ng-include="'templates/sequentRuleTemplate.html'"></div>
                     </div>
