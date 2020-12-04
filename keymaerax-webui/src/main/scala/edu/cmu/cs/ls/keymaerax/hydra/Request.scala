@@ -2951,20 +2951,23 @@ object RequestHelper {
 
   /** Updates the definitions in `proofSession` to include the unexpanded symbols of the open goals in `node`. */
   def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
-    val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
-    val elaboratedToFns = signatures.filter({
-      case Function(n, i, Unit, Real, _) => proofSession.defs.decls.exists({
-        case ((vn, vi), (None, Real, _, _, _)) => vn == n && vi == i
-        case _ => false
-      })
+    val symbols = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.symbols)).toSet[NamedSymbol].filter({
+      case _: DifferentialSymbol => false
       case _ => true
     })
-    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
+    val elaboratedToFns = symbols.filter({
+      case Function(n, i, Unit, s, _) => proofSession.defs.decls.exists({
+        case ((vn, vi), (None, vs, _, _, _)) => vn == n && vi == i && vs == s
+        case _ => false
+      })
+      case _ => false
+    })
+    val undefined = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
     val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
-      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
+      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // cuts may introduce variables
     }).toMap
     //@note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
     val mergedInvSupplier = TactixInit.invSupplier match {
