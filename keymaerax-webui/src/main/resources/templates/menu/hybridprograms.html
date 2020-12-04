@@ -68,6 +68,11 @@
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&langle;:=&rangle;=" code-name="assigndEquality"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
             name="&langle;:=&rangle;D" code-name="assigndDual"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
@@ -120,8 +125,13 @@
             name="[·]" code-name="boxd"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.hpmenu.kind=='diamond'" disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&langle;&rangle;&or;" code-name="diamondOr"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='diamond'" proof-id="{{proofId}}" user-id="{{userId}}"
-            disabled="agenda.items().length <= 0" hide-long-help="true"
+            disabled="agenda.items().length <= 0"
             name="&langle;·&rangle;" code-name="diamondd"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li role="separator" class="divider"></li>
