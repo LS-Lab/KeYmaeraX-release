@@ -122,8 +122,8 @@
                              data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal' style='margin-left: 30%'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl> </div>"
                              data-position="bottom">
                             <span ng-if="taskPostfixLabel(task.id).substring(0,5) == 'Lemma'">
-                                <span class="fa fa-cogs"></span>
-                                <a class="btn btn-link" ng-click="openLemmaProof(task.id)">{{taskPostfixLabel(task.id)}}</a>
+                                <span class="fa fa-external-link"></span>
+                                <span>Switch to: </span><a ng-click="openLemmaProof(task.id)">{{taskPostfixLabel(task.id)}}</a>
                             </span>
                             <span ng-if="taskPostfixLabel(task.id).substring(0,5) != 'Lemma'">
                                 <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>

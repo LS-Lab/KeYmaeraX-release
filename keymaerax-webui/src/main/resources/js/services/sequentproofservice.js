@@ -339,9 +339,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     doFetchAgenda: function(userId, proofId, agendaKind) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      this.tactic.fetch(userId, proofId);
+      var theTactic = this.tactic;
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + agendaKind)
         .then(function(response) {
+          theTactic.fetch(userId, proofId);
           theAgenda.modelId = response.data.modelId;
           theAgenda.itemsMap = response.data.agendaItems;
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
