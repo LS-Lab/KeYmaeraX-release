@@ -141,15 +141,18 @@
 </li>
 <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
     <a class="dropdown-toggle" data-toggle="dropdown">
-        <span ng-click="$event.stopPropagation();openProofstepBrowser()"
+        <span ng-click="$event.stopPropagation();openProofstepBrowser('axioms')"
               data-intro="<center>Browse all rules and lemmas</center>" data-position="top">
             <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span>
         </span>
         <i class="fa fa-caret-down fa-lg "></i>
     </a>
     <ul class="dropdown-menu dropdown-menu-right">
-        <li><a ng-click="openProofstepBrowser()">
-            <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse all ...</span></span></a>
+        <li><a ng-click="openProofstepBrowser('axioms')">
+            <span class="fa"><span class="k4-btn-optional-text"> Browse tactics and axioms ...</span></span></a>
+        </li>
+        <li><a ng-click="openProofstepBrowser('lemmas')">
+            <span class="fa"><span class="k4-btn-optional-text"> Browse lemmas ...</span></span></a>
         </li>
         <li><a ng-click="openTacticPosInputDialog('useLemma', undefined)">
             <span class="fa"><span class="k4-btn-optional-text"> Create new lemma ...</span></span></a>

@@ -625,7 +625,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
     }
 
-    $scope.openProofstepBrowser = function() {
+    $scope.openProofstepBrowser = function(tab) {
       var prevMode = sequentProofData.formulas.mode;
       sequentProofData.formulas.mode = 'select';
       var modalInstance = $uibModal.open({
@@ -637,7 +637,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           proofId: function() { return $scope.proofId; },
           nodeId: function() { return sequentProofData.agenda.selectedId(); },
           formulaId: function() { return undefined; },
-          formula: function() { return undefined; }
+          formula: function() { return undefined; },
+          tab: function() { return tab; }
         }
       });
       modalInstance.result.then(
