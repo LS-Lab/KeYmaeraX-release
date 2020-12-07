@@ -115,7 +115,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
 
   it should "eat long tool value" in {
     val q = "\"\"\"\""
-    val longToolValue = (0 until 99999).map(_ => "long tool value").mkString("\n")
+    val longToolValue = (0 until 99999).map(_ => "long \"tool\" value").mkString("\n")
     KeYmaeraXLexer.inMode(q + longToolValue + q, LemmaFileMode).head.tok shouldBe(TOOL_VALUE(longToolValue))
   }
 
