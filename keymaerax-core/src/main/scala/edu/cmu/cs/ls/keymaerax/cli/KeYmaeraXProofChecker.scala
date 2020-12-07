@@ -69,10 +69,11 @@ object KeYmaeraXProofChecker {
     })
 
     val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
+    val origInterpreter = BelleInterpreter.interpreter
     val listeners =
       if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
       else qeDurationListener :: Nil
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(origInterpreter.listeners ++ listeners))
 
     val proofStatistics = try {
       qeDurationListener.reset()
@@ -147,6 +148,8 @@ object KeYmaeraXProofChecker {
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
+    } finally {
+      BelleInterpreter.setInterpreter(origInterpreter)
     }
 
     proofStatistics
@@ -283,10 +286,6 @@ object KeYmaeraXProofChecker {
       ProofStatistics(entry.name, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
     } else {
       t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
-        val listeners =
-          if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
-          else qeDurationListener :: Nil
-        BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
 
         val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)
