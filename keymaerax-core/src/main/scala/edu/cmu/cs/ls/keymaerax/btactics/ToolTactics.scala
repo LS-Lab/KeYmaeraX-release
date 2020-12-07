@@ -306,7 +306,7 @@ private object ToolTactics {
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETacticTool): BelleExpr = anon ((sequent: Sequent) => {
+  def rcf(qeTool: => QETacticTool): BelleExpr = internal ("_rcf", (sequent: Sequent) => {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
