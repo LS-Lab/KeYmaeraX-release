@@ -739,4 +739,5 @@ object TacticFactory {
   def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
   def inputanonnoop(t: => BelleExpr): InputTactic = "ANON" byWithInputsNoop(Nil, t)
 
+  def internal(name: String, t: Sequent => BelleExpr): DependentTactic = name by t
 }
