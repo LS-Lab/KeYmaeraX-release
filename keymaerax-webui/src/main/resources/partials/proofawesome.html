@@ -8,7 +8,22 @@
         <div class="spinner-double-bounce2"></div>
     </div>
     <div class="tactic-spinner-please-wait">
-        <p>Tactical proof is running, please wait...</p>
+        <p>Tactical proof is running, please wait
+            <span ng-click="runningTask.showProgressList = !runningTask.showProgressList">
+                ...
+                <i class="fa fa-caret-right" ng-if="!runningTask.showProgressList"></i>
+                <i class="fa fa-caret-down" ng-if="runningTask.showProgressList"></i>
+            </span>
+        </p>
+        <div class="tactic-spinner-progresslist"
+             uib-collapse="!runningTask.showProgressList"
+             ng-if="runningTask.progress && runningTask.progress.length > 0">
+            <ol>
+                <li ng-repeat="step in runningTask.progress">
+                    {{step}}
+                </li>
+            </ol>
+        </div>
         <p ng-visible="runningTask.currentStep && runningTask.currentStep.ruleName">{{runningTask.currentStep.ruleName}} ({{runningTask.currentStep.duration}}ms)</p>
         <p ng-if="runningTask.info && runningTask.info !== ''">{{runningTask.info}}</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>

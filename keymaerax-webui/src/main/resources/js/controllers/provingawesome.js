@@ -326,6 +326,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
+          if (response.data.progress) $scope.runningTask.progress = response.data.progress;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
@@ -416,6 +417,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     taskStepwiseRequest: undefined,
     future: undefined,
     currentStep: undefined,
+    progress: [],
     info: undefined,
     start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
       $scope.runningTask.proofId = proofId;
@@ -446,6 +448,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
+          if (response.data.progress) $scope.runningTask.progress = response.data.progress;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);

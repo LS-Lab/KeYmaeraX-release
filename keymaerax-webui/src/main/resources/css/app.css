@@ -770,6 +770,16 @@ del {
   z-index: 10;
 }
 
+.tactic-spinner-progresslist {
+  text-align: left;
+  height: 25px;
+  max-height: 25px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+
 /* End Spinner */
 
 /* do not change appearance when focused for the sake of a context menu */
