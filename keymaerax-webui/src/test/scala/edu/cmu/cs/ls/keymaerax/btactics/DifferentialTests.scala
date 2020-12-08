@@ -713,6 +713,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x_0>0, x_0=x ==> [{x'=5&true&x>=x_0}]x>=2*x_0-x_0".asSequent
   }
 
+  it should "work when not sole formula in succedent" in withMathematica { _ =>
+    //@todo fix unstable positions in discreteGhost/assign/stutter
+    proveBy("t=0  ==> x!=1, [{t'=1,x'=-x&t=0}]x=1, x!=3".asSequent, dC("(x-old(x))^2<=2*((x-old(x))*(-x))*(t-0)".asFormula)(2)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "t=0, x_0=x ==> x_0!=1, x_0!=3, [{t'=1,x'=-x&t=0&(x-x_0)^2<=2*((x-x_0)*(-x))*(t-0)}]x=1".asSequent,
+      "t=0, x_0=x ==> x_0!=1, x_0!=3, [{t'=1,x'=-x&t=0}](x-x_0)^2<=2*((x-x_0)*(-x))*(t-0)".asSequent
+    )
+    proveBy("==> x!=1, t=0 -> [{t'=1,x'=-x&t=0}]x=1, x!=3".asSequent, dC("(x-old(x))^2<=2*((x-old(x))*(-x))*(t-0)".asFormula)(2, 1::Nil)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "==> x!=1, t=0 -> \\forall x_0 (x_0=x -> [{t'=1,x'=-x&t=0&(x-x_0)^2<=2*((x-x_0)*(-x))*(t-0)}]x=1), x!=3".asSequent,
+      "==> x!=1, x!=3, t=0 -> \\forall x_0 (x_0=x -> [{t'=1,x'=-x&t=0}](x-x_0)^2<=2*((x-x_0)*(-x))*(t-0))".asSequent
+    )
+  }
+
   it should "cut in multiple formulas" in withQE { _ =>
     val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, dC("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1))
     result.subgoals should have size 3

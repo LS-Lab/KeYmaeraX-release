@@ -317,7 +317,6 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
       case Some(e) => throw new TacticInapplicableFailure("ghostDC only applicable to box/diamond properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-
     }
 
     val ov = FormulaTools.argsOf("old", f)
@@ -326,10 +325,13 @@ private object DifferentialTactics extends Logging {
     } else {
       DLBySubst.discreteGhosts(ov, origSeq,
         (ghosts: List[((Term, Variable), BelleExpr)]) => {
-          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(0::1::Nil).flatten)
+          val afterGhostsPos =
+            if (pos.isTopLevel) LastSucc(0, pos.inExpr ++ posIncrements)
+            else Fixed(pos ++ posIncrements)
           val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
           if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(0::1::Nil).flatten))
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(afterGhostsPos)
         }
       )(pos)
     }
