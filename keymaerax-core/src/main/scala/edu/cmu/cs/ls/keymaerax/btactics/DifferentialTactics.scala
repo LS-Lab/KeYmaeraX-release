@@ -88,54 +88,46 @@ private object DifferentialTactics extends Logging {
     /** A single step of DE system (@todo replace with useAt when unification for this example works) */
     // semanticRenaming
     // was "DE system step"
-    private lazy val DESystemStep_SemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
-            val g = Box(
-              ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
-              Box(Assign(d, t), p)
-            )
+    private lazy val DESystemStep_SemRen: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
+        val g = Box(
+          ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
+          Box(Assign(d, t), p)
+        )
 
-            //construct substitution
-            val aF = UnitFunctional("f", AnyArg, Real)
-            val aH = UnitPredicational("H", AnyArg)
-            val aC = DifferentialProgramConst("c", AnyArg)
-            val aP = UnitPredicational("p", AnyArg)
-            val aX = Variable("x_")
+        //construct substitution
+        val aF = UnitFunctional("f", AnyArg, Real)
+        val aH = UnitPredicational("H", AnyArg)
+        val aC = DifferentialProgramConst("c", AnyArg)
+        val aP = UnitPredicational("p", AnyArg)
+        val aX = Variable("x_")
 
-            val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
-              SubstitutionPair(aH, h) :: Nil)
-            val uren = ProofRuleTactics.uniformRename(aX, x)
-            val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${d.prettyString}=f(||)&H(||)}][${d.prettyString}:=f(||);]p(||)".asFormula))
+        val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
+          SubstitutionPair(aH, h) :: Nil)
+        val uren = ProofRuleTactics.uniformRename(aX, x)
+        val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${d.prettyString}=f(||)&H(||)}][${d.prettyString}:=f(||);]p(||)".asFormula))
 
-            cutLR(g)(pos) <(
-              /* use */ skip,
-              //@todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
-              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
-              TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
-              //TactixLibrary.US(subst, "DE differential effect (system)"))
-          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to box ODEs, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-      }
-    }
+        cutLR(g)(pos) <(
+          /* use */ skip,
+          //@todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
+          /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
+          TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
+          //TactixLibrary.US(subst, "DE differential effect (system)"))
+      case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    })
 
     /** A single step of DE system */
     // !semanticRenaming
     // was "DE system step"
-    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
-            useAt(Ax.DEs)(pos)
-          case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
-            useAt(Ax.DE)(pos)
-          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-      }
-    }
+    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
+        useAt(Ax.DEs)(pos)
+      case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
+        useAt(Ax.DE)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    })
   }
 
   /** @see [[TactixLibrary.dI]] */

@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
@@ -275,12 +276,10 @@ class SequentialInterpreterTests extends TacticTestBase {
     BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter()))
 
     var finishedBranches = Seq.empty[Int]
-    def logDone(branch: Int) = new DependentTactic("ANON") {
-      override def computeExpr(provable: ProvableSig): BelleExpr = {
-        finishedBranches = finishedBranches :+ branch
-        skip
-      }
-    }
+    def logDone(branch: Int) = anon ((provable: ProvableSig) => {
+      finishedBranches = finishedBranches :+ branch
+      provable
+    })
 
     a [BelleThrowable] should be thrownBy proveBy("x>0 -> x>5 & x>0 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
       DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),
@@ -298,12 +297,10 @@ class SequentialInterpreterTests extends TacticTestBase {
     BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter()))
 
     var finishedBranches = Seq.empty[Int]
-    def logDone(branch: Int) = new DependentTactic("ANON") {
-      override def computeExpr(provable: ProvableSig): BelleExpr = {
-        finishedBranches = finishedBranches :+ branch
-        skip
-      }
-    }
+    def logDone(branch: Int) = anon ((provable: ProvableSig) => {
+      finishedBranches = finishedBranches :+ branch
+      provable
+    })
 
     the [BelleThrowable] thrownBy proveBy("x>0 -> x>5 & x>2 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
       DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),

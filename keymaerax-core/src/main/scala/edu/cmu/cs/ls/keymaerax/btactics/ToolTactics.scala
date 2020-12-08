@@ -128,12 +128,7 @@ private object ToolTactics {
               // catch: noop
               (_: Throwable) => skip,
               // finally: reset timeout
-              Some(new DependentTactic("ANON") {
-                override def computeExpr(v: BelleValue): BelleExpr = {
-                  tom.setOperationTimeout(oldTimeout)
-                  skip
-                }
-              })
+              Some(anon((p: ProvableSig) => { tom.setOperationTimeout(oldTimeout); p }))
             )
           } else (e: BelleExpr) => e
         case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")

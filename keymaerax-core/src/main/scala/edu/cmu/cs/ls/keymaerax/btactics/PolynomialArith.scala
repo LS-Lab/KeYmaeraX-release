@@ -859,43 +859,40 @@ object PolynomialArith extends Logging {
   }
 
   //Goal must be of the form (Fi=0, Gj!=0 |- )
-  def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
+  def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = anon ((sequent: Sequent) => {
+    val (gtZ, tac) = neqGtZero(mon,sequent)
 
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      val (gtZ, tac) = neqGtZero(mon,sequent)
+    //Assert the witness provided
+    val (wit, pfi) = genWitness(gtZ,witness)
+    val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1,1::Nil))(pfi)
+    //assert(pf.isProved)
+    //Generate our own reduction instructions if not available
+    //Proofs skipped
+    val inst = instopt.getOrElse({
+      val ante_polys = sequent.ante.flatMap(_ match {
+        case Equal(t, n: Number) if n.value == 0 => Some(t)
+        case _ => None
+      }).toList
+      val wit_norm = normalise(wit, true)._1
+      val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
+      reduction(ctx_norm, wit_norm)
+    })
 
-      //Assert the witness provided
-      val (wit, pfi) = genWitness(gtZ,witness)
-      val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1,1::Nil))(pfi)
-      //assert(pf.isProved)
-      //Generate our own reduction instructions if not available
-      //Proofs skipped
-      val inst = instopt.getOrElse({
-        val ante_polys = sequent.ante.flatMap(_ match {
-          case Equal(t, n: Number) if n.value == 0 => Some(t)
-          case _ => None
-        }).toList
-        val wit_norm = normalise(wit, true)._1
-        val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
-        reduction(ctx_norm, wit_norm)
-      })
-
-      //g >0 -> g+s_i^2 != 0
-      cut(pf.conclusion.succ.head) < (
-        implyL('Llast) < (tac & id,ident)&
-        notL('Llast) &
-          //Run the instructions
-          inst.foldRight[BelleExpr](ident)(
-            (h, tac) =>
-              implyRi(keep = true)(AntePos(h._1), SuccPos(0))
-                & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
-                & tac) &
-          equalityByNormalisation(1)
-        ,
-        cohideR(1) & by(pf)
-        )
-    }
-  }
+    //g >0 -> g+s_i^2 != 0
+    cut(pf.conclusion.succ.head) < (
+      implyL('Llast) < (tac & id,ident)&
+      notL('Llast) &
+        //Run the instructions
+        inst.foldRight[BelleExpr](ident)(
+          (h, tac) =>
+            implyRi(keep = true)(AntePos(h._1), SuccPos(0))
+              & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
+              & tac) &
+        equalityByNormalisation(1)
+      ,
+      cohideR(1) & by(pf)
+      )
+  })
 
   /**
     * End updated procedure

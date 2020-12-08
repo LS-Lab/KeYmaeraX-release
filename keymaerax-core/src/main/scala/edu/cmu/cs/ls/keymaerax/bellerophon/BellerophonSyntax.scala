@@ -17,7 +17,12 @@ import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 
 object BelleExpr {
+  val INTERNAL_NAME_PREFIX: String = "_"
+
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
+
+  /** Indicates whether name `n` is an internal name. */
+  def isInternal(n: String): Boolean = n.startsWith(INTERNAL_NAME_PREFIX)
 
   // Don't persist generator arguments
   private[bellerophon] def persistable[T](args: Seq[T]): Seq[T] = {
@@ -106,9 +111,13 @@ trait NamedBelleExpr extends BelleExpr {
   val name: String
 
   override def prettyString: String = name
-  if (name != "ANON") DerivationInfo.seeName(name)
-}
 
+  /** Indicates whether this is an internal named tactic. */
+  def isInternal: Boolean = BelleExpr.isInternal(name)
+
+  //@note register the name with the DerivationInfo once the tactic is instantiated
+  if (!isInternal) DerivationInfo.seeName(name)
+}
 
 // basic tactic combinators
 

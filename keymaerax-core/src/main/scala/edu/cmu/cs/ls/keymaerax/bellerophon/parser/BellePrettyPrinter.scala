@@ -57,8 +57,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             val eargs = BelleExpr.persistable(it.inputs).flatMap(input => argPrinter(Left(input))).mkString(", ")
             it.name + "(" + eargs + ")"
           } else it.name
-        case BuiltInTactic(name) => if (name != "ANON") name else ""
-        case BuiltInPositionTactic(name) => if (name != "ANON") name else ""
+        case b@BuiltInTactic(name) => if (!b.isInternal) name else ""
+        case b@BuiltInPositionTactic(name) => if (!b.isInternal) name else ""
         case b: CoreLeftTactic => b.name
         case b: CoreRightTactic => b.name
         case b: BuiltInLeftTactic => b.name
@@ -72,8 +72,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             case (a: Formula, v: Formula) => edu.cmu.cs.ls.keymaerax.core.Equiv(a, v)
           })).getOrElse("") + ") " + IN.img + " (" +
           newline(indent+1) + pp(inner, indent+1) + newline(indent) + ")"
-        case DependentPositionTactic(name) =>
-          if (name != "ANON") name // name of a DependentPositionTactic is the codeName
+        case t@DependentPositionTactic(name) =>
+          if (!t.isInternal) name // name of a DependentPositionTactic is the codeName
           else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case adp: AppliedDependentPositionTactic => adp.pt match {
           case e: DependentPositionWithAppliedInputTactic =>
@@ -93,8 +93,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           val argString = if (eargs.isEmpty) "" else  "(" + eargs + ")"
           it.name + argString
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
-        case NamedTactic(name, _) =>
-          if (name != "ANON") name
+        case n@NamedTactic(name, _) =>
+          if (!n.isInternal) name
           else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case dot: BelleDot => "_@" + dot.hashCode()
         case l: LabelBranch => l.prettyString

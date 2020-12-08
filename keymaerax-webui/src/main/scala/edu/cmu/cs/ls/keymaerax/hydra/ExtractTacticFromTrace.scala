@@ -61,8 +61,9 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     case None => "nil"
     case Some(c) => c.maker match {
       case None => "nil"
-      case Some(m) if m == "ANON" => "???" //@note anonymous tactics are not serializable (and should not be in the trace)
-      case Some(m) => m
+      case Some(m) =>
+        if (BelleExpr.isInternal(m)) "???" //@note internal tactics are not serializable (and should not be in the trace)
+        else m
     }
   }
 }

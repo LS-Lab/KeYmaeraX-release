@@ -118,7 +118,7 @@ object TactixLibrary extends HilbertCalculus
   @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
   lazy val normalize: BelleExpr =  normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by allTacticChase(
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = anon (allTacticChase(
     new DefaultTacticIndex {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case f@Not(_)      if f.isPredicateFreeFOL => (Nil, Nil)
@@ -133,7 +133,7 @@ object TactixLibrary extends HilbertCalculus
     }
   )(notL::andL::notR::implyR::orR::PropositionalTactics.autoMP::allR::TacticIndex.allLStutter::
     existsL::TacticIndex.existsRStutter::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::
-    ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+    ProofRuleTactics.closeFalse::Nil ++ beta:_*))
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)

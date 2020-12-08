@@ -302,32 +302,22 @@ object ODELiveness {
   /** Single use of DE system */
   //todo: copied and tweaked from DifferentialTactics
   // was "DE system step"
-  private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) => {
-          val ax = Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,x,semantic=true))
-          useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos)
-        }
-        case _ => skip
-      }
-    }
-  }
+  private lazy val DESystemCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
+      val ax = Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,x,semantic=true))
+      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos)
+    case _ => skip
+  })
 
   /** Repeated use of Dassignb */
   //todo: copied and tweaked from DifferentialTactics
   // was "DE system step"
-  private lazy val DassignbCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) => {
-          val ax = Provable.axioms("[':=] differential assign")(URename("x_".asVariable,x,semantic=true))
-          useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
-        }
-        case _ => skip
-      }
-    }
-  }
+  private lazy val DassignbCustom: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) =>
+      val ax = Provable.axioms("[':=] differential assign")(URename("x_".asVariable,x,semantic=true))
+      useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos) & DassignbCustom(pos)
+    case _ => skip
+  })
 
   // returns the diff ghost instantiated and discharged
   private def affineVDGprecond(ghostODEs:DifferentialProgram, boxode:Formula=True) : ProvableSig = {

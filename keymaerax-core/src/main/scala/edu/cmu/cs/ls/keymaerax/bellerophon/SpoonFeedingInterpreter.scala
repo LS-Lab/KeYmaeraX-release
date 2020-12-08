@@ -345,20 +345,20 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           }
 
         // look into tactics
-        case d: DependentTactic if level > 0 || d.name == "ANON" => try {
+        case d: DependentTactic if level > 0 || d.isInternal => try {
           val v = goal
           val valueDependentTactic = d.computeExpr(v)
-          val levelDecrement = if (d.name == "ANON") 0 else 1
+          val levelDecrement = if (d.isInternal) 0 else 1
           runTactic(valueDependentTactic, goal, level - levelDecrement, ctx, strict, convertPending, executePending)
         } catch {
           case e: BelleThrowable => throw e.inContext(d, goal.prettyString)
           case e: Throwable =>
-            val prefix = if (d.name != "ANON") "Unable to execute tactic '" + d.name + "', cause: " else ""
+            val prefix = if (!d.isInternal) "Unable to execute tactic '" + d.name + "', cause: " else ""
             throw new IllFormedTacticApplicationException(prefix + e.getMessage, e).inContext(d, "")
         }
 
-        case NamedTactic(name, t) if level > 0 || name == "ANON" =>
-          val levelDecrement = if (name == "ANON") 0 else 1
+        case n@NamedTactic(_, t) if level > 0 || n.isInternal =>
+          val levelDecrement = if (n.isInternal) 0 else 1
           runTactic(t, goal, level - levelDecrement, ctx, strict, convertPending, executePending)
 
         case TryCatch(t, catchClazz, doCatch, doFinally) =>
@@ -441,7 +441,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               result
             case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
               if (ctx.onBranch >= 0) tactic match {
-                case t: NoOpTactic if t.prettyString == "ANON" =>
+                case t: NoOpTactic if BelleExpr.isInternal(t.prettyString) =>
                   //@note execute but do not store anonymous no-op tactics
                   runningInner = inner(Nil)
                   runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
@@ -458,7 +458,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                     //@todo record a NoOpTactic that operates on all subgoals (print, assert etc)
                     else result
                   } else {
-                    assert(tactic.prettyString != "ANON", "Unable to record anonymous tactic without name")
+                    assert(!BelleExpr.isInternal(tactic.prettyString), "Unable to record internal tactic")
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                     runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
                       case p: BelleDelayedSubstProvable =>
