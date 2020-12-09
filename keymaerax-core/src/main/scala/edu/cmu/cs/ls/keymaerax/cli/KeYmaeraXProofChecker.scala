@@ -143,10 +143,11 @@ object KeYmaeraXProofChecker {
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
-      case _: Throwable =>
+      case ex: Throwable =>
         BelleInterpreter.kill()
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
+        ex.printStackTrace()
         ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
     } finally {
       BelleInterpreter.setInterpreter(origInterpreter)
