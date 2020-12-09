@@ -692,9 +692,11 @@ object ODEInvariance {
           Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
         val right = Times(freeAtoms.map(f => Times(Number(2),
           Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+
+        //dC with old(.) moves the formula to the last position
         dC(LessEqual(left,right))(pos)<(
-          dW(pos) & QE & done,
-          diffInd('full)(pos)
+          dW('Rlast) & QE & done,
+          diffInd('full)('Rlast)
         )
     }
   })
