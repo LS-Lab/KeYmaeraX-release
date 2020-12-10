@@ -23,7 +23,8 @@ import scala.collection.mutable
 object IOListeners {
 
   /** Interpreter listener that logs QE calls to `logger` if condition `logCondition` is satisfied. */
-  class QELogListener(logger: (Sequent, Sequent, String) => Unit, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
+  class QELogListener(val logger: (Sequent, Sequent, String) => Unit,
+                      val logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
     private val logged: scala.collection.mutable.Set[Sequent] = scala.collection.mutable.Set()
     private def qeFml(s: Sequent): Formula =
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
