@@ -63,8 +63,7 @@ object KeYmaeraXProofChecker {
     val pw = sanitized.map(new PrintWriter(_))
 
     val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
+      case DependentTactic("_rcf") => true
       case _ => false
     })
 
