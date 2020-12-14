@@ -185,7 +185,7 @@ class ElaborationPass() {
           case ProofApp(ProofApp(ProofVar(BaseVariable("orIL", _, _)), pt1), pt2: ProofInstance) => ProofApp(ProofApp(ProofVar(Variable("orIL")), coercePTSorts(pt1)), coerceFormula(pt2))
           case ProofApp(ProofApp(ProofVar(BaseVariable("orIR", _, _)), pt1: ProofInstance), pt2) => ProofApp(ProofApp(ProofVar(Variable("orIR")), coerceFormula(pt1)), coercePTSorts(pt2))
           case ProofApp(ProofApp(ProofVar(BaseVariable("falseE", _, _)), pt1), pt2:ProofInstance) => ProofApp(ProofApp(ProofVar(Variable("falseE")), coercePTSorts(pt1)), coerceFormula(pt2))
-          case ProofApp(ProofApp(ProofVar(BaseVariable("ignoreI", _, _)), pt1: ProofInstance), pt2) => ProofApp(ProofApp(ProofVar(Variable("ignoreI")), coerceFormula(pt1)), coercePTSorts(pt2))
+          case ProofApp(ProofApp(ProofVar(BaseVariable("implyW", _, _)), pt1: ProofInstance), pt2) => ProofApp(ProofApp(ProofVar(Variable("implyW")), coerceFormula(pt1)), coercePTSorts(pt2))
           case ProofApp(ProofApp(ProofVar(BaseVariable("allE", _, _)), pt1), pt2) => ProofApp(ProofApp(ProofVar(Variable("allE")), coercePTSorts(pt1)), coerceTerm(pt2))
           case ProofApp(ProofApp(ProofApp(ProofVar(BaseVariable("existsI", _, _)), pt1), pt2), pt3) =>ProofApp(ProofApp(ProofApp(ProofVar(Variable("existsI")), coercePTSorts(pt1)), coerceTerm(pt2)), coercePTSorts(pt3))
           case ProofApp(m, n) => ProofApp(coercePTSorts(m), coercePTSorts(n))
@@ -209,6 +209,7 @@ class ElaborationPass() {
             val assertion = locate(Assert(e, kce.elaborateFunctions(f, sel), finalMeth), sel)
             Some(locate(assertion, sel))
           case ProveODE(ds, dc) =>
+            requireTimeVarForSolution(ds, ds.clocks)
             // Context should include ODE during collection, because we want to know about domain constraint fmls and we may
             // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
             val dom = collectPts(kce.:+(sel), dc)
@@ -218,6 +219,17 @@ class ElaborationPass() {
             val finalPt = locate(kce.elaborateFunctions(pt, pt), pt)
             Some(locate(Note(x, finalPt, ann), sel))
           case _ => None
+        }
+      }
+
+      private def requireTimeVarForSolution(ds: DiffStatement, clocks: Set[Variable]): Unit = {
+        ds match {
+          case AtomicODEStatement(dp, Nothing) => ()
+          case AtomicODEStatement(dp, solFact) if clocks.isEmpty => throw ElaborationException("ODE with solution label must have time variable")
+          case AtomicODEStatement(dp, solFact)  => ()
+          case DiffProductStatement(l, r) => requireTimeVarForSolution(l, clocks); requireTimeVarForSolution(r, clocks)
+          case DiffGhostStatement(ds) => requireTimeVarForSolution(ds, clocks)
+          case InverseDiffGhostStatement(ds) => requireTimeVarForSolution(ds, clocks)
         }
       }
 
