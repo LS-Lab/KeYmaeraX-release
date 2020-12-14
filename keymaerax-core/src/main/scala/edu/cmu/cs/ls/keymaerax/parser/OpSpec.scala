@@ -164,11 +164,11 @@ object OpSpec {
     Function("min",None,Tuple(Real,Real),Real,interpreted=true) ::
     Function("max",None,Tuple(Real,Real),Real,interpreted=true) :: Nil
   } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
-  private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
+  private val interpretation: Map[(String, Option[Int]),Function] = interpretedSymbols.map(f => ((f.name, f.index) -> f)).toMap
 
   /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
   private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function =
-  interpretation.get(name) match {
+  interpretation.get((name, index)) match {
     case None => Function(name,index,domain,sort)
     case Some(r) =>
       assert(r.interpreted, "interpreted function")
@@ -177,7 +177,7 @@ object OpSpec {
   }
 
   /** The sort of an interpreted function or None if uninterpreted */
-  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get(name) match {
+  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get((name, None)) match {
     case None => None
     case Some(f) => Some(f.sort)
   }

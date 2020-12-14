@@ -34,10 +34,12 @@ object RenUSubst {
   /** Create a renaming (non-)substitution corresponding to the given ordinary uniform renaming. */
   def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
-  /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
-  def UniformRenamingForward(provable: ProvableSig, what: Variable, repl: Variable): ProvableSig =
-  provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
-
+  /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience). Supports semantic renaming
+    * on proved provables; renames conclusion but keeps subgoals of unproved provables unrenamed to simplify forward proofs. */
+  def UniformRenamingForward(provable: ProvableSig, what: Variable, repl: Variable): ProvableSig = {
+    if (provable.isProved) provable(URename(what,repl,semantic=true))
+    else provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
+  }
 
   private[infrastruct] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).

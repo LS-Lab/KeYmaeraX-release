@@ -431,12 +431,11 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & new BuiltInTactic("ANON") {
-        def result(provable: ProvableSig): ProvableSig = {
+      proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
-        }
-      }) shouldBe 'proved
+        })
+      ) shouldBe 'proved
     case _ => // nothing to test
   }
 
@@ -444,12 +443,11 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | new BuiltInTactic("ANON") {
-        def result(provable: ProvableSig): ProvableSig = {
+      proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
-        }
-      }) should (not be 'proved)
+        })
+      ) should (not be 'proved)
     case _ => // nothing to test
   }
 
@@ -458,12 +456,11 @@ class TactixLibraryTests extends TacticTestBase {
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Skip QE", new TacticInapplicableFailure(_))
-          & QE(Nil, None, Some(7))) | new BuiltInTactic("ANON") {
-        def result(provable: ProvableSig): ProvableSig = {
+          & QE(Nil, None, Some(7))) | anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
-        }
-      }) should (not be 'proved)
+        })
+      ) should (not be 'proved)
     case _ => // nothing to test
   }
 

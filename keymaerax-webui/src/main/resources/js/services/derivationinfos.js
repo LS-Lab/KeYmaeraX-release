@@ -20,7 +20,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       if (serviceDef.allLemmasCache) {
         return $q(function(resolve, reject) { resolve({data: serviceDef.allLemmasCache}); });
       } else {
-        var promise = $http.get('models/users/' + userId + '/lemmas')
+        var promise = $http.get('lemmas/users/' + userId)
           .then(function(response) {
             // return value gets picked up by 'then' in the controller using this service
             serviceDef.allLemmasCache = response.data;

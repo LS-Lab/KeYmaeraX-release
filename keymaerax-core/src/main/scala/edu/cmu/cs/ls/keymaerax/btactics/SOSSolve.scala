@@ -143,10 +143,15 @@ object SOSSolve {
         case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
         case fml => throw new IllegalArgumentException(name + " requires only formulas of the form 'poly = 0' in the antecedent but got " + fml)
       }.toList
+      val consts = polys.flatMap(StaticSemantics.signature(_).toSet).distinct.flatMap((e:Expression) =>
+        e match {
+          case bv:Function => Some(bv)
+          case _ => None
+        }).map( FuncOf(_,Nothing))
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct.sorted(variableOrdering)
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       val (sos, cofactors, lininst) = sosTimer.time {
-        sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
+        sosSolveTool.sosSolve(polys, consts++vars, degree, timeout) match {
           case Witness(sos, cofactors, lininst) => (sos, cofactors, lininst)
           case NoSOS => throw new SOSSolveNoSOS
           case Aborted => throw new SOSSolveAborted
@@ -154,7 +159,7 @@ object SOSSolve {
       }
 
       // Apply the linear instructions first then do the auxiliary
-      PolynomialArith.linearElim(lininst) &
+      linearElim(lininst) &
         witnessSOSaux(sos, cofactors, witnessTimer)
     }
   }
@@ -460,9 +465,9 @@ object SOSSolve {
       splitAnte &
       OnAll(universalCheck & naturalExponentCheck) &
       (strategy match {
-        case NoRatForm => OnAll(PolynomialArith.normAnte)
-        case RatForm(true) => OnAll(PolynomialArith.normAnte & ratFormAnte & elimRatForms(true))
-        case RatForm(false) => OnAll(ratFormAnte & elimRatForms(false) & PolynomialArith.normAnte)
+        case NoRatForm => OnAll(normAnte)
+        case RatForm(true) => OnAll(normAnte & ratFormAnte & elimRatForms(true))
+        case RatForm(false) => OnAll(ratFormAnte & elimRatForms(false) & normAnte)
       })
 
   /** "main" method to preprocessing, sos witness generation, and proving. */
@@ -474,7 +479,7 @@ object SOSSolve {
           witnessTimer: Timer = NoTimer,
           skipPreprocessing: Boolean = false
          ): BelleExpr = anon {
-    val defaultTimeout = Some(60)
+    val defaultTimeout = Some(120)
     val defaultDegree = 100
     (if(skipPreprocessing) skip else preprocess(ratFormStrategy)) &
       TryCatch(
@@ -501,5 +506,101 @@ object SOSSolve {
             case ex => throw ex
           }
       )
+  }
+
+  //Helper function for normalizing input sequents
+  private val namespace = "sossolve"
+
+  // Succedent to antecedent for inequations (rewrite left to right followed by notR)
+  // todo: These can all go into the simplifier
+  private lazy val ltSucc: ProvableSig = AnonymousLemmas.remember(" f_() < g_() <-> !(f_()>=g_())".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
+  private lazy val leSucc: ProvableSig = AnonymousLemmas.remember(" f_() <= g_() <-> !(f_()>g_())".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
+  private lazy val gtSucc: ProvableSig = AnonymousLemmas.remember(" f_() > g_() <-> !g_()>=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
+  private lazy val geSucc: ProvableSig = AnonymousLemmas.remember(" f_() >= g_() <-> !g_()>f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
+  private lazy val eqSucc: ProvableSig = AnonymousLemmas.remember(" f_() = g_() <-> !g_()!=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact //Convenient rule for A3
+  private lazy val neSucc: ProvableSig = AnonymousLemmas.remember(" f_() != g_() <-> !g_()=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact //Convenient rule for A3
+
+  private lazy val ltAnte: ProvableSig = AnonymousLemmas.remember("f_() < g_() <-> \\exists wit_ (f_()-g_())*wit_^2 + 1 = 0".asFormula, QE, namespace).fact
+  private lazy val leAnte: ProvableSig = AnonymousLemmas.remember("f_() <= g_() <-> \\exists wit_ (f_()-g_()) + wit_^2 = 0".asFormula, QE, namespace).fact
+  private lazy val gtAnte: ProvableSig = AnonymousLemmas.remember("f_() > g_() <-> \\exists wit_ (f_()-g_())*wit_^2 - 1 = 0".asFormula, QE, namespace).fact
+  private lazy val geAnte: ProvableSig = AnonymousLemmas.remember("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula, QE, namespace).fact
+
+  private lazy val eqAnte: ProvableSig = AnonymousLemmas.remember("f_() = g_() <-> f_() - g_() = 0".asFormula, QE & done, namespace).fact
+  private lazy val neAnte: ProvableSig = AnonymousLemmas.remember("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ - 1 = 0".asFormula, QE & done, namespace).fact
+
+  private lazy val mulZero: ProvableSig = AnonymousLemmas.remember("g_() != 0 -> (f_() = 0 <-> g_() * f_() = 0)".asFormula, QE & done, namespace).fact
+  //A = 0 <-> B = 0 <- A = B
+  private lazy val eqZeroEquiv = AnonymousLemmas.remember("(F_() = 0 <-> G_() = 0) <- F_() = G_()".asFormula, QE, namespace).fact
+
+  //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
+  def clearSucc:DependentTactic = anon ((seq: Sequent) => {
+    seq.succ.zipWithIndex.foldLeft[BelleExpr](ident) {(tac: BelleExpr, fi) =>
+      val ind = fi._2 + 1;
+      (fi._1 match {
+        case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
+        case GreaterEqual(f, g) =>  useAt(geSucc)(ind) & notR(ind)
+        case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
+        case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
+        case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
+        case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
+        case _ => ident
+      }) & tac
+    }
+  })
+
+  def normAnte:DependentTactic = anon ((seq: Sequent) => {
+    seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
+      val ind = -(fi._2 + 1);
+      (fi._1 match {
+        case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
+        case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
+        case Equal(_, _) => useAt(eqAnte)(ind)
+        case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
+        case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
+        case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
+        case _ => ident
+      }) & tac
+    }
+  })
+
+  lazy val prepareArith: BelleExpr = clearSucc & normAnte
+
+  // Guided linear variable elimination at a top-level position (of shape A=B)
+  // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
+
+  //The list of instructions contains:
+  // 1) position to rewrite, 2) term to leave on LHS, 3) term on RHS
+  // 4) determines the cofactor on the variable (expected to be provable to be non-zero by RCF)
+  // The proof works by the following sequence of steps :
+  // (clhs = crhs <-> lhs = rhs)
+  // <= (clhs - crhs = 0) <-> (lhs - rhs =0)
+  // <= (clhs-chrs=0) <-> (K*(lhs-rhs)=0)
+  // <= clhs-chrs = K*(lhs-rhs) (by polynomial arithmetic)
+
+  def rewriteEquality(pos:Position, lhs:Term, rhs:Term, cofactor:Term): DependentTactic = anon ((seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Equal(clhs,crhs)) =>
+        val cofact = proveBy(NotEqual(cofactor,Number(0)),RCF)
+        val instMulZero = useFor(mulZero,PosInExpr(0::Nil))(Position(1))(cofact)
+        //println(pos,lhs,rhs,cofactor)
+        val pr =
+          proveBy(Equiv(Equal(clhs,crhs),Equal(lhs,rhs)),
+            useAt(eqAnte)(1,PosInExpr(0::Nil)) &
+              useAt(eqAnte)(1,PosInExpr(1::Nil)) &
+              useAt(instMulZero)(1,PosInExpr(1::Nil)) &
+              useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
+              PolynomialArithV2.equate(1)
+          )
+        useAt(pr)(pos)
+      case _ => ident
+    }
+  })
+
+  //The actual linear elimination tactic takes a list
+  def linearElim(ls:List[(Int,Term,Term,Term)]) : BelleExpr =
+  {
+    val itopos = ls.map(p => (AntePosition(p._1),p._2,p._3,p._4))
+
+    itopos.foldLeft[BelleExpr](ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
   }
 }

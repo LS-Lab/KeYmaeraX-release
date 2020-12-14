@@ -150,8 +150,7 @@ object UIIndex {
             if (pos.forall(_.isSucc)) {
               if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)
               else ("solve" :: "compatCut" :: Nil) //todo
-            }
-            else ("solve" :: "compatCut" :: Nil) //todo
+            } else ("solve" :: "compatCut" :: Nil) //todo
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
             s"""expand "$name"""" :: rules
           case _ => rules
@@ -214,7 +213,7 @@ object UIIndex {
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
             case (_: Exists, false) => "existsR" :: "existsRmon" :: alwaysApplicable
-            case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: alwaysApplicable
+            case (_: Equal, true) => "allL2R" :: "allR2L" :: "= commute" :: "alphaRenAllBy" :: alwaysApplicable
             case (FuncOf(fn, _), _) if substs.exists({ case SubstitutionPair(FuncOf(wfn, _), _) => wfn == fn case _ => false }) =>
               s"""expand "${fn.prettyString}"""" :: alwaysApplicable
             case (PredOf(fn, _), _) if substs.exists({ case SubstitutionPair(PredOf(wfn, _), _) => wfn == fn case _ => false}) =>

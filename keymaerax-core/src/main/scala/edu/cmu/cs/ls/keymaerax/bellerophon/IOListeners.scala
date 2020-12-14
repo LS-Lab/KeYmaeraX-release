@@ -23,7 +23,8 @@ import scala.collection.mutable
 object IOListeners {
 
   /** Interpreter listener that logs QE calls to `logger` if condition `logCondition` is satisfied. */
-  class QELogListener(logger: (Sequent, Sequent, String) => Unit, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
+  class QELogListener(val logger: (Sequent, Sequent, String) => Unit,
+                      val logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
     private val logged: scala.collection.mutable.Set[Sequent] = scala.collection.mutable.Set()
     private def qeFml(s: Sequent): Formula =
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
@@ -78,7 +79,7 @@ object IOListeners {
     private var start = System.currentTimeMillis()
 
     private def stepInto(e: BelleExpr): Boolean = stepInto.nonEmpty && (stepInto.head == "_ALL" || (e match {
-      case n: NamedBelleExpr => n.name == "ANON" || stepInto.contains(n.name)
+      case n: NamedBelleExpr => n.isInternal || stepInto.contains(n.name)
       case _ => false
     }))
 
@@ -94,7 +95,7 @@ object IOListeners {
         case EitherTactic(l, _) => executionStack = (l->0) +: executionStack
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
         case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
-        case e: NamedBelleExpr if e.name == "ANON" => // always step into ANON
+        case e: NamedBelleExpr if e.isInternal => // always step into internal tactics
         // avoid duplicate printing of DependentPositionTactic and AppliedDependentPositionTactic
         case _: DependentPositionTactic =>
         case e: NamedBelleExpr /*if e.getClass == executionStack.head._1.getClass*/ =>
@@ -110,7 +111,7 @@ object IOListeners {
         executionStack = executionStack.tail
 
         def parent(stack: List[(BelleExpr, Int)]): List[NamedBelleExpr] = stack.filter({
-          case (n: NamedBelleExpr, _) => n.name != "ANON" && n.name != "done"
+          case (n: NamedBelleExpr, _) => !n.isInternal && n.name != "done"
           case _ => false
         }).map(_._1.asInstanceOf[NamedBelleExpr])
 
@@ -157,7 +158,7 @@ object IOListeners {
           case _: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
             printer.println(e.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
-          case n: NamedBelleExpr if n.name != "ANON" => printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
+          case n: NamedBelleExpr if !n.isInternal => printer.println(n.name + " done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
 

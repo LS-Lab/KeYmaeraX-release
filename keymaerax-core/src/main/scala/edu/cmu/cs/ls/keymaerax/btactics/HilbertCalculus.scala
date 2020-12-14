@@ -210,6 +210,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald              : DependentPositionTactic = useAt(Ax.duald)
 
+  @Tactic(("⟨:=⟩D", "<:=>D"), conclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P")
+  lazy val assigndDual: DependentPositionTactic = HilbertCalculus.useAt(Ax.assignDual2)
+  @Tactic(("[:=]D", "[:=]D"), conclusion = "&langle;x:=f();&rangle;P ↔ __[x:=f();]P__")
+  lazy val assignbDual: DependentPositionTactic = HilbertCalculus.useAt(Ax.assignDual2, PosInExpr(1::Nil))
+
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)

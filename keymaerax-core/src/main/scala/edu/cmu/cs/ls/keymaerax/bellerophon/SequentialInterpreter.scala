@@ -5,11 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.util.concurrent.{CancellationException, ExecutionException}
-
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -200,7 +199,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     } catch {
       case e: BelleThrowable => if (throwWithDebugInfo) throw e.inContext(d, v.prettyString) else throw e
       case e: Throwable =>
-        val prefix = if (d.name != "ANON") "Unable to execute tactic '" + d.name + "', cause: " else ""
+        val prefix = if (!d.isInternal) "Unable to execute tactic '" + d.name + "', cause: " else ""
         throw new IllFormedTacticApplicationException(prefix + e.getMessage, e).inContext(d, "")
     }
 

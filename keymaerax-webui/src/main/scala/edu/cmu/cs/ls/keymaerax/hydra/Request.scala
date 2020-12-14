@@ -1403,11 +1403,13 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
           case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
           case Some(node) if node.goal.isEmpty => return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
           case Some(node) if node.goal.isDefined =>
+            def printName(name: String, index: Option[Int]) = name +
+              (index match { case Some(i) => "_" + i case None => "" })
+
             def defsStringsOf(defs: Map[Name, Signature]): List[String] = {
               defs.map({
                 case ((name, index), (domain, sort, _, interpretation, _)) =>
-                  sort.toString + " " + name +
-                    (index match { case Some(i) => "_" + i case None => "" }) +
+                  sort.toString + " " + printName(name, index) +
                     (domain match {
                       case Some(Unit) => ""
                       case Some(d: Tuple) => d.toString
@@ -1422,21 +1424,23 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
             }
 
             val goal = node.goal.get.toFormula
-            val bv = StaticSemantics.boundVars(goal).toSet
-            val symbols = StaticSemantics.symbols(goal) -- bv
-            val vars = bv.map(v => "Real " + v.prettyString + ";").mkString("\n  ")
             val proofSession = session(parentProofId).asInstanceOf[ProofSession]
-            val usedParentDefs = proofSession.defs.decls.filter({ case ((n, i), _) => symbols.exists(s => s.name == n && s.index == i) })
-            val defs= defsStringsOf(usedParentDefs).mkString("\n  ")
+            val symbols = StaticSemantics.symbols(goal)
+            val (defs, vars) = proofSession.defs.decls.
+              filter({ case ((n, i), _) => symbols.exists(s => s.name == n && s.index == i) }).
+              partition({ case (_, (domain, _, _, _, _)) => domain.isDefined })
+
+            val printedVars = vars.map(v => "Real " + (printName _ tupled v._1) + ";").mkString("\n  ")
+            val printedDefs = defsStringsOf(defs).mkString("\n  ")
             val fileContents =
               s"""Lemma "$lemmaName"
                  |
                  |Definitions
-                 |  $defs
+                 |  $printedDefs
                  |End.
                  |
                  |ProgramVariables
-                 |  $vars
+                 |  $printedVars
                  |End.
                  |
                  |Problem
@@ -1641,6 +1645,14 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
 /** Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task! */
 class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
+    // reapply lemmas (may have proved in the mean time)
+    DbProofTree(db, proofId).openGoals.
+      filter(n => n.maker.exists(_.startsWith("useLemma")) && !n.isProved).
+      foreach(n => n.parent.map(p => {
+        p.pruneBelow()
+        p.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), BelleParser(n.maker.get), n.maker.get, wait = true)
+      }))
+
     val tree: ProofTree = DbProofTree(db, proofId)
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.isProved
@@ -2939,20 +2951,23 @@ object RequestHelper {
 
   /** Updates the definitions in `proofSession` to include the unexpanded symbols of the open goals in `node`. */
   def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
-    val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
-    val elaboratedToFns = signatures.filter({
-      case Function(n, i, Unit, Real, _) => proofSession.defs.decls.exists({
-        case ((vn, vi), (None, Real, _, _, _)) => vn == n && vi == i
-        case _ => false
-      })
+    val symbols = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.symbols)).toSet[NamedSymbol].filter({
+      case _: DifferentialSymbol => false
       case _ => true
     })
-    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
+    val elaboratedToFns = symbols.filter({
+      case Function(n, i, Unit, s, _) => proofSession.defs.decls.exists({
+        case ((vn, vi), (None, vs, _, _, _)) => vn == n && vi == i && vs == s
+        case _ => false
+      })
+      case _ => false
+    })
+    val undefined = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
     val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
       case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
       case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
       case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
-      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
+      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // cuts may introduce variables
     }).toMap
     //@note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
     val mergedInvSupplier = TactixInit.invSupplier match {

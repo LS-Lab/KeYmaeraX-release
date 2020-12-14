@@ -1038,25 +1038,23 @@ object IntervalArithmeticV2 {
       intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
 
-  def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, "intervalCutTerms")
-      val sequent = provable.subgoals(0)
-      val nantes = sequent.ante.length
-      val prec = 5
-      val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
-      val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
-      (prvs, prvs.indices).zipped.foldLeft(provable) {
-        (result, prvi) => prvi match {
-          case (prv: ProvableSig, i: Int) =>
-          (0 until i).foldLeft(result.apply(Cut(prv.conclusion.succ(0)), 0).apply(HideRight(SuccPos(0)), 1)){
-              (res, _) => res.apply(HideLeft(AntePos(nantes)), 1)
-            }.apply(prv, 1)
-        }
+  def intervalCutTerms(terms: Seq[Term]): BuiltInTactic = anon ((provable: ProvableSig) => {
+    requireOneSubgoal(provable, "intervalCutTerms")
+    val sequent = provable.subgoals(0)
+    val nantes = sequent.ante.length
+    val prec = 5
+    val qe = ToolProvider.qeTool().get
+    val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
+    val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
+    (prvs, prvs.indices).zipped.foldLeft(provable) {
+      (result, prvi) => prvi match {
+        case (prv: ProvableSig, i: Int) =>
+        (0 until i).foldLeft(result.apply(Cut(prv.conclusion.succ(0)), 0).apply(HideRight(SuccPos(0)), 1)){
+            (res, _) => res.apply(HideLeft(AntePos(nantes)), 1)
+          }.apply(prv, 1)
       }
     }
-  }
+  })
 
   @Tactic("Interval Arithmetic Cut",
     codeName = "intervalCutTerms" /* @todo old codeName */,

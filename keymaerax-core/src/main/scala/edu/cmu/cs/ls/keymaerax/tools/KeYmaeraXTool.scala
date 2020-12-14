@@ -8,12 +8,14 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ReflectiveExpressionBuilder}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, BelleProvable, BelleValue, DependentTactic, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, Declaration, KeYmaeraXArchiveParser, Parser}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, KeYmaeraXArchiveParser, Parser}
 
 import scala.collection.immutable.Map
 
@@ -45,10 +47,44 @@ object KeYmaeraXTool extends Tool {
     else
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
+    val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
+    val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
+    val LOG_QE_DURATION = Configuration(Configuration.Keys.LOG_QE_DURATION) == "true"
+    val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
+
+    val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
+    lazy val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+    lazy val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("_rcf") => true case _ => false })
+    lazy val qeStdOutListener: QELogListener = new QELogListener((_: Sequent, g: Sequent, s: String) => print(s"$s: ${g.prettyString}..."), (_, t) => t match { case DependentTactic("_rcf") => true case _ => false }) {
+      private val stopwatchListener = new StopwatchListener(logCondition)
+
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+        stopwatchListener.reset()
+        stopwatchListener.begin(input, expr)
+        super.begin(input, expr)
+      }
+
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
+        stopwatchListener.end(input, expr, output)
+        input match {
+          case BelleProvable(p, _) if logCondition(p, expr) =>
+            println(stopwatchListener.duration + "ms")
+          case _ => // nothing to do
+        }
+      }
+    }
+    lazy val qeDurationListener = new StopwatchListener((_, t) => t match { case DependentTactic("_rcf") => true case _ => false })
+
+    val listeners =
+      (if (LOG_QE) qeListener::Nil else Nil) ++
+      (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
+      (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
+      (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
+
     val interpreter = config.getOrElse(INTERPRETER, LazySequentialInterpreter.getClass.getSimpleName)
     BelleInterpreter.setInterpreter(
-      if (interpreter == LazySequentialInterpreter.getClass.getSimpleName) LazySequentialInterpreter()
-      else if (interpreter == ExhaustiveSequentialInterpreter.getClass.getSimpleName) ExhaustiveSequentialInterpreter()
+      if (interpreter == LazySequentialInterpreter.getClass.getSimpleName) LazySequentialInterpreter(listeners)
+      else if (interpreter == ExhaustiveSequentialInterpreter.getClass.getSimpleName) ExhaustiveSequentialInterpreter(listeners)
       else throw new IllegalArgumentException("Unknown interpreter: " + interpreter + "; please use one of " +
         LazySequentialInterpreter.getClass.getSimpleName + " | " + ExhaustiveSequentialInterpreter.getClass.getSimpleName)
     )

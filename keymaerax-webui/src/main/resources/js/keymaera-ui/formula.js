@@ -8,9 +8,9 @@ angular.module('formula')
     return {
         restrict: 'AE',
         scope: {
-            userId: '=',
-            proofId: '=',
-            nodeId: '=',
+            userId: '@',
+            proofId: '@',
+            nodeId: '@',
             formula: '=',
             highlight: '=',
             collapsed: '=?',
@@ -50,10 +50,7 @@ angular.module('formula')
               $(event.currentTarget).removeClass("k4-edit-hover");
               $(event.currentTarget).removeClass("k4-prove-hover");
               $(event.currentTarget).removeClass("k4-chase-hover");
-              if (!sequentProofData.formulas.highlighted
-                || !event.currentTarget.id.endsWith(sequentProofData.formulas.highlighted)) {
-                $(event.currentTarget).removeClass("k4-select-hover");
-              }
+              $(event.currentTarget).removeClass("k4-select-hover");
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
@@ -83,6 +80,9 @@ angular.module('formula')
                 } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
                     && (step === 'has-step' || event.altKey)) {
                   event.stopPropagation();
+                  $(".k4-select-selected").removeClass("k4-select-selected");
+                  $(event.currentTarget).removeClass("k4-select-hover");
+                  $(event.currentTarget).addClass("k4-select-selected");
                   scope.onTactic({formulaId: formulaId, tacticId: undefined});
                 }
               }

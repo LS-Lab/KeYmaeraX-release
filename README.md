@@ -78,6 +78,14 @@ or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
 
 This will generate ScalaDoc into `target/scala-2.12/unidoc/index.html`
 
+A quick smoke test suite can be run by:
+
+    sbt "test-only -- -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest"
+
+A single test can be run as follows:
+
+    sbt "testOnly edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests" 
+
 Publications
 ============
 
@@ -88,7 +96,7 @@ https://www.ls.cs.cmu.edu/publications.html
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
 Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-Extended version of [CADE'15](https://doi.org/10.1007/978-3-319-21401-6_32).
+Extended version of [CADE-25](https://doi.org/10.1007/978-3-319-21401-6_32).
 
 2. André Platzer.
 [Logics of dynamical systems](https://doi.org/10.1109/LICS.2012.13).
@@ -96,7 +104,7 @@ ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, 
 
 3. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
 [KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](https://doi.org/10.1007/978-3-319-21401-6_36).
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE-25, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 4. Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer. 
 [Bellerophon: Tactical theorem proving for hybrid systems](https://doi.org/10.1007/978-3-319-66107-0_14).
@@ -135,7 +143,7 @@ In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Re
 
 11. André Platzer.
 [Uniform substitution at one fell swoop](https://doi.org/10.1007/978-3-030-29436-6_25).
-In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE-27, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 [Isabelle/HOL](http://isa-afp.org/entries/Differential_Game_Logic.html)
 
 Automatic proofs for differential equation invariants are based on:
@@ -147,9 +155,11 @@ Extended version of [LICS'18](https://doi.org/10.1145/3209108.3209147).
 
 Liveness proofs for differential equations are based on:
 
-13. Yong Kiam Tan and André Platzer. 
-[An axiomatic approach to liveness for differential equations](https://doi.org/10.1007/978-3-030-30942-8_23). 
-In Maurice ter Beek, Annabelle McIver, and José N. Oliviera, editors, FM 2019: Formal Methods - The Next 30 Years, volume 11800 of LNCS, pp. 371-388. Springer, 2019.
+13. Yong Kiam Tan and André Platzer.
+Yong Kiam Tan and André Platzer. 
+[An axiomatic approach to existence and liveness for differential equations](https://doi.org/10.1007/s00165-020-00525-0). 
+Formal Aspects of Computing.
+Special issue for selected papers from [FM'19](https://doi.org/10.1007/978-3-030-30942-8_23). 
 
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
 
@@ -163,6 +173,12 @@ The design principles for the user interface of KeYmaera X are described in:
 15. Stefan Mitsch and André Platzer. 
 [The KeYmaera X proof IDE: Concepts on usability in hybrid systems theorem proving](https://doi.org/10.4204/EPTCS.240.5). 
 In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on Formal Integrated Development Environment F-IDE 2016, volume 240 of EPTCS, pp. 67-81, 2017.
+
+A comparison of KeYmaera X with its predecessor provers is described in:
+
+16. Stefan Mitsch and André Platzer. 
+[A Retrospective on Developing Hybrid System Provers in the KeYmaera Family: A Tale of Three Provers](https://doi.org/10.1007/978-3-030-64354-6_2 please FaceTime). 
+In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Perspectives, volume 12345 of LNCS. Springer, 2020
 
 Copyright and Licenses
 ======================

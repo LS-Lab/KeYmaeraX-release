@@ -1,0 +1,81 @@
+<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+   aria-haspopup="true" aria-expanded="false">Tools
+    <i class="fa fa-spinner fa-spin fa-fw"
+       ng-if="backend.busypoller.data.response.busy"></i>
+    <i class="fa fa-bolt text-danger"
+       ng-if="backend.busypoller.data.response.textStatus"
+       tooltip-placement="auto bottom"
+       uib-tooltip="{{backend.busypoller.data.response.textStatus}}"></i>
+    <span class="caret"></span>
+</a>
+<ul class="dropdown-menu dropdown-menu-right">
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="<i class='fa fa-calculator'></i> Real Arithmetic" code-name="QE" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="tool=='mathematica' || tool=='wolframengine' || tool=='wolframscript'"
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
+            name="... in Mathematica" code-name="QE('M')"
+            exec="doInputTactic(undefined, codeName, [{ param: 'tool', type: 'string', value: 'M' }])"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="tool=='mathematica'||tool=='wolframengine'||tool=='wolframscript'"
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true" hide-long-help="true"
+            name="... in Z3" code-name="QE('Z3')"
+            exec="doInputTactic(undefined, codeName, [{ param: 'tool', type: 'string', value: 'Z3' }])"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="Smart Arithmetic" code-name="smartQE" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-long-help="true"
+            name="Real Arithmetic Witnesses" code-name="sossolve" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true"
+            name="Counterexample" help-name="findCounterexample" exec="getCounterExample()"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="Find Assumptions" code-name="pQE" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true"
+            name="Find ODE Invariants" help-name="odeInvariantCandidates"
+            exec="getPegasusODECandidates()"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-short-help="true"
+            name="Find ODE Conditions" help-name="odeConditions"
+            exec="getODEConditions()"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="Interval Arithmetic" code-name="intervalArithmetic"
+            exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="Cut Interval Bounds ..." code-name="intervalCutTerms"
+            exec="openTacticPosInputDialog(codeName, undefined)"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            name="Simulate" hide-short-help="true" hide-long-help="true"
+            exec="simulate()"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            name="Export Subgoal" hide-short-help="true" hide-long-help="true"
+            exec="exportSubgoal()"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            name="Restart" hide-short-help="true" hide-long-help="true"
+            exec="restartBackend()"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            name="Test Connection" hide-short-help="true" hide-long-help="true"
+            exec="testBackednConnection()"></k4-tactic-menu-entry>
+</ul>

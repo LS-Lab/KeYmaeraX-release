@@ -63,16 +63,16 @@ object KeYmaeraXProofChecker {
     val pw = sanitized.map(new PrintWriter(_))
 
     val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
-      case DependentTactic("QE") => true
-      case DependentTactic("smartQE") => true
+      case DependentTactic("_rcf") => true
       case _ => false
     })
 
     val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
+    val origInterpreter = BelleInterpreter.interpreter
     val listeners =
       if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
       else qeDurationListener :: Nil
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(origInterpreter.listeners ++ listeners))
 
     val proofStatistics = try {
       qeDurationListener.reset()
@@ -142,11 +142,14 @@ object KeYmaeraXProofChecker {
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
-      case _: Throwable =>
+      case ex: Throwable =>
         BelleInterpreter.kill()
         deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
+        ex.printStackTrace()
         ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
+    } finally {
+      BelleInterpreter.setInterpreter(origInterpreter)
     }
 
     proofStatistics
@@ -283,10 +286,6 @@ object KeYmaeraXProofChecker {
       ProofStatistics(entry.name, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
     } else {
       t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
-        val listeners =
-          if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
-          else qeDurationListener :: Nil
-        BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
 
         val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)

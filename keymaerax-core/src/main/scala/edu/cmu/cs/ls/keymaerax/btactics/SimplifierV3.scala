@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{InfiniteTacticLoopError, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -721,7 +721,11 @@ object SimplifierV3 {
             pr match {
               case None => ident
               case Some(pr) =>
-                CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos)
+                TryCatch(
+                  CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos),
+                  classOf[InfiniteTacticLoopError], (_: InfiniteTacticLoopError) =>
+                    throw new UnsupportedTacticFeature("Unable to simplify term " + t +
+                      " because some of its variables appear in a maybe-bound context"))
             }
           }
           case _ => ident

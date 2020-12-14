@@ -313,7 +313,9 @@
             </div>
         </div>
     </div>
-    <p ng-include="'/help/axiomsrules/' + rulehelp.codeName + '-help.html'"></p>
+    <div class="k4-rulehelp-long" ng-if="rulehelp.codeName">
+        <p ng-include="'/help/axiomsrules/' + rulehelp.codeName + '-help.html'"></p>
+    </div>
 </script>
 <script type="text/ng-template" id="proofStepTactic.html">
     <div>

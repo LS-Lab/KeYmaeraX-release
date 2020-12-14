@@ -1,0 +1,86 @@
+<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+   aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
+<ul class="dropdown-menu">
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="Exhaustive" code-name="prop" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="<i class='fa fa-scissors'></i> Cut ..." code-name="cut" exec="openTacticPosInputDialog(codeName, undefined)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="<i class='fa fa-asterisk'></i> Identity" code-name="id" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&not;R" code-name="notR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&not;L" code-name="notL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&and;R" code-name="andR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&and;L" code-name="andL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&or;R" code-name="orR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&or;L" code-name="orL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8594;R" code-name="implyR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8594;L" code-name="implyL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8596;R" code-name="equivR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8596;L" code-name="equivL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+    <li role="separator" class="divider"></li>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-long-help="true"
+            name="True" code-name="closeT" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}" hide-long-help="true"
+            name="False" code-name="closeF" exec="doTactic(undefined, codeName)"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8596;CR" code-name="commuteEquivR"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="&#8596;CL" code-name="commuteEquivL"
+            exec="openTacticPosInputDialog(codeName, 'L')" option-exec="doSearch(codeName, 'L')"></k4-tactic-menu-entry>
+</ul>

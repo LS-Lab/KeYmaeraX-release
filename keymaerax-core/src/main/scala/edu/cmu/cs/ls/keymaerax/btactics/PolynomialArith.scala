@@ -113,14 +113,6 @@ object PolynomialArith extends Logging {
     * The rest of the axiomatization
     */
 
-  // Succedent to antecedent for inequations (rewrite left to right followed by notR)
-  // todo: These can all go into the simplifier
-  private lazy val ltSucc: ProvableSig = remember(" f_() < g_() <-> !(f_()>=g_())".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
-  private lazy val leSucc: ProvableSig = remember(" f_() <= g_() <-> !(f_()>g_())".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
-  private lazy val gtSucc: ProvableSig = remember(" f_() > g_() <-> !g_()>=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
-  private lazy val geSucc: ProvableSig = remember(" f_() >= g_() <-> !g_()>f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact
-  private lazy val eqSucc: ProvableSig = remember(" f_() = g_() <-> !g_()!=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact //Convenient rule for A3
-  private lazy val neSucc: ProvableSig = remember(" f_() != g_() <-> !g_()=f_()".asFormula, SimplifierV3.simpTac()(1) & prop & OnAll(SimplifierV3.simpTac()(1) & ?(close)), namespace).fact //Convenient rule for A3
 
   //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
   //note: these fold = 0 normalisation in as well
@@ -128,20 +120,10 @@ object PolynomialArith extends Logging {
 
   private lazy val doubleNeg = remember("P_() <-> !(!P_())".asFormula, prop, namespace).fact
 
-  private lazy val ltAnte: ProvableSig = remember("f_() < g_() <-> \\exists wit_ (f_()-g_())*wit_^2 + 1 = 0".asFormula, QE, namespace).fact
-  private lazy val leAnte: ProvableSig = remember("f_() <= g_() <-> \\exists wit_ (f_()-g_()) + wit_^2 = 0".asFormula, QE, namespace).fact
-  private lazy val gtAnte: ProvableSig = remember("f_() > g_() <-> \\exists wit_ (f_()-g_())*wit_^2 - 1 = 0".asFormula, QE, namespace).fact
-  private lazy val geAnte: ProvableSig = remember("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula, QE, namespace).fact
-
-  private lazy val eqAnte: ProvableSig = remember("f_() = g_() <-> f_() - g_() = 0".asFormula, QE & done, namespace).fact
-  private lazy val neAnte: ProvableSig = remember("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ - 1 = 0".asFormula, QE & done, namespace).fact
-
   //This just makes sorting the assumptions a bit easier
   private lazy val neAnteZ: ProvableSig = remember("f_() != g_() <-> !!(f_()-g_() !=0)".asFormula, QE & done, namespace).fact
   private lazy val ltAnteZ: ProvableSig = remember("f_() < g_() <-> f_() <= g_() & f_() - g_() != 0 ".asFormula, QE, namespace).fact
   private lazy val gtAnteZ: ProvableSig = remember("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula, QE, namespace).fact
-
-  private lazy val mulZero: ProvableSig = remember("g_() != 0 -> (f_() = 0 <-> g_() * f_() = 0)".asFormula, QE & done, namespace).fact
 
   private lazy val existsOr1 = remember("(\\exists x_ p_(x_) | \\exists y_ q_(y_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
     prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("y_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop), namespace).fact
@@ -171,8 +153,6 @@ object PolynomialArith extends Logging {
   //A=0 & B = 0 <-> A^2+B^2=0
   private lazy val orEqz = remember("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula, QE, namespace).fact
   private lazy val andEqz = remember("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula, QE, namespace).fact
-  //A = 0 <-> B = 0 <- A = B
-  private lazy val eqZeroEquiv = remember("(F_() = 0 <-> G_() = 0) <- F_() = G_()".asFormula, QE, namespace).fact
 
   private lazy val divEq = remember("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula, QE, namespace).fact
   private lazy val divNeq = remember("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula, QE, namespace).fact //Derivable from the above
@@ -879,387 +859,42 @@ object PolynomialArith extends Logging {
   }
 
   //Goal must be of the form (Fi=0, Gj!=0 |- )
-  def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
+  def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = anon ((sequent: Sequent) => {
+    val (gtZ, tac) = neqGtZero(mon,sequent)
 
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      val (gtZ, tac) = neqGtZero(mon,sequent)
+    //Assert the witness provided
+    val (wit, pfi) = genWitness(gtZ,witness)
+    val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1,1::Nil))(pfi)
+    //assert(pf.isProved)
+    //Generate our own reduction instructions if not available
+    //Proofs skipped
+    val inst = instopt.getOrElse({
+      val ante_polys = sequent.ante.flatMap(_ match {
+        case Equal(t, n: Number) if n.value == 0 => Some(t)
+        case _ => None
+      }).toList
+      val wit_norm = normalise(wit, true)._1
+      val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
+      reduction(ctx_norm, wit_norm)
+    })
 
-      //Assert the witness provided
-      val (wit, pfi) = genWitness(gtZ,witness)
-      val pf = useFor(gtNotZero, PosInExpr(0 :: Nil))(SuccPosition(1,1::Nil))(pfi)
-      //assert(pf.isProved)
-      //Generate our own reduction instructions if not available
-      //Proofs skipped
-      val inst = instopt.getOrElse({
-        val ante_polys = sequent.ante.flatMap(_ match {
-          case Equal(t, n: Number) if n.value == 0 => Some(t)
-          case _ => None
-        }).toList
-        val wit_norm = normalise(wit, true)._1
-        val ctx_norm = ante_polys.map(t => normalise(t, true)._1)
-        reduction(ctx_norm, wit_norm)
-      })
-
-      //g >0 -> g+s_i^2 != 0
-      cut(pf.conclusion.succ.head) < (
-        implyL('Llast) < (tac & id,ident)&
-        notL('Llast) &
-          //Run the instructions
-          inst.foldRight[BelleExpr](ident)(
-            (h, tac) =>
-              implyRi(keep = true)(AntePos(h._1), SuccPos(0))
-                & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
-                & tac) &
-          equalityByNormalisation(1)
-        ,
-        cohideR(1) & by(pf)
-        )
-    }
-  }
+    //g >0 -> g+s_i^2 != 0
+    cut(pf.conclusion.succ.head) < (
+      implyL('Llast) < (tac & id,ident)&
+      notL('Llast) &
+        //Run the instructions
+        inst.foldRight[BelleExpr](ident)(
+          (h, tac) =>
+            implyRi(keep = true)(AntePos(h._1), SuccPos(0))
+              & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
+              & tac) &
+        equalityByNormalisation(1)
+      ,
+      cohideR(1) & by(pf)
+      )
+  })
 
   /**
     * End updated procedure
     */
-
-  // Given a list representing a (hopefully Groebner) basis g_1, ... g_k, a witness, and
-  // an optional list of instructions (detailing the coefficients) and a list of witnesses s_i ^2
-  // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
-  // Nothing needs to be normalized?
-
-  //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
-  lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
-    override def computeExpr(seq: Sequent): BelleExpr =
-    {
-      seq.succ.zipWithIndex.foldLeft[BelleExpr](ident) {(tac: BelleExpr, fi) =>
-        val ind = fi._2 + 1;
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtSucc)(ind) & notR(ind)
-          case GreaterEqual(f, g) =>  useAt(geSucc)(ind) & notR(ind)
-          case Equal(_, _) => useAt(eqSucc)(ind) & notR(ind)
-          case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
-          case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
-          case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
-          case _ => ident
-        }) & tac
-      }
-    }
-  }
-
-  lazy val normAnte:DependentTactic = new SingleGoalDependentTactic("norm ante") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
-          case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
-          case Equal(_, _) => useAt(eqAnte)(ind)
-          case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
-          case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
-          case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => ident
-        }) & tac
-      }
-    }
-  }
-
-  lazy val prepareArith: BelleExpr = clearSucc & normAnte
-
-//  //Relax strict to nonstrict
-  lazy val relaxStrict:DependentTactic = new SingleGoalDependentTactic("strict to non") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtAnteZ)(ind)
-          case Less(f, g) => useAt(ltAnteZ)(ind)
-          case _ => ident
-        }) & tac
-      } & prop
-    }
-  }
-
-  lazy val normAnteNeq:DependentTactic = new SingleGoalDependentTactic("norm ante neq") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          //case Greater(f, g) => useAt(gtAnte)(ind) & existsL(ind)
-          //case Greater(f, g) => useAt(gtAnteZ)(ind) & andL(ind) & useAt(geAnte)(ind) & existsL(ind)
-          case GreaterEqual(f, g) => useAt(geAnte)(ind) & existsL(ind)
-          case Equal(_, _) => useAt(eqAnte)(ind)
-          //case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
-          case NotEqual(_, _) => useAt(neAnteZ)(ind) & notL(ind)
-          //case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
-          //case Less(f, g) => useAt(ltAnteZ)(ind) & andL(ind) & existsL(ind)
-          case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => ident
-        }) & tac
-      } & SaturateTactic(notR('R))
-    }
-  }
-
-  lazy val prepareArith2: BelleExpr = clearSucc & relaxStrict & normAnteNeq
-
-  // Guided linear variable elimination at a top-level position (of shape A=B)
-  // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
-
-  //The list of instructions contains:
-  // 1) position to rewrite, 2) term to leave on LHS, 3) term on RHS
-  // 4) determines the cofactor on the variable (expected to be provable to be non-zero by RCF)
-  // The proof works by the following sequence of steps :
-  // (clhs = crhs <-> lhs = rhs)
-  // <= (clhs - crhs = 0) <-> (lhs - rhs =0)
-  // <= (clhs-chrs=0) <-> (K*(lhs-rhs)=0)
-  // <= clhs-chrs = K*(lhs-rhs) (by polynomial arithmetic)
-
-  def rewriteEquality(pos:Position, lhs:Term, rhs:Term, cofactor:Term): DependentTactic = new SingleGoalDependentTactic("rewrite equality") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.sub(pos) match {
-        case Some(Equal(clhs,crhs)) =>
-          val cofact = proveBy(NotEqual(cofactor,Number(0)),RCF)
-          val instMulZero = useFor(mulZero,PosInExpr(0::Nil))(Position(1))(cofact)
-          //println(pos,lhs,rhs,cofactor)
-          val pr =
-            proveBy(Equiv(Equal(clhs,crhs),Equal(lhs,rhs)),
-              useAt(eqAnte)(1,PosInExpr(0::Nil)) &
-                useAt(eqAnte)(1,PosInExpr(1::Nil)) &
-                useAt(instMulZero)(1,PosInExpr(1::Nil)) &
-                useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
-                equalityByNormalisation(1)
-            )
-          useAt(pr)(pos)
-        case _ => ident
-      }
-    }
-  }
-
-  //The actual linear elimination tactic takes a list
-  def linearElim(ls:List[(Int,Term,Term,Term)]) : BelleExpr =
-  {
-    val itopos = ls.map(p => (AntePosition(p._1),p._2,p._3,p._4))
-
-    itopos.foldLeft[BelleExpr](ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
-  }
-
-  private def printList[A](ls:List[A]) : Unit ={
-    ls match{
-      case Nil => ()
-      case x::Nil => {
-        print("\"")
-        print(x)
-        print("\"")
-      }
-      case (x::xs) => {
-        printList(x::Nil)
-        print(",")
-        printList(xs)
-      }
-    }
-  }
-
-  val printGoal: DependentTactic = new DependentTactic("print goal") {
-    override def computeExpr(pr:ProvableSig): BelleExpr = {
-      pr.subgoals.zipWithIndex.foreach(
-        seqind =>
-        {
-          //println("Goal",seqind._2)
-          print("([")
-          printList(seqind._1.ante.flatMap( _ match {
-            case (Equal(l,_)) => Some(l)
-            case _ => None
-          }  ).toList)
-          print("],[")
-
-          printList(seqind._1.ante.flatMap( _ match {
-            case (NotEqual(l,_)) => Some(l)
-            case _ => None
-          }  ).toList)
-          print("]),\n")
-        }
-      )
-      ident
-    }
-  }
-
-  def useForOpt(pr:Option[ProvableSig],p:Position) : ForwardTactic = {
-    pr match {
-      case None => iden
-      case Some(pr) => useFor(pr,PosInExpr(0 :: Nil))(p)
-    }
-  }
-
-  // Given a term, turns it into a "rational form" and proves |- t = t, where A , B do not contain divisions
-  // If no division occurs in the term then it does nothing
-  def ratForm(l:Term) : (Option[ProvableSig]) = {
-    logger.debug(s"rat form at $l")
-    val res = l match {
-      case Power(_,_) => None //(a/b)^k unhandled
-      case b: BinaryCompositeTerm =>
-        val lem = b match {
-          case Divide(_,_) => divDiv
-          case Plus(_, _) => addDiv
-          case Minus(_, _) => subDiv
-          case Times(_, _) => mulDiv
-        }
-        val pr1 = ratForm(b.left)
-        val pr2 = ratForm(b.right)
-        (pr1, pr2) match {
-          case (None, None) =>
-            b match {
-              case Divide(_, _) => Some(proveBy(Equal(l, l), byUS(Ax.equalReflexive)))
-              case _ => None
-            }
-          case (Some(pr1), None) =>
-            val pr = proveBy(Equal(l, l), byUS(Ax.equalReflexive))
-            Some(useFor(lem._2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
-            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
-          case (None, Some(pr2)) =>
-            val pr = proveBy(Equal(l, l), byUS(Ax.equalReflexive))
-            Some(useFor(lem._3, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
-            (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))(pr)))
-          case (Some(pr1), Some(pr2)) =>
-            val pr = proveBy(Equal(l, l), byUS(Ax.equalReflexive))
-            Some(useFor(lem._1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
-            (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))
-            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr))))
-        }
-      case Neg(u) =>
-        val pr1 = ratForm(u)
-        pr1 match {
-          case None => None
-          case Some(pr1) =>
-            val pr = proveBy(Equal(l, l), byUS(Ax.equalReflexive))
-            Some(useFor(negDiv, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
-            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
-        }
-      case _ => None
-    }
-    res
-  }
-
-  // Repeatedly finds the first rational term in the antecedent starting at an index and cuts in the appropriate side goal
-  // A/B = 0 , G |-  turns into A = 0 , G |- and B = 0 , G |-
-  // This assumes that ALL divisions occuring in the goal are well-defined
-  def ratFormTac(antepos:Int, handle:Boolean, rec:Boolean):DependentTactic = new SingleGoalDependentTactic("rat ante") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      if (seq.ante.length <= antepos)
-        ident
-      else
-        seq.ante(antepos) match {
-          case Equal(t, n) =>
-            val propt = ratForm(t)
-            propt match {
-              case None => ratFormTac(antepos + 1, handle, rec)
-              case Some(pr) =>
-                if (handle)
-                  pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
-                    case (Some(Divide(num, den))) =>
-                      useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
-                        cutL(Equal(num, Number(0)))(-(antepos + 1)) < (
-                          ratFormTac(antepos + 1, handle, rec),
-                          useAt(divEq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
-                          )
-                    case _ => ???
-                  }
-                else
-                  ratFormTac(antepos + 1, handle, rec) & hideL(-(antepos + 1))
-            }
-          case NotEqual(t, n) =>
-            val propt = ratForm(t)
-            propt match {
-              case None => ratFormTac(antepos + 1, handle, rec)
-              case Some(pr) =>
-                if (handle)
-                  pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
-                    case (Some(Divide(num, den))) =>
-                      useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
-                        cutL(NotEqual(num, Number(0)))(-(antepos + 1)) < (
-                          ratFormTac(antepos + 1, handle, rec),
-                          useAt(divNeq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
-                          )
-                    case _ => ???
-                  }
-                else
-                  ratFormTac(antepos + 1, handle, rec) & hideL(-(antepos + 1))
-            }
-          case _ => ratFormTac(antepos + 1, handle, rec)
-        }
-    }
-  }
-
-  lazy val ratTac = ratFormTac(0,true,false)
-
-  //Move everything into antecedents via double negation
-  lazy val clearSuccNNF:BelleExpr =
-  SaturateTactic(useAt(doubleNeg)(1) & notR(1)) & fullSimpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
-
-  //NOTE: this doesn't (can't?) make use of the alternate inequality formulation!
-  def renWitness(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case And(Exists(v1,f1),Exists(v2,f2)) =>
-        if(v1 == v2)
-        {
-          //Clashing witness vars
-          val v3 = TacticHelper.freshNamedSymbol(v2.head, f)
-          List(proveBy(Equiv(f,Exists(v1,Exists(Seq(v3),And(f1,SubstitutionHelper.replaceFree(f2)(v2.head, v3))))),
-            useAt(existsAnd1,PosInExpr(1::Nil))(1,1::Nil) &
-              byUS(existsRename)
-          ))
-        }
-        else
-          List(proveBy(Equiv(f,Exists(v1,Exists(v2,And(f1,f2)))),
-            byUS(existsAnd1)
-          ))
-      case And(_,_) => List(existsAnd2,existsAnd3)
-      case Or(Exists(v1,f1),Exists(v2,f2)) =>
-        if (v1==v2)
-          List(existsSame)
-        else
-          List(existsOr1)
-      case Or(_,_) => List(existsOr2,existsOr3)
-      case f =>
-        List()
-    }
-  }
-
-  private lazy val ths = List(leAnte,ltAnte,geAnte,gtAnte,eqAnte,neAnte)
-
-  //Relax strict to non-strict inequalities, and then hide all the top-level != to the right
-  lazy val relaxStrict2:DependentTactic = new SingleGoalDependentTactic("strict to non2") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          case Greater(f, g) => useAt(gtAnteZ)(ind)
-          case Less(f, g) => useAt(ltAnteZ)(ind)
-          case _ => ident
-        }) & tac
-      } & SaturateTactic(andL('L))
-    }
-  }
-
-  lazy val hideTopNeq:DependentTactic = new SingleGoalDependentTactic("hide top neq") {
-    override def computeExpr(seq: Sequent): BelleExpr = {
-      seq.ante.zipWithIndex.foldLeft[BelleExpr](ident) { (tac: BelleExpr, fi) =>
-        val ind = -(fi._2 + 1);
-        (fi._1 match {
-          case NotEqual(f, g) => useAt(doubleNeg)(ind) & notL(ind)
-          case _ => ident
-        }) & tac
-      }
-    }
-  }
-
-  lazy val normAntes0 = fullSimpTac(ths = ths,faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  lazy val normAntes1 = SaturateTactic(fullSimpTac(ths = Nil,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false))
-  lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq &
-    normAntes0 &
-    normAntes1 &
-    SaturateTactic(existsL('L)) & SaturateTactic(andL('L)) & normAntes2 & SaturateTactic(notR('R))
-
-  //Just to rearrange things back into equalities first then inequalities
-  lazy val resortEqs = hideTopNeq & SaturateTactic(notR('R))
-
-  //lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & normAntes1 & (existsL('L)*) & normAntes2
 }

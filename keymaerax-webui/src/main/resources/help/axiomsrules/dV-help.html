@@ -1,0 +1,26 @@
+<div>
+<p>
+<kbd>dV</kbd> proves formula <code>P</code> to be a differential variant, i.e., <code>&langle;x'=f(x)&rangle;P</code>, by proving that ODE <code>x'=f(x)</code> makes <code>ε</code> progress towards <code>P</code>.
+</p>
+<p>
+The formula <code>P</code> can be an atomic inequality like <code>e >= 0</code> or a more complicated formula involving conjunctions and disjunctions of inequalities.
+</p>
+<p>
+<kbd>dV</kbd> generates <code>(P)' >= ε</code> where the existentially quantified variable <code>ε > 0</code> can be instantiated; <code>ε</code> can also be directly provided as input to <kbd>dV</kbd>.
+</p>
+<p>
+See also
+<ul>
+    <li><kbd>kDomainDiamond</kbd> Strengthening the postcondition <code>P</code> to formula <code>R</code> may enable a proof using <kbd>dV</kbd>.</li>
+    <li><kbd>compatCut</kbd> The <code>eps</code> progress conditions for <kbd>dV</kbd> may benefit by adding compatible box-modality cuts in the proof.</li>
+</ul>
+</p>
+<p>
+Learning resources
+<ul>
+    <!--todo example model and tactic-->
+    <!--<li><a target="_blank" href="">Example proof</a></li>-->
+    <li><a target="_blank" href="https://arxiv.org/abs/2004.14561">An Axiomatic Approach to Existence and Liveness for Differential Equations</a></li>
+</ul>
+</p>
+</div>

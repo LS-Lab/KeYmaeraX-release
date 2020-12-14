@@ -1,0 +1,36 @@
+<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+   aria-haspopup="true" aria-expanded="false">Defs <span class="caret"></span></a>
+<ul class="dropdown-menu">
+    <li><a ng-click="openModelEditor(agenda.modelId)">
+                                    <span class="fa fa-keyboard-o"
+                                          uib-tooltip="View model or edit model and rerun proof">
+                                        <span class="k4-btn-optional-text"> Edit Model...</span>
+                                    </span>
+    </a>
+    </li>
+    <li class="divider" ng-if="definitions.length > 0"></li>
+    <li ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all special functions<code class="pull-right">expandAll</code></a>
+    </li>
+    <li class="divider" ng-if="definitions.length > 0"></li>
+    <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all definitions<code class="pull-right">expandAllDefs</code></a>
+    </li>
+    <li ng-repeat="d in definitions" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a ng-if="d.definition.editable">
+                                        <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
+                                            {{d.definition.what}}
+                                        </span>
+            ~>
+            <input type="text" ng-model="d.definition.repl"
+                   ng-click="$event.stopPropagation()"
+                   ng-blur="setDefinition(d.definition.what, d.definition.repl)">
+        </a>
+        <a ng-if="!d.definition.editable"
+           ng-class="{'disabled': agenda.items().length <= 0 }"
+           ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+            <span>{{d.definition.what}}</span> ~> <span>{{d.definition.repl}}</span>
+            <code class="pull-right">expand "{{d.symbol}}"</code>
+        </a>
+    </li>
+</ul>

@@ -87,19 +87,24 @@ private object ToolTactics {
     val splittingQE =
       ArithmeticSimplification.smartHide & onAll(Idioms.?(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
+    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
+
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
         assertT(_.isFOL, "QE on FOL only") &
         allTacticChase()(notL, andL, notR, implyR, orR, allR) &
           Idioms.doIf(!_.isProved)(
-            close | hidePredicates &
-              Idioms.doIfElse(_.subgoals.forall(_.isPredicateFreeFOL))(
-                // if
-                EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
-                ,
-                // else
-                throw new TacticInapplicableFailure("Uninterpreted predicate symbols not supported in QE")
-              ))
+            close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+              // if
+              doQE
+              ,
+              // else
+              hidePredicates & hideQuantifiedFuncArgsFmls &
+                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
+                doQE & done
+                | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
+            )
+          )
         ),
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
@@ -123,12 +128,7 @@ private object ToolTactics {
               // catch: noop
               (_: Throwable) => skip,
               // finally: reset timeout
-              Some(new DependentTactic("ANON") {
-                override def computeExpr(v: BelleValue): BelleExpr = {
-                  tom.setOperationTimeout(oldTimeout)
-                  skip
-                }
-              })
+              Some(anon((p: ProvableSig) => { tom.setOperationTimeout(oldTimeout); p }))
             )
           } else (e: BelleExpr) => e
         case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
@@ -301,7 +301,7 @@ private object ToolTactics {
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETacticTool): BelleExpr = anon ((sequent: Sequent) => {
+  def rcf(qeTool: => QETacticTool): BelleExpr = internal ("_rcf", (sequent: Sequent) => {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
@@ -493,11 +493,16 @@ private object ToolTactics {
       if (pr.isProved || filters.tail.isEmpty) (pr, filteredAssumptions)
       else proveFact(assumptions, filters.tail)
     }
-    //@note first try to prove without assumptions, than with non-bound stuff, if all that fails with whole ante
     val (fact, ga) = proveFact(gaFull,
-      ((al: IndexedSeq[Formula]) => al.filter(_ => false))::
-        ((al: IndexedSeq[Formula]) => al.filter(fml => StaticSemantics.freeVars(fml).intersect(boundVars).isEmpty))::
-        ((al: IndexedSeq[Formula]) => al.filter(_ => true))::Nil)
+      ( // first try without any assumptions
+        (al: IndexedSeq[Formula]) => al.filter(_ => false)) ::
+        // then without alternatives to prove and without irrelevant formulas (non-overlapping variables)
+        ((al: IndexedSeq[Formula]) => al.filter({ case Not(_) => false case _ => true }).
+          filter(StaticSemantics.freeVars(_).intersect(boundVars).isEmpty)) ::
+        // then without irrelevant formulas (non-overlapping variables)
+        ((al: IndexedSeq[Formula]) => al.filter(StaticSemantics.freeVars(_).intersect(boundVars).isEmpty)) ::
+        // then with full sequent
+        ((al: IndexedSeq[Formula]) => al.filter(_ => true)) :: Nil)
 
     def propPushLeftIn(op: (Formula, Formula) => Formula) = {
       val p = "p_()".asFormula
@@ -581,8 +586,15 @@ private object ToolTactics {
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
   private def hidePredicates: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+  )
+
+  /* Hides all predicates (QE cannot handle predicate symbols) */
+  private def hideQuantifiedFuncArgsFmls: DependentTactic = anon ((sequent: Sequent) =>
+    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
 

@@ -6,14 +6,14 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import testHelper.KeYmaeraXTestTags.AdvocatusTest
 
 import scala.collection.immutable.IndexedSeq
+import org.scalatest.LoneElement._
 
 /**
   * Uniform renaming and bound renaming clash test dummies.
@@ -103,6 +103,26 @@ class URenameTests extends TacticTestBase(registerAxTactics=Some("z3")) {
       unsound.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x^2>=y -> \\forall y x^2>=y".asFormula))
       //@todo now an extra antecedent y>=0 would make the top provable but the bottom unsound
     }
+  }
+
+  it should "rename conclusions forward but keep subgoals of unproved provables" in {
+    val p = RenUSubst.UniformRenamingForward(ProvableSig.startProof("[x:=*;]x>=0".asFormula), "x".asVariable, "y".asVariable)
+    p.subgoals.loneElement shouldBe "==> [x:=*;]x>=0".asSequent
+    p.conclusion shouldBe "==> [y:=*;]y>=0".asSequent
+  }
+
+  it should "refuse semantic renaming forward of unproved provables" in {
+    the [RenamingClashException] thrownBy RenUSubst.UniformRenamingForward(
+      ProvableSig.startProof("[x:=*;][a;]x>=0".asFormula), "x".asVariable, "y".asVariable) should have message
+      """Cannot replace semantic dependencies syntactically: ProgramConstant a
+        |Renaming a via URename{x~>y}
+        |in """.stripMargin
+  }
+
+  it should "allow semantic renaming forward of proved provables" in {
+    val p = ProvableSig.startProof("[a;]x>=0 -> [a;]x>=0".asFormula)(ImplyRight(SuccPos(0)), 0)(Close(AntePos(0), SuccPos(0)), 0)
+    p shouldBe 'proved
+    RenUSubst.UniformRenamingForward(p, "x".asVariable, "y".asVariable).conclusion shouldBe "==> [a;]y>=0 -> [a;]y>=0".asSequent
   }
 
   "Bound Renaming" should "refuse to rename = x -> y when formula cares about x'" in {

@@ -459,7 +459,8 @@ class EqualityTests extends TacticTestBase {
   it should "not rename in formulas with free occurrences of right-hand side" in withQE { _ =>
     val result = proveBy("x=y, [{x'=x+y}]x>=0 ==> [{y'=y}]y>=0, x>=4, [z:=2;][x:=x+1;]\\exists y y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
     //@todo want \\exists y y>=0: add another bound renaming to undo the variable flip
-    result.subgoals.loneElement shouldBe "x=y, [{x'=x+y}]x>=0 ==> [{y'=y}]y>=0, y>=4, [z:=2;][y:=y+1;]\\exists x x>=0".asSequent
+    //@todo want [y:=y+1;] needs fix in exhaustiveEqL2R
+    result.subgoals.loneElement shouldBe "x=y, [{x'=x+y}]x>=0 ==> [{y'=y}]y>=0, y>=4, [z:=2;][y_0:=y+1;]\\exists x x>=0".asSequent
   }
 
   it should "cut equality" in withQE { _ =>
@@ -469,11 +470,29 @@ class EqualityTests extends TacticTestBase {
       "[{x'=x}]x>=0 ==> [{y'=y}]y>=0, x=y".asSequent)
     proveBy("[{x'=x}]x>=0, !x!=y ==> [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
       subgoals should contain theSameElementsInOrderAs List(
-      "[{y'=y}]y>=0, !x!=y ==> [{y'=y}]y>=0".asSequent,
+      "[{y'=y}]y>=0, !y!=y ==> [{y'=y}]y>=0".asSequent,
       "[{x'=x}]x>=0, !x!=y ==> [{y'=y}]y>=0, x=y".asSequent)
     proveBy("[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
       subgoals should contain theSameElementsInOrderAs List(
-      "[{y'=y}]y>=0, ==> x!=y, [{y'=y}]y>=0".asSequent,
+      "[{y'=y}]y>=0, ==> y!=y, [{y'=y}]y>=0".asSequent,
       "[{x'=x}]x>=0, ==> x!=y, [{y'=y}]y>=0, x=y".asSequent)
+  }
+
+  it should "automate equality cut when what is mustbound" in withQE { _ =>
+    proveBy("<x:=r;><{?x>1;x:=x-1;}*>x=0, x=y ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent,
+      SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).subgoals.
+      loneElement shouldBe "<y:=r;><{?y>1;y:=y-1;}*>y=0, x=y ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent
+    proveBy("<x:=r;><{?x>1;x:=x-1;}*>x=0 ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent,
+      SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).subgoals.
+      loneElement shouldBe "<y:=r;><{?y>1;y:=y-1;}*>y=0 ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent
+    proveBy("<x:=r;><{?x>1;x:=x-1;}*>x=0, x=r, y=r ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent,
+      SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).subgoals.
+      loneElement shouldBe "<y:=r;><{?y>1;y:=y-1;}*>y=0, x=r, y=r ==> <y:=r;><{?y>1;y:=y-1;}*>y=0".asSequent
+    proveBy("y=r, <x:=r;><{?x>1;x:=x-1;}*>x=0 ==> <{?y>1;y:=y-1;}*>y=0".asSequent,
+      SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).subgoals.
+      loneElement shouldBe "y=r, <y:=r;><{?y>1;y:=y-1;}*>y=0 ==> <{?y>1;y:=y-1;}*>y=0".asSequent
+    proveBy("<x:=r;><{?x>1;x:=x-1;}*>x=0 ==> [y:=1+r-1;]<{?y>1;y:=y-1;}*>y=0".asSequent,
+      SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).subgoals.
+      loneElement shouldBe "<y:=r;><{?y>1;y:=y-1;}*>y=0 ==> [y:=1+r-1;]<{?y>1;y:=y-1;}*>y=0".asSequent
   }
 }

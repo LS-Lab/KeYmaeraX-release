@@ -4,6 +4,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -21,6 +22,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   private val six = Number(6)
 
   override def beforeEach(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
@@ -110,7 +112,11 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ex.getMessage should include ("Found:    ( at 1:1")
   }
 
-
+  "Abs" should "parse" in {
+    "abs(x)".asTerm shouldBe FuncOf(Function("abs", None, Real, Real, interpreted=true), Variable("x"))
+    "abs_0".asTerm shouldBe Variable("abs", Some(0))
+    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interpreted=false), Nothing)
+  }
 
   ///
 

@@ -38,7 +38,7 @@ private object DifferentialTactics extends Logging {
 
   // QE with default timeout for use in ODE tactics (timeout in seconds)
   private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
-  private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
+  private[btactics] def timeoutQE = ToolTactics.hideNonFOL & QE(Nil, None, Some(ODE_QE_TIMEOUT))
   // QE with default timeout for use in counterexample tactics (timeout in seconds)
   private[btactics] val ODE_CEX_TIMEOUT =
       Try(Integer.parseInt(Configuration(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT))).getOrElse(-1)
@@ -88,54 +88,46 @@ private object DifferentialTactics extends Logging {
     /** A single step of DE system (@todo replace with useAt when unification for this example works) */
     // semanticRenaming
     // was "DE system step"
-    private lazy val DESystemStep_SemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
-            val g = Box(
-              ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
-              Box(Assign(d, t), p)
-            )
+    private lazy val DESystemStep_SemRen: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
+        val g = Box(
+          ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
+          Box(Assign(d, t), p)
+        )
 
-            //construct substitution
-            val aF = UnitFunctional("f", AnyArg, Real)
-            val aH = UnitPredicational("H", AnyArg)
-            val aC = DifferentialProgramConst("c", AnyArg)
-            val aP = UnitPredicational("p", AnyArg)
-            val aX = Variable("x_")
+        //construct substitution
+        val aF = UnitFunctional("f", AnyArg, Real)
+        val aH = UnitPredicational("H", AnyArg)
+        val aC = DifferentialProgramConst("c", AnyArg)
+        val aP = UnitPredicational("p", AnyArg)
+        val aX = Variable("x_")
 
-            val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
-              SubstitutionPair(aH, h) :: Nil)
-            val uren = ProofRuleTactics.uniformRename(aX, x)
-            val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${d.prettyString}=f(||)&H(||)}][${d.prettyString}:=f(||);]p(||)".asFormula))
+        val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
+          SubstitutionPair(aH, h) :: Nil)
+        val uren = ProofRuleTactics.uniformRename(aX, x)
+        val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${d.prettyString}=f(||)&H(||)}][${d.prettyString}:=f(||);]p(||)".asFormula))
 
-            cutLR(g)(pos) <(
-              /* use */ skip,
-              //@todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
-              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
-              TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
-              //TactixLibrary.US(subst, "DE differential effect (system)"))
-          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to box ODEs, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-      }
-    }
+        cutLR(g)(pos) <(
+          /* use */ skip,
+          //@todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
+          /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
+          TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
+          //TactixLibrary.US(subst, "DE differential effect (system)"))
+      case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    })
 
     /** A single step of DE system */
     // !semanticRenaming
     // was "DE system step"
-    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
-            useAt(Ax.DEs)(pos)
-          case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
-            useAt(Ax.DE)(pos)
-          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-      }
-    }
+    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
+        useAt(Ax.DEs)(pos)
+      case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
+        useAt(Ax.DE)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    })
   }
 
   /** @see [[TactixLibrary.dI]] */
@@ -325,7 +317,6 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
       case Some(e) => throw new TacticInapplicableFailure("ghostDC only applicable to box/diamond properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-
     }
 
     val ov = FormulaTools.argsOf("old", f)
@@ -334,10 +325,13 @@ private object DifferentialTactics extends Logging {
     } else {
       DLBySubst.discreteGhosts(ov, origSeq,
         (ghosts: List[((Term, Variable), BelleExpr)]) => {
-          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(0::1::Nil).flatten)
+          val afterGhostsPos =
+            if (pos.isTopLevel) LastSucc(0, pos.inExpr ++ posIncrements)
+            else Fixed(pos ++ posIncrements)
           val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
           if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(0::1::Nil).flatten))
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(afterGhostsPos)
         }
       )(pos)
     }
@@ -399,8 +393,8 @@ private object DifferentialTactics extends Logging {
     * */
   @Tactic(names="Inverse Differential Cut",
     codeName="dCi", // todo: rename the tactic directly
-    premises="Γ |- [x'=f(x)&Q]P ;; Γ |- R, Δ",
-    conclusion="Γ |- [x'=f(x)&(Q∧R)]P, Δ",
+    premises="Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
+    conclusion="Γ |- [x'=f(x) & Q∧R]P, Δ",
     displayLevel="browse")
   val inverseDiffCut: DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -657,8 +651,8 @@ private object DifferentialTactics extends Logging {
     */
   @Tactic(names="Inverse Differential Ghost",
     codeName="dGi",  // todo: rename the tactic directly
-    premises="Γ |- [{x'=f(x) & Q}]P, Δ",
-    conclusion="Γ |- ∃y [{x'=f(x),E & Q}]P, Δ",
+    premises="Γ |- [x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- ∃y [x'=f(x),E & Q]P, Δ",
     displayLevel="browse")
   val inverseDiffGhost: DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
@@ -752,8 +746,8 @@ private object DifferentialTactics extends Logging {
    */
   @Tactic(names="Unpack evolution domain",
     codeName="diffUnpackEvolDomain", // todo: rename the tactic directly
-    premises="Γ, Q |- [x'=f(x)&Q]P, Δ",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    premises="Γ, Q |- [x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     displayLevel="browse")
   lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(ODESystem(_, q), _)) =>
@@ -771,9 +765,9 @@ private object DifferentialTactics extends Logging {
           codeName="dW", // todo: rename the tactic directly
           longDisplayName="Differential Weaken",
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
-          conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+          conclusion="Γ |- [x'=f(x) & Q]P, Δ",
           contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
-          contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+          contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
           displayLevel="all", revealInternalSteps=true)
   private[btactics] lazy val diffWeaken: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
@@ -809,9 +803,9 @@ private object DifferentialTactics extends Logging {
     codeName="dWplus", // todo: rename the tactic directly
     longDisplayName="Differential Weaken",
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises="Γ |- C( ∀x (Q→P) ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="browse", revealInternalSteps=true)
   private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) =>
     if (pos.isAnte) {
@@ -1293,8 +1287,8 @@ private object DifferentialTactics extends Logging {
     * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
     * @author Nathan Fulton */
   @Tactic(names="Split weak inequality",
-    premises="Γ |- [x'=f(x)&Q] p > q, Δ ;; Γ |- [x'=f(x)&Q] p = q, Δ",
-    conclusion="Γ |- [x'=f(x)&Q] p >= q, Δ",
+    premises="Γ |- [{x'=f(x) & Q}] p>q, Δ ;; Γ |- [{x'=f(x) & Q}] p=q, Δ",
+    conclusion="Γ |- [{x'=f(x) & Q}] p≳q, Δ",
     displayLevel="browse")
   val splitWeakInequality : DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
@@ -1680,7 +1674,7 @@ private object DifferentialTactics extends Logging {
   @Tactic(names="Strict Barrier Certificate",
     codeName="barrier", // todo: rename the tactic directly
     premises="Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
-    conclusion="Γ |- [x'=f(x)&Q] p≳0, Δ",
+    conclusion="Γ |- [x'=f(x) & Q] p≳0, Δ",
     displayLevel="browse")
   val dgBarrier: DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     Dconstify(dgBarrierAux(pos))(pos)
@@ -1783,8 +1777,8 @@ private object DifferentialTactics extends Logging {
   })
 
   @Tactic(names="Darboux (in)equalities",
-    premises="Γ |- p≳0 ;; Q |- p' >= g p",
-    conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
+    premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
+    conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs="g:option[term]",
     displayLevel="browse")
   def dbx(g : Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ({ pos: Position =>

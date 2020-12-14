@@ -486,7 +486,7 @@ object RestApi extends Logging {
       }
     }}}
 
-    val userLemmas: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "lemmas") { userId => { pathEnd {
+    val userLemmas: SessionToken=>Route = (t: SessionToken) => path("lemmas" / "users" / Segment) { userId => { pathEnd {
       get {
         val request = new UserLemmasRequest(database, userId)
         completeRequest(request, t)

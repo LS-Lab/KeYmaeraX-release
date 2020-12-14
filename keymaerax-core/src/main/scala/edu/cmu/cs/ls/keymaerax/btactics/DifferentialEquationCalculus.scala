@@ -100,10 +100,10 @@ trait DifferentialEquationCalculus {
     */
   def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = dC(List(R))
   @Tactic(longDisplayName = "Differential Cut",
-    premises = "Γ |- [{x'=f(x) & Q}]R, Δ ;; Γ |- [{x'=f(x) & (Q∧R)}]P, Δ",
-    conclusion = "Γ |- [{x'=f(x) & Q}]P, Δ",
-    contextPremises = "Γ |- C( [{x'=f(x) & Q}]R ), Δ ;; Γ |- C( [{x'=f(x) & (Q∧R)}]P ), Δ",
-    contextConclusion = "Γ |- C( [{x'=f(x) & Q}]P ), Δ",
+    premises = "Γ |- [x'=f(x) & Q]R, Δ ;; Γ |- [x'=f(x) & Q∧R]P, Δ",
+    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    contextPremises = "Γ |- C( [x'=f(x) & Q]R ), Δ ;; Γ |- C( [x'=f(x) & Q∧R]P ), Δ",
+    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true)
   def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
 
@@ -161,23 +161,23 @@ trait DifferentialEquationCalculus {
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
   @Tactic(longDisplayName="Differential Invariant Auto-Close",
     premises="*",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
   def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
   @Tactic(longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises="Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true)
   def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
     contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x)&Q]P ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
     displayLevel="all", revealInternalSteps = true, codeName = "dI")
   def   dIX: DependentPositionTactic = DifferentialTactics.diffInd('cex)
 
@@ -210,10 +210,10 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DG]]
     */
   @Tactic(longDisplayName = "Differential Ghost",
-    premises = "Γ |- ∃y [x'=f(x),E&Q]G, Δ ;; G |- P",
-    conclusion = "Γ |- [x'=f(x)&Q]P, Δ",
-    contextPremises = "Γ |- C( ∃y [x'=f(x),E&Q]P ), Δ", //@note G->P in context not yet supported
-    contextConclusion = "Γ |- C( [x'=f(x)&Q]P ), Δ",
+    premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
+    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    contextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]P ), Δ", //@note G->P in context not yet supported
+    contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true, inputs = "E[y,x,y']:expression;; G[y]:option[formula]")
   def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) =>
     E match {
@@ -265,8 +265,10 @@ trait DifferentialEquationCalculus {
     */
   // NB: Annotate diffInvariant(Formula) rather than DifferentialTactics.diffInvariant(List[Formula]) for compatibility
   @Tactic(longDisplayName = "Differential Cut + Auto Differential Invariant",
-    premises = "Γ |- [x'=f(x)&R]P'",
-    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true)
+    premises = "Γ |- [x'=f(x) & Q∧R]P, Δ",
+    conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
+    inputs = "R:formula",
+    revealInternalSteps = true)
   def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => DifferentialTactics.diffInvariant(List(invariant))(pos)}
   def diffInvariant(invariants: List[Formula]): DependentPositionWithAppliedInputTactic = DifferentialTactics.diffInvariant(invariants)
 

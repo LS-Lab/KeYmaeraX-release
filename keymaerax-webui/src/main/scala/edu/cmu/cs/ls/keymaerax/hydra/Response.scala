@@ -147,7 +147,8 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
   def problemContent(s: String): String = {
     val i = s.indexOf("Problem")
     val j = s.indexOf("End.", i)
-    s.substring(i + "Problem".length, j).trim()
+    if (i >= 0) s.substring(i + "Problem".length, j).trim()
+    else s.trim()
   }
 
   lazy val objects : List[JsObject] = proofs.map({case (proof, model) => JsObject(
@@ -156,7 +157,7 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
     "conclusion" -> (if (model.isDefined) JsString(problemContent(model.get.keyFile)) else JsNull)
   )})
 
-  def getJson = JsArray(objects:_*)
+  override def getJson: JsValue = JsArray(objects:_*)
 }
 
 class GetModelResponse(model: ModelPOJO) extends Response {

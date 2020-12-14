@@ -1,0 +1,161 @@
+<li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span class="fa fa-play">
+            <span class="k4-btn-optional-text"
+                  ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto');$event.stopPropagation();"
+                  ng-alt-click="agenda.items().length <= 0 || onTacticScript('expandAllDefs;auto', false)"
+                  data-intro="<center>Automatic search</center>" data-position="top"
+                  uib-popover-template="fetchRuleHelp('auto')"
+                  popover-class="k4-rulemenu-helppopover"
+                  popover-trigger="'mouseenter'" popover-placement="auto right-top"
+                  popover-popup-delay="1000"> Auto</span>
+        </span>
+        <i class="fa fa-caret-down fa-lg"></i>
+    </a>
+    <ul class="dropdown-menu">
+        <li class="dropdown-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+            <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto')"
+               uib-popover-template="fetchRuleHelp('auto')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+        </li>
+        <li class="dropdown-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+            <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'explore')"
+               uib-popover-template="fetchRuleHelp('explore')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+                <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
+        </li>
+    </ul>
+</li>
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a ng-click="agenda.items().length <= 0 || onTacticScript('propClose',false)"
+       data-intro="<center>Propositional proof</center>" data-position="top"
+       uib-popover-template="fetchRuleHelp('propClose')"
+       popover-class="k4-rulemenu-helppopover"
+       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+        <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
+</li>
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'unfold')"
+       data-intro="<center>Unfold all operators</center>" data-position="top"
+       uib-popover-template="fetchRuleHelp('unfold')"
+       popover-class="k4-rulemenu-helppopover"
+       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+        <span class="fa fa-map-o"><span class="k4-btn-optional-text"> Unfold</span></span>
+    </a>
+</li>
+<li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="$event.stopPropagation();doTactic(undefined, 'fullSimplify')"
+              data-intro="<center>Simplify formulas</center>" data-position="top"
+              uib-popover-template="fetchRuleHelp('fullSimplify')"
+              popover-class="k4-rulemenu-helppopover"
+              popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+            <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="doTactic(undefined, 'fullSimplify')"
+               uib-popover-template="fetchRuleHelp('fullSimplify')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify All</span></span></a>
+        </li>
+        <li><a ng-click="openTacticPosInputDialog('simplify', 'R')"
+               uib-popover-template="fetchRuleHelp('simplify')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa"><span class="k4-btn-optional-text"> Simplify At Position</span></span></a>
+        </li>
+    </ul>
+</li>
+
+<li class="nav-item dropdown k4-tactics-navitem-dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="undoLastProofStep();$event.stopPropagation();"
+              data-intro="<center>Undo</center>" data-position="top"
+              uib-popover-template="fetchRuleHelp('undo')"
+              popover-class="k4-rulemenu-helppopover"
+              popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+            <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="undoLastProofStep()"
+               uib-popover-template="fetchRuleHelp('undo')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
+        </li>
+        <li><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(agenda.modelId, '', '')"
+               uib-popover-template="fetchRuleHelp('restart')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-eraser"><span class="k4-btn-optional-text"> Restart</span></span></a>
+        </li>
+    </ul>
+</li>
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0, 'active': getFormulaMode()=='edit' }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="agenda.items().length <= 0 || setFormulaMode('edit');$event.stopPropagation()"
+              ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
+              data-intro="<center>Switch edit/prove</center>" data-position="top"
+              uib-popover-template="fetchRuleHelp('edit')"
+              popover-class="k4-rulemenu-helppopover"
+              popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+            <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span>
+        </span>
+        <span ng-click="agenda.items().length <= 0 || setFormulaMode('prove');$event.stopPropagation()"
+              ng-if="getFormulaMode()=='edit'">
+            <span ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
+                  uib-tooltip="Toggle to stay in edit mode"
+                  ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></span>
+            <span class="k4-btn-optional-text"> Edit</span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="agenda.items().length <= 0 || setFormulaMode('edit')"
+               uib-popover-template="fetchRuleHelp('edit')"
+               popover-class="k4-rulemenu-helppopover k4-rulehelp-short"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-pencil"><span class="k4-btn-optional-text"> Edit</span></span></a>
+        </li>
+        <li><a ng-click="agenda.items().length <=0 || openTacticPosInputDialog('alphaRenAll', undefined)"
+               uib-popover-template="fetchRuleHelp('alphaRenAll')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-edit"><span class="k4-btn-optional-text"> Alpha-Rename All ...</span></span></a>
+        </li>
+        <li><a ng-click="agenda.items().length <=0 || openTacticPosInputDialog('abbrv', undefined)"
+               uib-popover-template="fetchRuleHelp('abbrv')"
+               popover-class="k4-rulemenu-helppopover"
+               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="200">
+            <span class="fa fa-link"><span class="k4-btn-optional-text"> Abbreviate All ...</span></span></a>
+        </li>
+    </ul>
+</li>
+<li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+        <span ng-click="$event.stopPropagation();openProofstepBrowser('axioms')"
+              data-intro="<center>Browse all rules and lemmas</center>" data-position="top">
+            <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span>
+        </span>
+        <i class="fa fa-caret-down fa-lg "></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li><a ng-click="openProofstepBrowser('axioms')">
+            <span class="fa"><span class="k4-btn-optional-text"> Browse tactics and axioms ...</span></span></a>
+        </li>
+        <li><a ng-click="openProofstepBrowser('lemmas')">
+            <span class="fa"><span class="k4-btn-optional-text"> Browse lemmas ...</span></span></a>
+        </li>
+        <li><a ng-click="openTacticPosInputDialog('useLemma', undefined)">
+            <span class="fa"><span class="k4-btn-optional-text"> Create new lemma ...</span></span></a>
+        </li>
+    </ul>
+</li>

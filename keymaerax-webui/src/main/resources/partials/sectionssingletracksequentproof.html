@@ -225,14 +225,14 @@
     <div>
     <span class="k4-nobreak">
         <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().ante | limitTo:1">
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+            <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
             <span ng-if="proofTree.nodesMap[sibling].getSequent().ante.length > 1">...</span>
         </span>
         <span>&#8866;</span>
         <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().succ | limitTo:-1">
             <span ng-if="proofTree.nodesMap[sibling].getSequent().succ.length > 1">... </span>
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+            <k4-formula user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
         </span>
     </span>

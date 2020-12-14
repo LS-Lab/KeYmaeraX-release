@@ -73,7 +73,7 @@ object DerivationInfo {
       case InitNotStarted => throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has not started. This error usually means you forgot to initialize DerivationInfo, e.g. using withMathematica in a test suite")
       case InitComplete =>
         // Allow anonymous tactic creation any time, and allow idempotent re-registration of existing tactic.
-        if (di.codeName == "ANON" || _allInfo.contains(di.codeName))
+        if (di.codeName.startsWith("_") || _allInfo.contains(di.codeName))
           ()
         else
           throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has finished. This error usually means you forgot to add a class to the list in DerivationInfoRegistry")

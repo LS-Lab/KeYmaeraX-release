@@ -472,7 +472,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
               size: 'md',
               resolve: {
                 tactics: function() { return tactics; },
-                readOnly: function() { return true; }
+                readOnly: function() { return true; },
+                userId: function() { return undefined; },
+                proofId: function() { return undefined; },
+                defaultPositionLocator: function() { return undefined; },
+                sequent: function() { return undefined; }
               }
             });
           }

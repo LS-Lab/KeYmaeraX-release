@@ -313,8 +313,7 @@ private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
 }
 private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-  def regexp: Regex = "\"{4}(([^\"]*|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
-//  def regexp = "\"([^\"]*)\"".r
+  def regexp: Regex = "(?s)\"{4}(.*?)\"{4}".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
@@ -384,7 +383,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     var remaining: String = input
     var loc: Location = inputLocation
     val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
-    while (!remaining.trim.isEmpty) {
+    while (remaining.trim.nonEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
           output.append(token)

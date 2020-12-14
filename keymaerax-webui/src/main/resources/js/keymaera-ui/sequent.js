@@ -87,7 +87,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               angular.element(event.target.firstChild.firstChild).removeClass('hlhover'); // remove hover effect on drag
             }
 
-            scope.openInputTacticDialog = function(tacticName) {
+            scope.openTacticPosInputDialog = function(tacticName) {
               var tactics = derivationInfos.byName(scope.userId, scope.proofId, scope.nodeId, tacticName)
                 .then(function(response) {
                   return response.data;
@@ -99,12 +99,16 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                 size: 'lg',
                 resolve: {
                   tactics: function() { return tactics; },
-                  readOnly: function() { return false; }
+                  readOnly: function() { return false; },
+                  userId: function() { return undefined; },
+                  proofId: function() { return undefined; },
+                  defaultPositionLocator: function() { return undefined; },
+                  sequent: function() { return undefined; }
                 }
               });
 
-              modalInstance.result.then(function(derivation) {
-                scope.onInputTactic(undefined, tacticName, derivation);
+              modalInstance.result.then(function(data) {
+                scope.onInputTactic(data.position, tacticName, data.input);
               })
             }
 

@@ -326,6 +326,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
+          if (response.data.progress) $scope.runningTask.progress = response.data.progress;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
@@ -416,6 +417,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     taskStepwiseRequest: undefined,
     future: undefined,
     currentStep: undefined,
+    progress: [],
     info: undefined,
     start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
       $scope.runningTask.proofId = proofId;
@@ -446,6 +448,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
+          if (response.data.progress) $scope.runningTask.progress = response.data.progress;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
@@ -485,6 +488,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.menu = {
       hpmenu: {
+        kind: 'box'
+      },
+      odemenu: {
         kind: 'box'
       }
     }
@@ -622,7 +628,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
     }
 
-    $scope.openProofstepBrowser = function() {
+    $scope.openProofstepBrowser = function(tab) {
       var prevMode = sequentProofData.formulas.mode;
       sequentProofData.formulas.mode = 'select';
       var modalInstance = $uibModal.open({
@@ -634,7 +640,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           proofId: function() { return $scope.proofId; },
           nodeId: function() { return sequentProofData.agenda.selectedId(); },
           formulaId: function() { return undefined; },
-          formula: function() { return undefined; }
+          formula: function() { return undefined; },
+          tab: function() { return tab; }
         }
       });
       modalInstance.result.then(
@@ -727,26 +734,35 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       }
     }
 
-    $scope.openInputTacticDialog = function(tacticName, positionLocator) {
+    $scope.openTacticPosInputDialog = function(tacticName, positionLocator) {
       var nodeId = sequentProofData.agenda.selectedId();
       var tactics = derivationInfos.byName($scope.userId, $scope.proofId, nodeId, tacticName)
         .then(function(response) {
           return response.data;
         });
 
+      var prevMode = sequentProofData.formulas.mode;
+      sequentProofData.formulas.mode = 'select';
+
       var modalInstance = $uibModal.open({
-        templateUrl: 'templates/derivationInfoDialog.html',
+        templateUrl: 'templates/inputtacticdialog.html',
         controller: 'DerivationInfoDialogCtrl',
         size: 'lg',
         resolve: {
           tactics: function() { return tactics; },
-          readOnly: function() { return false; }
+          readOnly: function() { return false; },
+          userId: function() { return $scope.userId; },
+          proofId: function() { return $scope.proofId; },
+          defaultPositionLocator: function() { return positionLocator; },
+          sequent: function() { return sequentProofData.proofTree.nodesMap[nodeId].getSequent(); }
         }
       });
 
-      modalInstance.result.then(function(derivation) {
-        if (positionLocator === undefined) $scope.doInputTactic(undefined, tacticName, derivation);
-        else $scope.doSearchInput(tacticName, positionLocator, derivation);
+      modalInstance.result.then(function(data) {
+        if (data.input.length > 0) $scope.doInputTactic(data.position, tacticName, data.input);
+        else $scope.doTactic(data.position, tacticName);
+      }).finally(function() {
+        sequentProofData.formulas.mode = prevMode;
       })
     }
 

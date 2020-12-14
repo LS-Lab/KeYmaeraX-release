@@ -132,9 +132,6 @@ object TaylorModelTactics extends Logging {
   }
 
   private def rewriteFormula(prv: ProvableSig) = anon { (pos: Position, seq: Sequent) =>
-    val failFast = new BuiltInTactic("ANON") with NoOpTactic {
-      override def result(provable: ProvableSig): ProvableSig = throw new TacticInapplicableFailure("Fail")
-    }
     prv.conclusion.succ.toList match {
       case Equiv(lhs, rhs) :: Nil =>
         seq.sub(pos) match {

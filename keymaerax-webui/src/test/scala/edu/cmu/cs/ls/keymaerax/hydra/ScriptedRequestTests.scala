@@ -1,13 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -178,6 +177,48 @@ class ScriptedRequestTests extends TacticTestBase {
       case AgendaAwesomeResponse(_, _, root, l1::Nil, _, _, _, _) =>
         root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
         l1 should have ('goal (Some("x>=2 ==> [{x:=x+1;}*]x>=0".asSequent)))
+    }
+  }}
+
+  it should "record new symbols correctly" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [{x'=1}]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map(("x", None) -> (None, Real, None, None, UnknownLocation))))
+    val proofSession = () => SessionManager.session(t)(proofId.toString).asInstanceOf[ProofSession]
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
+    // proof session should pick up new variable introduced by cut
+    proofSession().defs.decls.keySet should contain ("x0", None)
+    proofSession().defs.decls(("x0", None)) should be (None, Real, None, None, UnknownLocation)
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
+        leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
+          "x>=0, \\exists x0 x0=x ==> [{x'=1}]x>=0".asSequent,
+          "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent)
+    }
+
+    tacticRunner("(1,0)", existsL(-2) & dC("x>=x0".asFormula)(1))
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
+        leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
+          "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
+          "x>=0, x0=x ==> [{x'=1 & true&x>=x0}]x>=0".asSequent,
+          "x>=0, x0=x ==> [{x'=1}]x>=x0".asSequent)
+    }
+
+    tacticRunner("(2,1)", dIRule(1))
+    // proof session should not pick up elaborated variables
+    proofSession().defs.decls(("x0", None))._1 should not be 'defined
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
+        leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
+          "x>=0 ==> [{x'=1}]x>=0, \\exists x0 x0=x".asSequent,
+          "x>=0, x0=x ==> [{x'=1 & true&x>=x0}]x>=0".asSequent,
+          "x>=0, x0()=x, true ==> x>=x0()".asSequent,
+          "x>=0, x0()=x, true ==> [x':=1;]x'>=0".asSequent)
     }
   }}
 
@@ -544,25 +585,26 @@ class ScriptedRequestTests extends TacticTestBase {
       })
     }
 
-    val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
-      case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None)
+    val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator],
+         pos2: Option[PositionLocator], consultAxiomInfo: Boolean) = tactic match {
+      case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None, true)
       case t: AppliedDependentPositionTactic => t.pt match {
         case inner: DependentPositionWithAppliedInputTactic =>
-          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None)
-          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None)
-        case _ => (t.pt.name, Nil, Some(t.locator), None)
+          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None, true)
+          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None, true)
+        case _ => (t.pt.name, Nil, Some(t.locator), None, true)
       }
-      case NamedTactic(name, _) => (name, Nil, None, None)
-      case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None)
+      case NamedTactic(name, _) => (name, Nil, None, None, true)
+      case InputTactic(name, inputs) => (name, createInputs(name, inputs), None, None, true)
       case t: AppliedDependentPositionTacticWithAppliedInput => t.pt match {
         case inner: DependentPositionWithAppliedInputTactic =>
-          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None)
-          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None)
-        case _ => (t.pt.name, Nil, Some(t.locator), None)
+          if (inner.inputs.isEmpty) (inner.name, Nil, Some(t.locator), None, true)
+          else (inner.name, createInputs(inner.name, inner.inputs), Some(t.locator), None, true)
+        case _ => (t.pt.name, Nil, Some(t.locator), None, true)
       }
-      //@todo extend on demand
+      case t => (BellePrettyPrinter(t), Nil, None, None, false)
     }
-    runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo = true, pos1, pos2, inputs)
+    runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo, pos1, pos2, inputs)
   }
 
   private def runTacticString(db: TempDBTools, token: SessionToken, proofId: Int)
