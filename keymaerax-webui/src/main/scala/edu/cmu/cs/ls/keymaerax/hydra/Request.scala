@@ -24,13 +24,13 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+
 import java.io._
 import java.net.URLEncoder
 import java.nio.file.{Files, Paths}
 import java.text.SimpleDateFormat
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
-
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -2054,7 +2054,6 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
-    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     try {
       input match {
         case BelleTermInput(value, Some(arg: TermArg)) =>
@@ -2072,7 +2071,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) =>
-          checkExpressionInput(arg, value.split(splitComma).map(Parser.parser).toList, sequent, defs)
+          checkExpressionInput(arg, Parser.parseExpressionList(value), sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
@@ -2162,7 +2161,6 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   extends UserProofRequest(db, userId, proofId) with WriteRequest {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
-    val splitComma = ",(?!([^{]*}|([^(]*\\))))" // splits commas outside {} and outside ()
     val paramStrings: List[String] = inputs.map{
       case BelleTermInput(value, Some(_:TermArg)) => "\""+value+"\""
       case BelleTermInput(value, Some(_:FormulaArg)) => "\""+value+"\""
@@ -2172,12 +2170,13 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */
       case BelleTermInput(value, Some(ListArg(_: FormulaArg))) =>
-        val values = value.split(splitComma)
+        val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else if (values.length == 1) "\""+value+"\""
         else "[" + values.map("\""+_+"\"").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
-      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(splitComma).map("\""+_+"\"").mkString(",") + "]"
+      case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
+        "[" + Parser.parseExpressionList(value).map("\""+_.prettyString+"\"").mkString(",") + "]"
       case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
       case BelleTermInput(value, None) => value
     }
