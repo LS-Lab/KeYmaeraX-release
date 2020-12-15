@@ -52,6 +52,21 @@ lazy val root = (project in file("."))
   .settings(keymaeraxFullAssemblySettings: _*)
   .aggregate(macros, core, keymaerax)
 
+lazy val keymaeraxExperimentsAssemblySettings = AssemblyPlugin.assemblySettings ++
+  Seq(test in assembly := {},
+    mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotMain"),
+    assemblyJarName in assembly := "veriphy-experiment.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("examples", xs @ _*) => MergeStrategy.last
+      case x                             => (assemblyMergeStrategy in assembly).value(x)
+    })
+
+
+lazy val experiments = (project in file("keymaerax-veriphy-experiments"))
+  .dependsOn(macros, core, keymaerax)
+  .settings(inConfig(Test)(keymaeraxExperimentsAssemblySettings): _*)
+  .aggregate(macros,core,keymaerax)
+
 
 // extra runtime checks for initialization order: "-Xcheckinit"
 scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
