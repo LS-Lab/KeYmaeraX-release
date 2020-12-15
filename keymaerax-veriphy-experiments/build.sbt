@@ -12,6 +12,8 @@ assemblyJarName in (Test, assembly) := s"keymaerax-veriphy-experiments${version.
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
+libraryDependencies += "net.java.dev.jna" % "jna" % "5.6.0"
+
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
