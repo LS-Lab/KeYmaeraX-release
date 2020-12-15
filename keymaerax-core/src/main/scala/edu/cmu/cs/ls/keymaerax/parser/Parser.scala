@@ -12,6 +12,8 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.util.Try
+
 /**
   * Parser interface for KeYmaera X.
   * Provides a parser to read string inputs as differential dynamic logic.
@@ -94,6 +96,21 @@ object Parser extends (String => Expression) {
 
   /** Parses `input`. */
   override def apply(input: String): Expression = parser(input)
+
+  /** Parses a comma-separated list of expressions. */
+  def parseExpressionList(s: String): List[Expression] = {
+    def splitComma(s: String, prefix: String = ""): List[Expression] = {
+      val ci = s.indexOf(',')
+      if (ci >= 0) {
+        val (a, b) = s.splitAt(ci)
+        Try(Parser(prefix + a)).toOption match {
+          case Some(e) => e +: splitComma(b.substring(1))
+          case None => splitComma(b.substring(1), prefix + a + ",")
+        }
+      } else List(Parser(prefix + s))
+    }
+    splitComma(s)
+  }
 }
 
 /**

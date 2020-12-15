@@ -4,6 +4,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.CustomAssertions.withSafeClue
@@ -15,8 +16,11 @@ import org.scalamock.scalatest.MockFactory
 
 import scala.collection.immutable._
 
-class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with MockFactory {
-  override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
+class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
   // type declaration header for tests
@@ -431,6 +435,26 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
       """.stripMargin) should have message """3:6 Unexpected token cannot be parsed
                                              |Found:    if at 3:6 to 3:7
                                              |Expected: {""".stripMargin
+  }
+
+  it should "parse a comma-separated list of expressions" in {
+    Parser.parseExpressionList("x>=0,y>=0,z") shouldBe List("x>=0".asFormula, "y>=0".asFormula, "z".asTerm)
+    Parser.parseExpressionList("f(x,y)") shouldBe List("f(x,y)".asTerm)
+    Parser.parseExpressionList("f(x,(y,z))") shouldBe List("f(x,(y,z))".asTerm)
+    Parser.parseExpressionList("x=1,f(x,(y,z)),g(a,b),z") shouldBe List("x=1".asFormula, "f(x,(y,z))".asTerm, "g(a,b)".asTerm, "z".asTerm)
+    Parser.parseExpressionList("[{x'=y,y'=z}]x>=0") shouldBe List("[{x'=y,y'=z}]x>=0".asFormula)
+    Parser.parseExpressionList("[{x'=y,y'=f(x,y)}]P(x,z)") shouldBe List("[{x'=y,y'=f(x,y)}]P(x,z)".asFormula)
+    Parser.parseExpressionList("[{x'=y,y'=f(x,y) & <{x'=4,t'=1}>x>=2*g(x,t)}]P(x,z) -> [{x'=-3,y'=-2};?P(x,y,z);]x>=2, x>=2") shouldBe List(
+      "[{x'=y,y'=f(x,y) & <{x'=4,t'=1}>x>=2*g(x,t)}]P(x,z) -> [{x'=-3,y'=-2};?P(x,y,z);]x>=2".asFormula,
+      "x>=2".asFormula)
+    the [ParseException] thrownBy Parser.parseExpressionList("f(x,y") should
+      have message """1:2 Imbalanced parenthesis
+                     |Found:    ( at 1:2
+                     |Expected: """.stripMargin
+    the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
+      have message """1:6 Impossible elaboration: Operator COMMA$ expects a Term as argument but got the Formula x>=2
+                     |Found:    , at 1:6
+                     |Expected: Term""".stripMargin
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
