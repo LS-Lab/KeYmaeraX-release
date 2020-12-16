@@ -366,7 +366,21 @@ trait HilbertCalculus extends UnifyUSCalculus {
       case _ => skip
     }
 
-    chaseNegations & chase(pos)
+    chaseNegations & chase(pos) & anon { (seq: Sequent) => {
+      seq.sub(pos) match {
+        case Some(e: Expression) =>
+          val dvarPositions = ListBuffer.empty[PosInExpr]
+          ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+            override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+              case Differential(_: Variable) => dvarPositions.append(p); Left(None)
+              case _ => Left(None)
+            }
+          }, e)
+          dvarPositions.map(p => DifferentialTactics.Dvariable(pos ++ p)).
+            reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+        case _ => skip
+      }
+    }}
   }
 
   /**

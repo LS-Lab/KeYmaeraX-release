@@ -439,7 +439,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
 
-  it should "FEATURE_REQUEST: prove with quantified postconditions" taggedAs TodoTest in withMathematica { _ =>
+  it should "work with quantified postconditions" in withMathematica { _ =>
     proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) shouldBe 'proved
   }
 
@@ -483,8 +483,8 @@ class DifferentialTests extends TacticTestBase {
     )
   }
 
-  "Derive" should "FEATURE_REQUEST: derive quantifiers" taggedAs TodoTest in withTactics {
-    proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\exists x x'>=0".asSequent
+  "Derive" should "derive quantifiers" in withTactics {
+    proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\forall x x'>=0".asSequent
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>
