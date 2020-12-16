@@ -179,55 +179,7 @@ class GoPiGoBasicStrategy[number <: Numeric[number, Ternary]](ffis: VeriPhyFFIs,
     env)
 
 object BotMain {
-  private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
-
-  class Lazy[T](f: => T) {
-    private var option: Option[T] = None
-    def apply(): T = option match {
-      case Some(t) => t
-      case None => val t = f; option = Some(t); t
-    }
-    def isInitialized: Boolean = option.isDefined
-    def asOption: Option[T] = option
-  }
-
-  /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
-  class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
-    override def init(): Boolean = p.init()
-    override def shutdown(): Unit = {} // do not shut down between tests and when switching providers in ToolProvider.setProvider
-    def doShutdown(): Unit = super.shutdown()
-  }
-
-  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
-    Configuration.withTemporaryConfig(tempConfig)(testcode)
-
-  //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
-  private val mathematicaProvider: Lazy[DelayedShutdownToolProvider] = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
-
-  private def initQE(): Unit = {
-    Configuration.setConfiguration(FileConfiguration)
-    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    val common = Map(
-      Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
-      Configuration.Keys.QE_TOOL -> WOLFRAM)
-    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
-     withTemporaryConfig(common) {
-      val provider = mathematicaProvider()
-      ToolProvider.setProvider(provider)
-      val tool = provider.defaultTool() match {
-        case Some(m: Mathematica) => m
-        case _ => throw new Exception("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
-      }
-      KeYmaeraXTool.init(Map(
-        //KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
-        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
-      ))
-    }
-  }
-
-
-  val check: String => Statement = Kaisar.statementProved
-
+  // for documentation
   val botModel: String =
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
@@ -241,6 +193,8 @@ object BotMain {
       | !(d >= 0);
       |""".stripMargin
 
+  val astratStr: String = "SCompose(SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0),SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0)),SLoop(SCompose(SCompose(SCompose(STest(d_1>=eps_0*V_0),SAssignAny(v_2),STest(0<=v_2&v_2<=V_0)),SAssign(v_2,0)),SAssign(t_2,0),SCompose(SAssign(t_3,t_2),SAssign(d_2,d_1)),SCompose(SCompose(SAssignAny(t_3),STest(t_3>=0)),STest(t_3<=eps_0),SCompose(SAssign(t_3,t_3),SAssign(d_2,(-v_2)*t_3+d_1))),SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+
   // Args:  dll_name [dll_path]
   def main(args: Array[String]): Unit = {
     val libName = args(0)
@@ -251,17 +205,15 @@ object BotMain {
       val fullPath = if(path == null) dirName else dirName + File.pathSeparator + path
       System.setProperty("jna.library.path", fullPath)
       val what = System.getProperty("jna.library.path")
-      println("help:" + what)
     }
 
-    initQE()
-    println("Initialized QE")
-    val pf = check(botModel)
-    println("Checked proof")
+    //val pf = check(botModel)
     val load = FFILoader(libName)
     val lib: VeriPhyFFIs = load.Instance
     println("Loaded DLL for FFI!")
-    val angel = SimpleStrategy(AngelStrategy(pf))
+    val angel = StrategyParser(astratStr)
+    //val angel =  SimpleStrategy(AngelStrategy(pf))
+    println("AngelStrat1:\n" + StrategyPrinter(angel))
     val factory = UnknowingFactory(RatFactory)
     val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val basic = new GoPiGoBasicStrategy(lib, env)
