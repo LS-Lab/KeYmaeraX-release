@@ -19,11 +19,13 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 /**
@@ -151,12 +153,25 @@ private object DifferentialTactics extends Logging {
         case _ => skip
       }
 
+      val abbrvPrimes = anon { (pos: Position, seq: Sequent) => seq.sub(pos) match {
+        case Some(e: Expression) =>
+          val vprimes = scala.collection.mutable.Set.empty[DifferentialSymbol]
+          ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+            override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+              case x: DifferentialSymbol => vprimes += x; Left(None)
+              case _ => Left(None)
+            }
+          }, e)
+          vprimes.map(EqualityTactics.abbrv(_, None) & hideL('Llast)).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+        case _ => skip
+      }}
+
       if (pos.isTopLevel) {
         val t = expand & DI(pos) &
           //@note implyR moves RHS to end of succedent
           implyR(pos) & andR('Rlast) & Idioms.<(
-            if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
-            else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label(BelleLabels.dIInit)
+            if (auto == 'full) ToolTactics.hideNonFOL & (abbrvPrimes('Rlast) & QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
+            else if (auto == 'cex) ToolTactics.hideNonFOL & ?(abbrvPrimes('Rlast) & QE) & label(BelleLabels.dIInit)
             else skip
             ,
             if (auto != 'none) {
@@ -170,8 +185,8 @@ private object DifferentialTactics extends Logging {
                 ) &
                 //@note DW after DE to keep positions easier
                 (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
-                  (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
-                   else ?(QE) & label(BelleLabels.dIStep))
+                  (if (auto == 'full) abbrvPrimes('Rlast) & QE & done | DebuggingTactics.done("Differential invariant must be preserved")
+                   else ?(abbrvPrimes('Rlast) & QE) & label(BelleLabels.dIStep))
                else {
                 assert(auto == 'diffInd)
                 (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) &

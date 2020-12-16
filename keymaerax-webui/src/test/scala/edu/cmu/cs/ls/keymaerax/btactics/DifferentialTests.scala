@@ -440,7 +440,12 @@ class DifferentialTests extends TacticTestBase {
 
 
   it should "work with quantified postconditions" in withMathematica { _ =>
-    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) shouldBe 'proved
+    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs List(
+      "true ==> \\exists y y<=x".asSequent,
+      "true ==> [x':=3;]\\forall y y'<=x'".asSequent
+    )
+    the [BelleProofSearchControl] thrownBy proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) should
+      have message "Differential invariant must be preserved: expected to have proved, but got open goals"
   }
 
   it should "expand special functions" in withQE { _ =>
