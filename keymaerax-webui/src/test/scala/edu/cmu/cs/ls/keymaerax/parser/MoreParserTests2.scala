@@ -381,9 +381,11 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "parse (|x|) Exception taboos" in {
     parser("x>2&p(|x|)") shouldBe And(Greater(x,Number(2)), UnitPredicational("p",Except(x::Nil)))
+    parser("x>2&p(|x,y,z|)") shouldBe And(Greater(x,Number(2)), UnitPredicational("p",Except(x::y::z::Nil)))
     parser.formulaParser("p(|x|)") shouldBe UnitPredicational("p",Except(x::Nil))
     parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(x::Nil),Real))
     parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(x::Nil),Real)
+    parser.termParser("f(|x,y|)") shouldBe UnitFunctional("f",Except(x::y::Nil),Real)
     parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(5)),
       DifferentialProgramConst("c",Except(x::Nil))), True),
       Greater(x,Number(2)))

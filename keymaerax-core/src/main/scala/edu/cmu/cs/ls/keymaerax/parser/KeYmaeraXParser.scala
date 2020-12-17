@@ -49,6 +49,11 @@ private[parser] case class RecognizedModal(ltok: Token, program: Program, rtok: 
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
   override def toString: String = "Rec" + ltok.tok.img + KeYmaeraXPrettyPrinter.stringify(program) + rtok.tok.img
 }
+
+private[parser] case class RecognizedSpace(space: List[Variable]) extends Item {
+  //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+  override def toString: String = "|" + space.map(KeYmaeraXPrettyPrinter.stringify).mkString(",") + "|"
+}
 ///** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
 //private[parser] case class RecognizedAnnotation(program: Program) extends Item {
 //  //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
@@ -436,22 +441,17 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceUnitFuncOrPredOf(st, 4, tok, AnyArg, r)
 
-      // nullary functional/predicational symbols of argument AnyArg
-      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Token(RBANANA, _) =>
-        reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
-      // nullary functional/predicational symbols of argument Taboo
-      // @todo: update for vectorial taboos
-      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Expr(x: Variable) :+ Token(RBANANA, _) =>
-        reduceUnitFuncOrPredOf(st, 4, tok, Except(x::Nil), r)
-      //      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
-      //        shift(st)
+      // nullary functional/predicational symbols
+      case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ RecognizedSpace(s) :+ Token(RBANANA, _) =>
+        reduceUnitFuncOrPredOf(st, 4, tok, if (s.isEmpty) AnyArg else Except(s), r)
       case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) =>
-        if (la == RBANANA || la.isInstanceOf[IDENT]) shift(st)
+        if (la == RBANANA || la.isInstanceOf[IDENT]) shift(reduce(st, 0, RecognizedSpace(Nil), st.stack))
         else error(st, List(RBANANA, ANYIDENT))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ Expr(_: Variable) =>
-        if (la == RBANANA) shift(st)
-        else error(st, List(RBANANA))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ Expr(_) =>
+      case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ RecognizedSpace(s) :+ Expr(x: Variable) =>
+        if (la == RBANANA) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        else error(st, List(RBANANA,COMMA))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ RecognizedSpace(_) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent predicational/functional")
 
       // DifferentialProgramConst symbols of argument AnyArg
