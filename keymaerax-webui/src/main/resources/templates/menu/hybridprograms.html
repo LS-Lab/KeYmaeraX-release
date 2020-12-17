@@ -122,6 +122,11 @@
     <k4-tactic-menu-entry
             ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
             proof-id="{{proofId}}" user-id="{{userId}}"
+            name="B Barcan" code-name="barcan"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            ng-if="menu.hpmenu.kind=='box'" disabled="agenda.items().length <= 0"
+            proof-id="{{proofId}}" user-id="{{userId}}"
             name="[·]" code-name="boxd"
             exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
