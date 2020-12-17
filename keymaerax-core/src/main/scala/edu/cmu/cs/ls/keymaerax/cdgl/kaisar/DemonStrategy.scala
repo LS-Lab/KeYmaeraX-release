@@ -74,7 +74,7 @@ class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonS
       case (Some(ALoop(conv, body)), _) =>
         env.holds(conv) != KnownTrue() // if formula holds, continue
       case (Some(_), _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
-      case (None, Some(DLoop(_body))) => bds.readDemonLoop(id)
+      case (None, Some(SLoop(_body))) => bds.readDemonLoop(id)
       case (None, _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
     }
 
@@ -83,7 +83,7 @@ class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonS
       case (Some(ASwitch((fml, as) :: _right :: _)), _) =>
         env.holds(fml) != KnownTrue() // return value true ==> go right, so go left when formula is true or unknown
       case (Some(_), _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")
-      case (None, Some(DChoice(l, r))) => bds.readDemonChoice(id)
+      case (None, Some(SChoice(l, r))) => bds.readDemonChoice(id)
       case (None, _) => throw new DemonException("Demon expected to be given choice, but was not. Are you playing an angel strategy against an incompatible Demon?")
     }
 

@@ -45,7 +45,7 @@ object ForwardProofChecker {
     "orIR" -> ("orIR (P: Formula, proof: Q)", {case (ExpressionArg(l: Formula), ProvedArg(r)) => Or(l, r)}),
     "notE" -> ("notE (proofL: !P, proofR: P)", {case (ProvedArg(Not(p)), ProvedArg(pp)) if p == pp => False}),
     "falseE" -> ("falseE (proof: False, P: Formula)", {case (ProvedArg(False), ExpressionArg(p: Formula)) => p}),
-    "ignoreI" -> ("ignoreI (P: Formula, proof: Q)", {case (ExpressionArg(p: Formula), ProvedArg(q)) => Imply(p, q)}),
+    "implyW" -> ("implyI (P: Formula, proof: Q)", {case (ExpressionArg(p: Formula), ProvedArg(q)) => Imply(p, q)}),
     "allI" -> ("allI (x: Variable, proof: P)", {case (ExpressionArg(v: Variable), ProvedArg(p)) if !StaticSemantics(p).fv.contains(v) => Forall(List(v), p)}),
     "allE" -> ("allE (proof: (forall x, P), f: Term)", {case (ProvedArg(Forall(xs, p)), ExpressionArg(f: Term)) => subst(xs.head, f, p)}),
     "existsE" -> ("existsE (proofL: (exists x, P), proofR: (forall y, (P -> Q)))", {case (ProvedArg(Exists(List(x), p)), ProvedArg(Forall(List(y), Imply(pp, q)))) if p == pp && x == y && !StaticSemantics(q).fv.contains(x) => q})

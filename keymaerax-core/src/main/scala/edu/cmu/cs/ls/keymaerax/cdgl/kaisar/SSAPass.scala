@@ -363,6 +363,7 @@ object SSAPass {
         val convv = conv.map(ssa(_, preSnap)._1.asInstanceOf[Assert])
         val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil)), s)
         (KaisarProof.block(baseStutters :: forth :: Nil), preSnap)
+      //@TODO: switch case seems wrong, needs swap in the assignments
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>
         val scrut = scrutinee.map(ssa(_, snapshot))
         val clauses = pats.map ({case (x,f,s) => {

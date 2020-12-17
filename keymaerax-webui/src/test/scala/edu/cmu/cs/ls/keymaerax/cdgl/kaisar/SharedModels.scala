@@ -43,6 +43,13 @@ object SharedModels {
       |  case xHigh:(x >= 0) =>  !result:(x + 1 > 0);
       |}
       |""".stripMargin
+  val switchLiteralArg:String =
+    """?bit:(x =  0 | x = 1);
+      |switch (bit) {
+      | case (x = 0) => !nonneg:(x >= 0);
+      | case (x = 1) => !nonneg:(x >= 0);
+      |}
+      |""".stripMargin
 
   val switchLiteralsProgram: String =
     "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
@@ -143,6 +150,12 @@ object SharedModels {
     """x:= 0; y := 2;
       |{x' = 2, y' = -1 & ?dc:(y >= 0); & !xEq:(x =  2*(2 - y))};
       |!xFinal:(x >= 0) using xEq dc by auto;
+      |""".stripMargin
+
+  val justxSolODE: String =
+    """?xInit:(x:=0); y:=2;
+      |{xSol: x' = 2, y' = 1 & ?dc:(y >= 0);};
+      |!xFinal:(x >= 0) using  xSol xInit by auto;
       |""".stripMargin
 
   val inductODE: String =
@@ -348,7 +361,7 @@ object SharedModels {
       |  !prog:(pos <= (x - x@init));
       |  note step = andI(prog, safe);
       |}
-      |!(d >= x & x >= d - eps) using guard conv by auto;
+      |!(x <= d & x + eps >= d) using guard conv by auto;
       |""".stripMargin
 
   // @TODO: Check SB() vs SB parenthesis... hmm...
@@ -1425,7 +1438,7 @@ object SharedModels {
   val rssExamples: List[String] = List(/*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
     robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/)
 
-  val thesisExamples: List[String] = List(assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
+  val thesisExamples: List[String] = List(switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
     ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,

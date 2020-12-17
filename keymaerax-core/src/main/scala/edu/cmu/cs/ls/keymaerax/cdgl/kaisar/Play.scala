@@ -125,7 +125,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
   /** Interpret given angel strategy against given demon strategy in given environment. */
   def apply(env: Environment[number], as: AngelStrategy, ds: DemonStrategy[number]): Unit = {
     as match {
-      case DTest(f) =>
+      case STest(f) =>
         try {
           if (env.holds(f) != KnownTrue()) {
             println(s"""Test \"$f\" failed in state ${env.state}""")
@@ -134,7 +134,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
         } catch {
           case v: NoValueException => throw NoValueException(as.nodeID)
         }
-      case DAssign(x, f) =>
+      case SAssign(x, f) =>
         try {
           val v = env.eval(f)
           ds.writeAssign(as.nodeID, x, v)
@@ -143,19 +143,19 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
         } catch {
           case v: NoValueException => throw NoValueException(as.nodeID)
         }
-      case NDAssign(x) =>
+      case SAssignAny(x) =>
         val v = ds.readAssign(as.nodeID, x)
         //println(s"Interpreter star-assigned $x -> $v")
         env.set(x, v)
-      case DLoop(s) =>
+      case SLoop(s) =>
         // in-place update
         while(ds.readLoop(as.nodeID)) {
           apply(env, s, ds)
         }
-      case DCompose(children) =>
+      case SCompose(children) =>
         // in-place update of env
         children.foreach(x => apply(env, x, ds))
-      case DChoice(l, r) =>
+      case SChoice(l, r) =>
         if (ds.readChoice(as.nodeID))
           apply(env, r, ds)
         else
