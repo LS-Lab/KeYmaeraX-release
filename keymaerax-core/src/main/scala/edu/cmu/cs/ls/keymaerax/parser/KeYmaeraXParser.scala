@@ -473,18 +473,27 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index == None, "no index supported for SystemConst")
         reduce(st, 5, SystemConst(tok.name), r)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+        require(tok.index == None, "no index supported for SystemConst")
+        reduce(st, 6, SystemConst(tok.name, Except(x :: Nil)), r)
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) =>
+        if (la == SEMI) shift(st)
+        else error(st, List(SEMI))
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(_: Variable) :+ Token(RBARB, _) =>
         if (la == SEMI) shift(st)
         else error(st, List(SEMI))
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) =>
         if (la == RBARB || la.isInstanceOf[IDENT] || la == DUAL) shift(st)
-        else error(st, List(RBARB, ANYIDENT))
+        else error(st, List(RBARB, ANYIDENT, DUAL))
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_: Variable) =>
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) =>
+        if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBARB, ANYIDENT))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(_: Variable)  =>
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))
 
