@@ -369,6 +369,9 @@ object Ax extends Logging {
   @Axiom("[*]", conclusion = "__[a*]P__↔P∧[a][a*]P", displayLevel = "all",
     key = "0", recursor = "1", unifier = "surjlinear")
   val iterateb: CoreAxiomInfo = coreAxiom("[*] iterate")
+  @Axiom("B Barcan", conclusion = "__[a]∀x p(x)__ ↔∀x[a]p(x)  (x∉a)", displayLevel = "all",
+    key = "0", recursor = "0", unifier = "surjlinear")
+  val barcan: CoreAxiomInfo = coreAxiom("B Barcan")
 
   // Differential Equations
 
