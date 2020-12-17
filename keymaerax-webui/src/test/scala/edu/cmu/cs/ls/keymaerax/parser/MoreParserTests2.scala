@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
@@ -12,11 +13,14 @@ import scala.collection.immutable._
 class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   private val x = Variable("x")
   private val y = Variable("y")
+  private val z = Variable("z")
+  private val v = Variable("v")
 
   private var parser: KeYmaeraXParser = _
   private var pp: PrettyPrinter = _
 
   override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
       KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
@@ -48,26 +52,26 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "parse \\forall x \\forall y \\forall z (x>y & y>z)" in {
     parser("\\forall x \\forall y \\forall z (x>y & y>z)") should be
-    Forall(Seq(Variable("x")), Forall(Seq(Variable("y")), Forall(Seq(Variable("z")),
-      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))))
+    Forall(Seq(z), Forall(Seq(z), Forall(Seq(z),
+      And(Greater(x, z), Greater(y, z)))))
   }
 
   it should "parse \\forall x \\exists y \\exists z (x>y & y>z)" in {
     parser("\\forall x \\exists y \\exists z (x>y & y>z)") should be
-    Forall(Seq(Variable("x")), Exists(Seq(Variable("y")), Exists(Seq(Variable("z")),
-      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))))
+    Forall(Seq(z), Exists(Seq(z), Exists(Seq(z),
+      And(Greater(x, z), Greater(y, z)))))
   }
 
   it should "parse \\forall x,y,z (x>y & y>z)" in {
     parser("\\forall x,y,z (x>y & y>z)") should be
-    Forall(Seq(Variable("x"), Variable("y"), Variable("z")),
-      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))
+    Forall(Seq(x, y, z),
+      And(Greater(x, z), Greater(y, z)))
   }
 
   it should "parse \\forall x,y \\forall s,t (x>y & y>s & s>t)" in {
     parser("\\forall x,y,z (x>y & y>z)") should be
-    Forall(Seq(Variable("x"), Variable("y")), Forall(Seq(Variable("s"), Variable("t")),
-      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z")))))
+    Forall(Seq(x, z), Forall(Seq(Variable("s"), Variable("t")),
+      And(Greater(x, z), Greater(y, z))))
   }
 
   it should "report missing identifiers in block quantifiers" in {
@@ -82,31 +86,27 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "parse \\exists x,y,z (x>y & y>z)" in {
     parser("\\exists x,y,z (x>y & y>z)") should be
-    Exists(Seq(Variable("x"), Variable("y"), Variable("z")),
-      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))
+    Exists(Seq(x, y, z),
+      And(Greater(x, z), Greater(y, z)))
   }
 
   it should "parse \\forall v (v>=0&true&0>=0->v=v+0*0)<->true" in {
-    val v = Variable("v")
     val n0 = Number(0)
     parser("\\forall v (v>=0&true&0>=0->v=v+0*0)<->true") should be
     Equiv(Forall(Seq(v), Imply(And(And(GreaterEqual(v, n0), True), GreaterEqual(n0, n0)), Equal(v, Plus(v, Times(n0, n0))))), True)
   }
 
   it should "parse (\\forall v (v>=0&true&0>=0->v=v+0*0))<->true" in {
-    val v = Variable("v")
     val n0 = Number(0)
     parser("(\\forall v (v>=0&true&0>=0->v=v+0*0))<->true") should be
     Equiv(Forall(Seq(v), Imply(And(And(GreaterEqual(v, n0), True), GreaterEqual(n0, n0)), Equal(v, Plus(v, Times(n0, n0))))), True)
   }
 
   it should "program parse {x'=5&x>2&x>3} as an ODESystem with one evolution domain constraint" in {
-    val x = Variable("x")
     parser.programParser("{x'=5&x>2&x>3}") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
   }
 
   it should "program parse x'=5&x>2&x>3 as an ODESystem with one evolution domain constraint (if parsed at all)" in {
-    val x = Variable("x")
     try {
       parser.programParser("x'=5&x>2&x>3") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
     } catch {
@@ -115,60 +115,57 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "parse x'=5&x>2&x>3 as an equation system" in {
-    val x = Variable("x")
     parser.formulaParser("x'=5&x>2&x>3") shouldBe And(Equal(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
     parser("x'=5&x>2&x>3") shouldBe And(Equal(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
   }
 
   it should "parse [{x'=5&x>2&x>3}]x>0 as an ODESystem with one evolution domain constraint" in {
-    val x = Variable("x")
     parser("[{x'=5&x>2&x>3}]x>0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3)))), Greater(x, Number(0)))
   }
 
   it should "parse [{x'=v}]x=0 as a ODESystem with one ODE" in {
-    val x = Variable("x")
-    parser("[{x'=v}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True), Equal(x, Number(0)))
+    parser("[{x'=v}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), v), True), Equal(x, Number(0)))
   }
 
   it should "parse [{x'=v&x<5}]x=0 as a ODESystem with one ODE and evolution domain" in {
-    val x = Variable("x")
-    parser("[{x'=v&x<5}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), Less(x, Number(5))), Equal(x, Number(0)))
+    parser("[{x'=v&x<5}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), v), Less(x, Number(5))), Equal(x, Number(0)))
   }
 
   it should "parse [{x'=v,v'=a}]x=0 as a ODESystem with two ODEs" in {
-    val x = Variable("x")
-    parser("[{x'=v,v'=a}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), True), Equal(x, Number(0)))
+    parser("[{x'=v,v'=a}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), v), AtomicODE(DifferentialSymbol(v), Variable("a"))), True), Equal(x, Number(0)))
   }
 
   it should "parse [{x'=v,v'=a&x<5}]x=0 as a ODESystem with two ODEs" in {
-    val x = Variable("x")
-    parser("[{x'=v,v'=a&x<5}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), Less(x,Number(5))), Equal(x, Number(0)))
+    parser("[{x'=v,v'=a&x<5}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), v), AtomicODE(DifferentialSymbol(v), Variable("a"))), Less(x,Number(5))), Equal(x, Number(0)))
   }
 
 
   it should "program parse {{x'=v}}* as a loopy ODESystem with one ODE" in {
-    val x = Variable("x")
-    parser.programParser("{{x'=v}}*") shouldBe Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True))
+    parser.programParser("{{x'=v}}*") shouldBe Loop(ODESystem(AtomicODE(DifferentialSymbol(x), v), True))
   }
 
   it should "parse [{{x'=v}}*]x=0 as a loopy ODESystem with one ODE" in {
-    val x = Variable("x")
-    parser("[{{x'=v}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True)), Equal(x, Number(0)))
+    parser("[{{x'=v}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), v), True)), Equal(x, Number(0)))
   }
 
   it should "parse [{{x'=v&x<5}}*]x=0 as a loopy ODESystem with one ODE and evolution domain" in {
-    val x = Variable("x")
-    parser("[{{x'=v&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), Less(x, Number(5)))), Equal(x, Number(0)))
+    parser("[{{x'=v&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), v), Less(x, Number(5)))), Equal(x, Number(0)))
   }
 
   it should "parse [{{x'=v,v'=a}}*]x=0 as a loopy ODESystem with two ODEs" in {
-    val x = Variable("x")
-    parser("[{{x'=v,v'=a}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), True)), Equal(x, Number(0)))
+    parser("[{{x'=v,v'=a}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), v), AtomicODE(DifferentialSymbol(v), Variable("a"))), True)), Equal(x, Number(0)))
   }
 
   it should "parse [{{x'=v,v'=a&x<5}}*]x=0 as a loopy ODESystem with two ODEs" in {
-    val x = Variable("x")
-    parser("[{{x'=v,v'=a&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), Less(x,Number(5)))), Equal(x, Number(0)))
+    parser("[{{x'=v,v'=a&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), v), AtomicODE(DifferentialSymbol(v), Variable("a"))), Less(x,Number(5)))), Equal(x, Number(0)))
+  }
+
+  it should "parse [{x'=1,y'=2};x:=3;]x>=0 as a sequence with ODE first" in {
+    parser("[{x'=1,y'=2};x:=3;]x>=0") shouldBe Box(Compose(
+      ODESystem(DifferentialProduct(
+        AtomicODE(DifferentialSymbol(x), Number(1)),
+        AtomicODE(DifferentialSymbol(y), Number(2))
+      ), True), Assign(x, Number(3))), GreaterEqual(x, Number(0)))
   }
 
   it should "refuse ; in ODE-{}" in {
@@ -201,15 +198,29 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
   it should "refuse ODE systems 1 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v,v'=3;]x=0") should have message
-      """1:12 ODE without {}
-        |Found:    ] at 1:12
+      """1:11 ODE without {}
+        |Found:    ; at 1:11
         |Expected: }""".stripMargin
   }
 
   it should "refuse ODE systems 2 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v,v'=3 & x>0;]x=0") should have message
+      """1:17 ODE without {}
+        |Found:    ; at 1:17
+        |Expected: }""".stripMargin
+  }
+
+  it should "refuse ODE systems 3 without {} in modalities" in {
+    the [ParseException] thrownBy parser("[x'=v,v'=3 ++ {y'=3}]x=0") should have message
+      """1:12 ODE without {}
+        |Found:    ++ at 1:12 to 1:13
+        |Expected: }""".stripMargin
+  }
+
+  it should "refuse ODE systems 4 without {} in modalities" in {
+    the [ParseException] thrownBy parser("[x'=v,v'=3 & x>5 ++ {y'=3}]x=0") should have message
       """1:18 ODE without {}
-        |Found:    ] at 1:18
+        |Found:    ++ at 1:18 to 1:19
         |Expected: }""".stripMargin
   }
 
@@ -225,24 +236,24 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "parse standalone differential symbols" in {
-    parser("x'") shouldBe DifferentialSymbol(Variable("x"))
+    parser("x'") shouldBe DifferentialSymbol(x)
   }
 
   it should "parse standalone differentials" in {
-    parser("(x')'") shouldBe Differential(DifferentialSymbol(Variable("x")))
+    parser("(x')'") shouldBe Differential(DifferentialSymbol(x))
   }
 
   it should "parse terms with differential symbols" in {
-    parser("x'=0") shouldBe Equal(DifferentialSymbol(Variable("x")), Number(0))
+    parser("x'=0") shouldBe Equal(DifferentialSymbol(x), Number(0))
   }
 
   it should "parse terms with differentials" in {
-    parser("(x')'=0") shouldBe Equal(Differential(DifferentialSymbol(Variable("x"))), Number(0))
+    parser("(x')'=0") shouldBe Equal(Differential(DifferentialSymbol(x)), Number(0))
   }
 
   it should "parse postconditions with differential symbols" in {
-    parser("<{x'=3}>x'>0") shouldBe Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(3)), True),
-      Greater(DifferentialSymbol(Variable("x")), Number(0)))
+    parser("<{x'=3}>x'>0") shouldBe Diamond(ODESystem(AtomicODE(DifferentialSymbol(x), Number(3)), True),
+      Greater(DifferentialSymbol(x), Number(0)))
   }
 
   it should "parse +- in x+-y+1>=5" in {
@@ -362,29 +373,29 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
 
 
   "Parsing state-dependents" should "parse (||) AnyArg" in {
-    parser("x>2&p(||)") shouldBe And(Greater(Variable("x"),Number(2)), UnitPredicational("p",AnyArg))
+    parser("x>2&p(||)") shouldBe And(Greater(x,Number(2)), UnitPredicational("p",AnyArg))
     parser.formulaParser("p(||)") shouldBe UnitPredicational("p",AnyArg)
     parser("5<=f(||)") shouldBe LessEqual(Number(5),UnitFunctional("f",AnyArg,Real))
     parser.termParser("f(||)") shouldBe UnitFunctional("f",AnyArg,Real)
   }
 
   it should "parse (|x|) Exception taboos" in {
-    parser("x>2&p(|x|)") shouldBe And(Greater(Variable("x"),Number(2)), UnitPredicational("p",Except(Variable("x")::Nil)))
-    parser.formulaParser("p(|x|)") shouldBe UnitPredicational("p",Except(Variable("x")::Nil))
-    parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(Variable("x")::Nil),Real))
-    parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(Variable("x")::Nil),Real)
-    parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(5)),
-      DifferentialProgramConst("c",Except(Variable("x")::Nil))), True),
-      Greater(Variable("x"),Number(2)))
-    parser("[{z'=5,d{|y|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("z")),Number(5)),
-      DifferentialProgramConst("d",Except(Variable("y")::Nil))), True),
-      Greater(Variable("x"),Number(2)))
-    parser("<{x'=5,c{|x|}}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(5)),
-      DifferentialProgramConst("c",Except(Variable("x")::Nil))), True),
-      Greater(Variable("x"),Number(2)))
-    parser("<{z'=5,d{|y|}}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("z")),Number(5)),
-      DifferentialProgramConst("d",Except(Variable("y")::Nil))), True),
-      Greater(Variable("x"),Number(2)))
+    parser("x>2&p(|x|)") shouldBe And(Greater(x,Number(2)), UnitPredicational("p",Except(x::Nil)))
+    parser.formulaParser("p(|x|)") shouldBe UnitPredicational("p",Except(x::Nil))
+    parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(x::Nil),Real))
+    parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(x::Nil),Real)
+    parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(5)),
+      DifferentialProgramConst("c",Except(x::Nil))), True),
+      Greater(x,Number(2)))
+    parser("[{z'=5,d{|y|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(z),Number(5)),
+      DifferentialProgramConst("d",Except(y::Nil))), True),
+      Greater(x,Number(2)))
+    parser("<{x'=5,c{|x|}}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(5)),
+      DifferentialProgramConst("c",Except(x::Nil))), True),
+      Greater(x,Number(2)))
+    parser("<{z'=5,d{|y|}}>x>2") shouldBe Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(z),Number(5)),
+      DifferentialProgramConst("d",Except(y::Nil))), True),
+      Greater(x,Number(2)))
   }
 
   it should "elaborate uppercase names to unit predicationals and lower case names to nullary predicates in lax mode" in {
@@ -407,8 +418,8 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
   }
 
   it should "parse DG snippets" in {
-    parser("[{x'=2,c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)), DifferentialProgramConst("c",Except(Variable("y_")::Nil))), True), Equal(Variable("x"),Number(99)))
-    parser("[{c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), Equal(Variable("x"),Number(99)))
+    parser("[{x'=2,c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(2)), DifferentialProgramConst("c",Except(Variable("y_")::Nil))), True), Equal(x,Number(99)))
+    parser("[{c{|y_|}}]x=99") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), Equal(x,Number(99)))
     parser("[{c{|y_|}}]p(|y_|)") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), True), UnitPredicational("p",Except(Variable("y_")::Nil)))
     parser("[{c{|y_|}&H(|y_|)}]p(|y_|)") shouldBe Box(ODESystem(DifferentialProgramConst("c",Except(Variable("y_")::Nil)), UnitPredicational("H",Except(Variable("y_")::Nil))), UnitPredicational("p",Except(Variable("y_")::Nil)))
 

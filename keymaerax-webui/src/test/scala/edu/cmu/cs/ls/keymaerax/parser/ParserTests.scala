@@ -4,9 +4,11 @@ package edu.cmu.cs.ls.keymaerax.parser
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest._
 import org.scalatest.LoneElement._
@@ -19,7 +21,10 @@ import scala.collection.immutable._
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   override def beforeAll(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
   }
   override def afterEach(): Unit = { Parser.parser.setAnnotationListener((_, _) => {}) }
 
@@ -298,8 +303,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "parse (demonic) ODEs" in {
-    Parser("{x'=v}") shouldBe AtomicODE(DifferentialSymbol(Variable("x")), Variable("v"))
-    Parser("{x'=v}^@") shouldBe Dual(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")), True))
+    Parser("{x'=v}") shouldBe ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")))
+    Parser("{x'=v}^@") shouldBe Dual(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v"))))
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {

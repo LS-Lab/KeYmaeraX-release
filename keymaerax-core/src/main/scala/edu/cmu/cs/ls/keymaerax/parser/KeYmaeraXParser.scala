@@ -612,6 +612,10 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         assert(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
         if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
 
+      case r :+ Token(LBRACE,_) :+ Expr(t1:DifferentialProgram) :+ Token(RBRACE,_) =>
+        assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
+        reduce(st, 3, ODESystem(t1), r)
+
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
         if (la==STAR) shift(st) else reduce(st, 3, t1, r)
@@ -802,13 +806,12 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (firstExpression(la) && la!=EOF) shift(st)
         else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
 
-      case _ :+ Expr(DifferentialProduct(_,_)) :+ (optok@Token(op, _)) if op != COMMA && op != AMP && op != RBRACE=>
-        if (firstExpression(la) && la!=EOF) shift(st)
-        else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
+      case _ :+ Expr(DifferentialProduct(_,_)) :+ Token(op, loc) if op != COMMA && op != AMP && op != RBRACE =>
+        throw ParseException("ODE without {}", loc, op.img, RBRACE.img)
 
-      case _ :+ Expr(DifferentialProduct(_,_)) :+ (Token(AMP,_)) :+ Expr(_) :+ (optok@Token(op, _)) if op != COMMA && op != AMP && op != RBRACE=>
-        if (firstExpression(la) && la!=EOF) shift(st)
-        else throw ParseException("ODE without {}", st, List[Expected](RBRACE))
+      case _ :+ Expr(DifferentialProduct(_,_)) :+ Token(AMP,_) :+ Expr(_) :+ Token(op, loc) if op != COMMA && op != AMP && op != RBRACE =>
+        if (la != EOF && (firstFormula(la) || firstTerm(la))) shift(st)
+        else throw ParseException("ODE without {}", loc, op.img, RBRACE.img)
       // end error message
 
 
