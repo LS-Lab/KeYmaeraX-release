@@ -167,7 +167,7 @@ object AngelStrategy {
   private def body(pf: Statement, isPhi: Boolean): AngelStrategy = {
     pf match {
       case Assume(pat, f) => STest(f)
-      case BoxChoice(left, right) => Composed(body(left, isPhi), body(right, isPhi))
+      case BoxChoice(left, right) => SChoice(body(left, isPhi), body(right, isPhi))
       case InverseGhost(s) => body(s, isPhi)
       case Modify(ids, mods) =>
         Composed(mods.map({
