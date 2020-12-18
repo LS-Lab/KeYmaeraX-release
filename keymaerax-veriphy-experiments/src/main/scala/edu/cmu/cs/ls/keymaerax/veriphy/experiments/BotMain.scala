@@ -30,7 +30,7 @@ object BotMain {
     val lib: VeriPhyFFIs = load.Instance
     println("Loaded DLL for FFI!")
     println("native size: " + Native.LONG_SIZE)
-    val angel = StrategyParser(astratStr)
+    val angel = StrategyParser(sandboxPLDIStratString)
     println("AngelStrat1:\n" + StrategyPrinter(angel))
     for(speed <- testSpeeds) {
       for (simArg <- simArgs) {

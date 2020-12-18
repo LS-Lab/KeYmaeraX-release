@@ -327,7 +327,7 @@ class GoPiGoBasicStrategy[number <: Numeric[number, Ternary]](ffis: VeriPhyFFIs,
 
 object BotCommon {
   // source model
-  val botModel: String =
+  val sandboxPLDIModel: String =
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
@@ -341,7 +341,7 @@ object BotCommon {
       |""".stripMargin
 
   // Generated from model but then modified by hand.
-  val astratStr: String = "SCompose(" +
+  val sandboxPLDIStratString: String = "SCompose(" +
     "SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0)," +
     "SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0))," +
     "SLoop(SCompose(" +
@@ -351,6 +351,22 @@ object BotCommon {
       "SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3)," +
       "STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1))," +
      "SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+
+  val noSandbox1DBotModel: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | {
+      |  switch {
+      |    case (d>=eps*V) => v:=*; ?(0<=v&v<=V);
+      |    case (true) => v:=0;
+      |  }
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps); & !(d >= v*(eps-t));};}
+      |  !brk:(inv());
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
 
   // arguments for each test
   case class SimSpec(name: String, speedFactor: Int, obstacleSpeed: Int, actuatorOffset: Int, duration: Int, initialDistance: Int, reactionTime: Int)

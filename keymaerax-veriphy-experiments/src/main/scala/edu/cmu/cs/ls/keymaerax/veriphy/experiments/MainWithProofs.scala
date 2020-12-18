@@ -81,12 +81,13 @@ object MainWithProofs {
 
     initQE()
     println("Initialized QE")
-    val pf = check(botModel)
+    val pf = check(noSandbox1DBotModel)
+    //val pf = check(sandboxPLDIModel)
     val angel =  SimpleStrategy(AngelStrategy(pf))
     println("AngelStrat1:\n" + StrategyPrinter(angel))
     // So it's easy to find the strategy
     println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-    val load = FFILoader(libName) 
+    val load = FFILoader(libName)
     val lib: VeriPhyFFIs = load.Instance
     println("Loaded DLL for FFI!")
     println("native size: " + Native.LONG_SIZE)
