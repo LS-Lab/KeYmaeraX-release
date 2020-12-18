@@ -456,47 +456,47 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         errormsg(st, "Identifier expected after state-dependent predicational/functional")
 
       // DifferentialProgramConst symbols of argument AnyArg
-      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(RBARB, _) =>
-        require(tok.index.isEmpty, "no index supported for DifferentialProgramConst")
-        reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
-      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(s) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index.isEmpty, "no index supported for ProgramConst")
-        // @todo: update for vectorial taboos
-        reduce(st, 5, ProgramConst(tok.name, Except(x::Nil)), r)
+        reduce(st, 5, ProgramConst(tok.name, if (s.isEmpty) AnyArg else Except(s)), r)
       // DifferentialProgramConst symbols of argument Taboo
-      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(s) :+ Token(RBARB, _) =>
         if (la == SEMI) shift(st)
         else {
           require(tok.index.isEmpty, "no index supported for DifferentialProgramConst")
-          // @todo: update for vectorial taboos
-          reduce(st, 4, DifferentialProgramConst(tok.name, Except(x::Nil)), r)
+          reduce(st, 4, DifferentialProgramConst(tok.name, if (s.isEmpty) AnyArg else Except(s)), r)
         }
-      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index.isEmpty, "no index supported for SystemConst")
-        reduce(st, 5, SystemConst(tok.name), r)
-      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
-        require(tok.index.isEmpty, "no index supported for SystemConst")
-        reduce(st, 6, SystemConst(tok.name, Except(x :: Nil)), r)
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) =>
+        reduce(st, 6, SystemConst(tok.name, if (s.isEmpty) AnyArg else Except(s)), r)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) :+ Token(RBARB, _) =>
         if (la == SEMI) shift(st)
-        else error(st, List(SEMI))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(_: Variable) :+ Token(RBARB, _) =>
-        if (la == SEMI) shift(st)
-        else error(st, List(SEMI))
+        else {
+          require(tok.index.isEmpty, "no index supported for DifferentialProgramConst")
+          reduce(st, 4, DifferentialProgramConst(tok.name, if (s.isEmpty) AnyArg else Except(s)), r)
+        }
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) =>
-        if (la == RBARB || la.isInstanceOf[IDENT] || la == DUAL) shift(st)
+        if (la == DUAL) reduce(shift(st), 0, RecognizedSpace(Nil), st.stack.tail)
+        else if (la == RBARB || la.isInstanceOf[IDENT]) shift(reduce(st, 0, RecognizedSpace(Nil), st.stack))
         else error(st, List(RBARB, ANYIDENT, DUAL))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Expr(_: Variable) =>
-        if (la == RBARB) shift(st)
-        else error(st, List(RBARB))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Expr(_) =>
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(s) :+ Expr(x: Variable) =>
+        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        else error(st, List(RBARB, COMMA))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(_) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) =>
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(_) :+ Token(DUAL, _) =>
         if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBARB, ANYIDENT))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Expr(_: Variable)  =>
-        if (la == RBARB) shift(st)
-        else error(st, List(RBARB))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) =>
+        if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
+        else error(st, List(RBARB, ANYIDENT))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) :+ Expr(x: Variable)  =>
+        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        else error(st, List(RBARB, COMMA))
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(_) :+ Expr(_) =>
+        errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
 
       // function/predicate symbols arity>0
       case r :+ Token(tok: IDENT, _) :+ Token(LPAREN, _) :+ Expr(t1: Term) :+ Token(RPAREN, _) =>

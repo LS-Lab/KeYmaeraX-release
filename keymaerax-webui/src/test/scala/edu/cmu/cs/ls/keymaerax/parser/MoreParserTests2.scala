@@ -392,6 +392,13 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(x::Nil),Real))
     parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(x::Nil),Real)
     parser.termParser("f(|x,y|)") shouldBe UnitFunctional("f",Except(x::y::Nil),Real)
+    parser("[a{||};]P") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
+    parser("[a{|x|};]P") shouldBe Box(ProgramConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
+    parser("[a{|x,y|};]P") shouldBe Box(ProgramConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
+    parser("[a{|^@|};]P") shouldBe Box(SystemConst("a"), UnitPredicational("P", AnyArg))
+    parser("[a{|^@x|};]P") shouldBe Box(SystemConst("a", Except(x::Nil)), UnitPredicational("P", AnyArg))
+    parser("[a{|^@x,y|};]P") shouldBe Box(SystemConst("a", Except(x::y::Nil)), UnitPredicational("P", AnyArg))
+    parser("[{a{|^@|};}*]P") shouldBe Box(Loop(SystemConst("a")), UnitPredicational("P", AnyArg))
     parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(5)),
       DifferentialProgramConst("c",Except(x::Nil))), True),
       Greater(x,Number(2)))
