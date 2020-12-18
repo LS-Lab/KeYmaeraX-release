@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, BelleProvable, BelleValue, DependentTactic, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ReflectiveExpressionBuilder}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, BelleProvable, BelleValue, DependentTactic, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, ProverSetupException, ReflectiveExpressionBuilder}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, DerivationInfoRegistry, FixedGenerator, TactixInit}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program, Sequent}
@@ -103,6 +103,7 @@ object KeYmaeraXTool extends Tool {
       case Some("DLParser") =>
         new DLArchiveParser(new DLBelleParser(BellePrettyPrinter,
           ReflectiveExpressionBuilder(_, _, Some(TactixInit.invSupplier), _)))
+      case Some(p) => throw new ProverSetupException("Unknown parser " + p + "; please use one of 'KeYmaeraXParser' or 'DLParser'")
     })
 
     initialized = true
