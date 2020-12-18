@@ -145,21 +145,26 @@ object AngelStrategy {
     val coll = pode.dc.collect
     val assms = (coll.assumptions.toList.map(_.f)).reduceRight[Formula](And)
     val invs = (coll.assumptions.toList.map(_.f) ++ coll.assertions.map(_.f)).reduceRight[Formula](And)
-    pode.solutions match {
-      case None =>
+    val hasAsserts = pode.dc.collect.assertions.nonEmpty
+    val isDemon = !pode.isAngelic
+    (pode.solutions, hasAsserts && isDemon) match {
+      // Generate tests if solution can't be expressed *or* if it's a demon ode with assertions, because that probably suggests we wanted to monitor the assertions
+      case (None, _) | (_, true) =>
         val assignX = pode.ds.atoms.map(_.dp.xp.x).toList.map(SAssignAny)
         val assignDX = pode.ds.atoms.map(_.dp).toList.map({ case AtomicODE(xp, e) => SAssign(xp, e) })
         val conds = pode.timeVar match {
           case Some(t) if !pode.isAngelic => And(GreaterEqual(t, Number(0)), invs)
           case _ => invs
         }
-        Composed(assignT :: (assignX ++ assignDX.+:(STest(conds))))
-      case Some(xfs) =>
+        // test DC both initially and at end
+        Composed(STest(conds) :: assignT :: (assignX ++ assignDX.+:(STest(conds))))
+      case (Some(xfs), _) =>
         val setT = Composed(SAssignAny(tv), STest(GreaterEqual(tv, Number(0))))
         // @TODO: Should test all 0 <= s <= T  but c'est la vie
         val dc = STest(if (pode.isAngelic) assms else invs)
         val solAssign = Composed(xfs.map({ case (x, f) => SAssign(x, f) }))
-        Composed(setT :: dc :: solAssign :: Nil)
+        // test DC both at start and at end of ODE
+        Composed(setT :: dc :: solAssign :: dc :: Nil)
     }
   }
 
