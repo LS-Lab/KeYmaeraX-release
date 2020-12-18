@@ -128,7 +128,8 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
       case STest(f) =>
         try {
           if (env.holds(f) != KnownTrue()) {
-            println(s"""Test \"$f\" failed in state ${env.state}""")
+            println(s"""Test \"${f.prettyString}\" failed in state ${env.state}""")
+            ds.reportViolation()
             throw TestFailureException(as.nodeID)
           }
         } catch {
