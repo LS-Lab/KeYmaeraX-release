@@ -144,6 +144,12 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser.programParser("{{x'=v}}*") shouldBe Loop(ODESystem(AtomicODE(DifferentialSymbol(x), v), True))
   }
 
+  it should "differential program parse" in {
+    parser.differentialProgramParser("{x'=1}") shouldBe AtomicODE(DifferentialSymbol(x), Number(1))
+    // ODESystems are not differential programs, but their ODE is
+    parser.differentialProgramParser("{x'=1 & x<=5}") shouldBe AtomicODE(DifferentialSymbol(x), Number(1))
+  }
+
   it should "parse [{{x'=v}}*]x=0 as a loopy ODESystem with one ODE" in {
     parser("[{{x'=v}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), v), True)), Equal(x, Number(0)))
   }

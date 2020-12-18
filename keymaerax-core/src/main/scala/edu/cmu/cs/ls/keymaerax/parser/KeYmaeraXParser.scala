@@ -131,50 +131,51 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   override val termParser: String => Term =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, apply(input), LAX_MODE) match {
       case t: Term => t
-      case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
+      case e => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
     }
 
   override val termTokenParser: KeYmaeraXParser.TokenStream => Term =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, parse(input), LAX_MODE) match {
       case t: Term => t
-      case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput("<unknown>", Some(input))
+      case e => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   override val formulaParser: String => Formula =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, apply(input), LAX_MODE) match {
       case f: Formula => f
-      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput(input)
+      case e => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput(input)
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
   override val formulaTokenParser: TokenStream => Formula =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, parse(input), LAX_MODE) match {
       case f: Formula => f
-      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
+      case e => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   override val programParser: String => Program =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, ProgramKind, apply(input), LAX_MODE) match {
       case p: Program => p
-      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
+      case e => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
   override val programTokenParser: KeYmaeraXParser.TokenStream => Program =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, ProgramKind, parse(input), LAX_MODE) match {
       case prg: Program => prg
-      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput("<unknown>", Some(input))
+      case e => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   override val differentialProgramParser: String => DifferentialProgram =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, apply(input), LAX_MODE) match {
       case p: DifferentialProgram => p
-      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
+      case ODESystem(p, _) => p
+      case e => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput(input)
     }
 
   override val differentialProgramTokenParser: KeYmaeraXParser.TokenStream => DifferentialProgram =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, parse(input), LAX_MODE) match {
       case prg: DifferentialProgram => prg
-      case e@_ => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput("<unknown>", Some(input))
+      case e => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   //@todo
