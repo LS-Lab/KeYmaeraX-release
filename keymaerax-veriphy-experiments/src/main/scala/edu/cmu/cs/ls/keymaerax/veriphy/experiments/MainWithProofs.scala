@@ -81,8 +81,8 @@ object MainWithProofs {
 
     initQE()
     println("Initialized QE")
-    val pf = check(noSandbox1DBotModel)
-    //val pf = check(sandboxPLDIModel)
+    //val pf = check(noSandbox1DBotModel)
+    val pf = check(sandboxPLDIModel)
     val angel =  SimpleStrategy(AngelStrategy(pf))
     println("AngelStrat1:\n" + StrategyPrinter(angel))
     // So it's easy to find the strategy
@@ -95,7 +95,7 @@ object MainWithProofs {
     println("AngelStrat1:\n" + StrategyPrinter(angel))
     for(speed <- testSpeeds) {
       for (simArg <- simArgs) {
-        doOneSim(lib, angel, fullPath, simArg, speed)
+        doOneBotSim(lib, angel, fullPath, simArg, speed)
       }
     }
   }

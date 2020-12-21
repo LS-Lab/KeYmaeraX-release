@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import com.sun.jna.{Memory, Native, Pointer}
+import com.sun.jna.{Library, Memory, Native, Pointer}
 import com.sun.jna.win32.StdCallLibrary
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{AngelStrategy, BasicDemonStrategy, Environment, KnownTrue, Numeric, Play, RatFactory, RatNum, Ternary, TernaryNumber, TestFailureException, UnknowingFactory, WrappedDemonStrategy}
@@ -12,7 +12,7 @@ import spire.math.Rational
 import scala.collection.immutable.Map
 
 //FFI specs for VeriPhy driver functions
-trait VeriPhySenselessFFIs extends StdCallLibrary {
+trait VeriPhySenselessFFIs extends Library {
   def ffiget_const(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit
   def ffiget_ctrl(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit
   def ffiactuate(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit
@@ -26,7 +26,7 @@ trait VeriPhySenselessFFIs extends StdCallLibrary {
 }
 
 // separate this out because GoPiGo will want to do special Python handling rather than C
-trait VeriPhyFFIs extends VeriPhySenselessFFIs with StdCallLibrary {
+trait VeriPhyFFIs extends VeriPhySenselessFFIs with Library {
   def ffiget_sensor(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit
 }
 
@@ -56,8 +56,8 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
  val intArgs: List[Int])
   extends BasicDemonStrategy[number] {
   var isInit = false
-  val PRINT_EVENTS = true
-  val DEBUG_PRINT = true
+  val PRINT_EVENTS = false
+  val DEBUG_PRINT = false
 
   var logWriter: BufferedWriter = null
   var varMode: VarMode = InitMode
@@ -70,11 +70,13 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
 
   // Get initial state by consulting constants and sensors
   // This gets called on creation. Initialization order is important to make sure init ffi gets called before other ffis
+  val gisOutPC: Pointer = new Memory(constVars.length*4)
+  val gisOutPS: Pointer = new Memory(senseVars.length*4)
   def getInitState: Map[Ident, number] = {
     init(Some(filePath), intArgs)
     var vmap: Map[Ident, number] = Map()
     val inPC: Pointer = Pointer.NULL;
-    val outPC: Pointer= new Memory(constVars.length*4)
+    val outPC: Pointer = gisOutPC
     if (PRINT_EVENTS)
       println("ffiget_const: enter")
     ffis.ffiget_const(inPC, 0, outPC, constVars.length*4)
@@ -86,7 +88,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
       println("ffiget_const: returned " + vmap)
 
     val inPS: Pointer = Pointer.NULL;
-    val outPS: Pointer = new Memory(senseVars.length*4)
+    val outPS: Pointer = gisOutPS //new Memory(senseVars.length*4)
     if (PRINT_EVENTS)
       println("ffiget_sensor1: enter")
     ffis.ffiget_sensor(inPS, 0, outPS, senseVars.length*4)
@@ -110,11 +112,13 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
   // The original reason for doing this was that the DLL was crashing when calling standard library functions,
   // but that turned out not to be specific to IO but to be a hilarious issue due to running code with Linux calling
   // conventions on Windows
+  val BUF_SIZE = 256 * 256
+  val ioStrP: Pointer = new Memory(BUF_SIZE)
+  val rlOutP: Pointer = new Memory(8)
   private def doIO(): Unit = {
-    val BUF_SIZE = 256 * 256
-    val strP: Pointer = new Memory(BUF_SIZE)
+    val strP: Pointer = ioStrP
     strP.setByte(0, 0)
-    val sizeP: Pointer = new Memory(8)
+    val sizeP: Pointer = rlOutP
     var remaining = 1 // bogus init value
     var sb = new StringBuilder()
     while (remaining > 0) {
@@ -127,17 +131,21 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
         i = i + 1
       }
       val theString = sb.mkString
+      val before = System.currentTimeMillis()
       logWriter.write(theString)
       logWriter.flush()
+      val after = System.currentTimeMillis()
+      println("LOG PRINT TIME (ms): " + (after-before))
       if (DEBUG_PRINT)
         println("PRINTED STRING left:" + sizeP.getInt(0) + ", amount:" + sizeP.getInt(4) + "\n" + theString)
     }
   }
 
+  val rdlOutP: Pointer = new Memory(Native.WCHAR_SIZE)
   def readDemonLoop(id: NodeID): Boolean = {
     doIO()
     val inP: Pointer = Pointer.NULL;
-    val outP: Pointer = new Memory(Native.WCHAR_SIZE)
+    val outP: Pointer = rdlOutP
     outP.setChar(0,0)// initialize output array for sake of consistency
     if(PRINT_EVENTS)
       println("ffihas_next")
@@ -154,7 +162,8 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     val rc = (theV.eq(env.factory.number(0)))
     val lc = lhs >= rhs
     val cmp = lc == KnownTrue()
-    println(s"readDemonChoice: Went right? ${!cmp} , ($lc)")
+    if(DEBUG_PRINT)
+      println(s"readDemonChoice: Went right? ${!cmp} , ($lc)")
     if (!cmp && !(rc == KnownTrue())) {
       // announce that fallback was called. as of this writing, this is strictly for bookkeeping purposes.
       // Only do it if rc is false because in the other case their controller would have been safe too but we can't
@@ -164,6 +173,10 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     !cmp
   }
 
+  val inVars = constVars ++ senseVars
+  val rdainPEC: Pointer = new Memory(4*inVars.length)
+  val rdaoutPEC: Pointer = new Memory(4*ctrlVars.length)
+  val smOutPC: Pointer = new Memory(senseVars.length*4)
   def readDemonAssign(id: NodeID, x: String, varIndex: Option[Int]): number = {
     if(PRINT_EVENTS)
       println(s"readDemonAssign: $x, $varIndex")
@@ -177,9 +190,8 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
         // Do I ask external controller?
         case ExtCtrlMode =>
           extCtrlBuf = Map()
-          val inVars = constVars ++ senseVars
-          val inPEC: Pointer = new Memory(4*inVars.length)
-          val outPEC: Pointer = new Memory(4*ctrlVars.length)
+          val inPEC: Pointer = rdainPEC
+          val outPEC: Pointer = rdaoutPEC
 
           var printArgs: Map[Variable, number] = Map()
           for ((x,i) <- inVars.zipWithIndex) {
@@ -206,7 +218,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
         case SenseMode =>
           senseBuf = Map()
           val inPC: Pointer = Pointer.NULL;//new Memory(0)
-        val outPC: Pointer = new Memory(senseVars.length*4)
+          val outPC: Pointer = smOutPC
           if(PRINT_EVENTS)
             println("ffiget_sensor: enter")
           ffis.ffiget_sensor(inPC, 0, outPC, 4*senseVars.length)
@@ -221,10 +233,12 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     } else {
       varMode match {
         case ExtCtrlMode =>
-          println(s"read old extctrl $x: ${extCtrlBuf(toVar(x))}")
+          if(DEBUG_PRINT)
+            println(s"read old extctrl $x: ${extCtrlBuf(toVar(x))}")
           extCtrlBuf(toVar(x))
         case SenseMode =>
-          println(s"read old sense $x: ${senseBuf(toVar(x))}")
+          if(DEBUG_PRINT)
+            println(s"read old sense $x: ${senseBuf(toVar(x))}")
           senseBuf(toVar(x))
         case InitMode | _ => ???
       }
@@ -239,6 +253,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     }
   }
 
+  val waaInP: Pointer = new Memory(ctrlVars.length*4)
   override def writeAngelAssign(id: NodeID, baseVar: String, varIndex: Option[NodeID], value: number): Unit = {
     if(PRINT_EVENTS)
       println(s"writeAngelAssign: $baseVar, $varIndex, $value")
@@ -252,7 +267,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     val timed = baseVar == "t" && varIndex.contains(2) && value.intApprox == 0
     // actuate and reset buffer if all variables have been assigned
     if (timed) {
-      val inP: Pointer = new Memory(ctrlVars.length*4)
+      val inP: Pointer = waaInP
       val outP: Pointer = Pointer.NULL;//new Memory(0)
       for ((x,i) <- ctrlVars.zipWithIndex) {
         val theInt = toInt(ctrlBuf(x))
@@ -279,7 +294,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
       return
     val str = stringArg.get
     val strP: Pointer = new Memory(str.length + 1)
-    val intP: Pointer = new Memory(intArgs.length * 4)
+    val intP: Memory = new Memory(intArgs.length * 4)
     for((c,i) <- str.toCharArray.zipWithIndex) {
       strP.setByte(i,c.toByte)
     }
@@ -287,9 +302,6 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     for((n,i) <- intArgs.zipWithIndex) {
       intP.setInt(4*i, n)
     }
-    if(PRINT_EVENTS)
-      println(s"init:$str, $intArgs")
-    ffis.ffiinit(strP, str.length, intP, intArgs.length * 4)
     if (logWriter != null) {
       logWriter.flush()
       logWriter.close()
@@ -298,6 +310,9 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     logWriter = new BufferedWriter(new FileWriter(file))
     if(PRINT_EVENTS)
       println(s"initDone")
+    if(PRINT_EVENTS)
+      println(s"init:$str, $intArgs")
+    ffis.ffiinit(strP, str.length, intP, intArgs.length * 4)
     isInit = true
   }
 
@@ -341,7 +356,8 @@ object BotCommon {
       |""".stripMargin
 
   // Generated from model but then modified by hand.
-  val sandboxPLDIStratString: String = "SCompose(" +
+  val sandboxPLDIStratString: String = "SCompose(SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0),SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0)),SLoop(SCompose(SChoice(SCompose(STest(d_1>=eps_0*V_0),SAssignAny(v_2),STest(0<=v_2&v_2<=V_0)),SAssign(v_2,0)),SAssign(t_2,0),SCompose(SAssign(t_3,t_2),SAssign(d_2,d_1)),SCompose(STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3),STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1)),SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+  /*"SCompose(" +
     "SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0)," +
     "SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0))," +
     "SLoop(SCompose(" +
@@ -350,7 +366,7 @@ object BotCommon {
       "SCompose(STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3))," +
       "SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3)," +
       "STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1))," +
-     "SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+     "SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"*/
 
   val noSandbox1DBotModel: String =
     """
@@ -370,8 +386,18 @@ object BotCommon {
 
   // arguments for each test
   case class SimSpec(name: String, speedFactor: Int, obstacleSpeed: Int, actuatorOffset: Int, duration: Int, initialDistance: Int, reactionTime: Int)
+
+  case class BotSpec(name: String, speedFactor: Int, extraMessage: String)
+
+  val botArgs: List[BotSpec] = List(
+    BotSpec("correct", 1, ""),
+    BotSpec("ctrlbug", -1, ""),
+    BotSpec("backwards", 1, "Move obstacle towards robot while it drives"),
+    BotSpec("forwardObstCompensatesUnsafeActoffset", 1, "Move obstacle away from robot while it drives")
+  )
+
   // just test one speed for debugging purposes
-  val testSpeeds: List[Int] = List(100/*, 150, 200, 250*/)
+  val testSpeeds: List[Int] = List(100, 150, 200, 250)
 
   // based on tables / scripts
   val altSimArgs: List[SimSpec] = List(
@@ -395,14 +421,45 @@ object BotCommon {
   )
 
   // De one simulation and save the results to CSV
-  def doOneSim(lib: VeriPhyFFIs, astrat: AngelStrategy, path: String, spec: SimSpec, speed: Int): Unit = {
+  def doOneBotSim(lib: VeriPhyFFIs, astrat: AngelStrategy, path: String, spec: SimSpec, speed: Int): Unit = {
     val filePath = path + File.separator + spec.name + speed + ".csv"
     val intArgs = List(spec.speedFactor*speed, spec.obstacleSpeed, spec.actuatorOffset, spec.duration, spec.initialDistance, spec.reactionTime)
     val factory = UnknowingFactory(RatFactory)
     val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val basic = new GoPiGoBasicStrategy(lib, env, filePath, intArgs)
     val demon = new WrappedDemonStrategy(basic)(env)
-    println("Time to interpret: " + spec.name + "," + speed)
+    if(false)
+      println("Time to interpret: " + spec.name + "," + speed)
+    val interp = new Play(factory)
+    try {
+      interp(env, astrat, demon)
+    } catch {
+      // Can swallow exception because reportViolation already did the reporting
+      case tfe: TestFailureException => ()
+    }
+    demon.exit()
+    println("Final state: " + env.state)
+  }
+
+  // De one simulation and save the results to CSV
+  def doOneGoPiGo(/*setupCmd: String, */lib: VeriPhyFFIs, astrat: AngelStrategy, path: String, spec: BotSpec, speed: Int): Unit = {
+    val DURATION = 10
+    val EXIT_ON_VIOLATION = 0
+    val filePath = path + File.separator + spec.name + speed + ".csv"
+    val intArgs = List(spec.speedFactor*speed, DURATION, EXIT_ON_VIOLATION)
+    println(s"Experiment: ${spec.name} with speed $speed")
+    println("Please place the robot at distance ~0.75m from the obstacle, then press Enter to continue")
+    val _ = scala.io.StdIn.readLine()
+    //println("Robot is automatically adjusting start position")
+
+    // Execute shell command to run setup command for robot
+    //{ import sys.process._
+    //  setupCmd.! }
+    println("Starting experiment")
+    val factory = UnknowingFactory(RatFactory)
+    val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
+    val basic = new GoPiGoBasicStrategy(lib, env, filePath, intArgs)
+    val demon = new WrappedDemonStrategy(basic)(env)
     val interp = new Play(factory)
     try {
       interp(env, astrat, demon)

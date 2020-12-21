@@ -11,8 +11,8 @@ import ScalaWhitespace._
 
 object StrategyParser {
   def stest[_: P]: P[STest] = (P("STest(") ~ DLParser.formula ~ P(")")).map(STest)
-  def sassign[_: P]: P[SAssign] = (P("SAssign(") ~ DLParser.baseVariable ~ "," ~ DLParser.term ~ ")").map({case (x,y) => SAssign((x), y)})
-  def sassignAny[_: P]: P[SAssignAny] = (P("SAssignAny(") ~ DLParser.baseVariable ~ ")").map(x => SAssignAny((x)))
+  def sassign[_: P]: P[SAssign] = (P("SAssign(") ~ DLParser.variable ~ "," ~ DLParser.term ~ ")").map({case (x,y) => SAssign((x), y)})
+  def sassignAny[_: P]: P[SAssignAny] = (P("SAssignAny(") ~ DLParser.variable ~ ")").map(x => SAssignAny((x)))
   def scompose[_: P]: P[SCompose] = (P("SCompose(") ~ (angelStrategy.rep(min = 1, sep = ",")) ~ ")").map(x => SCompose(x.toList))
   def schoice[_: P]: P[SChoice] = (P("SChoice(") ~ angelStrategy ~ "," ~ angelStrategy ~ ")").map({case (l,r) => SChoice(l,r)})
   def sloop[_: P]: P[SLoop] = (P("SLoop(" ~ angelStrategy ~ ")")).map(SLoop)
