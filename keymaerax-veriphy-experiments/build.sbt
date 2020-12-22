@@ -1,10 +1,9 @@
-import java.io.{BufferedReader, FileReader}
+import java.io.{BufferedReader, FileInputStream, FileReader}
+import java.util.Properties
 
 name := "KeYmaeraX-VeriPhy-Experiments"
 
 version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
-
-//scalacOptions ++= Seq("-Xno-patmat-analysis")
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
 
@@ -14,108 +13,140 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 libraryDependencies += "net.java.dev.jna" % "jna" % "5.6.0"
 
-libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
-
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
-
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-
-libraryDependencies += "org.scalamock" %% "scalamock" % "4.4.0" % "test"
-
-libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % "test"      // (For Html Scalatest reports)
-
 libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0" // automatic resource management
 
-/// sqlite driver
+libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
 
-libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
 
-libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
+libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
-libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2"
+libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
 
-////////////////////////////////////////////////////////////////////////////////
-// HyDRA Settings
-// Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
-////////////////////////////////////////////////////////////////////////////////
+libraryDependencies += "org.typelevel" %% "spire" % "0.16.2"
+
 
 resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/" // contains json-schema-validtor.
 
-scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
+scalacOptions := Seq( "-encoding", "utf8") // "-unchecked", "-deprecation",
 
 javaOptions += "-Xss20M"
 
-//region Akka
 
-val akkaV = "2.5.23"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-http"   % "10.1.8"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.1.8"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % akkaV
-
-libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.8"
-
-libraryDependencies += "com.typesafe.akka"   %% "akka-slf4j"     % akkaV
-
-resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
-//endregion
-
-////////////////////////////////////////////////////////////////////////////////
-// Continuous testing/running settings (i.e., defining behavior of the ~
-// command
-////////////////////////////////////////////////////////////////////////////////
-/*
-watchSources ++= {{ baseDirectory map {
-  path => ((path / "src/main/resources/partials/") ** "*.html").get
-}}.value }
-
-watchSources ++= {{ baseDirectory map {
-  path => ((path / "src/main/resources/js") ** "*.js").get
-}}.value }
-
-watchSources ++= {{baseDirectory map {
-  path => ((path / "src/main/resources") ** "*.html").get
-}}.value }
-*/
-
-////////////////////////////////////////////////////////////////////////////////
-// Unit testing
-////////////////////////////////////////////////////////////////////////////////
-
-//parallelExecution in Test := false
-
-
-// set fork to true in order to run tests in their own Java process.
-// not forking avoids broken pipe exceptions in test reporter, but forking might become necessary in certain
-// multithreaded setups (see ScalaTest documentation)
-/*
-fork in Test := false
-
-// set HTML test report output directory
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
-
-// record and report test durations
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
-
-// report long-running tests (report every hour for tests that run longer than 1hr)
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-W", "3600", "3600")
-
-testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
-*/
 logBuffered := false
 
 ////////////////////////////////////////////////////////////////////////////////
 // Builds -- make sure you are using SBT 13.6+
 ////////////////////////////////////////////////////////////////////////////////
 
+scalaJSUseMainModuleInitializer := false
+
+libraryDependencies += "biz.enef" %%% "slogging" % "0.6.+"
+
+
+lazy val keymaeraxExperimentsAssemblySettings = AssemblyPlugin.assemblySettings ++
+  Seq(test in assembly := {},
+      mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotMain"),
+      assemblyJarName in assembly := "veriphy-experiment.jar",
+      assemblyMergeStrategy in assembly := {
+          case PathList("examples", xs @ _*) => MergeStrategy.last
+          case x                             => (assemblyMergeStrategy in assembly).value(x)
+      })
+// select core sources to include
+lazy val root = (project in file("."))
+    .settings(scalacOptions := Seq( "-encoding", "utf8"))
+    .settings((keymaeraxExperimentsAssemblySettings): _*)  /*inConfig(Test)*/
+  .settings(
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Configuration.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Logging.scala",
+    unmanagedSources in Compile ++=
+      coreSources(baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "core"),
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Position.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "FormulaTools.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "ExpressionTraversal.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Augmentors.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "Context.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "SubstitutionHelper.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "DependencyAnalysis.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "StaticSemanticsTools.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Location.scala",
+    //unmanagedSources in Compile +=
+      //baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "StringConverter.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "OpSpec.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "ParserErrors.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "PrettyPrinter.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Stack.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "Parser.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXPrettyPrinter.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXLexer.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXParser.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXStoredProvableParser.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXAxiomParser.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "DLParser.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "SubstitutionParser.scala",
+
+    /*unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "UnificationMatch.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "UnificationMatchImpl.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "MultiRename.scala",
+    unmanagedSources in Compile +=
+      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "infrastruct" / "RenUSubst.scala",*/
+    // for archive and tactic parsing
+    //    unmanagedSources in Compile +=
+    //      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "parser" / "TacticParser.scala",
+    //    unmanagedSources in Compile +=
+    //      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "bellerophon" / "parser" / "DLBelleParser.scala",
+    //unmanagedSources in Compile +=
+    //  baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "ArchiveParser.scala",
+    //    unmanagedSources in Compile +=
+    //      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "DLArchiveParser.scala",
+//    unmanagedSources in Compile +=
+//      baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXArchivePrinter.scala",
+//    unmanagedSources in Compile +=
+//
+//        baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXArchiveParserBase.scala"
+
+  )
+
+
+scalacOptions in Compile ++= Seq(
+  "-optimise",
+  "-Xelide-below", "10000",
+  "-Xdisable-assertions")
+
+
+def coreSources(dir: File): Vector[File] = {
+  (dir * "*.scala").get.toVector ++ (dir * "*.java").get.toVector
+}
+
 // command line UI
 mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotMain")
 
 // do not run tests when building assembly
-test in assembly := {}
+test in assembly :=  {}
+

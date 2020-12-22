@@ -3,19 +3,19 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 import java.io.File
 
 import com.sun.jna.Native
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.btactics._
+//import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+//import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+//import edu.cmu.cs.ls.keymaerax.btactics._
 
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotCommon._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
-import edu.cmu.cs.ls.keymaerax.cdgl._
+//import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+//import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
+//import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import BotCommon._
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
+//import edu.cmu.cs.ls.keymaerax.cdgl._
 
 object MainWithProofs {
-
+/*
   private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
 
   class Lazy[T](f: => T) {
@@ -28,6 +28,7 @@ object MainWithProofs {
     def asOption: Option[T] = option
   }
 
+
   /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
   class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
     override def init(): Boolean = p.init()
@@ -39,7 +40,7 @@ object MainWithProofs {
     Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
-  private val mathematicaProvider: Lazy[DelayedShutdownToolProvider] = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
+  private val mathematicaProvider: Lazy[DelayedShutdownToolProvider] = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(Map()/*ToolConfiguration.config(WOLFRAM.toLowerCase)*/)))
 
   private def initQE(): Unit = {
     Configuration.setConfiguration(FileConfiguration)
@@ -55,13 +56,13 @@ object MainWithProofs {
         case Some(m: Mathematica) => m
         case _ => throw new Exception("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      KeYmaeraXTool.init(Map(
-        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
-      ))
+      //KeYmaeraXTool.init(Map(
+//        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+//      ))
     }
   }
 
-  val check: String => Statement = edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Kaisar.statementProved
+  val check: String => Statement = Kaisar.statementProved
 
   // Args:  dll_name [dll_path]
   // dll_path is used for both dll loading and for printing CSV files
@@ -99,4 +100,6 @@ object MainWithProofs {
       }
     }
   }
+
+ */
 }

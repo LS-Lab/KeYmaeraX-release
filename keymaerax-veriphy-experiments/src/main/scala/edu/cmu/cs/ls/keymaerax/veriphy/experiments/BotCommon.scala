@@ -4,9 +4,9 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import com.sun.jna.{Library, Memory, Native, Pointer}
 import com.sun.jna.win32.StdCallLibrary
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{AngelStrategy, BasicDemonStrategy, Environment, KnownTrue, Numeric, Play, RatFactory, RatNum, Ternary, TernaryNumber, TestFailureException, UnknowingFactory, WrappedDemonStrategy}
-import edu.cmu.cs.ls.keymaerax.core.{DifferentialProduct, DifferentialSymbol, Variable}
+import KaisarProof.Ident
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{AngelStrategy, BasicDemonStrategy, Environment, KnownTrue, Numeric, Play, RatFactory, RatNum, Ternary, TernaryNumber, TestFailureException, UnknowingFactory, WrappedDemonStrategy}
+import edu.cmu.cs.ls.keymaerax.core._
 import spire.math.Rational
 
 import scala.collection.immutable.Map

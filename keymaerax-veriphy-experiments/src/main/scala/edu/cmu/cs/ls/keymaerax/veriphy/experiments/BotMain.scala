@@ -4,7 +4,6 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 
 import java.io.File
 import com.sun.jna._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
 
 import BotCommon._
 
@@ -34,7 +33,7 @@ object BotMain {
     println("AngelStrat1:\n" + StrategyPrinter(angel))
     for(speed <- testSpeeds) {
       for (simArg <- simArgs) {
-        doOneSim(lib, angel, fullPath, simArg, speed)
+        doOneBotSim(lib, angel, fullPath, simArg, speed)
       }
     }
   }
