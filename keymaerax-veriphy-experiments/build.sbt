@@ -13,13 +13,15 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 libraryDependencies += "net.java.dev.jna" % "jna" % "5.6.0"
 
-libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0" // automatic resource management
+libraryDependencies += "biz.enef" %%% "slogging" % "0.6.+"
 
-libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
+//libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0" // automatic resource management
 
-libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
+//libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3"
 
-libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
+//libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.5"
+
+//libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
 libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
 
@@ -41,7 +43,6 @@ logBuffered := false
 
 scalaJSUseMainModuleInitializer := false
 
-libraryDependencies += "biz.enef" %%% "slogging" % "0.6.+"
 
 
 lazy val keymaeraxExperimentsAssemblySettings = AssemblyPlugin.assemblySettings ++
