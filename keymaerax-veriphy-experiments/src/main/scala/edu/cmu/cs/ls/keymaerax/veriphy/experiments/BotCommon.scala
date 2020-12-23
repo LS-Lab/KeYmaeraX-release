@@ -420,6 +420,23 @@ object BotCommon {
 
   val noSandbox1DStratString: String = "SCompose(SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0),SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0)),SLoop(SCompose(SChoice(SCompose(STest(d_1>=eps_0*V_0),SCompose(SAssignAny(v_2),STest(0<=v_2&v_2<=V_0))),SAssign(v_2,0)),SAssign(t_2,0),SCompose(SAssign(t_3,t_2),SAssign(d_2,d_1)),SCompose(STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3),STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1)),SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
 
+  val angelSandbox1DBotModel: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | {
+      |  vCand :=*;
+      |  switch {
+      |    case (d>=eps*V & 0 <=v * v <= V) => v:=vCand;
+      |    case (true) => v:=0;
+      |  }
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps); & !(d >= v*(eps-t));};}
+      |  !brk:(inv());
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
   val noStar1DBotModel: String =
     """
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);

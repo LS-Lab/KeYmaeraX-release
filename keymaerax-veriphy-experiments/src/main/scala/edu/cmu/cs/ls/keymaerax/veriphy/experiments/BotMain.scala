@@ -30,14 +30,14 @@ object BotMain {
     println("Loaded DLL for FFI!")
     //println("native size: " + Native.LONG_SIZE)
     //val angel = StrategyParser(sandboxPLDIStratString)
-    val angel = StrategyParser(noSandbox1DBotModel)
+    val angel = StrategyParser(noStar1DStratString)
     println("No Sandbox")
     println("Read Angel Strategy:\n" + StrategyPrinter(angel))
     println("Warm-starting FFI Library")
     lib.warmStart()
     println("Warm-started FFI Library")
     for (simArg <- botArgs) {
-      for(speed <- testSpeeds) {
+      for(speed <- List(200, 250)/*testSpeeds*/) {
         doOneGoPiGo(lib, angel, fullPath, simArg, speed)
       }
     }
