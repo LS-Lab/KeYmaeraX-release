@@ -10,8 +10,8 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
  */
 
 import KaisarProof._
-//import edu.cmu.cs.ls.keymaerax.btactics.Integrator
-//import edu.cmu.cs.ls.keymaerax.cdgl.Metric
+import edu.cmu.cs.ls.keymaerax.btactics.Integrator
+import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
@@ -512,7 +512,6 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     else {
       val ode = asODESystem
       try {
-        /*
         val result = Integrator(xys.toMap, timeVar.get, ode)
         val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
         val resultMap = resultAlist.toMap
@@ -524,9 +523,7 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
           case Some((x, f)) => (x -> f)
           case None => (theTimeVar -> theTimeVar)
         }
-        Some((timeX, timeF) :: resultAlist)*/
-        //@TODO:
-        ???
+        Some((timeX, timeF) :: resultAlist)
       } catch {
         // Integrator raises Exception if it can't solve. Unfortunately, it does not raise any more specific type.
         case _: Exception => None

@@ -28,12 +28,17 @@ object BotMain {
     val load = FFILoader(libName)
     val lib: VeriPhyFFIs = load.Instance
     println("Loaded DLL for FFI!")
-    println("native size: " + Native.LONG_SIZE)
-    val angel = StrategyParser(sandboxPLDIStratString)
-    println("AngelStrat1:\n" + StrategyPrinter(angel))
-    for(speed <- testSpeeds) {
-      for (simArg <- simArgs) {
-        doOneBotSim(lib, angel, fullPath, simArg, speed)
+    //println("native size: " + Native.LONG_SIZE)
+    //val angel = StrategyParser(sandboxPLDIStratString)
+    val angel = StrategyParser(noSandbox1DBotModel)
+    println("No Sandbox")
+    println("Read Angel Strategy:\n" + StrategyPrinter(angel))
+    println("Warm-starting FFI Library")
+    lib.warmStart()
+    println("Warm-started FFI Library")
+    for (simArg <- botArgs) {
+      for(speed <- testSpeeds) {
+        doOneGoPiGo(lib, angel, fullPath, simArg, speed)
       }
     }
   }

@@ -107,6 +107,8 @@ object Play {
   type state[T] = Map[Ident, T]
   /** For printing,  etc. */
   val ROUNDING_SCALE = 5
+
+  var continueOnViolation: Boolean = false
 }
 
 /** Interpreter for strategies */
@@ -130,7 +132,8 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
           if (env.holds(f) != KnownTrue()) {
             println(s"""Test \"${f.prettyString}\" failed in state ${env.state}""")
             ds.reportViolation()
-            throw TestFailureException(as.nodeID)
+            if (Play.continueOnViolation)
+              throw TestFailureException(as.nodeID)
           }
         } catch {
           case v: NoValueException => throw NoValueException(as.nodeID)

@@ -7,7 +7,7 @@ import com.sun.jna.win32.StdCallLibrary
 import KaisarProof.Ident
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.{AngelStrategy, BasicDemonStrategy, Environment, KnownTrue, Numeric, Play, RatFactory, RatNum, Ternary, TernaryNumber, TestFailureException, UnknowingFactory, WrappedDemonStrategy}
 import edu.cmu.cs.ls.keymaerax.core._
-import spire.math.Rational
+//import spire.math.Rational
 
 import scala.collection.immutable.Map
 
@@ -28,6 +28,40 @@ trait VeriPhySenselessFFIs extends Library {
 // separate this out because GoPiGo will want to do special Python handling rather than C
 trait VeriPhyFFIs extends VeriPhySenselessFFIs with Library {
   def ffiget_sensor(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit
+
+  // Call all functions once to get any JIT compilation overhead out of the way, page into memory, etc
+  // this is specialized to GoPiGo, who knows if it might crash other code
+  // make sure to init again after this because it will have bogus info
+  def warmStart(): Unit = {
+    val initintArgs = List(1, 1, 1)
+    val initstr = "foo"
+    val initstrP: Pointer = new Memory(initstr.length + 1)
+    val initintP: Memory = new Memory(initintArgs.length * 4)
+    ffiinit(initstrP, initstr.length+1, initintP, initintArgs.length*4)
+    val gisOutPC: Pointer = new Memory(2*4)
+    val gisOutPS: Pointer = new Memory(2*4)
+    ffiget_const(Pointer.NULL, 0, gisOutPC, 2*4)
+    ffiget_sensor(Pointer.NULL, clen = 0, gisOutPS, 2*4)
+    val rdainPEC: Pointer = new Memory(4*4)
+    val rdaoutPEC: Pointer = new Memory(4*2)
+    rdainPEC.setInt(0, 250)
+    rdainPEC.setInt(4, 1000)
+    rdainPEC.setInt(8, 70000)
+    rdainPEC.setInt(12, 0)
+    ffiget_ctrl(rdainPEC, 4*4, rdaoutPEC, 4*2)
+    ffifallback(Pointer.NULL, 0, Pointer.NULL, 0)
+    ffiviolation(Pointer.NULL, 0, Pointer.NULL, 0)
+    val actinP = new Memory(2*4)
+    actinP.setInt(0, 0)
+    actinP.setInt(4, 0)
+    ffiactuate(actinP, 2*4, Pointer.NULL, 0)
+    val rdlOutP: Pointer = new Memory(Native.WCHAR_SIZE)
+    ffihas_next(Pointer.NULL, 0, rdlOutP, 1)
+    val rlStrP: Pointer = new Memory(2000)
+    val rlOutP: Pointer = new Memory(8)
+    ffiread_log(rlStrP, 2000, rlOutP, 8)
+    ffiexit()
+  }
 }
 
 // Load DLL
@@ -82,7 +116,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     ffis.ffiget_const(inPC, 0, outPC, constVars.length*4)
     for ((x, i) <- constVars.zipWithIndex) {
       val n = outPC.getInt(i*4)
-      vmap = vmap.+(x -> env.factory.number(Rational(n)))
+      vmap = vmap.+(x -> env.factory.number(Rational(n, 1)))
     }
     if (PRINT_EVENTS)
       println("ffiget_const: returned " + vmap)
@@ -94,7 +128,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     ffis.ffiget_sensor(inPS, 0, outPS, senseVars.length*4)
     for ((x, i) <- senseVars.zipWithIndex) {
       val z: Int = outPS.getInt(i*4)
-      val n = env.factory.number(Rational(z))
+      val n = env.factory.number(Rational(z, 1))
       senseBuf = senseBuf.+(x -> n)
       vmap = vmap.+(x -> n)
     }
@@ -135,7 +169,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
       logWriter.write(theString)
       logWriter.flush()
       val after = System.currentTimeMillis()
-      println("LOG PRINT TIME (ms): " + (after-before))
+      //println("LOG PRINT TIME (ms): " + (after-before))
       if (DEBUG_PRINT)
         println("PRINTED STRING left:" + sizeP.getInt(0) + ", amount:" + sizeP.getInt(4) + "\n" + theString)
     }
@@ -159,7 +193,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
     val lhs = env.get(Variable("d"))
     val rhs = env.get(Variable("eps")) * env.get(Variable("V"))
     val theV = readDemonAssign(id, "v", None)
-    val rc = (theV.eq(env.factory.number(0)))
+    val rc = (theV.eq(env.factory.number(Rational(0,1))))
     val lc = lhs >= rhs
     val cmp = lc == KnownTrue()
     if(DEBUG_PRINT)
@@ -205,7 +239,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
           ffis.ffiget_ctrl(inPEC, 4*inVars.length, outPEC,4*ctrlVars.length)
           for ((x,i) <- ctrlVars.zipWithIndex) {
             val n = outPEC.getInt(4*i)
-            extCtrlBuf = extCtrlBuf.+(x -> env.factory.number(n))
+            extCtrlBuf = extCtrlBuf.+(x -> env.factory.number(Rational(n,1)))
             if(ctrlVars.contains(x)) {
               ctrlBuf = ctrlBuf.+(x -> extCtrlBuf(x))
             }
@@ -224,7 +258,7 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
           ffis.ffiget_sensor(inPC, 0, outPC, 4*senseVars.length)
           for ((x,i) <- senseVars.zipWithIndex) {
             val n = outPC.getInt(i*4)
-            senseBuf = senseBuf.+(x -> env.factory.number(n))
+            senseBuf = senseBuf.+(x -> env.factory.number(Rational(n,1)))
           }
           if(PRINT_EVENTS)
             println("ffiget_sensor: returned " + senseBuf + ", " + toVar(x) + ", " + senseBuf(toVar(x)))
@@ -384,6 +418,26 @@ object BotCommon {
       | !(d >= 0);
       |""".stripMargin
 
+  val noSandbox1DStratString: String = "SCompose(SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0),SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0)),SLoop(SCompose(SChoice(SCompose(STest(d_1>=eps_0*V_0),SCompose(SAssignAny(v_2),STest(0<=v_2&v_2<=V_0))),SAssign(v_2,0)),SAssign(t_2,0),SCompose(SAssign(t_3,t_2),SAssign(d_2,d_1)),SCompose(STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3),STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1)),SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+
+  val noStar1DBotModel: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | {
+      |  switch {
+      |    case (d>=eps*V) => v:=V; ?(0<=v&v<=V);
+      |    case (true) => v:=0;
+      |  }
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps); & !(d >= v*(eps-t));};}
+      |  !brk:(inv());
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
+  val noStar1DStratString: String = "SCompose(SAssignAny(eps_0),SAssignAny(v_0),SAssignAny(d_0),SAssignAny(V_0),SAssignAny(t_0),SCompose(STest(d_0>=0&V_0>=0&eps_0>=0&v_0=0&t_0=0),SCompose(SAssign(t_1,t_0),SAssign(v_1,v_0),SAssign(d_1,d_0)),SLoop(SCompose(SChoice(SCompose(STest(d_1>=eps_0*V_0),SCompose(SAssign(v_2,V_0),STest(0<=v_2&v_2<=V_0))),SAssign(v_2,0)),SAssign(t_2,0),SCompose(SAssign(t_3,t_2),SAssign(d_2,d_1)),SCompose(STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny(t_3),SAssignAny(d_2),SAssignAny(t_3),STest(t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign(d_2',-v_2),SAssign(t_3',1)),SCompose(SAssign(t_1,t_3),SAssign(v_1,v_2),SAssign(d_1,d_2))))))"
+
   // arguments for each test
   case class SimSpec(name: String, speedFactor: Int, obstacleSpeed: Int, actuatorOffset: Int, duration: Int, initialDistance: Int, reactionTime: Int)
 
@@ -392,9 +446,17 @@ object BotCommon {
   val botArgs: List[BotSpec] = List(
     BotSpec("correct", 1, ""),
     BotSpec("ctrlbug", -1, ""),
-    BotSpec("backwards", 1, "Move obstacle towards robot while it drives"),
-    BotSpec("forwardObstCompensatesUnsafeActoffset", 1, "Move obstacle away from robot while it drives")
+    BotSpec("backwards", 1, "Move obstacle towards robot while it drives\n"),
+    BotSpec("forwardObstCompensatesUnsafeActoffset", 1, "Move obstacle away from robot while it drives\n")
   )
+
+
+  //val whiteboxBotArgs: List[BotSpec] = List(
+    //BotSpec("correct", 1, ""),
+    //BotSpec("ctrlbug", -1, ""),
+//    BotSpec("backwards", 1, "Move obstacle towards robot while it drives\n"),
+//    BotSpec("forwardObstCompensatesUnsafeActoffset", 1, "Move obstacle away from robot while it drives\n")
+//  )
 
   // just test one speed for debugging purposes
   val testSpeeds: List[Int] = List(100, 150, 200, 250)
@@ -428,7 +490,7 @@ object BotCommon {
     val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val basic = new GoPiGoBasicStrategy(lib, env, filePath, intArgs)
     val demon = new WrappedDemonStrategy(basic)(env)
-    if(false)
+    if(true)
       println("Time to interpret: " + spec.name + "," + speed)
     val interp = new Play(factory)
     try {
@@ -449,8 +511,9 @@ object BotCommon {
     val intArgs = List(spec.speedFactor*speed, DURATION, EXIT_ON_VIOLATION)
     println(s"Experiment: ${spec.name} with speed $speed")
     println("Please place the robot at distance ~0.75m from the obstacle, then press Enter to continue")
+    println(spec.extraMessage)
     val _ = scala.io.StdIn.readLine()
-    //println("Robot is automatically adjusting start position")
+    println("Robot is automatically adjusting start position")
 
     // Execute shell command to run setup command for robot
     //{ import sys.process._
@@ -461,6 +524,7 @@ object BotCommon {
     val basic = new GoPiGoBasicStrategy(lib, env, filePath, intArgs)
     val demon = new WrappedDemonStrategy(basic)(env)
     val interp = new Play(factory)
+    Play.continueOnViolation = true
     try {
       interp(env, astrat, demon)
     } catch {

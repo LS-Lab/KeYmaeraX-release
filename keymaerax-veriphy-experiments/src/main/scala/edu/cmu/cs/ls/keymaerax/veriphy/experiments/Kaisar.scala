@@ -17,7 +17,7 @@ object Kaisar {
   val MAX_CHAR = 80 - "...".length
 
   // Translate and check a statement
-  def result(kc: KaisarContext, in: Statement): (Statement, Formula) = { ??? /*
+  def result(kc: KaisarContext, in: Statement): (Statement, Formula) = {
     // Apply all proof transformation and checking passes, and recover error messages if necessary
     var currentPass = "elaboration"
     try {
@@ -46,7 +46,7 @@ object Kaisar {
           println(s"Error in pass $currentPass$stmtMessage at unknown location$stmtMessage: \n" + le.msg)
         }
         throw le
-    }*/
+    }
   }
 
   /** Parse and check single proof string [[pf]]

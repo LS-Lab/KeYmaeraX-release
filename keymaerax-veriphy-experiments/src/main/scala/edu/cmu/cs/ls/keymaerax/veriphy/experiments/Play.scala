@@ -14,7 +14,7 @@ import java.math.RoundingMode
 import KaisarProof.Ident
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{, number, state}
 //import edu.cmu.cs.ls.keymaerax.core
-import spire.math.{Rational, Number => n}
+//import spire.math.{Rational, Number => n}
 import edu.cmu.cs.ls.keymaerax.core._
 
 /** Indicates that expression was not in the executable fragment */
@@ -68,7 +68,7 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
   /** Evaluate computable term at current state */
   def eval(f: Term): number = {
     f match {
-      case n: Number => factory.number(n.value)
+      case n: Number => factory.number(Rational(n.value))
       case Plus(l, r) => eval(l) + eval(r)
       case Minus(l, r) => eval(l) - eval(r)
       case Times(l, r) => eval(l) * eval(r)
@@ -108,6 +108,7 @@ object Play {
   type state[T] = Map[Ident, T]
   /** For printing,  etc. */
   val ROUNDING_SCALE = 5
+  var continueOnViolation: Boolean = false
 }
 
 /** Interpreter for strategies */
@@ -131,7 +132,8 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
           if (env.holds(f) != KnownTrue()) {
             println(s"""Test \"${f.prettyString}\" failed in state ${env.state}""")
             ds.reportViolation()
-            throw TestFailureException(as.nodeID)
+            if(!Play.continueOnViolation)
+              throw TestFailureException(as.nodeID)
           }
         } catch {
           case v: NoValueException => throw NoValueException(as.nodeID)

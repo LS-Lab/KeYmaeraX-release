@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
  * @author Brandon Bohrer
  */
 
-import spire.math.{Algebraic, Rational}
+//import spire.math.{Algebraic, Rational}
 
 import java.math.RoundingMode
 
@@ -109,9 +109,10 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
     if (denom == 1) RatNum(n.pow(num))
     else if (denom == 0) throw NoValueException()
     else {
-      val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
-      val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
-      val frac = if(pos) alg else Algebraic(1) / alg
+      //val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
+      val x = n.ratPow(num, denom)
+      //val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
+      val frac = x //if(pos) x else 1 / x
       RatNum(Rational(frac.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)))
     }
   }
@@ -142,20 +143,20 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def /(rhs: RatIntNum): RatIntNum = {
     // Division by zero
     val (lo, hi) =
-      if(rhs.l <= 0 && 0 <= rhs.u)
+      if(rhs.l <= Rational(0,1) && Rational(0,1) <= rhs.u)
         throw NoValueException()
-      else if (0 <= rhs.l) { // top half
-        if (l <= 0 && 0 <= u) { // top-center
-          (Rational(0).min(l / rhs.l), Rational(0).max(u / rhs.l))
-        } else if (u < 0) { // top-left
+      else if (Rational(0,1) <= rhs.l) { // top half
+        if (l <= Rational(0,1) && Rational(0,1) <= u) { // top-center
+          ((Rational(0,1)).min(l / rhs.l), (Rational(0,1)).max(u / rhs.l))
+        } else if (u < Rational(0,1)) { // top-left
           (l / rhs.l, u / rhs.u)
         } else { // top-right
           (l / rhs.u, u / rhs.l)
         }
       } else { // bottom half
-        if (l <= 0 && 0 <= u) { // bottom-center
-          ((u / rhs.u).min(0), (l / rhs.u).max(0))
-        } else if (u < 0) { // bottom-left
+        if (l <= Rational(0,1) && Rational(0,1) <= u) { // bottom-center
+          ((u / rhs.u).min(Rational(0,1)), (l / rhs.u).max(Rational(0,1)))
+        } else if (u < Rational(0,1)) { // bottom-left
           (u / rhs.l, l / rhs.u)
         } else { // bottom-right
           (u / rhs.u, l / rhs.l)
@@ -165,7 +166,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   }
 
   def natPow(k: Int): RatIntNum = {
-    if (k == 0) RatIntNum(1, 1)
+    if (k == 0) RatIntNum(Rational(1), Rational(1))
     else {
       val (pos, abs) = if (k > 0) (true, k) else (false, -k)
       def mults(i: Int): RatIntNum = if(i == 1) this else this * mults(i - 1)
@@ -180,9 +181,9 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     else if (denom == 0) throw NoValueException()
     else {
       val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
-      val algL = l.toAlgebraic.nroot(denom).pow(numAbs)
-      val algU = u.toAlgebraic.nroot(denom).pow(numAbs)
-      val (fracL, fracU) = if(pos) (algL, algU) else (Algebraic(1) / algL, Algebraic(1) / algU)
+      val algL = l.ratPow(numAbs, denom)
+      val algU = u.ratPow(numAbs,denom)
+      val (fracL, fracU) = if(pos) (algL, algU) else (Rational(1) / algL, Rational(1) / algU)
       val (lo, hi) = if (fracL <= fracU) (fracL, fracU) else (fracU, fracL)
       RatIntNum(Rational(lo.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)), Rational(hi.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.UP)))
     }
@@ -192,7 +193,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def abs: RatIntNum = {
     val aL = l.abs
     val aU = u.abs
-    val lo = if(l <= 0 && u >= 0) Rational(0) else aL.min(aU)
+    val lo = if(l <= Rational(0,1) && u >= Rational(0,1)) Rational(0, 1) else aL.min(aU)
     val hi = aL.max(aU)
     RatIntNum(lo, hi)
   }
