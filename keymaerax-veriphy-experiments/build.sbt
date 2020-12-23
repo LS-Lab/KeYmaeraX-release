@@ -54,9 +54,10 @@ lazy val keymaeraxExperimentsAssemblySettings = AssemblyPlugin.assemblySettings 
           case x                             => (assemblyMergeStrategy in assembly).value(x)
       })
 // select core sources to include
-lazy val root = (project in file("."))
-    .settings(scalacOptions := Seq( "-encoding", "utf8"))
-    .settings((keymaeraxExperimentsAssemblySettings): _*)  /*inConfig(Test)*/
+//lazy val root = (project in file("."))
+//    .settings(scalacOptions := Seq( "-encoding", "utf8"))
+//    .settings((keymaeraxExperimentsAssemblySettings): _*)  /*inConfig(Test)*/
+  /*
   .settings(
     unmanagedSources in Compile +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Configuration.scala",
@@ -132,7 +133,7 @@ lazy val root = (project in file("."))
 //
 //        baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "parser" / "KeYmaeraXArchiveParserBase.scala"
 
-  )
+  )*/
 
 
 scalacOptions in Compile ++= Seq(

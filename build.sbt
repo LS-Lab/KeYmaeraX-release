@@ -8,25 +8,25 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 
 lazy val macros = (project in file("keymaerax-macros"))
 
-lazy val keymaeraxCoreAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
+/*lazy val keymaeraxCoreAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
   test in assembly := {},
   mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX"),
   assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar",
   assemblyMergeStrategy in assembly := {
     case PathList("examples", xs @ _*) => MergeStrategy.last
     case x                             => (assemblyMergeStrategy in assembly).value(x)
-  })
+  })*/
 
 // build KeYmaera X core jar with sbt "project core" clean assembly
 lazy val core = (project in file("keymaerax-core"))
   .dependsOn(macros)
-  .settings(
+  /*.settings(
     name := "KeYmaeraX Core",
     assemblyJarName := "keymaerax-core-" + version.value + ".jar",
     scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
-  )
-  .settings(keymaeraxCoreAssemblySettings: _*)
-  .aggregate(macros)
+  )*/
+  //.settings(keymaeraxCoreAssemblySettings: _*)
+  //.aggregate(macros)
 
 lazy val keymaeraxFullAssemblySettings = AssemblyPlugin.assemblySettings ++
   Seq(test in assembly := {},
@@ -42,6 +42,7 @@ lazy val keymaerax = (project in file("keymaerax-webui"))
   .settings(inConfig(Test)(keymaeraxFullAssemblySettings): _*)
 
 lazy val experiments = (project in file("keymaerax-veriphy-experiments"))
+  .dependsOn(macros, core)
 
 // build KeYmaera X full jar with sbt clean assembly
 lazy val root = (project in file("."))
@@ -52,7 +53,7 @@ lazy val root = (project in file("."))
     scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
   )
   .settings(keymaeraxFullAssemblySettings: _*)
-  .aggregate(macros, core, keymaerax)
+  .aggregate(macros, core, keymaerax, experiments)
 
 
 // extra runtime checks for initialization order: "-Xcheckinit"
