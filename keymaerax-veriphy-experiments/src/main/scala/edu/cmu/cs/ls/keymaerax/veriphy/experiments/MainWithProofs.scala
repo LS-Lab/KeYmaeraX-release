@@ -3,19 +3,19 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 import java.io.File
 
 import com.sun.jna.Native
-import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
-import edu.cmu.cs.ls.keymaerax.btactics._
+//import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+//import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+//import edu.cmu.cs.ls.keymaerax.btactics._
 
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
-import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+//import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+//import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
+//import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import BotCommon._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
-import edu.cmu.cs.ls.keymaerax.cdgl._
+//import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
+//import edu.cmu.cs.ls.keymaerax.cdgl._
 
 object MainWithProofs {
-
+/*
   private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
 
   class Lazy[T](f: => T) {
@@ -64,9 +64,10 @@ object MainWithProofs {
   }
 
   val check: String => Statement = Kaisar.statementProved
-
+*/
   // Just for generating strategy
   def main(args: Array[String]): Unit = {
+    /*
     if(args.length == 0) {
       println("Usage: ... <path_to_Kaisar_file>")
       return
@@ -77,7 +78,7 @@ object MainWithProofs {
     println("Initialized QE")
     val pf = check(noStar1DBotModel)
     val angel =  SimpleStrategy(AngelStrategy(pf))
-    println("AngelStrat:\n" + StrategyPrinter(angel))
+    println("AngelStrat:\n" + StrategyPrinter(angel))*/
   }
 
     // Args:  dll_name [dll_path]

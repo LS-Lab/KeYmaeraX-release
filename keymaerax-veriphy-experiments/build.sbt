@@ -25,7 +25,7 @@ libraryDependencies += "biz.enef" %%% "slogging" % "0.6.+"
 
 libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
 
-libraryDependencies += "org.typelevel" %% "spire" % "0.16.2"
+//libraryDependencies += "org.typelevel" %% "spire" % "0.16.2"
 
 
 resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/" // contains json-schema-validtor.
