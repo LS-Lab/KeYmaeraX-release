@@ -3,10 +3,8 @@
 package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 
 import java.io.File
-import com.sun.jna._
 
 import BotCommon._
-
 object BotMain {
 
   // Args:  dll_name [dll_path]
@@ -30,14 +28,13 @@ object BotMain {
     println("Loaded DLL for FFI!")
     //println("native size: " + Native.LONG_SIZE)
     //val angel = StrategyParser(sandboxPLDIStratString)
-    val angel = StrategyParser(noStar1DStratString)
-    println("No Sandbox")
+    val angel = loadBundle(angelSandboxBundle)
     println("Read Angel Strategy:\n" + StrategyPrinter(angel))
     println("Warm-starting FFI Library")
     lib.warmStart()
     println("Warm-started FFI Library")
     for (simArg <- botArgs) {
-      for(speed <- List(200, 250)/*testSpeeds*/) {
+      for(speed <- testSpeeds) {
         doOneGoPiGo(lib, angel, fullPath, simArg, speed)
       }
     }
