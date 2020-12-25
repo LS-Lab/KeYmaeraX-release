@@ -33,6 +33,8 @@ lazy val experiments = (project in file("keymaerax-veriphy-experiments"))
   .settings(
     unmanagedSources in Compile +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Configuration.scala",
+    //unmanagedSources in Compile +=
+    //  baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "FileConfiguration.scala",
     unmanagedSources in Compile +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Logging.scala",
     unmanagedSources in Compile ++=
@@ -120,6 +122,15 @@ lazy val keymaeraxFullAssemblySettings = AssemblyPlugin.assemblySettings ++
           case PathList("examples", xs @ _*) => MergeStrategy.last
           case x                             => (assemblyMergeStrategy in assembly).value(x)
       })
+
+/*lazy val keymaeraxKaisarAssemblySettings = AssemblyPlugin.assemblySettings ++
+  Seq(test in assembly := {},
+    mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.cdgl.kaisar.StrategyExtractorMain"),
+    assemblyJarName in assembly := "kaisar-strategy.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("examples", xs @ _*) => MergeStrategy.last
+      case x                             => (assemblyMergeStrategy in assembly).value(x)
+    })*/
 
 lazy val keymaerax = (project in file("keymaerax-webui"))
   .dependsOn(macros, core)
