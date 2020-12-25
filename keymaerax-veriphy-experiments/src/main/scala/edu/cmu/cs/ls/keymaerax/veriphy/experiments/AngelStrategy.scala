@@ -13,6 +13,8 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 import KaisarProof.Ident
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.collection.immutable.StringOps
+
 
 // @TODO: Massive memory leak, use local data structure instead
 /** Used for allocating unique integer IDs */
@@ -22,6 +24,10 @@ object IDCounter {
   // For nodes which arise from a demonization translation, track the original Angel node corresponding to each ID
   var originMap: Map[Int, AngelStrategy] = Map()
   var count: Int = 0
+  def set(i: Int, as: AngelStrategy): Unit = {
+    idMap = idMap.+(i -> as)
+    count = (count + 1).max(i)
+  }
   def next(as: AngelStrategy): Int = {
     val res = count
     count = count + 1
@@ -35,11 +41,55 @@ object IDCounter {
   def getOriginal(n: Int): Option[AngelStrategy] = originMap.get(n)
   def original(n: Int): AngelStrategy = originMap(n)
   def setOriginal(n: Int, as: AngelStrategy): Unit = (originMap = originMap.+(n -> as))
+
+  // Should be something that never appears in strategies or CdGL expressions
+  val MAP_SEPARATOR: String = "|->"
+  // For serializing / reloading idMap
+  def idMapString: String = {
+    idMap.toList.sortBy({ case (k, v) => k }).map({ case (k, v) => k + MAP_SEPARATOR + v }).mkString("\n")
+  }
+
+  // For serializing / reloading originMap
+  def originMapString: String = {
+    originMap.toList.sortBy({case (k, v) => k}).map({case (k,v) => k + MAP_SEPARATOR + v}).mkString("\n")
+  }
+
+
+  private def parseMap(mapString: String): Map[Int, AngelStrategy] = {
+    val lines = (mapString: StringOps).lines.toList
+    var theMap: Map[Int, AngelStrategy] = Map()
+    lines.foreach {line =>
+      val i = line.indexOf(MAP_SEPARATOR)
+      if (i < 0) throw new Exception("Could not parse strategy ID map metadata")
+      val numStr = line.take(i).trim()
+      val stratStr = line.drop(i + MAP_SEPARATOR.length).trim()
+      val num = numStr.toInt
+      val strat = StrategyParser(stratStr)
+      theMap = theMap.+(num -> strat)
+    }
+    theMap
+  }
+
+  def loadIdMap(idMapString: String): Unit = {
+    idMap = parseMap(idMapString)
+    println(idMap)
+  }
+
+  def loadOriginMap(originMapString: String): Unit = {
+    originMap = parseMap(originMapString)
+    println(originMap)
+  }
+
+
+  def clear(): Unit = {
+    idMap = Map()
+    originMap = Map()
+  }
 }
 
 /** Directly executable, simply-typed strategy for Angel player */
 sealed trait AngelStrategy {
-  val nodeID: Int = IDCounter.next(this)
+  var nodeID: Int = IDCounter.next(this)
 }
 /** A simple strategy is one where Angel makes no choices, only Demon */
 sealed trait SimpleStrategy extends AngelStrategy
@@ -62,6 +112,8 @@ case class SODE(ode: ODESystem) extends SimpleStrategy
 
 /** Angelic while loop with decidable convergence/guard formula */
 case class ALoop(conv: Formula, body: AngelStrategy) extends AngelStrategy
+/* Angel for loop */
+case class AForLoop(idx: Ident, idx0: Term, conv: Formula, body: AngelStrategy, idxUp: Term) extends AngelStrategy
 /** Angelic switch statement with decidable branch guards */
 case class ASwitch(branches: List[(Formula, AngelStrategy)]) extends AngelStrategy
 /** Differential equation with (concrete) angelic duration. */
@@ -117,6 +169,10 @@ object SimpleStrategy {
         val loop = SLoop(Composed(STest(conv), apply(body)))
         IDCounter.setOriginal(loop.nodeID, fs)
         Composed(loop, STest(Not(conv)))
+      case AForLoop(metX, met0, guard, body, metIncr) =>
+        val loop = SLoop(Composed(List(STest(guard), apply(body), SAssign(metX, metIncr))))
+        IDCounter.setOriginal(loop.nodeID, fs)
+        Composed(List(SAssign(metX,met0),loop, STest(Not(guard))))
       case ASwitch(branches) =>
         val branchStrats = branches.map({case (f, fs) => Composed(STest(f), apply(fs))})
         val pairs = branchStrats.zip(branches)
@@ -187,8 +243,8 @@ object AngelStrategy {
       case Block(ss) => Composed(ss.map(body(_, isPhi)))
       case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) }))
       case While(x, j, s) => ALoop(j, body(s, isPhi))
-      // @TODO: Test
-      case For(metX, met0, metIncr, conv, guard, s) => ALoop(guard.f, body(s, isPhi))
+      case For(metX, met0, metIncr, conv, guard, s) =>
+        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr)
       case BoxLoop(s, ih) => SLoop(body(s, isPhi))
       case pode: ProveODE =>
         val ode = ofODE(pode)

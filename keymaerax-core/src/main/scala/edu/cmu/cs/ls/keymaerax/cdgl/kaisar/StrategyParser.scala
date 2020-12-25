@@ -1,4 +1,5 @@
-package edu.cmu.cs.ls.keymaerax.veriphy.experiments
+package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
+
 
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar._
 import ProofParser.locate
@@ -16,8 +17,7 @@ object StrategyParser {
       maybe match {
         case Some(id) =>
           IDCounter.set(id, as); id
-        case None =>
-          IDCounter.next(as)
+        case None => IDCounter.next(as)
       }
     as.nodeID = theId
     as
@@ -41,7 +41,6 @@ object StrategyParser {
 
   def aloop[_: P]: P[ALoop] = (P("ALoop") ~ maybeId ~ DLParser.formula ~ "," ~ angelStrategy ~ ")").map({ case (id, x, y) => alloc(id, ALoop(x, y)) })
 
-
   def aforloop[_: P]: P[AForLoop] =
     (P("AForLoop") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term ~ "," ~ DLParser.formula ~ "," ~ angelStrategy ~ "," ~ DLParser.term).map({
       case (id, idx, idx0, conv, body, idxup) => alloc(id, AForLoop(idx, idx0, conv, body, idxup))
@@ -53,7 +52,7 @@ object StrategyParser {
 
   def branch[_: P]: P[(Formula, AngelStrategy)] = "(" ~ DLParser.formula ~ "," ~ angelStrategy ~ ")"
 
-  def angelStrategy[_: P]: P[AngelStrategy] = stest | sassign | sassignAny | scompose | schoice | aforloop | sloop | sode | aloop | aswitch | aode
+  def angelStrategy[_: P]: P[AngelStrategy] = stest | sassign | sassignAny | scompose | schoice | sloop | sode | aforloop | aloop | aswitch | aode
 
   def apply(str: String): AngelStrategy = {
     fastparse.parse(str, angelStrategy(_)) match {

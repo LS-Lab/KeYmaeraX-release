@@ -77,7 +77,9 @@ class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonS
   override def readLoop(id: NodeID): Boolean =
     (IDCounter.getOriginal(id), IDCounter.get(id)) match {
       case (Some(ALoop(conv, body)), _) =>
-        env.holds(conv) != KnownTrue() // if formula holds, continue
+        env.holds(conv) == KnownTrue() // if formula holds, continue
+      case (Some(AForLoop(idx, idx0, conv, body, inc)), _) =>
+        env.holds(conv) == KnownTrue() // if formula holds, continue
       case (Some(_), _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
       case (None, Some(SLoop(_body))) => bds.readDemonLoop(id)
       case (None, _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
