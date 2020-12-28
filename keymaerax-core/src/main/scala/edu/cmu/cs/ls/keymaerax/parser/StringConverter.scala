@@ -55,7 +55,7 @@ class StringConverter(val s: String) {
   def asTactic: BelleExpr = BelleParser(s)
 
   /** Converts to a sequent. */
-  def asSequent: Sequent = SequentParser.parseSequent(s)
+  def asSequent: Sequent = Parser.parser.sequentParser(s)
 
   /** Converts to a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = UnificationSubstitutionParser.parseSubstitutionPair(s)

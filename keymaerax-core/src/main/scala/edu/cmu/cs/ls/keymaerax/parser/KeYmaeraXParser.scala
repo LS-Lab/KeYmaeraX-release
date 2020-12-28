@@ -178,8 +178,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case e => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
-  //@todo
-  override val sequentParser: String => Sequent = _ => throw new UnsupportedOperationException("Not yet implemented")
+  override val sequentParser: String => Sequent = SequentParser.parseSequent
 
   lazy val strictParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = false)
   lazy val laxParser: KeYmaeraXParser = new KeYmaeraXParser(LAX_MODE = true)
@@ -488,7 +487,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(_) :+ Token(DUAL, _) =>
         if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBARB, ANYIDENT))
-      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) =>
+      case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(_) =>
         if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBARB, ANYIDENT))
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) :+ Expr(x: Variable)  =>
