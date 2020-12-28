@@ -1998,7 +1998,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
       case Some(goal) =>
         val provable = ProvableSig.startProof(goal)
         val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
-        new KvpResponse("sequent", "Sequent: \n" + goal.toString + "\n\nProvable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+        new KvpResponse("sequent", "Sequent: \n" + goal.toString + "\n\nFormula: \n" + goal.toFormula.prettyString + "\n\nProvable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
     }
   }
 }
