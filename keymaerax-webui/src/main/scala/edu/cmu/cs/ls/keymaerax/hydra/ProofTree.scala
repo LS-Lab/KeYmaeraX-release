@@ -143,6 +143,12 @@ trait ProofTreeNode {
   /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
     * Returns `goal` if `sub` is not applicable at `i`. */
   private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]): (ProvableSig, List[SubstitutionPair]) = {
+    /** Returns a list of non-duplicate substitution pairs with the most expanded replacements (least remaining definitions to expand). */
+    def maxExpandedSubsts(s: List[SubstitutionPair]): List[SubstitutionPair] = s.groupBy(_.what).map({ case (_, substs) =>
+      if (substs.size > 1) substs.map(s => s -> StaticSemantics.signature(s.repl)).minBy(_._2.size)._1
+      else substs.head
+    }).toList
+
     /** Unify goal with sub-conclusion to find missing substitutions.
       * @note sub may originate from a lemma that was proved with expanded definitions; find by unification,
       *       but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
@@ -153,12 +159,12 @@ trait ProofTreeNode {
       val substSub = exhaustiveSubst(sub, subst)
       try {
         val downSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> maxExpandedSubsts(substs ++ downSubst.subsDefsInput)
       } catch {
         case _: UnificationException =>
           try {
             val upSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
-            substGoal(exhaustiveSubst(substSub, upSubst), i) -> (substs ++ upSubst.subsDefsInput)
+            substGoal(exhaustiveSubst(substSub, upSubst), i) -> maxExpandedSubsts(substs ++ upSubst.subsDefsInput)
           } catch {
             case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
               //@note proof step introduced function symbols with delayed substitution,
@@ -175,7 +181,9 @@ trait ProofTreeNode {
       val subSig = StaticSemantics.signature(sub.conclusion)
       val sigDiff = goalSig -- subSig
       val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
-      val subst = RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst
+      // `applicableSubsts` may contain duplicate `what` if subgoals expanded to different extent; use the most expanded one
+      val minSubsts = maxExpandedSubsts(applicableSubsts)
+      val subst = RenUSubst(minSubsts.map(sp => sp.what -> sp.repl)).usubst
       unificationSubst(goal, sub, subst)
     } else {
       unificationSubst(goal, sub, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)

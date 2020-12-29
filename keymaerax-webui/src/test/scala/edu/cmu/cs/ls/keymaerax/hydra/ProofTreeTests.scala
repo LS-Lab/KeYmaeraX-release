@@ -613,6 +613,40 @@ class ProofTreeTests extends TacticTestBase {
     checkTree(db.db, theoremId, theorem.tactics.loneElement._3, "==> x>y*y -> x>y*y & x>=y*y".asSequent)
   }}
 
+  it should "work when expanding to different extent" in withDatabase { db => withMathematica { _ =>
+    val modelContent =
+      """SharedDefinitions
+        |  Real sq(Real x) = x*x;
+        |  Bool gt(Real x, Real y) <-> x>y;
+        |  Bool gtsq(Real x, Real y) <-> gt(x,sq(y));
+        |End.
+        |
+        |ArchiveEntry "user/tests/Delayed Substitution"
+        |
+        |ProgramVariables
+        |  Real x, y;
+        |End.
+        |
+        |Problem
+        |  gt(x,sq(y)) -> gt(x,sq(y)) & x>sq(y)
+        |End.
+        |
+        |Tactic "Delayed Substitution Test with Lemmas: Proof"
+        |implyR(1) ; andR(1) ; <(
+        |  expand "gtsq"; id,
+        |  expand "gtsq"; expand "gt"; id
+        |  )
+        |End.
+        |
+        |End.
+        |""".stripMargin
+
+    val theorem :: Nil = ArchiveParser(modelContent)
+
+    val theoremId = db.createProof(theorem.fileContent)
+    checkTree(db.db, theoremId, theorem.tactics.loneElement._3, "==> x>sq(y) -> x>sq(y) & x>sq(y)".asSequent)
+  }}
+
   it should "work with delayed let substitution" in withDatabase { db => withMathematica { _ =>
     val proofId = db.createProof(
       """ArchiveEntry "Simple"
