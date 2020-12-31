@@ -397,6 +397,13 @@ class GoPiGoReachAvoidStrategy[number <: Numeric[number, Ternary]](ffis: VeriPhy
     List(Variable("pos"), Variable("t"), Variable("v")),   // assign. in AngelSandbox, v is just an initial value
     env, filePath, intArgs)
 
+class AirSimVerboseStrategy[number <: Numeric[number, Ternary]](ffis: VeriPhyFFIs, env: Environment[number], filePath: String, intArgs: List[Int])
+  extends FFIBasicStrategy[number](ffis,
+    List(Variable("A"), Variable("B"), Variable("T"), Variable("eps")), // const
+    List(Variable("t"), Variable("v"), Variable("xg"), Variable("yg")),   // read
+    List(Variable("vl"), Variable("vh"), Variable("a"), Variable("k"), Variable("t"), Variable("xg"), Variable("yg")),   // assign. in AngelSandbox, v is just an initial value
+    env, filePath, intArgs)
+
 object BotCommon {
   // source model
   val sandboxPLDIModel: String =
@@ -519,16 +526,48 @@ object BotCommon {
   val reachAvoid1DOriginMap: String = "3|->STest[4](true)\n5|->STest[6](true)\n7|->STest[8](true)\n9|->STest[10](true)\n20|->STest[21](true)\n22|->STest[23](true)\n32|->SCompose[32](STest[30](t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny[25](t_3),SAssignAny[26](d_2),SAssignAny[27](t_3),STest[31](t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign[28](d_2',-v_2),SAssign[29](t_3',1))\n34|->STest[35](true)\n36|->STest[37](true)\n38|->STest[39](true)\n60|->ASwitch[59]((d_1>=eps_0*V_0, SCompose[15](SAssign[12](v_2,V_0),STest[13](0<=v_2&v_2<=V_0))),(true, SAssign[16](v_2,0)))\n67|->AForLoop[42](pos_1,0,pos_1<=d_0&d_1>=V_0*eps_0,SCompose[41](ASwitch[18]((d_1>=eps_0*V_0, SCompose[15](SAssign[12](v_2,V_0),STest[13](0<=v_2&v_2<=V_0))),(true, SAssign[16](v_2,0))),SAssign[19](t_2,0),SCompose[24](SAssign[20](t_3,t_2),SAssign[22](d_2,d_1)),SCompose[32](STest[30](t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssignAny[25](t_3),SAssignAny[26](d_2),SAssignAny[27](t_3),STest[31](t_3>=0&t_3<=eps_0&d_2>=v_2*(eps_0-t_3)),SAssign[28](d_2',-v_2),SAssign[29](t_3',1)),SCompose[40](SAssign[34](t_1,t_3),SAssign[36](v_1,v_2),SAssign[38](d_1,d_2))),pos_1+V_0*eps_0/2)"
 
 
+  val ralVerboseStratString:String = """"""
+  val ralVerboseIDMap: String = """"""
+  val ralVerboseOriginMap: String = """"""
+
   case class StrategyBundle(stratString: String, idMapString: String, originMapString: String)
 
   val noStarBundle: StrategyBundle = StrategyBundle(stratString = noStar1DStratString, idMapString = noStar1DIDMap, originMapString = noStar1DOriginMap)
   val angelSandboxBundle: StrategyBundle = StrategyBundle(stratString = angelSandbox1DStratString, idMapString = angelSandbox1DIDMap, originMapString = angelSandbox1DOriginMap)
   val timedAngelControlBundle: StrategyBundle = StrategyBundle(stratString = timedAngelControl1DStratString, idMapString = timedAngelControl1DIDMap, originMapString = timedAngelControl1DOriginMap)
   val reachAvoidBundle: StrategyBundle = StrategyBundle(stratString = reachAvoid1DStratString, idMapString = reachAvoid1DIDMap, originMapString = reachAvoid1DOriginMap)
+  val ralVerboseBundle: StrategyBundle = StrategyBundle(stratString = ralVerboseStratString, idMapString = ralVerboseIDMap, originMapString = ralVerboseOriginMap)
+
 
   // arguments for each test
   case class SimSpec(name: String, speedFactor: Int, obstacleSpeed: Int, actuatorOffset: Int, duration: Int, initialDistance: Int, reactionTime: Int)
   case class BotSpec(name: String, speedFactor: Int, extraMessage: String)
+
+  sealed trait AirSimLevel { val tag: Int; val name: String}
+  case object RectLevel extends AirSimLevel { val tag = 0; val name = "Rect" }
+  case object TurnsLevel extends AirSimLevel { val tag = 1; val name = "Turns" }
+  case object CloverLevel extends AirSimLevel { val tag = 2; val name = "Clover" }
+  object AirSimLevel { val all: List[AirSimLevel] = List(RectLevel, TurnsLevel, CloverLevel)}
+
+  sealed trait AirSimController { val tag: Int; val name: String}
+  case object BangBangController extends AirSimController { val tag = 0; val name = "Bang-Bang" }
+  case object PIDLowController extends AirSimController { val tag = 1; val name = "PIDLow" }
+  case object PIDMediumController extends AirSimController { val tag = 2; val name = "PIDMedium" }
+  case object PIDHighController extends AirSimController { val tag = 3; val name = "PIDHigh" }
+  case object HumanController extends AirSimController { val tag = 4; val name = "Human" }
+  object AirSimController {
+    val all: List[AirSimController] =
+      List(BangBangController, PIDLowController, PIDMediumController, PIDHighController, HumanController)
+  }
+
+  case class AirSimSpec(airSimLevel: AirSimLevel, airSimController: AirSimController) {
+    val name: String = s"Level:${airSimLevel.name};Controller:${airSimController.name}"
+  }
+  object AirSimSpec {
+    val all: List[AirSimSpec] =
+      AirSimLevel.all.flatMap(level => AirSimController.all.map(controller => AirSimSpec(level, controller)))
+  }
+
 
   val botArgs: List[BotSpec] = List(
     BotSpec("correct", 1, ""),
@@ -605,6 +644,31 @@ object BotCommon {
     val factory = UnknowingFactory(RatFactory)
     val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
     val basic = new GoPiGoAngelSandboxStrategy(lib, env, filePath, intArgs)
+    val demon = new WrappedDemonStrategy(basic)(env)
+    val interp = new Play(factory)
+    Play.continueOnViolation = true
+    try {
+      interp(env, astrat, demon)
+    } catch {
+      // Can swallow exception because reportViolation already did the reporting
+      case tfe: TestFailureException => ()
+    }
+    demon.exit()
+    println("Final state: " + env.state)
+  }
+
+  def doOneAirSim(lib: VeriPhyFFIs, astrat: AngelStrategy, path: String, spec: AirSimSpec): Unit = {
+    val filePath = path + File.separator + spec.airSimLevel.name + "-" + spec.airSimController.name + ".csv"
+    val intArgs = List(spec.airSimLevel.tag, spec.airSimController.tag)
+    println(s"Experiment: ${spec.name}")
+    println("Please start AirSim with correct level and compile in the correct controller")
+    val _ = scala.io.StdIn.readLine()
+    println("Starting experiment")
+    val factory = UnknowingFactory(RatFactory)
+    val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
+    val basic = new AirSimVerboseStrategy(lib, env, filePath, intArgs)
+    AirSimAPI.setSpec(spec)
+    AirSimAPI.setVars(basic)
     val demon = new WrappedDemonStrategy(basic)(env)
     val interp = new Play(factory)
     Play.continueOnViolation = true
