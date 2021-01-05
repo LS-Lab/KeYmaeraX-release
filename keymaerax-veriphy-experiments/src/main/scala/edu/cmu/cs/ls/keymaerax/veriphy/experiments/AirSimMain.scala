@@ -2,8 +2,15 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 
 import java.io.{File, RandomAccessFile}
 import java.nio._
+import java.nio.channels.FileChannel
 
 import com.sun.jna._
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.veriphy.experiments.ProtocolTypes._
 import edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotCommon._
 
@@ -31,6 +38,8 @@ object ProtocolTypes {
   val currentVersion: Int = 1
   val INT_SIZE: Int = 4
   val BOOL_SIZE: Int = 1
+  val BYTE_ORDER: ByteOrder = ByteOrder.LITTLE_ENDIAN
+
   type scalar = RatNum
 }
 sealed trait MessageType { val typeId: Int }
@@ -74,8 +83,8 @@ sealed trait Message {
   def content: Array[Byte]
   val messageType: MessageType
   protected def intsToBytes(ints: List[Int]): Array[Byte] = {
-    val INT_SIZE = 4
     val contentBuffer = ByteBuffer.allocate(ints.length*INT_SIZE)
+    contentBuffer.order(BYTE_ORDER);
     contentBuffer.position(0)
     for (k <- ints) {
       contentBuffer.putInt(k)
@@ -83,7 +92,8 @@ sealed trait Message {
     contentBuffer.array()
   }
   protected def scalarsToBytes(scalars: List[scalar]): Array[Byte] = {
-    intsToBytes(scalars.flatMap(n => List(n.n.n.toInt, n.n.d.toInt)))
+    val flatted = scalars.flatMap(n => List(n.n.n.toInt, n.n.d.toInt))
+    intsToBytes(flatted)
   }
 
   def allBytes: Array[Byte] = {
@@ -91,12 +101,14 @@ sealed trait Message {
     val typeId = messageType.typeId
     val size = arr.length + INT_SIZE
     val bb = ByteBuffer.allocate(size + INT_SIZE)
+    bb.order(BYTE_ORDER);
     bb.putInt(size)
     bb.putInt(typeId)
     bb.put(arr)
     bb.array()
   }
   def sendTo(file: RandomAccessFile): Unit = {
+    println("Sending message of type: " + this.messageType)
     val bytes = allBytes
     file.write(bytes)
   }
@@ -109,10 +121,24 @@ sealed trait Message {
   }
 }
 object Message {
+
+  private def readLittleEndianInt(file: RandomAccessFile): Int = {
+    val b1 = file.readByte()
+    val b2 = file.readByte()
+    val b3 = file.readByte()
+    val b4 = file.readByte()
+    val res = b1 + (b2 << 8) + (b3 << 16) + (b4 << 24)
+    res
+  }
+  // @TODO: set a maximum size for debugging reasons
   def blockingReadFrom(file: RandomAccessFile): Message = {
-    val size = file.readInt()
+    val size = readLittleEndianInt(file)
     val typeAndContent = new Array[Byte] (size)
-    file.readFully(typeAndContent)
+    val theLength = file.length()
+    println("Length: " + theLength)
+    val nRead = file.read(typeAndContent)
+    //file.readFully(typeAndContent)
+    println("Amount read: " + nRead)
     ofTypeAndContent(size, typeAndContent)
   }
   // @TODO: bytes interface -> file handle interface
@@ -121,14 +147,15 @@ object Message {
       throw new Exception("Message packet expected to be at least 4 bytes of type ID after packet size header")
     }
     val bb = ByteBuffer.allocate(bytes.length)
+    bb.order(BYTE_ORDER);
     bb.position(0)
     bb.put(bytes)
     bb.rewind()
-    val INT_SIZE = 4
-    if (bytes.length - INT_SIZE != declaredSize) {
+    if (bytes.length != declaredSize) {
       throw new Exception("Packet does not have expected size")
     }
-    val messageType = MessageType(bb.getInt())
+    val gottenInt = bb.getInt()
+    val messageType = MessageType(gottenInt)
     //bb.position(INT_SIZE)
     ofContent(messageType, bytes.length - INT_SIZE, bb)
   }
@@ -141,19 +168,23 @@ object Message {
 
 
 sealed trait MessageCompanion[T <: Message] {
+  //val messageType: MessageType
   def blockingReadFrom(file: RandomAccessFile): T = {
+    println("Waiting for message using type: " + {this.getClass.toString})
     val msg = Message.blockingReadFrom(file)
     msg.coerce[T](this)
   }
   val constructor: ((Int, ByteBuffer) => T)
   protected def readIntArray(len: Int, buf: ByteBuffer): Array[Int] = {
     val ib = buf.asIntBuffer()
-    val ints: Array[Int] = Array(len / INT_SIZE)
-    if(ints.length % 2 != 0) {
-      throw new Exception("Actuate request needs even number of ints")
+    val ints: Array[Int] = new Array[Int](len / INT_SIZE)
+    val intLength = ints.length
+    println("Hmm: " + intLength)
+    if(intLength % 2 != 0) {
+      throw new Exception("Rational array needs even number of ints")
     }
     var i = 0
-    while(i < len) {
+    while(i < intLength) {
       ints(i) = ib.get()
       i = i + 1
     }
@@ -209,6 +240,7 @@ case class InitResponseMessage(protocolVersion: Int, versionIsCompatible: Boolea
   override val messageType: MessageType = InitResponseMessageType
   override def content: Array[Byte] = {
     val contentBuffer = ByteBuffer.allocate(INT_SIZE + BOOL_SIZE)
+    contentBuffer.order(BYTE_ORDER);
     contentBuffer.position(0)
     contentBuffer.putInt(protocolVersion)
     contentBuffer.put(if (versionIsCompatible) (1:Byte) else (0: Byte))
@@ -224,7 +256,7 @@ object InitResponseMessage extends MessageCompanion[InitResponseMessage] {
 }
 
 case class GetConstRequestMessage(expectedVariableCount: Int) extends Message {
-  override val messageType: MessageType = GetConstResponseMessageType
+  override val messageType: MessageType = GetConstRequestMessageType
   override def content: Array[Byte] = {
     intsToBytes(List(expectedVariableCount))
   }
@@ -334,11 +366,11 @@ object ActuateResponseMessage extends MessageCompanion[ActuateResponseMessage] {
 
 // AirSim interaction isn't actually done through FFIs, it's done through interprocess communication with named pipes.
 // But let's try to implement it using the same infrastructure first and see if that works or not.
-object AirSimAPI extends VeriPhyFFIs {
+object  AirSimAPI extends VeriPhyFFIs {
   //val bundle = ralVerboseBundle
-  var numConsts: Int = 0
-  var numSensorVars: Int = 0
-  var numCtrlVars: Int = 0
+  var numConsts: Int = 4
+  var numSensorVars: Int = 4
+  var numCtrlVars: Int = 7
   var level: AirSimLevel = AirSimLevel.all.head
   var controller: AirSimController = AirSimController.all.head
 
@@ -347,23 +379,26 @@ object AirSimAPI extends VeriPhyFFIs {
     controller = airSimSpec.airSimController
   }
 
+  // @TODO: Initialize better at right time because currently done too late
   def setVars(strat: AirSimVerboseStrategy[_]): Unit = {
-    numConsts = strat.constVars.length
-    numSensorVars = strat.senseVars.length
-    numCtrlVars = strat.ctrlVars.length
+    numConsts = 4//strat.constVars.length
+    numSensorVars = 4//strat.senseVars.length
+    numCtrlVars = 7//strat.ctrlVars.length
   }
 
   var pipe: RandomAccessFile = null;
+  //val pipeChannel: FileChannel = null;
 
   // byte[]
   private def initPipe(): Unit = {
     if (pipe == null) {
       try { // Connect to the pipe
         pipe = new RandomAccessFile("\\\\.\\pipe\\VeriPhy", "rw")
-        pipe.close()
+        //pipeChannel = pipe.getChannel()
       } catch {
         case e: Exception =>
           // TODO Auto-generated catch block
+          println("Connection error: " + e)
           e.printStackTrace()
       }
     }
@@ -387,7 +422,9 @@ object AirSimAPI extends VeriPhyFFIs {
     val arr = response.variableValueArray
     // @TODO: Decide int vs rat
     for((x, i) <- arr.zipWithIndex) {
-      a.setInt(INT_SIZE*i, x.n.toInt)
+      a.setInt(INT_SIZE*i*2, x.n.n.toInt)
+      a.setInt(INT_SIZE*(i*2+1), x.n.d.toInt)
+//      a.setInt(INT_SIZE*i, x.n.toInt)
     }
   }
 
@@ -398,13 +435,18 @@ object AirSimAPI extends VeriPhyFFIs {
     val arr = response.variableValueArray
     // @TODO: Decide int vs rat
     for((x, i) <- arr.zipWithIndex) {
-      a.setInt(INT_SIZE*i, x.n.toInt)
+      a.setInt(INT_SIZE*i*2, x.n.n.toInt)
+      a.setInt(INT_SIZE*(i*2+1), x.n.d.toInt)
     }
   }
 
   def ffiactuate(c: Pointer, clen: Int, a: Pointer, alen: Int): Unit = {
-    val actVars = c.getIntArray(0, numCtrlVars).map(n => RatNum(Rational(n, 1)))
-    val request = ActuateRequestMessage(actVars)
+    val actInts = c.getIntArray(0, numCtrlVars*2)//.map(n => RatNum(Rational(n, 1)))
+    val arr: Array[RatNum] = new Array(numCtrlVars)
+    for(i <- (0 until numCtrlVars)) {
+      arr(i) = RatNum(Rational(actInts(2*i), actInts(2*i + 1)))
+    }
+    val request = ActuateRequestMessage(arr)
     request.sendTo(pipe)
     val _response = ActuateResponseMessage.blockingReadFrom(pipe)
   }
@@ -442,42 +484,101 @@ object AirSimAPI extends VeriPhyFFIs {
     val arr = response.variableValueArray
     // @TODO: Decide int vs rat
     for((x, i) <- arr.zipWithIndex) {
-      a.setInt(INT_SIZE*i, x.n.toInt)
+      a.setInt(INT_SIZE*i*2, x.n.n.toInt)
+      a.setInt(INT_SIZE*(i*2+1), x.n.d.toInt)
+//      a.setInt(INT_SIZE*i, x.n.toInt)
     }
   }
 }
 
 // separate this out because GoPiGo will want to do special Python handling rather than C
 
-class AirSimMain {
-  // Args:  dll_name [dll_path]
-  // dll_path is used for both dll loading and for printing CSV files
-  def main(args: Array[String]): Unit = {
-    val libName = args(0)
-    // paths for loading DLL
-    val fullPath =
-      if (args.length > 1) {
-        val dirName = args(1)
-        val path = System.getProperty("jna.library.path")
-        val fullPath = if(path == null) dirName else dirName + File.pathSeparator + path
-        System.setProperty("jna.library.path", fullPath)
-        fullPath
-      } else {
-        "."
-      }
+object AirSimMain {
 
+  private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
+
+  class Lazy[T](f: => T) {
+    private var option: Option[T] = None
+    def apply(): T = option match {
+      case Some(t) => t
+      case None => val t = f; option = Some(t); t
+    }
+    def isInitialized: Boolean = option.isDefined
+    def asOption: Option[T] = option
+  }
+
+
+  /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
+  class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
+    override def init(): Boolean = p.init()
+    override def shutdown(): Unit = {} // do not shut down between tests and when switching providers in ToolProvider.setProvider
+    def doShutdown(): Unit = super.shutdown()
+  }
+
+  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
+    Configuration.withTemporaryConfig(tempConfig)(testcode)
+
+  //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
+  private val mathematicaProvider: Lazy[DelayedShutdownToolProvider] = new Lazy(new DelayedShutdownToolProvider(MathematicaToolProvider(ToolConfiguration.config(WOLFRAM.toLowerCase))))
+
+  private def initQE(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    val common = Map(
+      Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
+      Configuration.Keys.QE_TOOL -> WOLFRAM)
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    withTemporaryConfig(common) {
+      val provider = mathematicaProvider()
+      ToolProvider.setProvider(provider)
+      val toolMap = Map("linkName" -> "C:\\Program Files\\Wolfram Research\\Mathematica\\SystemFiles\\Links\\JLink\\JLink.jar")
+      val tool = provider.defaultTool() match {
+        case Some(m: Mathematica) => m
+        case _ => throw new Exception("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
+      }
+      KeYmaeraXTool.init(Map(
+        KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+      ))
+    }
+  }
+
+  private def bundleFromFile(filePath: String): StrategyBundle = {
+    val file = io.Source.fromFile(filePath)
+    val src = file.mkString
+    file.close()
+    src.split('@').toList match {
+      case strat :: ids :: origins :: Nil => StrategyBundle(strat, ids, origins)
+      case lst => throw new Exception("Strategy file should have exactly 3 sections separated by @, had " + lst.length)
+    }
+  }
+
+  // Args:  file_path
+  // file_path is used for printing CSV files
+  def main(args: Array[String]): Unit = {
+    initQE()
+    println("Note: Customized AirSim must be started before this experiment is. \nThe custom AirSim version will show an UnrealEngine loading screen while waiting for us.")
+    if(args.length < 2) {
+      println("Usage: <exe_name> path_to_strategy_file directory_to_save_results")
+      println("strategy_file should use file format from strategy extractor including ID maps separated with @ symbol")
+      return
+    }
+    val stratPath = args(0)
+    val fullPath = args(1)
     //val load = FFILoader(libName)
     val lib: VeriPhyFFIs = AirSimAPI //load.Instance
     println("Loaded DLL for FFI!")
     //println("native size: " + Native.LONG_SIZE)
     //val angel = StrategyParser(sandboxPLDIStratString)
-    val angel = loadBundle(ralVerboseBundle)
+    val bundle = bundleFromFile(stratPath)
+    val angel = loadBundle(bundle)
     println("Read Angel Strategy:\n" + StrategyPrinter(angel))
-    println("Warm-starting FFI Library")
-    lib.warmStart()
-    println("Warm-started FFI Library")
-    for (simSpec <- AirSimSpec.all) {
+    //println("Warm-starting FFI Library")
+    // NB: Don't warm start because it would make protocol annoying for airsim side
+    //lib.warmStart()
+    //println("Warm-started FFI Library")
+      val simSpec = AirSimSpec(CloverLevel, PIDHighController)
+    //for (simSpec <- AirSimSpec.all) {
         doOneAirSim(lib, angel, fullPath, simSpec)
-    }
+    //}
   }
 }
