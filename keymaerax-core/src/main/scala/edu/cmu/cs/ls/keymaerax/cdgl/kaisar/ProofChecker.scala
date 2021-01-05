@@ -770,7 +770,7 @@ object ProofChecker {
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con.withInverseGhost, s)
         (Context(InverseGhost(ss.s)), f)
-      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (con.:+(s), True)
+      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.empty, True)
       case Was(now, was) =>
         val (ss, f) = apply(con, now)
         (Context(Was(ss.s, was)), f)
