@@ -31,6 +31,7 @@ trait Numeric[T, Truth] { this: T =>
   def diseq(rhs: T): Truth
   def unary_- : T
   def intApprox: Int
+  def ratApprox: Rational
 }
 
 trait NumberFactory[Truth, N <: Numeric[N, Truth]] {
@@ -66,6 +67,7 @@ case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extend
   override def diseq(rhs: TernaryNumber[number]): Ternary = if (num.diseq(rhs.num)) KnownTrue() else KnownFalse()
   override def unary_- : TernaryNumber[number] = TernaryNumber(-num)
   override def intApprox: Int = num.intApprox
+  override def ratApprox: Rational = num.ratApprox
 }
 
 case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N]) extends NumberFactory[Ternary, TernaryNumber[N]] {
@@ -107,7 +109,7 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
 
   override def pow(num: Int, denom: Int): RatNum = {
     if (denom == 1) RatNum(n.pow(num))
-    else if (denom == 0) throw NoValueException()
+    else if (denom == 0) throw NoValueException(msg = "Division by zero")
     else {
       //val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
       val x = n.ratPow(num, denom)
@@ -128,6 +130,7 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
   override def eq(other: RatNum): Boolean = (n == other.n)
   override def diseq(other: RatNum): Boolean = (n != other.n)
   override def intApprox: Int = n.toInt
+  override def ratApprox: Rational = n
 }
 
 /** Interval of rational numbers. */
@@ -144,7 +147,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     // Division by zero
     val (lo, hi) =
       if(rhs.l <= Rational(0,1) && Rational(0,1) <= rhs.u)
-        throw NoValueException()
+        throw NoValueException(msg = "Division by zero")
       else if (Rational(0,1) <= rhs.l) { // top half
         if (l <= Rational(0,1) && Rational(0,1) <= u) { // top-center
           ((Rational(0,1)).min(l / rhs.l), (Rational(0,1)).max(u / rhs.l))
@@ -178,7 +181,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   // @TODO: Check general-case correctness
   override def pow(num: Int, denom: Int): RatIntNum = {
     if (denom == 1) natPow(num)
-    else if (denom == 0) throw NoValueException()
+    else if (denom == 0) throw NoValueException(msg = "Rational power with denominator zero")
     else {
       val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
       val algL = l.ratPow(numAbs, denom)
@@ -223,5 +226,6 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     else KnownTrue()
   override def unary_- : RatIntNum = RatIntNum(-u, -l)
   override def intApprox: Int = (l.toInt + u.toInt) / 2
+  override def ratApprox: Rational = (l + u) * Rational(1,2)
 }
 
