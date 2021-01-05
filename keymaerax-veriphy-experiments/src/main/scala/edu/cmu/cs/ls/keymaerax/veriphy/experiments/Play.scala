@@ -12,15 +12,17 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
 import java.math.RoundingMode
 
 import KaisarProof.Ident
+import edu.cmu.cs.ls.keymaerax.parser._
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{, number, state}
 //import edu.cmu.cs.ls.keymaerax.core
 //import spire.math.{Rational, Number => n}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /** Indicates that expression was not in the executable fragment */
 case class UnsupportedStrategyException(nodeID: Int) extends Exception
 /** Indicates that we tried to evaluate something whose value could not be determined */
-case class NoValueException(nodeID: Int = -1) extends Exception
+case class NoValueException(nodeID: Int = -1, msg:String) extends Exception
 /** Indicates that a Demonic test failed, thus Demon loses */
 case class TestFailureException(nodeID: Int) extends Exception
 
@@ -61,7 +63,7 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
       case Equiv (l, r) =>  holds(r).iff(holds(l))
       case True => KnownTrue()
       case False => KnownFalse()
-      case _ => throw NoValueException()
+      case _ => throw NoValueException(msg = "Unknown connective: " + fml)
     }
   }
 
@@ -83,23 +85,24 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
         val n = num.value.intValue()
         val d = denom.value.intValue()
         v.pow(n, d)
-      case FuncOf(f, args) if f.interpreted =>
+      case FuncOf(f, args) /*if f.interpreted*/ =>
         (f.name, args) match {
           case ("max", Pair(l, r)) => eval(l).max(eval(r))
           case ("min", Pair(l, r)) => eval(l).min(eval(r))
           case ("abs", l) => eval(l).abs
-          case _ => throw NoValueException()
+          case _ => throw NoValueException(msg = "Unknown interpreted function: " + f.name)
         }
+      //case FuncOf(f, args) => throw NoValueException(msg = s"Function $f should maybe be interpreted")
       case v: Variable =>
         if (state.contains(v))
           state(v)
         else {
           println(s"Unknown value for variable $v")
-          throw NoValueException()
+          throw NoValueException(msg = s"Unknown value for variable $v")
         }
       case _ =>
         println(s"Couldn't evaluate $f in state $state")
-        throw NoValueException()
+        throw NoValueException(msg = s"Unknown term connective $f")
     }
   }
 }
@@ -130,13 +133,22 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
       case STest(f) =>
         try {
           if (env.holds(f) != KnownTrue()) {
-            println(s"""Test \"${f.prettyString}\" failed in state ${env.state}""")
+            // @TODO: Better printing of failures
+            val prettyState = env.state.toList.map{case (k, v) => s"$k |-> ${v}"}.mkString("\n")
+            println(s"""Test \"${edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter(f)}\"\n failed in state:\n$prettyState""")
+            val conjs = FormulaTools.conjuncts(f)
+            if(conjs.length > 1) {
+              val failingConjs = conjs.filter(f => env.holds(f) != KnownTrue())
+              println("Failing conjuncts:")
+              failingConjs.foreach(f => println(s"${edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter(f)}"))
+            }
             ds.reportViolation()
             if(!Play.continueOnViolation)
               throw TestFailureException(as.nodeID)
           }
         } catch {
-          case v: NoValueException => throw NoValueException(as.nodeID)
+          case v: NoValueException =>
+            throw NoValueException(as.nodeID, msg = v.msg)
         }
       case SAssign(x, f) =>
         try {
@@ -145,7 +157,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
           //println(s"Interpreter assigned $x -> $v")
           env.set(x, v)
         } catch {
-          case v: NoValueException => throw NoValueException(as.nodeID)
+          case v: NoValueException => throw NoValueException(as.nodeID, msg = v.msg)
         }
       case SAssignAny(x) =>
         val v = ds.readAssign(as.nodeID, x)
