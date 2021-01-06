@@ -120,6 +120,13 @@ class QETests extends TacticTestBase {
       have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
   }
 
+  it should "be able to run QE's internal steps" in withMathematica { _ =>
+    proveBy("x>z, y=0, z>y ==> x>=0".asSequent,
+      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"x::z::nil\", 1); rcf")) shouldBe 'proved
+    proveBy("x>z, y=0, z>y ==> x>=0".asSequent,
+      BelleParser("applyEqualities; toSingleFormula; universalClosure(\"nil\", 1); rcf")) shouldBe 'proved
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved

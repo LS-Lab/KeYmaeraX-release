@@ -369,32 +369,32 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   "Universal closure" should "work for simple formula" in withTactics {
-    val result = proveBy("x>5".asFormula, universalClosure(1))
+    val result = proveBy("x>5".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall x x>5".asSequent
   }
 
   it should "work when indexed names are already there" in withTactics {
-    val result = proveBy("x_0>0 & x_1>1 & x_2>2".asFormula, universalClosure(1))
+    val result = proveBy("x_0>0 & x_1>1 & x_2>2".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall x_2 \\forall x_1 \\forall x_0 (x_0>0 & x_1>1 & x_2>2)".asSequent
   }
 
   it should "compute closure for formulas with variables and parameterless function symbols" in withTactics {
-    val result = proveBy("x>5 & f()<2 & y+3>z".asFormula, universalClosure(1))
+    val result = proveBy("x>5 & f()<2 & y+3>z".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall z \\forall y \\forall x \\forall f (x>5 & f<2 & y+3>z)".asSequent
   }
 
   it should "ignore bound variables in closure" in withTactics {
-    val result = proveBy("\\forall x \\forall y (x>5 & f()<2 & y+3>z)".asFormula, universalClosure(1))
+    val result = proveBy("\\forall x \\forall y (x>5 & f()<2 & y+3>z)".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall z \\forall f (\\forall x \\forall y (x>5 & f<2 & y+3>z))".asSequent
   }
 
   it should "not ignore variables that are not bound everywhere" in withTactics {
-    val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalClosure(1))
+    val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall x_0 ((\\forall x x>5) & x_0<2)".asSequent
   }
 
   it should "not do anything if all variables are bound" in withTactics {
-    val result = proveBy("\\forall x x>5".asFormula, universalClosure(1))
+    val result = proveBy("\\forall x x>5".asFormula, universalClosure(Nil)(1))
     result.subgoals.loneElement shouldBe "==> \\forall x x>5".asSequent
   }
 

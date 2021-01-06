@@ -664,7 +664,7 @@ object TactixLibrary extends HilbertCalculus
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: Seq[NamedSymbol] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def QE(order: List[Variable] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     if (order.isEmpty) QEX(tool, timeout.map(Number(_)))
     else ToolTactics.timeoutQE(order, tool, timeout) // non-serializable for now
   }

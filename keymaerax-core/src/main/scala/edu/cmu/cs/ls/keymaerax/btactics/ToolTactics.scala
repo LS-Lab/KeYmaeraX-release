@@ -62,7 +62,7 @@ private object ToolTactics {
   })
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
+  def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
     if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
       seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
@@ -115,7 +115,7 @@ private object ToolTactics {
   }
 
   /** @see[[TactixLibrary.QE]] */
-  def timeoutQE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def timeoutQE(order: List[Variable] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
       throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
     lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {

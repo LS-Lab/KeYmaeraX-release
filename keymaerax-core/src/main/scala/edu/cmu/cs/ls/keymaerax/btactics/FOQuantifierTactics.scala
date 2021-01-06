@@ -380,12 +380,18 @@ protected object FOQuantifierTactics {
    * @param order The order of quantifiers.
    * @return The tactic.
    */
-  def universalClosure(order: Seq[NamedSymbol]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  @Tactic(
+    names = ("∀Cl", "allClosure"),
+    displayLevel = "browse",
+    premises = "Γ |- \\forall order p(x,y,z), Δ",
+    conclusion = "Γ |- p(x,y,z), Δ",
+    inputs = "order:list[variable]")
+  def universalClosure(order: List[Variable]): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => {
     // fetch non-bound variables and parameterless function symbols
     require(pos.isTopLevel, "Universal closure only at top-level")
     val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
-    require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
-      + (order.toSet -- varsFns) + " is not in the subset")
+    require(order.toSet[NamedSymbol].subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
+      + (order.toSet[NamedSymbol] -- varsFns) + " is not in the subset")
     // use specified order in reverse, prepend the rest alphabetically
     // @note get both: specified order and compatibility with previous sorting, which resulted in
     //       reverse-alphabetical ordering of quantifiers
@@ -398,9 +404,6 @@ protected object FOQuantifierTactics {
     if (sorted.isEmpty) skip
     else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
   })
-
-  @Tactic(names = ("∀Cl", "allClosure"), displayLevel = "browse")
-  val universalClosure: DependentPositionTactic = anon { pos: Position => universalClosure(Nil)(pos) }
 
   /** Repeated application of [[TactixLibrary.allL]] */
   //@todo won't compile @Tactic(displayLevel = "internal")
