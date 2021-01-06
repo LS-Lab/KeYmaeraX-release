@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
@@ -161,6 +161,48 @@ class ScriptedRequestTests extends TacticTestBase {
         root should have ('goal (Some("==> [{x'=4}]x>=0".asSequent)))
         leaves(0) should have ('goal (Some("==> [{x'=4 & true & [{x'=2,y'=3}]P(x,y)}]x>=0".asSequent)))
         leaves(1) should have ('goal (Some("==> [{x'=4}][{x'=2,y'=3}]P(x,y)".asSequent)))
+    }
+  }}
+
+  it should "split variable list arguments" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x,y; End. Problem x>0 & y>0 -> x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", BelleParser("""universalClosure("x::y::nil",1)""")) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, l0::Nil, _, _, _, _) =>
+        root should have ('goal (Some("==> x>0 & y>0 -> x>=0".asSequent)))
+        l0 should have ('goal (Some("==> \\forall x \\forall y (x>0 & y>0 -> x>=0)".asSequent)))
+    }
+  }}
+
+  it should "split formula list arguments" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem [{x'=2}]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", BelleParser("""dC("x>=1::x>=2::nil",1)""")) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, l0::l1::l2::Nil, _, _, _, _) =>
+        root should have ('goal (Some("==> [{x'=2}]x>=0".asSequent)))
+        l0 should have ('goal (Some("==> [{x'=2 & (true & x>=1) & x>=2}]x>=0".asSequent)))
+        l1 should have ('goal (Some("==> [{x'=2}]x>=1".asSequent)))
+        l2 should have ('goal (Some("==> [{x'=2 & true & x>=1}]x>=2".asSequent)))
     }
   }}
 

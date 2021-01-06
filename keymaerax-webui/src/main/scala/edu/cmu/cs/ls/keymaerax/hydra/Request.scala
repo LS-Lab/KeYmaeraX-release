@@ -2171,12 +2171,15 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */
       case BelleTermInput(value, Some(ListArg(_: FormulaArg))) =>
         val values = Parser.parseExpressionList(value).map(_.prettyString)
+        if (values.isEmpty) "\"nil\""
+        else "\"" + values.mkString("::") + "::nil\""
+      case BelleTermInput(value, Some(ListArg(_: VariableArg))) =>
+        val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
-        else if (values.length == 1) "\""+value+"\""
-        else "[" + values.map("\""+_+"\"").mkString(",") + "]"
+        else "\"" + values.mkString("::") + "::nil\""
       case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
-        "[" + Parser.parseExpressionList(value).map("\""+_.prettyString+"\"").mkString(",") + "]"
+        "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
       case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
       case BelleTermInput(value, None) => value
     }
