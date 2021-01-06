@@ -520,6 +520,7 @@ object BelleParser extends TacticParser with Logging {
     val newArgs = args match {
       case None => Nil
       case Some(argList) => argList.map({
+        case Left(Nil) => Left(Nil)
         case Left(x :: xs) => Left(x :: xs)
         case Left(expression) => Left(Seq(expression))
         case Right(pl) => Right(pl)
@@ -674,8 +675,8 @@ object BelleParser extends TacticParser with Logging {
           case OptionArg(ai) => parseArg(ai, undelim)
           case ListArg(ai) =>
             val listElems = undelim.split("::").map(_.trim)
-            if (listElems.length == 1) parseArg(ai, listElems.head) // allow single-element lists without ::nil notation
-            else if (listElems.last == "nil") Left(listElems.dropRight(1).map(parseArg(ai, _).left.get).toList)
+            if (listElems.last == "nil") Left(listElems.dropRight(1).map(parseArg(ai, _).left.get).toList)
+            else if (listElems.length == 1) parseArg(ai, listElems.head) // allow single-element lists without ::nil notation
             else throw ParseException(s"Could not parse $undelim as a list when a list of ${ai.sort} was expected; lists must end in :: nil", loc)
         }
         parseArg(expectedType.get, tok.undelimitedExprString)
