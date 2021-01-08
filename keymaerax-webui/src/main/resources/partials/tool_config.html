@@ -155,7 +155,6 @@
 <div class="modal-body k4-fill-screen" ng-if="config.mode==='advancedConfig'">
     <div class="row k4-vertical-fill-flex">
         <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
-            {{config.full.content}} <!-- don't know why editor doesn't show content without this line -->
             <div ui-ace="{theme:'github',mode:'properties',showGutter:true}"
                  ng-model="config.full.content" id="editor"></div>
         </div>

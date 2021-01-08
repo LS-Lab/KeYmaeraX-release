@@ -922,14 +922,14 @@ del {
   flex-direction: column;
 }
 .k4-vertical-fill .tab-content {
+  height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-.k4-vertical-fill .tab-content>.active {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+
+.k4-vertical-fill .tab-pane {
+  height: 100%;
 }
 
 .tacticalert-popover {
@@ -1437,13 +1437,9 @@ del {
  * ACE editor layout.
  */
 .ace_editor {
-  font-family: Menlo,monospace;
+  height: 100%;
   overflow: hidden;
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  font-family: Menlo,monospace;
   font-size: var(--lsfontsize);
 }
 
