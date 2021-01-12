@@ -316,13 +316,6 @@ object RestApi extends Logging {
     }}}
   }}}
 
-  val modelplexMandatoryVars: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "modelplex" / "mandatoryVars") { modelId => pathEnd {
-    get {
-      val r = new ModelPlexMandatoryVarsRequest(database, userId, modelId)
-      completeRequest(r, t)
-    }
-  }}}
-
   val testSynthesis: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "testcase" / "generate" / Segment / Segment / Segment ) { (modelId, monitorKind, amount, timeout) => pathEnd {
     get {
       parameters('kinds.as[String] ?) { kinds => {
@@ -1334,7 +1327,6 @@ object RestApi extends Logging {
     pruneBelow            ::
     undoLastProofStep     ::
     modelplex             ::
-    modelplexMandatoryVars::
     exportSequent         ::
     testSynthesis         ::
     examples              ::

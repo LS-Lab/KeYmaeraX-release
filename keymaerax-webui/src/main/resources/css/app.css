@@ -915,6 +915,12 @@ del {
 .k4-vertical-fill {
   height: 100%;
 }
+.k4-screenheight {
+  height: calc(100vh);
+}
+.k4-half-screenheight {
+  height: calc(50vh);
+}
 /* first uib-tabset div */
 .k4-vertical-fill > div {
   height: 100%;

@@ -198,18 +198,17 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 }
 
 class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
-  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(artifact))
-  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(artifact))
-  val fmlPlainString = JsString(artifact.prettyString)
+  private def prettierPrint(e: Expression): String = PrettyPrintFormatProvider(
+    new KeYmaeraXPrettierPrinter(80)(e), s => s).print(e.prettyString)
 
-  def getJson = JsObject(
-    "modelid" -> JsString(model.modelId.toString),
-    "generatedArtifact" -> JsObject(
-      "html" -> fmlHtml,
-      "string" -> fmlString,
-      "plainString" -> fmlPlainString
+  def getJson: JsValue = {
+    JsObject(
+      "modelid" -> JsString(model.modelId.toString),
+      "modelname" -> JsString(model.name),
+      "code" -> JsString(prettierPrint(artifact)),
+      "source" -> JsString(prettierPrint(ArchiveParser(model.keyFile).head.expandedModel))
     )
-  )
+  }
 }
 
 class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
@@ -568,7 +567,8 @@ object Helpers {
   }
 
   /** Stateful format provider to read off whitespace and line breaks from a pretty-printed string. */
-  case class PrettyPrintFormatProvider(var format: String) extends FormatProvider {
+  case class PrettyPrintFormatProvider(var format: String, wsPrinter: String => String =
+      _.replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")) extends FormatProvider {
     private val LINEINDENT = "\\n(\\s*)".r
     private val SPACES = "\\s+".r
 
@@ -587,11 +587,9 @@ object Helpers {
       }
     }
 
-    private def printHtmlWS(): String = advanceWS().replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")
-
     /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
     def printWS(check: String = ""): String = {
-      val result = printHtmlWS()
+      val result = wsPrinter(advanceWS())
       assert(format.startsWith(check), s"'$format' did not start with '$check'")
       format = format.substring(check.length)
       result
@@ -599,7 +597,7 @@ object Helpers {
 
     /** Prints whitespace prefix and formats `next` according to the format string. */
     def print(next: String): String = {
-      printHtmlWS() + next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
+      wsPrinter(advanceWS()) + next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
     }
   }
 

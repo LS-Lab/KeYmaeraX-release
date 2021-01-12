@@ -3,44 +3,40 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
 
   $scope.mxdata = {
     modelid: modelid,
-    monitorkind: 'controller',
-    monitorShape: 'boolean',
-    generatedArtifact: undefined,
-    artifact: 'sandbox',
-    additionalMonitorVars: [],
-    mandatoryMonitorVars: []
+    modelname: undefined,
+    generatedArtifact: {
+      code: undefined,
+      source: undefined
+    },
+    artifact: 'monitor/controller',
+    additionalMonitorVars: []
   }
 
-  $http.get("user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/mandatoryVars")
-    .then(function(response) {
-      $scope.mxdata.mandatoryMonitorVars = response.data.mandatoryVars;
-    })
+  $scope.language = "dL"
+  $scope.sourceCollapsed = true;
 
-  $scope.synthesize = function() {
+  $scope.synthesize = function(language, monitorShape) {
     spinnerService.show('modelplexExecutionSpinner')
+    $scope.language = language;
     $http({method: 'GET',
            url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
-                $scope.mxdata.artifact + "/" +
-                $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/kym",
+                $scope.mxdata.artifact + "/" + monitorShape + "/" + language,
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
-        $scope.mxdata.generatedArtifact = response.data.generatedArtifact;
+        $scope.mxdata.generatedArtifact.code = response.data.code;
+        $scope.mxdata.modelname = response.data.modelname;
+        $scope.mxdata.generatedArtifact.source = response.data.source;
       })
       .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
   }
 
-  $scope.downloadCCode = function() {
-    spinnerService.show('modelplexExecutionSpinner')
-    $http({method: 'GET',
-           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
-            $scope.mxdata.artifact + "/" +
-            $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/c",
-           params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
-      .then(function(response) {
-        var data = new Blob([response.data.code], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, response.data.modelname + '.c');
-      })
-      .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
+  $scope.download = function() {
+    var data = new Blob([$scope.mxdata.generatedArtifact.code], { type: 'text/plain;charset=utf-8' });
+    FileSaver.saveAs(data, $scope.mxdata.modelname + ($scope.language == 'dL' ? '.kyx' : '.c'));
+  }
+
+  $scope.open = function(what) {
+    $scope.mxdata.artifact = what;
   }
 
   $scope.cancel = function() {

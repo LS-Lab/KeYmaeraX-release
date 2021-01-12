@@ -23,6 +23,17 @@
         </div>
         <div class="spinner-please-wait">Deleting database entries, please wait...</div>
     </spinner>
+    <spinner name="modelplexExecutionSpinner" ng-cloak="">
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">
+            <p>ModelPlex is executing, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
+    </spinner>
     <!-- Default panel contents -->
     <div class="panel-heading">
         <div class="row">
