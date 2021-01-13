@@ -633,6 +633,32 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }, (_,_) => pr=>pr, _ => us=>us, AxIndex.axiomIndex)
   }
 
+  /** Chase index to remove loops and split sequential compositions, skip everything else. */
+  private val loopComposeIndex = (e:Expression) => e match {
+    // remove loops and split compositions to isolate differential equations before splitting choices
+    case Diamond(Loop(_), _) => Ax.loopApproxd:: Nil
+    case Diamond(Compose(_, _), _) => AxIndex.axiomsFor(e)
+    case _ => Nil
+  }
+
+  /** Chase index to skip ODEs, remove loops, and all other programs. */
+  private val skipODEIndex = (e:Expression) => e match {
+    // remove loops
+    case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
+    // keep ODEs, solve later
+    case Diamond(ODESystem(_, _), _) => Nil
+    case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
+  }
+
+  /** Solves ODEs for model monitors, chases in ODE postcondition after solving. */
+  private lazy val modelMonitorSolveChaseODE = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Diamond(_: ODESystem, _)) =>
+      AxiomaticODESolver.axiomaticSolve()(pos) & chase(3, 3, skipODEIndex)(pos ++ PosInExpr(0::1::Nil)) &
+        SimplifierV3.simpTac()(pos ++ PosInExpr(0::1::Nil))
+    case e => throw new TacticInapplicableFailure("Expected an ODE at position " + pos + ", but got " +
+      e.map(_.prettyString).getOrElse("<none>"))
+  })
+
   /**
     * Returns a tactic to derive a model monitor in axiomatic style using forward chase + diffSolve. The tactic is
     * designed to operate on input produced by createMonitorSpecificationConjecture.
@@ -640,31 +666,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see [[createMonitorSpecificationConjecture]]
     * @return The tactic.
     */
-  lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
-  def modelMonitorByChase(ode: DependentPositionTactic =
-    anon ((pos: Position, seq: Sequent) => { // was "SolveAndChase"
-      AxiomaticODESolver.axiomaticSolve()(pos) & chase(3, 3, (e:Expression) => e match {
-        // remove loops
-        case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
-        // keep ODEs, solve later
-        case Diamond(ODESystem(_, _), _) => Nil
-        case _ => println("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
-      })(pos ++ PosInExpr(0::1::Nil)) & SimplifierV3.simpTac()(pos ++ PosInExpr(0::1::Nil))
-    })): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match { // was "modelMonitor"
-    // remove loops and split compositions to isolate differential equations before splitting choices
-    case Diamond(Loop(_), _) => Ax.loopApproxd:: Nil
-    case Diamond(Compose(_, _), _) => AxIndex.axiomsFor(e)
-    case _ => Nil
-  })(pos) &
+  lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase(modelMonitorSolveChaseODE)
+  def modelMonitorByChase(ode: DependentPositionTactic): DependentPositionTactic = anon ((pos: Position, _: Sequent) =>
+    chase(3,3, loopComposeIndex)(pos) &
     applyAtAllODEs(ode)(pos) & // solve isolated ODEs once before splitting choices
     // chase and solve remaining
-    chase(3,3, (e:Expression) => e match {
-      // remove loops
-      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
-      // keep ODEs, solve later
-      case Diamond(ODESystem(_, _), _) => Nil
-      case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
-    })(pos) &
+    chase(3,3, skipODEIndex)(pos) &
     applyAtAllODEs(ode)(pos))
 
   /** Applies tatic `t` at all ODEs underneath this tactic's position. */
