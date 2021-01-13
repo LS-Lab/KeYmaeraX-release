@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
-    function($scope, $uibModalInstance, $http, spinnerService, FileSaver, Blob, userid, modelid) {
+    function($scope, $uibModal, $uibModalInstance, $http, spinnerService, FileSaver, Blob, userid, modelid) {
 
   $scope.mxdata = {
     modelid: modelid,
@@ -18,14 +18,28 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.synthesize = function(language, monitorShape) {
     spinnerService.show('modelplexExecutionSpinner')
     $scope.language = language;
+    $scope.mxdata.generatedArtifact.code = undefined;
+    $scope.mxdata.generatedArtifact.source = undefined;
+    $scope.mxdata.modelname = undefined;
     $http({method: 'GET',
            url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
                 $scope.mxdata.artifact + "/" + monitorShape + "/" + language,
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
         $scope.mxdata.generatedArtifact.code = response.data.code;
-        $scope.mxdata.modelname = response.data.modelname;
         $scope.mxdata.generatedArtifact.source = response.data.source;
+        $scope.mxdata.modelname = response.data.modelname;
+      }, function(error) {
+        $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Unable to derive monitor"; },
+            message: function() { return error.data.textStatus; },
+            mode: function() { return "ok"; }
+          }
+        });
       })
       .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
   }
@@ -35,8 +49,9 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     FileSaver.saveAs(data, $scope.mxdata.modelname + ($scope.language == 'dL' ? '.kyx' : '.c'));
   }
 
-  $scope.open = function(what) {
+  $scope.open = function(what, language, monitorShape) {
     $scope.mxdata.artifact = what;
+    $scope.synthesize(language, monitorShape);
   }
 
   $scope.cancel = function() {

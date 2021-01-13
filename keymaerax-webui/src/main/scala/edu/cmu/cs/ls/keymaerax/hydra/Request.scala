@@ -1256,9 +1256,14 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", tool) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      case ("model", tool) => try {
+        TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+          ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
           SimplifierV3.simpTac(Nil, SimplifierV3.composeIndex(SimplifierV3.baseIndex,SimplifierV3.boolIndex))(1))
+      } catch {
+        case ex: TacticInapplicableFailure =>
+          return Right(new ErrorResponse("Unable to synthesize model monitor (missing feature), because \n" + ex.getMessage))
+      }
     }
 
     if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {

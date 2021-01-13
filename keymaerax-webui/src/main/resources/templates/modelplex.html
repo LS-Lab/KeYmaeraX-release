@@ -17,10 +17,12 @@
                 <div uib-accordion-group class="panel-default" heading="Monitors"
                      uib-tooltip="Monitors check for deviation between model and reality"
                      is-open="true">
-                    <a class="btn btn-link" ng-click="open('monitor/controller')">
+                    <a class="btn btn-link" ng-click="open('monitor/controller','dL','boolean')">
                         <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/controller'">&nbsp;</i>Controller Monitor
                     </a>
-<!--                    <div>Model Monitor</div>-->
+                    <a class="btn btn-link" ng-click="open('monitor/model','dL','boolean')">
+                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/model'">&nbsp;</i>Model Monitor
+                    </a>
 <!--                    <div>Plant Monitor</div>-->
 <!--                    <div>Prediction Monitor</div>-->
                 </div>
@@ -28,7 +30,7 @@
             <uib-accordion>
                 <div uib-accordion-group class="panel-default" heading="Controllers"
                      uib-tooltip="Controllers implement the modeled control algorithm">
-                    <a class="btn btn-link" ng-click="open('controller/nondet')">
+                    <a class="btn btn-link" ng-click="open('controller/nondet','dL','ignore')">
                         <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='controller/nondet'">&nbsp;</i>Non-deterministic Controller
                     </a>
                 </div>
@@ -37,10 +39,10 @@
                 <div uib-accordion-group class="panel-default" heading="Sandboxes"
                      uib-tooltip="Sandboxes use the decisions of an unverified controller (if they agree with the model),
                      and otherwise uses the decisions of a fallback controller">
-                    <a class="btn btn-link" ng-click="open('sandbox/controller')">
+                    <a class="btn btn-link" ng-click="open('sandbox/controller','dL','boolean')">
                         <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='sandbox/controller'">&nbsp;</i>Controller Sandbox
                     </a>
-<!--                    <div ng-click="synthesize('sandbox/veriphy')">VeriPhy Sandbox</div>-->
+<!--                    <div ng-click="open('sandbox/veriphy')">VeriPhy Sandbox</div>-->
                 </div>
             </uib-accordion>
         </div>
