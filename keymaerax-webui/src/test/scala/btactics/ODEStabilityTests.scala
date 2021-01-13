@@ -622,14 +622,11 @@ class ODEStabilityTests extends TacticTestBase {
     //          (18.856765 * x2 - 48.132286 * x1 - 81.481369 * x1 * x2 +
     //           88.160775 * (x1 ^ 2) + 27.051686 * (x2 ^ 2))
 
-    val qe = proveBy(s"\\forall x1 \\forall x2 (x1*x1+x2*x2  >= 10^-10 -> $lyapstr > 0)".asFormula, QE)
-
-    println(qe)
     val pr1 = proveBy(Imply("tau = 10^-10".asFormula,stable),
       unfoldProgramNormalize&
         //On ||x||=eps+tau, there is a global lower bound k > 0 on the Lyapunov function
         //From paper, this bound can be k = alpha = 2.95 * 10^-19
-        cutR(s"\\forall x1 \\forall x2 (x1*x1+x2*x2 = eps+tau*eps+tau -> $lyapstr >= 2.95 * 10^-19)".asFormula)(1) <(
+        cutR(s"\\forall x1 \\forall x2 (x1*x1+x2*x2 = (eps+tau)*(eps+tau) -> $lyapstr >= 2.95 * 10^-19)".asFormula)(1) <(
           QE,
           unfoldProgramNormalize &
             //There is del s.t. ||x||<del -> v < k
@@ -645,15 +642,13 @@ class ODEStabilityTests extends TacticTestBase {
                   hideR(1) & prop,
                   // Move the forall quantified antecedent into domain constraint
                   // TODO: make tactic that adds universals directly into domain (without the universals)
-                  dC(s"x1*x1+x2*x2=eps+tau*eps+tau->$lyapstr >= 2.95 * 10^-19".asFormula)(1) <(
-                    hideL(-3) &
-                    // This part is slightly simpler without having to close over the sub-domain
-                    dC(s"$lyapstr < 2.95 * 10^-19".asFormula)(1) <(
-                      ODE(1),
-                      ODE(1)
-                    )
+                  dC(s"(x1*x1+x2*x2=(eps+tau)*(eps+tau)->$lyapstr >= 2.95 * 10^-19) & $lyapstr < 2.95 * 10^-19".asFormula)(1) <(
+                    hideL(-3) & ODE(1)
                     ,
-                    dWPlus(1) & allL(-3) & allL(-3) & prop
+                    boxAnd(1) & andR(1) <(
+                      dWPlus(1) & allL(-3) & allL(-3) & prop,
+                      hideL(-3) & ODE(1)
+                    )
                   )
                 )
               )
