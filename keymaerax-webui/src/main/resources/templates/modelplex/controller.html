@@ -1,0 +1,42 @@
+<uib-tabset active="active">
+    <uib-tab index="0" select="synthesize('dL','ignore')">
+        <uib-tab-heading>Controller Program
+            <div class="btn-group btn-group-toggle" data-toggle="buttons" ng-if="active==0">
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='dL'}"
+                       ng-click="synthesize('dL','ignore');$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off" checked> dL
+                </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='C'}"
+                       ng-click="synthesize('C','ignore');$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> C
+                </label>
+            </div>
+            <i class="fa fa-download" ng-if="active==0" ng-click="download()"></i>
+        </uib-tab-heading>
+        <div class="row k4-half-screenheight">
+            <div class="col-md-12 k4-vertical-fill">
+                <div ui-ace="{theme:'github',mode:{{language=='dL' ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
+                      advanced: {
+                        wrap: -1,
+                        indentedSoftWrap: true
+                      }}"
+                     ng-model="mxdata.generatedArtifact.code" id="dleditor"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                Source Model <i class="fa fa-bars pull-right" ng-click="sourceCollapsed=!sourceCollapsed"></i>
+            </div>
+        </div>
+        <div class="row k4-half-screenheight" uib-collapse="sourceCollapsed">
+            <div class="col-md-12 k4-vertical-fill">
+                <div ui-ace="{theme:'nord_dark',mode:'dl',showGutter:true,
+                      advanced: {
+                        wrap: -1,
+                        indentedSoftWrap: true
+                      }}"
+                     ng-model="mxdata.generatedArtifact.source" id="dlsourceeditor"></div>
+            </div>
+        </div>
+    </uib-tab>
+</uib-tabset>
