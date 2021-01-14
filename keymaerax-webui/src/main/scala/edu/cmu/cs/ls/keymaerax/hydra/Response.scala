@@ -198,8 +198,14 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 }
 
 class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
-  private def prettierPrint(e: Expression): String = PrettyPrintFormatProvider(
-    new KeYmaeraXPrettierPrinter(80)(e), s => s).print(e.prettyString)
+  private def prettierPrint(e: Expression): String = try {
+    PrettyPrintFormatProvider(
+      new KeYmaeraXPrettierPrinter(80)(e), s => s).print(e.prettyString)
+  } catch {
+    case _: Throwable =>
+      println(e.prettyString + "\n" + new KeYmaeraXPrettierPrinter(80)(e))
+      e.prettyString
+  }
 
   def getJson: JsValue = {
     JsObject(
