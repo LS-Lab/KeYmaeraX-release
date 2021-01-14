@@ -781,7 +781,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse mixed arguments" in {
-    BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
+    BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("{z'=-1*z+0}".asProgram, Some("x*z^2=1".asFormula))(1))
   }
 
   it should "parse predicates in locators" in {
@@ -886,10 +886,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "new dG syntax" should "round trip ghosts" in {
     "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asFormula, None)(1)) and (print as "dG(\"y'=1\", 1)") and (reparse fromPrint))
-    "dG({`{y'=1}`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1}`}, {`x*y=5`}, 1)".asTactic should (be (dG("{y'=1}".asProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
     "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asFormula, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"y'=0*y+1\", \"x*y^2=1\", 1)") and (reparse fromPrint))
     "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asFormula, None)(1)) and (print as "dG(\"y'=1/2*y\", 1)") and (reparse fromPrint))
-    "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+    "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("{y'=1/2*y}".asProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
   }
 
   //endregion

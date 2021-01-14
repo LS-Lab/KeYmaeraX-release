@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
@@ -18,8 +19,14 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
  *
  * @author Brandon Bohrer
  */
-class KeYmaeraXRandomParserTests extends RandomParserTests (KeYmaeraXParser.formulaParser)
-class KeYmaeraXDeterministicParserTests extends RandomParserTests (KeYmaeraXParser.formulaParser, rand = new RandomFormula(seed =0))
+class KeYmaeraXRandomParserTests extends RandomParserTests ({
+  Configuration.setConfiguration(FileConfiguration)
+  if (false) KeYmaeraXParser.formulaParser else DLParser.formulaParser
+}, new RandomFormula())
+class KeYmaeraXDeterministicParserTests extends RandomParserTests ({
+  Configuration.setConfiguration(FileConfiguration)
+  if (false) KeYmaeraXParser.formulaParser else DLParser.formulaParser
+}, new RandomFormula(seed=0))
 
 /**
  * Generic parser tester, tests some parser on pretty prints of randomly generated formulas
@@ -27,12 +34,12 @@ class KeYmaeraXDeterministicParserTests extends RandomParserTests (KeYmaeraXPars
   * @author Andre Platzer
  *  @author Brandon Bohrer
  */
-class RandomParserTests (formulaParser: (String => Formula), rand: RandomFormula = new RandomFormula())
+class RandomParserTests (parser: String => Formula, rand: RandomFormula)
   extends FlatSpec with Matchers with BeforeAndAfterAll {
-  val randomTrials = 4000
-  val randomComplexity = 8
+
+  private val randomTrials = 4000
+  private val randomComplexity = 8
   private val pp = KeYmaeraXPrettyPrinter
-  private val parser = if (false) KeYmaeraXParser else DLParser
 
   override def beforeAll(): Unit = {
     KeYmaeraXTool.init(Map(
@@ -45,8 +52,8 @@ class RandomParserTests (formulaParser: (String => Formula), rand: RandomFormula
     KeYmaeraXTool.shutdown()
   }
 
-  def parseShouldBe(input: String, expr: Expression) = {
-    val parse = parser.formulaParser(input)
+  def parseShouldBe(input: String, expr: Expression): Any = {
+    val parse = parser(input)
     if (!(parse == expr)) {
       println("Reparsing" +
         "\nInput:      " + input +

@@ -5,9 +5,14 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester}
+
+import scala.collection.immutable.Map
 
 /**
  * Tests for ContEvolve -> NFContEvolve refactoring.
@@ -15,12 +20,19 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester {
+class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
 
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-  val one = Number(1)
-  val zero = Number(0)
+  private val x = Variable("x", None, Real)
+  private val y = Variable("y", None, Real)
+  private val one = Number(1)
+  private val zero = Number(0)
 
   "The parser" should "parse diff eqs in normal form into Product(NFContEvolve,Empty)" in {
     "{x' = 1 & x > 0}".asProgram shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(1)), Greater(x, zero))

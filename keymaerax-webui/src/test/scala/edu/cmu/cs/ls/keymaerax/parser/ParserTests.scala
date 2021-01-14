@@ -35,8 +35,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     "Problem." + program + "\nEnd."
   }
 
-//  val parser = new KeYmaeraParser(false)
-//  val alpParser = parser.ProofFileParser
   private val x = Variable("x", None, Real)
   private val y = Variable("y", None, Real)
 

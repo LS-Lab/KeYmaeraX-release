@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
@@ -22,6 +23,8 @@ import scala.collection.immutable._
  */
 @SummaryTest
 class PairParserTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+  Configuration.setConfiguration(FileConfiguration)
+
   private val pp = KeYmaeraXPrettyPrinter
   private val parser =
 //    KeYmaeraXParser

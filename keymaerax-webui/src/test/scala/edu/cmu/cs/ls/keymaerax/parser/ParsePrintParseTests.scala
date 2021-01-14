@@ -5,111 +5,116 @@ package edu.cmu.cs.ls.keymaerax.parser
 * See LICENSE.txt for the conditions of this license.
 */
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.prop.TableDrivenPropertyChecks._
+
+import scala.collection.immutable.Map
+
 
 /**
  * Created by smitsch on 1/8/15.
  * @author Stefan Mitsch
  */
-class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val randomTrials = 20
-  val randomComplexity = 25
-  val rand = new RandomFormula()
-  //val rand = new RandomFormula(2784046900084013503L)
+class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+  private val randomTrials = 20
+  private val randomComplexity = 25
+  private val rand = new RandomFormula()
+
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
 
   override protected def beforeEach(): Unit = PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 
-  // type declaration header for tests
-  def makeInput(program : String) : String = {
-    "Functions. B a. B b. B c. End." +
-    "ProgramVariables. R p. R q. R r. R s. R r_0. End." +
-    "Problem." + program + "\nEnd."
-  }
-
   "Parsing of pretty-printed ODEs" should "be the same as the original parse result" in {
-    val exprs =
-      "[{x'=y}]x>0" ::
-      "[{x'=y & x>0}]x>0" ::
-      "[{x'=y, y'=z & x>0}]x>0" ::
-      "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0" :: Nil
+    val exprs = Table(
+      "[{x'=y}]x>0",
+      "[{x'=y & x>0}]x>0",
+      "[{x'=y, y'=z & x>0}]x>0",
+      "[{x'=y, y'=z & x>0}]x>0",
+      "[{x'=y, y'=z, z'=3 & z>1 & z>2}]x>0")
 
-    for (e <- exprs) {
+    forAll(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "parse, print, and parse ODEs in sequential compositions" in {
-    val exprs =
-      "[{x'=y}; x:=2;]x>0" ::
-//      "[x:=2; {x'=y}]x>0" :: // TODO not yet supported by parser
-      "[{x'=y}*]x>0" ::
-      "[{{x'=y}; x:=2;}*]x>0" ::
-//      "[{x:=2; {x'=y}}*]x>0" :: // TODO not yet supported by parser
-        Nil
+    val exprs = Table(
+      "[{x'=y}; x:=2;]x>0",
+      "[x:=2; {x'=y}]x>0",
+      "[{{x'=y}}*]x>0",
+      "[{{x'=y}; x:=2;}*]x>0",
+      "[{x:=2; {x'=y}}*]x>0",
+    )
 
-    for (e <- exprs) {
+    forAll(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "print and parse nested choices consistently" in {
-    val exprs =
-      "[x:=1; ++ x:=2; ++ x:=3;]x>0" ::
-      "[x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;]x>0" ::
-      "[{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0" ::
-      "[x:=0;{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0" ::
-      "[{x:=1; ++ x:=2;}++x:=3;]x>0" :: Nil
+    val exprs = Table(
+      "[x:=1; ++ x:=2; ++ x:=3;]x>0",
+      "[x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;]x>0",
+      "[{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0",
+      "[x:=0;{x:=10;x:=11; ++ x:=20;x:=21; ++ x:=30;x:=31;};x:=40;]x>0",
+      "[{x:=1; ++ x:=2;}++x:=3;]x>0")
 
-    for (e <- exprs) {
+    forAll(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "print and parse sequences with superfluous parentheses" in {
-    val exprs =
-      "[{x:=1;x:=2;};x:=3;]x>0" ::
-      "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0" :: Nil
+    val exprs = Table(
+      "[{x:=1;x:=2;};x:=3;]x>0",
+      "[{{x:=1;x:=2;};x:=3;} {{x:=4;};x:=5;}]x>0")
 
-    for (e <- exprs) {
+    forAll(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
   }
 
   it should "not print and parse a formula with if then else as variable names." in {
-    val exprs = "if = then"   ::
-                "then = else" ::
-                "if = else"   ::
-                "else = then" ::
-                "then = if"   ::
-                Nil
-    for(e <- exprs) {
-      try {
-        Parser(e)
-        assert(false, "Should've thrown an exception")
-      } catch {
-        case e : Throwable => //ok.
-      }
+    val exprs = Table(
+      "if = then",
+      "then = else",
+      "if = else",
+      "else = then",
+      "then = if")
+
+    forAll(exprs) { e =>
+      a [ParseException] should be thrownBy Parser(e)
     }
   }
 
   it should "print and parse if-then-else" in {
-    val exprs =
-      "if(x < 0)  { x := -x; x := x;} else {?true;}" ::
-      "if (x < 0) { x := -x;} else {?true;}" ::
-      "if (x < 0) { x := -x;} else {x := x * 2;}" ::
-      "if (acc <= 0) { acc := 0;} else {if (SB < A) {acc := SB;} else {acc := A;}}"  ::
-      "<{if (x = 0) {x := 1; y := 0;} else {y := 3; a := a + 5; ?(x = x);}}>x != y" ::
-      "<if (x = 0) {x := 1; y := 0;} else {y := 3;} a := a + 5; ?(x = x);>x != y" ::
-      "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y" ::
-        Nil
-    for (e <- exprs) {
+    val exprs = Table(
+      "if(x < 0)  { x := -x; x := x;} else {?true;}",
+      "if (x < 0) { x := -x;} else {?true;}",
+      "if (x < 0) { x := -x;} else {x := x * 2;}",
+      "if (acc <= 0) { acc := 0;} else {if (SB < A) {acc := SB;} else {acc := A;}}",
+      "<{if (x = 0) {x := 1; y := 0;} else {y := 3; a := a + 5; ?(x = x);}}>x != y",
+      "<if (x = 0) {x := 1; y := 0;} else {y := 3;} a := a + 5; ?(x = x);>x != y",
+      "x = 0 -> [if (x = 0){ x := 1; y := 0; }else {y := 3;} a := a + 5; ?(x = x);]x > y")
+
+    forAll(exprs) { e =>
       val expected = Parser(e)
       Parser(PrettyPrinter(expected)) shouldBe expected
     }
@@ -124,7 +129,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
-    for (i <- 1 to randomTrials) {
+    for (_ <- 1 to randomTrials) {
 		  val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
       // asFormula runs the parser, but declares the variables occurring in the formula
       PrettyPrinter(expected).asFormula shouldBe expected
