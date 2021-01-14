@@ -94,6 +94,17 @@ object ModelPlex extends ModelPlexTrait with Logging {
   private def postVar = (v: Variable) => BaseVariable(v.name + "post", v.index)
   private def preVar = (v: Variable) => BaseVariable(v.name + "pre", v.index)
 
+  /** Normalizes formula `f` into the shape A -> [a;]S. */
+  def normalizeInputFormula(f: Formula): Formula = {
+    proveBy(f, SaturateTactic(TactixLibrary.alphaRule)).subgoals match {
+      case IndexedSeq(Sequent(assumptions, alternatives)) =>
+        val (boxes, negAssumptions) = alternatives.partition({ case _: Box => true case _ => false })
+        require(boxes.size == 1, "Expected a single box property, but got " + boxes.mkString(","))
+        Imply((assumptions ++ negAssumptions.map(Not)).reduceRightOption(And).getOrElse(True), boxes.head)
+      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + f.prettyString + "; formula must be propositionally equivalent to A -> [prg;]P")
+    }
+  }
+
   /**
     * Construct ModelPlex monitor specification conjecture corresponding to given formula.
     *
@@ -118,13 +129,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
       (Diamond(prg, posteqs), nonboundAssumptions)
     }
 
-    proveBy(fml, SaturateTactic(TactixLibrary.alphaRule)).subgoals match {
-      case IndexedSeq(Sequent(assumptions, alternatives)) =>
-        val (boxes, negAssumptions) = alternatives.partition({ case _: Box => true case _ => false })
-        require(boxes.size == 1, "Expected a single box property, but got " + boxes.mkString(","))
-        val Box(prg, _) = boxes.head
-        conjectureOf((assumptions ++ negAssumptions.map(Not)).reduceRightOption(And).getOrElse(True), prg)
-      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml + "; formula must be propositionally equivalent to A -> [prg;]P")
+    normalizeInputFormula(fml) match {
+      case f@Imply(_, Box(prg, _)) => conjectureOf(f, prg)
+      case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml.prettyString + "; formula must be propositionally equivalent to A -> [prg;]P")
     }
   }
 

@@ -1139,7 +1139,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                        additionalVars: List[String]) extends UserRequest(userId, _ => true) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
+    val modelFml = ModelPlex.normalizeInputFormula(ArchiveParser.parseAsExpandedFormula(model.keyFile))
     val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
       filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
 
