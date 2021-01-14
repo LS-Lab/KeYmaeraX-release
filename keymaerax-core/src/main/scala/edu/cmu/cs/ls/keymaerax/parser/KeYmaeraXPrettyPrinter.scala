@@ -167,6 +167,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + "(" + pp(f) + ")")
+    case ODESystem(ode, True)   => "{" + ppODE(ode) + "}"
     case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
     //@note This is only used in printing internal data structures, not user input.
@@ -331,8 +332,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case Assign(x, e)           => statement(pp(q++0, x) + ppOp(program) + pp(q++1, e))
     case AssignAny(x)           => statement(pp(q++0, x) + ppOp(program))
     case Test(f)                => statement(ppOp(program) + pp(q++0, f))
-    //@todo avoid & true
-    case ODESystem(ode, f)      => wrap(ppODE(q++0, ode) + (if (false && f==True) "" else ppOp(program) + pp(q++1, f)), program)
+    case ODESystem(ode, True)   => wrap(ppODE(q++0, ode), program)
+    case ODESystem(ode, f)      => wrap(ppODE(q++0, ode) + ppOp(program) + pp(q++1, f), program)
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
     //@note This is only used in printing internal data structures, not user input (ODESystem case catches user input).
     //@note no positional change since ODESystem already descended into child position
