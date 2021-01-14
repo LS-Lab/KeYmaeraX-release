@@ -8,8 +8,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import java.io.{File, IOException, PrintWriter}
+import edu.cmu.cs.ls.keymaerax.core.VERSION
 
+import java.io.{File, IOException, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
 import scala.reflect.io.Directory
@@ -88,6 +89,10 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     lemmadbpath.delete()
     //@note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
+    new PrintWriter(cachePath + File.separator + "VERSION") {
+      write(VERSION)
+      close()
+    }
   }
 
   /** @inheritdoc */
