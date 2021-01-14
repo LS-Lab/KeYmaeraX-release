@@ -210,6 +210,11 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   /** Returns the first entry in `input` as formula. */
   def parseAsFormula(input: String): Formula = parse(input, parseTactics=false).head.model.asInstanceOf[Formula]
 
+  /** Returns the first entry in `input` as a formula with all definitions fully expanded. */
+  def parseAsExpandedFormula(input: String): Formula = parse(input, parseTactics=false).head match {
+    case ParsedArchiveEntry(_, _, _, _, defs, model, _, _, _) => defs.expandFull(model.asInstanceOf[Formula])
+  }
+
   /** Returns the first entry in `in` as formula. */
   def parseAsFormula(in: InputStream): Formula = parseAsFormula(io.Source.fromInputStream(in).mkString)
 
