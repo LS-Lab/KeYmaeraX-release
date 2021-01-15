@@ -351,8 +351,10 @@ class DLParser extends Parser {
     map({case (s,None) => ProgramConst(s) case (s,Some(i)) => throw ParseException("Program symbols cannot have an index: " + s + "_" + i)})
   //@todo could we call Fail(_) instead of throwing a ParseException to retain more context info?
   //@todo combine system symbol and space taboo
-  def systemSymbol[_: P]: P[AtomicProgram] = P( ident  ~~ "{|^@|}" ~ ";").
-    map({case (s,None) => SystemConst(s) case (s,Some(i)) => throw ParseException("System symbols cannot have an index: " + s + "_" + i)})
+  def systemSymbol[_: P]: P[AtomicProgram] = P( ident  ~~ "{|^@" ~/ variable.rep(sep=","./) ~ "|}" ~ ";").map({
+    case (s,None,taboo) => SystemConst(s, if (taboo.isEmpty) AnyArg else Except(taboo.to))
+    case (s,Some(i),_) => throw ParseException("System symbols cannot have an index: " + s + "_" + i)
+  })
 
   def assign[_: P]: P[Assign] = P( variable ~ ":=" ~/ term ~ ";").map({case (x,t) => Assign(x,t)})
   def assignany[_: P]: P[AssignAny] = P( variable ~ ":=" ~ "*" ~ ";").map({case x => AssignAny(x)})
