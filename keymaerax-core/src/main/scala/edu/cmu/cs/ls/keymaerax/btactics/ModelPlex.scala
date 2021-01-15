@@ -1112,7 +1112,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case (_, None) => skip
     }
     val result = proveBy(fml, normTactic & cmpNF(1) & arithNF(1) &
-      SimplifierV3.simplify(1) & Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
+      SaturateTactic(SimplifierV3.simplify(1)) /* until Simplifier saturates by itself */ &
+      Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
     assert(result.subgoals.length == 1 && result.subgoals.head.ante.isEmpty && result.subgoals.head.succ.length == 1)
     result.subgoals.head.succ.head
   }
