@@ -798,6 +798,9 @@ object SimplifierV3 {
     Ax.timesIdentityNeg.provable,
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable))
 
+  private lazy val negArith: List[ProvableSig] = List(
+    Ax.minusNeg.provable)
+
   private lazy val plusArith: List[ProvableSig] = List(
     Ax.plusZero.provable,
     Ax.zeroPlus.provable)
@@ -823,15 +826,14 @@ object SimplifierV3 {
   //  qeTermProof("F_()+G_()-F_()","G_()"),
   //  qeTermProof("F_()+G_()-G_()","F_()"),
 
-  def arithBaseIndex (t:Term,ctx:context) : List[ProvableSig] = {
-    (t match {
-      case Plus(_,_) => plusArith
-      case Minus(_,_) => minusArith
-      case Times(_,_) => mulArith
-      case Divide(_,_) => divArith
-      case Power(_,_) => powArith
-      case _ => List()
-    })
+  def arithBaseIndex (t:Term,ctx:context) : List[ProvableSig] = t match {
+    case Neg(_)      => negArith
+    case Plus(_,_)   => plusArith
+    case Minus(_,_)  => minusArith
+    case Times(_,_)  => mulArith
+    case Divide(_,_) => divArith
+    case Power(_,_)  => powArith
+    case _           => List()
   }
 
   //This generates theorems on the fly to simplify ground arithmetic (only for integers)
