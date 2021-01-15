@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -274,26 +275,26 @@ object Ax extends Logging {
     val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    val exclude: Set[String] = Configuration(Configuration.Keys.QE_TOOL).toLowerCase() match {
-      case "z3" => Set(
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerLemma",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesPowersBoth",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerEven",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerOdd",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNumber",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNeg",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideRat",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.normalizeCoeff0",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerEven",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormAdd",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormNeg",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormMinus",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormTimes",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormDivide",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd"
-      )
+    val exclude: Set[String] = ToolProvider.qeTool() match {
+      case Some(_: Z3) => Set(
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerLemma",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesPowersBoth",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerEven",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerOdd",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNumber",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNeg",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideRat",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.normalizeCoeff0",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerEven",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormAdd",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormNeg",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormMinus",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormTimes",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormDivide",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
+          "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd"
+        )
       case _ => Set.empty
     }
 
@@ -365,7 +366,7 @@ object Ax extends Logging {
   val choiceb: CoreAxiomInfo = coreAxiom("[++] choice")
   @Axiom("[;]", conclusion = "__[a;b]P__↔[a][b]P", displayLevel = "all",
     key = "0", recursor = "1;*", unifier = "surjlinear")
-  val composeb = coreAxiom("[;] compose")
+  val composeb: CoreAxiomInfo = coreAxiom("[;] compose")
   @Axiom("[*]", conclusion = "__[a*]P__↔P∧[a][a*]P", displayLevel = "all",
     key = "0", recursor = "1", unifier = "surjlinear")
   val iterateb: CoreAxiomInfo = coreAxiom("[*] iterate")

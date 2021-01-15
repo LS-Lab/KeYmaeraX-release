@@ -31,28 +31,12 @@ import scala.reflect.runtime.{universe => ru}
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
 class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathematica")) {
 
-  // @TODO: Change everything to ProvableInfo
-  private def check(lemma: Lemma): Sequent = {
-    println(lemma.name.get + "\n" + lemma.fact.conclusion)
-    lemma.fact shouldBe 'proved
-    useToClose(lemma)
-    lemma.fact.conclusion
-  }
   private def check(pi: => ProvableInfo): Sequent = {
     DerivationInfoRegistry.init(initLibrary = false)
     println(pi.codeName + "\n" + pi.provable.conclusion)
     pi.provable shouldBe 'proved
     useToClose(pi)
     pi.provable.conclusion
-  }
-
-  private def useToClose(lemma: Lemma): Unit = {
-    ProvableSig.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
-    //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(ProvableSig.startProof(lemma.fact.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
-      case _ => fail()
-    }
   }
 
   private def useToClose(pi: ProvableInfo): Unit = {
