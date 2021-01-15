@@ -5,15 +5,15 @@
 
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
-import testHelper.KeYmaeraXTestTags._
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{FlatSpec, Matchers, TagAnnotation}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
 /**
  * Test Provable constructions
@@ -22,10 +22,18 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  */
 @CheckinTest
 @SummaryTest
-class ProvableTest extends FlatSpec with Matchers {
+class ProvableTest extends FlatSpec with Matchers with BeforeAndAfterAll {
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
+
   "Provable" should "close trivial proofs" in {
     import scala.collection.immutable._
-    val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
+    val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
     val provable = ProvableSig.startProof(verum)
     // construct a proof
@@ -37,7 +45,7 @@ class ProvableTest extends FlatSpec with Matchers {
 
   it should "glue trivial proofs forward" in {
     import scala.collection.immutable._
-    val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
+    val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
     val provable = ProvableSig.startProof(verum)
     // construct a proof
@@ -46,7 +54,7 @@ class ProvableTest extends FlatSpec with Matchers {
     if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be (true)
 
-    val more = new Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
+    val more = Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
     val moreProvable = ProvableSig.startProof(more)
     // construct another (partial) proof
@@ -61,14 +69,14 @@ class ProvableTest extends FlatSpec with Matchers {
 
   it should "glue trivial proofs backward" in {
     import scala.collection.immutable._
-    val more = new Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
+    val more = Sequent(IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
     val moreProvable = ProvableSig.startProof(more)
     // construct another (partial) proof
     val moreProving = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
     moreProving.isProved should be (false)
 
-    val verum = new Sequent(IndexedSeq(), IndexedSeq(True))
+    val verum = Sequent(IndexedSeq(), IndexedSeq(True))
     // conjecture
     val provable = ProvableSig.startProof(verum)
     // construct a proof
@@ -102,7 +110,7 @@ class ProvableTest extends FlatSpec with Matchers {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))
     // |- x>5 -> x>5 & true
-    val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+    val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
     // conjecture
     val finProvable = ProvableSig.startProof(finGoal)
     // construct a proof
@@ -151,7 +159,7 @@ class ProvableTest extends FlatSpec with Matchers {
       right2, 1)(
         left, 0))
     // |- x>5 -> x>5 & true
-    val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+    val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
     val proof = ProvableSig.startProof(finGoal)(
       ImplyRight(SuccPos(0)), 0) (merged, 0)
     proof.isProved should be (true)
@@ -189,11 +197,11 @@ class ProvableTest extends FlatSpec with Matchers {
             Sequent(IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
         0)(
         // |- x>5 -> x>5 & true
-        new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
+        Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
         ImplyRight(SuccPos(0))
       )
     proof.isProved should be (true)
-    proof.proved should be (new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))))
+    proof.proved should be (Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))))
   }
 
   /**
@@ -219,7 +227,7 @@ class ProvableTest extends FlatSpec with Matchers {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))
     // x>5  |-  x>5 & true
-    val mid = new Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
+    val mid = Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
     // middle conjecture
     val midProvable = ProvableSig.startProof(mid)
     // construct a middle proof
@@ -228,7 +236,7 @@ class ProvableTest extends FlatSpec with Matchers {
       HideLeft(AntePos(0)), 1)
     midProof.isProved should be (false)
     // right conjecture: True
-    val right = new Sequent(IndexedSeq(), IndexedSeq(True))
+    val right = Sequent(IndexedSeq(), IndexedSeq(True))
     val rightProvable = ProvableSig.startProof(right)
     rightProvable.isProved should be (false)
     // construct a right proof
@@ -243,7 +251,7 @@ class ProvableTest extends FlatSpec with Matchers {
     precloseProof.proved should be (mid)
     // add to the bottom of the proof
     // final conjecture: |- x>5 -> x>5&true
-    val finGoal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+    val finGoal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
     val fin = ProvableSig.startProof(finGoal)
     // glue mergeMidRight intermediate proof forward as the partial proof of fin
     val finProof = fin(ImplyRight(SuccPos(0)), 0) (mergeMidRight, 0)
@@ -260,14 +268,14 @@ class ProvableTest extends FlatSpec with Matchers {
     val fm = Greater(Variable("x"), Number(5))
     val fm1 = Less(Variable("x"), Number(5))
     // x>5 |- x>5
-    val finGoal = new Sequent(IndexedSeq(fm), IndexedSeq(fm))
+    val finGoal = Sequent(IndexedSeq(fm), IndexedSeq(fm))
     val finProof = ProvableSig.startProof(finGoal)(
       Close(AntePos(0), SuccPos(0)), 0
     )
     finProof.isProved should be (true)
     finProof.proved should be (finGoal)
     // x<5 |- x>5
-    val noGoal = new Sequent(IndexedSeq(fm1), IndexedSeq(fm))
+    val noGoal = Sequent(IndexedSeq(fm1), IndexedSeq(fm))
     a [CoreException] shouldBe thrownBy(ProvableSig.startProof(noGoal)(
       Close(AntePos(0), SuccPos(0)), 0
     ))
@@ -286,11 +294,11 @@ class ProvableTest extends FlatSpec with Matchers {
         |  ==>  (x) > ((0))
         |\qed::d0a1dfc51350c263e39bc5fba13192c1""".stripMargin
     Provable.toStorageString(Provable.startProof("[{x'=2,y'=3}]x>0, y>0 ==> y>0".asSequent)) shouldBe
-      """[{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
+      """[{x'=(2),y'=(3)}]((x) > ((0))) :: (y) > ((0))
         |  ==>  (y) > ((0))
-        |\from   [{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
+        |\from   [{x'=(2),y'=(3)}]((x) > ((0))) :: (y) > ((0))
         |  ==>  (y) > ((0))
-        |\qed::b54b97c2c2a88560333d75ce6c445d9a""".stripMargin
+        |\qed::89558f43bbaf60af25d6d699604fe9b5""".stripMargin
     Provable.toStorageString(Provable.startProof("true".asFormula)(CloseTrue(SuccPos(0)), 0)) shouldBe
       """  ==>  true
         |\qed::e02d96fbea9765496a14c7459b48a40d""".stripMargin
@@ -318,7 +326,7 @@ class ProvableTest extends FlatSpec with Matchers {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))
     // x>5 |- x>5 & true
-    val finGoal = new Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
+    val finGoal = Sequent(IndexedSeq(fm), IndexedSeq(And(fm, True)))
     // conjecture
     val finProvable = ProvableSig.startProof(finGoal)
     // construct a proof
@@ -332,16 +340,16 @@ class ProvableTest extends FlatSpec with Matchers {
 
     // prolong forward
     // x>5 |- x>5 & true
-    val goal = new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+    val goal = Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
     val finProof = proof(goal, ImplyRight(SuccPos(0)))
     finProof.isProved should be (true)
     finProof.proved should be (goal)
     // incorrectly prolong forward
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, AndRight(SuccPos(0))))
     a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(goal, OrRight(SuccPos(0))))
-    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
-    a [CoreException] shouldBe thrownBy(proof(new Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
+    a [MatchError /*| CoreException*/] shouldBe thrownBy(proof(Sequent(IndexedSeq(), IndexedSeq(Equiv(fm, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(proof(Sequent(IndexedSeq(), IndexedSeq(Imply(False, And(fm, True)))), ImplyRight(SuccPos(0))))
+    a [CoreException] shouldBe thrownBy(proof(Sequent(IndexedSeq(), IndexedSeq(Imply(fm, And(True, fm)))), ImplyRight(SuccPos(0))))
   }
 
   "Individual proof rules" should "refuse Skolemization clashes" in {

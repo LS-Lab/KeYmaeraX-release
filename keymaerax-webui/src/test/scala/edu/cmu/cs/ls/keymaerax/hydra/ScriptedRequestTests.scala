@@ -293,7 +293,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", choiceb(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     response should have ('msg ("""Axiom choiceb [a;++b;]p(||)<->[a;]p(||)&[b;]p(||) cannot be applied: The shape of
-                                  |  expression               [v:=v;]<{x'=v&true}>x>=0
+                                  |  expression               [v:=v;]<{x'=v}>x>=0
                                   |  does not match axiom key [a;++b;]p(||)""".stripMargin))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
@@ -312,7 +312,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Unable to execute tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
+    response should have ('msg ("Unable to execute tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -331,7 +331,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("dG only applicable to box ODEs, but got [v:=v;]<{x'=v&true}>x>=0"))
+    response should have ('msg ("dG only applicable to box ODEs, but got [v:=v;]<{x'=v}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>

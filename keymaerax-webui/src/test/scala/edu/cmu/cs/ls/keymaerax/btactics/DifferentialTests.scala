@@ -365,7 +365,7 @@ class DifferentialTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x>=5, y()=2 ==> [x:=x+1;](true->x>=y()&y()>=0)".asSequent
     the [BelleProofSearchControl] thrownBy proveBy("x>=5 ==> [y:=2;x:=x+1;][{x'=y}]x>=y".asSequent,
       DifferentialTactics.diffInd('full)(1, 1::Nil)) should
-      have message "Unable to constify in context ReplContext{{[y:=2;x:=x+1;][{x'=y&true}]x>=y at .1}}, because it binds y"
+      have message "Unable to constify in context ReplContext{{[y:=2;x:=x+1;][{x'=y}]x>=y at .1}}, because it binds y"
   }
 
   it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in withTactics {
@@ -430,12 +430,12 @@ class DifferentialTests extends TacticTestBase {
                      |   -1:  x>0	Greater
                      |   -2:  f(x,y())>0	Greater
                      |   -3:  true	True$
-                     |==> 1:  [{x'=2&true}](f(x,y())>0)'	Box
+                     |==> 1:  [{x'=2}](f(x,y())>0)'	Box
                      |  from
                      |   -1:  x>0	Greater
                      |   -2:  f(x,y())>0	Greater
                      |   -3:  true	True$
-                     |==> 1:  [{x'=2&true}][x':=2;](f(x,y()))'>=0	Box}""".stripMargin
+                     |==> 1:  [{x'=2}][x':=2;](f(x,y()))'>=0	Box}""".stripMargin
   }
 
 
@@ -1216,9 +1216,9 @@ class DifferentialTests extends TacticTestBase {
         |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
         |
         |Provable{
-        |==> 1:  [{x'=v&true}]x>0	Box
+        |==> 1:  [{x'=v}]x>0	Box
         |  from
-        |==> 1:  \exists z [{x'=v,z'=v&true}]x>0	Exists}""".stripMargin
+        |==> 1:  \exists z [{x'=v,z'=v}]x>0	Exists}""".stripMargin
   }
 
   it should "give a useful error message when facts cannot be preserved for postcondition transformation" in withMathematica { _ =>
@@ -1231,9 +1231,9 @@ class DifferentialTests extends TacticTestBase {
         |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
         |
         |Provable{
-        |==> 1:  [b:=1;][{x'=v&true}]x>b	Box
+        |==> 1:  [b:=1;][{x'=v}]x>b	Box
         |  from
-        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v&true}]x>b	Box}""".stripMargin
+        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v}]x>b	Box}""".stripMargin
   }
 
   it should "use facts preserved by dC when transforming postcondition" in withMathematica { _ =>
