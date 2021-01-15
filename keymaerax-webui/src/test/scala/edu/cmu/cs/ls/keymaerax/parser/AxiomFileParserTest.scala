@@ -4,16 +4,30 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, PrivateMethodTester}
+
+import scala.collection.immutable.Map
 
 /**
   * @author Nathan Fulton
  */
 @CheckinTest
-class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester {
+class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester with BeforeAndAfterAll {
+
   private val loadAxiomString = PrivateMethod[String]('loadAxiomString)
+
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
 
   "KeYmaeraXAxiomParser" should "parse the axiom file" in {
     // even AxiomBase is private[core], so get Class by Java reflection
