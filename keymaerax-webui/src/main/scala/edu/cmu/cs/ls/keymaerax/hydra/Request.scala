@@ -1196,7 +1196,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
     case Imply(_, Box(prg, _)) =>
       createMonitorCondition(modelFml, stateVars) match {
-        case Left((monitorConjecture, monitorCond)) =>
+        case Left((monitorConjecture, monitorCond, _)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
 
           val fallback = extractController(prg)
@@ -1250,17 +1250,14 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`.
     * Returns the monitor conjecture together with the synthesized monitor, or an error. */
-  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable]): Either[(Formula, Formula), ErrorResponse] = {
+  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
+
+    val mx = ModelPlex.mxSynthesize(monitorKind) & ModelPlex.mxAutoInstantiate(assumptions) &
+      ModelPlex.mxSimplify & ModelPlex.mxFormatShape(monitorShape)
+
     val monitorCond = try {
-      TactixLibrary.proveBy(modelplexInput,
-        ModelPlex.mxSynthesize(monitorKind) & TryCatch(
-          ModelPlex.mxAutoInstantiate(assumptions) & ModelPlex.mxSimplify,
-          classOf[Throwable],
-          (_: Throwable) => TactixLibrary.skip
-        ) & DebuggingTactics.assert(0, 1, "Unique ModelPlex synthesis result expected") &
-          ModelPlex.mxFormatShape(monitorShape)
-      )
+      TactixLibrary.proveBy(modelplexInput, mx)
     } catch {
       case ex: TacticInapplicableFailure =>
         return Right(new ErrorResponse("Unable to synthesize monitor (missing feature), because \n" + ex.getMessage))
@@ -1268,15 +1265,25 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
         return Right(new ErrorResponse("ModelPlex failed: expected unique result, but \n" + ex.getMessage))
     }
 
-    Left(modelplexInput, monitorCond.subgoals.head.succ.head)
+    Left(modelplexInput, monitorCond.subgoals.head.succ.head, mx)
   }
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val Imply(_, Box(prg, _)) = modelFml
     createMonitorCondition(modelFml, vars) match {
-      case Left((modelplexConjecture, monitorFml)) =>
+      case Left((modelplexConjecture, monitorFml, synthesizeTactic)) =>
         conditionKind match {
-          case "dL" => new ModelPlexMonitorResponse(model, modelplexConjecture, monitorFml) :: Nil
+          case "dL" =>
+            val monitorProof = TactixLibrary.implyR(1) & synthesizeTactic &
+              TactixLibrary.prop & DebuggingTactics.done("Monitor proof")
+            val mxProof = TactixLibrary.proveBy(Imply(monitorFml, modelplexConjecture), monitorProof)
+            val entry = ParsedArchiveEntry(model.name + " ModelPlex Monitor", "theorem",
+              "",
+              mxProof.conclusion.succ.head.prettyString, Declaration(Map.empty),
+              mxProof.conclusion.succ.head,
+              ("ModelPlex Monitor Proof", BellePrettyPrinter(monitorProof), monitorProof) :: Nil,
+              Nil, Map.empty)
+            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter()(entry)) :: Nil
           case "C" =>
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)

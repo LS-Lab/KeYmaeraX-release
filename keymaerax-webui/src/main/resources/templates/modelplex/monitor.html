@@ -10,12 +10,17 @@
                        ng-click="synthesize('C','boolean');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
                 </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
+                       uib-tooltip="ModelPlex Proof Certificate"
+                       ng-click="showProofArchive();$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> <i class="fa fa-certificate"></i>
+                </label>
             </div>
             <i class="fa fa-download" ng-if="active==0" ng-click="download()"></i>
         </uib-tab-heading>
         <div class="row k4-half-screenheight">
             <div class="col-md-12 k4-vertical-fill">
-                <div ui-ace="{theme:'github',mode:{{language=='dL' ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
+                <div ui-ace="{theme:'github',mode:{{language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
                       advanced: {
                         wrap: -1,
                         indentedSoftWrap: true
@@ -35,12 +40,17 @@
                        ng-click="synthesize('C','metricfml');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
                 </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
+                       uib-tooltip="ModelPlex Proof Certificate"
+                       ng-click="showProofArchive();$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> <i class="fa fa-certificate"></i>
+                </label>
             </div>
             <i class="fa fa-download" ng-if="active==1" ng-click="download()"></i>
         </uib-tab-heading>
         <div class="row k4-half-screenheight">
             <div class="col-md-12 k4-vertical-fill">
-                <div ui-ace="{theme:'github',mode:{{language=='dL' ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
+                <div ui-ace="{theme:'github',mode:{{language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
                       advanced: {
                         wrap: -1,
                         indentedSoftWrap: true
@@ -60,12 +70,17 @@
                        ng-click="synthesize('C','metricprg');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
                 </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
+                       uib-tooltip="ModelPlex Proof Certificate"
+                       ng-click="showProofArchive();$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> <i class="fa fa-certificate"></i>
+                </label>
             </div>
             <i class="fa fa-download" ng-if="active==2" ng-click="download()"></i>
         </uib-tab-heading>
         <div class="row k4-half-screenheight">
             <div class="col-md-12 k4-vertical-fill">
-                <div ui-ace="{theme:'github',mode:{{language=='dL' ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
+                <div ui-ace="{theme:'github',mode:{{language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '')}},showGutter:true,
                       advanced: {
                         wrap: -1,
                         indentedSoftWrap: true

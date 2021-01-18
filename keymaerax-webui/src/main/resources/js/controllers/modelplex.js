@@ -6,7 +6,8 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     modelname: undefined,
     generatedArtifact: {
       code: undefined,
-      source: undefined
+      source: undefined,
+      proof: undefined
     },
     artifact: 'monitor/controller',
     additionalMonitorVars: []
@@ -28,6 +29,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
       .then(function(response) {
         $scope.mxdata.generatedArtifact.code = response.data.code;
         $scope.mxdata.generatedArtifact.source = response.data.source;
+        if (response.data.proof) $scope.mxdata.generatedArtifact.proof = response.data.proof;
         $scope.mxdata.modelname = response.data.modelname;
       }, function(error) {
         $uibModal.open({
@@ -52,6 +54,11 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.open = function(what, language, monitorShape) {
     $scope.mxdata.artifact = what;
     $scope.synthesize(language, monitorShape);
+  }
+
+  $scope.showProofArchive = function() {
+    $scope.language = 'dLProof';
+    $scope.mxdata.generatedArtifact.code = $scope.mxdata.generatedArtifact.proof;
   }
 
   $scope.cancel = function() {
