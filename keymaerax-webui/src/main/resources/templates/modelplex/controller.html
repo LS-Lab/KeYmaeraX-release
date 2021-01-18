@@ -23,20 +23,5 @@
                      ng-model="mxdata.generatedArtifact.code" id="dleditor"></div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-12">
-                Source Model <i class="fa fa-bars pull-right" ng-click="sourceCollapsed=!sourceCollapsed"></i>
-            </div>
-        </div>
-        <div class="row k4-half-screenheight" uib-collapse="sourceCollapsed">
-            <div class="col-md-12 k4-vertical-fill">
-                <div ui-ace="{theme:'nord_dark',mode:'dl',showGutter:true,
-                      advanced: {
-                        wrap: -1,
-                        indentedSoftWrap: true
-                      }}"
-                     ng-model="mxdata.generatedArtifact.source" id="dlsourceeditor"></div>
-            </div>
-        </div>
     </uib-tab>
 </uib-tabset>

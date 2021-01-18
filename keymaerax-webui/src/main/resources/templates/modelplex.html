@@ -12,41 +12,107 @@
 </div>
 <div class="modal-body">
     <div class="row k4-vertical-fill">
-        <div class="col-md-2">
-            <uib-accordion>
-                <div uib-accordion-group class="panel-default" heading="Monitors"
-                     uib-tooltip="Monitors check for deviation between model and reality"
-                     is-open="true">
-                    <a class="btn btn-link" ng-click="open('monitor/controller','dL','boolean')">
-                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/controller'">&nbsp;</i>Controller Monitor
-                    </a>
-                    <a class="btn btn-link" ng-click="open('monitor/model','dL','boolean')">
-                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/model'">&nbsp;</i>Model Monitor
-                    </a>
-<!--                    <div>Plant Monitor</div>-->
-<!--                    <div>Prediction Monitor</div>-->
+        <div class="col-md-4 k4-process-graph">
+            <div class="row">
+                <div class="col-md-12">
+                    <uib-accordion>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Model">
+                            <div class="row k4-half-screenheight">
+                                <div class="col-md-12 k4-vertical-fill">
+                                    <div ui-ace="{theme:'nord_dark',mode:'dl',showGutter:true,
+                                         advanced: {
+                                           wrap: -1,
+                                           indentedSoftWrap: true
+                                         }}"
+                                         ng-model="mxdata.generatedArtifact.source">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </uib-accordion>
                 </div>
-            </uib-accordion>
-            <uib-accordion>
-                <div uib-accordion-group class="panel-default" heading="Controllers"
-                     uib-tooltip="Controllers implement the modeled control algorithm">
-                    <a class="btn btn-link" ng-click="open('controller/nondet','dL','ignore')">
-                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='controller/nondet'">&nbsp;</i>Non-deterministic Controller
-                    </a>
+            </div>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
                 </div>
-            </uib-accordion>
-            <uib-accordion>
-                <div uib-accordion-group class="panel-default" heading="Sandboxes"
-                     uib-tooltip="Sandboxes use the decisions of an unverified controller (if they agree with the model),
-                     and otherwise uses the decisions of a fallback controller">
-                    <a class="btn btn-link" ng-click="open('sandbox/controller','dL','boolean')">
-                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='sandbox/controller'">&nbsp;</i>Controller Sandbox
-                    </a>
-<!--                    <div ng-click="open('sandbox/veriphy')">VeriPhy Sandbox</div>-->
+                <div class="col-md-4 text-center">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
                 </div>
-            </uib-accordion>
+                <div class="col-md-4 text-center">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <uib-accordion>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Monitor"
+                             uib-tooltip="Monitors check for deviation between model and reality"
+                             is-open="true">
+                            <ul class="list-group k4-accordion-list-group">
+                                <li class="list-group-item">
+                                    <a class="btn-link" ng-click="open('monitor/controller','dL','boolean')">
+                                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/controller'">&nbsp;</i>Controller Monitor
+                                    </a>
+                                </li>
+                                <li class="list-group-item">
+                                    <a class="btn-link" ng-click="open('monitor/model','dL','boolean')">
+                                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='monitor/model'">&nbsp;</i>Model Monitor
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </uib-accordion>
+                </div>
+                <div class="col-md-4">
+                    <uib-accordion>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Controller"
+                             uib-tooltip="Controllers implement the modeled control algorithm"
+                             is-open="true">
+                            <ul class="list-group k4-accordion-list-group">
+                                <li class="list-group-item">
+                                    <a class="btn-link" ng-click="open('controller/nondet','dL','ignore')">
+                                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='controller/nondet'">&nbsp;</i>Non-deterministic
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </uib-accordion>
+                </div>
+                <div class="col-md-4">
+                    <uib-accordion>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Proof"></div>
+                    </uib-accordion>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
+                </div>
+                <div class="col-md-4 text-center">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8">
+                    <uib-accordion>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Sandbox"
+                             uib-tooltip="Sandboxes use the decisions of an unverified controller (if they agree with the model),
+                             and otherwise uses the decisions of a fallback controller"
+                             is-open="true">
+                            <ul class="list-group k4-accordion-list-group">
+                                <li class="list-group-item">
+                                    <a class="btn-link" ng-click="open('sandbox/controller','dL','boolean')">
+                                        <i class="fa fa-angle-double-right" ng-if="mxdata.artifact=='sandbox/controller'">&nbsp;</i>Controller Sandbox
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </uib-accordion>
+                </div>
+            </div>
         </div>
-        <div class="col-md-10">
+        <div class="col-md-8">
             <div ng-if="mxdata.artifact.startsWith('monitor')" ng-include="'templates/modelplex/monitor.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('controller')" ng-include="'templates/modelplex/controller.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('sandbox')" ng-include="'templates/modelplex/sandbox.html'" class="k4-vertical-fill"></div>

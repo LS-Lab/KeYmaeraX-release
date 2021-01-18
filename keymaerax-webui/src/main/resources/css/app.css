@@ -1473,3 +1473,15 @@ del {
   margin-bottom: 0px;
   display: inherit;
 }
+
+.k4-process-graph .panel-group {
+  margin-bottom: 0px;
+}
+
+.k4-accordion-list .panel-body {
+  padding: 0px;
+}
+
+.k4-accordion-list-group {
+  margin-bottom: 0px;
+}
