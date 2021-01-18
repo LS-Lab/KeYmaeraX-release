@@ -198,14 +198,7 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 }
 
 class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
-  protected def prettierPrint(e: Expression): String = try {
-    PrettyPrintFormatProvider(
-      new KeYmaeraXPrettierPrinter(80)(e), s => s).print(e.prettyString)
-  } catch {
-    case _: Throwable =>
-      println(e.prettyString + "\n" + new KeYmaeraXPrettierPrinter(80)(e))
-      e.prettyString
-  }
+  protected def prettierPrint(e: Expression): String = PrettierPrintFormatProvider(e, 80).print(e.prettyString)
 
   def getJson: JsValue = {
     JsObject(
@@ -217,11 +210,11 @@ class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends 
   }
 }
 
-class ModelPlexMonitorResponse(model: ModelPOJO, conjecture: Formula, artifact: Expression)
+class ModelPlexMonitorResponse(model: ModelPOJO, artifact: Expression, proofArchive: String)
     extends ModelPlexArtifactResponse(model, artifact) {
   override def getJson: JsValue = {
     val artifact = super.getJson.asJsObject
-    artifact.copy(artifact.fields + ("conjecture" -> JsString(prettierPrint(conjecture))))
+    artifact.copy(artifact.fields + ("proof" -> JsString(proofArchive)))
   }
 }
 
@@ -581,46 +574,12 @@ class ProofAgendaResponse(tasks: List[(ProofPOJO, List[Int], String)]) extends R
 
 /** JSON conversions for frequently-used response formats */
 object Helpers {
-  trait FormatProvider {
-    /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
-    def printWS(check: String = ""): String
-    /** Prints whitespace prefix and formats `next` according to the format string. */
-    def print(next: String): String
-  }
 
   /** Stateful format provider to read off whitespace and line breaks from a pretty-printed string. */
-  case class PrettyPrintFormatProvider(var format: String, wsPrinter: String => String =
-      _.replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")) extends FormatProvider {
-    private val LINEINDENT = "\\n(\\s*)".r
-    private val SPACES = "\\s+".r
+  case class HtmlPrettyPrintFormatProvider(format: String, wsPrinter: String => String =
+      _.replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;"))
+    extends PrettyPrintFormatProvider(format, wsPrinter) {
 
-    /** Advances the format string `format` to the first non-whitespace character and returns the whitespace prefix. */
-    def advanceWS(): String = {
-      LINEINDENT.findPrefixMatchOf(format) match {
-        case Some(m) =>
-          format = format.substring(m.end)
-          m.matched
-        case None => SPACES.findPrefixMatchOf(format) match {
-          case Some(m) =>
-            format = format.substring(m.end)
-            m.matched
-          case None => ""
-        }
-      }
-    }
-
-    /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
-    def printWS(check: String = ""): String = {
-      val result = wsPrinter(advanceWS())
-      assert(format.startsWith(check), s"'$format' did not start with '$check'")
-      format = format.substring(check.length)
-      result
-    }
-
-    /** Prints whitespace prefix and formats `next` according to the format string. */
-    def print(next: String): String = {
-      wsPrinter(advanceWS()) + next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
-    }
   }
 
   /** Noop format provider. */
@@ -639,7 +598,7 @@ object Helpers {
         val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
 
         val format = new KeYmaeraXPrettierPrinter(if (isAnte) marginLeft else marginRight)(fml)
-        val fmlJson = printJson(PosInExpr(), fml, PrettyPrintFormatProvider(format))(Position(idx), fml)
+        val fmlJson = printJson(PosInExpr(), fml, HtmlPrettyPrintFormatProvider(format))(Position(idx), fml)
         JsObject(
           "id" -> JsString(idx.toString),
           "formula" -> JsObject(

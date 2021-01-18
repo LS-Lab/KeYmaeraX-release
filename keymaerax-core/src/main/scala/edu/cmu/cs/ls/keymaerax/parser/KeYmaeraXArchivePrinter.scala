@@ -47,7 +47,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
 
     val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val printed = print(head, entry.name, defsBlock, varsBlock, entry.model.prettyString, printedTactics)
+    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrint(entry.model), printedTactics)
 
     val finalPrint = if (withComments) {
       assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.problemContent).map(_.model),
@@ -168,6 +168,8 @@ object KeYmaeraXArchivePrinter {
        #$tacticsBlock
        #$END_BLOCK""".stripMargin('#')
   }
+
+  def prettierPrint(e: Expression): String = PrettierPrintFormatProvider(e, 80).print(e.prettyString)
 }
 
 class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
