@@ -38,7 +38,7 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
         var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
         var jlinkTcpip = $scope.jlinkTcpip.port ? "" + ($scope.jlinkTcpip.machine ? $scope.jlinkTcpip.port + "@" + $scope.jlinkTcpip.machine
                                                                                           : $scope.jlinkTcpip.port)
-                                                : "true";
+                                                : "false";
         var dataObj = { linkName: linkName, jlinkLibDir: jlinkLibPath, jlinkTcpip: jlinkTcpip };
 
         $scope.$parent.toolStatus.initializing = true;

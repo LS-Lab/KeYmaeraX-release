@@ -592,14 +592,19 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
     } else {
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, toolName)
+      // prefer TCPIP=false if no specific port/machine is configured
+      val tcpip = jlinkTcpip match {
+        case "true" | "false" => "false" // not user-configurable with this request (but configurable with Advanced options, which then takes precedence)
+        case x => x
+      }
       val provider = toolName match {
         case "wolframengine" =>
-          Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
+          Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
           ToolProvider.initFallbackZ3(WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
         case "mathematica" =>
-          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
+          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, tcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
           ToolProvider.initFallbackZ3(MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
