@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
@@ -89,6 +89,40 @@ object ModelPlex extends ModelPlexTrait with Logging {
         mxOutputProofTree
     }
   }
+
+  @Tactic(longDisplayName = "ModelPlex Monitor Synthesis")
+  def mxSynthesize(kind: String): InputTactic = inputanon {
+    kind match {
+      case "controller" => controllerMonitorByChase(1)
+      case "model" => modelMonitorByChase(1)
+      case _ => throw new IllFormedTacticApplicationException("Unknown ModelPlex option '" + kind + "'; please use one of [controller|model]")
+    }
+  }
+
+  @Tactic(longDisplayName = "ModelPlex Auto Quantifier Instantiation")
+  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic = inputanon {
+    TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions)(1)),
+      classOf[Throwable], (_: Throwable) => TactixLibrary.skip)
+  }
+
+  @Tactic(longDisplayName = "ModelPlex Simplifier")
+  lazy val mxSimplify: BelleExpr = anon {
+    SimplifierV3.simpTac(Nil, SimplifierV3.composeIndex(SimplifierV3.baseIndex,SimplifierV3.boolIndex))(1)
+  }
+
+  @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
+  def mxFormatShape(shape: String): InputTactic = inputanon ((seq: Sequent) => shape match {
+    case "boolean" => skip
+    case "metricprg" =>
+      val monitorFml = seq.succ.head
+      val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+      cut(reassociatedMonitorFml) <(
+        prop & DebuggingTactics.done("Unable to reassociate monitor formula into a monitor program")
+        ,
+        hideR(1) & ModelPlex.chaseToTests(combineTests = false)(1)*2
+      )
+    case "metricfml" => toMetricT(seq.succ.head)
+  })
 
   /** Returns the post variable of `v` */
   private def postVar = (v: Variable) => BaseVariable(v.name + "post", v.index)
@@ -1066,8 +1100,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     sequent.succ.indices.map(i => SimplifierV2.simpTac(SuccPosition.base0(i))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
-  /** Turns the formula `fml` into a single inequality. */
-  def toMetric(fml: Formula): Formula = {
+  private def toMetricT(fml: Formula): BelleExpr = {
     val cmpNF = chase(3, 3, (e: Expression) => e match {
       case And(_, _) => Ax.andRecursor::Nil
       case Or(_, _) => Ax.orRecursor::Nil
@@ -1111,9 +1144,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case (_, Some(p)) => useAt(p, PosInExpr(0::Nil))(1)
       case (_, None) => skip
     }
-    val result = proveBy(fml, normTactic & cmpNF(1) & arithNF(1) &
+
+    normTactic & cmpNF(1) & arithNF(1) &
       SaturateTactic(SimplifierV3.simplify(1)) /* until Simplifier saturates by itself */ &
-      Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
+      Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1)
+  }
+
+  /** Turns the formula `fml` into a single inequality. */
+  def toMetric(fml: Formula): Formula = {
+    val result = proveBy(fml, toMetricT(fml))
     assert(result.subgoals.length == 1 && result.subgoals.head.ante.isEmpty && result.subgoals.head.succ.length == 1)
     result.subgoals.head.succ.head
   }

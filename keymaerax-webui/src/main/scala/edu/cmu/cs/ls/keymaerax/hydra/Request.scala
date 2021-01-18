@@ -1196,7 +1196,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
     case Imply(_, Box(prg, _)) =>
       createMonitorCondition(modelFml, stateVars) match {
-        case Left(monitorCond) =>
+        case Left((monitorConjecture, monitorCond)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
 
           val fallback = extractController(prg)
@@ -1205,7 +1205,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               val ctrlVars = StaticSemantics.boundVars(fallback).toSet
               val ctrl = ctrlVars.map(v => AssignAny(fresh(v, "post"))).reduceRightOption(Compose).getOrElse(Test(True))
               val sandbox = Compose(ctrl, Choice(Test(monitorCond), Compose(Test(Not(monitorCond)), fallback)))
-              new ModelPlexArtifactResponse(model, sandbox) :: Nil
+              new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
               val ctrlInputs = CGenerator.getInputs(monitorCond)
               val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(monitorCond, stateVars, ctrlInputs, "Monitor")
@@ -1248,49 +1248,35 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
     case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
   }
 
-  /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`. */
-  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable]): Either[Formula, ErrorResponse] = {
+  /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`.
+    * Returns the monitor conjecture together with the synthesized monitor, or an error. */
+  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable]): Either[(Formula, Formula), ErrorResponse] = {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
-    val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
-      case ("controller", tool) =>
-        val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
-        try {
-          TactixLibrary.proveBy(foResult.subgoals.head,
-            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)) &
-              SimplifierV3.simpTac(Nil, SimplifierV3.composeIndex(SimplifierV3.baseIndex,SimplifierV3.boolIndex))(1))
-        } catch {
-          case _: Throwable => foResult
-        }
-      case ("model", tool) => try {
-        TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-          ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
-          SimplifierV3.simpTac(Nil, SimplifierV3.composeIndex(SimplifierV3.baseIndex,SimplifierV3.boolIndex))(1))
-      } catch {
-        case ex: TacticInapplicableFailure =>
-          return Right(new ErrorResponse("Unable to synthesize model monitor (missing feature), because \n" + ex.getMessage))
-      }
+    val monitorCond = try {
+      TactixLibrary.proveBy(modelplexInput,
+        ModelPlex.mxSynthesize(monitorKind) & TryCatch(
+          ModelPlex.mxAutoInstantiate(assumptions) & ModelPlex.mxSimplify,
+          classOf[Throwable],
+          (_: Throwable) => TactixLibrary.skip
+        ) & DebuggingTactics.assert(0, 1, "Unique ModelPlex synthesis result expected") &
+          ModelPlex.mxFormatShape(monitorShape)
+      )
+    } catch {
+      case ex: TacticInapplicableFailure =>
+        return Right(new ErrorResponse("Unable to synthesize monitor (missing feature), because \n" + ex.getMessage))
+      case ex: TacticAssertionError =>
+        return Right(new ErrorResponse("ModelPlex failed: expected unique result, but \n" + ex.getMessage))
     }
 
-    if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
-      monitorShape match {
-        case "boolean" => Left(monitorCond.subgoals.head.succ.head)
-        case "metricprg" =>
-          val monitorFml = monitorCond.subgoals.head.succ.head
-          val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-          if (TactixLibrary.proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop).isProved) {
-            Left(TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests = false)(1) * 2).subgoals.head.succ.head)
-          } else Right(new ErrorResponse("Unable to reassociate monitor formula into a monitor program"))
-        case "metricfml" => Left(ModelPlex.toMetric(monitorCond.subgoals.head.succ.head))
-      }
-    } else Right(new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString))
+    Left(modelplexInput, monitorCond.subgoals.head.succ.head)
   }
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val Imply(_, Box(prg, _)) = modelFml
     createMonitorCondition(modelFml, vars) match {
-      case Left(monitorFml) =>
+      case Left((modelplexConjecture, monitorFml)) =>
         conditionKind match {
-          case "dL" => new ModelPlexArtifactResponse(model, monitorFml) :: Nil
+          case "dL" => new ModelPlexMonitorResponse(model, modelplexConjecture, monitorFml) :: Nil
           case "C" =>
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)

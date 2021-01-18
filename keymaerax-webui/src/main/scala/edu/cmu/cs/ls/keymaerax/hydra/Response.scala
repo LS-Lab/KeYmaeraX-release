@@ -198,7 +198,7 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
 }
 
 class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
-  private def prettierPrint(e: Expression): String = try {
+  protected def prettierPrint(e: Expression): String = try {
     PrettyPrintFormatProvider(
       new KeYmaeraXPrettierPrinter(80)(e), s => s).print(e.prettyString)
   } catch {
@@ -214,6 +214,22 @@ class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends 
       "code" -> JsString(prettierPrint(artifact)),
       "source" -> JsString(prettierPrint(ArchiveParser(model.keyFile).head.expandedModel))
     )
+  }
+}
+
+class ModelPlexMonitorResponse(model: ModelPOJO, conjecture: Formula, artifact: Expression)
+    extends ModelPlexArtifactResponse(model, artifact) {
+  override def getJson: JsValue = {
+    val artifact = super.getJson.asJsObject
+    artifact.copy(artifact.fields + ("conjecture" -> JsString(prettierPrint(conjecture))))
+  }
+}
+
+class ModelPlexSandboxResponse(model: ModelPOJO, conjecture: Formula, artifact: Expression)
+  extends ModelPlexArtifactResponse(model, artifact) {
+  override def getJson: JsValue = {
+    val artifact = super.getJson.asJsObject
+    artifact.copy(artifact.fields + ("conjecture" -> JsString(prettierPrint(conjecture))))
   }
 }
 
