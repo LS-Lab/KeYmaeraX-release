@@ -13,12 +13,18 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     additionalMonitorVars: []
   }
 
+  $scope.getEditorMode = function(language) {
+    return language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '');
+  }
+
   $scope.language = "dL"
+  $scope.editorMode = $scope.getEditorMode($scope.language);
   $scope.sourceCollapsed = true;
 
   $scope.synthesize = function(language, monitorShape) {
     spinnerService.show('modelplexExecutionSpinner')
     $scope.language = language;
+    $scope.editorMode = $scope.getEditorMode(language);
     $scope.mxdata.generatedArtifact.code = undefined;
     $scope.mxdata.generatedArtifact.source = undefined;
     $scope.mxdata.modelname = undefined;
@@ -58,6 +64,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
 
   $scope.showProofArchive = function() {
     $scope.language = 'dLProof';
+    $scope.editorMode = $scope.getEditorMode($scope.language);
     $scope.mxdata.generatedArtifact.code = $scope.mxdata.generatedArtifact.proof;
   }
 
