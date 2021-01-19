@@ -116,6 +116,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   private def argPrinter(arg: BelleParser.TacticArg): Option[String] = {
     arg match {
       case Left(None) => None
+      case Left(Nil) => Some("\"nil\"")
       case Left(x :: Nil) => argPrinter(Left(x))
       case Left(x :: xs) => Some((x :: xs).flatMap(c => argPrinter(Left(c))).map(_.stripPrefix("\"").stripSuffix("\"")).
         mkString("\"", "::", "::nil\""))

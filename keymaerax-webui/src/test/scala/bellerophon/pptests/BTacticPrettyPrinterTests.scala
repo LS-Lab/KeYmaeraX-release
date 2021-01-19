@@ -66,6 +66,18 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     roundTrip("loop(\"x>0\", 1)")
   }
 
+  "Input tactic" should "print list input" in withTactics {
+    val tactic = TactixLibrary.dC("x>0".asFormula :: "x>2".asFormula :: Nil)(1)
+    BellePrettyPrinter(tactic) shouldBe "dC(\"x>0::x>2::nil\", 1)"
+    roundTrip("dC(\"x>0::x>2::nil\", 1)")
+  }
+
+  it should "print empty list input" in withTactics {
+    val tactic = TactixLibrary.dC(Nil)(1)
+    BellePrettyPrinter(tactic) shouldBe "dC(\"nil\", 1)"
+    roundTrip("dC(\"nil\", 1)")
+  }
+
   "useLemmaAt" should "print key correctly" in withTactics {
     BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt(\"the lemma\", 1)"
     roundTrip("useLemmaAt(\"the lemma\", 1)")
@@ -84,5 +96,4 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   it should "parenthesize tactic combinators" in withTactics {
     parser(BellePrettyPrinter(SaturateTactic(TactixLibrary.alphaRule))) shouldBe SaturateTactic(TactixLibrary.alphaRule)
   }
-
 }

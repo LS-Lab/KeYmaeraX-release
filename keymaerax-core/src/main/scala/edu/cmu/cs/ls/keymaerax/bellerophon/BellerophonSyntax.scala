@@ -48,6 +48,7 @@ object BelleExpr {
       case (head: Expression)::tail =>
         if (listAsVarArgs) Some((head :: tail).map(printOne(_, listAsVarArgs)).mkString(","))
         else Some("\"" + (head :: tail).map(_.asInstanceOf[Expression].prettyString).mkString("::") + "::nil\"")
+      case Nil => Some("\"nil\"")
       case input => Some("\"" + input.toString + "\"")
     }
   }
