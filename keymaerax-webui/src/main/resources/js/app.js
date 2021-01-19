@@ -84,7 +84,12 @@ keymaeraProofApp.config(['$routeProvider',
       }).
       when('/models/:modelId/proofs', {
         templateUrl: 'partials/proof-list.html',
-        controller: 'ProofListCtrl'
+        controller: 'ProofListCtrl',
+        resolve: {
+          modelId: function($route) {
+            return $route.current.params.modelId;
+          }
+        }
       }).
       when('/models/:modelId/proofs/create', {
         //templateUrl: 'partials/proof-detail.html',
@@ -93,11 +98,17 @@ keymaeraProofApp.config(['$routeProvider',
       }).
       when('/proofs', {
         templateUrl: 'partials/proof-list.html',
-        controller: 'ProofListCtrl'
+        controller: 'ProofListCtrl',
+        resolve: {
+          modelId: function() { return undefined; }
+        }
       }).
       when('/guestproofs', {
         templateUrl: 'partials/guest-proof-list.html',
-        controller: 'ProofListCtrl'
+        controller: 'ProofListCtrl',
+        resolve: {
+          modelId: function() { return undefined; }
+        }
       }).
       when('/proofs/:proofId', {
         //templateUrl: 'partials/proof-detail.html',
