@@ -48,7 +48,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
 
   $scope.download = function() {
     var data = new Blob([$scope.mxdata.generatedArtifact.code], { type: 'text/plain;charset=utf-8' });
-    FileSaver.saveAs(data, $scope.mxdata.modelname + ($scope.language == 'dL' ? '.kyx' : '.c'));
+    FileSaver.saveAs(data, $scope.mxdata.modelname + ($scope.language.startsWith('dL') ? '.kyx' : '.c'));
   }
 
   $scope.open = function(what, language, monitorShape) {
