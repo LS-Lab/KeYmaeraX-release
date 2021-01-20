@@ -81,7 +81,9 @@
                 </div>
                 <div class="col-md-4">
                     <uib-accordion>
-                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Proof"></div>
+                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Proof"
+                             ng-click="showProofList()">
+                        </div>
                     </uib-accordion>
                 </div>
             </div>
@@ -116,6 +118,9 @@
             <div ng-if="mxdata.artifact.startsWith('monitor')" ng-include="'templates/modelplex/monitor.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('controller')" ng-include="'templates/modelplex/controller.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('sandbox')" ng-include="'templates/modelplex/sandbox.html'" class="k4-vertical-fill"></div>
+            <div ng-if="mxdata.artifact.startsWith('proof')" class="k4-vertical-fill">
+                <k4-proof-list user-id="{{userId}}" model-id="{{mxdata.modelid}}"></k4-proof-list>
+            </div>
         </div>
     </div>
 </div>

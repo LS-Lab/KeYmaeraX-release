@@ -17,6 +17,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     return language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '');
   }
 
+  $scope.userId = userid;
   $scope.language = "dL"
   $scope.editorMode = $scope.getEditorMode($scope.language);
   $scope.sourceCollapsed = true;
@@ -66,6 +67,10 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     $scope.language = 'dLProof';
     $scope.editorMode = $scope.getEditorMode($scope.language);
     $scope.mxdata.generatedArtifact.code = $scope.mxdata.generatedArtifact.proof;
+  }
+
+  $scope.showProofList = function() {
+    $scope.mxdata.artifact = 'proofs';
   }
 
   $scope.cancel = function() {
