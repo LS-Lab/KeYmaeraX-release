@@ -428,16 +428,22 @@ case class Context(s: Statement) {
         val guardVars = VariableSets(Context(guard)).freeVars
         val boundVars = VariableSets(this).boundVars
         val assertionCandidates = assertionVars -- (guardVars ++ boundVars)
-        val assertionPosQuery = assertionCandidates.map(v => QUnify(Greater(v, Number(0)))).
-          reduce[ContextQuery](QUnion(_, _))
+        val assertionPosQuery: ContextQuery =
+          if (assertionCandidates.nonEmpty)
+            assertionCandidates.map(v => QUnify(Greater(v, Number(0)))).reduce[ContextQuery](QUnion(_, _))
+          else QNil()
         val assertionFound = findAll(assertionPosQuery).formulas
         assertionFound match {
           case Greater(v, _) :: _ => v
           case _ :: _ => throw new Exception("Bad pattern match - bug found")
           case Nil =>
             val guardCandidates = assertionVars.intersect(guardVars) -- boundVars
-            val guardPosQuery = guardCandidates.map(v => QUnify(Greater(v, Number(0)))).
-              reduce[ContextQuery](QUnion(_,_))
+            val guardPosQuery: ContextQuery =
+              if(guardCandidates.nonEmpty) {
+                guardCandidates.map(v => QUnify(Greater(v, Number(0)))).
+                reduce[ContextQuery](QUnion(_,_))
+              } else
+                QNil()
             val guardFound = findAll(guardPosQuery).formulas
             guardFound match {
               case Greater(v, _) :: _ => v

@@ -346,7 +346,6 @@ object SharedModels {
   
   // may be less popular but may be easier to implement / test
   // @TODO: remember to update thesis after code is working
-  // @TODO: Constructivize guards
   val revisedReachAvoidFor: String =
     """pragma option "time=true";
       |pragma option "trace=true";
@@ -367,7 +366,7 @@ object SharedModels {
       |  !prog:(pos <= (x - x@init));
       |  note step = andI(prog, safe);
       |}
-      |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard(eps);
+      |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard;
       |!(x <= d & x + 2 * eps >= d) using done conv  by auto;
       |""".stripMargin
 
