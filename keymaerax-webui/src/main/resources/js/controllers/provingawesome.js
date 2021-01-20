@@ -475,7 +475,7 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 angular.module('keymaerax.controllers').controller('TaskCtrl',
   function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, $location, $timeout,
            Tactics, sequentProofData, spinnerService,
-           derivationInfos, sessionService, Poller, FileSaver) {
+           derivationInfos, sessionService, Poller, FileSaver, Proofs) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
@@ -1077,20 +1077,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $location.path('/proofs/' + $scope.proof.proofId + '/browse');
     };
 
-    // don't trust local cache, fetch new from server
-    //@todo duplicate with proofs.js downloadLemma
     $scope.downloadLemma = function() {
-      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/lemma").then(function(response) {
-        var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, $scope.proofName + '.kyp');
-      });
+      Proofs.downloadLemma($scope.userId, {id: $scope.proofId, name: $scope.proofName});
     }
-
-    //@todo duplicate with proofs.js downloadPartialProof
     $scope.downloadProofArchive = function() {
-      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/download").then(function(response) {
-        var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, $scope.proofName + '.kyx');
-      });
+      Proofs.downloadProofArchive($scope.userId, {id: $scope.proofId, name: $scope.proofName});
     }
   });

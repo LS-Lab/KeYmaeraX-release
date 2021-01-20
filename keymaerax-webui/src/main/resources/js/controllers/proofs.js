@@ -2,7 +2,7 @@
  * Controllers for proof lists and proof information pages.
  */
 angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http,
-    $routeParams, $location, sessionService, spinnerService) {
+    $routeParams, $location, sessionService, spinnerService, Proofs) {
   /** User data and helper functions. */
   $scope.user = {
     /** Returns true if the user is a guest, false otherwise. */
@@ -11,18 +11,7 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
 
   /** Create a new proof for model 'modelId' with 'proofName' and 'proofDescription' (both optional: empty ""). */
   $scope.createProof = function(modelId, proofName, proofDescription) {
-      var uri     = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createProof'
-      var dataObj = {proofName: proofName, proofDescription: proofDescription}
-
-      $http.post(uri, dataObj).
-          success(function(data) {
-              var proofid = data.id
-              // we may want to switch to ui.router
-              $location.path('proofs/' + proofid);
-          }).
-          error(function(data, status, headers, config) {
-              console.log('Error starting new proof for model ' + $routeParams.modelId)
-          });
+    Proofs.createProof(sessionService.getUser(), modelId, proofName, proofDescription);
   };
 
   /** Opens the last proof (finished or not) of this model. */
@@ -82,7 +71,7 @@ var pollProofStatus = function(proof, userId, http) {
 
 /* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
 angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
-    $scope, $http, $location, $route, $uibModal, FileSaver, Blob, spinnerService, sessionService, modelId) {
+    $scope, $http, $location, $route, $uibModal, FileSaver, Blob, spinnerService, sessionService, Proofs, modelId) {
   $scope.modelId = modelId;
   $scope.userId = sessionService.getUser();
 
@@ -108,17 +97,8 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     doneLabel: 'Done'
   }
 
-  $scope.openPrf = function(proofId) {
-      $location.path('/proofs/' + proofId)
-  }
-
   $scope.deleteProof = function(proof) {
-    $http.post('user/' + $scope.userId + "/proof/" + proof.id + "/delete").success(function(data) {
-       if (data.success) {
-         var idx = $scope.proofs.indexOf(proof)
-         if (idx > -1) $scope.proofs.splice(idx, 1);
-       }
-    });
+    Proofs.deleteProof($scope.userId, proof);
   };
 
   $scope.loadProof = function(proof) {
@@ -142,28 +122,14 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     });
   }
 
-  //@todo duplicate with provingawesome.js downloadTactic
   $scope.downloadTactic = function(proof) {
-    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/extract").then(function(response) {
-      var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, proof.name + '.kyt');
-    });
+    Proofs.downloadTactic($scope.userId, proof);
   }
-
-  //@todo duplicate with provingawesome.js downloadLemma
   $scope.downloadLemma = function(proof) {
-    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/lemma").then(function(response) {
-      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, proof.name + '.kyp');
-    });
+    Proofs.downloadLemma($scope.userId, proof);
   }
-
-  //@todo duplicate with provingawesome.js downloadProofArchive
   $scope.downloadPartialProof = function(proof) {
-    $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/download").then(function(response) {
-      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, proof.name + '.kyx');
-    });
+    Proofs.downloadProofArchive($scope.userId, proof)
   }
 
   $scope.openTactic = function (proofid) {
@@ -180,47 +146,20 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     });
   };
 
-  currentDateString = function() {
-    var today = new Date();
-    var dd = today.getDate();
-    var mm = today.getMonth() + 1; //@note January is 0
-    var yyyy = today.getFullYear();
-
-    if(dd < 10) dd = '0' + dd
-    if(mm < 10) mm='0'+mm
-    return mm + dd + yyyy;
-  }
-
   $scope.downloadModelProofs = function(modelId) {
     spinnerService.show('proofExportSpinner');
-    $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
-      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kyx');
-    })
-    .finally(function() { spinnerService.hide('proofExportSpinner'); });
+    Proofs.downloadModelProofs($scope.userId, modelId).finally(function() { spinnerService.hide('proofExportSpinner'); });
   }
 
   $scope.downloadAllProofs = function() {
     spinnerService.show('proofExportSpinner');
-    $http.get("/proofs/user/" + $scope.userId + "/downloadAllProofs").then(function(response) {
-      var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kyx');
-    })
-    .finally(function() { spinnerService.hide('proofExportSpinner'); });
+    Proofs.downloadAllProofs($scope.userId).finally(function() { spinnerService.hide('proofExportSpinner'); });
   }
 
   //Load the proof list and emit as a view.
-  if ($scope.modelId !== undefined) {
-    $http.get('models/users/' + $scope.userId + "/model/" + $scope.modelId + "/proofs").success(function(data) {
-      $scope.proofs = data;
-    });
-    $scope.$emit('routeLoaded', {theview: 'proofs'});
-  } else {
-    $http.get('proofs/users/' + $scope.userId).success(function(data) {
-      $scope.proofs = data;
-    });
-    $scope.$emit('routeLoaded', {theview: 'allproofs'});
-  }
+  Proofs.loadProofList($scope.userId, $scope.modelId);
+  $scope.proofs = Proofs.proofs;
+  $scope.$emit('routeLoaded', {theview: 'proofs'});
 
 });
 
