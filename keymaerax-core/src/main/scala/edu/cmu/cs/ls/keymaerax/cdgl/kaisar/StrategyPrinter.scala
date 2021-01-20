@@ -10,7 +10,9 @@ object StrategyPrinter {
       case SCompose(children) => s"SCompose[${as.nodeID}](${children.map(apply).mkString(",")})"
       case SChoice(l, r) => s"SChoice[${as.nodeID}](${apply(l)},${apply(r)})"
       case SODE(ode) => s"SODE[${as.nodeID}](${ode.prettyString})"
-      case AForLoop(idx,idx0,conv,body,idxup) => s"AForLoop[${as.nodeID}](${idx.prettyString},${idx0.prettyString},${conv.prettyString},${apply(body)},${idxup.prettyString})"
+      case AForLoop(idx,idx0,conv,body,idxup, guardEpsilon) =>
+        val guardStr = guardEpsilon.map(f => "," + f.prettyString).getOrElse("")
+        s"AForLoop[${as.nodeID}](${idx.prettyString},${idx0.prettyString},${conv.prettyString},${apply(body)},${idxup.prettyString}${guardStr})"
       case ALoop(conv, body) => s"ALoop[${as.nodeID}](${conv.prettyString},${apply(body)})"
       case ASwitch(branches) => s"ASwitch[${as.nodeID}](${branches.map({case (fml, as) => s"(${fml.prettyString}, ${apply(as)})"}).mkString(",")})"
       case AODE(ode, dur) => s"AODE[${as.nodeID}](${ode.prettyString},${dur.prettyString})"

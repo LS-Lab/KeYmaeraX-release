@@ -111,14 +111,15 @@ object VariableSets {
       }).reduce((l, r) => l.choice(r))
     case BoxChoice(left, right) => apply(kc.reapply(left)).choice(apply(kc.reapply(right)))
     case While(x: Term, j, s) => apply(kc.reapply(s)).addTabooFacts(StaticSemantics(x).toSet).option
-    case For(metX, metF, metIncr, conv, guard, body) =>
+    case For(metX, metF, metIncr, conv, guard, body, guardEpsilon) =>
       val mx = ofMustBound(Set(metX), kc.isGhost)
       val mf = mx.addFreeVars(StaticSemantics(metF).toSet)
       val mi = mf.addFreeVars(StaticSemantics(metIncr).toSet)
       val mg = mi ++ ofFacts(StaticSemantics(guard.pat).toSet, guard.f, kc.isInverseGhost)
       val mc = mg ++
         (conv.map(cnv => ofFacts(StaticSemantics(cnv.pat).toSet, cnv.f, kc.isInverseGhost)).getOrElse(VariableSets.empty))
-      mc ++ apply(kc.reapply(body))
+      val mge = guardEpsilon.map(f => mc.addFreeVars(StaticSemantics(f).toSet)).getOrElse(mc)
+      mge ++ apply(kc.reapply(body))
     case BoxLoop(s, _) => apply(kc.reapply(s)).option
     case ProveODE(ds, dc) => apply(kc, ds).++(apply(kc, dc))
     case m: Phi => apply(m.asgns).forgetBound

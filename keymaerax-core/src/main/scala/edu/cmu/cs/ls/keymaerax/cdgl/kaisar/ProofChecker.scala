@@ -226,6 +226,15 @@ object ProofChecker {
     }
   }
 
+  private def guardDone(con: Context,  delta: Term, interpF: Formula): Boolean = {
+    con.getFor match {
+      case Some(fr: For) =>
+        val postCond = Metric.weakNegation(fr.guard.f, delta)
+        interpF == postCond
+      case _ => false
+    }
+  }
+
   /** @return unit if f proves by method [[m]], else throw. */
   private def apply(con: Context, f: Formula, m: Method, outerStatement: ASTNode = Triv()): Unit = {
     val query = methodAssumptions(con, m, f)
@@ -247,6 +256,7 @@ object ProofChecker {
         val branches = FormulaTools.disjuncts(interpF)
         qeAssert (exhaustive(branches), assms, f, m, outerStatement)
       // discharge goal with structured proof
+      case GuardDone(Some(delta)) => qeAssert(guardDone(con, delta, interpF), assms, f, m, outerStatement)
       case ByProof(proof: Statements) => apply(con, proof)
     }
     ProofOptions.countBranches()
@@ -617,6 +627,7 @@ object ProofChecker {
         if(debugNames.map(Variable(_): Term).contains(x)) {
           println("Checking debug assertion: " + x)
         }
+        con.sideEffect(s)
         apply(con, elabF, m, s)
         val conflict = taboo.intersect(StaticSemantics(elabF).fv.toSet)
         if (conflict.nonEmpty)
@@ -668,7 +679,7 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
-      case fr@For(metX, plainMet0, plainMetIncr, plainMaybeConv, plainGuard, body) =>
+      case fr@For(metX, plainMet0, plainMetIncr, plainMaybeConv, plainGuard, body, guardEpsilon) =>
         // @TODO: Double check side conditions / edge cases
         // throws exception if metric ill-formed
         val taboos = VariableSets(body).boundVars
@@ -683,7 +694,6 @@ object ProofChecker {
         val met0 = con.elaborateStable(plainMet0)
         // check whether loop metric is well-founded, throw if not
         val metric = Metric(metX, metIncr, guard.f, taboos)
-        val termCond = metric.guardPost(metX)
         // check additional metric side condition if any, e.g. increment amount must have lower bound
         metric.sideCondition match {
           case None => ()
@@ -722,10 +732,11 @@ object ProofChecker {
         // NB: progress is ensured by side conditions / increment conditions, no separate proof needed in loop body */
         // Package proof results
         val Box(a, p) = asBox(fBody)
-        val theConcl = cnvConcl match {case True => termCond case f => And(f, termCond)}
+        val termCond = fr.guardDelta.map(gd => Metric.weakNegation(fr.guard.f, gd))
+        val theConcl = (cnvConcl, termCond) match {case (True, Some(tc)) => tc case (f, None) => f case (f, Some(tc)) => And(f, tc)}
         // @TODO: reconsider result formula format. Complicated one here needed when proved formula mentions metX though
         val ff = Box(Compose(Compose(Assign(metX, met0),Dual(Loop(Compose(Dual(a), Assign(metX,metIncr))))), Dual(Test(theConcl))), True)
-        val ss = For(metX, met0, metIncr, maybeConv, guard, sBody.s)
+        val ss = For(metX, met0, metIncr, maybeConv, guard, sBody.s, guardEpsilon)
         (Context(ss), ff)
       case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {

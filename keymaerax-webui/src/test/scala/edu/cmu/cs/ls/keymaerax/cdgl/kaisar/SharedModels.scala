@@ -294,6 +294,8 @@ object SharedModels {
       |}
       |""".stripMargin
 
+
+  // Note: not supposed to work. Is for historical purposes to remember early design
   val proposedReachAvoidFor: String =
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
       |let J(pos) <-> (pos <= d);
@@ -331,12 +333,15 @@ object SharedModels {
   // gauss formula for triangle number
   val basicForConv: String =
     """
+      | ?deltaLo:(delta > 0);
+      | ?deltaHi:(delta < 1);
       | sum := 0;
-      | for (x := 0; !(sum = x^2 / 2); ?(x <= 10); x := x + 1) {
+      | for (x := 0; !(sum = x^2 / 2); ?(x <= 11); x := x + 1) {
       |    sum := sum + x;
       |   !cnv:(sum = x^2 / 2);
       | }
-      | !total:(sum >= 50) using sum x by auto;
+      | !done:(x >= 11 - delta) by guard(delta);
+      | !total:(sum >= 50) using done sum x deltaHi by auto;
       |""".stripMargin
   
   // may be less popular but may be easier to implement / test
@@ -346,10 +351,11 @@ object SharedModels {
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
-      |?consts:(eps > 0 &  x = 0 & T > 0 & d > eps);
+      |?epsPos:(eps > 0);
+      |?consts:(x = 0 & T > 0 & d > eps);
       |init:
       |for (pos := 0;
-      |    !conv:(pos <= (x - x@init) & x <= d);
+      |    !conv:(pos <= (x - x@init) & x <= d) using epsPos consts ... by auto;
       |    ?guard:(pos <= d - (eps + x@init) & x <= d - eps);
       |    pos := pos + eps*T/2) {
       |  body:
@@ -361,7 +367,8 @@ object SharedModels {
       |  !prog:(pos <= (x - x@init));
       |  note step = andI(prog, safe);
       |}
-      |!(x <= d & x + eps >= d) using guard conv by auto;
+      |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard(eps);
+      |!(x <= d & x + 2 * eps >= d) using done conv  by auto;
       |""".stripMargin
 
   // @TODO: Check SB() vs SB parenthesis... hmm...

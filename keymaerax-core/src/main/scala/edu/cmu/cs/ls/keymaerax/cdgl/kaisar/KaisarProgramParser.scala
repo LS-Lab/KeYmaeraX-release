@@ -245,6 +245,9 @@ object ProofParser {
   def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
   def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
   def hypothesis[_: P]: P[Hypothesis] = P("by" ~ ws ~ Index ~ "hypothesis").map(i => locate(Hypothesis(), i))
+  def guardDone[_: P]: P[GuardDone] = P("by" ~ ws ~ Index ~ "guard" ~ ("(" ~ term ~ ")").?).map({
+    case (i, fOpt) => locate(GuardDone(fOpt), i)
+  })
 
   def solution[_: P]: P[Solution] = P("by" ~ ws ~ Index ~ "solution").map(i => locate(Solution(), i))
   def diffInduction[_: P]: P[DiffInduction] = P("by" ~ ws ~ Index ~ "induction").map(i => locate(DiffInduction(), i))
@@ -260,7 +263,8 @@ object ProofParser {
   def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
-  def rawMethod[_: P]: P[Method] = auto | rcf |  prop | hypothesis | solution | diffInduction | exhaustive | using | byProof
+  def rawMethod[_: P]: P[Method] = auto | rcf |  prop | hypothesis | solution |
+    diffInduction | exhaustive | using | byProof |  guardDone
   // If method has no selectors, then insert the "default" heuristic selection method
   // If terminator ; is seen instead of method, default to auto method
   def method[_: P]: P[Method] = (P(";").map(_ => None) | (rawMethod ~/ ";").map(Some(_))).map({

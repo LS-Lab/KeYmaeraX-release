@@ -183,7 +183,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).programSignature
       case Was(now, was) => Context(now).programSignature
       case While(_, _, body) => Context(body).programSignature
-      case For(_, _, _, _, _, body) => Context(body).programSignature
+      case For(_, _, _, _, _, body, _) => Context(body).programSignature
       case BoxLoop(body, _) => Context(body).programSignature
       case BoxLoopProgress(bl, progress) => Context(progress).programSignature
       case WhileProgress(wh, prog) => Context(prog).programSignature
@@ -207,7 +207,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).signature
       case Was(now, was) => Context(now).signature
       case While(_, _, body) => Context(body).signature
-      case For(_, _, _, _, _, body) => Context(body).signature
+      case For(_, _, _, _, _, body, _) => Context(body).signature
       case BoxLoop(body, _) => Context(body).signature
       case BoxLoopProgress(bl, progress) => Context(progress).signature
       case WhileProgress(wh, prog) => Context(prog).signature
@@ -295,16 +295,18 @@ case class Context(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
-      case fr@For(metX, met0, metIncr, conv, guard, body) =>
+      case fr@For(metX, met0, metIncr, conv, guard, body, guardDeltaOpt) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         // Represents bound variables of loop *body*, not tabooProgramVars.
         // Taboo set is used to raise exception if metric is invalid. We assume that metric will be constructed elsewhere
         // with correct taboo set in order to check foundedness
         val bodyTaboos = Set[Variable]()
         val metric = Metric(metX, metIncr, guard.f, bodyTaboos)
-        val guardMatch = matched(guard.pat, metric.guardPost(metX))
-        val res = convMatch ++ guardMatch
-        res
+        guardDeltaOpt match {
+          case Some(guardDelta) =>
+            convMatch ++ matched(guard.pat, Metric.weakNegation(guard.f, guardDelta))
+          case _ => convMatch
+        }
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
@@ -327,7 +329,7 @@ case class Context(s: Statement) {
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case ForProgress(For(metX, metF, metIncr, conv, guard, body), prog) =>
+      case ForProgress(For(metX, metF, metIncr, conv, guard, body, _), prog) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         val guardMatch = matched(guard.pat, guard.f)
         val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
@@ -407,6 +409,64 @@ case class Context(s: Statement) {
     }
   }
 
+  def getFor: Option[For] = {
+    s match {
+      case Block(ss) => Context(ss.last).getFor
+      case fr: For => Some(fr)
+      case _ => None
+    }
+  }
+
+  def inferGuardDelta(asrt: Assert): Term = {
+    getFor match {
+      case None => throw ProofCheckException("Tried to use guard proof method but couldn't find for loop")
+      case Some(For(metX, met0, metIncr, conv, guard, body, Some(f))) => f
+      case Some(For(metX, met0, metIncr, conv, guard, body, None)) =>
+        // Heuristic: first look for constant variable > 0 appearing in assertion but not context,
+        // second, look for constant variable > 0 appearing in both guard and assertion
+        val assertionVars = VariableSets(Context(asrt)).freeVars
+        val guardVars = VariableSets(Context(guard)).freeVars
+        val boundVars = VariableSets(this).boundVars
+        val assertionCandidates = assertionVars -- (guardVars ++ boundVars)
+        val assertionPosQuery = assertionCandidates.map(v => QUnify(Greater(v, Number(0)))).
+          reduce[ContextQuery](QUnion(_, _))
+        val assertionFound = findAll(assertionPosQuery).formulas
+        assertionFound match {
+          case Greater(v, _) :: _ => v
+          case _ :: _ => throw new Exception("Bad pattern match - bug found")
+          case Nil =>
+            val guardCandidates = assertionVars.intersect(guardVars) -- boundVars
+            val guardPosQuery = guardCandidates.map(v => QUnify(Greater(v, Number(0)))).
+              reduce[ContextQuery](QUnion(_,_))
+            val guardFound = findAll(guardPosQuery).formulas
+            guardFound match {
+              case Greater(v, _) :: _ => v
+              case _ :: _ => throw new Exception("Bad pattern match - bug found")
+              case Nil => throw ProofCheckException("Could not infer guard comparison delta in for loop, " +
+                "use explicit delta by using proof method 'guard(delta)' rather than 'guard'")
+            }
+        }
+      case _ => throw new Exception("bad pattern match - bug found")
+    }
+  }
+
+  // Apply any side effect which updates existing parts of the context based on a given statement.
+  // This should be called before checking [[s]]. As of initial writing, this is just used to update ForLoop
+  // with its guard comparison delta once known
+  def sideEffect(s: Statement): Unit = {
+    s match {
+      case asrt@Assert(x, f, m) => m.atom match {
+        case GuardDone(deltaOpt) =>
+          val delta = deltaOpt.getOrElse(inferGuardDelta(asrt))
+          getFor match {
+            case Some(fr: For) => (fr.guardDelta = Some(delta))
+            case _ => throw new Exception("Failed to locate for loop in context - bug found")
+          }
+        case _ => () // Expected behavior - no side effect needed if assertion does not use GuardDone method
+      }
+      case _ => throw new Exception("bug found - bad pattern match in sideEffect")
+    }
+  }
 
   /** Find all fact bindings which satisfy [[finder]] in statement [[dc]]
     *

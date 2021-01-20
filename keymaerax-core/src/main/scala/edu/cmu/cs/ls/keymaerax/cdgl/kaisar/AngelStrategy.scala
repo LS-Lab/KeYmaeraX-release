@@ -109,7 +109,7 @@ case class SODE(ode: ODESystem) extends SimpleStrategy
 /** Angelic while loop with decidable convergence/guard formula */
 case class ALoop(conv: Formula, body: AngelStrategy) extends AngelStrategy
 /* Angel for loop */
-case class AForLoop(idx: Ident, idx0: Term, conv: Formula, body: AngelStrategy, idxUp: Term) extends AngelStrategy
+case class AForLoop(idx: Ident, idx0: Term, conv: Formula, body: AngelStrategy, idxUp: Term, guardDelta:Option[Term]) extends AngelStrategy
 /** Angelic switch statement with decidable branch guards */
 case class ASwitch(branches: List[(Formula, AngelStrategy)]) extends AngelStrategy
 /** Differential equation with (concrete) angelic duration. */
@@ -160,15 +160,14 @@ object SimpleStrategy {
       case SLoop(s) => SLoop(apply(s))
       case SCompose(children) => SCompose(children.map(apply))
       case SChoice(l, r) => SChoice(apply(l), apply(r))
-      // @TODO: Need better negation of formulas, need more info in Kaisar data structure for that
       case ALoop(conv, body) =>
         val loop = SLoop(Composed(STest(conv), apply(body)))
         IDCounter.setOriginal(loop.nodeID, fs)
         Composed(loop, STest(Not(conv)))
-      case AForLoop(metX, met0, guard, body, metIncr) =>
+      case AForLoop(metX, met0, guard, body, metIncr, guardEpsilon) =>
         val loop = SLoop(Composed(List(STest(guard), apply(body), SAssign(metX, metIncr))))
         IDCounter.setOriginal(loop.nodeID, fs)
-        Composed(List(SAssign(metX,met0),loop, STest(Not(guard))))
+        Composed(List(SAssign(metX,met0),loop, STest(Metric.weakNegation(guard, guardEpsilon.get))))
       case ASwitch(branches) =>
         val branchStrats = branches.map({case (f, fs) => Composed(STest(f), apply(fs))})
         val pairs = branchStrats.zip(branches)
@@ -239,8 +238,8 @@ object AngelStrategy {
       case Block(ss) => Composed(ss.map(body(_, isPhi)))
       case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) }))
       case While(x, j, s) => ALoop(j, body(s, isPhi))
-      case For(metX, met0, metIncr, conv, guard, s) =>
-        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr)
+      case For(metX, met0, metIncr, conv, guard, s, guardDelta) =>
+        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr, guardDelta)
       case BoxLoop(s, ih) => SLoop(body(s, isPhi))
       case pode: ProveODE =>
         val ode = ofODE(pode)

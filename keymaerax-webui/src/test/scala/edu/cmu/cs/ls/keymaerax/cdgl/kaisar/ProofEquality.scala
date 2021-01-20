@@ -27,8 +27,8 @@ object ProofEquality extends Equality[Statement] {
       case (Switch(scrutinee, pats), Switch(scrutineeR, patsR)) if scrutinee == scrutineeR && pats.length == patsR.length =>
         pats.zip(patsR).forall({case ((x, f, b), (xr, fr, br)) => x == xr && f == fr && areEqual(b, br)})
       case (BoxChoice(ll, lr), BoxChoice(rl, rr)) => areEqual(ll, rl) && areEqual(lr, rr)
-      case (For(metX, met0, metIncr, conv, guard, body), For(metXR, met0R, metIncrR, convR, guardR, bodyR)) =>
-        metX == metXR && met0 == met0R && metIncr == metIncrR && conv == convR && guard == guardR && areEqual(body, bodyR)
+      case (For(metX, met0, metIncr, conv, guard, body, ge), For(metXR, met0R, metIncrR, convR, guardR, bodyR, geR)) =>
+        metX == metXR && met0 == met0R && metIncr == metIncrR && conv == convR && guard == guardR && areEqual(body, bodyR) && ge == geR
       case (While(x, j, s), While(xr, jr, sr)) => x == xr && j == jr && areEqual(s, sr)
       case (BoxLoop(s, ih), BoxLoop(sr, ihr)) => areEqual(s, sr)
       case (Ghost(s), Ghost(sr)) => areEqual(s, sr)
