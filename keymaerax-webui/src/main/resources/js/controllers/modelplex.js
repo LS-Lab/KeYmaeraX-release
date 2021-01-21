@@ -27,34 +27,47 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.workingDir = [];
 
   $scope.synthesize = function(language, monitorShape) {
-    spinnerService.show('modelplexExecutionSpinner')
-    $scope.language = language;
-    $scope.editorMode = $scope.getEditorMode(language);
-    $scope.mxdata.generatedArtifact.code = undefined;
-    $scope.mxdata.generatedArtifact.source = undefined;
-    $scope.mxdata.modelname = undefined;
-    $http({method: 'GET',
-           url: "user/" + $scope.userId + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
-                $scope.mxdata.artifact + "/" + monitorShape + "/" + language,
-           params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
-      .then(function(response) {
-        $scope.mxdata.generatedArtifact.code = response.data.code;
-        $scope.mxdata.generatedArtifact.source = response.data.source;
-        if (response.data.proof) $scope.mxdata.generatedArtifact.proof = response.data.proof;
-        $scope.mxdata.modelname = response.data.modelname;
-      }, function(error) {
-        $uibModal.open({
-          templateUrl: 'templates/modalMessageTemplate.html',
-          controller: 'ModalMessageCtrl',
-          size: 'md',
-          resolve: {
-            title: function() { return "Unable to derive monitor"; },
-            message: function() { return error.data.textStatus; },
-            mode: function() { return "ok"; }
-          }
-        });
-      })
-      .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
+    if ($scope.mxdata.modelid) {
+      spinnerService.show('modelplexExecutionSpinner')
+      $scope.language = language;
+      $scope.editorMode = $scope.getEditorMode(language);
+      $scope.mxdata.generatedArtifact.code = undefined;
+      $scope.mxdata.generatedArtifact.source = undefined;
+      $scope.mxdata.modelname = undefined;
+      $http({method: 'GET',
+             url: "user/" + $scope.userId + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+                  $scope.mxdata.artifact + "/" + monitorShape + "/" + language,
+             params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
+        .then(function(response) {
+          $scope.mxdata.generatedArtifact.code = response.data.code;
+          $scope.mxdata.generatedArtifact.source = response.data.source;
+          if (response.data.proof) $scope.mxdata.generatedArtifact.proof = response.data.proof;
+          $scope.mxdata.modelname = response.data.modelname;
+        }, function(error) {
+          $uibModal.open({
+            templateUrl: 'templates/modalMessageTemplate.html',
+            controller: 'ModalMessageCtrl',
+            size: 'md',
+            resolve: {
+              title: function() { return "Unable to derive monitor"; },
+              message: function() { return error.data.textStatus; },
+              mode: function() { return "ok"; }
+            }
+          });
+        })
+        .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
+    } else {
+      $uibModal.open({
+        templateUrl: 'templates/modalMessageTemplate.html',
+        controller: 'ModalMessageCtrl',
+        size: 'md',
+        resolve: {
+          title: function() { return "Select model"; },
+          message: function() { return "Please first select a model from the list."; },
+          mode: function() { return "ok"; }
+        }
+      });
+    }
   }
 
   $scope.download = function() {
