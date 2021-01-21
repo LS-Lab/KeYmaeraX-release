@@ -110,6 +110,13 @@ keymaeraProofApp.config(['$routeProvider',
           modelId: function() { return undefined; }
         }
       }).
+      when('/modelplex', {
+        templateUrl: 'templates/modelplex.html',
+        controller: 'ModelPlexCtrl',
+        resolve: {
+          modelid: function() { return undefined; }
+        }
+      }).
       when('/guestproofs', {
         templateUrl: 'partials/guest-proof-list.html',
         controller: 'ProofListCtrl',

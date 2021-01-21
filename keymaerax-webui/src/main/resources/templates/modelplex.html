@@ -13,13 +13,22 @@
     <div class="row k4-vertical-fill">
         <div class="col-md-4 k4-process-graph">
             <div class="row">
-                <div class="col-md-12"><span class="lead">ModelPlex</span></div>
+                <div class="col-md-12">
+                    <span class="lead">ModelPlex</span>
+                    <small class="text-muted"> Verified Runtime Monitoring and Model Validation
+                        <span class="fa fa-question-circle"
+                              uib-popover-template="'help/axiomsrules/modelplex.html'"
+                              popover-append-to-body="true"
+                              popover-placement="auto right-top"></span>
+                    </small>
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
                     <uib-accordion>
-                        <div uib-accordion-group class="panel-info k4-accordion-list" heading="Model">
-                            <div class="row k4-half-screenheight">
+                        <div uib-accordion-group class="panel-info k4-accordion-list"
+                             is-open="isModelAccordionOpen" heading="Model">
+                            <div class="row k4-half-screenheight" ng-if="mxdata.modelid">
                                 <div class="col-md-12 k4-vertical-fill">
                                     <div ui-ace="{theme:'nord_dark',mode:'dl',showGutter:true,
                                          advanced: {
@@ -27,6 +36,29 @@
                                            indentedSoftWrap: true
                                          }}"
                                          ng-model="mxdata.generatedArtifact.source">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row k4-half-screenheight" ng-if="!mxdata.modelid">
+                                <div class="col-md-12 k4-vertical-fill">
+                                    <div class="container k4-overflow-box">
+                                        <div class="row" ng-if="workingDir.length > 0">
+                                            <div class="col-md-12">
+                                                <p>
+                                                    <small class="text-muted">
+                                                        <a ng-click="setWorkingDir(undefined)">KeYmaera X</a>
+                                                        <span ng-repeat="folder in workingDir">
+                                                            <span> / </span><a ng-click="setWorkingDir($index+1)">{{folder}}</a>
+                                                        </span>
+                                                    </small>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div ng-include="'templates/modelplex/modellistshort.html'"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -116,12 +148,21 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
+        <div class="col-md-8" ng-if="mxdata.modelid">
             <div ng-if="mxdata.artifact.startsWith('monitor')" ng-include="'templates/modelplex/monitor.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('controller')" ng-include="'templates/modelplex/controller.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('sandbox')" ng-include="'templates/modelplex/sandbox.html'" class="k4-vertical-fill"></div>
             <div ng-if="mxdata.artifact.startsWith('proof')" class="k4-vertical-fill">
                 <k4-proof-list user-id="{{userId}}" model-id="{{mxdata.modelid}}"></k4-proof-list>
+            </div>
+        </div>
+        <div class="col-md-8" ng-if="!mxdata.modelid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-include="'help/axiomsrules/modelplex.html'"></div>
+                    <p>Click <i class="fa fa-shield"></i> in the list on the left to generate ModelPlex monitor
+                        conditions from a model.</p>
+                </div>
             </div>
         </div>
     </div>

@@ -1,0 +1,41 @@
+<table class="table table-hover table-condensed k4-table-fixed" id="ModelList" ng-if="models.length > 0" ng-cloak>
+    <thead>
+    <tr>
+        <th class="col-sm-4">Name</th>
+        <th class="col-sm-7">Description</th>
+        <th class="col-sm-1"></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr ng-repeat="model in models | filter:{folder:'!null'} | orderBy:'name' | unique:'folder' track by model.id">
+        <td ng-if="model.folder" class="k4-abbreviate">
+            <div>
+                <i class="fa fa-folder"></i><button class="btn btn-link" ng-click="openFolder(model.folder)">{{ model.folder }}</button>
+            </div>
+        </td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr ng-repeat="model in models | filter:{folder:null} | orderBy:'name' track by model.id">
+        <td class="k4-abbreviate" id="modelopen">
+            <div>
+                <button class="btn btn-link" ng-click="openModelEditor(model.id)">{{ model.name }}</button>
+            </div>
+        </td>
+        <td class="k4-abbreviate">
+            <div>
+                <a class="btn btn-link" ng-if="model.pubLink"
+                   uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                   href="{{model.pubLink}}">{{model.description}}</a>
+                <div uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                     ng-if="!model.pubLink">{{model.description}}</div>
+            </div>
+        </td>
+        <td>
+            <a class="btn btn-default" ng-if="!model.isExercise"
+               ng-href="dashboard.html?#/models/{{ model.id }}/modelplex"
+               uib-tooltip="Generate code" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+        </td>
+    </tr>
+    </tbody>
+</table>

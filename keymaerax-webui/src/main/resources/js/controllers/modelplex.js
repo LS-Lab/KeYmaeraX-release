@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
-    function($scope, $uibModal, $http, sessionService, spinnerService, FileSaver, Blob, modelid) {
+    function($scope, $uibModal, $http, sessionService, spinnerService, Models, FileSaver, Blob, modelid) {
 
   $scope.mxdata = {
     modelid: modelid,
@@ -20,7 +20,11 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.userId = sessionService.getUser();
   $scope.language = "dL"
   $scope.editorMode = $scope.getEditorMode($scope.language);
-  $scope.sourceCollapsed = true;
+
+  // models list when no model selected yet
+  $scope.isModelAccordionOpen = $scope.mxdata.modelid == undefined;
+  $scope.models = Models.getModels();
+  $scope.workingDir = [];
 
   $scope.synthesize = function(language, monitorShape) {
     spinnerService.show('modelplexExecutionSpinner')
@@ -75,6 +79,47 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
 
   $scope.cancel = function() {
     $uibModalInstance.dismiss('cancel');
+  }
+
+  $scope.readModelList = function(folder) {
+    if (folder.length > 0) {
+      $http.get("models/users/" + $scope.userId + "/" + encodeURIComponent(folder.join("/"))).then(function(response) {
+        Models.setModels(response.data);
+      });
+    } else {
+      $http.get("models/users/" + $scope.userId + "/").then(function(response) {
+        Models.setModels(response.data);
+      });
+    }
+  }
+
+  $scope.openFolder = function(folder) {
+    $scope.workingDir.push(folder);
+    $scope.readModelList($scope.workingDir);
+  }
+
+  $scope.setWorkingDir = function(folderIdx) {
+    if (folderIdx == undefined) $scope.workingDir = [];
+    else $scope.workingDir = $scope.workingDir.slice(0, folderIdx);
+    $scope.readModelList($scope.workingDir);
+  }
+
+  $scope.openModelEditor = function (modelId) {
+    $uibModal.open({
+      templateUrl: 'partials/modeldialog.html',
+      controller: 'ModelDialogCtrl',
+      size: 'fullscreen',
+      resolve: {
+        userid: function() { return $scope.userId; },
+        modelid: function() { return modelId; },
+        proofid: function() { return undefined; },
+        mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
+      }
+    });
+  };
+
+  if (!$scope.mxdata.modelid) {
+    $scope.readModelList($scope.workingDir);
   }
 
 });
