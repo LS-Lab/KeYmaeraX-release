@@ -96,6 +96,13 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proof-create.html',
         controller: 'ModelProofCreateCtrl'
       }).
+      when('/models/:modelId/modelplex', {
+        templateUrl: 'templates/modelplex.html',
+        controller: 'ModelPlexCtrl',
+        resolve: {
+          modelid: function($route) { return $route.current.params.modelId; }
+        }
+      }).
       when('/proofs', {
         templateUrl: 'partials/proof-list.html',
         controller: 'ProofListCtrl',

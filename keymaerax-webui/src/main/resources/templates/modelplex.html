@@ -1,18 +1,20 @@
-<div class="modal-header">
-    <div class="row">
-        <div class="col-md-12">
-            <h3 class="modal-title">
-            <span>ModelPlex</span>
-            <span class="pull-right">
-                <a ng-click="cancel()"><span class="fa fa-close"></span></a>
-            </span>
-            </h3>
+<div class="container">
+    <spinner name="modelplexExecutionSpinner" ng-cloak="">
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
         </div>
-    </div>
-</div>
-<div class="modal-body">
+        <div class="spinner-please-wait">
+            <p>ModelPlex is executing, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
+    </spinner>
     <div class="row k4-vertical-fill">
         <div class="col-md-4 k4-process-graph">
+            <div class="row">
+                <div class="col-md-12"><span class="lead">ModelPlex</span></div>
+            </div>
             <div class="row">
                 <div class="col-md-12">
                     <uib-accordion>

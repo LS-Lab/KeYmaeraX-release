@@ -329,18 +329,6 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     });
   }
 
-  $scope.modelplex = function(modelid) {
-    var modalInstance = $uibModal.open({
-      templateUrl: 'templates/modelplex.html',
-      controller: 'ModelPlexCtrl',
-      size: 'fullwidth',
-      resolve: {
-        userid: function() { return $scope.userId; },
-        modelid: function() { return modelid; }
-      }
-    })
-  }
-
   $scope.testsynthesis = function(modelid) {
       var modalInstance = $uibModal.open({
         templateUrl: 'templates/testsynthesis.html',

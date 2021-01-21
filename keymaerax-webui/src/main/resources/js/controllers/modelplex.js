@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
-    function($scope, $uibModal, $uibModalInstance, $http, spinnerService, FileSaver, Blob, userid, modelid) {
+    function($scope, $uibModal, $http, sessionService, spinnerService, FileSaver, Blob, modelid) {
 
   $scope.mxdata = {
     modelid: modelid,
@@ -17,7 +17,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     return language.startsWith('dL') ? 'dl' : (language=='C' ? 'c_cpp' : '');
   }
 
-  $scope.userId = userid;
+  $scope.userId = sessionService.getUser();
   $scope.language = "dL"
   $scope.editorMode = $scope.getEditorMode($scope.language);
   $scope.sourceCollapsed = true;
@@ -30,7 +30,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     $scope.mxdata.generatedArtifact.source = undefined;
     $scope.mxdata.modelname = undefined;
     $http({method: 'GET',
-           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+           url: "user/" + $scope.userId + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
                 $scope.mxdata.artifact + "/" + monitorShape + "/" + language,
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
