@@ -10,6 +10,7 @@ KeYmaera X features a minimal core of just about 2000 lines of code that isolate
 
 * [Differential dynamic logic grammar](http://keymaeraX.org/doc/dL-grammar.md)
 * [KeYmaera X Tutorial](http://keymaeraX.org/Xtutorial.html)
+* [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/) textbook
 
 Installation
 ============
@@ -20,7 +21,7 @@ The easiest way to run KeYmaera X is to download binaries
 
 For this to succeed, ensure that the following software is installed:
 - [Oracle Java Development Kit JDK/Java Runtime Environment JRE](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK/JRE](https://openjdk.java.net/)
-  (version 1.8 or later, tested up to Java15)
+  (version 1.8 or later, tested up to Java 15)
 - Use any number of the following real arithmetic solvers:
   - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
     (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
