@@ -60,7 +60,7 @@ Building
 To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 In a nutshell, install
 
-* [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java13 onwards does not work)
+* [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java 13 onwards does not work)
 * SBT 0.13.17
 * Scala 2.12.8 
 
@@ -178,7 +178,7 @@ A comparison of KeYmaera X with its predecessor provers is described in:
 
 16. Stefan Mitsch and André Platzer. 
 [A Retrospective on Developing Hybrid System Provers in the KeYmaera Family: A Tale of Three Provers](https://doi.org/10.1007/978-3-030-64354-6_2). 
-In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Perspectives, volume 12345 of LNCS. Springer, 2020
+In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Perspectives, volume 12345 of LNCS, pp. 21-64. Springer, 2020
 
 Copyright and Licenses
 ======================
