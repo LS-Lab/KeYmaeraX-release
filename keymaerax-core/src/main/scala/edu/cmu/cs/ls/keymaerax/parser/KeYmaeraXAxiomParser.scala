@@ -71,7 +71,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
       (name, axiom, remainderTokens)
     } catch {
       case e: ParseException => throw e.inContext(input.toString, "Error occurred while parsing formula associated with axiom named " + name)
-      case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name)
+      case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name, e)
     }
   }
 
