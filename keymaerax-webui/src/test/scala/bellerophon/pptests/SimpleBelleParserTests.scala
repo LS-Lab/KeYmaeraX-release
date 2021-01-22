@@ -664,7 +664,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       ExpandAll(decls.substs) & (TactixLibrary.implyR(1) & cut("[x:=x+1;]3*2>=0".asFormula))
   }
 
-  "ExpandAll" should "expand multiple definitions" in {
+  it should "not collide with expandAll" in {
+    BellePrettyPrinter(BelleParser.parseWithInvGen("expandAll")) shouldBe "expandAll"
+  }
+
+  "ExpandAllDefs" should "expand multiple definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
         //@note locations just so that parser knows the definitions are supposed to originate from a file

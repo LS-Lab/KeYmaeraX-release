@@ -322,6 +322,10 @@ object BelleParser extends TacticParser with Logging {
 
       //region def
       case r :+ BelleToken(EXPAND, loc) => st.input match {
+        case BelleToken(all@IDENT("All"), allLoc) :: tail =>
+          // resolve clash with builtin tactic expandAll
+          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs)
+          ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(allLoc)), tail)
         case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
           val x: NamedSymbol = expr.undelimitedExprString.asExpr match {
             case v: Variable => v
