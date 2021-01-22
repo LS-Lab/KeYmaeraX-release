@@ -354,7 +354,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   //@todo performance bottleneck
   //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState, lax: Boolean): ParseState = {
-    val ParseState(s, Token(la, laloc) :: _) = st
+    val ParseState(s, (next@Token(la, laloc)) :: _) = st
     logger.info(s.toString)
     logger.info(la.toString)
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
@@ -448,8 +448,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (la == RBANANA || la.isInstanceOf[IDENT]) shift(reduce(st, 0, RecognizedSpace(Nil), st.stack))
         else error(st, List(RBANANA, ANYIDENT))
       case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ RecognizedSpace(s) :+ Expr(x: Variable) =>
-        if (la == RBANANA) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
-        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        if (la == RBANANA) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack.tail.tail))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail.tail))
         else error(st, List(RBANANA,COMMA))
       case _ :+ Token(_: IDENT, _) :+ Token(LBANANA, _) :+ RecognizedSpace(_) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent predicational/functional")
@@ -475,12 +475,12 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
           reduce(st, 4, DifferentialProgramConst(tok.name, if (s.isEmpty) AnyArg else Except(s)), r)
         }
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) =>
-        if (la == DUAL) reduce(shift(st), 0, RecognizedSpace(Nil), st.stack.tail)
+        if (la == DUAL) reduce(shift(st), 0, RecognizedSpace(Nil), st.stack :+ next)
         else if (la == RBARB || la.isInstanceOf[IDENT]) shift(reduce(st, 0, RecognizedSpace(Nil), st.stack))
         else error(st, List(RBARB, ANYIDENT, DUAL))
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(s) :+ Expr(x: Variable) =>
-        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
-        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack.tail.tail))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail.tail))
         else error(st, List(RBARB, COMMA))
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ RecognizedSpace(_) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
@@ -491,8 +491,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (la == RBARB || la.isInstanceOf[IDENT]) shift(st)
         else error(st, List(RBARB, ANYIDENT))
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(s) :+ Expr(x: Variable)  =>
-        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack))
-        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail))
+        if (la == RBARB) shift(reduce(st, 2, RecognizedSpace(s :+ x), st.stack.tail.tail))
+        else if (la == COMMA) shift(reduce(shift(st), 3, RecognizedSpace(s :+ x), st.stack.tail.tail))
         else error(st, List(RBARB, COMMA))
       case _ :+ Token(_: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ RecognizedSpace(_) :+ Expr(_) =>
         errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
@@ -681,8 +681,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, tok1, OpSpec.sODESystem, DifferentialProgramKind, t1, lax)), r)
 
       // special case for sDchoice -- notation
-      case r :+ Expr(_: Program) :+ Token(MINUS,loc) if la==MINUS =>
-        reduce(ParseState(st.stack, Token(DCHOICE, loc.spanTo(laloc)) +: st.input.tail), 1, Bottom, r)
+      case _ :+ Expr(_: Program) :+ Token(MINUS,loc) if la==MINUS =>
+        reduce(ParseState(st.stack, Token(DCHOICE, loc.spanTo(laloc)) +: st.input.tail), 1, Bottom, st.stack.tail)
 
       // special case for sCompose in case statementSemicolon
       //@todo review
