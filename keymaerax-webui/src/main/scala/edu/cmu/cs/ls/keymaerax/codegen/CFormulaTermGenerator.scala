@@ -31,7 +31,7 @@ object CFormulaTermGenerator {
   }
 
   /** Prints a struct declaration named `structName` with a field for each of the names in `vars`. */
-  def printStructDeclaration[T <: NamedSymbol](structName: String, vars: Set[T]): String = {
+  def printStructDeclaration[T <: NamedSymbol](structName: String, vars: Set[T], comment: String): String = {
     // stable ordering by NamedSymbol.compare
     val fields = vars.toList.sorted[NamedSymbol].map({
       case x: Variable => printSort(x.sort) + " " + nameIdentifier(x) + ";"
@@ -42,7 +42,7 @@ object CFormulaTermGenerator {
       case _ => None
     }).mkString("\n  ")
     val structBody = if (vars.isEmpty) "" else "{\n  " + fields + "\n} "
-    s"typedef struct $structName $structBody$structName;\n\n"
+    s"/** $comment */\ntypedef struct $structName $structBody$structName;\n\n"
   }
 
   /** Print sort `s` as a C type. */

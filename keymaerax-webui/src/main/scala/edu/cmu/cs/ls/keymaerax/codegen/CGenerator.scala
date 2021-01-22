@@ -28,15 +28,20 @@ object CGenerator {
       |""".stripMargin
 
   /** Prints the parameters struct declaration. */
-  def printParameterDeclaration(parameters: Set[NamedSymbol]): String = printStructDeclaration("parameters", parameters)
+  def printParameterDeclaration(parameters: Set[NamedSymbol]): String = printStructDeclaration("parameters", parameters, "Model parameters")
 
   /** Prints the state variables struct declaration. */
-  def printStateDeclaration(stateVars: Set[BaseVariable]): String = printStructDeclaration("state", stateVars)
+  def printStateDeclaration(stateVars: Set[BaseVariable]): String = printStructDeclaration("state", stateVars, "State (control choices, environment measurements etc.)")
 
   /** Prints the input (non-deterministically assigned variables) struct declaration. */
-  def printInputDeclaration(inputs: Set[BaseVariable]): String = printStructDeclaration("input", inputs)
+  def printInputDeclaration(inputs: Set[BaseVariable]): String = printStructDeclaration("input", inputs, "Values for resolving non-deterministic assignments in control code")
 
-  def printVerdictDeclaration() = s"typedef struct verdict { int id; long double val; } verdict;\n\n"
+  /** Prints the verdict struct declaration with documentation comment. */
+  def printVerdictDeclaration(): String =
+    """/** Monitor verdict: `id` identifies the violated monitor sub-condition, `val` the safety margin (<0 violated, >=0 satisfied). */
+      |typedef struct verdict { int id; long double val; } verdict;
+      |
+      |""".stripMargin
 
   /**
     * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
