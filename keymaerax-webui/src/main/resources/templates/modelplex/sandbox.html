@@ -1,6 +1,6 @@
 <uib-tabset active="active">
     <uib-tab index="0" select="synthesize('dL', 'boolean')">
-        <uib-tab-heading>Monitor Formula
+        <uib-tab-heading>Sandbox with Monitor Formula
             <div class="btn-group btn-group-toggle" data-toggle="buttons" ng-if="active==0">
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dL'}"
                        ng-click="synthesize('dL','boolean');$event.stopPropagation()">
@@ -25,7 +25,7 @@
         </div>
     </uib-tab>
     <uib-tab index="1" select="synthesize('dL', 'metricfml')">
-        <uib-tab-heading>Margin Monitor Formula
+        <uib-tab-heading>Sandbox with Margin Monitor Formula
             <div class="btn-group btn-group-toggle" data-toggle="buttons" ng-if="active==1">
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dL'}"
                        ng-click="synthesize('dL','metricfml');$event.stopPropagation()">
@@ -50,7 +50,7 @@
         </div>
     </uib-tab>
     <uib-tab index="2" select="synthesize('dL', 'metricprg')">
-        <uib-tab-heading>Margin Monitor Program
+        <uib-tab-heading>Sandbox with Margin Monitor Program
             <div class="btn-group btn-group-toggle" data-toggle="buttons" ng-if="active==2">
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dL'}"
                        ng-click="synthesize('dL','metricprg');$event.stopPropagation()">
