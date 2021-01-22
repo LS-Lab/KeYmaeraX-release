@@ -197,17 +197,21 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
   )
 }
 
-class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
+abstract class ModelPlexResponse(model: ModelPOJO, code: String) extends Response {
   protected def prettierPrint(e: Expression): String = PrettierPrintFormatProvider(e, 80).print(e.prettyString)
 
   def getJson: JsValue = {
     JsObject(
       "modelid" -> JsString(model.modelId.toString),
       "modelname" -> JsString(model.name),
-      "code" -> JsString(prettierPrint(artifact)),
+      "code" -> JsString(code),
       "source" -> JsString(prettierPrint(ArchiveParser(model.keyFile).head.expandedModel))
     )
   }
+}
+
+class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression)
+  extends ModelPlexResponse(model, PrettierPrintFormatProvider(artifact, 80).print(artifact.prettyString)) {
 }
 
 class ModelPlexMonitorResponse(model: ModelPOJO, artifact: Expression, proofArchive: String)
@@ -219,7 +223,7 @@ class ModelPlexMonitorResponse(model: ModelPOJO, artifact: Expression, proofArch
 }
 
 class ModelPlexSandboxResponse(model: ModelPOJO, conjecture: Formula, artifact: Expression)
-  extends ModelPlexArtifactResponse(model, artifact) {
+    extends ModelPlexArtifactResponse(model, artifact) {
   override def getJson: JsValue = {
     val artifact = super.getJson.asJsObject
     artifact.copy(artifact.fields + ("conjecture" -> JsString(prettierPrint(conjecture))))
@@ -302,12 +306,8 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
   )
 }
 
-class ModelPlexArtifactCodeResponse(model: ModelPOJO, code: String) extends Response {
-  def getJson = JsObject(
-    "modelid" -> JsString(model.modelId.toString),
-    "modelname" -> JsString(model.name),
-    "code" -> JsString(code)
-  )
+class ModelPlexCCodeResponse(model: ModelPOJO, code: String) extends ModelPlexResponse(model, code) {
+
 }
 
 class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String]) extends Response {

@@ -1186,7 +1186,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
            |}
            |""".stripMargin
 
-        new ModelPlexArtifactCodeResponse(model, code) :: Nil
+        new ModelPlexCCodeResponse(model, code) :: Nil
       case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']") :: Nil
     }
     case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
@@ -1237,7 +1237,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                    |}
                    |""".stripMargin
 
-              new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+              new ModelPlexCCodeResponse(model, sandbox) :: Nil
             case c => new ErrorResponse("Unknown output format '" + c + "'; please use one of ['dL'|'C']") :: Nil
           }
         case Right(e) => e :: Nil
@@ -1301,7 +1301,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                  |}
                  |""".stripMargin
 
-            new ModelPlexArtifactCodeResponse(model, code) :: Nil
+            new ModelPlexCCodeResponse(model, code) :: Nil
         }
       case Right(e) => e :: Nil
     }
