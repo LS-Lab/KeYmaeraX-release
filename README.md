@@ -112,7 +112,7 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, Cham, 2018. [DOI](https://doi.org/10.1007/978-3-319-63588-0)
+Springer, Cham, 2018. [DOI](https://doi.org/10.1007/978-3-319-63588-0) [Videos](http://video.lfcps.org/)
 
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus.
 
@@ -150,7 +150,7 @@ Automatic proofs for differential equation invariants are based on:
 
 12. André Platzer and Yong Kiam Tan. 
 [Differential equation invariance axiomatization](https://doi.org/10.1145/3380825). 
-J. ACM 67(1), 2020. 
+J. ACM 67(1), 6:1-6:66, 2020. 
 Extended version of [LICS'18](https://doi.org/10.1145/3209108.3209147). 
 
 Liveness proofs for differential equations are based on:
@@ -164,7 +164,7 @@ Special issue for selected papers from [FM'19](https://doi.org/10.1007/978-3-030
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
 
 14. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
-[Pegasus: Sound continuous invariant generation](https://arxiv.org/abs/2005.09348).
+[Pegasus: Sound continuous invariant generation](https://doi.org/10.1007/s10703-020-00355-z).
 Formal Methods in System Design. To appear. 
 Special issue for selected papers from [FM'19](https://doi.org/10.1145/3209108.3209147).
 
@@ -177,7 +177,7 @@ In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on F
 A comparison of KeYmaera X with its predecessor provers is described in:
 
 16. Stefan Mitsch and André Platzer. 
-[A Retrospective on Developing Hybrid System Provers in the KeYmaera Family: A Tale of Three Provers](https://doi.org/10.1007/978-3-030-64354-6_2 please FaceTime). 
+[A Retrospective on Developing Hybrid System Provers in the KeYmaera Family: A Tale of Three Provers](https://doi.org/10.1007/978-3-030-64354-6_2). 
 In Wolfgang Ahrendt et al., editors, Deductive Software Verification: Future Perspectives, volume 12345 of LNCS. Springer, 2020
 
 Copyright and Licenses
