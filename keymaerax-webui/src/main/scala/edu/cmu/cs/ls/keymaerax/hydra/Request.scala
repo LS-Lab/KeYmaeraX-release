@@ -1169,9 +1169,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
       case "dL" => new ModelPlexArtifactResponse(model, extractController(prg)) :: Nil
       case "C" =>
         val controller = (new CGenerator(new CControllerGenerator()))(prg, vars, CGenerator.getInputs(prg))
-        val code = s"""
-           |${CGenerator.printHeader(model.name)}
-           |${controller._1}
+        val code =
+          s"""${controller._1}
            |${controller._2}
            |
            |int main() {
@@ -1215,9 +1214,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               val monitorCode = ctrlMonitorCode._2.trim
 
               val sandbox =
-                s"""
-                   |${CGenerator.printHeader(model.name)}
-                   |$declarations
+                s"""$declarations
                    |${fallbackCode._1}
                    |${fallbackCode._2}
                    |$monitorCode
@@ -1288,9 +1285,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
             val code =
-              s"""
-                 |${CGenerator.printHeader(model.name)}
-                 |${monitor._1}
+              s"""${monitor._1}
                  |${monitor._2}
                  |
                  |int main() {
