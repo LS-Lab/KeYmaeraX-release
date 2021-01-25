@@ -258,21 +258,22 @@ class ElaborationPass() {
       // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
       override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) => Assume(pat, kce.elaborateFunctions(f, s))
+          case Assume(pat, f) => locate(Assume(pat, kce.elaborateFunctions(f, s)),s)
           // Elaborate all functions that are defined *before* f
           case LetSym(f, args, e: Term) =>
             val rhs = kce.elaborateFunctions(e, s)
-            LetSym(f, args, rhs)
-          case LetSym(f, args, e: Formula) => LetSym(f, args, kce.elaborateFunctions(e, s))
+            locate(LetSym(f, args, rhs),s)
+          case LetSym(f, args, e: Formula) => locate(LetSym(f, args, kce.elaborateFunctions(e, s)),s)
           case LetSym(_, _, _: Program) => throw ElaborationException("Lets of programs are only allowed in top-level declarations, not in proofs")
-          case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
-          case While(x, j, body) => While(x, kce.elaborateFunctions(j, s), body)
+          case Match(pat, e: Term) => locate(Match(pat, kce.elaborateFunctions(e, s)),s)
+          case While(x, j, body) => locate(While(x, kce.elaborateFunctions(j, s), body),s)
           case For(metX, metF, metIncr, guard, conv, body, metGuard) =>
-            For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body, metGuard.map{f => kce.elaborateFunctions(f, s)})
-          case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None)))
+            locate(For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body, metGuard.map{f => kce.elaborateFunctions(f, s)}), s)
+          case BoxLoop(body, Some((ihk, ihv, None))) =>
+            locate(BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None))),s)
           // dc was elaborated in preS
-          case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, kce, ds), dc)
-          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kce.elaborateFunctions(f, s), b)}))
+          case ProveODE(ds, dc) => locate(ProveODE(elaborateODE(kc, kce, ds), dc), s)
+          case Switch(scrut, pats) => locate(Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kce.elaborateFunctions(f, s), b)})), s)
           case s => s
         }
       }

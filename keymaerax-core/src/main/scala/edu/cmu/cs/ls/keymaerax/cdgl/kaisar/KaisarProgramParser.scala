@@ -526,6 +526,20 @@ object KaisarProgramParser {
     (arr(0).toInt, arr(1).toInt)
   }
 
+  def prettyIndex(index: Int, inputs: List[String], sepLength: Int = 2): (Int, Int) = {
+    var inp = inputs
+    var idx = index
+    var (l: Int, c: Int) = (0, 1)
+    while(inp.nonEmpty && idx >= 0) {
+      c = idx + 1
+      idx = idx - (inp.head.length + sepLength)
+      l = l + 1
+      inp = inp.tail
+    }
+    {if(inp.isEmpty) {c = idx + 1}}
+    (l, c)
+  }
+
   def parseSingle(s: String): Statement = {
     val file = s"proof unnamed begin $s end"
     KaisarProgramParser.parseProof(file) match {

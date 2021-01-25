@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
  */
 
 import KaisarProof.Ident
+import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProgramParser
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.StringOps
@@ -23,10 +24,28 @@ object IDCounter {
   var idMap: Map[Int, AngelStrategy] = Map()
   // For nodes which arise from a demonization translation, track the original Angel node corresponding to each ID
   var originMap: Map[Int, AngelStrategy] = Map()
+  // Map node IDs to source line and column
+  var sourceLocationMap:Map[Int, (Int, Int)] = Map()
   var count: Int = 0
+
+  var sourceFile: Option[String] = Some("")
+
+  def setSourceFile(str: String): Unit = { sourceFile = Some(str) }
+  def prettyIndex(int: Int): (Int, Int) = {
+    sourceFile match {
+      case Some(sf) => KaisarProgramParser.prettyIndex(int, sf)
+      case None => (0, int)
+    }
+  }
+
   def set(i: Int, as: AngelStrategy): Unit = {
     idMap = idMap.+(i -> as)
     count = (count + 1).max(i)
+    as.location match {
+      case Some(loc) =>
+        sourceLocationMap = sourceLocationMap.+(i -> loc)
+      case None => ()
+    }
   }
   def next(as: AngelStrategy): Int = {
     val res = count
@@ -37,6 +56,7 @@ object IDCounter {
   def contains(n: Int): Boolean = idMap.contains(n)
   def hasOriginal(n: Int): Boolean = originMap.contains(n)
   def get(n: Int): Option[AngelStrategy] = idMap.get(n)
+  def getLocation(n: Int): Option[(Int, Int)] = sourceLocationMap.get(n)
   def apply(n: Int): AngelStrategy = idMap(n)
   def getOriginal(n: Int): Option[AngelStrategy] = originMap.get(n)
   def original(n: Int): AngelStrategy = originMap(n)
@@ -54,29 +74,45 @@ object IDCounter {
     originMap.toList.sortBy({case (k, v) => k}).map({case (k,v) => k + MAP_SEPARATOR + v}).mkString("\n")
   }
 
+  def sourceLocMapString: String = {
+    sourceLocationMap.toList.sortBy({case (k, v) => k}).
+      map({case (k,(l,c)) =>
+        k + MAP_SEPARATOR + l + "," + c}).
+      mkString("\n")
+  }
 
-  private def parseMap(mapString: String): Map[Int, AngelStrategy] = {
+  private def parseIntPair(str: String):(Int,Int) = {
+    val strs = str.split(',')
+    (strs(0).toInt, strs(1).toInt)
+  }
+
+  private def parseMap[T](f: String => T, mapString: String): Map[Int, T] = {
     val lines = (mapString: StringOps).lines.toList
-    var theMap: Map[Int, AngelStrategy] = Map()
+    var theMap: Map[Int, T] = Map()
     lines.foreach {line =>
       val i = line.indexOf(MAP_SEPARATOR)
       if (i < 0) throw new Exception("Could not parse strategy ID map metadata")
       val numStr = line.take(i).trim()
       val stratStr = line.drop(i + MAP_SEPARATOR.length).trim()
       val num = numStr.toInt
-      val strat = StrategyParser(stratStr)
+      val strat = f(stratStr)
       theMap = theMap.+(num -> strat)
     }
     theMap
   }
 
+  def loadSourceLocMap(locMapString: String): Unit = {
+    sourceLocationMap = parseMap(parseIntPair, locMapString)
+    println(sourceLocationMap)
+  }
+
   def loadIdMap(idMapString: String): Unit = {
-    idMap = parseMap(idMapString)
+    idMap = parseMap(StrategyParser(_), idMapString)
     println(idMap)
   }
 
   def loadOriginMap(originMapString: String): Unit = {
-    originMap = parseMap(originMapString)
+    originMap = parseMap(StrategyParser(_), originMapString)
     println(originMap)
   }
 
@@ -85,14 +121,39 @@ object IDCounter {
     idMap = Map()
     originMap = Map()
   }
+
 }
 
 /** Directly executable, simply-typed strategy for Angel player */
 sealed trait AngelStrategy {
   var nodeID: Int = IDCounter.next(this)
+  var location: Option[(Int, Int)] = None
+  def rememberSourceStatement(st: ASTNode): AngelStrategy = {
+    val loc = st.location.map(i => IDCounter.prettyIndex(i))
+    loc.foreach(l => location = Some(l))
+    IDCounter.set(this.nodeID, this)
+    this
+  }
+  def rememberSourceLocation(loc: (Int, Int)): AngelStrategy = {
+    location = Some(loc)
+    IDCounter.set(this.nodeID, this)
+    this
+  }
 }
 /** A simple strategy is one where Angel makes no choices, only Demon */
-sealed trait SimpleStrategy extends AngelStrategy
+sealed trait SimpleStrategy extends AngelStrategy {
+  def rememberSourceStrategy(as: AngelStrategy): SimpleStrategy = {
+    as.location.foreach(l => location = Some(l))
+    IDCounter.set(this.nodeID, this)
+    this
+  }
+  override def rememberSourceLocation(loc: (Int, Int)): SimpleStrategy = {
+    location = Some(loc)
+    IDCounter.set(this.nodeID, this)
+    this
+  }
+
+}
 
 /** Demon must pass test f. Strategies are weak-test, assume f is decidable */
 case class STest(f: Formula) extends SimpleStrategy
@@ -102,7 +163,7 @@ case class SAssign(x: Ident, f: Term) extends SimpleStrategy
 case class SAssignAny(x: Ident) extends SimpleStrategy
 /** Demonic loop */
 case class SLoop(s: AngelStrategy) extends SimpleStrategy
-// Note: binary compose is better for backend execution, but n-ary composition looks much nicer in debugger.
+// Note: binary compose is better for backend exiecution, but n-ary composition looks much nicer in debugger.
 /** (n-ary) sequential composition, identical for Demon vs Angel. */
 case class SCompose(children: List[AngelStrategy]) extends SimpleStrategy
 /** Demonic choice */
@@ -126,9 +187,13 @@ object Composed {
     // Careful: Should distinguish "real" ?true from no-ops which should be eliminated
     val filtered = children.filter({case STest(True) => false case _ => true})
     filtered match {
-      case Nil => STest(True)
+      case Nil => STest(True).rememberSourceLocation((0, 0))
       case as :: Nil => as
-      case _ => SCompose(filtered)
+      case _ =>
+        val strat = SCompose(filtered)
+        // take location info from first component that has one
+        val _ = filtered.find(as => as.location.isDefined).map(as => strat.rememberSourceLocation(as.location.get))
+        strat
     }
   }
 
@@ -142,9 +207,13 @@ object Composed {
     // SSA blocks are kept together and can be easily collapsed in debugger
     val filtered = children.filter({case STest(True) => false case _ => true})
     filtered match {
-      case Nil => STest(True)
+      case Nil => STest(True).rememberSourceLocation((0, 0))
       case as :: Nil => as
-      case _ => SCompose(filtered)
+      case _ =>
+        val strat = SCompose(filtered)
+        // take location info from first component that has one
+        val _ = filtered.find(as => as.location.isDefined).map(as => strat.rememberSourceLocation(as.location.get))
+        strat
     }
   }
 
@@ -161,29 +230,29 @@ object SimpleStrategy {
    * Demon driver can be programmed against the original game specification */
   def apply(fs: AngelStrategy): SimpleStrategy = {
     fs match {
-      case SLoop(s) => SLoop(apply(s))
-      case SCompose(children) => SCompose(children.map(apply))
-      case SChoice(l, r) => SChoice(apply(l), apply(r))
+      case SLoop(s) => SLoop(apply(s)).rememberSourceStrategy(fs)
+      case SCompose(children) => SCompose(children.map(apply)).rememberSourceStrategy(fs)
+      case SChoice(l, r) => SChoice(apply(l), apply(r)).rememberSourceStrategy(fs)
       // @TODO: Need better negation of formulas, need more info in Kaisar data structure for that
       case ALoop(conv, body) =>
-        val loop = SLoop(Composed(STest(conv), apply(body)))
+        val loop = SLoop(Composed(STest(conv).rememberSourceStrategy(fs), apply(body))).rememberSourceStrategy(fs)
         IDCounter.setOriginal(loop.nodeID, fs)
-        Composed(loop, STest(Not(conv)))
+        Composed(loop, STest(Not(conv)).rememberSourceStrategy(fs))
       case AForLoop(metX, met0, guard, body, metIncr) =>
-        val loop = SLoop(Composed(List(STest(guard), apply(body), SAssign(metX, metIncr))))
+        val loop = SLoop(Composed(List(STest(guard).rememberSourceStrategy(fs), apply(body), SAssign(metX, metIncr))))
         IDCounter.setOriginal(loop.nodeID, fs)
-        Composed(List(SAssign(metX,met0),loop, STest(Not(guard))))
+        Composed(List(SAssign(metX,met0),loop, STest(Not(guard)).rememberSourceStrategy(fs)))
       case ASwitch(branches) =>
-        val branchStrats = branches.map({case (f, fs) => Composed(STest(f), apply(fs))})
+        val branchStrats = branches.map({case (f, fs) => Composed(STest(f).rememberSourceStrategy(fs), apply(fs))})
         val pairs = branchStrats.zip(branches)
         val (xs, x) = (pairs.dropRight(1), pairs.last)
         val (choice, _) = xs.foldLeft[(SimpleStrategy, ASwitch)]((x._1, ASwitch(x._2 :: Nil)))({case ((accStrat, accOrig), (thisStrat, thisOrig)) =>
           val fullOrig = ASwitch(thisOrig :: accOrig.branches)
-          val choice = SChoice(thisStrat, accStrat)
+          val choice = SChoice(thisStrat, accStrat).rememberSourceStrategy(thisOrig._2)
           IDCounter.setOriginal(choice.nodeID, fullOrig)
           (choice, fullOrig)
         })
-        choice
+        choice.rememberSourceStrategy(fs)
       // @TODO: Proof rule somewhere should check duration variable binding side conditions
       case ss: SimpleStrategy => ss
       case _: AODE | _: SODE => throw new Exception("ODEs should be eliminated before SimpleStrategy conversion")
@@ -196,8 +265,8 @@ object AngelStrategy {
   private def ofODE(pode: ProveODE): AngelStrategy = {
     val tv = pode.timeVar.getOrElse(Variable("t"))
     val assignT = pode.duration match {
-      case Some((_, f)) => SAssign(tv, f)
-      case None => SAssignAny(tv)
+      case Some((_, f)) => SAssign(tv, f).rememberSourceStatement(pode)
+      case None => SAssignAny(tv).rememberSourceStatement(pode)
     }
     val coll = pode.dc.collect
     val assms = (coll.assumptions.toList.map(_.f)).reduceRight[Formula](And)
@@ -207,19 +276,19 @@ object AngelStrategy {
     (pode.solutions, hasAsserts && isDemon) match {
       // Generate tests if solution can't be expressed *or* if it's a demon ode with assertions, because that probably suggests we wanted to monitor the assertions
       case (None, _) | (_, true) =>
-        val assignX = pode.ds.atoms.map(_.dp.xp.x).toList.map(SAssignAny)
-        val assignDX = pode.ds.atoms.map(_.dp).toList.map({ case AtomicODE(xp, e) => SAssign(xp, e) })
+        val assignX = pode.ds.atoms.map(_.dp.xp.x).toList.map(x => SAssignAny(x).rememberSourceStatement(pode))
+        val assignDX = pode.ds.atoms.map(_.dp).toList.map({ case AtomicODE(xp, e) => SAssign(xp, e).rememberSourceStatement(pode) })
         val conds = pode.timeVar match {
           case Some(t) if !pode.isAngelic => And(GreaterEqual(t, Number(0)), invs)
           case _ => invs
         }
         // test DC both initially and at end
-        Composed(STest(conds) :: assignT :: (assignX ++ assignDX.+:(STest(conds))))
+        Composed(STest(conds).rememberSourceStatement(pode.dc) :: assignT :: (assignX ++ assignDX.+:(STest(conds).rememberSourceStatement(pode.dc))))
       case (Some(xfs), _) =>
-        val setT = Composed(SAssignAny(tv), STest(GreaterEqual(tv, Number(0))))
+        val setT = Composed(SAssignAny(tv).rememberSourceStatement(pode), STest(GreaterEqual(tv, Number(0))).rememberSourceStatement(pode))
         // @TODO: Should test all 0 <= s <= T  but c'est la vie
-        val dc = STest(if (pode.isAngelic) assms else invs)
-        val solAssign = Composed(xfs.map({ case (x, f) => SAssign(x, f) }))
+        val dc = STest(if (pode.isAngelic) assms else invs).rememberSourceStatement(pode.dc)
+        val solAssign = Composed(xfs.map({ case (x, f) => SAssign(x, f).rememberSourceStatement(pode.ds) }))
         // test DC both at start and at end of ODE
         Composed(setT :: dc :: solAssign :: dc :: Nil)
     }
@@ -228,35 +297,35 @@ object AngelStrategy {
   /** Main translation pass from Kaisar to strategies */
   private def body(pf: Statement, isPhi: Boolean): AngelStrategy = {
     pf match {
-      case Assume(pat, f) => STest(f)
-      case BoxChoice(left, right) => SChoice(body(left, isPhi), body(right, isPhi))
-      case InverseGhost(s) => body(s, isPhi)
+      case Assume(pat, f) => STest(f).rememberSourceStatement(pf)
+      case BoxChoice(left, right) => SChoice(body(left, isPhi), body(right, isPhi)).rememberSourceStatement(pf)
+      case InverseGhost(s) => body(s, isPhi).rememberSourceStatement(pf)
       case Modify(ids, mods) =>
         Composed(mods.map({
-          case (x, None) => SAssignAny(x)
+          case (x, None) => SAssignAny(x).rememberSourceStatement(pf)
           case (x, Some(f)) =>
-            val res = SAssign(x, f)
+            val res = SAssign(x, f).rememberSourceStatement(pf)
             if(isPhi)
-              IDCounter.setOriginal(res.nodeID, STest(True))
+              IDCounter.setOriginal(res.nodeID, STest(True).rememberSourceStatement(pf))
             res
         }))
       case Block(ss) => Composed(ss.map(body(_, isPhi)))
-      case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) }))
-      case While(x, j, s) => ALoop(j, body(s, isPhi))
+      case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) })).rememberSourceStatement(pf)
+      case While(x, j, s) => ALoop(j, body(s, isPhi)).rememberSourceStatement(pf)
       case For(metX, met0, metIncr, conv, guard, s) =>
-        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr)
-      case BoxLoop(s, ih) => SLoop(body(s, isPhi))
+        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr).rememberSourceStatement(pf)
+      case BoxLoop(s, ih) => SLoop(body(s, isPhi)).rememberSourceStatement(pf)
       case pode: ProveODE =>
         val ode = ofODE(pode)
         // ODE does not have an "original" strategy, but we put it in map to indicate that it "was once an ODE"
         //if (pode.isAngelic)
         IDCounter.setOriginal(ode.nodeID, ode)
-        ode
+        ode.rememberSourceStatement(pf)
       case Phi(s) =>
         val block = body(s, isPhi = true)
         // Phi block does not have an "original" strategy, but we put it in map to indicate that it "is special"
         block
-      case _: MetaNode | _: Note | _: Match | _: LetSym | _: Triv | _: Assert | _: Label | _: Ghost => STest(True)
+      case _: MetaNode | _: Note | _: Match | _: LetSym | _: Triv | _: Assert | _: Label | _: Ghost => STest(True).rememberSourceStatement(pf)
     }
   }
 
@@ -264,7 +333,8 @@ object AngelStrategy {
   def apply(pf: Statement): AngelStrategy = {
     val fv = VariableSets(pf).freeVars
     val main = body(pf, isPhi = false)
-    val inits = fv.toList.map(SAssignAny)
+    val startLoc = (0, 0)
+    val inits = fv.toList.map(SAssignAny).map(as => as.rememberSourceLocation(startLoc))
     val strat = Composed(inits.:+(main))
     strat
   }

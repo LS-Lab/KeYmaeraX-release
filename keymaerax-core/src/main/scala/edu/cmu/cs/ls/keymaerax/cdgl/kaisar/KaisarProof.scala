@@ -495,9 +495,7 @@ case class ProvablyConstantMetric(override val delta: Term, override val bound: 
 //   !(foo >= bar) by guard(delta);  else can try to infer with ... by guard;.
 //   guardEpsilon is None initially
 // and should not be changed once set to Some(delta)
-case class For(metX: Ident, met0: Term, metIncr: Term,
-               conv: Option[Assert], guard: Assume,
-               body: Statement, var guardDelta:Option[Term] = None) extends Statement
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement, var guardDelta:Option[Term] = None) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]

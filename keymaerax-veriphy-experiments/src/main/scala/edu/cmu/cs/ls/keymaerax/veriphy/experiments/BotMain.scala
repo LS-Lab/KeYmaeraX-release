@@ -28,14 +28,19 @@ object BotMain {
     println("Loaded DLL for FFI!")
     //println("native size: " + Native.LONG_SIZE)
     //val angel = StrategyParser(sandboxPLDIStratString)
-    val angel = loadBundle(angelSandboxBundle)
+    //val angel = loadBundle(angelSandboxBundle)
+    //val angel = loadBundle(reachAvoidBundle)
+    val bundle = StrategyBundle.fromFile("C:\\Users\\bjboh\\Documents\\GitHub\\phd-thesis\\experiments\\proofplex\\models\\kaisar\\compiled\\RA.txt")
+    val angel = loadBundle(bundle)
     println("Read Angel Strategy:\n" + StrategyPrinter(angel))
     println("Warm-starting FFI Library")
     lib.warmStart()
     println("Warm-started FFI Library")
-    for (simArg <- botArgs) {
+    for (simArg <- simArgs) {
       for(speed <- testSpeeds) {
-        doOneGoPiGo(lib, angel, fullPath, simArg, speed)
+        doOneBotSim(lib, angel, fullPath, simArg, speed)
+        return
+        //doOneGoPiGo(lib, angel, fullPath, simArg, speed)
       }
     }
   }

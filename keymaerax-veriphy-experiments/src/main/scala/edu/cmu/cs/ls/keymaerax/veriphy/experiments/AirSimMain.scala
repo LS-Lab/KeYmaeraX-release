@@ -543,13 +543,8 @@ object AirSimMain {
   }
 
   private def bundleFromFile(filePath: String): StrategyBundle = {
-    val file = io.Source.fromFile(filePath)
-    val src = file.mkString
-    file.close()
-    src.split('@').toList match {
-      case strat :: ids :: origins :: Nil => StrategyBundle(strat, ids, origins)
-      case lst => throw new Exception("Strategy file should have exactly 3 sections separated by @, had " + lst.length)
-    }
+    StrategyBundle.fromFile(filePath)
+
   }
 
   // Args:  file_path

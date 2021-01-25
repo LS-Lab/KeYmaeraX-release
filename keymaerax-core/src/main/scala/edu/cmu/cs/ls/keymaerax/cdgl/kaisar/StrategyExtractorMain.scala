@@ -70,11 +70,16 @@ object StrategyExtractorMain {
     val kaisarFile = scala.io.Source.fromFile(args(0), "UTF-8")
     initQE()
     println("Initialized QE")
-    val pf = check(kaisarFile.mkString)
+    val srcString = kaisarFile.mkString
+    val pf = check(srcString)
+    IDCounter.setSourceFile(srcString)
     val fullStrategy = AngelStrategy(pf)
     val angel =  SimpleStrategy(fullStrategy)
     println("Angel Strategy:\n" + StrategyPrinter(angel))
     println("ID Map:\n" + IDCounter.idMapString)
     println("Origin Map:\n" + IDCounter.originMapString)
+    println("Source Location Map:\n" + IDCounter.sourceLocMapString)
+    println("\n\n\n\n\n\n\n\n\n\n")
+    println(s"Full file:\n${StrategyPrinter(angel)}@${IDCounter.idMapString}@${IDCounter.originMapString}@${IDCounter.sourceLocMapString}")
   }
 }

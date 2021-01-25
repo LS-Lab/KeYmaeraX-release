@@ -619,6 +619,7 @@ object ProofChecker {
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
     Pragmas.listen(con, s)
+    val (Context(resS), resF) =
     s match {
       case Assert(x , f, m) =>
         val taboo: Set[Variable] = if (con.isGhost) Set() else VariableSets(con).tabooVars
@@ -811,5 +812,6 @@ object ProofChecker {
       case _: Triv | _: Label => (Context(s), True)
       case pr: Pragma => Pragmas.update(pr.ps); (Context(s), True)
     }
+    (Context(ASTNode.locate(resS, s)), resF)
   }
 }
