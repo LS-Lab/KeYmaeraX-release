@@ -628,6 +628,13 @@ case class PrintGoal(printable: Printable) extends MetaNode {
   override val children: List[Statement] = Nil
 }
 
+/** Note this is not for comments parsed from source files since the parser strips out comments. This is used
+  * for the insertion of machine-generated comments in machine-generated Kaisar files
+  *  */
+case class Comment(str: String) extends MetaNode {
+  override val children: List[Statement] = Nil
+}
+
 
 /** Used for features which are not fundamentally part of the language, but more convenience features of the implementation.
   * Used for setting options including those useful for debugging or profiling  */

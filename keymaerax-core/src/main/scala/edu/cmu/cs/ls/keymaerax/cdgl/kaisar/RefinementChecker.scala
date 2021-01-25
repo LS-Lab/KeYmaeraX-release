@@ -61,7 +61,7 @@ object RefinementChecker {
 
   private def isIgnored(s: Statement): Boolean ={
     s match {
-      case Triv() | _: Label | _: LetSym | _: Ghost | _: PrintGoal | _: Pragma | _: Was | _: Match => true
+      case Triv() | _: Label | _: LetSym | _: Ghost | _: PrintGoal | _: Pragma | _: Was | _: Match | _: Comment => true
       case _ => false
     }
   }

@@ -192,7 +192,7 @@ case class Context(s: Statement) {
       case SwitchProgress(bl, i, progress) => Context(progress).programSignature
       case Phi(s) => Context(s).programSignature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match | _: Pragma => Map()
+           | _: Label | _: Match | _: Pragma | _: Comment => Map()
     }
   }
   
@@ -216,7 +216,7 @@ case class Context(s: Statement) {
       case SwitchProgress(bl, i, progress) => Context(progress).signature
       case Phi(s) => Context(s).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match | _: Pragma => Map()
+           | _: Label | _: Match | _: Pragma | _: Comment => Map()
     }
   }
 
@@ -294,7 +294,7 @@ case class Context(s: Statement) {
       case InverseGhost(s) => ContextResult.unit
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
+      case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma | _: Comment => ContextResult.unit
       case fr@For(metX, met0, metIncr, conv, guard, body, guardDeltaOpt) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         // Represents bound variables of loop *body*, not tabooProgramVars.
