@@ -29,7 +29,7 @@ import AnnotationCommon._
   * @param conclusion Formula string displayed for axioms as html with unicode in the user interface
   *  For axioms with (non-position) inputs, the conclusion must mention each input.
   *  Sequent syntax is optionally supported:   A, B |- C, D
-  * @param unifier Which unifier to use for axiom: "surjective" or "linear" or "surjlinear" or "surjlinearpretend" or "full" [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
+  * @param unifier Which unifier to use for axiom: "surjective" or "linear" or "surjlinear" or "surjlinearpretend" or "full" [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus#matcherFor(edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo)]]
   * @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
   * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
   *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example

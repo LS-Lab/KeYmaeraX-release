@@ -2310,19 +2310,20 @@ trait UnifyUSCalculus {
   }
 
 
-  /** Which matcher to use for which [[ProvableInfo]].
-    * [[AxiomInfo.unifier]] will be consulted:
+  /** Which unification matcher to use for which [[ProvableInfo]].
+    * [[AxiomInfo.unifier]] declaration will be consulted from @[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]] declarations:
     * - 'surjective: A formula is surjective iff rule US can instantiate it to any of its axiom schema instances,
     *   so those obtained by uniformly replacing program constant symbols by hybrid games and unit predicationals by formulas.
     *   If no arguments occur, so no function or predicate symbols or predicationals, then the axiom is surjective.
     *   UnitFunctional, UnitPredicational, ProgramConst etc. can still occur.
     *   Function or predicate symbols that occur in a context without any bound variables are exempt. For example [[Ax.testb]].
-    *   [[UniformMatcher]]
+    *   Using [[UniformMatcher]]
     * - 'linear: No symbol can occur twice in the shape.
     *   If a symbol does occur twice, it is assumed that the identical match is found in all use cases,
     *   which is a strong assumption and can lead to unpredictable behavior otherwise.
-    *   [[LinearMatcher]]
+    *   Using [[LinearMatcher]]
     * - 'surjlinear: Both 'surject and 'linear
+    *   Using [[UniformMatcher]] but [[LinearMatcher]] would be okay/
     * - 'surjlinearpretend: An axiom that pretends to be surjective and linear even if it isn't necessarily so.
     * - 'full: General unification [[UnificationMatch]] is the default fallback.
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. arXiv:1601.06183
