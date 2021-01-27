@@ -8,8 +8,8 @@ KeYmaera X features a minimal core of just about 2000 lines of code that isolate
 **More information** and precompiled binaries are available at:
   http://keymaeraX.org/
 
-* [Differential dynamic logic grammar](http://keymaeraX.org/doc/dL-grammar.md)
 * [KeYmaera X Tutorial](http://keymaeraX.org/Xtutorial.html)
+* [KeYmaera X Releases](https://github.com/LS-Lab/KeYmaeraX-release/releases)
 * [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/) textbook
 
 Installation
