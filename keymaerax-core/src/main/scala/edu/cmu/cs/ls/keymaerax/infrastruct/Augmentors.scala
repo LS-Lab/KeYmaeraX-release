@@ -150,7 +150,11 @@ object Augmentors {
 
     /** Indicates whether the formula is FOL without uninterpreted predicate symbols. */
     def isPredicateFreeFOL: Boolean = fml.isFOL &&
-      StaticSemantics.signature(fml).forall({ case Function(_, _, _, Bool, false) => false case _ => true })
+      StaticSemantics.signature(fml).forall({
+        case Function(_, _, _, Bool, false) => false
+        case _: PredicationalOf => false
+        case _: UnitPredicational => false
+        case _ => true })
 
     /** Indicates whether the arguments of uninterpreted functions are free. */
     def isFuncFreeArgsFOL: Boolean = {

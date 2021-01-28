@@ -756,4 +756,8 @@ class SequentialInterpreterTests extends TacticTestBase {
         skip
       )).subgoals.loneElement shouldBe "x>y, y=0 | y>0 ==> x>0".asSequent
   }
+
+  it should "work with QE" in withQE { _ =>
+    proveBy("x>0, y=0 | y>0 ==> x^2>0".asSequent, Using("x>0".asFormula :: "x^2>0".asFormula :: Nil, QE)) shouldBe 'proved
+  }
 }
