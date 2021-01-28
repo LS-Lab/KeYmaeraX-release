@@ -53,7 +53,8 @@ trait LemmaDB {
    *         || !contains(lemmaID) && \result == None
    */
   def get(lemmaID: LemmaID): Option[Lemma] = get(List(lemmaID)).flatMap(_.headOption) ensures(r =>
-    contains(lemmaID) && r.isDefined && r.get.name.contains(lemmaID) || !contains(lemmaID) && r.isEmpty)
+    // lemma name must match id except when name==None
+    contains(lemmaID) && r.isDefined && r.get.name.forall(_ == lemmaID) || !contains(lemmaID) && r.isEmpty)
 
   /**
    * Returns the lemmas with IDs `lemmaIDs` or None if any of the `lemmaIDs` does not exist.

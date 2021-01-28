@@ -36,9 +36,9 @@ abstract class LemmaDBBase extends LemmaDB {
       }
     ))
   } ensures(r => r match {
-    case Some(l) =>
-      val names = l.map(_.name).filter(_.isDefined).map(_.get)
-      names.diff(ids).isEmpty && ids.diff(names).isEmpty
+    case Some(lemmas) =>
+      // lemma names must match id except when name==None
+      lemmas.zip(ids).forall({ case (l, id) => l.name.forall(_ == id) })
     case None => !ids.forall(contains)
   })
 
@@ -84,7 +84,7 @@ abstract class LemmaDBBase extends LemmaDB {
     }
     //@note overwrites pre-existing identical lemma
     saveLemma(lemma, id)
-    id.toString
+    id
   } ensures(r => get(r).contains(proofTermLemma(lemma)))
 
   /** Turns a list of options into a list or to a None if any list element was None.
