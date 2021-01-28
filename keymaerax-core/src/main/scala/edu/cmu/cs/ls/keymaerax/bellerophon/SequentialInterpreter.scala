@@ -475,6 +475,34 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             }
         }
       }
+
+    case Using(es, t) => v match {
+      case bp@BelleProvable(p, labels) =>
+        val filteredGoals = p.subgoals.
+          map(s => {
+            val antes = s.ante.zipWithIndex.map({ case (f, i) =>
+              if (es.contains(f)) (f, None)
+              else { val p = UnitPredicational("p" + i + "_", AnyArg); (p, Some(SubstitutionPair(p, f))) }
+            })
+            val succs = s.succ.zipWithIndex.map({ case (f, i) =>
+              if (es.contains(f)) (f, None)
+              else { val q = UnitPredicational("q" + i + "_", AnyArg); (q, Some(SubstitutionPair(q, f))) }
+            })
+
+            (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),
+              USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
+          })
+
+        val goalResults = filteredGoals.map({ case (p, s) => apply(t, BelleProvable(p, labels)) match {
+          case BelleProvable(rp, rl) => BelleProvable(rp(s), rl)
+          case r => r
+        } })
+
+        //@todo labels if parent didn't have any but some subgoals produced labels
+        goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l), (BelleProvable(sp, sl), i)) =>
+          BelleProvable(p(sp, i), l.map(_.patch(i, Nil, 1) ++ sl.getOrElse(Nil))) })
+    }
+
   }
 
   /** Maps sequents to BelleProvables. */

@@ -731,4 +731,29 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(entry.model.asInstanceOf[Formula], let("r()".asTerm, "r".asTerm, by(
       proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe 'proved
   }
+
+  "Using" should "keep mentioned and abbreviate unmentioned formulas" in withMathematica { _ =>
+    def check(expected: Sequent) = anon ((seq: Sequent) => {
+      seq shouldBe expected
+      skip
+    })
+
+    proveBy("x>y, y>=0, x>0 ==> y>=0, x>=0".asSequent, Using("x>0".asFormula:: "x>=0".asFormula :: Nil,
+      check("p0_(||), p1_(||), x>0 ==> q0_(||), x>=0".asSequent)) // restricted inside
+    ).subgoals.loneElement shouldBe "x>y, y>=0, x>0 ==> y>=0, x>=0".asSequent // back to full outside
+  }
+
+  it should "abbreviate only temporarily" in withMathematica { _ =>
+    proveBy("x>0 | x>y, y=0 | y>0 ==> x>0".asSequent,
+      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL('L)))).subgoals shouldBe List(
+      "x>0, y=0 | y>0 ==> x>0".asSequent, "x>y, y=0 | y>0 ==> x>0".asSequent)
+  }
+
+  it should "work nested" in withMathematica { _ =>
+    proveBy("x>0 | x>y, y=0 | y>0 ==> x>0".asSequent,
+      Using("x>0 | x>y".asFormula :: Nil, SaturateTactic(orL('L))) <(
+        Using("x>0".asFormula :: "x>0".asFormula :: Nil, id),
+        skip
+      )).subgoals.loneElement shouldBe "x>y, y=0 | y>0 ==> x>0".asSequent
+  }
 }

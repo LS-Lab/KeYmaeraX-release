@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
@@ -79,20 +78,20 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   // tactic combinators
 
   /** this & other: sequential composition this ; other executes other on the output of this, failing if either fail. */
-  def &(other: BelleExpr)     = SeqTactic(this, other)
+  def &(other: BelleExpr): BelleExpr     = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
-  def |(other: BelleExpr)     = EitherTactic(this, other)
+  def |(other: BelleExpr): BelleExpr     = EitherTactic(this, other)
   /** this |! other: alternative composition executes other if applying this fails (even critically), failing if both fail. */
-  def |!(other: BelleExpr)     = EitherTactic(TryCatch(this, classOf[Throwable], (ex: Throwable) => throw new TacticInapplicableFailure("Inapplicable due to critical exception", ex)), other)
-  def ||(other: BelleExpr)     = ParallelTactic(List(this, other))
+  def |!(other: BelleExpr): BelleExpr     = EitherTactic(TryCatch(this, classOf[Throwable], (ex: Throwable) => throw new TacticInapplicableFailure("Inapplicable due to critical exception", ex)), other)
+  def ||(other: BelleExpr): BelleExpr     = ParallelTactic(List(this, other))
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
-  def *(n: Int)               = RepeatTactic(this, n)
+  def *(n: Int): BelleExpr               = RepeatTactic(this, n)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
-  def <(children: BelleExpr*) = SeqTactic(this, BranchTactic(children))
+  def <(children: BelleExpr*): BelleExpr = SeqTactic(this, BranchTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
-  def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
+  def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(this, USubstPatternTactic(p))
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
   override def toString: String = prettyString
@@ -163,6 +162,13 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   * }}}
   * */
 case class TryCatch[T <: Throwable](t: BelleExpr, cCatch: Class[T], c: T => BelleExpr, f: Option[BelleExpr] = None) extends BelleExpr { override def prettyString: String = "TryCatch" }
+
+/** Positive mention of expressions `es` to use when executing tactic `t`. */
+case class Using(es: List[Expression], t: BelleExpr) extends BelleExpr {
+  override def prettyString: String =
+    if (es.nonEmpty) t.prettyString + " using \"" + es.map(_.prettyString).mkString("::") + "::nil\""
+    else t.prettyString
+}
 
 /** Marker for no-op tactics. */
 trait NoOpTactic {}
@@ -858,7 +864,6 @@ case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
   //@note serialize `defs` for database since required in the proof tree when assembling provables
   override def prettyString: String = "expandAllDefs"
 }
-
 
 /**
  * Bellerophon expressions that are values, so should not be evaluated any further since irreducible.
