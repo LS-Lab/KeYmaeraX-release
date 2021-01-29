@@ -375,6 +375,19 @@ object BelleParser extends TacticParser with Logging {
         }
       //endregion
 
+      //region using
+
+      case r :+ ParsedBelleExpr(expr, eLoc) :+ BelleToken(USING, _) => st.input match {
+        case BelleToken(EXPRESSION(s, delims), esLoc) :: tail =>
+          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).
+            split("::").dropRight(1).
+            map(Parser.parser.formulaParser).toList
+          ParserState(r :+ ParsedBelleExpr(Using(fmls, expr), eLoc.spanTo(esLoc)), tail)
+      }
+
+
+      //endregion
+
       //region Stars and Repitition
       case r :+ ParsedBelleExpr(expr, loc) :+ BelleToken(KLEENE_STAR, starLoc) =>
         val parsedExpr = SaturateTactic(expr)

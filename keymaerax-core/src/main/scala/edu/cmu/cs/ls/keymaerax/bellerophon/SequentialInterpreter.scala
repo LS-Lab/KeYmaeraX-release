@@ -480,13 +480,23 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       case bp@BelleProvable(p, labels) =>
         val filteredGoals = p.subgoals.
           map(s => {
+            def abbrv(f: Formula, i: Int, name: String): (PredOf, Option[SubstitutionPair]) = {
+              val fv = StaticSemantics.freeVars(f).toSet.toList
+              val dots = fv.zipWithIndex.map({ case (v, i) => (v, DotTerm(Real, Some(i))) })
+              val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
+              val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
+              val fDots = dots.foldRight(f)({ case ((what, repl), f) => f.replaceFree(what, repl) })
+              val fn = Function(name, Some(i), arg.sort, Bool, interpreted=false)
+              (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
+            }
+
             val antes = s.ante.zipWithIndex.map({ case (f, i) =>
               if (es.contains(f)) (f, None)
-              else { val p = UnitPredicational("p" + i + "_", AnyArg); (p, Some(SubstitutionPair(p, f))) }
+              else abbrv(f, i, "p")
             })
             val succs = s.succ.zipWithIndex.map({ case (f, i) =>
               if (es.contains(f)) (f, None)
-              else { val q = UnitPredicational("q" + i + "_", AnyArg); (q, Some(SubstitutionPair(q, f))) }
+              else abbrv(f, i, "q")
             })
 
             (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),

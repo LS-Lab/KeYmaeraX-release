@@ -83,6 +83,8 @@ private object EXPAND extends BelleTerminal("expand")
 
 private object EXPANDALLDEFS extends BelleTerminal("expandAllDefs")
 
+private object USING extends BelleTerminal("using")
+
 private object RIGHT_ARROW extends BelleTerminal("=>")
 
 // Separation/Grouping Tokens
