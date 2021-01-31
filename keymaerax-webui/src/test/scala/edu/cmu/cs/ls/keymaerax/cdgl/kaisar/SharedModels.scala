@@ -335,15 +335,17 @@ object SharedModels {
     """
       | ?deltaLo:(delta > 0);
       | ?deltaHi:(delta < 1);
-      | sum := 0;
-      | for (x := 0; !(sum = x^2 / 2); ?(x <= 11); x := x + 1) {
-      |    sum := sum + x;
-      |   !cnv:(sum = x^2 / 2);
+      | let sol(x) = x*(x+1)/2;
+      | sum := 1;
+      | for (x := 1; !(sum = sol(x)); ?(x <= 11); x := x + 1) {
+      |    sum := sum + (x+1);
+      |   !cnv:(sum = sol(x+1));
       | }
       | !done:(x >= 11 - delta) by guard(delta);
       | !total:(sum >= 50) using done sum x deltaHi by auto;
       |""".stripMargin
-  
+
+
   // may be less popular but may be easier to implement / test
   val revisedReachAvoidFor: String =
     """pragma option "time=true";
@@ -355,14 +357,14 @@ object SharedModels {
       |for (pos := 0;
       |    !conv:(pos <= (x - x@init) & x <= d) using epsPos consts ... by auto;
       |    ?guard:(pos <= d - (eps + x@init) & x <= d - eps);
-      |    pos := pos + eps*T/2) {
+      |    pos := pos + eps/2) {
       |  body:
       |  vel := (d - x)/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T)};
       |  !safe:(x <= d) using conv guard vel time by auto;
       |  ?high:(t >= T/2);
-      |  !prog:(pos <= (x - x@init));
+      |  !prog:(pos + eps/2 <= (x - x@init)) using high ... by auto;
       |  note step = andI(prog, safe);
       |}
       |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard;
@@ -1445,7 +1447,7 @@ object SharedModels {
 
   val thesisExamples: List[String] = List(switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
+    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock, basicForConv,
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
     )
 
