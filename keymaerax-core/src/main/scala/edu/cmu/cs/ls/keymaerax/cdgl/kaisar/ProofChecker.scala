@@ -334,7 +334,7 @@ object ProofChecker {
   }
 
   private case class ODEContext(c: Context, header: ODEProofHeader) {
-    def dropPhi: ODEContext = ODEContext(c.dropPhi, header)
+    def bakePhi: ODEContext = ODEContext(c.bakePhi, header)
     def applyPhi(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)({case v: Variable => header.phiAssigns.get(v) case _ => None})
     def containsFact(fml: Formula, shouldApplyPhi: Boolean = true): Boolean = {
       val fmls = if (shouldApplyPhi) Set(fml, applyPhi(fml)) else Set(fml)
@@ -344,13 +344,16 @@ object ProofChecker {
   }
   private object ODEContext {
       def apply(c: Context): ODEContext = {
-        val last = c.lastBlock
+        val last = c.lastBlockSmall
         val header = last.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
           s match {
             case Phi(Modify(ps, (x, Some(f)) :: Nil)) =>
               acc.addFact(ps.headOption, Equal(x, f)).addPhiAssign(x, f)
             case Ghost(Modify(ps, (x, Some(f)) :: Nil)) =>
               acc.addFact(ps.headOption, Equal(x, f)).addGhostAssign(x, f)
+            //case Modify(ps, (x, None) :: Nil) => acc.
+              ////acc.addAssign()
+              //acc.addFact(ps.headOption, Equal(x, f)).addAssign(x, f)
             case Modify(ps, (x, Some(f)) :: Nil) =>
               acc.addFact(ps.headOption, Equal(x, f)).addAssign(x, f)
             case Ghost(Note(x, pt, Some(fml))) => acc.addFact(Some(x), fml)
@@ -446,7 +449,7 @@ object ProofChecker {
 
   private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val baseConBC = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
-    val baseConIH = domainFacts.foldLeft(odeCon.dropPhi.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
+    val baseConIH = domainFacts.foldLeft(odeCon.bakePhi.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
     val DomAssert(x, plainF, m) = assertion
     val f = odeCon.c.elaborateStable(plainF)
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, odeCon.c.elaborateStable(f))})
@@ -532,11 +535,16 @@ object ProofChecker {
   /** Throw an exception if proveODE unsoundly reuses variables from context. Assumes SSA. */
   private def checkODEContext(kc: ODEContext, proveODE: ProveODE): Unit = {
     val bv = VariableSets(proveODE).boundVars.filter(_.isInstanceOf[BaseVariable])
-    val kv = VariableSets(kc.c.s)
-    val taboo = kv.freeVars ++ kv.boundVars
-    val clash = bv.intersect(taboo)
-    if (clash.nonEmpty)
-      throw ODEAdmissibilityException(clash, node = proveODE)
+    val lasts = kc.c.lastBlock.ss.reverse.takeWhile(x => x.isInstanceOf[Phi])
+    lasts match {
+      case phiBlock =>
+        val kvJustPhi = VariableSets(Block(phiBlock)).boundVars
+        val clash = bv -- kvJustPhi
+        if (clash.nonEmpty)
+          throw ODEAdmissibilityException(clash, node = proveODE)
+      case _ =>
+        throw ODEAdmissibilityException(bv, node = proveODE)
+    }
   }
 
     /**  Check a differential equation proof */
@@ -721,8 +729,13 @@ object ProofChecker {
         val progCon = ForProgress(progFor, Triv())
         // Check body
         val (sBody, fBody) = apply(con.:+(progCon), body)
+        val maybeStepConv = maybeConv.map(cnv => SubstitutionHelper.replacesFree(cnv.f)({
+          case bv: BaseVariable if bv == metX =>
+            Some(metIncr)
+          case _ => None
+        }))
         val indStepResults = sBody.lastFacts
-        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => maybeConv.exists({case Assert(x,f,m) => f == kElab})})
+        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => maybeStepConv.contains(kElab)})
         // Check that convergence inductive step has been proven which matches the convergence condition, if there is any
         val cnvConcl: Formula =
         (indStepConv, maybeConv) match {

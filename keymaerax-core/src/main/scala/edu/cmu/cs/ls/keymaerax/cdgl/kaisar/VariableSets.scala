@@ -21,6 +21,7 @@ import edu.cmu.cs.ls.keymaerax.core._
   * @param tabooFacts All fact variables which are taboo to reference, usually because they are inverse ghosts
   */
 case class VariableSets (boundVars: Set[Variable], mustBoundVars: Set[Variable], freeVars: Set[Variable], tabooVars: Set[Variable], tabooFunctions: Set[Ident], tabooFacts: Set[Ident]) {
+  def addBoundVars(v: Set[Variable]): VariableSets = VariableSets(boundVars.++(v), mustBoundVars, freeVars, tabooVars, tabooFunctions, tabooFacts)
   def addFreeVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars.++(v), tabooVars, tabooFunctions, tabooFacts)
   def addTabooVars(v: Set[Variable]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars, tabooVars.++(v), tabooFunctions, tabooFacts)
   def addTabooFuncs(f: Set[Ident]): VariableSets = VariableSets(boundVars, mustBoundVars, freeVars, tabooVars, tabooFunctions.++(f), tabooFacts)
@@ -120,11 +121,13 @@ object VariableSets {
         (conv.map(cnv => ofFacts(StaticSemantics(cnv.pat).toSet, cnv.f, kc.isInverseGhost)).getOrElse(VariableSets.empty))
       val mge = guardEpsilon.map(f => mc.addFreeVars(StaticSemantics(f).toSet)).getOrElse(mc)
       mge ++ apply(kc.reapply(body))
+    case ForProgress(fr, prog) =>
+      apply(kc.reapply(fr)).addBoundVars(Set(fr.metX))
     case BoxLoop(s, _) => apply(kc.reapply(s)).option
+    case BoxLoopProgress(bl, progress) => apply(kc.reapply(bl))
     case ProveODE(ds, dc) => apply(kc, ds).++(apply(kc, dc))
-    case m: Phi => apply(m.asgns).forgetBound
+    case m: Phi => apply(m.asgns)/*.forgetBound*/
     // @TODO: Are there ever cases where we want to check _bl instead?
-    case BoxLoopProgress(_bl, progress) => apply(kc.reapply(progress))
     case WhileProgress(wh, prog) => apply(kc.reapply(prog))
     case SwitchProgress(switch, onBranch, progress) =>
       val thisBranch = ofFacts(StaticSemantics(switch.pats(onBranch)._1).toSet, switch.pats(onBranch)._2, isInverseGhost = false)

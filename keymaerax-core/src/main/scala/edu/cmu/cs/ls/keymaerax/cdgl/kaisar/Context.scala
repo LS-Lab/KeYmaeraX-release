@@ -525,7 +525,7 @@ case class Context(s: Statement) {
   /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
     * appear ghosted or unghosted.  */
-  private def lastStatements(taboos: Set[Variable] = Set()): List[Statement] = {
+  private def lastStatements(allowProgress: Boolean, taboos: Set[Variable] = Set()): List[Statement] = {
     s match {
       case Assume(x, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Assert(x, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
@@ -538,23 +538,28 @@ case class Context(s: Statement) {
         if (admissible) List(s) else Nil
       case Note(x, pt, Some(fml)) => if(StaticSemantics(fml).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Phi(asgns) =>
-        val res = reapply(asgns).lastStatements(taboos)
+        val res = reapply(asgns).lastStatements(allowProgress,taboos)
         res.map(Phi)
       case Ghost(s) =>
-        val res = reapply(s).lastStatements(taboos)
+        val res = reapply(s).lastStatements(allowProgress,taboos)
         val mapped = res.map({case g: Ghost => g case s: Statement => Ghost(s)})
         mapped
       case Block(ss) =>
         ss.foldRight[(List[Statement], Set[Variable], Boolean)]((List(), taboos, false))({case (s, (acc, taboos, done)) =>
           if (done) (acc, taboos, done)
           else {
-            val res = reapply(s).lastStatements(taboos)
+            val res = reapply(s).lastStatements(allowProgress,taboos)
             if (res.isEmpty) (acc, taboos, true)
             else {
               val tt = taboos ++ VariableSets(s).boundVars
               (res ++ acc, tt, false)
             }}})._1
-      case Was(now, was) => reapply(now).lastStatements(taboos)
+      case Was(now, was) => reapply(now).lastStatements(allowProgress, taboos)
+      case WhileProgress(wh, s) if allowProgress => reapply(s).lastStatements(allowProgress,taboos)
+      case BoxLoopProgress(bl, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case ForProgress(fr, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case SwitchProgress(sw, i, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case BoxChoiceProgress(bc, i, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
       case _: PrintGoal => List(s)
       case _ =>
         Nil
@@ -565,9 +570,12 @@ case class Context(s: Statement) {
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
     * appear ghosted or unghosted.  */
   def lastBlock: Block = {
-    Block(lastStatements())
+    Block(lastStatements(allowProgress = true, taboos = Set()))
   }
 
+  def lastBlockSmall: Block = {
+    Block(lastStatements(allowProgress = false, taboos = Set()))
+  }
 
   private def starPhi(s: Statement): Statement = {
     s match {
@@ -575,14 +583,33 @@ case class Context(s: Statement) {
       case Block(ss) => Block(ss.map(starPhi))
     }
   }
-  def dropPhi: Context = {
+  def bakePhi: Context = {
     s match {
       case Block(ss) if ss.length > 1 && ss.last.isInstanceOf[Phi]=>
         val (lefts, right) = (ss.dropRight(1), starPhi(ss.last.asInstanceOf[Phi].asgns))
         reapply(Block(lefts :+ right))
       case phi: Phi => reapply(Phi(starPhi(phi.asgns)))
-      case Ghost(s) => reapply(Ghost(reapply(s).dropPhi.s))
-      case InverseGhost(s) => reapply(InverseGhost(reapply(s).dropPhi.s))
+      case Ghost(s) => reapply(Ghost(reapply(s).bakePhi.s))
+      case InverseGhost(s) => reapply(InverseGhost(reapply(s).bakePhi.s))
+      case _ => this
+    }
+  }
+
+  def deletePhi: Context = {
+    s match {
+      case Block(ss) if ss.length > 1 && ss.last.isInstanceOf[Phi]=> reapply(Block(ss.dropRight(1)))
+      case Block(ss) if ss.nonEmpty =>
+        val (lefts, right) = (ss.dropRight(1), reapply(ss.last).deletePhi.s)
+        reapply(Block(lefts :+ right))
+      case phi: Phi => reapply(Triv())
+      case Ghost(s) => reapply(Ghost(reapply(s).deletePhi.s))
+      case InverseGhost(s) => reapply(InverseGhost(reapply(s).deletePhi.s))
+        // PROGRESS ONLY!!
+      case ForProgress(fr, s) => reapply(s).deletePhi
+      case BoxLoopProgress(bx, s) => reapply(s).deletePhi
+      case WhileProgress(bx, s) => reapply(s).deletePhi
+      case SwitchProgress(sw, i, s) => reapply(s).deletePhi
+      case BoxChoiceProgress(bc, i, s) => reapply(s).deletePhi
       case _ => this
     }
   }
@@ -609,7 +636,7 @@ case class Context(s: Statement) {
         case Nil => Nil
       }
     }
-    unwind(lastStatements().reverse)
+    unwind(lastStatements(allowProgress = false, taboos = Set()).reverse)
   }
 
   private def finishFact(f: Formula, phis: List[Phi]): Formula = destabilize(phis.foldLeft(f)((fml, phi) => Context.substPhi(phi, fml)))
