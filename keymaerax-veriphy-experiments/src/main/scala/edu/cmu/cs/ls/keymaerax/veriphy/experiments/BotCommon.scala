@@ -33,7 +33,7 @@ trait VeriPhyFFIs extends VeriPhySenselessFFIs with Library {
   // this is specialized to GoPiGo, who knows if it might crash other code
   // make sure to init again after this because it will have bogus info
   def warmStart(): Unit = {
-    /*
+
     val initintArgs = List(1, 1, 0)
     val initstr = "foo"
     val initstrP: Pointer = new Memory(initstr.length + 1)
@@ -62,7 +62,7 @@ trait VeriPhyFFIs extends VeriPhySenselessFFIs with Library {
     val rlStrP: Pointer = new Memory(2000)
     val rlOutP: Pointer = new Memory(8)
     ffiread_log(rlStrP, 2000, rlOutP, 8)
-    ffiexit()*/
+    ffiexit()
   }
 }
 
@@ -92,8 +92,8 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
  val intArgs: List[Int])
   extends BasicDemonStrategy[number] {
   var isInit = false
-  val PRINT_EVENTS = false
-  val DEBUG_PRINT = false
+  val PRINT_EVENTS = true
+  val DEBUG_PRINT = true
   val FFI_RATS = false // true
 
   var logWriter: BufferedWriter = null
@@ -109,6 +109,9 @@ class FFIBasicStrategy[number <: Numeric[number, Ternary]]
   // This gets called on creation. Initialization order is important to make sure init ffi gets called before other ffis
   val gisOutPC: Pointer = new Memory(constVars.length*4*(if (FFI_RATS) 2 else 1))
   val gisOutPS: Pointer = new Memory(senseVars.length*4*(if (FFI_RATS) 2 else 1))
+  // d  eps_0  pos_0  v_0 d_0 V_0  t_0
+  // SCompose[118](SAssignAny[79](d),SAssignAny[80](eps_0),SAssignAny[81](pos_0),SAssignAny[82](v_0),SAssignAny[83](d_0),SAssignAny[84](V_0),SAssignAny[85](t_0)
+  // V eps
   def getInitState: Map[Ident, number] = {
     init(Some(filePath), intArgs)
     var vmap: Map[Ident, number] = Map()
@@ -1075,9 +1078,9 @@ object BotCommon {
 
 
   val botArgs: List[BotSpec] = List(
-    BotSpec("correct", 1, ""),
+    /*BotSpec("correct", 1, ""),
     BotSpec("ctrlbug", -1, ""),
-    BotSpec("backwards", 1, "Move obstacle towards robot while it drives\n"),
+    BotSpec("backwards", 1, "Move obstacle towards robot while it drives\n"),*/
     BotSpec("forwardObstCompensatesUnsafeActoffset", 1, "Move obstacle away from robot while it drives\n")
   )
 
@@ -1149,7 +1152,7 @@ object BotCommon {
     println("Starting experiment")
     val factory = UnknowingFactory(RatFactory)
     val env: Environment[TernaryNumber[RatNum]] = new Environment(factory)
-    val basic = new GoPiGoAngelSandboxStrategy(lib, env, filePath, intArgs)
+    val basic = new GoPiGoTimedAngelControlStrategy(lib, env, filePath, intArgs)
     val demon = new WrappedDemonStrategy(basic)(env)
     val interp = new Play(factory)
     Play.continueOnViolation = true

@@ -133,29 +133,31 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
       case STest(f) =>
         try {
           val alwaysPrint = false
-          if (env.holds(f) != KnownTrue() || alwaysPrint) {
+          val fails = env.holds(f) != KnownTrue()
+          if (fails || alwaysPrint) {
             // @TODO: Better printing of failures
             val id = as.nodeID
-            val gotLoc = IDCounter.getLocation(as.nodeID)
-            val asLoc = as.location
-            val locOpt = asLoc match { case Some(x) => Some(x) case None => gotLoc}
-            println(id+"\n"+gotLoc+"\n"+asLoc+"\n"+locOpt)
-            val mapped = locOpt.map({case (l,c) => s"at line $l column $c"})
-            val locStr = mapped match {
+            //val gotLoc = IDCounter.getLocation(as.nodeID)
+            //val asLoc = as.location
+            //val locOpt = asLoc match { case Some(x) => Some(x) case None => gotLoc}
+            //println(id+"\n"+gotLoc+"\n"+asLoc+"\n"+locOpt)
+            //val mapped = locOpt.map({case (l,c) => s"at line $l column $c"})
+            /*val locStr = mapped match {
               case Some(it) => it
               case None =>
                 "at unknown source location"
-            }
+            }*/
             val prettyState = env.state.toList.map{case (k, v) => s"$k |-> ${v}"}.mkString("\n")
-            println(s"""Test \"${f.prettyString}\"\n failed in state:\n$prettyState""")
-            val conjs = FormulaTools.conjuncts(f)
+            println(s"Failed Test: $id in $prettyState")
+            //println(s"""ID($id): Test \"${f.prettyString}\"\n failed in state:\n$prettyState""")
+            /*val conjs = FormulaTools.conjuncts(f)
             if(conjs.length > 1) {
               val failingConjs = conjs.filter(f => env.holds(f) != KnownTrue())
-              println("Failing conjuncts:")
-              failingConjs.foreach(f => println(s"${edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter(f)}"))
-            }
-            println(locStr)
-            if (env.holds(f) != KnownTrue()) {
+              //println("Failing conjuncts:")
+              failingConjs.foreach(f => println(s"${f.prettyString}"))
+            }*/
+            //println(locStr)
+            if (fails) {
               ds.reportViolation()
               if(!Play.continueOnViolation)
                 throw TestFailureException(as.nodeID)

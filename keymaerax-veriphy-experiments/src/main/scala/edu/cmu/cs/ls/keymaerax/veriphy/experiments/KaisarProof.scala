@@ -424,6 +424,17 @@ sealed trait Metric {
 }
 
 object Metric {
+  def weakNegation(guard: Formula, delta: Term): Formula = {
+    guard  match {
+      case And(l, r) => Or(weakNegation(l, delta), weakNegation(r, delta))
+      case Or(l, r) => And(weakNegation(l, delta), weakNegation(r, delta))
+      case Less(l, r) => Greater(l, Minus(r, delta))
+      case LessEqual(l, r) => GreaterEqual(l, Minus(r, delta))
+      case Greater(l, r) => Less(l, Plus(r, delta))
+      case GreaterEqual(l, r) => LessEqual(l, Plus(r, delta))
+    }
+  }
+
   /** @return A termination bound and flag indicating whether loop increases vs decreases
    * @throws MatchError If this conjunct is not a loop bound  */
   private def conjunctBound(mvar: Variable): PartialFunction[Formula, (Term, Boolean)] = {
@@ -483,7 +494,7 @@ case class ProvablyConstantMetric(override val delta: Term, override val bound: 
   }
 }
 
-case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement, var guardDelta:Option[Term] = None) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]

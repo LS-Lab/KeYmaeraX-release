@@ -43,9 +43,10 @@ object StrategyParser {
 
 
   def aforloop[_: P]: P[AForLoop] =
-    (P("AForLoop") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term ~ "," ~ DLParser.formula ~ "," ~ angelStrategy ~ "," ~ DLParser.term).map({
-      case (id, idx, idx0, conv, body, idxup) => alloc(id, AForLoop(idx, idx0, conv, body, idxup))
+    (P("AForLoop") ~ maybeId ~ DLParser.variable ~ "," ~ DLParser.term ~ "," ~ DLParser.formula ~ "," ~ angelStrategy ~ "," ~ DLParser.term ~ ("," ~ DLParser.term).?).map({
+      case (id, idx, idx0, conv, body, idxup, delta) => alloc(id, AForLoop(idx, idx0, conv, body, idxup, delta))
     })
+
 
   def aswitch[_: P]: P[ASwitch] = (P("ASwitch") ~ maybeId ~ branch.rep(sep = ",") ~ ")").map({ case (id, brs) => alloc(id, ASwitch(brs.toList)) })
 

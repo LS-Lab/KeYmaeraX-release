@@ -350,7 +350,7 @@ object SSAPass {
         val (xx, (jj, _jjSnap)) = (ssa(x, bodySnap), ssa(j, bodySnap))
         val whilst = locate(While(xx, jj, KaisarProof.block(body :: indStutters :: Nil)), s)
         (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
-      case For(metX, met0, metIncr, conv, guard, inBody) =>
+      case For(metX, met0, metIncr, conv, guard, inBody, metGuard) =>
         val met00 = ssa(met0, snapshot)
         val (metXX, initSnap) = snapshot.increment(metX)
         val boundVars = VariableSets(inBody).boundVars
@@ -363,7 +363,8 @@ object SSAPass {
         val metIncrr = ssa(metIncr, preSnap)
         val (guardd : Assume, _) = ssa(guard, preSnap)
         val convv = conv.map(ssa(_, preSnap)._1.asInstanceOf[Assert])
-        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil)), s)
+        val metGuardd : Option[Term] = metGuard.map(f => ssa(f, preSnap))
+        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil), metGuardd), s)
         (KaisarProof.block(baseStutters :: forth :: Nil), preSnap)
       //@TODO: switch case seems wrong, needs swap in the assignments
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>

@@ -5,7 +5,7 @@ import java.nio._
 import java.nio.channels.FileChannel
 
 import com.sun.jna._
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+/*import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.veriphy.experiments.ProtocolTypes._
 import edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotCommon._
-
+*/
 
 /**
   * This *PROBABLY-WINDOWS-SPECIFIC* VeriPhy wrapper uses a bidirectional named pipe to talk to a custom fork of AirSim
@@ -34,7 +34,7 @@ import edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotCommon._
   * Sense tells us new state
   *
   */
-object ProtocolTypes {
+/*object ProtocolTypes {
   val currentVersion: Int = 1
   val INT_SIZE: Int = 4
   val BOOL_SIZE: Int = 1
@@ -492,9 +492,9 @@ object  AirSimAPI extends VeriPhyFFIs {
 }
 
 // separate this out because GoPiGo will want to do special Python handling rather than C
-
+*/
 object AirSimMain {
-
+/*
   private val WOLFRAM = System.getProperty("WOLFRAM", "mathematica").toLowerCase
 
   class Lazy[T](f: => T) {
@@ -546,11 +546,11 @@ object AirSimMain {
     StrategyBundle.fromFile(filePath)
 
   }
-
+*/
   // Args:  file_path
   // file_path is used for printing CSV files
   def main(args: Array[String]): Unit = {
-    initQE()
+  /*  initQE()
     println("Note: Customized AirSim must be started before this experiment is. \nThe custom AirSim version will show an UnrealEngine loading screen while waiting for us.")
     if(args.length < 2) {
       println("Usage: <exe_name> path_to_strategy_file directory_to_save_results")
@@ -574,6 +574,6 @@ object AirSimMain {
       val simSpec = AirSimSpec(CloverLevel, PIDHighController)
     //for (simSpec <- AirSimSpec.all) {
         doOneAirSim(lib, angel, fullPath, simSpec)
-    //}
+    //}*/
   }
 }

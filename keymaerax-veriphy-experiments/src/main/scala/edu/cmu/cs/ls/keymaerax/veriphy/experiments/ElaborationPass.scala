@@ -256,8 +256,8 @@ class ElaborationPass() {
           case LetSym(_, _, _: Program) => throw ElaborationException("Lets of programs are only allowed in top-level declarations, not in proofs")
           case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
           case While(x, j, body) => While(x, kce.elaborateFunctions(j, s), body)
-          case For(metX, metF, metIncr, guard, conv, body) =>
-            For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body)
+          case For(metX, metF, metIncr, guard, conv, body, metGuard) =>
+            locate(For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body, metGuard.map{f => kce.elaborateFunctions(f, s)}), s)
           case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None)))
           // dc was elaborated in preS
           case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, kce, ds), dc)

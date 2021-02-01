@@ -7,14 +7,15 @@ import java.io.File
 import BotCommon._
 object BotMain {
 
-  // Args:  dll_name [dll_path]
+  // Args:  dll_name bundle [dll_path]
   // dll_path is used for both dll loading and for printing CSV files
   def main(args: Array[String]): Unit = {
     val libName = args(0)
+    val bundlePath = args(1)
     // paths for loading DLL
     val fullPath =
-      if (args.length > 1) {
-        val dirName = args(1)
+      if (args.length > 2) {
+        val dirName = args(2)
         val path = System.getProperty("jna.library.path")
         val fullPath = if(path == null) dirName else dirName + File.pathSeparator + path
         System.setProperty("jna.library.path", fullPath)
@@ -30,17 +31,16 @@ object BotMain {
     //val angel = StrategyParser(sandboxPLDIStratString)
     //val angel = loadBundle(angelSandboxBundle)
     //val angel = loadBundle(reachAvoidBundle)
-    val bundle = StrategyBundle.fromFile("C:\\Users\\bjboh\\Documents\\GitHub\\phd-thesis\\experiments\\proofplex\\models\\kaisar\\compiled\\RA.txt")
+    val bundle = StrategyBundle.fromFile(bundlePath)
     val angel = loadBundle(bundle)
-    println("Read Angel Strategy:\n" + StrategyPrinter(angel))
+    println("Read Angel Reach Avoid Strategy:\n" + StrategyPrinter(angel))
     println("Warm-starting FFI Library")
     lib.warmStart()
     println("Warm-started FFI Library")
-    for (simArg <- simArgs) {
+    for (simArg <- botArgs) {
       for(speed <- testSpeeds) {
-        doOneBotSim(lib, angel, fullPath, simArg, speed)
-        return
-        //doOneGoPiGo(lib, angel, fullPath, simArg, speed)
+        //doOneBotSim(lib, angel, fullPath, simArg, speed)
+        doOneGoPiGo(lib, angel, fullPath, simArg, speed)
       }
     }
   }

@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.veriphy.experiments
  */
 
 import KaisarProof.Ident
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProgramParser
+import edu.cmu.cs.ls.keymaerax.veriphy.experiments.KaisarProgramParser
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.StringOps
@@ -95,8 +95,14 @@ object IDCounter {
       val numStr = line.take(i).trim()
       val stratStr = line.drop(i + MAP_SEPARATOR.length).trim()
       val num = numStr.toInt
-      val strat = f(stratStr)
-      theMap = theMap.+(num -> strat)
+      try {
+        val strat = f(stratStr)
+        theMap = theMap.+(num -> strat)
+      } catch {
+        case t: Throwable =>
+          println(num + "   " + stratStr)
+          throw t
+      }
     }
     theMap
   }
@@ -174,7 +180,7 @@ case class SODE(ode: ODESystem) extends SimpleStrategy
 /** Angelic while loop with decidable convergence/guard formula */
 case class ALoop(conv: Formula, body: AngelStrategy) extends AngelStrategy
 /* Angel for loop */
-case class AForLoop(idx: Ident, idx0: Term, conv: Formula, body: AngelStrategy, idxUp: Term) extends AngelStrategy
+case class AForLoop(idx: Ident, idx0: Term, conv: Formula, body: AngelStrategy, idxUp: Term, guardDelta:Option[Term]) extends AngelStrategy
 /** Angelic switch statement with decidable branch guards */
 case class ASwitch(branches: List[(Formula, AngelStrategy)]) extends AngelStrategy
 /** Differential equation with (concrete) angelic duration. */
@@ -238,10 +244,14 @@ object SimpleStrategy {
         val loop = SLoop(Composed(STest(conv).rememberSourceStrategy(fs), apply(body))).rememberSourceStrategy(fs)
         IDCounter.setOriginal(loop.nodeID, fs)
         Composed(loop, STest(Not(conv)).rememberSourceStrategy(fs))
-      case AForLoop(metX, met0, guard, body, metIncr) =>
-        val loop = SLoop(Composed(List(STest(guard).rememberSourceStrategy(fs), apply(body), SAssign(metX, metIncr))))
+      case AForLoop(metX, met0, guard, body, metIncr, guardEpsilon) =>
+        val loop = SLoop(Composed(List(STest(guard).rememberSourceStrategy(fs),
+          apply(body),
+          SAssign(metX, metIncr).rememberSourceStrategy(fs)))).rememberSourceStrategy(fs)
         IDCounter.setOriginal(loop.nodeID, fs)
-        Composed(List(SAssign(metX,met0),loop, STest(Not(guard)).rememberSourceStrategy(fs)))
+        // @TODO: Also have guard even if not specified in model somehow
+        Composed(List(SAssign(metX,met0).rememberSourceStrategy(fs),loop,
+          STest(Metric.weakNegation(guard, guardEpsilon.getOrElse(Number(0)))).rememberSourceStrategy(fs)))
       case ASwitch(branches) =>
         val branchStrats = branches.map({case (f, fs) => Composed(STest(f).rememberSourceStrategy(fs), apply(fs))})
         val pairs = branchStrats.zip(branches)
@@ -312,8 +322,9 @@ object AngelStrategy {
       case Block(ss) => Composed(ss.map(body(_, isPhi)))
       case Switch(scrutinee, pats) => ASwitch(pats.map({ case (x, f, b) => (f, body(b, isPhi)) })).rememberSourceStatement(pf)
       case While(x, j, s) => ALoop(j, body(s, isPhi)).rememberSourceStatement(pf)
-      case For(metX, met0, metIncr, conv, guard, s) =>
-        AForLoop(metX, met0, guard.f, body(s, isPhi), metIncr).rememberSourceStatement(pf)
+      case For(metX, met0, metIncr, conv, guard, s, gd) =>
+        val bod = body(s, isPhi)
+        AForLoop(metX, met0, guard.f, bod, metIncr, gd).rememberSourceStatement(pf)
       case BoxLoop(s, ih) => SLoop(body(s, isPhi)).rememberSourceStatement(pf)
       case pode: ProveODE =>
         val ode = ofODE(pode)

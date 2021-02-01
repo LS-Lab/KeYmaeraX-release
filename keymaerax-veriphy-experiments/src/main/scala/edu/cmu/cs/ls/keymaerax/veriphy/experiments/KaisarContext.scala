@@ -183,7 +183,7 @@ case class KaisarContext(s: Statement) {
       case Ghost(s) => KaisarContext(s).programSignature
       case Was(now, was) => KaisarContext(now).programSignature
       case While(_, _, body) => KaisarContext(body).programSignature
-      case For(_, _, _, _, _, body) => KaisarContext(body).programSignature
+      case For(_, _, _, _, _, body, _) => KaisarContext(body).programSignature
       case BoxLoop(body, _) => KaisarContext(body).programSignature
       case BoxLoopProgress(bl, progress) => KaisarContext(progress).programSignature
       case WhileProgress(wh, prog) => KaisarContext(prog).programSignature
@@ -207,7 +207,7 @@ case class KaisarContext(s: Statement) {
       case Ghost(s) => KaisarContext(s).signature
       case Was(now, was) => KaisarContext(now).signature
       case While(_, _, body) => KaisarContext(body).signature
-      case For(_, _, _, _, _, body) => KaisarContext(body).signature
+      case For(_, _, _, _, _, body, _) => KaisarContext(body).signature
       case BoxLoop(body, _) => KaisarContext(body).signature
       case BoxLoopProgress(bl, progress) => KaisarContext(progress).signature
       case WhileProgress(wh, prog) => KaisarContext(prog).signature
@@ -295,16 +295,18 @@ case class KaisarContext(s: Statement) {
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
       case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
-      case fr@For(metX, met0, metIncr, conv, guard, body) =>
+      case fr@For(metX, met0, metIncr, conv, guard, body, guardDeltaOpt) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         // Represents bound variables of loop *body*, not tabooProgramVars.
         // Taboo set is used to raise exception if metric is invalid. We assume that metric will be constructed elsewhere
         // with correct taboo set in order to check foundedness
         val bodyTaboos = Set[Variable]()
         val metric = Metric(metX, metIncr, guard.f, bodyTaboos)
-        val guardMatch = matched(guard.pat, metric.guardPost(metX))
-        val res = convMatch ++ guardMatch
-        res
+        guardDeltaOpt match {
+          case Some(guardDelta) =>
+            convMatch ++ matched(guard.pat, Metric.weakNegation(guard.f, guardDelta))
+          case _ => convMatch
+        }
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
@@ -327,7 +329,7 @@ case class KaisarContext(s: Statement) {
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case ForProgress(For(metX, metF, metIncr, conv, guard, body), prog) =>
+      case ForProgress(For(metX, metF, metIncr, conv, guard, body, _), prog) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         val guardMatch = matched(guard.pat, guard.f)
         val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
