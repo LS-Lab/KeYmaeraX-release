@@ -379,12 +379,15 @@ object BelleParser extends TacticParser with Logging {
 
       case r :+ ParsedBelleExpr(expr, eLoc) :+ BelleToken(USING, _) => st.input match {
         case BelleToken(EXPRESSION(s, delims), esLoc) :: tail =>
-          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).
-            split("::").dropRight(1).
-            map(Parser.parser.formulaParser).toList
+          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).split("::").toList match {
+            case "nil" :: Nil => Nil // explicit empty list
+            case head :: Nil => Parser.parser.formulaParser(head) :: Nil // single-element lists without :: nil
+            case scala.collection.:+(args, "nil") => args.map(Parser.parser.formulaParser) // all other lists
+            case l => throw ParseException("Formula list in using \"" + l.mkString("::") + "\" must end in :: nil",
+              esLoc, s, l.mkString("\"", "::", "::nil\""))
+          }
           ParserState(r :+ ParsedBelleExpr(Using(fmls, expr), eLoc.spanTo(esLoc)), tail)
       }
-
 
       //endregion
 

@@ -3,9 +3,9 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
 import org.scalatest.Inside._
 
 /**
@@ -137,6 +137,10 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     parser(""" unfold using "x>=0 | x<=0"; doall(QE using "x>=0::x>0::nil") """) shouldBe
       Using("x>=0 | x<=0".asFormula :: Nil, TactixLibrary.unfoldProgramNormalize) &
         OnAll(Using("x>=0".asFormula :: "x>0".asFormula :: Nil, TactixLibrary.QE))
+    the [ParseException] thrownBy parser(""" unfold using "x>0::y>0" """) should
+      have message """1:15 Formula list in using "x>0::y>0" must end in :: nil
+                     |Found:    "x>0::y>0" at 1:15 to 1:24
+                     |Expected: "x>0::y>0::nil"""".stripMargin
   }
 
   "Propositional Examples" should "close p() -> p()" in withTactics {
