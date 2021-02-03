@@ -6,13 +6,14 @@ makeLazyNode = function(http, userId, proofId, node) {
     if (theNode.sequent) {
       if (callback) callback(theNode.sequent);
       return theNode.sequent;
-    }
-    else {
+    } else {
       theNode.sequent = {};
       http.get('proofs/user/' + userId + '/' + proofId + '/' + theNode.id + '/sequent').then(function(response) {
         if (response.data.sequent != undefined) {
           theNode.sequent.ante = response.data.sequent.ante;
           theNode.sequent.succ = response.data.sequent.succ;
+          theNode.sequent.ante.forEach(function(f, i) { f.use = true; });
+          theNode.sequent.succ.forEach(function(f, i) { f.use = true; });
         } else {
           theNode.sequent.ante = [];
           theNode.sequent.succ = [];
@@ -44,7 +45,7 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          //@HACK set selectedTab here because angular bootstrap v2.5.0 screws up active=selectedTab when tabs are removed
          var selected = this.selectedItem();
          if (selected !== undefined) this.selectedTab = selected.id;
-         return $.map(this.itemsMap, function(v) {return v;});;
+         return $.map(this.itemsMap, function(v) {return v;});
        },
        selectedItem: function() {
          var theItems = $.map(this.itemsMap, function(v) {return v;});
@@ -345,7 +346,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theTactic.fetch(userId, proofId);
           theAgenda.modelId = response.data.modelId;
           theAgenda.itemsMap = response.data.agendaItems;
-          $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
+          $.each(response.data.proofTree.nodes, function(i, v) {
+            if (v.sequent) {
+              v.sequent.ante.forEach(function(f, i) { f.use = true; });
+              v.sequent.succ.forEach(function(f, i) { f.use = true; });
+            }
+            makeLazyNode($http, userId, proofId, v);
+          });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
           theProofTree.isProved = response.data.proofTree.isProved;

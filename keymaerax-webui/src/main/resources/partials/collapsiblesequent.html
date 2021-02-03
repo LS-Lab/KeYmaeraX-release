@@ -46,7 +46,7 @@
                     </li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li>{{f.id}}:</li></ul>
+                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-check-square-o':f.use,'fa-square-o':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
                     <k4-formula class="k4-formula-container"
                             k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
@@ -131,7 +131,7 @@
                     </li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li>{{f.id}}:</li></ul>
+                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-check-square-o':f.use,'fa-square-o':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
                     <k4-formula class="k4-formula-container"
                                 user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}" goal-id="{{goalId}}"
                                 formula="f.formula" highlight="!collapsed" collapsed="collapsed"

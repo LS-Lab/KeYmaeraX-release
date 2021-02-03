@@ -654,18 +654,34 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       );
     }
 
+    $scope.selectedFormulas = function(sequent) {
+      return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }).
+        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }));
+    }
+
     $scope.doTactic = function(formulaId, tacticId) {
       var nodeId = sequentProofData.agenda.selectedId();
+      var node = sequentProofData.proofTree.node(nodeId);
+      var formulas = formulaId
+      if (!formulaId) {
+        var selected = $scope.selectedFormulas(node.getSequent());
+        if (selected.length < node.getSequent().ante.length + node.getSequent().succ.length) formulas = selected;
+        else formulas = undefined;
+      }
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
-      var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
-      spinnerService.show('tacticExecutionSpinner')
-      $http.get(uri + '?stepwise=false')
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
-        .catch(function(err) {
-          spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$broadcast("proof.message", err.data);
-        });
+      if (Array.isArray(formulas)) {
+        $scope.onTacticScript(tacticId + ' using "' + formulas.join('::') + '::nil"', false)
+      } else {
+        var uri = formulas !== undefined ?  base + '/' + formulas + '/doAt/' + tacticId : base + '/do/' + tacticId;
+        var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
+        spinnerService.show('tacticExecutionSpinner')
+        $http.get(uri + '?stepwise=false')
+          .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+          .catch(function(err) {
+            spinnerService.hide('tacticExecutionSpinner');
+            $rootScope.$broadcast("proof.message", err.data);
+          });
+      }
     }
 
     $scope.doInputTactic = function(formulaId, tacticId, input) {
