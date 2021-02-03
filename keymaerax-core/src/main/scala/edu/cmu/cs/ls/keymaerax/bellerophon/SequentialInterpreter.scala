@@ -492,11 +492,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
             val antes = s.ante.zipWithIndex.map({ case (f, i) =>
               if (es.contains(f)) (f, None)
-              else abbrv(f, i, "p")
+              else abbrv(f, i, "p_")
             })
             val succs = s.succ.zipWithIndex.map({ case (f, i) =>
               if (es.contains(f)) (f, None)
-              else abbrv(f, i, "q")
+              else abbrv(f, i, "q_")
             })
 
             (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),

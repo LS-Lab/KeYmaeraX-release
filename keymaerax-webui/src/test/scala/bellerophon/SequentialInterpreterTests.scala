@@ -739,7 +739,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     })
 
     proveBy("x>y, y>=0, x>0 ==> y>=0, x>=0".asSequent, Using("x>0".asFormula:: "x>=0".asFormula :: Nil,
-      check("p0_(||), p1_(||), x>0 ==> q0_(||), x>=0".asSequent)) // restricted inside
+      check("p__0(x,y), p__1(y), x>0 ==> q__0(y), x>=0".asSequent)) // restricted inside
     ).subgoals.loneElement shouldBe "x>y, y>=0, x>0 ==> y>=0, x>=0".asSequent // back to full outside
   }
 
