@@ -8,7 +8,9 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ForwardTactic
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -485,7 +487,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
               val dots = fv.zipWithIndex.map({ case (v, i) => (v, DotTerm(Real, Some(i))) })
               val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
               val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
-              val fDots = dots.foldRight(f)({ case ((what, repl), f) => f.replaceFree(what, repl) })
+              val fDots = dots.foldRight(f)({ case ((what, repl), f) => Box(Assign(what, repl), f) })
               val fn = Function(name, Some(i), arg.sort, Bool, interpreted=false)
               (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
             }
@@ -503,10 +505,30 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
               USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
           })
 
-        val goalResults = filteredGoals.map({ case (p, s) => apply(t, BelleProvable(p, labels)) match {
-          case BelleProvable(rp, rl) => BelleProvable(rp(s), rl)
+        def selfAssign(substs: Seq[SubstitutionPair]): BelleExpr = substs.map(s => s.what match {
+          case PredOf(Function(fn, Some(i), _, _, _), arg) =>
+            if (fn == "p_") {
+              TactixLibrary.useAt(Ax.selfassignb)(AntePos(i))*StaticSemantics.symbols(arg).size
+            } else if (fn == "q_") {
+              TactixLibrary.useAt(Ax.selfassignb)(SuccPos(i))*StaticSemantics.symbols(arg).size
+            } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+          case _ => throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+        }).reduceRightOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip)
+
+        def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs.foldRight(p)({ case (s, zee) => s.what match {
+          case PredOf(Function(fn, Some(i), _, _, _), arg) =>
+            if (fn == "p_") {
+              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(AntePos(i))).foldRight(zee)({ case (t, p) => t(p) })
+            } else if (fn == "q_") {
+              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(SuccPos(i))).foldRight(zee)({ case (t, p) => t(p) })
+            } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+          case _ => throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+        }})
+
+        val goalResults = filteredGoals.map({ case (p, s) => apply(OnAll(selfAssign(s.subsDefsInput)), apply(t, BelleProvable(p, labels)) match {
+          case BelleProvable(rp, rl) => BelleProvable(selfAssignFor(rp(s), s.subsDefsInput), rl)
           case r => r
-        } })
+        }) })
 
         //@todo labels if parent didn't have any but some subgoals produced labels
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l), (BelleProvable(sp, sl), i)) =>

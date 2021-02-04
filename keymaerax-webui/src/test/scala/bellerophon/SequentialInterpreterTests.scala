@@ -760,4 +760,20 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "work with QE" in withQE { _ =>
     proveBy("x>0, y=0 | y>0 ==> x^2>0".asSequent, Using("x>0".asFormula :: "x^2>0".asFormula :: Nil, QE)) shouldBe 'proved
   }
+
+  it should "work with loops" in withTactics {
+    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x:=x+z;}*]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL('L)))).
+      subgoals shouldBe List(
+        "x>0, y=0 | y>0, z=0 ==> [{x:=x+z;}*]x>0".asSequent,
+        "x>0, y=0 | y>0, z=1 ==> [{x:=x+z;}*]x>0".asSequent
+    )
+  }
+
+  it should "work with ODEs" in withTactics {
+    proveBy("x>0, y=0 | y>0, z=0 | z=1 ==> [{x'=z*x}]x>0".asSequent, Using("z=0 | z=1".asFormula :: Nil, SaturateTactic(orL('L)))).
+      subgoals shouldBe List(
+      "x>0, y=0 | y>0, z=0 ==> [{x'=z*x}]x>0".asSequent,
+      "x>0, y=0 | y>0, z=1 ==> [{x'=z*x}]x>0".asSequent
+    )
+  }
 }
