@@ -1827,18 +1827,29 @@ trait UnifyUSCalculus {
           val sideCE: ProvableSig = CE(C)(sideUS)
           //@todo could shortcut proof by using "CO one-sided congruence" instead of CE
           // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
-          val sideImply: ProvableSig = sideCE(Sequent(IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
-            EquivifyRight(SuccPos(0)))
-          // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
+          val sideImply: ProvableSig =
+            if (pos.isSucc) sideCE(Sequent(IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
+              EquivifyRight(SuccPos(0)))
+            else sideCE(Sequent(IndexedSeq(), IndexedSeq(Equiv(C(subst(o)), C(subst(k))))),
+              CommuteEquivRight(SuccPos(0)))(Sequent(IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
+              EquivifyRight(SuccPos(0)))
+          // succ: |- C{subst(k)}  -> C{subst(other)} by EquivifyRight or
+          // ante: |- C{subst(other)}  -> C{subst(k)} by CommuteEquivRight and EquivifyRight
           //assert(C(subst(k)) == expr, "matched expression expected")
-          val coside: ProvableSig = sideImply(
-            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(o)))),
-            CoHideRight(p.top.asInstanceOf[SuccPos])
-          )
-          // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+          val coside: ProvableSig =
+            if (pos.isSucc) sideImply(
+              proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(o)))),
+              CoHideRight(p.top.asInstanceOf[SuccPos])
+            ) else sideImply(
+              Sequent(proof.conclusion.ante.patch(p.index0, Nil, 1), proof.conclusion.succ :+ Imply(C(subst(o)), C(subst(k)))),
+              CoHideRight(SuccPos(proof.conclusion.succ.size))
+            )
+          // succ: G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+          // ante: G |- D, C{subst(o)} -> C{subst(k)} by CoHideRight
           val proved = {
             ProvableSig.startProof(proof.conclusion.updated(p.top, C(subst(o))))(
-            CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
+            if (pos.isSucc) CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos])
+            else CutLeft(C(subst(k)), p.top.asInstanceOf[AntePos]), 0
           ) (coside, 1)
           } ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
             ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
@@ -1847,6 +1858,12 @@ trait UnifyUSCalculus {
           // G |- C{subst(k)}, D    coside
           // ------------------------------ CutRight
           // G |- C{subst(o)}, D
+
+          //                           *
+          //                        ------
+          // G, C{subst(k)} |- D    coside
+          // ------------------------------ CutLeft
+          // G, C{subst(o)} |- D
           proved(proof, 0)
         } ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
           ) ensures(r=>r.subgoals==proof.subgoals, "expected original premises")
