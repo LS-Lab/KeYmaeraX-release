@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivedAxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.immutable._
@@ -39,7 +39,7 @@ protected object FOQuantifierTactics {
         case Some(e) => throw new TacticInapplicableFailure("allInstantiateInverse only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
-      useAt(Ax.allInst, PosInExpr(1::Nil), (us: Option[Subst]) => RenUSubst(
+      useAt(Ax.allInst, PosInExpr(1::Nil), (_: Option[Subst]) => RenUSubst(
         ("x_".asTerm, v) ::
         ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
         ("p(.)".asFormula, fml.replaceFree(t, DotTerm())) :: Nil))(pos)
@@ -56,15 +56,17 @@ protected object FOQuantifierTactics {
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
       sequent.at(pos) match {
-        case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+        case (_, Forall(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt(Ax.alle)(pos)
-        case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
+        case (_, Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
           //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
-          import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.AxiomInfoAugmentor
-          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1,  (uso: Option[Subst]) => uso match {
+            case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
+            case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
+          })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           if ((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) >= 0)
             throw new TacticInapplicableFailure("\\forall must have negative polarity in antecedent")
@@ -86,7 +88,7 @@ protected object FOQuantifierTactics {
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
             )
-        case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+        case (_, f@Forall(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
           throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
@@ -101,13 +103,16 @@ protected object FOQuantifierTactics {
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
       sequent.at(pos) match {
-        case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+        case (_, Exists(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt(Ax.existse)(pos)
-        case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
+        case (_, Exists(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get))  =>
           //@todo assumes any USubstAboveURen
-          useAt(Ax.existsGeneralize, PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(Ax.existsGeneralize, PosInExpr(1::Nil),  (uso: Option[Subst]) => uso match {
+            case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
+            case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
+          })(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
@@ -119,10 +124,10 @@ protected object FOQuantifierTactics {
           val (v,assign, assignPreprocess, subst) = t match {
             case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
               (vinst,Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos),
-                (us: Subst) => RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
+                (_: Subst) => RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
             case _ =>
               (x,Box(Assign(x, t), p), skip,
-                (us: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
+                (_: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
           }
           val rename = Ax.existsGeneralize.provable(URename(Variable("x_"), v, semantic=true))
 
@@ -132,7 +137,7 @@ protected object FOQuantifierTactics {
               assignb(pos),
                 cohide(pos) & CMon(pos.inExpr) & byUS(rename, subst) & done
               )
-        case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+        case (_, f@Exists(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
           throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
@@ -293,12 +298,14 @@ protected object FOQuantifierTactics {
     val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case Some(us) => us ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Forall(Seq(quantified), f), Ax.alle, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case Some(us) => us ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), Ax.allInst, subst)
       case Some(e) => throw new TacticInapplicableFailure("allGeneralize only applicable to formulas, but got " + e.prettyString)
@@ -346,12 +353,14 @@ protected object FOQuantifierTactics {
     val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case Some(us) => us ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Exists(Seq(quantified), f), Ax.existse, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case Some(us) => us ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Exists(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), Ax.existsGeneralize, subst)
       case Some(e) => throw new TacticInapplicableFailure("existsGen only applicable to formulas, but got " + e.prettyString)
