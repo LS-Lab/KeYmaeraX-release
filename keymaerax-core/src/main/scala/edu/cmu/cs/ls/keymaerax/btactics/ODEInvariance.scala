@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -314,7 +314,6 @@ object ODEInvariance {
             hideL(-3) & lpgen(r)
           )
         case GeqFml(r, gs, cofs) =>
-          DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
             useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
             DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
             (
@@ -442,7 +441,6 @@ object ODEInvariance {
         DebuggingTactics.error("Inapplicable: t_ occurs")
       )
   })
-
 
   // Similar to lpgeq but proves the unlocked version
   // t=0 , p*>0 -> <t'=1, x'=f(x)& p - t^(2k) >=0> t!=0
@@ -1945,4 +1943,105 @@ object ODEInvariance {
   })
 
   lazy val dCClosure = DifferentialTactics.dCClosure(true)
+
+
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    *
+    * G|-P  Q,Q*,P |- P*   Q,Q-*, !P |- (!P)-*
+    * --------------- (sAI)
+    * G |- [x'=f(x)&Q]P
+    *
+    * @return closes the subgoal if P is indeed invariant,
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+    */
+  def sAI : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAI: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAI needs an algebra tool (and Mathematica)")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("sAI only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    //todo: robustness against t_ appearing in model
+    val rind = getRealIndInst(sys.ode)
+
+    //P*
+    val (postfml,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    val (pf1,inst1) = try {
+      fStar(sys,postfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // Normalizes the postcondition appearing in local progress
+    val tac1 = propt1 match {
+      case None => skip
+      case Some(pr) => useAt(pr)(1,0::1::0::Nil)
+    }
+
+    //P-*
+    val (negpostfml,propt2) = try {
+      semiAlgNormalize(Not(post))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    val revodeList = DifferentialProduct.listify(sys.ode).map{ case AtomicODE(x,rhs) => AtomicODE(x, Neg(rhs)) }
+    val revode = revodeList.reduce(DifferentialProduct.apply)
+
+    val (pf2,inst2) = try {
+      fStar(ODESystem(revode,sys.constraint),negpostfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // Normalizes the negated postcondition appearing in local progress
+    val tac2 = propt2 match {
+      case None => skip
+      case Some(pr) => useAt(pr)(1,0::1::0::Nil)
+    }
+
+    useAt(rind)(pos) & andR(pos) <(
+      ToolTactics.hideNonFOL & QE,
+      composeb(pos) & dW(pos) & // todo: dW drops all succedents except the one at pos. maybe use dWplus?
+      assignb(1) & andR(1) <(
+        implyR(1) & andL('Llast) & tac1 & cutR(pf1)(1) <(
+          ToolTactics.hideNonFOL & QE, //prove P* from assumptions todo: cut Q* first
+          hideL(-3) & hideL(-1) & implyR(1) & // set up into shape expected by lpgen
+          lpgen(inst1)
+        ),
+        implyR(1) & andL('Llast) & tac2 & cutR(pf2)(1) <(
+          ToolTactics.hideNonFOL & QE, //prove (!P)-* from assumptions todo: cut Q-* first
+          hideL(-3) & hideL(-1) & implyR(1) & // set up into shape expected by lpgen
+          lpgen(inst2)
+        )
+      )
+    )
+  })
+
+  private def getRealIndInst(odes:DifferentialProgram) : ProvableSig = {
+
+    val odels = DifferentialProduct.listify(odes).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new IllegalArgumentException("odes for real induction should all be atomic, found: "+odes)
+    }
+    val dim = odels.length
+    val realind = Provable.realInd(dim)
+
+    // @TODO: this very manually applies the uniform renaming part, since it's not automated elsewhere yet (?)
+    // would also be much cleaner if one could access the renaming part more easily.
+    val rindlhs = (1 to dim).map( i => BaseVariable("x_", Some(i)))
+    val lhs = odels.map(_._1.x)  // variables in the ODE
+    val realindren = (lhs zip rindlhs).foldLeft(realind)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
+
+    ElidingProvable(realindren)
+  }
 }

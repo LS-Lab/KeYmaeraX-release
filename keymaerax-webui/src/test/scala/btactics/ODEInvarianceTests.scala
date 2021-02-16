@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
@@ -748,6 +749,26 @@ class ODEInvarianceTests extends TacticTestBase {
       "a!= 0,[{v'=a,x'=c() * v,a'=b() & x>=1 | x^2>=1 & x >= -5 | x <= -2 }]x <= 5, b() >= 0, [{x'=x}]x<1").asSequent,
       domainStuck(2)
     )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  "real induction" should "generate dimensional realind" in withMathematica { _ =>
+    val pr1 = Provable.realInd(1)
+    val pr2 = Provable.realInd(2)
+    println(pr1)
+    println(pr2)
+    pr1 shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
+  "SAI" should "prove simple inv" in withMathematica { _ =>
+    val rind = ElidingProvable(Provable.realInd(1))
+    val pr = proveBy("x = 1 -> x > 1 | [{x'=x+y,y'=y+x+z&y=0}](x>0 | (x^3 > 0 & x <= 1))".asFormula,
+      implyR(1) &
+      orR(1) & sAI(2)
+    )
+
     println(pr)
     pr shouldBe 'proved
   }
