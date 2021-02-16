@@ -1967,28 +1967,53 @@ object ODEInvariance {
 
     //todo: robustness against t_ appearing in model
     val rind = getRealIndInst(sys.ode)
+    val tvar = BaseVariable("t_")
 
-    //P*
-    val (postfml,propt1) = try {
+    //P
+    val (pfml,pfmlpropt) = try {
       semiAlgNormalize(post)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
     }
 
-    val (pf1,inst1) = try {
-      fStar(sys,postfml)
+    //P*
+    val (pstarpf, pstarinst) = try {
+      fStar(sys,pfml)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
     }
 
     // Normalizes the postcondition appearing in local progress
-    val tac1 = propt1 match {
+    val ptac = pfmlpropt match {
       case None => skip
       case Some(pr) => useAt(pr)(1,0::1::0::Nil)
     }
 
-    //P-*
-    val (negpostfml,propt2) = try {
+    //!Q
+    val (nqfml,nqfmlpropt) = try {
+      semiAlgNormalize(Not(sys.constraint))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    //(!Q)*
+    val (nqstarpf,nqstarinst) = try {
+      fStar(sys,nqfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f* for f: "+nqfml, ex)
+    }
+
+    // Normalizes the postcondition appearing in local progress
+    val nqtac = nqfmlpropt match {
+      case None => skip
+      case Some(pr) => useAt(pr,PosInExpr(1::Nil))(-2,0::1::0::Nil)
+    }
+
+    // <ODE & !Q> O
+    val nqlp = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),Or(nqfml,Equal(tvar,Number(0)))),NotEqual(tvar,Number(0)))
+
+    //!P
+    val (npfml,npfmlpropt) = try {
       semiAlgNormalize(Not(post))
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
@@ -1997,31 +2022,61 @@ object ODEInvariance {
     val revodeList = DifferentialProduct.listify(sys.ode).map{ case AtomicODE(x,rhs) => AtomicODE(x, Neg(rhs)) }
     val revode = revodeList.reduce(DifferentialProduct.apply)
 
-    val (pf2,inst2) = try {
-      fStar(ODESystem(revode,sys.constraint),negpostfml)
+    //(!P)-*
+    val (nprstarpf,nprstarinst) = try {
+      fStar(ODESystem(revode,sys.constraint),npfml)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
     }
 
     // Normalizes the negated postcondition appearing in local progress
-    val tac2 = propt2 match {
+    val nptac = npfmlpropt match {
       case None => skip
       case Some(pr) => useAt(pr)(1,0::1::0::Nil)
     }
+
+    //(!Q)-*
+    val (nqrstarpf,nqrstarinst) = try {
+      fStar(ODESystem(revode,sys.constraint),nqfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // <-ODE & !Q> O
+    val nqrlp = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),revode),Or(nqfml,Equal(tvar,Number(0)))),NotEqual(tvar,Number(0)))
 
     useAt(rind)(pos) & andR(pos) <(
       ToolTactics.hideNonFOL & QE,
       composeb(pos) & dW(pos) & // todo: dW drops all succedents except the one at pos. maybe use dWplus?
       assignb(1) & andR(1) <(
-        implyR(1) & andL('Llast) & tac1 & cutR(pf1)(1) <(
-          ToolTactics.hideNonFOL & QE, //prove P* from assumptions todo: cut Q* first
-          hideL(-3) & hideL(-1) & implyR(1) & // set up into shape expected by lpgen
-          lpgen(inst1)
+        implyR(1) & andL('Llast) & ptac & cutR(Or(pstarpf,nqstarpf))(1) <(
+          ToolTactics.hideNonFOL & QE, //prove P* | (!Q)* from assumptions
+          implyR(1) & orL('Llast) <(
+            // P* branch
+            hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
+            lpgen(pstarinst),
+            hideL(-3) & hideL(-1) & cutR(nqlp)(1) <(
+              lpgen(nqstarinst),
+              hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+              diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+              implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
+            )
+
+          )
         ),
-        implyR(1) & andL('Llast) & tac2 & cutR(pf2)(1) <(
-          ToolTactics.hideNonFOL & QE, //prove (!P)-* from assumptions todo: cut Q-* first
-          hideL(-3) & hideL(-1) & implyR(1) & // set up into shape expected by lpgen
-          lpgen(inst2)
+        implyR(1) & andL('Llast) & nptac & cutR(Or(nprstarpf,nqrstarpf))(1) <(
+          ToolTactics.hideNonFOL & QE, //prove (!P)-* | (!Q)-* from assumptions
+          implyR(1) & orL('Llast) <(
+            //(!P)-* branch
+            hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
+            lpgen(nprstarinst),
+            hideL(-3) & hideL(-1) & cutR(nqrlp)(1) <(
+              lpgen(nqrstarinst),
+              hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+                diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+                implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
+            )
+          )
         )
       )
     )

@@ -763,10 +763,18 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   "SAI" should "prove simple inv" in withMathematica { _ =>
-    val rind = ElidingProvable(Provable.realInd(1))
     val pr = proveBy("x = 1 -> x > 1 | [{x'=x+y,y'=y+x+z&y=0}](x>0 | (x^3 > 0 & x <= 1))".asFormula,
       implyR(1) &
       orR(1) & sAI(2)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "work with domains" in withMathematica { _ =>
+    val pr = proveBy("x = 1 -> [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)".asFormula,
+      implyR(1) & sAI(1)
     )
 
     println(pr)
