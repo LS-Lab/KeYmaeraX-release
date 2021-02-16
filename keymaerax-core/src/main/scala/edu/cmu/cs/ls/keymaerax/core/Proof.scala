@@ -793,6 +793,70 @@ object Provable {
   }
 
   /**
+    * Axiom schema for real induction, schematic in dimension.
+    * {{{
+    *   [{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
+    *     ( q(|t_|) -> p(|t_|) ) &
+    *     [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
+    *       (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0) &
+    *       (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+    *     )
+    * }}}
+    * @todo: soundness-critical: q(|t_|) and p(|t_|) must not contain differentials
+    *
+    * @param dim The dimension of ODE x_'=f(|t_|)
+    */
+  final def realInd(dim : Int): Provable = {
+    insist(dim > 0, "Real induction over ODE with at least 1 variable.")
+
+    // The time variable
+    val tvar = BaseVariable("t_")
+    // The time variable space exception
+    val tvarEx = Except(tvar::Nil)
+    // The list of LHS variables x__1, x__2, ..., x__dim
+    val odeLHS = (1 to dim).map(i => BaseVariable("x_", Some(i)))
+    // The list of RHS f1(||), f2(||), ..., fdim(||)
+    // @todo: UnitFunctionals may need an index argument
+    val odeRHS = (1 to dim).map(i => UnitFunctional("f"+i,tvarEx,Real))
+    // The list of ODEs x__1'=f1(||), x__2'=f2(||), ..., x__dim'=fdim(||)
+    val odeList = (odeLHS zip odeRHS).map{ case (x,rhs) => AtomicODE(DifferentialSymbol(x), rhs) }
+    val ode = odeList.reduce(DifferentialProduct.apply)
+    // The list of reversed ODEs x__1'=-f1(||), x__2'=-f2(||), ..., x__dim'=-fdim(||)
+    val revodeList = (odeLHS zip odeRHS).map{ case (x,rhs) => AtomicODE(DifferentialSymbol(x), Neg(rhs)) }
+    val revode = revodeList.reduce(DifferentialProduct.apply)
+    // The ODEs with an added time ODE t_'=1
+    val tode = DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),ode)
+    val trevode = DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),revode)
+
+    val domain = UnitPredicational("q",tvarEx)
+    val post = UnitPredicational("p",tvarEx)
+
+    // <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
+    val postLocalProg = Diamond(ODESystem(tode, Or(post,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0)
+    val domainLocalProg = Diamond(ODESystem(tode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+    val notpostRevLocalProg = Diamond(ODESystem(trevode, Or(Not(post),Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0)
+    val domainRevLocalProg = Diamond(ODESystem(trevode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+
+    val RInd = Equiv(Box(ODESystem(ode,domain),post), //[{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
+      And( Imply(domain,post), //(q(|t_|) -> p(|t_|)) &
+      Box(Compose(ODESystem(ode,domain),Assign(tvar,Number(0))), // [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
+        And(
+        // (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
+        Imply(And(post,domainLocalProg),postLocalProg),
+        // (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+        Imply(And(Not(post),domainRevLocalProg),notpostRevLocalProg)
+        )
+      ))
+    )
+
+    //@note soundness-critical
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(RInd)), immutable.IndexedSeq())
+  }
+
+  /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
     *
     * @param conclusion the desired conclusion.
