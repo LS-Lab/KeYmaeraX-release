@@ -673,29 +673,35 @@ object ODEInvariance {
     val fvs = StaticSemantics.freeVars(post)
     val freeAtoms = atoms.filter( p => fvs.contains(p.xp.x))
 
-    val timeLike = atoms.flatMap(_ match {
-      case AtomicODE(v ,n:Number) if n.value!=0 => Some(v.x)
-      case _=> None
-    })
-    val constRHS = domConj.filter(_ match {
-      //todo: this can be generalized
-      case Equal(l,_:Number) if timeLike.contains(l) => true
-      case _ => false})
+    // Handle the special case where postcondition is constant
+    if(freeAtoms.isEmpty)
+      V(pos) & QE & done
+    else {
+      val timeLike = atoms.flatMap(_ match {
+        case AtomicODE(v, n: Number) if n.value != 0 => Some(v.x)
+        case _ => None
+      })
+      val constRHS = domConj.filter(_ match {
+        //todo: this can be generalized
+        case Equal(l, _: Number) if timeLike.contains(l) => true
+        case _ => false
+      })
 
-    constRHS match {
-      case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
-      case Equal(t,d)::_ =>
-        //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
-        val left = freeAtoms.map(f =>
-          Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
-        val right = Times(freeAtoms.map(f => Times(Number(2),
-          Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+      constRHS match {
+        case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+        case Equal(t, d) :: _ =>
+          //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
+          val left = freeAtoms.map(f =>
+            Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), Number(2)): Term).reduce(Plus)
+          val right = Times(freeAtoms.map(f => Times(Number(2),
+            Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)): Term).reduce(Plus), Minus(t, d))
 
-        //dC with old(.) moves the formula to the last position
-        dC(LessEqual(left,right))(pos)<(
-          dW('Rlast) & QE & done,
-          diffInd('full)('Rlast)
-        )
+          //dC with old(.) moves the formula to the last position
+          dC(LessEqual(left, right))(pos) < (
+            dW('Rlast) & QE & done,
+            diffInd('full)('Rlast)
+          )
+      }
     }
   })
 
@@ -2011,6 +2017,8 @@ object ODEInvariance {
 
     // <ODE & !Q> O
     val nqlp = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),Or(nqfml,Equal(tvar,Number(0)))),NotEqual(tvar,Number(0)))
+    // <ODE & Q>o
+    val qlpi = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),sys.constraint),NotEqual(tvar,Number(0)))
 
     //!P
     val (npfml,npfmlpropt) = try {
@@ -2044,28 +2052,62 @@ object ODEInvariance {
 
     // <-ODE & !Q> O
     val nqrlp = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),revode),Or(nqfml,Equal(tvar,Number(0)))),NotEqual(tvar,Number(0)))
+    // <-ODE & Q>o
+    val qrlpi = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),revode),sys.constraint),NotEqual(tvar,Number(0)))
 
     useAt(rind)(pos) & andR(pos) <(
       ToolTactics.hideNonFOL & QE,
       composeb(pos) & dW(pos) & // todo: dW drops all succedents except the one at pos. maybe use dWplus?
       assignb(1) & andR(1) <(
         implyR(1) & andL('Llast) & ptac & cutR(Or(pstarpf,nqstarpf))(1) <(
-          ToolTactics.hideNonFOL & QE, //prove P* | (!Q)* from assumptions
+          ToolTactics.hideNonFOL & ?(QE & done), //prove P* | (!Q)* from assumptions
+          //Strengthen local progress for Q in antecedent to include initial state
+          cutL(qlpi)('Llast) <(skip,
+            cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+            dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
+              DW(1) & G(1) &
+                implyR(1) & andL(-1) &
+                orL(-1) <(id, implyL(-2) <(id,id)),
+              useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
+                dC(GreaterEqual(tvar,Number(0)))(1) <(
+                  DW(1) & G(1) & implyR(1) & implyR(1) &
+                  andL(-1) & hideL(-2) &
+                    dC(Greater(tvar,Number(0)))(1) <(
+                      DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+                      DifferentialTactics.dI(1)
+                    ),
+                  cohideOnlyL(-2) & DifferentialTactics.dI(1)))
+             )
+          ) &
           implyR(1) & orL('Llast) <(
-            // P* branch
-            hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
-            lpgen(pstarinst),
-            hideL(-3) & hideL(-1) & cutR(nqlp)(1) <(
-              lpgen(nqstarinst),
-              hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
-              diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
-              implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
-            )
-
-          )
+          // P* branch
+          hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
+          lpgen(pstarinst),
+          hideL(-3) & hideL(-1) & cutR(nqlp)(1) <(
+            lpgen(nqstarinst),
+            hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+            diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+            implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
+          ))
         ),
         implyR(1) & andL('Llast) & nptac & cutR(Or(nprstarpf,nqrstarpf))(1) <(
-          ToolTactics.hideNonFOL & QE, //prove (!P)-* | (!Q)-* from assumptions
+          ToolTactics.hideNonFOL & ?(QE & done), //prove (!P)-* | (!Q)-* from assumptions
+          //Strengthen local progress for Q in antecedent to include initial state
+          cutL(qrlpi)('Llast) <(skip,
+            cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+              dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
+                DW(1) & G(1) & implyR(1) & andL(-1) & orL(-1) <(id, implyL(-2) <(id,id)),
+                useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
+                  dC(GreaterEqual(tvar,Number(0)))(1) <(
+                    DW(1) & G(1) & implyR(1) & implyR(1) &
+                      andL(-1) & hideL(-2) &
+                      dC(Greater(tvar,Number(0)))(1) <(
+                        DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+                        DifferentialTactics.dI(1)
+                      ),
+                    cohideOnlyL(-2) & DifferentialTactics.dI(1)))
+              )
+          ) &
           implyR(1) & orL('Llast) <(
             //(!P)-* branch
             hideL(-3) & hideL(-1) & // set up into shape expected by lpgen

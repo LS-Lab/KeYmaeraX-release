@@ -759,6 +759,7 @@ class ODEInvarianceTests extends TacticTestBase {
     )
 
     println(pr)
+    println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
 
@@ -768,6 +769,7 @@ class ODEInvarianceTests extends TacticTestBase {
     )
 
     println(pr)
+    println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
 
@@ -777,6 +779,7 @@ class ODEInvarianceTests extends TacticTestBase {
       sAI(2)
     )
     println(pr)
+    println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
 
