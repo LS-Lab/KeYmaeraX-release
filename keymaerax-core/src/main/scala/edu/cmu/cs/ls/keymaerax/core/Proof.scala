@@ -798,8 +798,8 @@ object Provable {
     *   [{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
     *     ( q(|t_|) -> p(|t_|) ) &
     *     [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
-    *       (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0) &
-    *       (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+    *       (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0) &
+    *       (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
     *     )
     * }}}
     * @todo: soundness-critical: q(|t_|) and p(|t_|) must not contain differentials
@@ -833,20 +833,20 @@ object Provable {
 
     // <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
     val postLocalProg = Diamond(ODESystem(tode, Or(post,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
-    // <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0)
-    val domainLocalProg = Diamond(ODESystem(tode, domain), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0)
+    val domainLocalProg = Diamond(ODESystem(tode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
     // <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
     val notpostRevLocalProg = Diamond(ODESystem(trevode, Or(Not(post),Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
-    // <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0)
-    val domainRevLocalProg = Diamond(ODESystem(trevode, domain), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0)
+    val domainRevLocalProg = Diamond(ODESystem(trevode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
 
     val RInd = Equiv(Box(ODESystem(ode,domain),post), //[{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
       And( Imply(domain,post), //(q(|t_|) -> p(|t_|)) &
       Box(Compose(ODESystem(ode,domain),Assign(tvar,Number(0))), // [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
         And(
-        // (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
+        // (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
         Imply(And(post,domainLocalProg),postLocalProg),
-        // (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+        // (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
         Imply(And(Not(post),domainRevLocalProg),notpostRevLocalProg)
         )
       ))
