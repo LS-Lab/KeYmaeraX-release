@@ -8,6 +8,7 @@
   * @author Andre Platzer
   * @author Jan-David Quesel
   * @author nfulton
+  * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -798,12 +799,25 @@ object Provable {
     *   [{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
     *     ( q(|t_|) -> p(|t_|) ) &
     *     [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
-    *       (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0) &
-    *       (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+    *       (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0) &
+    *       (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
     *     )
     * }}}
-    * @todo: soundness-critical: q(|t_|) and p(|t_|) must not contain differentials
+    * @note compared to J. ACM, for implementation purposes, the schema:
+    * 1) uses a fresh time variable t_ to express local evolution instead of vectorial quantification over x_
+    * 2) adds conjuncts on the RHS of the equivalence:
+    *    q(|t_|) -> p(|t_|) and
+    *    !p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0
+    *    instead of deriving them from differential adjoints (see J. ACM, Cor A.8);
+    *    the ODE for t_'=1 is not negated in t_'=1,x_'=-f(|t_|) as it is fresh in x_'=f(|t_|)
+    * 3) removes the disjunction t_=0 in the local progress modalities for q(|t_|), i.e.,
+    *     <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0 instead of <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 and
+    *     <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 instead of <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0
+    *    because q(|t_|) is true in the context where those modalities occur
+    *    so they are provably interchangeable (see J. ACM, Cor A.5)
     *
+    * @todo soundness requires no primes in p(|t_|), q(|t_|) (for first conjunct on RHS)
+    *       although a fully substituted instance of the axiom is sound by data structure invariant on domains
     * @param dim The dimension of ODE x_'=f(|t_|)
     */
   final def realInd(dim : Int): Provable = {
@@ -833,20 +847,20 @@ object Provable {
 
     // <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
     val postLocalProg = Diamond(ODESystem(tode, Or(post,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
-    // <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0)
-    val domainLocalProg = Diamond(ODESystem(tode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0)
+    val domainLocalProg = Diamond(ODESystem(tode, domain), NotEqual(tvar,Number(0)))
     // <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
     val notpostRevLocalProg = Diamond(ODESystem(trevode, Or(Not(post),Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
-    // <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0)
-    val domainRevLocalProg = Diamond(ODESystem(trevode, Or(domain,Equal(tvar,Number(0)))), NotEqual(tvar,Number(0)))
+    // <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0)
+    val domainRevLocalProg = Diamond(ODESystem(trevode, domain), NotEqual(tvar,Number(0)))
 
     val RInd = Equiv(Box(ODESystem(ode,domain),post), //[{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
       And( Imply(domain,post), //(q(|t_|) -> p(|t_|)) &
       Box(Compose(ODESystem(ode,domain),Assign(tvar,Number(0))), // [{x_'=f(|t_|)&q(|t_|)} ; t_:=0] (
         And(
-        // (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
+        // (p(|t_|) & <{t_'=1,x_'=f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=f(|t_|)&p(|t_|)|t_=0>t_!=0)
         Imply(And(post,domainLocalProg),postLocalProg),
-        // (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)|t_=0>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
+        // (!p(|t_|) & <{t_'=1,x_'=-f(|t_|)&q(|t_|)>t_!=0 -> <{t_'=1,x_'=-f(|t_|)&!p(|t_|)|t_=0>t_!=0)
         Imply(And(Not(post),domainRevLocalProg),notpostRevLocalProg)
         )
       ))
