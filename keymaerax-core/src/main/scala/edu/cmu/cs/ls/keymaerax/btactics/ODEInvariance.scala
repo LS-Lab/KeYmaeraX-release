@@ -2062,23 +2062,24 @@ object ODEInvariance {
         implyR(1) & andL('Llast) & ptac & cutR(Or(pstarpf,nqstarpf))(1) <(
           ToolTactics.hideNonFOL & ?(QE & done), //prove P* | (!Q)* from assumptions
           //Strengthen local progress for Q in antecedent to include initial state
-          cutL(qlpi)('Llast) <(skip,
-            cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
-            dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
-              DW(1) & G(1) &
-                implyR(1) & andL(-1) &
-                orL(-1) <(id, implyL(-2) <(id,id)),
-              useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
-                dC(GreaterEqual(tvar,Number(0)))(1) <(
-                  DW(1) & G(1) & implyR(1) & implyR(1) &
-                  andL(-1) & hideL(-2) &
-                    dC(Greater(tvar,Number(0)))(1) <(
-                      DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
-                      DifferentialTactics.dI(1)
-                    ),
-                  cohideOnlyL(-2) & DifferentialTactics.dI(1)))
-             )
-          ) &
+          //NOTE: NOT needed since core version currently already includes Q
+          //cutL(qlpi)('Llast) <(skip,
+          //  cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+          //  dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
+          //    DW(1) & G(1) &
+          //      implyR(1) & andL(-1) &
+          //      orL(-1) <(id, implyL(-2) <(id,id)),
+          //    useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
+          //      dC(GreaterEqual(tvar,Number(0)))(1) <(
+          //        DW(1) & G(1) & implyR(1) & implyR(1) &
+          //       andL(-1) & hideL(-2) &
+          //          dC(Greater(tvar,Number(0)))(1) <(
+          //            DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+          //            DifferentialTactics.dI(1)
+          //          ),
+          //        cohideOnlyL(-2) & DifferentialTactics.dI(1)))
+          //   )
+          //) &
           implyR(1) & orL('Llast) <(
           // P* branch
           hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
@@ -2093,21 +2094,22 @@ object ODEInvariance {
         implyR(1) & andL('Llast) & nptac & cutR(Or(nprstarpf,nqrstarpf))(1) <(
           ToolTactics.hideNonFOL & ?(QE & done), //prove (!P)-* | (!Q)-* from assumptions
           //Strengthen local progress for Q in antecedent to include initial state
-          cutL(qrlpi)('Llast) <(skip,
-            cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
-              dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
-                DW(1) & G(1) & implyR(1) & andL(-1) & orL(-1) <(id, implyL(-2) <(id,id)),
-                useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
-                  dC(GreaterEqual(tvar,Number(0)))(1) <(
-                    DW(1) & G(1) & implyR(1) & implyR(1) &
-                      andL(-1) & hideL(-2) &
-                      dC(Greater(tvar,Number(0)))(1) <(
-                        DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
-                        DifferentialTactics.dI(1)
-                      ),
-                    cohideOnlyL(-2) & DifferentialTactics.dI(1)))
-              )
-          ) &
+          //NOTE: NOT needed since core version currently already includes Q
+          // cutL(qrlpi)('Llast) <(skip,
+          //  cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+          //    dC(Imply(Equal(tvar,Number(0)),sys.constraint))(1) <(
+          //      DW(1) & G(1) & implyR(1) & andL(-1) & orL(-1) <(id, implyL(-2) <(id,id)),
+          //      useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
+          //        dC(GreaterEqual(tvar,Number(0)))(1) <(
+          //          DW(1) & G(1) & implyR(1) & implyR(1) &
+          //            andL(-1) & hideL(-2) &
+          //            dC(Greater(tvar,Number(0)))(1) <(
+          //              DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+          //              DifferentialTactics.dI(1)
+          //            ),
+          //          cohideOnlyL(-2) & DifferentialTactics.dI(1)))
+          //    )
+          //) &
           implyR(1) & orL('Llast) <(
             //(!P)-* branch
             hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
