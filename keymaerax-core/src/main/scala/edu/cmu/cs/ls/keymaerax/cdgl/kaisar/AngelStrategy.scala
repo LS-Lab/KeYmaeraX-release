@@ -60,6 +60,7 @@ object IDCounter {
   def contains(n: Int): Boolean = idMap.contains(n)
   def hasOriginal(n: Int): Boolean = originMap.contains(n)
   def get(n: Int): Option[AngelStrategy] = idMap.get(n)
+  def getLocation(n: Int): Option[(Int, Int)] = sourceLocationMap.get(n)
   def apply(n: Int): AngelStrategy = idMap(n)
   def getOriginal(n: Int): Option[AngelStrategy] = originMap.get(n)
   def original(n: Int): AngelStrategy = originMap(n)
