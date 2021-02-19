@@ -59,32 +59,24 @@ class AxiomSchemaTests  extends TacticTestBase {
     vdg._2.conclusion shouldBe "==> [{c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)->[{y__1'=g1(||),y__2'=g2(||),c{|y__1,y__2|}&q(|y__1,y__2|)}]p(|y__1,y__2|)".asSequent
   }
 
-  "Real Induction" should "return 1D real induction" in {
-    val ri = Provable.realInd(1)
+  "Diff Adjoint" should "return 1D diff adjoint" in {
+    val da = Provable.diffAdjoint(1)
 
-    ri shouldBe 'proved
-    ri.conclusion shouldBe ("==>" +
-      "[{x__1'=f1(|t_|)&q(|t_|)}]p(|t_|)<->" +
-      "(q(|t_|)->p(|t_|))&" +
-      "[{x__1'=f1(|t_|)&q(|t_|)}t_:=0;]" +
-      "((p(|t_|)&<{t_'=1,x__1'=f1(|t_|)&q(|t_|)|t_=0}>t_!=0-><{t_'=1,x__1'=f1(|t_|)&p(|t_|)|t_=0}>t_!=0)&" +
-      "(!p(|t_|)&<{t_'=1,x__1'=-f1(|t_|)&q(|t_|)|t_=0}>t_!=0-><{t_'=1,x__1'=-f1(|t_|)&!p(|t_|)|t_=0}>t_!=0))").asSequent
+    println(da)
+    da shouldBe 'proved
+    da.conclusion shouldBe "==>  <{x__1'=f__1(x__1)&q_(x__1)}>x__1=y__1<-><{y__1'=-f__1(y__1)&q_(y__1)}>x__1=y__1".asSequent
   }
 
   it should "throw core exceptions on out-of-bounds dimension arguments" in {
-    an[CoreException] should be thrownBy Provable.realInd(0)
-    an[CoreException] should be thrownBy Provable.realInd(-1)
+    an[CoreException] should be thrownBy Provable.diffAdjoint(0)
+    an[CoreException] should be thrownBy Provable.diffAdjoint(-1)
   }
 
-  it should "return 2D real induction" in {
-    val ri = Provable.realInd(2)
+  it should "return 2D diff adjoint" in {
+    val da = Provable.diffAdjoint(2)
 
-    ri shouldBe 'proved
-    ri.conclusion shouldBe ("==>" +
-      "[{x__1'=f1(|t_|),x__2'=f2(|t_|)&q(|t_|)}]p(|t_|)<->" +
-      "(q(|t_|)->p(|t_|))&" +
-      "[{x__1'=f1(|t_|),x__2'=f2(|t_|)&q(|t_|)}t_:=0;]" +
-      "((p(|t_|)&<{t_'=1,x__1'=f1(|t_|),x__2'=f2(|t_|)&q(|t_|)|t_=0}>t_!=0-><{t_'=1,x__1'=f1(|t_|),x__2'=f2(|t_|)&p(|t_|)|t_=0}>t_!=0)&" +
-      "(!p(|t_|)&<{t_'=1,x__1'=-f1(|t_|),x__2'=-f2(|t_|)&q(|t_|)|t_=0}>t_!=0-><{t_'=1,x__1'=-f1(|t_|),x__2'=-f2(|t_|)&!p(|t_|)|t_=0}>t_!=0))").asSequent
+    println(da)
+    da shouldBe 'proved
+    da.conclusion shouldBe "==>  <{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2)&q_(x__1,x__2)}>(x__1=y__1&x__2=y__2)<-><{y__1'=-f__1(y__1,y__2),y__2'=-f__2(y__1,y__2)&q_(y__1,y__2)}>(x__1=y__1&x__2=y__2)".asSequent
   }
 }

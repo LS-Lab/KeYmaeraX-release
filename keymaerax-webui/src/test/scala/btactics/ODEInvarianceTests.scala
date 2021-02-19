@@ -745,20 +745,10 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "real induction" should "generate dimensional realind" in withMathematica { _ =>
-    val pr1 = Provable.realInd(1)
-    val pr2 = Provable.realInd(2)
-    println(pr1)
-    println(pr2)
-    pr1 shouldBe 'proved
-    pr2 shouldBe 'proved
-  }
-
   "SAI" should "prove simple inv" in withMathematica { _ =>
     val pr = proveBy("x = 1 -> x > 1 | [{x'=x+y,y'=y+x+z&y=0}](x>0 | (x^3 > 0 & x <= 1))".asFormula,
       implyR(1) & orR(1) &
-      //sAI(2)
-      sAIA(2)
+      sAI(2)
     )
 
     println(pr)
@@ -769,8 +759,7 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "work with domains" in withMathematica { _ =>
     val pr = proveBy("x = 1 -> [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)".asFormula,
       implyR(1) &
-      //sAI(1)
-      sAIA(1)
+      sAI(1)
     )
 
     println(pr)
@@ -781,8 +770,7 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "prove a difficult invariant" in withMathematica { _ =>
     val fml = "a() = 0 & 1/100 - x^2 - y^2 >= a() -> a()=1 | [{x'=-2*x+x^2+y, y'=x-2*y+y^2+a()}]!(x^2+y^2 >= 1/4)".asFormula
     val pr = proveBy(fml, implyR(1) & andL(-1) & orR(1) &
-      //sAI(2)
-      sAIA(2)
+      sAI(2)
     )
     println(pr)
     println("Proof steps:",pr.steps)
