@@ -794,6 +794,49 @@ object Provable {
   }
 
   /**
+    * Axiom schema for differential adjoints, schematic in dimension.
+    * {{{
+    *   <{x_'=f_(x_) & q_(x_)}>x_=y_ <-> <{y_'=-f_(y_) & q_(y_)}>x_=y_
+    * }}}
+    *
+    * @param dim The dimension of ODE x_'=f_(x_)
+    */
+  final def diffAdjoint(dim : Int): Provable = {
+    insist(dim > 0, "Diff. adjoint over ODE with at least 1 variable.")
+
+    // The list of LHS variables x__1, x__2, ..., x__dim
+    val xLHS = (1 to dim).map(i => BaseVariable("x_", Some(i)))
+    // The list of LHS variables y__1, y__2, ..., y__dim
+    val yLHS = (1 to dim).map(i => BaseVariable("y_", Some(i)))
+    // The sort of RHS functions and predicates is (real,(real,...)) n times
+    val sort = Seq.fill(dim)(Real).reduceRight(Tuple)
+    val RHSfunc = (1 to dim).map(i => Function("f_", Some(i), sort,Real))
+    // Functions applied to x_
+    val RHSxarg = xLHS.reduceRight(Pair)
+    val xRHS =  RHSfunc.map{ f => FuncOf(f,RHSxarg) }
+    // RHS functions applied to y_
+    val RHSyarg = yLHS.reduceRight(Pair)
+    val yRHS =  RHSfunc.map{ f => FuncOf(f,RHSyarg) }
+
+    // ODEs for x_, y_
+    val xODE = (xLHS zip xRHS).map{case (x,rhs) => AtomicODE(DifferentialSymbol(x), rhs)}
+      .reduceRight(DifferentialProduct.apply)
+    val yODE = (yLHS zip yRHS).map{case (y,rhs) => AtomicODE(DifferentialSymbol(y), Neg(rhs))}
+      .reduceRight(DifferentialProduct.apply)
+    // Domains for x_, y_
+    val xDom = PredOf(Function("q_", None, sort, Bool), RHSxarg)
+    val yDom = PredOf(Function("q_", None, sort, Bool), RHSyarg)
+    // Postcondition x_ = y_
+    val eq = (xLHS zip yLHS).map( xy => Equal(xy._1,xy._2)).reduceRight(And)
+
+    //<x_'=f_(x_)&q_(x_)>x_=y_ <-> <y_'=-f_(y_)&q_(y_)>x_=y_
+    val diffAdj = Equiv(Diamond(ODESystem(xODE,xDom),eq),Diamond(ODESystem(yODE,yDom),eq))
+
+    //@note soundness-critical
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
+  }
+
+  /**
     * Axiom schema for real induction, schematic in dimension.
     * {{{
     *   [{x_'=f(|t_|)&q(|t_|)}]p(|t_|) <->
