@@ -29,6 +29,7 @@ trait Numeric[T, Truth] { this: T =>
   def eq(rhs: T): Truth
   def diseq(rhs: T): Truth
   def unary_- : T
+  def intApprox: Int
 }
 
 trait NumberFactory[Truth, N <: Numeric[N, Truth]] {
@@ -63,6 +64,7 @@ case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extend
   override def eq(rhs: TernaryNumber[number]): Ternary = if (num.eq(rhs.num)) KnownTrue() else KnownFalse()
   override def diseq(rhs: TernaryNumber[number]): Ternary = if (num.diseq(rhs.num)) KnownTrue() else KnownFalse()
   override def unary_- : TernaryNumber[number] = TernaryNumber(-num)
+  override def intApprox: Int = num.intApprox
 }
 
 case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N]) extends NumberFactory[Ternary, TernaryNumber[N]] {
@@ -123,6 +125,7 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
   override def unary_- : RatNum = RatNum(-n)
   override def eq(other: RatNum): Boolean = (n == other.n)
   override def diseq(other: RatNum): Boolean = (n != other.n)
+  override def intApprox: Int = n.toInt
 }
 
 /** Interval of rational numbers. */
@@ -217,5 +220,6 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     else if ((l <= rhs.l && rhs.l <= u) || (l <= rhs.u && rhs.u <= u)) Unknown()
     else KnownTrue()
   override def unary_- : RatIntNum = RatIntNum(-u, -l)
+  override def intApprox: Int = (l.toInt + u.toInt) / 2
 }
 

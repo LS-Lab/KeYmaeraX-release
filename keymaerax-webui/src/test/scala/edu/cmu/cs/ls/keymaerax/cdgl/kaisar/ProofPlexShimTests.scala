@@ -65,6 +65,11 @@ class ProofPlexShimTests extends TacticTestBase {
 }
 
 class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val env: Environment[number]) extends BasicDemonStrategy[number] {
+  override def init(stringArg: Option[String], intArgs: List[NodeID]): Unit = {}
+  override def exit(): Unit = {}
+  override def reportViolation(): Unit = {}
+
+
   var iterationsLeft: Int = 100
   val readInitState: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
@@ -100,6 +105,7 @@ class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val e
 }
 
 class EssentialsSafeCar1DShim[number <: Numeric[number, Ternary]] (val env: Environment[number]) extends DemonStrategy[number] {
+  override def reportViolation(): Unit = {}
   val initValues: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,

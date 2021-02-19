@@ -257,10 +257,12 @@ object SSAPass {
     val node =
       m match {
         case _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => m
+        case GuardDone(Some(delta)) => GuardDone(Some(ssa(delta, snapshot)))
         case Using(sels, m) =>
           Using(sels.map(ssa(_, snapshot)), ssa(m, snapshot))
         // @TODO: This means variable indices which are used in ss can be reused elsewhere. Is this what we want?
         case ByProof(ss) => ByProof(ssa(Block(ss), snapshot)._1.asInstanceOf[Block].ss)
+        case _: GuardDone => throw TransformationException("Bad pattern match in SSA for GuardDone")
       }
     locate(node, m)
   }
@@ -348,7 +350,7 @@ object SSAPass {
         val (xx, (jj, _jjSnap)) = (ssa(x, bodySnap), ssa(j, bodySnap))
         val whilst = locate(While(xx, jj, KaisarProof.block(body :: indStutters :: Nil)), s)
         (KaisarProof.block(baseStutters :: whilst :: Nil), bodySnap)
-      case For(metX, met0, metIncr, conv, guard, inBody) =>
+      case For(metX, met0, metIncr, conv, guard, inBody, metGuard) =>
         val met00 = ssa(met0, snapshot)
         val (metXX, initSnap) = snapshot.increment(metX)
         val boundVars = VariableSets(inBody).boundVars
@@ -361,7 +363,8 @@ object SSAPass {
         val metIncrr = ssa(metIncr, preSnap)
         val (guardd : Assume, _) = ssa(guard, preSnap)
         val convv = conv.map(ssa(_, preSnap)._1.asInstanceOf[Assert])
-        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil)), s)
+        val metGuardd : Option[Term] = metGuard.map(f => ssa(f, preSnap))
+        val forth = locate(For(metXX, met00, metIncrr, convv, guardd, KaisarProof.block(body :: indStutters :: Nil), metGuardd), s)
         (KaisarProof.block(baseStutters :: forth :: Nil), preSnap)
       //@TODO: switch case seems wrong, needs swap in the assignments
       case Switch(scrutinee: Option[Selector], pats: List[(Expression, Expression, Statement)]) =>

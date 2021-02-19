@@ -22,7 +22,8 @@ trait DemonStrategy[T] {
   // would work as foreign-function interface for low-level languages, where we wish to pass only basic types.
   type NodeID = Int
   /** Hook for any additional initialization */
-  def init(): Unit = ()
+  def init(stringArg:Option[String] = None, intArgs: List[Int] = List()): Unit = ()
+  def exit(): Unit = ()
   /** @return whether the driver wishes to continue executing the given loop */
   def readLoop(id: NodeID): Boolean
   /** @return whether the driver wishes to take the right branch of the given choice */
@@ -31,6 +32,7 @@ trait DemonStrategy[T] {
   def readAssign(id: NodeID, x: Ident): T
   /** Hook to perform actuation, reports fact that Angel assigned x:=f  */
   def writeAssign(id: NodeID, x: Ident, f: T): Unit
+  def reportViolation(): Unit
 }
 
 /** Wrappable interface for Demon strategies. While this interface is not "simpler" than [[DemonStrategy]],
@@ -49,7 +51,9 @@ trait BasicDemonStrategy[number <: Numeric[number, Ternary]] {
   // @TODO: Should there be separate function for ODE? Yes.
   def readDemonAssign(id: NodeID, baseVar: String, varIndex: Option[Int]): number
   def writeAngelAssign(id: NodeID, baseVar: String, varIndex: Option[Int], value: number): Unit
-
+  def reportViolation(): Unit
+  def init(stringArg: Option[String], intArgs:List[Int]): Unit
+  def exit(): Unit
   /** Get the current value for variable [[x]], initializing if necessary */
   def valFor(x: Ident): number = {
     if (env.contains(x)) env.get(x)
@@ -69,10 +73,13 @@ trait BasicDemonStrategy[number <: Numeric[number, Ternary]] {
   * */
 class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonStrategy[number])(val env: Environment[number]) extends DemonStrategy[number] {
   val initState: Map[Ident, number] = bds.readInitState
+  override def reportViolation(): Unit = bds.reportViolation()
   override def readLoop(id: NodeID): Boolean =
     (IDCounter.getOriginal(id), IDCounter.get(id)) match {
       case (Some(ALoop(conv, body)), _) =>
-        env.holds(conv) != KnownTrue() // if formula holds, continue
+        env.holds(conv) == KnownTrue() // if formula holds, continue
+      case (Some(AForLoop(idx, idx0, conv, body, inc, guardEpsilon)), _) =>
+        env.holds(conv) == KnownTrue() // if formula holds, continue
       case (Some(_), _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
       case (None, Some(SLoop(_body))) => bds.readDemonLoop(id)
       case (None, _) => throw new DemonException("Demon expected to be given loop, but was not. Are you playing an angel strategy against an incompatible Demon?")
@@ -112,4 +119,6 @@ class WrappedDemonStrategy[number <: Numeric[number, Ternary]] (bds: BasicDemonS
         env.set(x, f)
     }
   }
+  override def init(stringArg: Option[String], intArgs:List[Int]): Unit = bds.init(stringArg, intArgs)
+  override def exit(): Unit = bds.exit()
 }

@@ -440,7 +440,10 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(/*SharedModels.ijrrStaticSafetyRough*/ SharedModels.switchLiteralArg :: Nil)
+    testExampleSet(SharedModels.basicForConv :: SharedModels.revisedReachAvoidFor :: SharedModels.basicForNoConv :: Nil)
+    // SharedModels.basicForConv
+    // basicForConv revisedReachAvoidFor basicForNoConv
+
   }
 
   it should "allow ghosts of invariants in loop induction proofs " in withMathematica { _ =>
