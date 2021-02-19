@@ -30,6 +30,7 @@ lazy val core = (project in file("keymaerax-core"))
 
 
 lazy val experiments = (project in file("keymaerax-veriphy-experiments"))
+  /*.dependsOn(core)*/
   .settings(
     unmanagedSources in Compile +=
       baseDirectory.value.getParentFile / "keymaerax-core" / "src" / "main" / "scala" / "edu" / "cmu" / "cs" / "ls" / "keymaerax" / "Configuration.scala",
@@ -138,7 +139,7 @@ lazy val keymaerax = (project in file("keymaerax-webui"))
 
 lazy val keymaeraxExperimentsAssemblySettings = AssemblyPlugin.assemblySettings ++
   Seq(test in assembly := {},
-      mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotMain"),
+      mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.AirBotMain"),
       assemblyJarName in assembly := "veriphy-experiment.jar",
       assemblyMergeStrategy in assembly := {
           case PathList("examples", xs @ _*) => MergeStrategy.last

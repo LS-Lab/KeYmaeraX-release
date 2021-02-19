@@ -147,7 +147,7 @@ def coreSources(dir: File): Vector[File] = {
 }
 
 // command line UI
-mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.AirSimMain")
+mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.veriphy.experiments.BotMain")
 
 // do not run tests when building assembly
 test in assembly :=  {}
