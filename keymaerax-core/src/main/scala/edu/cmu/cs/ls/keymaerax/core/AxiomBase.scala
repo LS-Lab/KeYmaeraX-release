@@ -379,7 +379,7 @@ End.
 
 /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
 Axiom "Cont continuous existence"
-  f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=g()
+  h()!=0 & f(||) > 0 -> <{t_'=h(),c&f(||)>0}>t_!=g()
 End.
 
 /* @note compared to J. ACM, the following axiom
