@@ -379,7 +379,7 @@ End.
 
 /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
 Axiom "Cont continuous existence"
-  f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
+  f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=g()
 End.
 
 /* @note compared to J. ACM, the following axiom
@@ -390,6 +390,15 @@ Axiom "RI& closed real induction >="
   [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
   (q(|t_|) ->f(|t_|)>=0) &
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
+End.
+
+/* @note compared to J. ACM, the following axiom uses a time variable t_ instead of vectorial quantification */
+Axiom "RI& real induction"
+  [{c{|s_,t_|}&q(|s_,t_|)}]p(|s_,t_|) <->
+  \forall s_ [{t_'=1,c{|s_,t_|}&q(|s_,t_|)&(p(|s_,t_|)|t_=s_)}] (t_ = s_ ->
+    p(|s_,t_|) &
+    (<{t_'=1,c{|s_,t_|}&q(|s_,t_|)|t_=s_}>t_!=s_ -> <{t_'=1,c{|s_,t_|}&p(|s_,t_|)|t_=s_}>t_!=s_)
+  )
 End.
 
 Axiom "IVT"
