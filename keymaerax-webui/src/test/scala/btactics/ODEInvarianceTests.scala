@@ -776,4 +776,13 @@ class ODEInvarianceTests extends TacticTestBase {
     println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
+
+  it should "prove a simple inv" in withMathematica { _ =>
+    val fml = "x>0 -> [{x'=x}] x>0".asFormula
+    val pr = proveBy(fml, implyR(1) & sAI(1)
+    )
+    println(pr)
+    println("Proof steps:",pr.steps)
+    pr shouldBe 'proved
+  }
 }

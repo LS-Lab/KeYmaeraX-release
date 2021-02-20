@@ -2120,6 +2120,9 @@ object ODEInvariance {
     // <-ODE & !P> O
     val nprlp = Diamond(ODESystem(revsys.ode,Or(npfml,Equal(newnames.head,svar))),NotEqual(newnames.head,svar))
 
+    // Can skip the O -> o step for forward branch if there are no equalities in domain
+    val skipLock = domainEqualities(sys.constraint).isEmpty
+
     useAt(Ax.RI)(pos) & allR(pos) &
       useAt(and_imp,PosInExpr(0::Nil))(pos++PosInExpr(1::1::Nil)) &
       useAt(imp_and,PosInExpr(0::Nil))(pos++PosInExpr(1::Nil)) & boxAnd(pos) & andR(pos) <(
@@ -2191,6 +2194,8 @@ object ODEInvariance {
       dW(pos) & andL(-1) & hideL(-2) & implyR(1) & implyR(1) & implyR(1) &
         ptac & cutR(Or(pstarpf,nqstarpf))(1) <(
         ToolTactics.hideNonFOL & ?(QE & done), //prove P* | (!Q)* from assumptions
+        (if (skipLock) skip
+        else {
         cutL(qlpi)('Llast) <(skip,
           cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
           dC(Imply(Equal(tvar,svar),sys.constraint))(1) <(
@@ -2207,7 +2212,7 @@ object ODEInvariance {
                   ),
                 cohideOnlyL(-2) & DifferentialTactics.dI(1)))
            )
-        ) &
+        ) }) &
         implyR(1) & orL('Llast) <(
           // P* branch
           hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
@@ -2216,7 +2221,9 @@ object ODEInvariance {
             lpgen(nqstarinst),
             hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
               diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
-              implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
+              implyR(1) & andL(-1) &
+              (if(skipLock) orL(-1) <( orL(-2) <(notL(-2) & id,id), id)
+              else orL(-2) <( notL(-2) & id, id))
           )
         ))
     )
