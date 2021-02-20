@@ -804,17 +804,19 @@ object Provable {
   final def diffAdjoint(dim : Int): Provable = {
     insist(dim > 0, "Diff. adjoint over ODE with at least 1 variable.")
 
+    //Indices 1,2,...dim
+    val indices = 1 to dim
     // The list of LHS variables x__1, x__2, ..., x__dim
-    val xLHS = (1 to dim).map(i => BaseVariable("x_", Some(i)))
+    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
     // The list of LHS variables y__1, y__2, ..., y__dim
-    val yLHS = (1 to dim).map(i => BaseVariable("y_", Some(i)))
+    val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
     // The sort of RHS functions and predicates is (real,(real,...)) n times
-    val sort = Seq.fill(dim)(Real).reduceRight(Tuple)
-    val RHSfunc = (1 to dim).map(i => Function("f_", Some(i), sort,Real))
-    // Functions applied to x_
+    val sort = indices.map( _ => Real).reduceRight(Tuple)
+    val RHSfunc = indices.map(i => Function("f_", Some(i), sort,Real))
+    // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
     val RHSxarg = xLHS.reduceRight(Pair)
     val xRHS =  RHSfunc.map{ f => FuncOf(f,RHSxarg) }
-    // RHS functions applied to y_
+    // The application f_(y_) where y_ is written as a tuple of the right sort (y_1,(y_2,(...))
     val RHSyarg = yLHS.reduceRight(Pair)
     val yRHS =  RHSfunc.map{ f => FuncOf(f,RHSyarg) }
 
