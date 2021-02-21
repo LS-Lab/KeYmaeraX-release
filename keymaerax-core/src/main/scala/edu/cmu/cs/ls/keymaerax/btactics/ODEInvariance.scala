@@ -53,7 +53,7 @@ object ODEInvariance {
   // todo: uses c{|s_|} instead of c to work around USubstOne conservativity
   // around substituted differential program constants
   private[btactics] lazy val contAx =
-    remember("f(||) > 0 -> <{t_'=1,c{|s_|}&f(||)>=0}>t_!=g()".asFormula,
+    remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=g()".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
         cutL("1!=0 & f(||)>0".asFormula)(-1) <( implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) <(hideL(-1) & QE,id) ),
@@ -62,7 +62,7 @@ object ODEInvariance {
       ), namespace)
 
   private[btactics] lazy val contAxR =
-    remember("f(||) > 0 -> <{t_'=-(1),c{|s_|}&f(||)>=0}>t_!=g()".asFormula,
+    remember("f(||) > 0 -> <{t_'=-(1),c&f(||)>=0}>t_!=g()".asFormula,
       implyR(1) &
         dR("f(||)>0".asFormula)(1) <(
           cutL("-(1)!=0 & f(||)>0".asFormula)(-1) <( implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) <(hideL(-1) & QE,id) ),
@@ -72,8 +72,8 @@ object ODEInvariance {
 
   // unconditional cont with true in the domain constraint
   private lazy val contAxTrue =
-    remember("<{t_'=1,c{|s_|}&1 > 0}>t_!=g()".asFormula,
-          cutR("1 > 0".asFormula)(1) <( QE,  byUS(Ax.Cont)), namespace)
+    remember("<{t_'=1,c&1 > 0}>t_!=g()".asFormula,
+          cutR("1!=0 & 1 > 0".asFormula)(1) <( QE,  byUS(Ax.Cont)), namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
