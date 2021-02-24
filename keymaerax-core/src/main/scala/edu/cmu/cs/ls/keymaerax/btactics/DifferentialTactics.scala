@@ -604,7 +604,7 @@ private object DifferentialTactics extends Logging {
             )
           }
           val cutSingularities = if (singular.nonEmpty) {
-            singular.map(t => ?(dC(NotEqual(t, Number(0)))(pos) <(skip, ODE(pos) & done))).reduce(_ & _)
+            singular.map(t => ?(dC(NotEqual(t, Number(0)))(pos) <(skip, TactixLibrary.ODE(pos) & done))).reduce(_ & _)
           } else skip
           val doGhost = r match {
             case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
@@ -983,43 +983,6 @@ private object DifferentialTactics extends Logging {
     instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
-  /**
-    * @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer
-    * @author Nathan Fulton
-    * @author Stefan Mitsch
-    * @note Compatibility tactic for Z3 ([[DifferentialTactics.odeInvariant]] not supported with Z3).
-    */
-  lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(sys@ODESystem(_, q), _)) =>
-      lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
-        //@note abort if unchanged
-        DebuggingTactics.assert((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-          failureMessage, new BelleNoProgress(_)
-        )(pos) &
-          anon ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-            case Some(ODESystem(_, extendedQ)) =>
-              if (q == True && extendedQ != True) useAt(Ax.trueAnd)(ppos ++
-                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-              else skip
-            case p => throw new TacticInapplicableFailure("Tactic ODE only applicable to ODESystem, but got " + p.map(_.prettyString).getOrElse("None"))
-          })(pos ++ PosInExpr(0 :: Nil))
-      )(pos)
-
-      if (pos.isTopLevel) {
-        proveWithoutCuts(false)(pos) |
-        solve(pos) & ?(endODEHeuristic & QE) |
-        recurseODE
-      } else {
-        //@note diffInd in context won't fail even if unprovable in the end; try solve first to support the usual examples
-        solve(pos) & ?(endODEHeuristic & QE) |
-        proveWithoutCuts(false)(pos) |
-        recurseODE
-      }
-    case Some(e) => throw new TacticInapplicableFailure("ODE only applicable to box ODEs, but got " + e.prettyString)
-    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-  })
-
   /** Compatibility ODE invariance tactics prior to [[DifferentialTactics.odeInvariant]] */
   private def compatibilityFallback(pos: Position, isOpen: Boolean): BelleExpr =
     lzzCheck(pos) &
@@ -1027,9 +990,7 @@ private object DifferentialTactics extends Logging {
         openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
       } else {
         diffInd()(pos)       | // >= to >=
-          DGauto(pos)          |
-          dgZeroMonomial(pos)  | //Equalities
-          dgZeroPolynomial(pos)  //Equalities
+          DGauto(pos)
       })
 
   /** Proves ODE invariance properties. */
@@ -1069,8 +1030,7 @@ private object DifferentialTactics extends Logging {
         //@note diffWeaken will already include all cases where V works, without much additional effort.
         (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
           diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) | (if (useOdeInvariant) proveInvariant(pos)
-        else compatibilityFallback(pos, isOpen))
+          ) | (if (useOdeInvariant) proveInvariant(pos) else compatibilityFallback(pos, isOpen))
       })(pos))
   })
 
@@ -1293,131 +1253,6 @@ private object DifferentialTactics extends Logging {
       (hide(pos.topLevel) & QE & done) | //@todo write a hideNonArithmetic tactic.
       DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
     )
-  })
-
-  /* Deprecated. probably use dgDbx instead. */
-  @deprecated
-  def dgZeroPolynomial: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
-    val Box(ODESystem(system, _), property) = seq.sub(pos) match {
-      case Some(b@Box(_: ODESystem, _)) => b
-      case Some(e) => throw new TacticInapplicableFailure("dgZeroPolynomial only applicable to box ODEs, but got " + e.prettyString)
-   case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
-
-    val lhs = property match {
-      case Equal(term, Number(n)) if n == 0 => term
-      case e => throw new TacticInapplicableFailure("Not sure what to do with shape " + e.prettyString)
-    }
-
-    val (x: Variable, derivative:Term) = system match {
-      case AtomicODE(xp, t) => (xp.x, t)
-      case _ => throw new TacticInapplicableFailure("Systems not currently supported by dgZeroPolynomialDerivative")
-    }
-    require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
-
-    val ghostVar = "z_".asVariable
-    require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
-
-    val negOneHalf: Term = Divide(Number(-1), Number(2))
-    //Given a system of the form x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
-    //@note this is done because we can't ghost in something that contains a division by a possibly zero-valued variable (in this case, x).
-    val xPrimeDividedByX = TacticHelper.transformMonomials(derivative, {
-      case Times(coeff, Power(v,exp)) if v == x => Times(coeff, Power(v, Minus(exp, Number(1))))
-      case Times(coeff, v: Variable) if v==x => coeff
-      case v: Variable if v==x => Number(1)
-      case t: Term => t
-    })
-
-    /* construct the arguments ti diff aux:
-     * Deprecated. Use dgDbx instead.
-    * y' = -xPrimeDividedByX/2 * y
-     * x=0 <-> \exists y x*y^2=0 & y>0 */
-    //@todo At some point I was not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on b/c of the pattern matching in dgZero. But it does. So review dgZero and this to see what's up.
-    val (ghostODE, ghostEqn) = (
-      AtomicODE(DifferentialSymbol(ghostVar), Times(Times(negOneHalf,xPrimeDividedByX) , ghostVar)),
-      And(
-        Equal(
-          Times(x, Power(ghostVar, Number(2)) ),
-          Number(0)
-        ),
-        Greater(ghostVar, Number(0))
-      )
-    )
-
-    dG(ghostODE, Some(ghostEqn))(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
-      DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
-      //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE & done
-  })
-
-  /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
-    * Deprecated. Use dgDbx instead.
-    * */
-  @deprecated
-  def dgZeroMonomial: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
-    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
-
-    val Box(ODESystem(system, _), property) = seq.sub(pos) match {
-      case Some(b@Box(_: ODESystem, _)) => b
-      case Some(e) => throw new TacticInapplicableFailure("dgZeroMonomial only applicable to box ODEs, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
-
-    /** The lhs of the post-condition {{{lhs = 0}}} */
-    val lhs = property match {
-      case Equal(term, Number(n)) if n == 0 => term
-      case e => throw new TacticInapplicableFailure("Not sure what to do with shape " + e.prettyString)
-    }
-
-    /** The equation in the ODE of the form {{{x'=c*x^n}}}; the n is optional.
-      * @todo make this tactic work for systems of ODEs. */
-    val (x: Variable, (c: Option[Term], n: Option[Term])) = system match {
-      case AtomicODE(variable, equation) => (variable.x, equation match {
-        case Times(c, Power(_, n)) => (Some(c), Some(n))
-        case Times(c, v: Variable) if v==variable.x => (Some(c), None)
-        case Power(_, n) => (None, Some(n))
-        case v: Variable if v==variable.x => (None, None)
-        case p => throw new TacticInapplicableFailure("Tactic dgZeroMonomial only applicable atomic ODEs of right-hand side shape c*x^n or c*v or x^n or v, but got " + p.prettyString)
-      })
-      case p => throw new TacticInapplicableFailure("Tactic dgZeroMonomial only applicable to atomic ODE, but got " + p.prettyString)
-    }
-    require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
-
-    /** The ghost variable */
-    val ghostVar = "z_".asVariable
-    require(!StaticSemantics.vars(system).contains(ghostVar), "fresh ghost " + ghostVar + " in " + system.prettyString) //@todo should not occur anywhere else in the sequent either...
-
-
-    val (newOde: DifferentialProgram, equivFormula: Formula) = (c,n) match {
-      case (Some(c), Some(n)) => (
-        s"$ghostVar' = ( (-1*$c * $x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
-      case (None, Some(n)) => (
-        s"$ghostVar' = ((-1*$x^($n-1)) / 2) * $ghostVar + 0".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
-      case (Some(c), None) => (
-        s"$ghostVar' = ((-1*$c*$x) / 2) * $ghostVar + 0".asDifferentialProgram,
-        s"$x*$ghostVar^2=0&$ghostVar>0".asFormula
-      )
-      case (None, None) => (
-        s"$ghostVar' = -1 * $ghostVar + 0".asDifferentialProgram,
-        s"$x * $ghostVar = 0 & $ghostVar > 0".asFormula
-      )
-    }
-
-    val backupTactic = dG(newOde, Some(equivFormula))(pos) & boxAnd(pos ++ PosInExpr(0::Nil)) &
-      DifferentialTactics.diffInd()(pos ++ PosInExpr(0::0::Nil)) &
-      //@note would be more robust to do the actual derivation here the way it's done in [[AutoDGTests]], but I'm leaving it like this so that we can find the bugs/failures in DGauto
-      DGauto(pos ++ PosInExpr(0::1::Nil)) & QE & done
-
-    //@todo massage the other cases into a useAt.
-    //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
-    if(c.isDefined && n.isDefined) //if has correct shape for using the derived axiom
-      ??? // TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
-    else
-      backupTactic
   })
 
   /**
