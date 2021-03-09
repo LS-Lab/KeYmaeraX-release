@@ -27,7 +27,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -1037,25 +1036,23 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def getJson: JsValue = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
-case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])]) extends Response {
+case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression])]) extends Response {
   /** Transforms name `n`, its expression `ne`, its replacement `re`, and the plaintext signature from the model. */
-  private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression], s: Option[InputSignature]): JsValue = {
+  private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression]): JsValue = {
     JsObject(
       "symbol" -> JsString(n.prettyString),
       "definition" -> JsObject(
         "what" -> JsString(ne.prettyString),
-        "repl" -> JsString(s match {
-          case Some(is) => is._2.map(_.prettyString).getOrElse("")
-          case None =>
+        "repl" -> JsString(
             //@todo replace dots with arguments from ne (input signature no longer available from simplified parser, is always None)
             re.map(_.prettyString).getOrElse("")
-        }),
-        "editable" -> JsBoolean(s.isEmpty)
+        ),
+        "editable" -> JsBoolean(re.isEmpty)
       )
     )
   }
 
-  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3, d._4)):_*)
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3)):_*)
 }
 
 class PruneBelowResponse(item: AgendaItem) extends Response {

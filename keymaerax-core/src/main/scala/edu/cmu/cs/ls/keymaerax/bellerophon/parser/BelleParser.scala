@@ -89,8 +89,8 @@ object BelleParser extends TacticParser with Logging {
       }
       val prefix = s.split(nonAsciiCharacter).head
       val lines = prefix.split("\n")
-      assert(lines != null && lines.length > 0,
-        s"Expected a 'last' element but found ${lines} because there is a disallowed unicode character _${disallowedChars.mkString(" ")}_")
+      assert(lines != null && lines.nonEmpty,
+        s"Expected a 'last' element but found $lines because there is a disallowed unicode character _${disallowedChars.mkString(" ")}_")
       val lineNumber = lines.length
       val columnNumber = lines.last.length + 1
       Some(new Region(lineNumber, columnNumber, lineNumber, columnNumber), nonAsciiCharacter)
@@ -347,17 +347,17 @@ object BelleParser extends TacticParser with Logging {
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
         //@note uses location information to distinguish file definitions from proof definitions (e.g., abstract loop invariant J(x))
         val (modelDefs, proofDefs) = defs.decls.partition({
-          case (_, (_, _, _, _, UnknownLocation)) => false
+          case (_, Signature(_, _, _, _, UnknownLocation)) => false
           case _ => true
         })
         val modelSubsts = Declaration(modelDefs).substs
         val modelExpand = if (modelSubsts.nonEmpty) Some(ExpandAll(modelSubsts)) else None
         // use all defs and filter so that right-hand sides of proof definitions get correctly elaborated
         val proofsExpand = defs.substs.filter(_.what match {
-          case FuncOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
-          case PredOf(ns: Function, _) => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
-          case ns: ProgramConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
-          case ns: SystemConst => proofDefs.exists({ case ((name, index), _) => name == ns.name && index == ns.index })
+          case FuncOf(ns: Function, _) => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
+          case PredOf(ns: Function, _) => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
+          case ns: ProgramConst => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
+          case ns: SystemConst => proofDefs.exists({ case (Name(name, index), _) => name == ns.name && index == ns.index })
           case _ => false
         }).map(s => TactixLibrary.uniformSubstitute(USubst(s :: Nil))).reduceRightOption[BelleExpr](_ & _)
         val expand = (modelExpand, proofsExpand) match {
