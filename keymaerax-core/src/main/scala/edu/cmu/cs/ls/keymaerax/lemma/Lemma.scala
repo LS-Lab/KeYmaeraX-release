@@ -45,10 +45,10 @@ object Lemma {
     * @note not soundness-critical, because only used for checking whether a re-read gives the same result.
     * @note performance bottleneck for loading
     */
-  private def matchesInput(result: Lemma, input:String): Boolean = {
+  private def matchesInput(result: Lemma, input: String): Boolean = {
     //@note performance is optimized since contract-free stringify calls are used here for rechecking purposes
     val str = result.toStringInternal
-    str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence)
+    str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.underlyingProvable, result.evidence)
   }
 
   /** Parses a lemma from its string representation (without consistency checking). */
