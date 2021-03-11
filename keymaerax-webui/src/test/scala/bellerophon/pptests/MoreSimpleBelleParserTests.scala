@@ -143,6 +143,12 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
                      |Expected: "x>0::y>0::nil"""".stripMargin
   }
 
+  it should "bind strong" in withTactics {
+    parser(""" implyR(1); id using "x>=0" """) shouldBe TactixLibrary.implyR(1) & Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+    parser(""" (implyR(1); id) using "x>=0" """) shouldBe Using("x>=0".asFormula :: Nil, TactixLibrary.implyR(1) & TactixLibrary.id)
+    parser(""" implyR(1) | id using "x>=0" """) shouldBe TactixLibrary.implyR(1) | Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+  }
+
   "Propositional Examples" should "close p() -> p()" in withTactics {
     val tactic = parser("implyR(1) & id")
     val value = BelleProvable(ProvableSig.startProof("p() -> p()".asFormula))

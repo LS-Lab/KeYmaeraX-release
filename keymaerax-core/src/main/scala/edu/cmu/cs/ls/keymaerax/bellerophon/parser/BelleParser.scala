@@ -194,6 +194,7 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(KLEENE_STAR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(N_TIMES(_), _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SATURATE, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(USING, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case _ => ParserState(r :+ ParsedBelleExpr(left & right, leftLoc.spanTo(rightLoc)), st.input)
         }
       //endregion
@@ -214,6 +215,7 @@ object BelleParser extends TacticParser with Logging {
           case Some(BelleToken(N_TIMES(_), _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SATURATE, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(SEQ_COMBINATOR | DEPRECATED_SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(USING, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
           case _ =>
             val parsedExpr = left | right
             parsedExpr.setLocation(combatinorLoc)
