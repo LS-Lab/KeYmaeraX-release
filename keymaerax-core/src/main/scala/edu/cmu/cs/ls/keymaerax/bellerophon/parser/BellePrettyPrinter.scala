@@ -99,7 +99,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case dot: BelleDot => "_@" + dot.hashCode()
         case l: LabelBranch => l.prettyString
         case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
-        case Using(es, t) => pp(t, indent) + " using " + es.mkString("\"", " :: ", " :: nil\"")
+        case Using(es, t) => pp(t, indent) + " using \"" + es.mkString(" :: ") + (if (es.isEmpty) "" else " :: ") + "nil\""
         case _ => throw PrinterException(s"Do not know how to pretty-print $e")
       }
     }

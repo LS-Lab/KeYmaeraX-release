@@ -662,17 +662,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.doTactic = function(formulaId, tacticId) {
       var nodeId = sequentProofData.agenda.selectedId();
       var node = sequentProofData.proofTree.node(nodeId);
-      var formulas = formulaId
-      if (!formulaId) {
-        var selected = $scope.selectedFormulas(node.getSequent());
-        if (selected.length < node.getSequent().ante.length + node.getSequent().succ.length) formulas = selected;
-        else formulas = undefined;
-      }
+      var selected = $scope.selectedFormulas(node.getSequent());
+      if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      if (Array.isArray(formulas)) {
-        $scope.onTacticScript(tacticId + ' using "' + formulas.join('::') + '::nil"', false)
+      if (selected) {
+        $scope.onTacticScript(tacticId + (formulaId ? '(' + formulaId + ')' : '') + ' using "' + selected.join('::') +
+          (selected.length > 0 ? '::' : '') + 'nil"', false)
       } else {
-        var uri = formulas !== undefined ?  base + '/' + formulas + '/doAt/' + tacticId : base + '/do/' + tacticId;
+        var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
         var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
         spinnerService.show('tacticExecutionSpinner')
         $http.get(uri + '?stepwise=false')
@@ -686,16 +683,25 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.doInputTactic = function(formulaId, tacticId, input) {
       var nodeId = sequentProofData.agenda.selectedId();
+      var node = sequentProofData.proofTree.node(nodeId);
+      var selected = $scope.selectedFormulas(node.getSequent());
+      if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       spinnerService.show('tacticExecutionSpinner');
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      var uri = formulaId !== undefined ? base + '/' + formulaId + '/doInputAt/' + tacticId : base + '/doInput/' + tacticId
-      var stepwise = { method: 'POST', url: uri + '?stepwise=true', data: input};
-      $http.post(uri + '?stepwise=false', input)
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
-        .catch(function(err) {
-          spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$broadcast("proof.message", err.data);
-        });
+      if (selected) {
+        var args = input.map(function(e) { return '"' + e.value + '"'; }).join(',');
+        $scope.onTacticScript(tacticId + '(' + args + (formulaId ? ',' + formulaId.replace(',','.') : '') + ')' +
+          ' using "' + selected.join('::') + (selected.length > 0 ? '::' : '') + 'nil"', false)
+      } else {
+        var uri = formulaId !== undefined ? base + '/' + formulaId + '/doInputAt/' + tacticId : base + '/doInput/' + tacticId
+        var stepwise = { method: 'POST', url: uri + '?stepwise=true', data: input};
+        $http.post(uri + '?stepwise=false', input)
+          .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+          .catch(function(err) {
+            spinnerService.hide('tacticExecutionSpinner');
+            $rootScope.$broadcast("proof.message", err.data);
+          });
+      }
     }
 
     $scope.doTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {

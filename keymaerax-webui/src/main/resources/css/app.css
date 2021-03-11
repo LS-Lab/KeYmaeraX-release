@@ -568,13 +568,22 @@ del {
   font-weight: bold;
   font-size: larger;
 }
+.text-muted .k4-mod-close {
+  color: revert;
+}
 
-/* Everything inside a box/diamond */
+/* Everything inside a box/diamond, except when muted */
 .k4-mod-open ~ span:not(.k4-mod-close) {
   color: green;
 }
+.text-muted .k4-mod-open ~ span:not(.k4-mod-close) {
+  color: revert;
+}
 .k4-mod-close ~ span:not(.k4-mod-open) {
   color: var(--lsmain);
+}
+.text-muted .k4-mod-close ~ span:not(.k4-mod-open) {
+  color: revert;
 }
 /* Unless a parent is highlighted */
 .k4-has-step.k4-prove-hover span {
