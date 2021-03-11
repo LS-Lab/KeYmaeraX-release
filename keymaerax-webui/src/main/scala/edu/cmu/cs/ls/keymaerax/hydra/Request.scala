@@ -1397,50 +1397,14 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
           case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
           case Some(node) if node.goal.isEmpty => return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
           case Some(node) if node.goal.isDefined =>
-            def printName(name: String, index: Option[Int]) = name +
-              (index match { case Some(i) => "_" + i case None => "" })
-
-            def defsStringsOf(defs: Map[Name, Signature]): List[String] = {
-              defs.map({
-                case (Name(name, index), Signature(domain, sort, _, interpretation, _)) =>
-                  sort.toString + " " + printName(name, index) +
-                    (domain match {
-                      case Some(Unit) => ""
-                      case Some(d: Tuple) => d.toString
-                      case Some(d) => "(" + d.toString + ")"
-                      case None => ""
-                    }) +
-                    (interpretation match {
-                      case Some(i) => (if (sort == Real) " = " else " <-> ") + "(" + i.prettyString + ")"
-                      case None => ""
-                    }) + ";"
-              }).toList
-            }
-
             val goal = node.goal.get.toFormula
             val proofSession = session(parentProofId).asInstanceOf[ProofSession]
             val symbols = StaticSemantics.symbols(goal)
-            val (defs, vars) = proofSession.defs.decls.
-              filter({ case (Name(n, i), _) => symbols.exists(s => s.name == n && s.index == i) }).
-              partition({ case (_, Signature(domain, _, _, _, _)) => domain.isDefined })
-
-            val printedVars = vars.map(v => "Real " + printName(v._1.name, v._1.index) + ";").mkString("\n  ")
-            val printedDefs = defsStringsOf(defs).mkString("\n  ")
-            val fileContents =
-              s"""Lemma "$lemmaName"
-                 |
-                 |Definitions
-                 |  $printedDefs
-                 |End.
-                 |
-                 |ProgramVariables
-                 |  $printedVars
-                 |End.
-                 |
-                 |Problem
-                 |  ${goal.prettyString}
-                 |End.
-                 |End.""".stripMargin
+            val defs = proofSession.defs.decls.filter({
+              case (Name(n, i), _) => symbols.exists(s => s.name == n && s.index == i)
+            })
+            val lemma = ParsedArchiveEntry(lemmaName, "lemma", "", "", Declaration(defs), goal, Nil, Nil, Map.empty)
+            val fileContents = new KeYmaeraXArchivePrinter()(lemma)
 
             db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
         }
