@@ -1050,7 +1050,8 @@ case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Op
           case _ => ne.prettyString
         }),
         "repl" -> JsString(re.map(_.prettyString).getOrElse("")),
-        "editable" -> JsBoolean(isEditable)
+        "editable" -> JsBoolean(isEditable),
+        "assumptionsCart" -> JsBoolean(n.name.startsWith("A_"))
       )
     )
   }

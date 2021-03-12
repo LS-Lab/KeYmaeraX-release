@@ -1871,7 +1871,9 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         /** Translates the list of parsed argument names `args` into a function argument (Pair). */
         def asPairs(args: Option[List[(Name, Sort)]]): Term = args.map({
           case Nil => Nothing
-          case (n, _) :: Nil => Variable(n.name, n.index)
+          case (Name(n, i), _) :: Nil =>
+            if (n == Nothing.name) Nothing
+            else Variable(n, i)
           case (n, _) :: ns => Pair(Variable(n.name, n.index), asPairs(Some(ns)))
         }).getOrElse(Nothing)
         /** Replaces `.` in expression `repl` with the corresponding argument name from `args`. */

@@ -8,29 +8,47 @@
                                     </span>
     </a>
     </li>
-    <li class="divider" ng-if="definitions.length > 0"></li>
+    <li class="divider"></li>
+    <li><small>&nbsp;Special functions</small></li>
     <li ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all special functions<code class="pull-right">expandAll</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all<code class="pull-right">expandAll</code></a>
     </li>
-    <li class="divider" ng-if="definitions.length > 0"></li>
+    <li class="divider"></li>
+    <li><small>&nbsp;Definitions</small></li>
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all definitions<code class="pull-right">expandAllDefs</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
     </li>
-    <li ng-repeat="d in definitions" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a ng-if="d.definition.editable">
-                                        <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
-                                            {{d.definition.what}}
-                                        </span>
+    <li ng-repeat="d in definitions | filter: {definition: {editable:false,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a ng-class="{'disabled': agenda.items().length <= 0 }"
+           ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+            <span>{{d.definition.what}}</span> &map; <span>{{d.definition.repl}}</span>
+            <code class="pull-right">expand "{{d.symbol}}"</code>
+        </a>
+    </li>
+    <li class="divider"></li>
+    <li><small>&nbsp;Proof Parameters</small></li>
+    <li ng-repeat="d in definitions | filter: {definition: {editable:true,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a>
+            <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
+                {{d.definition.what}}
+            </span>
             &map;
             <input type="text" ng-model="d.definition.repl"
                    ng-click="$event.stopPropagation()"
                    ng-blur="setDefinition(d.definition.what, d.definition.repl)">
         </a>
-        <a ng-if="!d.definition.editable"
-           ng-class="{'disabled': agenda.items().length <= 0 }"
-           ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
-            <span>{{d.definition.what}}</span> &map; <span>{{d.definition.repl}}</span>
-            <code class="pull-right">expand "{{d.symbol}}"</code>
+    </li>
+    <li class="divider"></li>
+    <li><small>&nbsp;Unmodeled Constant Assumptions</small></li>
+    <li ng-repeat="d in definitions | filter: {definition: {assumptionsCart:true}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a>
+            <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
+                <i class="fa fa-shopping-cart"></i><sub>{{d.symbol}}</sub>
+            </span>
+            &map;
+            <input type="text" ng-model="d.definition.repl"
+                   ng-click="$event.stopPropagation()"
+                   ng-blur="setDefinition(d.definition.what, d.definition.repl)">
         </a>
     </li>
 </ul>
