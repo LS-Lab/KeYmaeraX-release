@@ -1868,23 +1868,42 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         val applicable: Map[NamedSymbol, Signature] = symbols.
           filter({ case _: Function => true case _: ProgramConst => true case _: SystemConst => true case _ => false }).
           flatMap(s => proofSession.defs.find(s.name, s.index).map(s -> _)).toMap
-        // name, name expression (what), optional repl, optional plaintext definition from the model file
-        def dotted(d: Option[Sort]): Term = d.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
+        /** Translates the list of parsed argument names `args` into a function argument (Pair). */
+        def asPairs(args: Option[List[(Name, Sort)]]): Term = args.map({
+          case Nil => Nothing
+          case (n, _) :: Nil => Variable(n.name, n.index)
+          case (n, _) :: ns => Pair(Variable(n.name, n.index), asPairs(Some(ns)))
+        }).getOrElse(Nothing)
+        /** Replaces `.` in expression `repl` with the corresponding argument name from `args`. */
+        def withArgs(repl: Option[Expression], args: Option[List[(Name, Sort)]]): Option[Expression] = args match {
+          case None => repl
+          case Some(a) =>
+            //@note can be optimized to just a single traversal if we are sure that . and ._0 do not co-occur and ._i is
+            //      a contiguous range
+            def argsMap(dots: List[NamedSymbol], i: Int): Map[NamedSymbol, Name] = dots match {
+              case Nil => Map.empty
+              case dot :: Nil => Map(dot -> a(i)._1)
+              case dot :: dots => Map(dot -> a(i)._1) ++ argsMap(dots, i+1)
+            }
+            val dots = argsMap(repl.map(StaticSemantics.symbols).getOrElse(Set.empty).
+              filter({ case _: DotTerm => true case _ => false }).toList.
+              sortBy({ case DotTerm(_, None) => -1 case DotTerm(_, Some(i)) => i }), 0)
+            repl.flatMap(ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+                case s: DotTerm =>
+                  val n = dots(s)
+                  Right(Variable(n.name, n.index))
+                case _ => Left(None)
+              }
+            }, _))
+        }
         val expansions: List[(NamedSymbol, Expression, Option[Expression])] = applicable.toList.map({
-          // functions, predicates, and programs with definition
-          case (s: Function, Signature(domain, sort, _, repl, _)) if repl.isDefined => sort match {
-            case Real => (s, FuncOf(s, dotted(domain)), repl)
-            case Bool => (s, PredOf(s, dotted(domain)), repl)
+          case (s: Function, Signature(_, sort, args, repl, _)) => sort match {
+            case Real => (s, FuncOf(s, asPairs(args)), withArgs(repl, args))
+            case Bool => (s, PredOf(s, asPairs(args)), withArgs(repl, args))
           }
-          case (s: ProgramConst, Signature(_, _, _, repl, _)) if repl.isDefined => (s, s, repl)
-          case (s: SystemConst, Signature(_, _, _, repl, _)) if repl.isDefined => (s, s, repl)
-          // functions, predicates, and programs without definition
-          case (s: Function, Signature(domain, sort, _, None, _)) => sort match {
-            case Real => (s, FuncOf(s, dotted(domain)), None)
-            case Bool => (s, PredOf(s, dotted(domain)), None)
-          }
-          case (s: ProgramConst, Signature(_, _, _, None, _)) => (s, s, None)
-          case (s: SystemConst, Signature(_, _, _, None, _)) => (s, s, None)
+          case (s: ProgramConst, Signature(_, _, _, repl, _)) => (s, s, repl)
+          case (s: SystemConst, Signature(_, _, _, repl, _)) => (s, s, repl)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil

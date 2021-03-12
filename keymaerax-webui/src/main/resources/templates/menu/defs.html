@@ -21,7 +21,7 @@
                                         <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
                                             {{d.definition.what}}
                                         </span>
-            ~>
+            &map;
             <input type="text" ng-model="d.definition.repl"
                    ng-click="$event.stopPropagation()"
                    ng-blur="setDefinition(d.definition.what, d.definition.repl)">
@@ -29,7 +29,7 @@
         <a ng-if="!d.definition.editable"
            ng-class="{'disabled': agenda.items().length <= 0 }"
            ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
-            <span>{{d.definition.what}}</span> ~> <span>{{d.definition.repl}}</span>
+            <span>{{d.definition.what}}</span> &map; <span>{{d.definition.repl}}</span>
             <code class="pull-right">expand "{{d.symbol}}"</code>
         </a>
     </li>

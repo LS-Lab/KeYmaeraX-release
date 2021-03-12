@@ -1037,16 +1037,19 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
 }
 
 case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression])]) extends Response {
-  /** Transforms name `n`, its expression `ne`, its replacement `re`, and the plaintext signature from the model. */
+  /** Transforms name `n`, its expression `ne`, and its replacement `re`. */
   private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression]): JsValue = {
     JsObject(
-      "symbol" -> JsString(n.prettyString),
+      "symbol" -> JsString(n match {
+        case SystemConst(n, _) => n
+        case _ => n.prettyString
+      }),
       "definition" -> JsObject(
-        "what" -> JsString(ne.prettyString),
-        "repl" -> JsString(
-            //@todo replace dots with arguments from ne (input signature no longer available from simplified parser, is always None)
-            re.map(_.prettyString).getOrElse("")
-        ),
+        "what" -> JsString(ne match {
+          case SystemConst(n, _) => n
+          case _ => ne.prettyString
+        }),
+        "repl" -> JsString(re.map(_.prettyString).getOrElse("")),
         "editable" -> JsBoolean(re.isEmpty)
       )
     )
