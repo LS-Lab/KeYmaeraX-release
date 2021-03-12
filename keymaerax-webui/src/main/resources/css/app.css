@@ -394,6 +394,7 @@ del {
 }
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
+.k4-system-const { font-style: italic; }
 
 .k4-select-hover {
   background-color: var(--lsgreen);
