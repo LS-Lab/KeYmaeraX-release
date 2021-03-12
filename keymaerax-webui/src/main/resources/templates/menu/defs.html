@@ -13,6 +13,14 @@
     <li ng-class="{'disabled': agenda.items().length <= 0 }">
         <a href ng-click="doTactic(undefined, 'expandAll')">Expand all<code class="pull-right">expandAll</code></a>
     </li>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="abs" code-name="absExp"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="min/max" code-name="minmax"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
     <li class="divider"></li>
     <li><small>&nbsp;Definitions</small></li>
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
