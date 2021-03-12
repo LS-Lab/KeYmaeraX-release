@@ -1897,13 +1897,13 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
               }
             }, _))
         }
-        val expansions: List[(NamedSymbol, Expression, Option[Expression])] = applicable.toList.map({
-          case (s: Function, Signature(_, sort, args, repl, _)) => sort match {
-            case Real => (s, FuncOf(s, asPairs(args)), withArgs(repl, args))
-            case Bool => (s, PredOf(s, asPairs(args)), withArgs(repl, args))
+        val expansions: List[(NamedSymbol, Expression, Option[Expression], Boolean)] = applicable.toList.map({
+          case (s: Function, Signature(_, sort, args, repl, loc)) => sort match {
+            case Real => (s, FuncOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
+            case Bool => (s, PredOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
           }
-          case (s: ProgramConst, Signature(_, _, _, repl, _)) => (s, s, repl)
-          case (s: SystemConst, Signature(_, _, _, repl, _)) => (s, s, repl)
+          case (s: ProgramConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
+          case (s: SystemConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
@@ -1931,9 +1931,20 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                 case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
                 case c: SystemConst => Function(c.name, c.index, Unit, Trafo)
               }
-              session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-                (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
-              BooleanResponse(flag = true) :: Nil
+              val name = Name(fnwhat.name, fnwhat.index)
+              proofSession.defs.decls.get(name) match {
+                case None =>
+                  session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
+                  BooleanResponse(flag = true) :: Nil
+                case Some(Signature(_, _, args, None, _)) =>
+                  session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, args, Some(erepl), UnknownLocation))))
+                  BooleanResponse(flag = true) :: Nil
+                case Some(Signature(_, _, _, Some(i), _)) =>
+                  new ErrorResponse("Cannot change " + fnwhat.prettyString + ", it is already defined as " + i.prettyString) :: Nil
+              }
+
             } else BooleanResponse(flag = false, Some("Expected a replacement of sort " + ewhat.sort + ", but got " + erepl.sort)) :: Nil
         }
     }
@@ -2930,9 +2941,13 @@ object RequestHelper {
       })
       case _ => false
     })
-    val undefined = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
-    val newDefs: Map[Name, Signature] = undefined.map({
-      case Function(name, index, domain, sort, _) => Name(name, index) -> Signature(Some(domain), sort, None, None, UnknownLocation)
+    val undefinedSymbols = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
+    val nodeFml = node.children.flatMap(_.localProvable.subgoals.map(_.toFormula)).reduceRightOption(And).getOrElse(True)
+    val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
+
+    val newDefs: Map[Name, Signature] = undefinedSymbols.map({
+      case fn@Function(name, index, domain, sort, _) => Name(name, index) -> Signature(Some(domain), sort,
+        collectedArgs.decls.get(Name(fn.name, fn.index)).flatMap(_.arguments), None, UnknownLocation)
       case ProgramConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
       case SystemConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
       case u => Name(u.name, u.index) -> Signature(None, u.sort, None, None, UnknownLocation) // cuts may introduce variables

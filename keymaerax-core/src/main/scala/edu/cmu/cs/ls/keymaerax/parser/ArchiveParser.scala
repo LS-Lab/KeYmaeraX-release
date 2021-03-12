@@ -1,9 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, PredOf, Program, ProgramConst, Real, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -361,10 +360,40 @@ object ArchiveParser extends ArchiveParser {
   }
 
   /** Extracts declarations per static semantics of the expression `parsedContent`. */
-  private[parser] def declarationsOf(parsedContent: Expression): Declaration = {
+  def declarationsOf(parsedContent: Expression, filter: Option[Set[NamedSymbol]] = None): Declaration = {
+    //@todo robustify
+    def makeArgsList(args: Term): List[(Name, Sort)] = args match {
+      case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
+      case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
+    }
+
+    val collectedArgs = scala.collection.mutable.Map.empty[NamedSymbol, List[(Name, Sort)]]
+    def collect(fn: Function, args: Term): Unit = {
+      if (filter.isEmpty || filter.get.contains(fn)) {
+        if (!collectedArgs.contains(fn)) collectedArgs(fn) = makeArgsList(args)
+        else assert(collectedArgs(fn) == makeArgsList(args), "Expected consistent arguments to " + fn.prettyString +
+          " everywhere, but found " + collectedArgs(fn).mkString(",") + " vs. " + makeArgsList(args).mkString(","))
+      }
+    }
+
+    ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case FuncOf(fn, args) =>
+          collect(fn, args)
+          Left(None)
+        case _ => Left(None)
+      }
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case PredOf(fn, args) =>
+          collect(fn, args)
+          Left(None)
+        case _ => Left(None)
+      }
+    }, parsedContent)
+
     val symbols = StaticSemantics.symbols(parsedContent)
     val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-      Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, None, None, UnknownLocation)
+      Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, collectedArgs.get(fn), None, UnknownLocation)
     ).toMap
     val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v =>
       Name(v.name, v.index) -> Signature(None, v.sort, None, None, UnknownLocation)

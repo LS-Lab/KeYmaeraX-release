@@ -1036,9 +1036,9 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def getJson: JsValue = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
-case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression])]) extends Response {
+case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression], Boolean)]) extends Response {
   /** Transforms name `n`, its expression `ne`, and its replacement `re`. */
-  private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression]): JsValue = {
+  private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression], isEditable: Boolean): JsValue = {
     JsObject(
       "symbol" -> JsString(n match {
         case SystemConst(n, _) => n
@@ -1050,12 +1050,12 @@ case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Op
           case _ => ne.prettyString
         }),
         "repl" -> JsString(re.map(_.prettyString).getOrElse("")),
-        "editable" -> JsBoolean(re.isEmpty)
+        "editable" -> JsBoolean(isEditable)
       )
     )
   }
 
-  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3)):_*)
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3, d._4)):_*)
 }
 
 class PruneBelowResponse(item: AgendaItem) extends Response {
