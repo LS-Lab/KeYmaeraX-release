@@ -756,6 +756,52 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       }
     }
 
+    $scope.onMultiNodeTactic = function(tactic, nodes) {
+      var nodeIds = nodes ? nodes : sequentProofData.agenda.itemIds();
+      //@todo robustness like runningTask / refactor runningTask to also use future when polling
+      spinnerService.show('tacticExecutionSpinner');
+      var tacticRunner = $q.defer();
+      nodeIds.reduce(function(result, nodeId) {
+        return result.then(function(response) {
+          if (tactic.id) {
+            var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
+            var uri = tactic.formulaId !== undefined ?  base + '/' + tactic.formulaId + '/doAt/' + tactic.id : base + '/do/' + tactic.id;
+            var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
+            return $http.get(uri + '?stepwise=false')
+          } else if (tactic.text) {
+            var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
+            return $http.post(uri + '?stepwise='+tactic.stepwise, tactic.text)
+          }
+        }).then(function(response) {
+          var taskId = response.data.taskId;
+          var taskDone = $q.defer();
+          function poll() {
+            $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/' + taskId + '/status').
+              then(function(response) {
+                if (response.data.status === 'done') taskDone.resolve(taskId);
+                else $timeout(poll, 1000);
+              }).catch(function(error) {
+                taskDone.reject(error);
+              });
+          }
+          poll();
+          return taskDone.promise;
+        }).then(function(taskId) {
+          return $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/' + taskId + '/result')
+        }).then(function(response) {
+          var taskResult = response.data;
+          $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+          sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
+          sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+        })
+      }, tacticRunner.promise).then(function(response) {
+        // done on all nodes
+      }).finally(function() {
+        spinnerService.hide('tacticExecutionSpinner');
+      });
+      tacticRunner.resolve();
+    }
+
     $scope.openTacticPosInputDialog = function(tacticName, positionLocator) {
       var nodeId = sequentProofData.agenda.selectedId();
       var tactics = derivationInfos.byName($scope.userId, $scope.proofId, nodeId, tacticName)

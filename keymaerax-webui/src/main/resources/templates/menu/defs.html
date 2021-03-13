@@ -26,6 +26,9 @@
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
         <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
     </li>
+    <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a href ng-click="onMultiNodeTactic({id:'expandAllDefs'}, undefined)">...everywhere<code class="pull-right">doall(expandAllDefs)</code></a>
+    </li>
     <li ng-repeat="d in definitions | filter: {definition: {editable:false,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
         <a ng-class="{'disabled': agenda.items().length <= 0 }"
            ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
