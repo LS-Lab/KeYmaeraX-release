@@ -1,4 +1,4 @@
-<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+<a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown" role="button"
    aria-haspopup="true" aria-expanded="false">Tools
     <i class="fa fa-spinner fa-spin fa-fw"
        ng-if="backend.busypoller.data.response.busy"></i>

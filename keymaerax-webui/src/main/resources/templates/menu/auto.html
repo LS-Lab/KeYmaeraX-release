@@ -1,5 +1,5 @@
 <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown">
         <span class="fa fa-play">
             <span class="k4-btn-optional-text"
                   ng-click="agenda.items().length <= 0 || doTactic(undefined, 'auto');$event.stopPropagation();"
@@ -47,7 +47,7 @@
     </a>
 </li>
 <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown">
         <span ng-click="$event.stopPropagation();doTactic(undefined, 'fullSimplify')"
               data-intro="<center>Simplify formulas</center>" data-position="top"
               uib-popover-template="fetchRuleHelp('fullSimplify')"
@@ -100,7 +100,7 @@
     </ul>
 </li>
 <li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0, 'active': getFormulaMode()=='edit' }">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown">
         <span ng-click="agenda.items().length <= 0 || setFormulaMode('edit');$event.stopPropagation()"
               ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
               data-intro="<center>Switch edit/prove</center>" data-position="top"
@@ -140,7 +140,7 @@
     </ul>
 </li>
 <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown">
         <span ng-click="$event.stopPropagation();openProofstepBrowser('axioms')"
               data-intro="<center>Browse all rules and lemmas</center>" data-position="top">
             <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span>
