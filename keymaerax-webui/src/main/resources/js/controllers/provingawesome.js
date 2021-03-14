@@ -867,7 +867,12 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.executeTacticDiff = function(stepwise) {
       if ($scope.tactic.tacticDel === '' || $scope.tactic.tacticDel === 'nil') {
-        $scope.onTacticScript($scope.tactic.tacticDiff, stepwise);
+        //@todo forward all to onMultiNodeTactic once it is robustified
+        var doallTactic = $scope.tactic.tacticDiff.replace(/doall\((.*)\)/g, function(match, inner, offset, string) {
+          return inner;
+        });
+        if (doallTactic !== $scope.tactic.tacticDiff) $scope.onMultiNodeTactic({text: doallTactic, stepwise:stepwise}, undefined);
+        else $scope.onTacticScript($scope.tactic.tacticDiff, stepwise);
       } else {
         $scope.rerunTactic();
       }
