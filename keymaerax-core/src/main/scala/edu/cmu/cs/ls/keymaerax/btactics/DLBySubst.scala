@@ -241,6 +241,13 @@ private object DLBySubst {
         if (universal) Ax.assignbeq.provable(URename("x_".asVariable, x, semantic=true))
         else Ax.assignbequalityexists.provable(URename("x_".asVariable, x, semantic=true))
 
+      if (StaticSemantics.freeVars(p).isInfinite) {
+        val unexpandedSymbols = StaticSemantics.symbols(p).
+          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
+          map(_.prettyString).mkString(",")
+        throw new UnexpandedDefinitionsFailure("Assignment not possible because postcondition " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
+      }
+
       //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
       ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)

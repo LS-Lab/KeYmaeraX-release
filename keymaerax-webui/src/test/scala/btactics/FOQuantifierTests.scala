@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, UnexpandedDefinitionsFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -477,6 +477,11 @@ class FOQuantifierTests extends TacticTestBase {
   it should "rename nondeterministic assignments" in withTactics {
     val result = proveBy("[a:=*;][b:=*;]a>0 ==> \\forall b [a:=*;]a>0".asSequent, allSkolemize(1))
     result.subgoals.loneElement shouldBe "[a:=*;][b:=*;]a>0 ==> [a:=*;]a>0".asSequent
+  }
+
+  it should "give advice on program constant formula" in withTactics {
+    the [UnexpandedDefinitionsFailure] thrownBy proveBy("x=0 ==> \\forall x (x=2 -> [ode;]x>=0)".asSequent, allSkolemize(1)) should
+      have message "Skolemization not possible because formula x=2->[ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
   }
 
   "exists skolemize" should "skolemize simple" in withTactics {

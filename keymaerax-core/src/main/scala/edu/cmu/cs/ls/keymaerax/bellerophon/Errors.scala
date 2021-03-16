@@ -120,6 +120,8 @@ class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowa
 /** Signals that an annotated invariant is not provable and needs fixing. */
 class UnprovableAnnotatedInvariant(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
 
+class UnexpandedDefinitionsFailure(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
+
 /** Signaling that a tactic was not applicable or did not work at the current goal.
   * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */
 abstract class BelleTacticFailure(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)

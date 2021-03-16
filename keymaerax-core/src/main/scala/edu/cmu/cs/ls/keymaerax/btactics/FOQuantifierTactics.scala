@@ -177,8 +177,8 @@ protected object FOQuantifierTactics {
     //@Tactic in [[SequentCalculus]]
     if (!pos.isSucc)
       throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
-    val xs = sequent.sub(pos) match {
-      case Some(Forall(vars, _)) => vars
+    val (xs, p) = sequent.sub(pos) match {
+      case Some(Forall(vars, p)) => (vars, p)
       case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
@@ -189,6 +189,12 @@ protected object FOQuantifierTactics {
     
     if (noRename) ProofRuleTactics.skolemizeR(pos)
     else {
+      if (StaticSemantics.freeVars(p).isInfinite) {
+        val unexpandedSymbols = StaticSemantics.symbols(p).
+          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
+          map(_.prettyString).mkString(",")
+        throw new UnexpandedDefinitionsFailure("Skolemization not possible because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
+      }
       //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
       val renaming =
         if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)

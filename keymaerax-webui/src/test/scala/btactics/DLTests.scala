@@ -282,6 +282,11 @@ class DLTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x_0=1, [x_0:=2;]x_0=2, x=3 ==> x>0, [x_0:=5;]x_0>6, x_0=7".asSequent
   }
 
+  it should "give advice on program constant postcondition" in withTactics {
+    the [BelleUserCorrectableException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
+      DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+  }
+
   "generalize" should "introduce intermediate condition" in withTactics {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
