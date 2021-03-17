@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import org.slf4j.LoggerFactory
 
 /**
@@ -106,10 +107,6 @@ object ODEInvariance {
   private lazy val fastSOS = proveBy("g() >= 0 & (P() <-> g() <= 0) -> (P()&f()=0 <-> g()+f()*f()<=0)".asFormula,
     prop & OnAll(QE)
   )
-
-  private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
-  private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
-  private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
 
   /** Given a polynomial p, and an ODE system, generates the formula
     * p*>0

@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.immutable._
 
@@ -428,9 +429,9 @@ private object EqualityTactics {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     )
@@ -442,9 +443,9 @@ private object EqualityTactics {
   val expandAllAt: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val tactics =
       Idioms.mapSubpositions(pos, seq, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     tactics.reduceOption(_ & _).getOrElse(skip)

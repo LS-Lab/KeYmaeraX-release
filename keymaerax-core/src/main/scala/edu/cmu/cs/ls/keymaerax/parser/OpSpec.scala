@@ -160,9 +160,9 @@ object OpSpec {
 
   /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
   private val interpretedSymbols: List[Function] = {
-    Function("abs",None,Real,Real,interpreted=true) ::
-    Function("min",None,Tuple(Real,Real),Real,interpreted=true) ::
-    Function("max",None,Tuple(Real,Real),Real,interpreted=true) :: Nil
+    InterpretedSymbols.absF ::
+    InterpretedSymbols.minF ::
+    InterpretedSymbols.maxF :: Nil
   } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
   private val interpretation: Map[(String, Option[Int]),Function] = interpretedSymbols.map(f => ((f.name, f.index) -> f)).toMap
 
