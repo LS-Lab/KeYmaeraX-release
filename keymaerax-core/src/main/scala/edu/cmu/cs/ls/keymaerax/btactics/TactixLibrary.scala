@@ -107,12 +107,15 @@ object TactixLibrary extends HilbertCalculus
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
-  val step : DependentPositionTactic = anon ((pos: Position) =>
+  val step : DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
-    (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
-     else HilbertCalculus.stepAt(pos))
+    TryCatch(
       //@todo optimizable: move assignb tactic into AxIndex once supported
-    |! assignb(pos))
+      if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) else HilbertCalculus.stepAt(pos),
+      classOf[Throwable], (ex: Throwable) => seq.sub(pos) match {
+        case Some(Box(_: Assign, _)) => assignb(pos)
+        case _ => throw ex
+      } ))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
