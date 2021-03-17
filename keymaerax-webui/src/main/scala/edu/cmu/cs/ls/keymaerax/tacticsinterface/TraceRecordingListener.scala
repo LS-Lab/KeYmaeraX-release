@@ -74,12 +74,9 @@ class TraceRecordingListener(db: DBAbstraction,
   var isDead: Boolean = false
   val nodesWritten: ListBuffer[TraceNode] = ListBuffer()
 
-  /* Debug info: Records how deep inside the tree of begin-end pairs we are */
-  var depth: Int = 0
   def begin(v: BelleValue, expr: BelleExpr): Unit = {
     synchronized {
-      depth = depth + 1
-      if(isDead) return
+      if (isDead) return
       val parent = node
       node = new TraceNode(isFirstNode = parent == null)
       node.parent = parent
@@ -112,9 +109,9 @@ class TraceRecordingListener(db: DBAbstraction,
 
   def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, Throwable]): Unit = {
     synchronized {
-      depth = depth - 1
-      if(isDead) return
+      if (isDead) return
       val current = node
+      assert(node.executable.eq(expr), "Popping unexpected expression " + expr + ", end of trace is " + node.executable)
       node = node.parent
       youngestSibling = current.id
       current.status =
@@ -122,26 +119,6 @@ class TraceRecordingListener(db: DBAbstraction,
           case Left(_) => ExecutionStepStatus.Finished
           case Right(_) => ExecutionStepStatus.Error
         }
-      if (node != null && !recursive) return
-//      db.updateExecutionStep(current.stepId.get, current.asPOJO)
-//      if (node == null) {
-//        result match {
-//          // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-//          case Left(BelleProvable(p, _)) =>
-//            current.output = globalProvable(p, branch)
-//            current.local = p
-//          case _ =>
-//        }
-//        if (current.output != null) {
-//          db.updateExecutionStep(current.stepId.get, current.asPOJO)
-//          if (current.output.isProved) {
-//            val p = db.getProofInfo(proofId)
-//            val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount,
-//              closed = true, p.provableId, p.temporary)
-//            db.updateProofInfo(provedProof)
-//          }
-//        }
-//      }
       if (node == null) {
         result match {
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic

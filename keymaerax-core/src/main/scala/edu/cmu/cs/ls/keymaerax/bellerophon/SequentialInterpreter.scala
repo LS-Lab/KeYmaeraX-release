@@ -8,12 +8,9 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ForwardTactic
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -57,13 +54,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       listeners.foreach(_.end(v, expr, Left(result)))
       result
     } catch {
-      case err: BelleThrowable =>
-        listeners.foreach(_.end(v, expr, Right(err)))
-        throw err
-      case e: StackOverflowError =>
-        // unable to recover, listeners are likely corrupted
-        logger.error("Fatal error: stack overflow, please restart KeYmaera X with increased stack size")
-        throw new ProverSetupException("Fatal error: stack overflow, please restart KeYmaera X with increased stack size", e)
       case e: Throwable =>
         listeners.foreach(_.end(v, expr, Right(e)))
         throw e
