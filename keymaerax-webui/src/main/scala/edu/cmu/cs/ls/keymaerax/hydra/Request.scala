@@ -2943,7 +2943,7 @@ object RequestHelper {
       })
       case _ => false
     })
-    val undefinedSymbols = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
+    val undefinedSymbols = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns -- InterpretedSymbols.symbols
     val nodeFml = node.children.flatMap(_.localProvable.subgoals.map(_.toFormula)).reduceRightOption(And).getOrElse(True)
     val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
 
