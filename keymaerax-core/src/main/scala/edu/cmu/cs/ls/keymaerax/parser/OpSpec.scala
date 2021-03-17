@@ -158,17 +158,9 @@ object OpSpec {
   import UnaryOpSpec.lUnaryOpSpecT
   import BinaryOpSpec.lBinaryOpSpec
 
-  /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
-  private val interpretedSymbols: List[Function] = {
-    InterpretedSymbols.absF ::
-    InterpretedSymbols.minF ::
-    InterpretedSymbols.maxF :: Nil
-  } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
-  private val interpretation: Map[(String, Option[Int]),Function] = interpretedSymbols.map(f => ((f.name, f.index) -> f)).toMap
-
   /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
   private[parser] def func(name: String, index: Option[Int] = None, domain: Sort, sort: Sort): Function =
-  interpretation.get((name, index)) match {
+  InterpretedSymbols.byName.get((name, index)) match {
     case None => Function(name,index,domain,sort)
     case Some(r) =>
       assert(r.interpreted, "interpreted function")
@@ -177,7 +169,7 @@ object OpSpec {
   }
 
   /** The sort of an interpreted function or None if uninterpreted */
-  private[parser] def interpretedFuncSort(name: String): Option[Sort] = interpretation.get((name, None)) match {
+  private[parser] def interpretedFuncSort(name: String): Option[Sort] = InterpretedSymbols.byName.get((name, None)) match {
     case None => None
     case Some(f) => Some(f.sort)
   }
