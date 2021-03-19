@@ -54,15 +54,18 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       listeners.foreach(_.end(v, expr, Left(result)))
       result
     } catch {
-      case e: Throwable =>
+      case e: Throwable => throw try {
         listeners.foreach(_.end(v, expr, Right(e)))
-        throw e
+        e
+      } catch {
+        case ex: Throwable => ex.initCause(e)
+      }
     }
   }
 
   override def kill(): Unit = {
     isDead = true
-    listeners.foreach(_.kill())
+    listeners.synchronized(listeners.foreach(_.kill()))
   }
 
   /** Adjusts the number of labels to match the number of subgoals. */
@@ -240,7 +243,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
       case Some(tactic) =>
-        val c = Cancellable(apply(tactic, v))
+        val c = Cancellable(listeners.synchronized(apply(tactic, v)))
         try {
           Await.result(c.future, Duration(timeout, MILLISECONDS))
         } catch {
@@ -251,7 +254,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           }
           case ex: TimeoutException =>
             c.cancel()
-            throw new BelleNoProgress("Alternative timed out", ex)
+            //@note otherwise race condition between tactic exceptions (caused by cancel) and BelleNoProgress in notifying listeners
+            listeners.synchronized(throw new BelleNoProgress("Alternative timed out", ex))
         }
       case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
     }
