@@ -632,7 +632,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
     case _ => false
   }
 }
-class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
+class AppliedDependentPositionTacticWithAppliedInput(override val pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
     if (pt.inputs.nonEmpty) {
       val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne(_, pt.inputs.size <= 1))
@@ -666,7 +666,6 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case None => pt.factory(pos).computeExpr(v)
       }
       case l@Find(_, _, start, _) =>
-        require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })

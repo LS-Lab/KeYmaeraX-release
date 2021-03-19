@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,7 +24,7 @@ sealed trait PositionLocator {
 }
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
-case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
+case class Fixed private[keymaerax] (pos: Position, shape: Option[Expression] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString + ((shape, exact) match {
     case (Some(fml), true) => "==\"" + fml.prettyString + "\""
     case (Some(fml), false) => "~=\"" + fml.prettyString + "\""
@@ -32,24 +33,25 @@ case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = Non
   override def toPosition(p: ProvableSig): Option[Position] = Some(pos)
 }
 object Fixed {
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula]): Fixed = new Fixed(Position(seqPos, inExpr), shape)
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Expression], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Expression]): Fixed = new Fixed(Position(seqPos, inExpr), shape)
   def apply(seqPos: Int, inExpr: List[Int]): Fixed = new Fixed(Position(seqPos, inExpr))
   def apply(seqPos: Int): Fixed = new Fixed(Position(seqPos, Nil))
 }
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
+  private def sub(p: Position): String = (if (p.isTopLevel) "" else p.inExpr.prettyString)
   override def prettyString: String = (start, shape, exact) match {
-    case (_: AntePosition, None, _) => "'L"
-    case (_: AntePosition, Some(s), true) => "'L==\"" + s.prettyString + "\""
-    case (_: AntePosition, Some(s), false) => "'L~=\"" + s.prettyString + "\""
-    case (_: SuccPosition, None, _) => "'R"
-    case (_: SuccPosition, Some(s), true) => "'R==\"" + s.prettyString + "\""
-    case (_: SuccPosition, Some(s), false) => "'R~=\"" + s.prettyString + "\""
-    case (_, None, _) => "'_"
-    case (_, Some(s), true) => "'_==\"" + s.prettyString + "\""
-    case (_, Some(s), false) => "'_~=\"" + s.prettyString + "\""
+    case (l: AntePosition, None, _) => "'L" + sub(l)
+    case (l: AntePosition, Some(s), true) => "'L" + sub(l) + "==\"" + s.prettyString + "\""
+    case (l: AntePosition, Some(s), false) => "'L" + sub(l) + "~=\"" + s.prettyString + "\""
+    case (r: SuccPosition, None, _) => "'R" + sub(r)
+    case (r: SuccPosition, Some(s), true) => "'R" + sub(r) + "==\"" + s.prettyString + "\""
+    case (r: SuccPosition, Some(s), false) => "'R" + sub(r) + "~=\"" + s.prettyString + "\""
+    case (p, None, _) => "'_" + sub(p)
+    case (p, Some(s), true) => "'_" + sub(p) + "==\"" + s.prettyString + "\""
+    case (p, Some(s), false) => "'_" + sub(p) + "~=\"" + s.prettyString + "\""
   }
 
   override def toPosition(p: ProvableSig): Option[Position] = findPosition(p, start)
@@ -79,9 +81,9 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
 
 object Find {
   /** 'L Find somewhere on the left meaning in the antecedent */
-  def FindL(goal: Int, shape: Option[Expression], exact: Boolean = true): Find = new Find(goal, shape, AntePosition(1), exact)
+  def FindL(goal: Int, shape: Option[Expression], sub: PosInExpr = HereP, exact: Boolean = true): Find = new Find(goal, shape, AntePosition.base0(0, sub), exact)
   /** 'R Find somewhere on the right meaning in the succedent */
-  def FindR(goal: Int, shape: Option[Expression], exact: Boolean = true): Find = new Find(goal, shape, SuccPosition(1), exact)
+  def FindR(goal: Int, shape: Option[Expression], sub: PosInExpr = HereP, exact: Boolean = true): Find = new Find(goal, shape, SuccPosition.base0(0, sub), exact)
 }
 
 /** 'Llast Locates the last position in the antecedent. */

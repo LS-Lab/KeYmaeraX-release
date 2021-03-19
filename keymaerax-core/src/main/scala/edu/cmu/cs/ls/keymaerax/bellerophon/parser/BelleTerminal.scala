@@ -127,10 +127,32 @@ private object LAST_ANTECEDENT {
   def regexp: Regex = """('Llast(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
-private object SEARCH_SUCCEDENT extends BelleTerminal("'R") with TACTIC_ARGUMENT
-private object SEARCH_ANTECEDENT extends BelleTerminal("'L") with TACTIC_ARGUMENT
-private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMENT {
-  override def regexp: Regex = "'\\_".r
+private case class SEARCH_SUCCEDENT(positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_SUCCEDENT.regexp
+  override val startPattern: Regex = SEARCH_SUCCEDENT.startPattern
+  override def toString: String = s"SEARCH_SUCCEDENT($positionString)"
+}
+private object SEARCH_SUCCEDENT {
+  def regexp: Regex = """('R(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
+private case class SEARCH_ANTECEDENT(positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_ANTECEDENT.regexp
+  override val startPattern: Regex = SEARCH_ANTECEDENT.startPattern
+  override def toString: String = s"SEARCH_ANTECEDENT($positionString)"
+}
+private object SEARCH_ANTECEDENT {
+  def regexp: Regex = """('L(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
+private case class SEARCH_EVERYWHERE(positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_EVERYWHERE.regexp
+  override val startPattern: Regex = SEARCH_EVERYWHERE.startPattern
+  override def toString: String = s"SEARCH_EVERYWHERE($positionString)"
+}
+private object SEARCH_EVERYWHERE {
+  def regexp: Regex = """('_(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object EXACT_MATCH extends BelleTerminal("==") with TACTIC_ARGUMENT
 private object UNIFIABLE_MATCH extends BelleTerminal("~=") with TACTIC_ARGUMENT

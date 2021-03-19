@@ -126,9 +126,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     ABSOLUTE_POSITION.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, ABSOLUTE_POSITION(pos), loc))),
     LAST_SUCCEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_SUCCEDENT(pos), loc))),
     LAST_ANTECEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_ANTECEDENT(pos), loc))),
-    SEARCH_SUCCEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_SUCCEDENT, loc))),
-    SEARCH_ANTECEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_ANTECEDENT, loc))),
-    SEARCH_EVERYWHERE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_EVERYWHERE, loc))),
+    SEARCH_SUCCEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_SUCCEDENT(pos), loc))),
+    SEARCH_ANTECEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_ANTECEDENT(pos), loc))),
+    SEARCH_EVERYWHERE.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_EVERYWHERE(pos), loc))),
     EXACT_MATCH.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EXACT_MATCH, loc))),
     UNIFIABLE_MATCH.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, UNIFIABLE_MATCH, loc))),
     // delimited expressions

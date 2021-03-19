@@ -78,7 +78,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
-    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation)
+    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation, None, exact=true)
     BelleParser("boxAnd(1.1)") shouldBe (round trip HilbertCalculus.boxAnd(pos))
   }
 
@@ -88,6 +88,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "parse a built-in argument with a searchy position locator" in {
     BelleParser("boxAnd('L=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula))))
+  }
+
+  it should "parse a built-in argument with a searchy sub-position locator" in {
+    BelleParser("boxAnd('L.1==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
   }
 
   it should "parse a built-in argument with a searchy unification position locator" in {
@@ -618,13 +622,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "elaborate variables to functions in tactic arguments" in {
-    val tactic = BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None,
-      Declaration(scala.collection.immutable.Map(
-        (Name("f", None), Signature(Some(Unit), Real, None, None, UnknownLocation)),
-        (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
-      )
-      ), expandAll=true)
-    tactic shouldBe ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+    val defs = Declaration(scala.collection.immutable.Map(
+      (Name("f", None), Signature(Some(Unit), Real, None, None, UnknownLocation)),
+      (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
+    ))
+    BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=true) shouldBe
+      ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+    BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=false) shouldBe
+      TactixLibrary.hideL('L, "f()=g()".asFormula)
   }
 
   it should "elaborate variables to functions per declarations" in {
