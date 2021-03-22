@@ -251,6 +251,18 @@ object Augmentors {
   }
 
   implicit class ExpressionAugmentor[E <: Expression](val e: E) {
+    def sub(pos: PosInExpr): Option[Expression] = e match {
+      case f: Formula => f.sub(pos)
+      case t: Term => t.sub(pos)
+      case h: Program => h.sub(pos)
+    }
+
+    def replaceAt(pos: PosInExpr, repl: Expression): Expression = e match {
+      case f: Formula => f.replaceAt(pos, repl)
+      case t: Term => t.replaceAt(pos, repl)
+      case h: Program => h.replaceAt(pos, repl)
+    }
+
     def replaceFree(what: Term, repl: Term): E = e match {
       case f: Formula => f.replaceFree(what, repl).asInstanceOf[E]
       case t: Term => t.replaceFree(what, repl).asInstanceOf[E]
