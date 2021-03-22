@@ -18,6 +18,11 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             isVisible: false
           }
 
+          //@todo does not get called
+          scope.aceLoaded = function(editor) {
+            editor.getSession().foldAll();
+          }
+
           var combinators = ['*', '|', ';', '<'];
           var tacticContent = elem.find('#tacticcontent');
           var textComplete = new Textcomplete(tacticContent, [
@@ -144,14 +149,6 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             }
           });
         },
-        template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff(false)"></div>' +
-                  '</div></div>' +
-                  '<div class=row><div class="col-md-12">' +
-                  '<k4-auto-hide-alert message="tacticError.text"' +
-                                      'details="tacticError.details"' +
-                                      'is-visible="tacticError.isVisible" timeout="-1">' +
-                  '</k4-auto-hide-alert>' +
-                  '</div></div>'
+        templateUrl: 'templates/tacticEditor.html'
     };
   }]);

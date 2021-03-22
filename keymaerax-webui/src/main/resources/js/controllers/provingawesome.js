@@ -834,17 +834,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
-    $scope.openTacticEditor = function() {
-      $uibModal.open({
-        templateUrl: 'templates/tacticEditor.html',
-        controller: 'TacticEditorCtrl',
-        size: 'lg',
-        resolve: {
-          parentScope: function() { return $scope; }
-        }
-      })
-    }
-
     $scope.rulehelp = {
       codeName: undefined,
       derivationInfo: undefined

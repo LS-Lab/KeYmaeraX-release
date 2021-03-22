@@ -628,6 +628,10 @@ del {
   word-wrap: break-word;
 }
 
+.k4-no-padding {
+  padding: 0;
+}
+
 .k4-modeleditor, .k4-modeleditor:focus {
   font-family:monospace;
   display: block;
