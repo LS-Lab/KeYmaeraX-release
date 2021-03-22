@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
 
+import scala.util.matching.Regex
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locate Positions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,13 +25,47 @@ sealed trait PositionLocator {
   def toPosition(p: ProvableSig): Option[Position]
 }
 
+object PositionLocator {
+  import edu.cmu.cs.ls.keymaerax.core._
+  /** #-placeholder expression and regex for matching left/right placeholder; forces parentheses by non-default associativity. */
+  def placeholder(e: Expression): (Expression, String, String) = e match {
+    case f: Formula =>
+      val h = PredOf(Function("h_", None, Unit, Bool, interpreted=false), Nothing)
+      (And(And(h, f), h), Regex.quote("(" + h.prettyString + "&"), Regex.quote(")&" + h.prettyString))
+    case t: Term =>
+      val h = FuncOf(Function("h_", None, Unit, Real, interpreted=false), Nothing)
+      (Plus(h, Plus(t, h)), Regex.quote(h.prettyString + "+("), Regex.quote("+" + h.prettyString + ")"))
+    case p: Program =>
+      val h = ProgramConst("h_")
+      (Compose(Compose(h, p), h), Regex.quote("{" + h.prettyString), Regex.quote("}" + h.prettyString))
+  }
+
+  def withMarkers(e: Expression, pos: PosInExpr): String = {
+    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+    if (pos == HereP) e.prettyString
+    else {
+      val (ph, left, right) = placeholder(e.sub(pos).getOrElse(throw new IllegalArgumentException("Sub-position " + pos.prettyString + " does not exist in " + e.prettyString)))
+      e.replaceAt(pos, ph).prettyString.
+        replaceAll(left, "#").
+        replaceAll(right, "#").
+        replaceAll("\\(#(.+)#\\)", "#$1#").
+        replaceAll("\\{#(.+)#}", "#$1#")
+    }
+  }
+
+  def withMarkers(s: String, sub: Expression, start: Int, end: Int): (String, Expression) = {
+    val (p, _, _) = placeholder(sub)
+    (s.patch(start, p.prettyString, end), p)
+  }
+}
+
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Expression] = None, exact: Boolean = true) extends PositionLocator {
-  override def prettyString: String = pos.prettyString + ((shape, exact) match {
-    case (Some(fml), true) => "==\"" + fml.prettyString + "\""
-    case (Some(fml), false) => "~=\"" + fml.prettyString + "\""
-    case (None, _) => ""
-  })
+  override def prettyString: String = (shape, exact) match {
+    case (Some(fml), true) => pos.topLevel.prettyString + "==\"" + PositionLocator.withMarkers(fml, pos.inExpr) + "\""
+    case (Some(fml), false) => pos.topLevel.prettyString + "~=\"" + PositionLocator.withMarkers(fml, pos.inExpr) + "\""
+    case (None, _) => pos.prettyString
+  }
   override def toPosition(p: ProvableSig): Option[Position] = Some(pos)
 }
 object Fixed {
@@ -41,17 +77,17 @@ object Fixed {
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
-  private def sub(p: Position): String = (if (p.isTopLevel) "" else p.inExpr.prettyString)
+  private def sub(p: Position): String = if (p.isTopLevel) "" else p.inExpr.prettyString
   override def prettyString: String = (start, shape, exact) match {
     case (l: AntePosition, None, _) => "'L" + sub(l)
-    case (l: AntePosition, Some(s), true) => "'L" + sub(l) + "==\"" + s.prettyString + "\""
-    case (l: AntePosition, Some(s), false) => "'L" + sub(l) + "~=\"" + s.prettyString + "\""
+    case (l: AntePosition, Some(s), true) => "'L==\"" + PositionLocator.withMarkers(s, l.inExpr) + "\""
+    case (l: AntePosition, Some(s), false) => "'L~=\"" + PositionLocator.withMarkers(s, l.inExpr)  + "\""
     case (r: SuccPosition, None, _) => "'R" + sub(r)
-    case (r: SuccPosition, Some(s), true) => "'R" + sub(r) + "==\"" + s.prettyString + "\""
-    case (r: SuccPosition, Some(s), false) => "'R" + sub(r) + "~=\"" + s.prettyString + "\""
+    case (r: SuccPosition, Some(s), true) => "'R==\"" + PositionLocator.withMarkers(s, r.inExpr) + "\""
+    case (r: SuccPosition, Some(s), false) => "'R~=\"" + PositionLocator.withMarkers(s, r.inExpr)  + "\""
     case (p, None, _) => "'_" + sub(p)
-    case (p, Some(s), true) => "'_" + sub(p) + "==\"" + s.prettyString + "\""
-    case (p, Some(s), false) => "'_" + sub(p) + "~=\"" + s.prettyString + "\""
+    case (p, Some(s), true) => "'_==\"" + PositionLocator.withMarkers(s, p.inExpr)  + "\""
+    case (p, Some(s), false) => "'_~=\"" + PositionLocator.withMarkers(s, p.inExpr)  + "\""
   }
 
   override def toPosition(p: ProvableSig): Option[Position] = findPosition(p, start)

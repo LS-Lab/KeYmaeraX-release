@@ -91,7 +91,27 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with a searchy sub-position locator" in {
-    BelleParser("boxAnd('L.1==\"[x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+    BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+    BellePrettyPrinter(BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")")) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
+  }
+
+  it should "parse a built-in argument with a searchy formula sub-position locator in new notation" in {
+    BelleParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+  }
+
+  it should "parse a built-in argument with a searchy term sub-position locator in new notation" in {
+    BelleParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2;](x>0+0&x>1)".asFormula), PosInExpr(1::0::1::Nil))))
+  }
+
+  it should "parse a built-in argument with a searchy program sub-position locator in new notation" in {
+    BelleParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil))))
+    BellePrettyPrinter(SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil)))) shouldBe "simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")"
+  }
+
+  it should "parse a built-in argument with a searchy term sub-position locator in new notation (term occurs thrice)" in {
+    BelleParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::1::1::Nil))))
   }
 
   it should "parse a built-in argument with a searchy unification position locator" in {
