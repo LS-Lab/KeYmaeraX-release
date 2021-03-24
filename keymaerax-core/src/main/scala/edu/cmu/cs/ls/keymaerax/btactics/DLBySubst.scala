@@ -627,13 +627,6 @@ private object DLBySubst {
             case _ => f //@note new: arbitrary term ghosts
           }
 
-          val subst = (_: Option[Subst]) => RenUSubst(
-            ("x_".asVariable, theGhost) ::
-              ("f()".asTerm, e) ::
-              ("p(.)".asFormula, theF) ::
-              Nil
-          )
-
           val execAssignment = assignEquality(pos) &
             //@note allR2L does not allow rewriting numbers
             (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
@@ -641,8 +634,30 @@ private object DLBySubst {
               else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
             } else skip)
 
-          useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
-            (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+          theGhost match {
+            case DifferentialSymbol(x) =>
+              val subst = (_: Option[Subst]) => RenUSubst(
+                ("f()".asTerm, e) ::
+                ("p(.)".asFormula, theF) ::
+                Nil)
+              val y = TacticHelper.freshNamedSymbol(x, f)
+              useAt(Ax.Dassignb, PosInExpr(1::Nil), subst)(pos) &
+                stutter("x_".asVariable)(pos) &
+                stutter(x)(pos) &
+                boundRename(x, y)(pos) &
+                boundRename("x_".asVariable, x)(pos ++ PosInExpr(1::Nil)) &
+                V(pos ++ PosInExpr(1::Nil)) & assignb(pos)
+            case _ =>
+              val subst = (_: Option[Subst]) => RenUSubst(
+                ("x_".asVariable, theGhost) ::
+                ("f()".asTerm, e) ::
+                ("p(.)".asFormula, theF) ::
+                Nil)
+              useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
+                (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+          }
+
+
         case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }

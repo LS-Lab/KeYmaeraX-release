@@ -778,6 +778,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
   }
 
+  it should "introduce differential symbol ghosts" in withTactics {
+    proveBy("==> y=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]y=x'".asSequent
+    proveBy("==> x=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]x=x'".asSequent
+  }
+
   "[:=] assign exists" should "turn existential quantifier into assignment" in withTactics {
     val result = proveBy("\\exists t [x:=t;]x>=0".asFormula, assignbExists("0".asTerm)(1))
     result.subgoals.loneElement shouldBe "==> [t:=0;][x:=t;]x>=0".asSequent
