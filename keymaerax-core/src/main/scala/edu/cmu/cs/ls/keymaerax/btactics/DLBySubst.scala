@@ -251,14 +251,14 @@ private object DLBySubst {
         // bound renaming not possible when
         useAt(rename)(pos) &
           (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos) & eqL2R(AntePosition.base0(sequent.ante.length-1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length-1))
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast) & eqL2R(AntePosition.base0(sequent.ante.length-1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length-1))
           else ident)
       } else {
         //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
         val y = TacticHelper.freshNamedSymbol(x, sequent)
         ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
           (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
           else ident)
       }
     case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)

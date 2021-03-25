@@ -300,11 +300,21 @@ class DLTests extends TacticTestBase {
       DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
   }
 
+  it should "assign with antecedent context present" in withTactics {
+    proveBy("[x:=y;]x>=0, x>=4 ==>".asSequent, DLBySubst.assignEquality(-1)).subgoals.loneElement shouldBe "x_0>=4, x=y, x>=0 ==>".asSequent
+  }
+
   it should "assign in the presence of differential symbols and differentials" in withTactics {
     proveBy("==> [x:=y;]x'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> x'=y".asSequent
     proveBy("==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> (f(x))'=y".asSequent
     proveBy("x=2 ==> [x:=y;](f(y))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x=2 ==> (f(y))'=y".asSequent
     proveBy("x=2 ==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x_0=2 ==> (f(x))'=y".asSequent
+  }
+
+  it should "assign in the antecedent in the presence of differential symbols and differentials" in withTactics {
+    proveBy("[x:=y;]x'=x ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y ==>".asSequent
+    proveBy("[x:=y;]x'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y, x=2 ==>".asSequent
+    proveBy("[x:=y;](f(x))'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x_0=2, (f(x))'=y ==>".asSequent
   }
 
   "generalize" should "introduce intermediate condition" in withTactics {

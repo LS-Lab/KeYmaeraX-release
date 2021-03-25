@@ -509,6 +509,10 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x_0>0, x>0 ==> ".asSequent
   }
 
+  it should "FEATURE_REQUEST: keep positions stable" in withTactics {
+    proveBy("\\exists x (x=y&x>=0), y=2 ==>".asSequent, existsSkolemize(-1)).subgoals.loneElement shouldBe "x=y&x>=0, y=2 ==>".asSequent
+  }
+
   "quantifier rules" should "not prove false \\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)" in withTactics {
     val result = proveBy("\\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)".asFormula,
       implyR(1) & existsR(1) & allL(-1) & allR(1) & existsL(-1) & (close | skip)
