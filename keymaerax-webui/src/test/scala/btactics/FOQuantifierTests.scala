@@ -210,6 +210,16 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "t_=0, [{x'=2,t_'=1&true}]x>b ==> ".asSequent
   }
 
+  it should "instantiate in the presence of self assignments" in withTactics {
+    proveBy("\\forall x [x:=x;][{x'=1}]x>=2 ==>".asSequent, allL("y".asVariable)(-1)).subgoals.
+      loneElement shouldBe "[y:=y;][{y'=1}]y>=2 ==>".asSequent
+  }
+
+  it should "instantiate in the presence of differentials" in withTactics {
+    proveBy("\\forall x (f(x))'=g(x) ==>".asSequent, allL("y".asVariable)(-1)).subgoals.
+      loneElement shouldBe "(f(x))'=g(y) ==>".asSequent
+  }
+
   "existsR" should "instantiate simple formula" in withTactics {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
@@ -482,6 +492,11 @@ class FOQuantifierTests extends TacticTestBase {
   it should "give advice on program constant formula" in withTactics {
     the [UnexpandedDefinitionsFailure] thrownBy proveBy("x=0 ==> \\forall x (x=2 -> [ode;]x>=0)".asSequent, allSkolemize(1)) should
       have message "Skolemization not possible because formula x=2->[ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+  }
+
+  it should "work in the presence of differential symbols and differentials" in withTactics {
+    proveBy("x=0 ==> \\forall x x'=0".asSequent, allR(1)).subgoals.loneElement shouldBe "x_0=0 ==> x'=0".asSequent
+    proveBy("x=0 ==> \\forall x (f(x))'=0".asSequent, allR(1)).subgoals.loneElement shouldBe "x_0=0 ==> (f(x))'=0".asSequent
   }
 
   "exists skolemize" should "skolemize simple" in withTactics {

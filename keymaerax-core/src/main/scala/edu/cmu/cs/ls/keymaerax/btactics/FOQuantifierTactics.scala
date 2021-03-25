@@ -60,6 +60,7 @@ protected object FOQuantifierTactics {
           useAt(Ax.alle)(pos)
         case (_, Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
+          StaticSemantics.symbols(qf).intersect(vars.map(DifferentialSymbol).toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
           //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
@@ -77,7 +78,7 @@ protected object FOQuantifierTactics {
           val p = forall(qf)
 
           val (assign, assignPreprocess) = t match {
-            case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
+            case vinst: Variable if !StaticSemantics.freeVars(p).symbols.exists(t => t == vinst || t == DifferentialSymbol(x)) =>
               (Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos))
             case _ => (Box(Assign(x, t), p), skip)
           }
@@ -195,19 +196,39 @@ protected object FOQuantifierTactics {
           map(_.prettyString).mkString(",")
         throw new UnexpandedDefinitionsFailure("Skolemization not possible because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
       }
-      //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
-      val renaming =
-        if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)
-        else {
-          assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_ & _)
+      if (StaticSemantics.freeVars(p).symbols.intersect(xs.toSet.map(x => DifferentialSymbol(x)).map(_.asInstanceOf[Variable])).nonEmpty) {
+        //@note bound renaming at pos not allowed, so rename everywhere else with stuttering and bound renaming
+        val np = namePairs.toMap
+        val stutter = xs.map(DLBySubst.stutter)
+        val breq = xs.map(x => (p: Position) => boundRename(x, np(x))(p) & DLBySubst.assignEquality(p) & hideL('L, Equal(np(x), x))
+        )
+        def localRename(p: Position): BelleExpr = {
+          stutter.map(_(p)).reduceRight[BelleExpr](_&_) & breq.map(_(p)).reduceRight[BelleExpr](_&_)
         }
-      // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
-      val backrenaming =
-        if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
-        else {
-          assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
-        }
-      renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
+        val fmls =
+          (sequent.ante.zipWithIndex.map({ case (f, i) => (f, AntePosition.base0(i)) }) ++
+           sequent.succ.zipWithIndex.map({ case (f, i) => (f, SuccPosition.base0(i)) })).filter(_._2 != pos.topLevel)
+        val rename = fmls.map({ case (f, p) =>
+          if (StaticSemantics.freeVars(f).intersect(xs.toSet).isEmpty) skip else localRename(p) }).
+          reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+        rename & ProofRuleTactics.skolemizeR(pos)
+      } else {
+        //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
+        val renaming =
+          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)
+          else {
+            assert(namePairs.size == 1);
+            outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_ & _)
+          }
+        // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
+        val backrenaming =
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
+          else {
+            assert(namePairs.size == 1);
+            ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
+          }
+        renaming & DebuggingTactics.print("Renamed") & ProofRuleTactics.skolemizeR(pos) & DebuggingTactics.print("Skolemized") & backrenaming
+      }
     }
   })
 
