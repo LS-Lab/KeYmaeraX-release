@@ -628,6 +628,11 @@ del {
   word-wrap: break-word;
 }
 
+.k4-tactic-diff {
+  position: absolute;
+  border-bottom: 1px dashed;
+}
+
 .k4-no-padding {
   padding: 0;
 }

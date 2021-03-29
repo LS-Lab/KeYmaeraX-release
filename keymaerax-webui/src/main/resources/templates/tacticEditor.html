@@ -1,6 +1,11 @@
+<script type="text/ng-template" id="tacticPopover.html">
+    <kbd>Alt</kbd>-Click underlined text to execute <code>{{tacticExecPopover.tactic.text}}</code>
+</script>
 <div class="row k4-vertical-fill-flex">
-    <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
-        <div ui-ace="{theme:'github',mode:'bellerophon',showGutter:true,onLoad:aceLoaded}"
-             ng-model="tactic.tacticText" id="editor"></div>
+    <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex"
+         uib-popover-template="'tacticPopover.html'" popover-trigger="'none'"
+         popover-is-open="tacticExecPopover.tactic !== undefined">
+        <div ui-ace="{theme:'github',mode:'bellerophon',showGutter:true,onLoad:aceLoaded,onChange:aceChanged}"
+             ng-model="tactic.tacticText" id="tacticeditor"></div>
     </div>
 </div>

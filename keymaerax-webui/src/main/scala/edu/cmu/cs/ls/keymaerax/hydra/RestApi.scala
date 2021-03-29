@@ -762,7 +762,7 @@ object RestApi extends Logging {
     val doCustomTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
       post { parameters('stepwise.as[Boolean]) { stepwise =>
         entity(as[String]) { tactic => {
-          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false, stepwise=stepwise)
+          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic.trim.stripPrefix(";"), None, consultAxiomInfo=false, stepwise=stepwise)
           completeRequest(request, t)
         }}
       }}}

@@ -732,27 +732,34 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.onTacticScript = function(tacticText, stepwise) {
-      var nodeId = sequentProofData.agenda.selectedId();
-      if (nodeId != undefined) {
-        if (tacticText != "nil") {
-          spinnerService.show('tacticExecutionSpinner');
-          var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
-          var updateProof = stepwise ? $scope.updateFreshProof : $scope.updateMainProof
-          $http.post(uri + '?stepwise='+stepwise, tacticText)
-            .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
-                                       updateProof, $scope.broadcastProofError, undefined); })
-            .catch(function(err) {
-              spinnerService.hideAll();
-              if (err.data.errorThrown != undefined) {
-                //@note errors that occur before scheduling (parsing etc.), but not tactic execution errors -> cannot repeat from here
-                $rootScope.$broadcast('proof.message', err.data);
-              } else {
-                console.error("Expected errorThrown field on error object but found something else: " + JSON.stringify(err));
-              }
-            });
-        } // else nothing to do
-      } else {
-        console.error("Undefined selected node in agenda when trying to run the tactic script '" + tacticText + "'");
+      //@todo forward all to onMultiNodeTactic once it is robustified
+      var doallTactic = tacticText.replace(/doall\((.*)\)/g, function(match, inner, offset, string) {
+        return inner;
+      });
+      if (doallTactic !== tacticText) $scope.onMultiNodeTactic({text: doallTactic, stepwise: stepwise}, undefined);
+      else {
+        var nodeId = sequentProofData.agenda.selectedId();
+        if (nodeId != undefined) {
+          if (tacticText != "nil") {
+            spinnerService.show('tacticExecutionSpinner');
+            var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
+            var updateProof = stepwise ? $scope.updateFreshProof : $scope.updateMainProof
+            return $http.post(uri + '?stepwise='+stepwise, tacticText)
+              .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
+                                         updateProof, $scope.broadcastProofError, undefined); })
+              .catch(function(err) {
+                spinnerService.hideAll();
+                if (err.data.errorThrown != undefined) {
+                  //@note errors that occur before scheduling (parsing etc.), but not tactic execution errors -> cannot repeat from here
+                  $rootScope.$broadcast('proof.message', err.data);
+                } else {
+                  console.error("Expected errorThrown field on error object but found something else: " + JSON.stringify(err));
+                }
+              });
+          } // else nothing to do
+        } else {
+          console.error("Undefined selected node in agenda when trying to run the tactic script '" + tacticText + "'");
+        }
       }
     }
 
@@ -852,26 +859,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       }
       // return name of the ng-template in proofawesesome.html
       return 'rulehelp.html';
-    }
-
-    $scope.executeTacticDiff = function(stepwise) {
-      if ($scope.tactic.tacticDel === '' || $scope.tactic.tacticDel === 'nil') {
-        //@todo forward all to onMultiNodeTactic once it is robustified
-        var doallTactic = $scope.tactic.tacticDiff.replace(/doall\((.*)\)/g, function(match, inner, offset, string) {
-          return inner;
-        });
-        if (doallTactic !== $scope.tactic.tacticDiff) $scope.onMultiNodeTactic({text: doallTactic, stepwise:stepwise}, undefined);
-        else $scope.onTacticScript($scope.tactic.tacticDiff, stepwise);
-      } else {
-        $scope.rerunTactic();
-      }
-    };
-
-    $scope.rerunTactic = function() {
-      var tactic = $scope.tactic.tacticText;
-      sequentProofData.prune($scope.userId, $scope.proofId, $scope.prooftree.root, function() {
-        $scope.onTacticScript(tactic, true);
-      });
     }
 
     $scope.simulate = function() {
