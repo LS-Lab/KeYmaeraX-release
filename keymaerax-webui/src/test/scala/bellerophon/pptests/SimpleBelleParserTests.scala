@@ -341,18 +341,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq()
   }
 
-  it should "parse e <(e)" in {
-    val result = BelleParser("andR(1) <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
-  }
-
-  it should "parse e & <(e) as well" in {
-    val result = BelleParser("andR(1) & <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
+  it should "report an error on e <(e)" in {
+    the [ParseException] thrownBy BelleParser("andR(1) <(andR(1))") should
+      have message """1:9 Branch tactic has only a single child
+                     |Found:    <unknown> at 1:9
+                     |Expected: <unknown>""".stripMargin
   }
 
   it should "parse e & <(e,e)" in {
@@ -362,6 +355,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))
   }
 
+  it should "parse as case tactic when labels are present" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> andL(-2),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
+  it should "require case labels on all branches" in {
+    the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
+      have message """1:17 Not all branches have labels
+                     |Found:    <unknown> at 1:17
+                     |Expected: <unknown>""".stripMargin
+  }
 
 
   //endregion

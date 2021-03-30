@@ -51,6 +51,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case EitherTactic(l,r) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case BranchTactic(ts) => op(e).terminal.img +
           "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
+        case CaseTactic(ts) => op(e).terminal.img +
+          "(" + newline(indent) + ts.map({ case (label, t) => "\"" + label.prettyString + "\": " + pp(t, indent+2) }).mkString("," + newline(indent+2)) + newline(indent) + ")"
         case SaturateTactic(t) => sanitizeUnary(wrapLeft(e, t, indent), op(e).terminal.img)
         case it: StringInputTactic =>
           if (it.inputs.nonEmpty) {

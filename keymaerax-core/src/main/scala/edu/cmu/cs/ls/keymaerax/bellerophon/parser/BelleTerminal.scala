@@ -100,6 +100,8 @@ private object CLOSE_PAREN extends BelleTerminal(")") {
 }
 private object COMMA extends BelleTerminal(",")
 
+private object COLON extends BelleTerminal(":")
+
 private trait TACTIC_ARGUMENT
 
 // Positions
@@ -181,7 +183,6 @@ private abstract class BELLE_EXPRESSION(val exprString: String, val delimiters: 
 }
 
 private case class EXPRESSION(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL expression. May throw a parse exception. */
   def expression: Expression = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
@@ -191,7 +192,6 @@ private case class EXPRESSION(override val exprString: String, override val deli
 }
 
 private case class SUBSTITUTION_PAIR(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL substitution pair. May throw a parse exception. */
   def expression: SubstitutionPair = {
     import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -202,7 +202,6 @@ private case class SUBSTITUTION_PAIR(override val exprString: String, override v
 }
 
 private case class EXPRESSION_SUB(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL expression and sub-position. May throw a parse exception. */
   def expression: (Expression, PosInExpr) = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),

@@ -17,6 +17,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
  * Very fine-grained tests of the sequential interpreter.
@@ -343,6 +344,23 @@ class SequentialInterpreterTests extends TacticTestBase {
         BelleSubLabel(BelleLabels.indStep, "1") ::
         BelleLabels.indStep :: Nil)
     })
+  }
+
+  "Case combinator" should "match tactics with labels" in withMathematica { _ =>
+    val ts = List(
+      BelleLabels.initCase -> nil,
+      BelleLabels.useCase -> id,
+      BelleLabels.indStep -> assignb(1)
+    ).permutations.map(t => implyR(1) & loop("x>1".asFormula)(1) & CaseTactic(t))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, _) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x>2 ==> x>1".asSequent,
+            "x>1 ==> x+1>1".asSequent)
+      }
+    }
   }
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in withMathematica { _ =>

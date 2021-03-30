@@ -167,6 +167,13 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       }
       result
 
+    case CaseTactic(children) => v match {
+      case BelleProvable(p, Some(labels)) =>
+        if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels " + labels.mkString(",") + "\nfor " + p.prettyString, p.underlyingProvable)
+        apply(BranchTactic(labels.map(children.toMap)), v)
+      case _ => throw new IllFormedTacticApplicationException("Case tactic applied on a proof state without labels")
+    }
+
     case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:CoreLeftTactic | _:CoreRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
       throw new IllFormedTacticApplicationException(s"Need to apply position tactic at a position before executing it: $expr(???)").inContext(expr, "")
 

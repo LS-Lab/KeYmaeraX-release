@@ -90,6 +90,7 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
   def <(children: BelleExpr*): BelleExpr = SeqTactic(this, BranchTactic(children))
+  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(this, CaseTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(this, USubstPatternTactic(p))
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
@@ -135,6 +136,8 @@ case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def pre
 case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*" + times + ")" }
 /** `<(e1,...,en)` branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+/** `<("l1":e1,...,"ln":en)` branching to run tactic `ei` on label `li`, failing if any of them fail, if there are not exactly `n` branches, or if any of the labels does not exist. */
+case class CaseTactic(children: Seq[(BelleLabel, BelleExpr)]) extends BelleExpr { override def prettyString: String = "<( " + children.map({ case (l, c) => "\"" + l.prettyString + "\": " + c.prettyString }).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
   *
