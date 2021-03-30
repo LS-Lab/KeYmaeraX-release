@@ -119,7 +119,7 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR(1=="x>=0->x>=0")"""
+      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
     }
   }}
 
@@ -234,7 +234,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
     // proof session should pick up new variable introduced by cut
     proofSession().defs.decls.keySet should contain (Name("x0", None))
-    proofSession().defs.decls(Name("x0", None)) should be (None, Real, None, None, UnknownLocation)
+    proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, None, UnknownLocation)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -369,7 +369,7 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
-        stepsTactic shouldBe "implyR(1) ; andL(-1)"
+        stepsTactic shouldBe "implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }

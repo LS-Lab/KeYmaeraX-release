@@ -57,7 +57,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.provable.subgoals.loneElement shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
 
-    tree.tactic shouldBe implyR(1)
+    tree.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula)
   }
 
   it should "create a proved tree from QE" in withDatabase { db => withMathematica { _ =>
@@ -143,7 +143,7 @@ class ProofTreeTests extends TacticTestBase {
 
     rt shouldBe 'proved
 
-    rt.tactic shouldBe implyR(1) & QE
+    rt.tactic shouldBe implyR('R, "x>0 -> x>0".asFormula) & QE
   }}
 
   it should "create a tree with two open goals with a cut" in withDatabase { db =>
@@ -207,7 +207,7 @@ class ProofTreeTests extends TacticTestBase {
     p.subgoals(0) shouldBe g2.goal.get
     p.subgoals(1) shouldBe g1.goal.get
 
-    tree.tactic shouldBe cut("y=37".asFormula) <(implyR(1), nil)
+    tree.tactic shouldBe cut("y=37".asFormula) <(implyR('R, "x>0->x>0".asFormula), nil)
   }
 
   "Tactic suggestion" should "return single-pos tactics" in withTactics { withDatabase { db =>
