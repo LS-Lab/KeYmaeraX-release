@@ -142,41 +142,41 @@ object SharedModels {
 
   val straightODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0);};
+      |{x' = 2, y' = -1 & ?dc:(y >= 0)};
       |!xFinal:(x <= 4) using dc x y by auto;
       |""".stripMargin
 
   val assertODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0); & !xEq:(x =  2*(2 - y))};
+      |{x' = 2, y' = -1 & ?dc:(y >= 0) & !xEq:(x =  2*(2 - y))};
       |!xFinal:(x >= 0) using xEq dc by auto;
       |""".stripMargin
 
   val justxSolODE: String =
     """?xInit:(x:=0); y:=2;
-      |{xSol: x' = 2, y' = 1 & ?dc:(y >= 0);};
+      |{xSol: x' = 2, y' = 1 & ?dc:(y >= 0)};
       |!xFinal:(x >= 0) using  xSol xInit by auto;
       |""".stripMargin
 
   val inductODE: String =
     """x := 0; y := 1;
-      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction;};
+      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
       |""".stripMargin
 
   val inductODEBC: String =
     """x := 0; y := 1;
       |!bc:(x^2 + y^2 = 1);
-      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction;};
+      |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
       |""".stripMargin
 
   val durationODE: String =
     """?(T > 0); ?accel:(acc > 0);
       |x:= 0; v := 0; t := 0;
       |{t' = 1, x' = v, v' = acc
-      |  & !vel:(v >= 0) using accel by induction;
-      |  & !vSol: (v = t * acc) by solution;
-      |  & !xSol:(x = acc*(t^2)/2) by induction;
-      |  & ?dur:(t := T);};
+      |  & !vel:(v >= 0) using accel by induction
+      |  & !vSol: (v = t * acc) by solution
+      |  & !xSol:(x = acc*(t^2)/2) by induction
+      |  & ?dur:(t := T)};
       |!finalV:(x = acc*(t^2)/2) using dur xSol by auto;
       |""".stripMargin
 
@@ -207,7 +207,7 @@ object SharedModels {
       |  y := (1/x)^(1/2);
       |  !inv:(x*y^2 = 1) by auto;
       |++/
-      |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction;}
+      |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction}
       |!nonZero:(x > 0) using inv by auto;
       |""".stripMargin
 
@@ -217,7 +217,7 @@ object SharedModels {
 
   val inverseGhostODE: String =
     """z := 0;
-      |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution;}
+      |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution}
       |""".stripMargin
 
   /** Program which the inverse ghost ODE refines */
@@ -243,7 +243,7 @@ object SharedModels {
 
   val labelOld: String =
     """old:
-      |{x' = 1 & !greater:(x >= x@old);}
+      |{x' = 1 & !greater:(x >= x@old)}
       |""".stripMargin
 
   val unwindBlock: String =
@@ -278,7 +278,7 @@ object SharedModels {
       |let safe() <-> x@ode(ST()) <= d;
       |print(safe());
       |t:= 0;
-      |{t' = 1, x' = v, v' = -B  & ?(v >= 0);};
+      |{t' = 1, x' = v, v' = -B  & ?(v >= 0)};
       |ode(t):
       |""".stripMargin
 
@@ -287,13 +287,15 @@ object SharedModels {
       |while (x >= 0 & x + eps <= goal) {
       |  vel := (goal - (x + eps))/T;
       |  t := 0;
-      |  {t' = 1, x' = vel & ?time:(t <= T);};
+      |  {t' = 1, x' = vel & ?time:(t <= T)};
       |  /-- !safe:(x >= 0) using time ... by auto;  --/
       |  ?(t >= T/2);
       |  !live:(x >= 0 & x + eps <= goal) using time ... by auto;
       |}
       |""".stripMargin
 
+
+  // Note: not supposed to work. Is for historical purposes to remember early design
   val proposedReachAvoidFor: String =
     """?(eps > 0 &  x = 0 & T > 0 & d > 0);
       |let J(pos) <-> (pos <= d);
@@ -302,7 +304,7 @@ object SharedModels {
       |prev:
       |  vel := (d - (x + eps))/T;
       |  t := 0;
-      |  {t' = 1, x' = vel & ?time:(t <= T);};
+      |  {t' = 1, x' = vel & ?time:(t <= T)};
       |  !safe:(J(x)) using conv guard vel time by auto;
       |  ?(t >= T/2);
       |  !prog:(pos >= pos@prev + eps*T/2);
@@ -331,37 +333,42 @@ object SharedModels {
   // gauss formula for triangle number
   val basicForConv: String =
     """
-      | sum := 0;
-      | for (x := 0; !(sum = x^2 / 2); ?(x <= 10); x := x + 1) {
-      |    sum := sum + x;
-      |   !cnv:(sum = x^2 / 2);
+      | ?deltaLo:(delta > 0);
+      | ?deltaHi:(delta < 1);
+      | let sol(x) = x*(x+1)/2;
+      | sum := 1;
+      | for (x := 1; !(sum = sol(x)); ?(x <= 11); x := x + 1) {
+      |    sum := sum + (x+1);
+      |   !cnv:(sum = sol(x+1));
       | }
-      | !total:(sum >= 50) using sum x by auto;
+      | !done:(x >= 11 - delta) by guard(delta);
+      | !total:(sum >= 50) using done sum x deltaHi by auto;
       |""".stripMargin
-  
+
+
   // may be less popular but may be easier to implement / test
-  // @TODO: remember to update thesis after code is working
-  // @TODO: Constructivize guards
   val revisedReachAvoidFor: String =
     """pragma option "time=true";
       |pragma option "trace=true";
       |pragma option "debugArith=true";
-      |?consts:(eps > 0 &  x = 0 & T > 0 & d > eps);
+      |?epsPos:(eps > 0);
+      |?consts:(x = 0 & T > 0 & d > eps);
       |init:
       |for (pos := 0;
-      |    !conv:(pos <= (x - x@init) & x <= d);
+      |    !conv:(pos <= (x - x@init) & x <= d) using epsPos consts ... by auto;
       |    ?guard:(pos <= d - (eps + x@init) & x <= d - eps);
-      |    pos := pos + eps*T/2) {
+      |    pos := pos + eps/2) {
       |  body:
       |  vel := (d - x)/T;
       |  t := 0;
-      |  {t' = 1, x' = vel & ?time:(t <= T);};
+      |  {t' = 1, x' = vel & ?time:(t <= T)};
       |  !safe:(x <= d) using conv guard vel time by auto;
       |  ?high:(t >= T/2);
-      |  !prog:(pos <= (x - x@init));
+      |  !prog:(pos + eps/2 <= (x - x@init)) using high ... by auto;
       |  note step = andI(prog, safe);
       |}
-      |!(x <= d & x + eps >= d) using guard conv by auto;
+      |!done:(pos >= d - (eps + x@init) - eps | x >= d - eps - eps) by guard;
+      |!(x <= d & x + 2 * eps >= d) using done conv  by auto;
       |""".stripMargin
 
   // @TODO: Check SB() vs SB parenthesis... hmm...
@@ -373,7 +380,7 @@ object SharedModels {
       |{
       |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
       |   t:= 0;
-      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(t <= T); & ?vel:(v >= 0);};
+      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
       |ode(t):
       |   !step:(safe()) using env init initSafe time vel xSol vSol tSol by auto;
       |}*
@@ -400,7 +407,7 @@ object SharedModels {
       |      !predictSafe:(safe()@ode(T, acc)) using initSafe fast init theAcc by auto;
       |  }
       |  t:= 0;
-      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(0 <= t & t <= T); & ?vel:(v >= 0);};
+      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(0 <= t & t <= T) & ?vel:(v >= 0)};
       |ode(t, acc):
       |  !step:(safe()) using predictSafe init initSafe tSol xSol vSol time vel by auto;
       |}*
@@ -416,7 +423,7 @@ object SharedModels {
       | !(inv());
       | {
       |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
-      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps);};}
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps)};}
       |  !brk:(inv());
       | }*
       | !(d >= 0);
@@ -440,7 +447,7 @@ object SharedModels {
       | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
       | {
       |  {?before: (d >= eps*V); v:=*; ?range:(0<=v & v<=V);}
-      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps)};}
       |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol range before ... by auto ;
       | }*
       | !(d >= 0);
@@ -462,7 +469,7 @@ object SharedModels {
       | !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V));
       | {
       |  {v:=*; ?admiss:(d >= eps*v & 0<=v & v<=V);}
-      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps)};}
       |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol admiss ... by auto ;
       | }*
       | !(d >= 0);
@@ -477,7 +484,7 @@ object SharedModels {
       |  ++
       |     {v:=0; !admiss:(d >= eps*v & 0<=v & v<=V);}
       |  }
-      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps);};}
+      |  {t := 0; {dSol: d' = -v, tSol: t' = 1 & ?(t <= eps)};}
       |  !((d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V)) using v dSol tSol admiss ... by auto ;
       | }*
       | !(d >= 0);
@@ -495,9 +502,9 @@ object SharedModels {
       |   }
       |   t := 0;
       |   mid:
-      |   {d' = -v, t' = 1 & ?(t <= eps);
-      |    & !tSign:(t>=0);
-      |    & !dBound:(d>=v*(eps-t));
+      |   {d' = -v, t' = 1 & ?(t <= eps)
+      |    & !tSign:(t>=0)
+      |    & !dBound:(d>=v*(eps-t))
       |   };
       |   !(inv());
       | }*
@@ -553,12 +560,12 @@ object SharedModels {
       |      { ?aB:(a := -b); ?tZ:(t := 0); xo := xo; yo := yo;
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ by induction;
-      |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body - b*t) using aB tZ by induction;
-      |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
-      |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0)
+      |         & !tSign:(t >= 0) using tZ by induction
+      |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction
+      |         & !vSol:(v = v@body - b*t) using aB tZ by induction
+      |         & !xBound:(-t * (v@body - b/2*t) <= x - x@body & x - x@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction
+      |         & !yBound:(-t * (v@body - b/2*t) <= y - y@body & y - y@body <= t * (v@body - b/2*t)) using bnds aB vSol dir tSign dc tZ by induction
       |        };
       |        let b1() <-> (x-xo > stopDist(v));
       |        let b2() <-> (xo-x > stopDist(v));
@@ -584,12 +591,12 @@ object SharedModels {
       |      { ?vZ:(v = 0); ?aZ:(a := 0); w := 0; ?tZ:(t := 0); xo := xo; yo := yo; /* @TODO: Better SSA phi rename handling */
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ by induction;
-      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body) using aZ by induction;
-      |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction;
-      |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0)
+      |         & !tSign:(t >= 0) using tZ by induction
+      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction
+      |         & !vSol:(v = v@body) using aZ by induction
+      |         & !xSol:(x = x@body) using vZ vSol dir tSign dc by induction
+      |         & !ySol:(y = y@body) using vZ vSol dir tSign dc by induction
       |         };
       |        let b1() <-> (x-xo > stopDist(v));
       |        let b2() <-> (xo-x > stopDist(v));
@@ -622,12 +629,12 @@ object SharedModels {
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-      |          t' = 1 & ?dc:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ aA by induction;
-      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body + A*t) using aA tZ by induction;
-      |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction; /* got here after 20 mins -> reduced to 4 secs */
-      |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction;
+      |          t' = 1 & ?dc:(t <= T & v >= 0)
+      |         & !tSign:(t >= 0) using tZ aA by induction
+      |         & !dir:(norm(dx, dy) = 1) using dxyNorm by induction
+      |         & !vSol:(v = v@body + A*t) using aA tZ by induction
+      |         & !xBound:(-t * (v@body + A/2*t) <= x - x@body & x - x@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction /* got here after 20 mins -> reduced to 4 secs */
+      |         & !yBound:(-t * (v@body + A/2*t) <= y - y@body & y - y@body <= t * (v@body + A/2*t)) using bnds aA vSol dir tSign dc tZ by induction
       |        };
       |        let b1() <-> (x-xo > stopDist(v));
       |        let b2() <-> (xo-x > stopDist(v));
@@ -710,11 +717,11 @@ object SharedModels {
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
       |          t' = 1 & ?dom:(t <= T & v >= 0);
-      |         & !tSign:(t >= 0) using tZ by induction;
-      |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction;
-      |         & !vSol:(v = v@body + a*t) using tZ by induction;
-      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction;
-      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction;
+      |         & !tSign:(t >= 0) using tZ by induction
+      |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction
+      |         & !vSol:(v = v@body + a*t) using tZ by induction
+      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction
+      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction
       |        };
       |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dom bnds tSign by auto;
       |      }
@@ -765,10 +772,10 @@ object SharedModels {
       |      { x' = v * dx, y' = v * dy,                /* move */
       |        dx' = -w * dy, dy' = w * dx,             /* follow curve */
       |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
-      |        ?(t' = 1 & t <= ep & v >= 0);
-      |        !tSign:(t>=0);
-      |        !xBound:(-t*v <= xo - xo@loop & xo - xo@loop <= t*v);
-      |        !yBound:(-t*v <= yo - yo@loop & yo - yo@loop <= t*v);
+      |        ?(t' = 1 & t <= ep & v >= 0)
+      |        !tSign:(t>=0)
+      |        !xBound:(-t*v <= xo - xo@loop & xo - xo@loop <= t*v)
+      |        !yBound:(-t*v <= yo - yo@loop & yo - yo@loop <= t*v)
       |      };
       |      }
       |    !(loopinv());
@@ -811,14 +818,14 @@ object SharedModels {
       |      {
       |      { x' = v * dx, y' = v * dy, v' = a,
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |        ?(t' = 1 & t <= ep & v >= 0);
-      |        !tSign:(t>=0);
-      |        !dir:(norm(dx, dy) = 1);
-      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |        !vSol:(v = v@loop + a*t);
-      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
-      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |        ?(t' = 1 & t <= ep & v >= 0)
+      |        !tSign:(t>=0)
+      |        !dir:(norm(dx, dy) = 1)
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |        !vSol:(v = v@loop + a*t)
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t))
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t))
       |      };
       |      }
       |    !(loopinv());
@@ -863,14 +870,14 @@ object SharedModels {
       |      { x' = v * dx, y' = v * dy, v' = a,
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,
       |        xo' = vxo, yo' = vyo,
-      |        ?(t' = 1 & t <= ep() & v >= 0);
-      |        !tSign:(t>=0);
-      |        !dir:(norm(dx, dy) = 1);
-      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |        !vSol:(v = v@loop + a*t);
-      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
-      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |        ?(t' = 1 & t <= ep() & v >= 0)
+      |        !tSign:(t>=0)
+      |        !dir:(norm(dx, dy) = 1)
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |        !vSol:(v = v@loop + a*t)
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t))
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t))
       |      };
       |      }
       |    !(loopinv());
@@ -882,7 +889,7 @@ object SharedModels {
       | t := 0;
       | {xo'=vo*dxo, yo'=vo*dyo, vo'=ao, t'=1,
       |    ?(vo>= 0 & t<= ep());
-      |  & ?(t := todo());
+      |  & ?(t := todo())
       | };
       | !(dist(x,y,xo,yo) > 0 & vo = 0);
       |""".stripMargin
@@ -932,15 +939,15 @@ object SharedModels {
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,
       |        beta' = w,
       |        xo' = vxo, yo' = vyo, t' = 1 &
-      |        ?(t <= ep() & v >= 0);
-      |        !tSign:(t>=0);
-      |        !dir:(norm(dx, dy) = 1);
-      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |        !vSol:(v = v@loop + a*t);
-      |        !betaSol:(beta = beta@loop + t/r*(v + a/2*t));
-      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
-      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |        ?(t <= ep() & v >= 0)
+      |        !tSign:(t>=0)
+      |        !dir:(norm(dx, dy) = 1)
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |        !vSol:(v = v@loop + a*t)
+      |        !betaSol:(beta = beta@loop + t/r*(v + a/2*t))
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t))
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t))
       |      };
       |      }
       |    !(loopinv());
@@ -991,13 +998,13 @@ object SharedModels {
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,
       |        xo' = vxo, yo' = vyo, t' = 1 &
       |        ?(t <= ep() & v >= 0);
-      |        !tSign:(t>=0);
-      |        !dir:(norm(dx, dy) = 1);
-      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |        !vSol:(v = v@loop + a*t);
-      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t));
-      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t));
+      |        !tSign:(t>=0)
+      |        !dir:(norm(dx, dy) = 1)
+      |        !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |        !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |        !vSol:(v = v@loop + a*t)
+      |        !xBound:(-t*(v@loop - a/2*t) <= xo - xo@loop & xo - xo@loop <= t*(v@loop - a/2*t))
+      |        !yBound:(-t*(v@loop - a/2*t) <= yo - yo@loop & yo - yo@loop <= t*(v@loop - a/2*t))
       |      };
       |      }
       |    !(loopinv());
@@ -1062,13 +1069,13 @@ object SharedModels {
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
       |        t' = 1 & t <= ep & v >= 0
-      |       & !tSign:(t>=0);
-      |       & !dir:(norm(dx, dy) = 1);
-      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |       & !vBound:(v <= v@loop - a**t);
-      |       & !xBound:(-t * (v - a/2*t) <= x - x@loop & x - x@loop <= t * (v - a/2*t));
-      |       & !yBound:-(t * (v - a/2*t) <= y - y@loop & y - y@loop <= t * (v - a/2*t));
+      |       & !tSign:(t>=0)
+      |       & !dir:(norm(dx, dy) = 1)
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |       & !vBound:(v <= v@loop - a**t)
+      |       & !xBound:(-t * (v - a/2*t) <= x - x@loop & x - x@loop <= t * (v - a/2*t))
+      |       & !yBound:-(t * (v - a/2*t) <= y - y@loop & y - y@loop <= t * (v - a/2*t))
       |      }
       |    !(loopinv());
       |    }*
@@ -1121,13 +1128,13 @@ object SharedModels {
       |        dx' = -w * dy, dy' = w * dx, w' = acc/r, /* follow curve */
       |        xo' = vxo, yo' = vyo,                    /* obstacle moves */
       |        t' = 1 & ?(t <= ep & v >= 0);
-      |       & !tSign:(t>=0);
-      |       & !dir:(norm(dx, dy) = 1);
-      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |       & !vBound:(v <= v@loop - (b()*Da())*t);
-      |       & !xBound:(-t * (v@loop - (b()*Da())/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - (b()*Da())/2*t));
-      |       & !yBound:-(t * (v@loop - (b()*Da())/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - (b()*Da())/2*t));
+      |       & !tSign:(t>=0)
+      |       & !dir:(norm(dx, dy) = 1)
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |       & !vBound:(v <= v@loop - (b()*Da())*t)
+      |       & !xBound:(-t * (v@loop - (b()*Da())/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - (b()*Da())/2*t))
+      |       & !yBound:-(t * (v@loop - (b()*Da())/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - (b()*Da())/2*t))
       |      }
       |    !(loopinv());
       |    }
@@ -1179,13 +1186,13 @@ object SharedModels {
       |        dx' = -w * dy, dy' = w * dx, w' = a/r,
       |        xo' = vxo, yo' = vyo,
       |        t' = 1 & ?(t <= ep & v >= 0);
-      |       & !tSign:(t>=0);
-      |       & !dir:(norm(dx, dy) = 1);
-      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V());
-      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V());
-      |       & !vBound:(v <= v@loop - a*t);
-      |       & !xBound:(-t * (v@loop - a/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - a/2*t));
-      |       & !yBound:-(t * (v@loop - a/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - a/2*t));
+      |       & !tSign:(t>=0)
+      |       & !dir:(norm(dx, dy) = 1)
+      |       & !xoBound:(-t*V() <= xo - xo@loop & xo - xo@loop <= t*V())
+      |       & !yoBound:(-t*V() <= yo - yo@loop & yo - yo@loop <= t*V())
+      |       & !vBound:(v <= v@loop - a*t)
+      |       & !xBound:(-t * (v@loop - a/2*t) <= x - x@loop & x - x@loop <= t * (v@loop - a/2*t))
+      |       & !yBound:-(t * (v@loop - a/2*t) <= y - y@loop & y - y@loop <= t * (v@loop - a/2*t))
       |      }
       |    !(loopinv());
       |    }*
@@ -1247,14 +1254,14 @@ object SharedModels {
       |        { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
       |          xo' = vxo, yo' = vyo,                    /* obstacle moves */
-      |          t' = 1 & ?(t <= ep & v >= 0);
-      |        & !(t>=t@body);
-      |        & !(norm(dx, dy) = 1);
-      |        & !(-(t-t@body)*V() <= xo - xo@body & xo - xo@body <= (t-t@body)*V());
-      |        & !(-(t-t@body)*V() <= yo - yo@body & yo - yo@body <= (t-t@body)*V());
-      |        & !(v = v@body + a*(t-t@body));
-      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= x - x@body & x - x@body <= (t-t@body) * (v - a/2*(t-t@body)));
-      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= y - y@body & y - y@body <= (t-t@body) * (v - a/2*(t-t@body)));
+      |          t' = 1 & ?(t <= ep & v >= 0)
+      |        & !(t>=t@body)
+      |        & !(norm(dx, dy) = 1)
+      |        & !(-(t-t@body)*V() <= xo - xo@body & xo - xo@body <= (t-t@body)*V())
+      |        & !(-(t-t@body)*V() <= yo - yo@body & yo - yo@body <= (t-t@body)*V())
+      |        & !(v = v@body + a*(t-t@body))
+      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= x - x@body & x - x@body <= (t-t@body) * (v - a/2*(t-t@body)))
+      |        & !(-(t-t@body) * (v - a/2*(t-t@body)) <= y - y@body & y - y@body <= (t-t@body) * (v - a/2*(t-t@body)))
       |        }
       |       !(innerloopinv());
       |      }*
@@ -1295,7 +1302,7 @@ object SharedModels {
       |   ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
       |   ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
       |	} t:=0; }
-      | {xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0};
+      | {xr' = vr, vr' = ar, t' = 1 & ?(t <= ep() & vr >= 0)};
       | !(loopinv());
       | }*
       | !(xr < waypointEndDist(xg));
@@ -1305,7 +1312,7 @@ object SharedModels {
       |   ++ ?vr = 0; ar := 0;
       |   ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
       |   ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
-      |	} t:=0; } xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0};
+      |	} t:=0; } xr' = vr, vr' = ar, t' = 1 & ?(t <= ep() & vr >= 0)};
       | !(loopinv());
       | }*
       | !(waypointStartDist(xg) < xr);
@@ -1332,7 +1339,7 @@ object SharedModels {
       | t:=0;
       | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
       |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
-      |  & ?vr >= 0 & t <= T}
+      |  & ?(vr >= 0 & t <= T)}
       |}*
       |!(goal());
       |""".stripMargin
@@ -1358,7 +1365,7 @@ object SharedModels {
       | t:=0;
       | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
       |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
-      |  & ?(vr >= 0 & t <= T);}
+      |  & ?(vr >= 0 & t <= T)}
       |}*
       |!(goal());
       |""".stripMargin
@@ -1377,7 +1384,7 @@ object SharedModels {
       | {dox := *; doy := *; ?norm(dox, doy) = 1;
       |  aox := *; aoy := *; ?vo + ao*To <= V;}
       | t:= 0;
-      | {pox' = vo*dox, poy' = vo*doy, vo' = ao, t' = 1 & t <= To & ?(vo > = 0);}
+      | {pox' = vo*dox, poy' = vo*doy, vo' = ao, t' = 1 & t <= To & ?(vo > = 0)}
       |}*
       |!(dist(prx, pry, pox, poy) > 0 & vo = 0);
       |""".stripMargin
@@ -1403,7 +1410,7 @@ object SharedModels {
       | t:=0;
       | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - ar,
       |  vwr' = ar/dist(prx, pry, pcx, pcy, t' = 1
-      |  & ?(vr >= 0 & t <= T);}
+      |  & ?(vr >= 0 & t <= T)}
       |}*
       |
       |""".stripMargin
@@ -1430,7 +1437,7 @@ object SharedModels {
       | t:=0;
       | {prx' = vr*drx, pxy' = vr*dry, drx' = -wr*dry, dry' = wr*drx, pox' = vox, poy' = voy, vr' - atr,
       |  vwr' = atr/dist(prx, pry, pcx, pcy, t' = 1
-      |  & ?(vr >= 0 & t <= T);}
+      |  & ?(vr >= 0 & t <= T)}
       |}*
       |
       |""".stripMargin
@@ -1440,7 +1447,7 @@ object SharedModels {
 
   val thesisExamples: List[String] = List(switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock,
+    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock, basicForConv,
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
     )
 

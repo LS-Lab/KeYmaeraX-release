@@ -183,7 +183,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).programSignature
       case Was(now, was) => Context(now).programSignature
       case While(_, _, body) => Context(body).programSignature
-      case For(_, _, _, _, _, body) => Context(body).programSignature
+      case For(_, _, _, _, _, body, _) => Context(body).programSignature
       case BoxLoop(body, _) => Context(body).programSignature
       case BoxLoopProgress(bl, progress) => Context(progress).programSignature
       case WhileProgress(wh, prog) => Context(prog).programSignature
@@ -192,7 +192,7 @@ case class Context(s: Statement) {
       case SwitchProgress(bl, i, progress) => Context(progress).programSignature
       case Phi(s) => Context(s).programSignature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match | _: Pragma => Map()
+           | _: Label | _: Match | _: Pragma | _: Comment => Map()
     }
   }
   
@@ -207,7 +207,7 @@ case class Context(s: Statement) {
       case Ghost(s) => Context(s).signature
       case Was(now, was) => Context(now).signature
       case While(_, _, body) => Context(body).signature
-      case For(_, _, _, _, _, body) => Context(body).signature
+      case For(_, _, _, _, _, body, _) => Context(body).signature
       case BoxLoop(body, _) => Context(body).signature
       case BoxLoopProgress(bl, progress) => Context(progress).signature
       case WhileProgress(wh, prog) => Context(prog).signature
@@ -216,7 +216,7 @@ case class Context(s: Statement) {
       case SwitchProgress(bl, i, progress) => Context(progress).signature
       case Phi(s) => Context(s).signature
       case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
-           | _: Label | _: Match | _: Pragma => Map()
+           | _: Label | _: Match | _: Pragma | _: Comment => Map()
     }
   }
 
@@ -294,17 +294,19 @@ case class Context(s: Statement) {
       case InverseGhost(s) => ContextResult.unit
       case po: ProveODE => findAll(po, po.ds, cq, tabooProgramVars, tabooFactVars).++(findAll(po.dc, cq, tabooProgramVars, tabooFactVars))
       case Was(now, was) => reapply(was).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma => ContextResult.unit
-      case fr@For(metX, met0, metIncr, conv, guard, body) =>
+      case _: Label | _: LetSym | _: Match | _: PrintGoal | _: Pragma | _: Comment => ContextResult.unit
+      case fr@For(metX, met0, metIncr, conv, guard, body, guardDeltaOpt) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         // Represents bound variables of loop *body*, not tabooProgramVars.
         // Taboo set is used to raise exception if metric is invalid. We assume that metric will be constructed elsewhere
         // with correct taboo set in order to check foundedness
         val bodyTaboos = Set[Variable]()
         val metric = Metric(metX, metIncr, guard.f, bodyTaboos)
-        val guardMatch = matched(guard.pat, metric.guardPost(metX))
-        val res = convMatch ++ guardMatch
-        res
+        guardDeltaOpt match {
+          case Some(guardDelta) =>
+            convMatch ++ matched(guard.pat, Metric.weakNegation(guard.f, guardDelta))
+          case _ => convMatch
+        }
       case While(_, _, body) =>
         //@TODO
         // only allowed to find IH
@@ -327,7 +329,7 @@ case class Context(s: Statement) {
       case WhileProgress(While(x, j, s), prog) =>
         val convMatch = matched(x, j)
         convMatch ++ reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
-      case ForProgress(For(metX, metF, metIncr, conv, guard, body), prog) =>
+      case ForProgress(For(metX, metF, metIncr, conv, guard, body, _), prog) =>
         val convMatch = conv match { case Some(cnv) => matched(cnv.pat, cnv.f) case None => ContextResult.unit }
         val guardMatch = matched(guard.pat, guard.f)
         val rec = reapply(prog).searchAll(cq, tabooProgramVars, tabooFactVars)
@@ -407,6 +409,70 @@ case class Context(s: Statement) {
     }
   }
 
+  def getFor: Option[For] = {
+    s match {
+      case Block(ss) => Context(ss.last).getFor
+      case fr: For => Some(fr)
+      case _ => None
+    }
+  }
+
+  def inferGuardDelta(asrt: Assert): Term = {
+    getFor match {
+      case None => throw ProofCheckException("Tried to use guard proof method but couldn't find for loop")
+      case Some(For(metX, met0, metIncr, conv, guard, body, Some(f))) => f
+      case Some(For(metX, met0, metIncr, conv, guard, body, None)) =>
+        // Heuristic: first look for constant variable > 0 appearing in assertion but not context,
+        // second, look for constant variable > 0 appearing in both guard and assertion
+        val assertionVars = VariableSets(Context(asrt)).freeVars
+        val guardVars = VariableSets(Context(guard)).freeVars
+        val boundVars = VariableSets(this).boundVars
+        val assertionCandidates = assertionVars -- (guardVars ++ boundVars)
+        val assertionPosQuery: ContextQuery =
+          if (assertionCandidates.nonEmpty)
+            assertionCandidates.map(v => QUnify(Greater(v, Number(0)))).reduce[ContextQuery](QUnion(_, _))
+          else QNil()
+        val assertionFound = findAll(assertionPosQuery).formulas
+        assertionFound match {
+          case Greater(v, _) :: _ => v
+          case _ :: _ => throw new Exception("Bad pattern match - bug found")
+          case Nil =>
+            val guardCandidates = assertionVars.intersect(guardVars) -- boundVars
+            val guardPosQuery: ContextQuery =
+              if(guardCandidates.nonEmpty) {
+                guardCandidates.map(v => QUnify(Greater(v, Number(0)))).
+                reduce[ContextQuery](QUnion(_,_))
+              } else
+                QNil()
+            val guardFound = findAll(guardPosQuery).formulas
+            guardFound match {
+              case Greater(v, _) :: _ => v
+              case _ :: _ => throw new Exception("Bad pattern match - bug found")
+              case Nil => throw ProofCheckException("Could not infer guard comparison delta in for loop, " +
+                "use explicit delta by using proof method 'guard(delta)' rather than 'guard'")
+            }
+        }
+      case _ => throw new Exception("bad pattern match - bug found")
+    }
+  }
+
+  // Apply any side effect which updates existing parts of the context based on a given statement.
+  // This should be called before checking [[s]]. As of initial writing, this is just used to update ForLoop
+  // with its guard comparison delta once known
+  def sideEffect(s: Statement): Unit = {
+    s match {
+      case asrt@Assert(x, f, m) => m.atom match {
+        case GuardDone(deltaOpt) =>
+          val delta = deltaOpt.getOrElse(inferGuardDelta(asrt))
+          getFor match {
+            case Some(fr: For) => (fr.guardDelta = Some(delta))
+            case _ => throw new Exception("Failed to locate for loop in context - bug found")
+          }
+        case _ => () // Expected behavior - no side effect needed if assertion does not use GuardDone method
+      }
+      case _ => throw new Exception("bug found - bad pattern match in sideEffect")
+    }
+  }
 
   /** Find all fact bindings which satisfy [[finder]] in statement [[dc]]
     *
@@ -459,7 +525,7 @@ case class Context(s: Statement) {
   /** Used in proof statements such as ProveODE which have not only implicit assumptions but which need to consider
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
     * appear ghosted or unghosted.  */
-  private def lastStatements(taboos: Set[Variable] = Set()): List[Statement] = {
+  private def lastStatements(allowProgress: Boolean, taboos: Set[Variable] = Set()): List[Statement] = {
     s match {
       case Assume(x, f) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Assert(x, f, _) => if (StaticSemantics(f).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
@@ -472,23 +538,28 @@ case class Context(s: Statement) {
         if (admissible) List(s) else Nil
       case Note(x, pt, Some(fml)) => if(StaticSemantics(fml).fv.intersect(taboos).toSet.isEmpty) List(s) else Nil
       case Phi(asgns) =>
-        val res = reapply(asgns).lastStatements(taboos)
+        val res = reapply(asgns).lastStatements(allowProgress,taboos)
         res.map(Phi)
       case Ghost(s) =>
-        val res = reapply(s).lastStatements(taboos)
+        val res = reapply(s).lastStatements(allowProgress,taboos)
         val mapped = res.map({case g: Ghost => g case s: Statement => Ghost(s)})
         mapped
       case Block(ss) =>
         ss.foldRight[(List[Statement], Set[Variable], Boolean)]((List(), taboos, false))({case (s, (acc, taboos, done)) =>
           if (done) (acc, taboos, done)
           else {
-            val res = reapply(s).lastStatements(taboos)
+            val res = reapply(s).lastStatements(allowProgress,taboos)
             if (res.isEmpty) (acc, taboos, true)
             else {
               val tt = taboos ++ VariableSets(s).boundVars
               (res ++ acc, tt, false)
             }}})._1
-      case Was(now, was) => reapply(now).lastStatements(taboos)
+      case Was(now, was) => reapply(now).lastStatements(allowProgress, taboos)
+      case WhileProgress(wh, s) if allowProgress => reapply(s).lastStatements(allowProgress,taboos)
+      case BoxLoopProgress(bl, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case ForProgress(fr, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case SwitchProgress(sw, i, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
+      case BoxChoiceProgress(bc, i, s) if allowProgress => reapply(s).lastStatements(allowProgress, taboos)
       case _: PrintGoal => List(s)
       case _ =>
         Nil
@@ -499,9 +570,12 @@ case class Context(s: Statement) {
     * immediately preceding assignments. The lastBlock can include straight-line assignments and facts, which may
     * appear ghosted or unghosted.  */
   def lastBlock: Block = {
-    Block(lastStatements())
+    Block(lastStatements(allowProgress = true, taboos = Set()))
   }
 
+  def lastBlockSmall: Block = {
+    Block(lastStatements(allowProgress = false, taboos = Set()))
+  }
 
   private def starPhi(s: Statement): Statement = {
     s match {
@@ -509,14 +583,33 @@ case class Context(s: Statement) {
       case Block(ss) => Block(ss.map(starPhi))
     }
   }
-  def dropPhi: Context = {
+  def bakePhi: Context = {
     s match {
       case Block(ss) if ss.length > 1 && ss.last.isInstanceOf[Phi]=>
         val (lefts, right) = (ss.dropRight(1), starPhi(ss.last.asInstanceOf[Phi].asgns))
         reapply(Block(lefts :+ right))
       case phi: Phi => reapply(Phi(starPhi(phi.asgns)))
-      case Ghost(s) => reapply(Ghost(reapply(s).dropPhi.s))
-      case InverseGhost(s) => reapply(InverseGhost(reapply(s).dropPhi.s))
+      case Ghost(s) => reapply(Ghost(reapply(s).bakePhi.s))
+      case InverseGhost(s) => reapply(InverseGhost(reapply(s).bakePhi.s))
+      case _ => this
+    }
+  }
+
+  def deletePhi: Context = {
+    s match {
+      case Block(ss) if ss.length > 1 && ss.last.isInstanceOf[Phi]=> reapply(Block(ss.dropRight(1)))
+      case Block(ss) if ss.nonEmpty =>
+        val (lefts, right) = (ss.dropRight(1), reapply(ss.last).deletePhi.s)
+        reapply(Block(lefts :+ right))
+      case phi: Phi => reapply(Triv())
+      case Ghost(s) => reapply(Ghost(reapply(s).deletePhi.s))
+      case InverseGhost(s) => reapply(InverseGhost(reapply(s).deletePhi.s))
+        // PROGRESS ONLY!!
+      case ForProgress(fr, s) => reapply(s).deletePhi
+      case BoxLoopProgress(bx, s) => reapply(s).deletePhi
+      case WhileProgress(bx, s) => reapply(s).deletePhi
+      case SwitchProgress(sw, i, s) => reapply(s).deletePhi
+      case BoxChoiceProgress(bc, i, s) => reapply(s).deletePhi
       case _ => this
     }
   }
@@ -543,7 +636,7 @@ case class Context(s: Statement) {
         case Nil => Nil
       }
     }
-    unwind(lastStatements().reverse)
+    unwind(lastStatements(allowProgress = false, taboos = Set()).reverse)
   }
 
   private def finishFact(f: Formula, phis: List[Phi]): Formula = destabilize(phis.foldLeft(f)((fml, phi) => Context.substPhi(phi, fml)))

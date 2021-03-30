@@ -14,16 +14,7 @@ import scala.collection.immutable.Nil
 
 class ODELivenessTests extends TacticTestBase {
 
-  "DGs" should "return raw VDGs" in withQE { _ =>
-      val ax = (1 to 4).map(Provable.vectorialDG)
-    println(ax)
-
-    ax(0)._1.conclusion shouldBe "==> [{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]y__1*y__1<=f_(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
-    ax(0)._2.conclusion shouldBe "==> [{c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
-    //TODO: write some additional tests when parsing for list taboos is supported
-  }
-
-  it should "return raw DDGs" in withMathematica { _ =>
+  "DGs" should "return raw DDGs" in withMathematica { _ =>
     val ax = (1 to 1).map(getDDG)
     println(ax)
     //TODO: write some additional tests when parsing for list taboos is supported

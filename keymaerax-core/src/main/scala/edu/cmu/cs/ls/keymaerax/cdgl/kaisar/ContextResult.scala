@@ -69,7 +69,9 @@ sealed trait ContextResult {
           (inContext.isElaborationContext || free.toSet.intersect(tabooProgramVars).isEmpty)
         }
         def assignFilter(as: Assign): Boolean = factFilter(assignId(as), assignFact(as))
-        RSuccess(facts.filter({case (x, y) => factFilter(x, y)}), assigns.filter(assignFilter))
+        val filteredFacts = facts.filter({case (x, y) => factFilter(x, y)})
+        val filteredAssigns = assigns.filter(assignFilter)
+        RSuccess(filteredFacts, filteredAssigns)
     }
 
   // @TODO: Better data structure for assignments that might also have names. matchesAssign vs matchesFact

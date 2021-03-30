@@ -8,8 +8,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import spire.math.{Algebraic, Rational}
-
 import java.math.RoundingMode
 
 /** Trait for different arithmetic representations supported for system execution */
@@ -29,6 +27,7 @@ trait Numeric[T, Truth] { this: T =>
   def eq(rhs: T): Truth
   def diseq(rhs: T): Truth
   def unary_- : T
+  def intApprox: Int
 }
 
 trait NumberFactory[Truth, N <: Numeric[N, Truth]] {
@@ -63,6 +62,7 @@ case class TernaryNumber[number <: Numeric[number, Boolean]](num: number) extend
   override def eq(rhs: TernaryNumber[number]): Ternary = if (num.eq(rhs.num)) KnownTrue() else KnownFalse()
   override def diseq(rhs: TernaryNumber[number]): Ternary = if (num.diseq(rhs.num)) KnownTrue() else KnownFalse()
   override def unary_- : TernaryNumber[number] = TernaryNumber(-num)
+  override def intApprox: Int = num.intApprox
 }
 
 case class UnknowingFactory[N <: Numeric[N, Boolean]](val factory: NumberFactory[Boolean, N]) extends NumberFactory[Ternary, TernaryNumber[N]] {
@@ -104,11 +104,12 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
 
   override def pow(num: Int, denom: Int): RatNum = {
     if (denom == 1) RatNum(n.pow(num))
-    else if (denom == 0) throw NoValueException()
+    else if (denom == 0) throw NoValueException(msg = "Division by zero")
     else {
-      val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
-      val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
-      val frac = if(pos) alg else Algebraic(1) / alg
+      //val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
+      val x = n.ratPow(num, denom)
+      //val alg = n.toAlgebraic.nroot(denom).pow(numAbs)
+      val frac = x //if(pos) x else 1 / x
       RatNum(Rational(frac.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)))
     }
   }
@@ -123,6 +124,7 @@ case class RatNum(n: Rational) extends Numeric[RatNum, Boolean] {
   override def unary_- : RatNum = RatNum(-n)
   override def eq(other: RatNum): Boolean = (n == other.n)
   override def diseq(other: RatNum): Boolean = (n != other.n)
+  override def intApprox: Int = n.toInt
 }
 
 /** Interval of rational numbers. */
@@ -138,30 +140,30 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def /(rhs: RatIntNum): RatIntNum = {
     // Division by zero
     val (lo, hi) =
-    if(rhs.l <= 0 && 0 <= rhs.u)
-      throw NoValueException()
-    else if (0 <= rhs.l) { // top half
-      if (l <= 0 && 0 <= u) { // top-center
-        (Rational(0).min(l / rhs.l), Rational(0).max(u / rhs.l))
-      } else if (u < 0) { // top-left
-        (l / rhs.l, u / rhs.u)
-      } else { // top-right
-        (l / rhs.u, u / rhs.l)
+      if(rhs.l <= Rational(0,1) && Rational(0,1) <= rhs.u)
+        throw NoValueException(msg = "Division by zero")
+      else if (Rational(0,1) <= rhs.l) { // top half
+        if (l <= Rational(0,1) && Rational(0,1) <= u) { // top-center
+          ((Rational(0,1)).min(l / rhs.l), (Rational(0,1)).max(u / rhs.l))
+        } else if (u < Rational(0,1)) { // top-left
+          (l / rhs.l, u / rhs.u)
+        } else { // top-right
+          (l / rhs.u, u / rhs.l)
+        }
+      } else { // bottom half
+        if (l <= Rational(0,1) && Rational(0,1) <= u) { // bottom-center
+          ((u / rhs.u).min(Rational(0,1)), (l / rhs.u).max(Rational(0,1)))
+        } else if (u < Rational(0,1)) { // bottom-left
+          (u / rhs.l, l / rhs.u)
+        } else { // bottom-right
+          (u / rhs.u, l / rhs.l)
+        }
       }
-    } else { // bottom half
-      if (l <= 0 && 0 <= u) { // bottom-center
-        ((u / rhs.u).min(0), (l / rhs.u).max(0))
-      } else if (u < 0) { // bottom-left
-        (u / rhs.l, l / rhs.u)
-      } else { // bottom-right
-        (u / rhs.u, l / rhs.l)
-      }
-    }
     RatIntNum(lo, hi)
   }
 
   def natPow(k: Int): RatIntNum = {
-    if (k == 0) RatIntNum(1, 1)
+    if (k == 0) RatIntNum(Rational(1), Rational(1))
     else {
       val (pos, abs) = if (k > 0) (true, k) else (false, -k)
       def mults(i: Int): RatIntNum = if(i == 1) this else this * mults(i - 1)
@@ -173,12 +175,12 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   // @TODO: Check general-case correctness
   override def pow(num: Int, denom: Int): RatIntNum = {
     if (denom == 1) natPow(num)
-    else if (denom == 0) throw NoValueException()
+    else if (denom == 0) throw NoValueException(msg = "Rational power with denominator zero")
     else {
       val (pos, numAbs) = if (num >= 0 == denom >= 0) (true, num) else (false, -num)
-      val algL = l.toAlgebraic.nroot(denom).pow(numAbs)
-      val algU = u.toAlgebraic.nroot(denom).pow(numAbs)
-      val (fracL, fracU) = if(pos) (algL, algU) else (Algebraic(1) / algL, Algebraic(1) / algU)
+      val algL = l.ratPow(numAbs, denom)
+      val algU = u.ratPow(numAbs,denom)
+      val (fracL, fracU) = if(pos) (algL, algU) else (Rational(1) / algL, Rational(1) / algU)
       val (lo, hi) = if (fracL <= fracU) (fracL, fracU) else (fracU, fracL)
       RatIntNum(Rational(lo.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.DOWN)), Rational(hi.toBigDecimal(Play.ROUNDING_SCALE, RoundingMode.UP)))
     }
@@ -188,7 +190,7 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
   override def abs: RatIntNum = {
     val aL = l.abs
     val aU = u.abs
-    val lo = if(l <= 0 && u >= 0) Rational(0) else aL.min(aU)
+    val lo = if(l <= Rational(0,1) && u >= Rational(0,1)) Rational(0, 1) else aL.min(aU)
     val hi = aL.max(aU)
     RatIntNum(lo, hi)
   }
@@ -217,5 +219,6 @@ case class RatIntNum(l: Rational, u: Rational) extends Numeric[RatIntNum, Ternar
     else if ((l <= rhs.l && rhs.l <= u) || (l <= rhs.u && rhs.u <= u)) Unknown()
     else KnownTrue()
   override def unary_- : RatIntNum = RatIntNum(-u, -l)
+  override def intApprox: Int = (l.toInt + u.toInt) / 2
 }
 

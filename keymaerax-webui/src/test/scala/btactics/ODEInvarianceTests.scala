@@ -1,15 +1,18 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.{alld, doubleNegation, equivReflexive}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, Nil}
 import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
@@ -192,7 +195,6 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-
 
   //Mathematica crashes badly
   //  it should "handle the largest example" in withMathematica { _ =>
@@ -545,15 +547,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "normalize invariants" ignore withMathematica { _ =>
-    //@note fails because rank
-    val normalizedSeq = "(1/2*x<=x & x<=7/10 & 0<=y & y<=3/10) ==> [{x'=-x+x*y, y'=-y}](-4/5 < x | x < -1 | -7/10 < y | y < -1)".asSequent
-    proveBy(normalizedSeq, odeInvariant(1)) shouldBe 'proved
-    //@note fails because not normalized
-    val seq = "(1/2*x<=x & x<=7/10 & 0<=y & y<=3/10) ==> [{x'=-x+x*y, y'=-y}]!(((-4/5>=x&x>=-1)&-7/10>=y)&y>=-1)".asSequent
-    proveBy(seq, odeInvariant(1)) shouldBe 'proved
-  }
-
   it should "prove example where Darboux heuristic fails" in withZ3 { _ =>
     val seq = "2*g()*x<=2*g()*H()-v_0^2&x>=0, g()>0, 1>=c(), c()>=0, r()>=0, x=0, v=-c()*v_0\n  ==>  [{x'=v,v'=-g()-r()*v^2&x>=0&v>=0}]2*g()*x<=2*g()*H()-v^2".asSequent
     val pr = proveBy(seq, odeInvariant(1))
@@ -749,6 +742,47 @@ class ODEInvarianceTests extends TacticTestBase {
       domainStuck(2)
     )
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  "SAI" should "prove simple inv" in withMathematica { _ =>
+    val pr = proveBy("x = 1 -> x > 1 | [{x'=x+y,y'=y+x+z&y=0}](x>0 | (x^3 > 0 & x <= 1))".asFormula,
+      implyR(1) & orR(1) &
+      sAI(2)
+    )
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    pr shouldBe 'proved
+  }
+
+  it should "work with domains" in withMathematica { _ =>
+    val pr = proveBy("x = 1 -> [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0)".asFormula,
+      implyR(1) &
+      sAI(1)
+    )
+
+    println(pr)
+    println("Proof steps:",pr.steps)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a difficult invariant" in withMathematica { _ =>
+    val fml = "a() = 0 & 1/100 - x^2 - y^2 >= a() -> a()=1 | [{x'=-2*x+x^2+y, y'=x-2*y+y^2+a()}]!(x^2+y^2 >= 1/4)".asFormula
+    val pr = proveBy(fml, implyR(1) & andL(-1) & orR(1) &
+      sAI(2)
+    )
+    println(pr)
+    println("Proof steps:",pr.steps)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a simple inv" in withMathematica { _ =>
+    val fml = "x>0 -> [{x'=x}] x>0".asFormula
+    val pr = proveBy(fml, implyR(1) & sAI(1)
+    )
+    println(pr)
+    println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
 }
