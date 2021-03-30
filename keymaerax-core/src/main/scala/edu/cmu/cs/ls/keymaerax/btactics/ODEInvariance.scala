@@ -2231,12 +2231,12 @@ object ODEInvariance {
   private val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
 
   //todo: move to Ax.scala
-  val dBarcan = proveBy("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
+  private lazy val dBarcan = proveBy("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
     diamondd(1,1::Nil) &
     diamondd(1,0::0::Nil) &
     useAt(Ax.existsDual,PosInExpr(1::Nil))(1,0::Nil) &
     useAt(Ax.doubleNegation)(1,0::0::0::Nil) &
-    useAt(Ax.notExists)(1,1::0::1::Nil) &
+    useAt(Ax.notExists)(1,1::0::1::Nil) & //@todo substitution clash
     useAt(Ax.barcan)(1,1::0::Nil) &
     byUS(Ax.equivReflexive)
   )
