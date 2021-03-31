@@ -2156,10 +2156,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else "\"" + values.mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:StringArg)) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
         "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
+      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)

@@ -689,7 +689,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       spinnerService.show('tacticExecutionSpinner');
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
       if (selected) {
-        var args = input.map(function(e) { return '"' + e.value + '"'; }).join(',');
+        var args = input.map(function(e) { return '"' + e.value.replace("\"", "\\\"") + '"'; }).join(',');
         $scope.onTacticScript(tacticId + '(' + args + (formulaId ? ',' + formulaId.replace(',','.') : '') + ')' +
           ' using "' + selected.join('::') + (selected.length > 0 ? '::' : '') + 'nil"', false)
       } else {
