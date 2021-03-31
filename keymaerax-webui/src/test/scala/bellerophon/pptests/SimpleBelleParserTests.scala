@@ -899,6 +899,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
   }
 
+  it should "allow escaped quotation marks in arguments" in {
+    BelleParser("""useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
+      useLemmaX("Lemma 1", Some("dC(\"x>=0\",1)"))
+  }
+
   //endregion
 
   //region Lemmas
