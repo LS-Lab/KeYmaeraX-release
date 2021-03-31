@@ -192,7 +192,11 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       return result;
     },
 
-    sanitizeValue: function(value) { return value ? value.replace("()", "") : value; },
+    sanitizeValue: function(value) {
+      //@note used to remove () on inputs for uniform appearance x vs. x(), but has surprising effects when user wants
+      //      to insist on function symbol (e.g., when instantiating quantifiers)
+      return value;
+    },
 
     createInput: function(formula, tactic, inputBoundary) {
       var inputId = formula.slice(inputBoundary.start, inputBoundary.end);
