@@ -228,7 +228,7 @@ private case class EXPRESSION_SUB(override val exprString: String, override val 
 }
 
 private object BELLE_EXPRESSION {
-  def regexp: Regex = """(\{`[\s\S]*?`})|("(?:[^\\"]*(?:\\")?)*")""".r // allows \" inside "..."
+  def regexp: Regex = """(\{`[\s\S]*?`})|("(?:[^\\"]*(?:\\.)?)*")""".r // allows \" inside "..."
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 
   def apply(exprString: String, delimiters: (String, String)): BELLE_EXPRESSION = {

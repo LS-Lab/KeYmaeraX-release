@@ -900,8 +900,17 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "allow escaped quotation marks in arguments" in {
-    BelleParser("""useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
+    BelleParser(""" useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
       useLemmaX("Lemma 1", Some("dC(\"x>=0\",1)"))
+  }
+
+  it should "lex backslash followed by any character" in {
+    BelleParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR('R, "\\exists x x=0".asFormula)
+    BelleParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR('R, "\\forall x x^2>=0".asFormula)
+    the [ParseException] thrownBy BelleParser(""" hideR('R=="\x x^2=1") """) should
+      have message """1:1 Unexpected token cannot be parsed
+                     |Found:    \\ at 1:1 to 1:2
+                     |Expected: <BeginningOfExpression>""".stripMargin
   }
 
   //endregion
