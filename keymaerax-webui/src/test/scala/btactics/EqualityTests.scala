@@ -98,6 +98,16 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=x ==> [x:=2;]x>=y".asSequent
   }
 
+  it should "not fail bound occurrences 5" in withQE { _ =>
+    proveBy("y=x ==> [{x'=2}]x>=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> [{x'=2}]x>=y".asSequent
+    proveBy("x=y ==> [{x'=2}]x>=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "x=y ==> [{x'=2}]x>=y".asSequent
+  }
+
+  it should "not try to rewrite differential symbols and differentials" in withQE { _ =>
+    proveBy("y=x ==> y'=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> y'=x".asSequent
+    proveBy("y=x ==> (f(y))'=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> (f(y))'=x".asSequent
+  }
+
   "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
     val result = proveBy("0=x ==> x*y=0".asSequent, eqR2L(-1)(1))
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent

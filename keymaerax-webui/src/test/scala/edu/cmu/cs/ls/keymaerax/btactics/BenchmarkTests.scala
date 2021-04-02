@@ -316,7 +316,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       case Some(t) =>
         println(s"Proving $name")
 
-        val hasDefinitions = defs.decls.exists(_._2._3.isDefined)
+        val hasDefinitions = defs.decls.exists(_._2.interpretation.isDefined)
         val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(t)
         if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
         val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)

@@ -40,6 +40,19 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "[x:=2;][x:=x;]x>0 ==> ".asSequent
   }
 
+  it should "introduce self assignments before differentials" in withTactics {
+    proveBy("==> (f(x))'=5".asSequent, DLBySubst.stutter("x".asVariable)(1)).subgoals.
+      loneElement shouldBe "==> [x:=x;](f(x))'=5".asSequent
+  }
+
+  it should "introduce self assignments in universal context in antecedent" in withTactics {
+    proveBy("\\forall x x=2 ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;]x=2 ==>".asSequent
+    proveBy("\\forall x (f(x))'=2 ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;](f(x))'=2 ==>".asSequent
+    proveBy("\\forall x (f(x))'=g(x) ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;](f(x))'=g(x) ==>".asSequent
+  }
 
   "Box abstraction" should "work on top-level" in withTactics {
     val result = proveBy("[x:=2;]x>0".asFormula, abstractionb(1))
@@ -280,6 +293,28 @@ class DLTests extends TacticTestBase {
     //@todo last step (implyR) in assignEquality changes position
     proveBy("x=1, [x:=2;]x=2 ==> [x:=3;]x>0, [x:=5;]x>6, x=7".asSequent, DLBySubst.assignEquality(1)).
       subgoals.loneElement shouldBe "x_0=1, [x_0:=2;]x_0=2, x=3 ==> x>0, [x_0:=5;]x_0>6, x_0=7".asSequent
+  }
+
+  it should "give advice on program constant postcondition" in withTactics {
+    the [BelleUserCorrectableException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
+      DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+  }
+
+  it should "assign with antecedent context present" in withTactics {
+    proveBy("[x:=y;]x>=0, x>=4 ==>".asSequent, DLBySubst.assignEquality(-1)).subgoals.loneElement shouldBe "x_0>=4, x=y, x>=0 ==>".asSequent
+  }
+
+  it should "assign in the presence of differential symbols and differentials" in withTactics {
+    proveBy("==> [x:=y;]x'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> x'=y".asSequent
+    proveBy("==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> (f(x))'=y".asSequent
+    proveBy("x=2 ==> [x:=y;](f(y))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x=2 ==> (f(y))'=y".asSequent
+    proveBy("x=2 ==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x_0=2 ==> (f(x))'=y".asSequent
+  }
+
+  it should "assign in the antecedent in the presence of differential symbols and differentials" in withTactics {
+    proveBy("[x:=y;]x'=x ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y ==>".asSequent
+    proveBy("[x:=y;]x'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y, x=2 ==>".asSequent
+    proveBy("[x:=y;](f(x))'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x_0=2, (f(x))'=y ==>".asSequent
   }
 
   "generalize" should "introduce intermediate condition" in withTactics {
@@ -771,6 +806,13 @@ class DLTests extends TacticTestBase {
     //@todo last step (implyR) in assignEquality step used in discreteGhost changes position
     val result = proveBy("a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent, discreteGhost("0".asTerm, Some("z".asVariable))(2))
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
+  }
+
+  it should "introduce differential symbol ghosts" in withTactics {
+    proveBy("==> y=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]y=x'".asSequent
+    proveBy("==> x=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]x=x'".asSequent
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in withTactics {

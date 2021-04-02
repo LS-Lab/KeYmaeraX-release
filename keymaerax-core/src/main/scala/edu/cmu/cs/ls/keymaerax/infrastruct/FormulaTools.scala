@@ -200,31 +200,25 @@ object FormulaTools extends Logging {
    */
   def posOf(expr: Expression, sub: Expression): Option[PosInExpr] = {
     var pos: Option[PosInExpr] = None
-    expr match {
-      case formula: Formula =>
-        sub match {
-          case subFormula: Formula =>
-            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-                if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-                else Left(None)
-            }, formula)
-          case subTerm: Term =>
-            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-                else Left(None)
-            }, formula)
-        }
-      case term: Term =>
-        sub match {
-          case subTerm: Term =>
-            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-                else Left(None)
-            }, term)
-        }
+    sub match {
+      case _: Formula =>
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+            if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+            else Left(None)
+        }, expr)
+      case _: Term =>
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+            if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+            else Left(None)
+        }, expr)
+      case _: Program =>
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
+            if (e == sub) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+            else Left(None)
+        }, expr)
     }
     pos
   }

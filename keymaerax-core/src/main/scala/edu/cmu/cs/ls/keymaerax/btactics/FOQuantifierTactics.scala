@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivedAxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.immutable._
@@ -39,7 +39,7 @@ protected object FOQuantifierTactics {
         case Some(e) => throw new TacticInapplicableFailure("allInstantiateInverse only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
-      useAt(Ax.allInst, PosInExpr(1::Nil), (us: Option[Subst]) => RenUSubst(
+      useAt(Ax.allInst, PosInExpr(1::Nil), (_: Option[Subst]) => RenUSubst(
         ("x_".asTerm, v) ::
         ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
         ("p(.)".asFormula, fml.replaceFree(t, DotTerm())) :: Nil))(pos)
@@ -56,15 +56,18 @@ protected object FOQuantifierTactics {
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
       sequent.at(pos) match {
-        case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+        case (_, Forall(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt(Ax.alle)(pos)
-        case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
+        case (_, Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
+          StaticSemantics.symbols(qf).intersect(vars.map(DifferentialSymbol).toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
           //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
-          import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.AxiomInfoAugmentor
-          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1,  (uso: Option[Subst]) => uso match {
+            case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
+            case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
+          })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           if ((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) >= 0)
             throw new TacticInapplicableFailure("\\forall must have negative polarity in antecedent")
@@ -75,7 +78,7 @@ protected object FOQuantifierTactics {
           val p = forall(qf)
 
           val (assign, assignPreprocess) = t match {
-            case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
+            case vinst: Variable if !StaticSemantics.freeVars(p).symbols.exists(t => t == vinst || t == DifferentialSymbol(x)) =>
               (Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos))
             case _ => (Box(Assign(x, t), p), skip)
           }
@@ -86,7 +89,7 @@ protected object FOQuantifierTactics {
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
             )
-        case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+        case (_, f@Forall(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
           throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
@@ -101,13 +104,16 @@ protected object FOQuantifierTactics {
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
       sequent.at(pos) match {
-        case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
+        case (_, Exists(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
           useAt(Ax.existse)(pos)
-        case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
+        case (_, Exists(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get))  =>
           //@todo assumes any USubstAboveURen
-          useAt(Ax.existsGeneralize, PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(Ax.existsGeneralize, PosInExpr(1::Nil),  (uso: Option[Subst]) => uso match {
+            case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
+            case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
+          })(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
@@ -119,10 +125,10 @@ protected object FOQuantifierTactics {
           val (v,assign, assignPreprocess, subst) = t match {
             case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
               (vinst,Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos),
-                (us: Subst) => RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
+                (_: Subst) => RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
             case _ =>
               (x,Box(Assign(x, t), p), skip,
-                (us: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
+                (_: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
           }
           val rename = Ax.existsGeneralize.provable(URename(Variable("x_"), v, semantic=true))
 
@@ -132,7 +138,7 @@ protected object FOQuantifierTactics {
               assignb(pos),
                 cohide(pos) & CMon(pos.inExpr) & byUS(rename, subst) & done
               )
-        case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
+        case (_, f@Exists(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
           throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
@@ -172,8 +178,8 @@ protected object FOQuantifierTactics {
     //@Tactic in [[SequentCalculus]]
     if (!pos.isSucc)
       throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
-    val xs = sequent.sub(pos) match {
-      case Some(Forall(vars, _)) => vars
+    val (xs, p) = sequent.sub(pos) match {
+      case Some(Forall(vars, p)) => (vars, p)
       case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
@@ -184,19 +190,45 @@ protected object FOQuantifierTactics {
     
     if (noRename) ProofRuleTactics.skolemizeR(pos)
     else {
-      //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
-      val renaming =
-        if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)
-        else {
-          assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_ & _)
+      if (StaticSemantics.freeVars(p).isInfinite) {
+        val unexpandedSymbols = StaticSemantics.symbols(p).
+          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
+          map(_.prettyString).mkString(",")
+        throw new UnexpandedDefinitionsFailure("Skolemization not possible because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
+      }
+      if (StaticSemantics.freeVars(p).symbols.intersect(xs.toSet.map(x => DifferentialSymbol(x)).map(_.asInstanceOf[Variable])).nonEmpty) {
+        //@note bound renaming at pos not allowed, so rename everywhere else with stuttering and bound renaming
+        val np = namePairs.toMap
+        val stutter = xs.map(DLBySubst.stutter)
+        val breq = xs.map(x => (p: Position) => boundRename(x, np(x))(p) & DLBySubst.assignEquality(p) & hideL('L, Equal(np(x), x))
+        )
+        def localRename(p: Position): BelleExpr = {
+          stutter.map(_(p)).reduceRight[BelleExpr](_&_) & breq.map(_(p)).reduceRight[BelleExpr](_&_)
         }
-      // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
-      val backrenaming =
-        if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
-        else {
-          assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
-        }
-      renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
+        val fmls =
+          (sequent.ante.zipWithIndex.map({ case (f, i) => (f, AntePosition.base0(i)) }) ++
+           sequent.succ.zipWithIndex.map({ case (f, i) => (f, SuccPosition.base0(i)) })).filter(_._2 != pos.topLevel)
+        val rename = fmls.map({ case (f, p) =>
+          if (StaticSemantics.freeVars(f).intersect(xs.toSet).isEmpty) skip else localRename(p) }).
+          reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+        rename & ProofRuleTactics.skolemizeR(pos)
+      } else {
+        //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
+        val renaming =
+          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)
+          else {
+            assert(namePairs.size == 1);
+            outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_ & _)
+          }
+        // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
+        val backrenaming =
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
+          else {
+            assert(namePairs.size == 1);
+            ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
+          }
+        renaming & DebuggingTactics.print("Renamed") & ProofRuleTactics.skolemizeR(pos) & DebuggingTactics.print("Skolemized") & backrenaming
+      }
     }
   })
 
@@ -293,12 +325,14 @@ protected object FOQuantifierTactics {
     val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case Some(us) => us ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Forall(Seq(quantified), f), Ax.alle, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case Some(us) => us ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), Ax.allInst, subst)
       case Some(e) => throw new TacticInapplicableFailure("allGeneralize only applicable to formulas, but got " + e.prettyString)
@@ -346,12 +380,14 @@ protected object FOQuantifierTactics {
     val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case Some(us) => us ++ RenUSubst(("x_".asTerm, t) :: Nil)
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Exists(Seq(quantified), f), Ax.existse, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
-          case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case Some(us) => us ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
+          case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
         }
         (Exists(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), Ax.existsGeneralize, subst)
       case Some(e) => throw new TacticInapplicableFailure("existsGen only applicable to formulas, but got " + e.prettyString)

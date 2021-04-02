@@ -394,6 +394,14 @@ del {
 }
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
+.k4-functional {
+  font-style: bold small-caps;
+  text-transform: capitalize;
+}
+.k4-system-const { font-style: italic; }
+.k4-assumptions-cart {
+
+}
 
 .k4-select-hover {
   background-color: var(--lsgreen);
@@ -568,13 +576,22 @@ del {
   font-weight: bold;
   font-size: larger;
 }
+.text-muted .k4-mod-close {
+  color: revert;
+}
 
-/* Everything inside a box/diamond */
+/* Everything inside a box/diamond, except when muted */
 .k4-mod-open ~ span:not(.k4-mod-close) {
   color: green;
 }
+.text-muted .k4-mod-open ~ span:not(.k4-mod-close) {
+  color: revert;
+}
 .k4-mod-close ~ span:not(.k4-mod-open) {
   color: var(--lsmain);
+}
+.text-muted .k4-mod-close ~ span:not(.k4-mod-open) {
+  color: revert;
 }
 /* Unless a parent is highlighted */
 .k4-has-step.k4-prove-hover span {
@@ -609,6 +626,15 @@ del {
   white-space: -pre-wrap;      /* Opera 4-6 */
   white-space: -o-pre-wrap;    /* Opera 7 */
   word-wrap: break-word;
+}
+
+.k4-tactic-diff {
+  position: absolute;
+  border-bottom: 1px dashed;
+}
+
+.k4-no-padding {
+  padding: 0;
 }
 
 .k4-modeleditor, .k4-modeleditor:focus {
@@ -1310,7 +1336,7 @@ del {
 .k4-formula-content > ul:first-child {
   list-style-type: none;
   padding: 0px 0px 0px 0px;
-  margin-top: -0.5ex;
+  margin-top: -0.7ex;
   text-align: right;
   display: block;
   position: absolute;

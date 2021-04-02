@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -25,6 +25,14 @@ import org.scalatest.LoneElement._
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends TacticTestBase {
+
+  "Locators" should "apply searchy with sub-positions" in withTactics {
+    inside(theInterpreter(composeb(Find.FindR(0, Some("[x:=2;][y:=*;?y>=x;]y>=2".asFormula), PosInExpr(1::Nil), exact=true)),
+      BelleProvable(ProvableSig.startProof("==> [x:=2;][y:=*;?y>=x;]y>=2".asSequent)))) {
+      case BelleProvable(p, _) =>
+        p.subgoals.loneElement shouldBe "==> [x:=2;][y:=*;][?y>=x;]y>=2".asSequent
+    }
+  }
 
   "AndR" should "prove |- 1=1 ^ 2=2" in withMathematica { _ =>
     inside (theInterpreter(andR(1), BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))) {

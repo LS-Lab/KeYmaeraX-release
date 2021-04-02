@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -119,7 +119,7 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR(1=="x>=0->x>=0")"""
+      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
     }
   }}
 
@@ -227,14 +227,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(("x", None) -> (None, Real, None, None, UnknownLocation))))
+      FixedGenerator(Nil), Declaration(Map(Name("x", None) -> Signature(None, Real, None, None, UnknownLocation))))
     val proofSession = () => SessionManager.session(t)(proofId.toString).asInstanceOf[ProofSession]
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
     // proof session should pick up new variable introduced by cut
-    proofSession().defs.decls.keySet should contain ("x0", None)
-    proofSession().defs.decls(("x0", None)) should be (None, Real, None, None, UnknownLocation)
+    proofSession().defs.decls.keySet should contain (Name("x0", None))
+    proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, None, UnknownLocation)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -253,7 +253,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("(2,1)", dIRule(1))
     // proof session should not pick up elaborated variables
-    proofSession().defs.decls(("x0", None))._1 should not be 'defined
+    proofSession().defs.decls(Name("x0", None)).domain should not be 'defined
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -369,7 +369,7 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
-        stepsTactic shouldBe "implyR(1) ; andL(-1)"
+        stepsTactic shouldBe "implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
@@ -481,7 +481,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(("f", None) -> (None, Real, None, Some("3+5".asTerm), null))))
+      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(None, Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
@@ -493,7 +493,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil),
-      Declaration(Map(("f", None) -> (Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
+      Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
@@ -593,14 +593,14 @@ class ScriptedRequestTests extends TacticTestBase {
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
         BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs, expandAll = true) match {
           case _: PartialTactic =>
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue("closed")
           case _ =>
             r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue("closed")
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
             r6 shouldBe a[ProofVerificationResponse]
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
-            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true
+            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = BelleParser.parseWithInvGen(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value,

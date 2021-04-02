@@ -228,15 +228,21 @@ angular.module('formula')
               return $sce.trustAsHtml(html);
             }
 
-            scope.replaceNullaryFn = function(html) {
-              return html.replace(/(\w+)(\(\))/g, function(match, fn, parens, offset, string) {
-                return '<span class="k4-nullary-fn">' + fn + '</span>';
-              });
+            scope.replaceSpecialNotation = function(html) {
+              return html.replace(/(\w+)(?:(\(\))|(\(\|\|\))|({\|\^@\|}))/g,
+                function(match, name, fnParens, fnctlParens, sysParens, offset, string) {
+                  if (name.startsWith('A__')) return name.replace(/A__(\d+)/g,
+                    function(match, i, offset, string) { return '<span class="k4-assumptions-cart fa fa-shopping-cart small text-muted"><sub>' + i + '</sub></span>'; })
+                  else if (fnParens) return '<span class="k4-nullary-fn">' + name + '</span>';
+                  else if (fnctlParens) return '<span class="k4-functional">' + name + '</span>';
+                  else if (sysParens) return '<span class="k4-system-const">' + name + '</span>';
+                  else return html;
+                });
             }
 
-            scope.replacePlainNullaryFn = function(text) {
-              return text.replace(/(\w+)(\(\))/g, function(match, fn, parens, offset, string) {
-                return fn;
+            scope.replacePlainSpecialNotation = function(text) {
+              return text.replace(/(\w+)(?:(\(\))|({\|\^@\|}))/g, function(match, name, fnParens, sysParens, offset, string) {
+                return name;
               });
             }
 
@@ -247,20 +253,6 @@ angular.module('formula')
 //                return '<sub>' + idx + '</sub>';
 //              });
             }
-
-
-
-//            console.log("Compiling formula")
-//            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
-//            // compile template, bind to scope, and add into DOM
-//            if (scope.collapsed) {
-//              //@note if collapsed we don't have any listeners, no need to compile
-//              element.append('<span class="k4-formula-preformat">' + fmlMarkup + '</span>');
-//            } else {
-//              var template = '<span ng-class="{\'k4-abbreviate\': collapsed, \'k4-formula-preformat\': true}">' + fmlMarkup + '</span>';
-//              element.append($compile(template)(scope));
-//            }
-//            console.log("Done compiling")
         }
     };
   }]);

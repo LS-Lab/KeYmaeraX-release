@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
@@ -25,6 +26,7 @@ class RandomContextTests extends FlatSpec with Matchers with BeforeAndAfterAll {
   private val rand = new RandomFormula()
 
   override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     KeYmaeraXTool.init(Map(
       KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
       KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName

@@ -648,7 +648,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
 
   /** The tactic to produce this tree from its root conclusion. */
-  override def tacticString: String = { load(); new ExtractTacticFromTrace(db).getTacticString(this) }
+  override def tacticString: String = { load(); new VerboseTraceToTacticConverter().getTacticString(this) }
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed

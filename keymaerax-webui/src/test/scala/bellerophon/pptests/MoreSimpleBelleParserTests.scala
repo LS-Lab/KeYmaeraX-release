@@ -1,7 +1,7 @@
 package bellerophon.pptests
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -141,6 +141,17 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
       have message """1:15 Formula list in using "x>0::y>0" must end in :: nil
                      |Found:    "x>0::y>0" at 1:15 to 1:24
                      |Expected: "x>0::y>0::nil"""".stripMargin
+  }
+
+  it should "bind strong" in withTactics {
+    parser(""" implyR(1); id using "x>=0" """) shouldBe TactixLibrary.implyR(1) & Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+    parser(""" (implyR(1); id) using "x>=0" """) shouldBe Using("x>=0".asFormula :: Nil, TactixLibrary.implyR(1) & TactixLibrary.id)
+    parser(""" implyR(1) | id using "x>=0" """) shouldBe TactixLibrary.implyR(1) | Using("x>=0".asFormula :: Nil, TactixLibrary.id)
+  }
+
+  it should "parse empty lists" in withTactics {
+    parser(""" id using "nil" """) shouldBe Using(Nil, TactixLibrary.id)
+    BellePrettyPrinter(Using(Nil, TactixLibrary.id)) shouldBe """id using "nil""""
   }
 
   "Propositional Examples" should "close p() -> p()" in withTactics {

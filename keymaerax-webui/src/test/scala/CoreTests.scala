@@ -3,15 +3,11 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
-import edu.cmu.cs.ls.keymaerax.tools._
-import java.math.BigDecimal
-import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -19,40 +15,44 @@ import scala.collection.immutable._
 
 @CheckinTest
 @SummaryTest
-class CoreTests extends FlatSpec with Matchers {
+class CoreTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+  }
   
-  val p = PredOf(Function("p", None, Unit, Bool), Nothing)
-  val q = PredOf(Function("q", None, Unit, Bool), Nothing)
+  private val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+  private val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
-  val sPos = SeqPos(1).asInstanceOf[SuccPos]
-  val aPos = SeqPos(-1).asInstanceOf[AntePos]
+  private val sPos = SeqPos(1).asInstanceOf[SuccPos]
+  private val aPos = SeqPos(-1).asInstanceOf[AntePos]
 
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-  val z = Variable("z", None, Real)
+  private val x = Variable("x", None, Real)
+  private val y = Variable("y", None, Real)
+  private val z = Variable("z", None, Real)
 
 
   "Core (Data Strutures)" should "accept explicit differential equations" in {
-    new AtomicODE(new DifferentialSymbol(x), new Number(5)) should be (new AtomicODE(new DifferentialSymbol(x), new Number(5)))
+    AtomicODE(DifferentialSymbol(x), Number(5)) should be (AtomicODE(DifferentialSymbol(x), Number(5)))
   }
 
   it should "require explicit-form differential equation" in {
-    an[CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
+    an[CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x))}
   }
 
   it should "require explicit-form differential equations" in {
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(y))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(x))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(y))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(Plus(x, y)))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, new Differential(Plus(x, y))))}
-    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(x))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), DifferentialSymbol(y))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(x))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(y))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Differential(Plus(x, y)))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Plus(x, Differential(Plus(x, y))))}
+    an [CoreException] should be thrownBy {AtomicODE(DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
   }
 
   it should "reject duplicate differential equations" in {
-    an [CoreException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(Variable("x")), Number(2)))}
-    an [CoreException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(Variable("x")), Number(7)))}
+    an [CoreException] should be thrownBy {DifferentialProduct(AtomicODE(DifferentialSymbol(x), Number(7)), AtomicODE(DifferentialSymbol(Variable("x")), Number(2)))}
+    an [CoreException] should be thrownBy {DifferentialProduct(AtomicODE(DifferentialSymbol(x), Number(7)), AtomicODE(DifferentialSymbol(Variable("x")), Number(7)))}
   }
 
   //@todo add core SeqPos tests
@@ -63,20 +63,17 @@ class CoreTests extends FlatSpec with Matchers {
   }
 
   "Tactic (Positions)" should "have PosInExpr equality based on lists" in {
-    new PosInExpr(List(1,0,4,4,1)) should be (new PosInExpr(List(1,0,4,4,1)))
-    new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1)))
-    new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1,4)))
-    new PosInExpr(List(0)) should not be (new PosInExpr(List(0, 0, 0, 0, 0)))
-    new PosInExpr(List(0)) should not be (HereP)
+    new PosInExpr(List(1,0,4,4,1)) shouldBe new PosInExpr(List(1,0,4,4,1))
+    new PosInExpr(List(1,0,4,4,1)) should not be new PosInExpr(List(1,0,4,1))
+    new PosInExpr(List(1,0,4,4,1)) should not be new PosInExpr(List(1,0,4,1,4))
+    new PosInExpr(List(0)) should not be new PosInExpr(List(0, 0, 0, 0, 0))
+    new PosInExpr(List(0)) should not be HereP
   }
 
   "Core (Expressions)" should "yield equality" in {
     DifferentialFormula(Equal(Variable("x", None, Real), Number(0))) should be (DifferentialFormula(Equal(Variable("x", None, Real), Number(0))))
     Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
   }
-
-  def rootSucc(f: Formula) = ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(f)))
-  def rootAnte(f: Formula) = ProvableSig.startProof(Sequent(IndexedSeq(f), IndexedSeq()))
 
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(IndexedSeq() ++ a, IndexedSeq() ++ b)
 
@@ -100,11 +97,11 @@ class CoreTests extends FlatSpec with Matchers {
     }
   }
 
-  def testRule(rule: Rule, in: Sequent) = ProvableSig.startProof(in).apply(rule, 0).subgoals
+  private def testRule(rule: Rule, in: Sequent) = ProvableSig.startProof(in).apply(rule, 0).subgoals
 
-  implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
+  private implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
 
-  implicit def sequentToList(s: Sequent): List[Sequent] = List(s)
+  private implicit def sequentToList(s: Sequent): List[Sequent] = List(s)
 
   "Core (Propositional Rules)" should "yield expected results" in {
     testRule(CloseTrue(sPos), seq(Nil, True), Nil)

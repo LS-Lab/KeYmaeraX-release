@@ -10,13 +10,12 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.btactics.Integrator
-import edu.cmu.cs.ls.keymaerax.cdgl.Metric
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import fastparse.Parsed.{Failure, TracedFailure}
 import StandardLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
@@ -155,9 +154,9 @@ object KaisarProof {
   }
 
   // Special functions max, min, and abs are already used in KeYmaera X, but are often used in Kaisar proofs as well
-  val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)
-  val min: Function = Function("min", domain = Tuple(Real, Real), sort = Real, interpreted = true)
-  val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
+  val max: Function = InterpretedSymbols.maxF
+  val min: Function = InterpretedSymbols.minF
+  val abs: Function = InterpretedSymbols.absF
 
   // We reuse expression syntax for patterns over expressions. We use an interpreted function wild() for the wildcard
   // patttern "*" or "_". This is elaborated before proofchecking

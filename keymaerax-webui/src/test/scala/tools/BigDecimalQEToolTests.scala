@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import org.scalatest.LoneElement._
@@ -40,7 +41,7 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       checkEval(mathematica, Neg(n), false)
       checkEval(mathematica, Differential(n), true)
       withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-        checkEval(mathematica, FuncOf(BigDecimalQETool.absF, n), false)
+        checkEval(mathematica, FuncOf(InterpretedSymbols.absF, n), false)
       }
       checkEval(mathematica, FuncOf(Function("f", None, Real, Real), n), true)
     }
@@ -54,8 +55,8 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       checkEval(mathematica, Divide(n, m), true)
       checkEval(mathematica, Power(n, m), true)
       withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-        checkEval(mathematica, FuncOf(BigDecimalQETool.minF, Pair(n, m)), false)
-        checkEval(mathematica, FuncOf(BigDecimalQETool.maxF, Pair(n, m)), false)
+        checkEval(mathematica, FuncOf(InterpretedSymbols.minF, Pair(n, m)), false)
+        checkEval(mathematica, FuncOf(InterpretedSymbols.maxF, Pair(n, m)), false)
       }
       checkEval(mathematica, FuncOf(Function("f", None, Tuple(Real, Real), Real), Pair(n, m)), true)
     }

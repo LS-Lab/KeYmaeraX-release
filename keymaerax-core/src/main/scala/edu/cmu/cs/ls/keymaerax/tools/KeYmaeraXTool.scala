@@ -41,16 +41,16 @@ object KeYmaeraXTool extends Tool {
   override def init(config: Map[String,String]): Unit = {
     //@note allow re-initialization since we do not know how (Mathematica, Z3, not at all) the tactic registry was initialized
     if (initialized) shutdown()
-    if (Configuration(Configuration.Keys.LAX) == "true")
+    if (Configuration.getBoolean(Configuration.Keys.LAX).getOrElse(false))
       //@note Careful, this disables contract checking in printing!
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter.pp)
     else
       PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
-    val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
-    val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
-    val LOG_QE_DURATION = Configuration(Configuration.Keys.LOG_QE_DURATION) == "true"
-    val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
+    val LOG_EARLIEST_QE = Configuration.getBoolean(Configuration.Keys.LOG_ALL_FO).getOrElse(false)
+    val LOG_QE = Configuration.getBoolean(Configuration.Keys.LOG_QE).getOrElse(false)
+    val LOG_QE_DURATION = Configuration.getBoolean(Configuration.Keys.LOG_QE_DURATION).getOrElse(false)
+    val LOG_QE_STDOUT = Configuration.getBoolean(Configuration.Keys.LOG_QE_STDOUT).getOrElse(false)
 
     val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
     lazy val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })

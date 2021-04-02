@@ -1,4 +1,4 @@
-<span ng-if="!highlight || collapsed" ng-bind-html="trustedHtml(subscriptIndex(replaceNullaryFn(formula.string)))">
+<span ng-if="!highlight || collapsed" ng-bind-html="trustedHtml(subscriptIndex(replaceSpecialNotation(formula.string)))">
 </span>
 <span frang-tree ng-if="highlight && !collapsed">
     <span frang-tree-repeat="expr in [formula.json]"
@@ -10,9 +10,9 @@
           ng-alt-click="exprClick($event, expr.id, expr.step, expr.editable)"
           ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)">
         <span ng-if="modeIsEdit() && expr.plain">
-            <span editable-text="replacePlainNullaryFn(expr.plain)" onbeforesave="editExpr(expr.id, $data)">{{replacePlainNullaryFn(expr.plain)}}</span>
+            <span editable-text="replacePlainSpecialNotation(expr.plain)" onbeforesave="editExpr(expr.id, $data)">{{replacePlainSpecialNotation(expr.plain)}}</span>
         </span>
-        <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.text" ng-bind-html="subscriptIndex(replaceNullaryFn(expr.text))"></span>
+        <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.text" ng-bind-html="subscriptIndex(replaceSpecialNotation(expr.text))"></span>
         <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.children && expr.children.length > 0"
               frang-tree-insert-children="expr.children"></span>
         </span>

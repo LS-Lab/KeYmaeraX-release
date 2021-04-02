@@ -122,7 +122,7 @@ sealed trait Position {
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
   def ++(child: PosInExpr): Position
 
-  /** Advances the index by i on top-level positions. */
+  /** Advances the index by i on top-level, does not affect inExpr. */
   def advanceIndex(i: Int): Position
 
   /**
@@ -222,7 +222,6 @@ trait AntePosition extends Position {
   override def checkTop: AntePos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
   override def topLevel: TopAntePosition
   override def advanceIndex(i: Int): AntePosition = {
-    require(isTopLevel, "Advance index only at top level")
     require(index0+i >= 0, "Cannot advance to negative index")
     AntePosition.base0(index0+i, inExpr)
   }
@@ -241,7 +240,6 @@ trait SuccPosition extends Position {
   override def checkTop: SuccPos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
   override def topLevel: TopSuccPosition
   override def advanceIndex(i: Int): SuccPosition = {
-    require(isTopLevel, "Advance index only at top level")
     require(index0+i >= 0, "Cannot advance to negative index")
     SuccPosition.base0(index0+i, inExpr)
   }

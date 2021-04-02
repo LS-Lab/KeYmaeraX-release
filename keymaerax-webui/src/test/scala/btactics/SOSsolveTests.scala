@@ -1,7 +1,6 @@
 package btactics
 
 import java.io.FileWriter
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -10,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.SOSSolve.{ExponentOutOfScopeFailure, NonUniversalOutOfScopeFailure, RatFormError, SOSSolveAborted, SOSSolveNoSOS, SOSWelldefinedDivisionFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Witness
@@ -403,9 +403,9 @@ class ConvertQELogToIsabelle extends TacticTestBase with PrivateMethodTester {
       throw ToIsabelleTermException("keymaerax_variable_in_exponent")
     case v : DifferentialSymbol => toIsabelle(Differential(v.x), typeReal) : String
     case Differential(a) => printOp(toIsabelle(_:Term, typeReal), "(keymaerax_differential::real\\<Rightarrow>real)", a)
-    case FuncOf(Function("min", None, Tuple(Real, Real), Real, true), Pair(a, b)) => "(min::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
-    case FuncOf(Function("max", None, Tuple(Real, Real), Real, true), Pair(a, b)) =>"(max::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
-    case FuncOf(Function("abs", None, Real, Real, true), a) =>"(abs::real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))
+    case FuncOf(InterpretedSymbols.minF, Pair(a, b)) => "(min::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
+    case FuncOf(InterpretedSymbols.maxF, Pair(a, b)) =>"(max::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
+    case FuncOf(InterpretedSymbols.absF, a) =>"(abs::real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))
     case _ => throw new IllegalArgumentException("toIsabelle(Term): " + t)
   }
   def toIsabelle(fml: Formula) : String = fml match {
