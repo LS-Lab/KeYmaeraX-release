@@ -428,7 +428,7 @@ object ProofChecker {
     val DomAssert(x, plainF, m) = assertion
     val f = discreteCon.c.elaborateStable(plainF)
     val methAssumps = m.selectors
-    val fullSols = proveODE.solutions.get
+    val fullSols = proveODE.proofSolutions.get
     val sols = fullSols.filter({case ((x, f)) => !proveODE.timeVar.contains(x) })
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({
