@@ -930,8 +930,8 @@ trait BelleLabel {
   def append(l: BelleLabel): BelleLabel
 }
 object BelleLabel {
-  val LABEL_SEPARATOR: String = ","
-  val LABEL_DELIMITER: String = ":"
+  val LABEL_SEPARATOR: String = "::"
+  val LABEL_DELIMITER: String = "//"
 
   def fromString(s: String): List[BelleLabel] = {
     s.split(LABEL_SEPARATOR).map(topLabel => {
