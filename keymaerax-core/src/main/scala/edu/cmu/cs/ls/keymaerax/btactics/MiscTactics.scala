@@ -597,6 +597,30 @@ object TacticFactory {
       }
     }
 
+    def coreby[S <: Expression, T <: Expression](rule: Either[AntePos => Rule, SuccPos => Rule], unapply: S => Option[(T, T)],
+                                                 labels: (T, T) => (String, String)): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+      if (pos.isTopLevel) {
+        try {
+          seq.sub(pos.checkTop).flatMap(f => unapply(f.asInstanceOf[S])) match {
+            case Some((l, r)) =>
+              val (lLabel, rLabel) = labels(l, r)
+              new BuiltInTactic(name) {
+                override private[keymaerax] def result(pr: ProvableSig) = (rule, pos.checkTop) match {
+                  case (Left(lr), p: AntePos) => pr(lr(p), 0)
+                  case (Right(rr), p: SuccPos) => pr(rr(p), 0)
+                }
+              } <(
+                LabelBranch(BelleTopLevelLabel(lLabel)),
+                LabelBranch(BelleTopLevelLabel(rLabel)),
+              )
+          }
+        } catch {
+          case ex: MatchError => throw new TacticInapplicableFailure("Tactic " + name +
+            " applied at " + pos + " on a non-matching expression in " + seq.prettyString, ex)
+        }
+      } else throw new IllFormedTacticApplicationException("andR only at top-level, but was applied at " + pos.prettyString)
+    }
+
     /** Creates a CoreRightTactic with applied inputs from a function turning provables and succedent positions into new provables.
      * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
      * @example {{{
@@ -728,6 +752,8 @@ object TacticFactory {
   def anons(t: ProvableSig => BelleExpr): DependentTactic = ANON bys t
   def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = ANON coreby t
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = ANON coreby t
+  def coreanonL[S <: Expression, T <: Expression](rule: AntePos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = ((l: T, r: T) => (l.prettyString, r.prettyString))): DependentPositionTactic = ANON coreby(Left(rule), unapply, labels)
+  def coreanonR[S <: Expression, T <: Expression](rule: SuccPos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = ((l: T, r: T) => (l.prettyString, r.prettyString))): DependentPositionTactic = ANON coreby(Right(rule), unapply, labels)
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
   def inputanon(t: Sequent => BelleExpr): InputTactic = ANON byWithInputs(Nil, t)

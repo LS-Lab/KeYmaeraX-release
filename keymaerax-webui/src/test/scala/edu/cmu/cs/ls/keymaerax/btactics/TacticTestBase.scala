@@ -336,22 +336,26 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(fml))
+  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, defs: Declaration): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
-        dsp.p.conclusion shouldBe Sequent(
-          IndexedSeq(),
-          IndexedSeq(fml.exhaustiveSubst(dsp.subst ++ USubst(defs.substs)).asInstanceOf[Formula])
-        )
+        dsp.p.conclusion shouldBe s.exhaustiveSubst(dsp.subst ++ USubst(defs.substs))
         labelCheck(dsp.label)
         dsp.p
       case BelleProvable(provable, labels) =>
-        provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(defs.exhaustiveSubst(fml)))
+        provable.conclusion shouldBe s.exhaustiveSubst(USubst(defs.substs))
         labelCheck(labels)
         provable
       case r => fail("Unexpected tactic result " + r)
     }
+  }
+  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit): ProvableSig = {
+    proveByS(s, tactic, labelCheck, Declaration(Map.empty))
+  }
+
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
+    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, defs)
   }
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
