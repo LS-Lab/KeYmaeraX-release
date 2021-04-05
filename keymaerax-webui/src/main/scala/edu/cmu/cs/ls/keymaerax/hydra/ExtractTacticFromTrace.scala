@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionErro
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
+import scala.util.Try
+
 trait TraceToTacticConverter {
   def getTacticString(tree: ProofTree): String = getTacticString(tree.root, "  ")
   def getTacticString(node: ProofTreeNode, indent: String): String
@@ -54,11 +56,11 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
       case None => "nil"
       case Some(m) =>
         if (BelleExpr.isInternal(m)) "???" //@note internal tactics are not serializable (and should not be in the trace)
-        else BelleParser(m) match {
-          case t@AppliedPositionTactic(_, l) => BellePrettyPrinter(t.copy(locator = convertLocator(l, node)))
-          case t: AppliedDependentPositionTactic =>
+        else Try(BelleParser(m)).toOption match {
+          case Some(t@AppliedPositionTactic(_, l)) => BellePrettyPrinter(t.copy(locator = convertLocator(l, node)))
+          case Some(t: AppliedDependentPositionTactic) =>
             BellePrettyPrinter(new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node)))
-          case t: AppliedDependentPositionTacticWithAppliedInput =>
+          case Some(t: AppliedDependentPositionTacticWithAppliedInput) =>
             BellePrettyPrinter(new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node)))
           case _ => m
         }
