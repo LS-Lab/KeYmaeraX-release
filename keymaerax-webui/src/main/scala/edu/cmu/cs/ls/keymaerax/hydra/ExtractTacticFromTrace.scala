@@ -5,33 +5,52 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParse
 import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.util.Try
 
 trait TraceToTacticConverter {
-  def getTacticString(tree: ProofTree): String = getTacticString(tree.root, "  ")
+  def getTacticString(tree: ProofTree): String = getTacticString(tree.root, "")
   def getTacticString(node: ProofTreeNode, indent: String): String
 }
 
 class VerboseTraceToTacticConverter extends TraceToTacticConverter {
+  private val INDENT_INCREMENT = "  "
+
   def getTacticString(node: ProofTreeNode, indent: String): String = {
     assert(!node.children.contains(node), "A node should not be its own child.")
     val thisTactic = tacticStringAt(node)
-    val subgoals = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else "  ")))
+    val subgoalTactics = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else INDENT_INCREMENT)))
 
-    //@todo does pretty-printing
-    if (subgoals.isEmpty) thisTactic
-    else if (subgoals.size == 1) sequentialTactic(thisTactic, subgoals.head)
-    else sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + indent + subgoals.mkString(",\n" + indent) + "\n" + indent + ")")
+    //@note expensive: labels are temporary, need to rerun tactic to create labels
+    val labels = if (node.children.size > 1) {
+      node.goal.map(s => BelleProvable(ProvableSig.startProof(s))) match {
+        case Some(p) =>
+          val t = node.children.headOption.flatMap(_.maker.map(BelleParser)).get
+          LazySequentialInterpreter()(t, p) match {
+            case BelleProvable(_, Some(labels)) => labels
+            case _ => Nil
+          }
+      }
+    } else Nil
+
+    if (subgoalTactics.isEmpty) indent + thisTactic
+    else if (subgoalTactics.size == 1) indent + sequentialTactic(thisTactic, subgoalTactics.head, indent)
+    else sequentialTactic(thisTactic,
+      subgoalTactics.zip(labels).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + indent + t }).mkString(",\n") +
+      "\n" + indent + ")", indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
   }
 
-  private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {
-    case ("nil", _) | ("skip", _)=> ts2
-    case (_, "nil") | (_, "skip") => ts1
-    case ("" | "()", "" | "()") => ""
-    case (_, "" | "()") => ts1
-    case ("" | "()", _) => ts2
-    case _ => ts1 + SEQ_COMBINATOR.img + "\n" + ts2
+  private def sequentialTactic(ts1: String, ts2: String, indent: String, sep: String = SEQ_COMBINATOR.img): String = {
+    val (ts1t, ts2t) = (ts1.trim, ts2.trim)
+    (ts1t, ts2t) match {
+      case ("nil", _) | ("skip", _)=> ts2t
+      case (_, "nil") | (_, "skip") => ts1t
+      case ("" | "()", "" | "()") => ""
+      case (_, "" | "()") => ts1t
+      case ("" | "()", _) => ts2t
+      case _ => ts1t + sep + "\n" + indent + ts2t
+    }
   }
 
   /** Returns a copy of `pos` with index 0. */

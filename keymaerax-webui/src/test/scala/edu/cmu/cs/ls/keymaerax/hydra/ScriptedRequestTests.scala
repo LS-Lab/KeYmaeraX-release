@@ -417,13 +417,15 @@ class ScriptedRequestTests extends TacticTestBase {
             |andL('L=="y>0&z=0");
             |step('R=="[x:=x+y;++x:=x*y;]x>=z");
             |andR('R=="[x:=x+y;]x>=z&[x:=x*y;]x>=z"); <(
-            |  step('R=="[x:=x+y;]x>=z");
-            |  applyEqualities;
-            |  QE
+            |  "[x:=x+y;]x>=z":
+            |    step('R=="[x:=x+y;]x>=z");
+            |    applyEqualities;
+            |    QE
             |  ,
-            |  step('R=="[x:=x*y;]x>=z");
-            |  applyEqualities;
-            |  QE
+            |  "[x:=x*y;]x>=z":
+            |    step('R=="[x:=x*y;]x>=z");
+            |    applyEqualities;
+            |    QE
             |)""".stripMargin)
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
