@@ -256,16 +256,7 @@ object Idioms {
     * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
     * @see [[BelleLabels]]
     */
-  def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
-    override def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = {
-      val labelledTactics = (s1 +: spec).toMap
-      Idioms.<(labels.map(l => labelledTactics(l)):_*)
-    }
-    override def computeExpr(provable: ProvableSig): BelleExpr = {
-      logger.debug("No branch labels, executing by branch order")
-      Idioms.<((s1 +: spec).map(_._2):_*)
-    }
-  }
+  def <(s1: (BelleTopLevelLabel, BelleExpr), spec: (BelleTopLevelLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
 
   /* branch by case distinction
   *  cases must be exhaustive (or easily proved to be exhaustive in context)
@@ -615,6 +606,8 @@ object TacticFactory {
               )
           }
         } catch {
+          case ex: ClassCastException => throw new TacticInapplicableFailure("Tactic " + name +
+            " applied at " + pos + " on a non-matching expression in " + seq.prettyString, ex)
           case ex: MatchError => throw new TacticInapplicableFailure("Tactic " + name +
             " applied at " + pos + " on a non-matching expression in " + seq.prettyString, ex)
         }
@@ -752,8 +745,8 @@ object TacticFactory {
   def anons(t: ProvableSig => BelleExpr): DependentTactic = ANON bys t
   def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = ANON coreby t
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = ANON coreby t
-  def coreanonL[S <: Expression, T <: Expression](rule: AntePos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = ((l: T, r: T) => (l.prettyString, r.prettyString))): DependentPositionTactic = ANON coreby(Left(rule), unapply, labels)
-  def coreanonR[S <: Expression, T <: Expression](rule: SuccPos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = ((l: T, r: T) => (l.prettyString, r.prettyString))): DependentPositionTactic = ANON coreby(Right(rule), unapply, labels)
+  def coreanonL[S <: Expression, T <: Expression](rule: AntePos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = (l: T, r: T) => (l.prettyString, r.prettyString)): DependentPositionTactic = ANON coreby(Left(rule), unapply, labels)
+  def coreanonR[S <: Expression, T <: Expression](rule: SuccPos => Rule, unapply: S => Option[(T, T)], labels: (T, T) => (String, String) = (l: T, r: T) => (l.prettyString, r.prettyString)): DependentPositionTactic = ANON coreby(Right(rule), unapply, labels)
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
   def inputanon(t: Sequent => BelleExpr): InputTactic = ANON byWithInputs(Nil, t)
