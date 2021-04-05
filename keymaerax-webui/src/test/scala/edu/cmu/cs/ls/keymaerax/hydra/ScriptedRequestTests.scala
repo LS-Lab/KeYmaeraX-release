@@ -369,14 +369,14 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
-        stepsTactic shouldBe "implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")"
+        BelleParser(stepsTactic) shouldBe BelleParser("implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")")
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
   }}
 
   it should "expand auto" in withMathematica { _ => withDatabase { db =>
-    val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y;]x>=z End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -387,7 +387,44 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "auto"
-        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; applyEqualities ; QE"
+        BelleParser(stepsTactic) shouldBe BelleParser(
+          """implyR('R=="x>=0&y>0&z=0->[x:=x+y;]x>=z");
+            |andL('L=="x>=0&y>0&z=0");
+            |andL('L=="y>0&z=0");
+            |step('R=="[x:=x+y;]x>=z");
+            |applyEqualities;
+            |QE""".stripMargin)
+      case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
+      case e: ErrorResponse if e.exn == null => fail(e.msg)
+    }
+  }}
+
+  it should "expand auto with branches" in withMathematica { _ => withDatabase { db =>
+    val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y; ++ x:=x*y;]x>=z End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", master())
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
+      case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
+        parentTactic shouldBe "auto"
+        BelleParser(stepsTactic) shouldBe BelleParser(
+          """implyR('R=="x>=0&y>0&z=0->[x:=x+y;++x:=x*y;]x>=z");
+            |andL('L=="x>=0&y>0&z=0");
+            |andL('L=="y>0&z=0");
+            |step('R=="[x:=x+y;++x:=x*y;]x>=z");
+            |andR('R=="[x:=x+y;]x>=z&[x:=x*y;]x>=z"); <(
+            |  step('R=="[x:=x+y;]x>=z");
+            |  applyEqualities;
+            |  QE
+            |  ,
+            |  step('R=="[x:=x*y;]x>=z");
+            |  applyEqualities;
+            |  QE
+            |)""".stripMargin)
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }

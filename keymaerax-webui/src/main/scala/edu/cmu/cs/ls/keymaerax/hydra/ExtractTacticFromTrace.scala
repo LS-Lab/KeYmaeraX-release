@@ -40,12 +40,21 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
 
   /** Converts fixed position locators into search locators. */
   private def convertLocator(loc: PositionLocator, node: ProofTreeNode): PositionLocator = loc match {
-    case Fixed(pos, None, _) => node.localProvable.subgoals.head.sub(pos.top) match {
+    case Fixed(pos, None, _) => node.goal.flatMap(_.sub(pos.top)) match {
       case Some(e) => Find(0, Some(e), firstInSuccOrAnte(pos), exact=true)
       case None => throw TacticExtractionError("Recorded position " + pos.prettyString + " does not exist in " +
         node.localProvable.subgoals.head.prettyString)
     }
     case Fixed(pos, Some(f), exact) => Find(0, Some(f), firstInSuccOrAnte(pos), exact)
+    case Find(goal, None, start, exact) =>
+      val childGoal = node.children.headOption.flatMap(_.goal)
+      val affected =
+        if (start.isAnte) node.goal.map(_.ante.filterNot(childGoal.map(_.ante).getOrElse(IndexedSeq.empty).toSet).toList)
+        else node.goal.map(_.succ.filterNot(childGoal.map(_.succ).getOrElse(IndexedSeq.empty).toSet).toList)
+      affected match {
+        case Some(e :: Nil) => Find(goal, Some(e), start, exact)
+        case _ => throw TacticExtractionError("Recorded position " + loc.prettyString + " does not exist in " + node.localProvable)
+      }
     case _ => loc
   }
 
