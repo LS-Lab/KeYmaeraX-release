@@ -256,8 +256,17 @@ object BelleParser extends TacticParser with Logging {
 
       case _ :+ BelleToken(_: EXPRESSION, _) :+ BelleToken(COLON, _) => ParserState(stack :+ st.input.head, st.input.tail)
 
-      case r :+ BelleToken(label: EXPRESSION, l1) :+ BelleToken(COLON, _) :+ ParsedBelleExpr(expr, l2, None) =>
-        ParserState(r :+ ParsedBelleExpr(expr, l1.spanTo(l2), Some(BelleTopLevelLabel(label.undelimitedExprString))), st.input)
+      case r :+ BelleToken(label: EXPRESSION, l1) :+ BelleToken(COLON, _) :+ ParsedBelleExpr(expr, l2, None) => st.input.headOption match {
+        case Some(t@BelleToken(SEQ_COMBINATOR, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(EITHER_COMBINATOR, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(BRANCH_COMBINATOR, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(OPTIONAL, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(SATURATE, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(KLEENE_STAR, _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(N_TIMES(_), _)) => ParserState(stack :+ t, st.input.tail)
+        case Some(t@BelleToken(USING, _)) => ParserState(stack :+ t, st.input.tail)
+        case _ => ParserState(r :+ ParsedBelleExpr(expr, l1.spanTo(l2), Some(BelleTopLevelLabel(label.undelimitedExprString))), st.input)
+      }
       case _ :+ BelleToken(_: EXPRESSION, _) :+ BelleToken(COLON, _) :+ ParsedBelleExpr(_, _, Some(l)) =>
         throw BelleParseException("Already labeled case '" + l.label + "' cannot be relabeled", st)
 

@@ -366,6 +366,28 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     )
   }
 
+  it should "parse as case tactic when labels are present on nested tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> (andL(-1) & orL(-1)),
+      BelleLabels.indStep -> (orL(-2) <(andL(-2), orR(2))),
+      BelleLabels.useCase -> (Using("x=2".asFormula::Nil, andL(-3)) | andR(3))
+    )
+  }
+
+  it should "parse nested case tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> orL(-2).switch("LHS".asLabel -> andL(-2), "RHS".asLabel -> orR(2)),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
   it should "require case labels on all branches" in {
     the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
       have message """1:17 Not all branches have labels
