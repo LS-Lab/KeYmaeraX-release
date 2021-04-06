@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleLabel, BelleTopLevelLabel}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleLabel, BelleRollbackLabel, BelleSubLabel, BelleTopLevelLabel}
 
 /**
   * Default labels used by the KeYmaera X tactics.
@@ -12,6 +12,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleLabel, BelleTopLevelLabel}
   * @author aplatzer
   */
 object BelleLabels {
+  val rollback: BelleLabel = BelleRollbackLabel
+  /** Creates a label that first rolls back to the last transaction start, then appends label `l`. */
+  def rollbackAndAdd(l: BelleLabel): BelleLabel = BelleSubLabel(rollback, l.label)
+
   // loop induction
   val useCase: BelleLabel = BelleTopLevelLabel("Post")
   val initCase: BelleLabel = BelleTopLevelLabel("Init")

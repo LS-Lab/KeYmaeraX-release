@@ -17,7 +17,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
-import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.OptionValues._
 
 /**
  * Very fine-grained tests of the sequential interpreter.
@@ -341,8 +341,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       ), (labels: Option[List[BelleLabel]]) => {
       labels shouldBe Some(
         BelleLabels.useCase.append(BelleLabels.QECEX) ::
-        BelleSubLabel(BelleLabels.indStep, "1") ::
-        BelleLabels.indStep :: Nil)
+        BelleLabels.indStep.append("[x:=x+1;]x>=0".asLabel).append("1".asLabel) ::
+        BelleLabels.indStep.append("[x:=x+2;]x>=0".asLabel) :: Nil)
     })
   }
 
@@ -359,6 +359,53 @@ class SequentialInterpreterTests extends TacticTestBase {
           p.subgoals should contain theSameElementsAs List(
             "x>2 ==> x>1".asSequent,
             "x>1 ==> x+1>1".asSequent)
+      }
+    }
+  }
+
+  it should "match tactics with label suffixes" in withMathematica { _ =>
+    val ts = List(
+      BelleLabels.initCase -> nil,
+      BelleLabels.useCase -> id,
+      BelleLabels.indStep -> assignb(1)
+    ).permutations.map(t => implyR(1) & andR(1) /* creates labels that become parents of loop labels */ <(
+      loop("x>1".asFormula)(1) & CaseTactic(t), id))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, _) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x>2 ==> x>1".asSequent,
+            "x>1 ==> x+1>1".asSequent)
+      }
+    }
+  }
+
+  it should "match tactics with label suffixes (2)" in withMathematica { _ =>
+    val ts = List(
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.initCase) -> nil,
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.useCase) -> id,
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.indStep) -> assignb(1),
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.initCase) -> QE,
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.useCase) -> label("A manual label"),
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.indStep) -> assignb(1)
+    ).permutations.map(t => prop & unfoldProgramNormalize /* create labels that become parents of loop labels */ &
+      onAll(loop("x>=1".asFormula)(1)) & CaseTactic(t))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [x:=1;++x:=x-1;][{x:=x+1;}*]x>=1 & x>2".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, labels) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x_0>2, x=1 ==> x>=1".asSequent,
+            "x>=1, x_0>2 ==> x>=1".asSequent,
+            "x>=1, x_0>2 ==> x+1>=1".asSequent,
+            "x>=1, x_0>2 ==> x+1>=1".asSequent
+          )
+          labels.value should contain theSameElementsAs List(
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=1;][{x:=x+1;}*]x>=1//Init".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=x-1;][{x:=x+1;}*]x>=1//Post//A manual label".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=x-1;][{x:=x+1;}*]x>=1//Step".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=1;][{x:=x+1;}*]x>=1//Step".asLabel)
       }
     }
   }

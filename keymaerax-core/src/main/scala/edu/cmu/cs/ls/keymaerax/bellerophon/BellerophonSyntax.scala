@@ -928,6 +928,8 @@ trait BelleLabel {
   def components: List[BelleLabel]
   /** Appends a label to the end of this label. */
   def append(l: BelleLabel): BelleLabel
+  /** Returns true if `l` is a suffix of this label (ignoring top- vs.sub-label differences), false otherwise. */
+  def endsWith(l: BelleLabel): Boolean = components.map(_.label).endsWith(l.components.map(_.label))
 }
 object BelleLabel {
   val LABEL_SEPARATOR: String = "::"
@@ -951,8 +953,32 @@ case class BelleTopLevelLabel(label: String) extends BelleLabel {
   override def components: List[BelleLabel] = this :: Nil
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
+    case BelleRollbackLabel => BelleTxStartLabel(this)
     case sl: BelleSubLabel => BelleSubLabel(this.append(sl.parent), sl.label)
   }
+}
+/** Marks a transaction start, created by appending [[BelleLabels.rollback]] to a label that does not yet have a transaction. */
+//@todo nested label transactions
+private[this] case class BelleTxStartLabel(restorePoint: BelleLabel, label: String = "") extends BelleLabel {
+  override def prettyString: String = restorePoint.prettyString
+  override def components: List[BelleLabel] = this +: restorePoint.components
+  override def append(l: BelleLabel): BelleLabel = l match {
+    case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
+    case BelleRollbackLabel => restorePoint
+    case sl: BelleSubLabel => restorePoint match {
+      case BelleRollbackLabel => sl match {
+        case BelleSubLabel(BelleRollbackLabel, l) => BelleTopLevelLabel(l)
+        case l => l
+      }
+      case _ => BelleSubLabel(this.append(sl.parent), sl.label)
+    }
+  }
+}
+object BelleRollbackLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = this
 }
 /** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
@@ -962,6 +988,14 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
   override def components: List[BelleLabel] = parent.components :+ this
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
+    case BelleRollbackLabel =>
+      val txStartIdx = parent.components.lastIndexWhere(_.isInstanceOf[BelleTxStartLabel])
+      if (txStartIdx == -1) BelleTxStartLabel(this, label)
+      else parent.components(txStartIdx).asInstanceOf[BelleTxStartLabel].restorePoint
+    case BelleSubLabel(BelleRollbackLabel, label) => append(BelleRollbackLabel) match {
+      case BelleRollbackLabel => BelleTopLevelLabel(label)
+      case l => l.append(BelleTopLevelLabel(label))
+    }
     case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
   }
 }

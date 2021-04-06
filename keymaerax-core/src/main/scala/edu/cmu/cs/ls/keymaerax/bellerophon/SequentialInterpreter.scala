@@ -169,8 +169,14 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case CaseTactic(children) => v match {
       case BelleProvable(p, Some(labels)) =>
-        if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels " + labels.mkString(",") + "\nfor " + p.prettyString, p.underlyingProvable)
-        apply(BranchTactic(labels.map(children.toMap)), v)
+        if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels  " + labels.map(_.prettyString).mkString("\n  ") + "\nfor " + p.prettyString, p.underlyingProvable)
+        if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
+        def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
+          case c :: Nil => c._2
+          case Nil => throw new IllFormedTacticApplicationException("No case for branch " + l.prettyString)
+          case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch " + l.prettyString + "; please disambiguate cases " + c.map(_._1.prettyString).mkString("::"))
+        }
+        apply(BranchTactic(labels.map(getBranchTactic)), v)
       case _ => throw new IllFormedTacticApplicationException("Case tactic applied on a proof state without labels")
     }
 
@@ -267,10 +273,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
     }
 
-
     case LabelBranch(label) => v match {
       case BelleProvable(pr, Some(labels)) => BelleProvable(pr, adjustLabels(pr, Some(labels.map(_.append(label)))))
-      case BelleProvable(pr, None) => BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
+      case BelleProvable(pr, None) =>
+        if (label == BelleRollbackLabel) BelleProvable(pr, adjustLabels(pr, Some(BelleTxStartLabel(BelleRollbackLabel) :: Nil)))
+        else BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
       case _ => throw new IllFormedTacticApplicationException(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
     }
 
