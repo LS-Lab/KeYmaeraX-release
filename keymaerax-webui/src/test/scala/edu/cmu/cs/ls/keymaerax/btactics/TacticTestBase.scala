@@ -340,11 +340,11 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
-        dsp.p.conclusion shouldBe s.exhaustiveSubst(dsp.subst ++ USubst(defs.substs))
+        dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ USubst(defs.substs)) shouldBe s.exhaustiveSubst(dsp.subst ++ USubst(defs.substs))
         labelCheck(dsp.label)
         dsp.p
       case BelleProvable(provable, labels) =>
-        provable.conclusion shouldBe s.exhaustiveSubst(USubst(defs.substs))
+        provable.conclusion.exhaustiveSubst(USubst(defs.substs)) shouldBe s.exhaustiveSubst(USubst(defs.substs))
         labelCheck(labels)
         provable
       case r => fail("Unexpected tactic result " + r)

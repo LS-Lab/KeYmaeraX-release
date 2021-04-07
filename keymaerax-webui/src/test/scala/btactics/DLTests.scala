@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import org.scalatest.OptionValues._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
@@ -318,7 +319,8 @@ class DLTests extends TacticTestBase {
   }
 
   "generalize" should "introduce intermediate condition" in withTactics {
-    val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
+    val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1),
+      _.value should contain theSameElementsAs List(BelleLabels.mrShow, BelleLabels.mrUse))
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
@@ -359,7 +361,10 @@ class DLTests extends TacticTestBase {
   }
 
   "postCut" should "introduce implication in simple example" in withTactics {
-    val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
+    val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.cutUse,
+      BelleLabels.cutShow
+    ))
     result.subgoals shouldBe "==> [a:=5;]a>1".asSequent :: "==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
@@ -450,6 +455,18 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
   }
 
+  "Loop rule" should "generate labels" in withTactics {
+    proveByS("x=3 ==> [{x:=x+1;}*]x>=2".asSequent, DLBySubst.loopRule("x>=3".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase,
+      BelleLabels.useCase,
+      BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "x=3 ==> x>=3".asSequent,
+      "x>=3 ==> x>=2".asSequent,
+      "x>=3 ==> [{x:=x+1;}]x>=3".asSequent
+    )
+  }
+
   "I gen" should "work on a simple example" in withTactics {
     val succ@Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
     val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
@@ -499,11 +516,21 @@ class DLTests extends TacticTestBase {
   }
 
   "Convergence" should "work in easy case" in withTactics {
-    val result = proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1))
-    result.subgoals should have size 3
-    result.subgoals(0) shouldBe "==> \\exists v_ v_>x".asSequent
-    result.subgoals(1) shouldBe "v_<=0, v_>x ==> x < 0".asSequent
-    result.subgoals(2) shouldBe "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent
+    proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase, BelleLabels.useCase, BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "==> \\exists v_ v_>x".asSequent,
+      "v_<=0, v_>x ==> x < 0".asSequent,
+      "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent)
+  }
+
+  it should "work as rule" in withTactics {
+    proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.conRule("v_".asVariable, "v_>x".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase, BelleLabels.useCase, BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "==> \\exists v_ v_>x".asSequent,
+      "v_<=0, v_>x ==> x < 0".asSequent,
+      "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent)
   }
 
   it should "work with preconditions" in withTactics {

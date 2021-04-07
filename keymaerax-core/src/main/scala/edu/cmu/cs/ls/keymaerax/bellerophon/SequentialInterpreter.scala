@@ -276,7 +276,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case LabelBranch(label) => v match {
       case BelleProvable(pr, Some(labels)) => BelleProvable(pr, adjustLabels(pr, Some(labels.map(_.append(label)))))
       case BelleProvable(pr, None) =>
-        if (label == BelleRollbackLabel) BelleProvable(pr, adjustLabels(pr, Some(BelleTxStartLabel(BelleRollbackLabel) :: Nil)))
+        if (label == BelleStartTxLabel || label == BelleRollbackTxLabel) BelleProvable(pr, adjustLabels(pr, Some(BelleLabelTx(BelleStartTxLabel, None) :: Nil)))
         else BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
       case _ => throw new IllFormedTacticApplicationException(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
     }

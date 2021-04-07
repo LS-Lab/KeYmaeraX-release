@@ -953,32 +953,43 @@ case class BelleTopLevelLabel(label: String) extends BelleLabel {
   override def components: List[BelleLabel] = this :: Nil
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
-    case BelleRollbackLabel => BelleTxStartLabel(this)
     case sl: BelleSubLabel => BelleSubLabel(this.append(sl.parent), sl.label)
+    case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
   }
 }
-/** Marks a transaction start, created by appending [[BelleLabels.rollback]] to a label that does not yet have a transaction. */
-//@todo nested label transactions
-private[this] case class BelleTxStartLabel(restorePoint: BelleLabel, label: String = "") extends BelleLabel {
-  override def prettyString: String = restorePoint.prettyString
-  override def components: List[BelleLabel] = this +: restorePoint.components
+/** Label transaction with rollback point `r` and collected labels `c` since rollback point. */
+case class BelleLabelTx(r: BelleLabel, c: Option[BelleLabel], label: String = "") extends BelleLabel {
+  override def prettyString: String = r.prettyString
+  override def components: List[BelleLabel] = this +: r.components
   override def append(l: BelleLabel): BelleLabel = l match {
-    case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
-    case BelleRollbackLabel => restorePoint
-    case sl: BelleSubLabel => restorePoint match {
-      case BelleRollbackLabel => sl match {
-        case BelleSubLabel(BelleRollbackLabel, l) => BelleTopLevelLabel(l)
-        case l => l
-      }
-      case _ => BelleSubLabel(this.append(sl.parent), sl.label)
-    }
+    case tl: BelleTopLevelLabel => copy(c = Some(c.map(_.append(tl)).getOrElse(tl)))
+    case sl: BelleSubLabel => copy(c = Some(c.map(_.append(sl)).getOrElse(sl)))
+    case BelleStartTxLabel => BelleLabelTx(this, None)
+    case BelleRollbackTxLabel => BelleLabelTx(r, None)
+    case BelleCommitTxLabel => c.map(r.append).getOrElse(r)
+    // shorthand for label(rollback) & label(l) & label(commit)
+    case BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, l), None, _) => copy(c = Some(BelleTopLevelLabel(l))).append(BelleCommitTxLabel)
   }
 }
-object BelleRollbackLabel extends BelleLabel {
+/** Rollback a label transaction. */
+object BelleRollbackTxLabel extends BelleLabel {
   override val label = ""
   override def prettyString: String = label
   override def components: List[BelleLabel] = this :: Nil
-  override def append(l: BelleLabel): BelleLabel = this
+  override def append(l: BelleLabel): BelleLabel = l
+}
+/** Commits a label transaction. */
+object BelleCommitTxLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l
+}
+object BelleStartTxLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l
 }
 /** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
@@ -988,15 +999,8 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
   override def components: List[BelleLabel] = parent.components :+ this
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
-    case BelleRollbackLabel =>
-      val txStartIdx = parent.components.lastIndexWhere(_.isInstanceOf[BelleTxStartLabel])
-      if (txStartIdx == -1) BelleTxStartLabel(this, label)
-      else parent.components(txStartIdx).asInstanceOf[BelleTxStartLabel].restorePoint
-    case BelleSubLabel(BelleRollbackLabel, label) => append(BelleRollbackLabel) match {
-      case BelleRollbackLabel => BelleTopLevelLabel(label)
-      case l => l.append(BelleTopLevelLabel(label))
-    }
     case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
+    case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
   }
 }
 

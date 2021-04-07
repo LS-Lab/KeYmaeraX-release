@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
+import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -164,14 +165,14 @@ private object DifferentialTactics extends Logging {
           //@note implyR moves RHS to end of succedent
           implyR(pos) & andR('Rlast) & Idioms.<(
             if (auto == 'full) ToolTactics.hideNonFOL & (abbrvPrimes('Rlast) & QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
-            else if (auto == 'cex) ToolTactics.hideNonFOL & ?(abbrvPrimes('Rlast) & QE) & label(BelleLabels.dIInit)
-            else skip
+            else if (auto == 'cex) ToolTactics.hideNonFOL & ?(abbrvPrimes('Rlast) & QE) & label(replaceTxWith(BelleLabels.dIInit))
+            else label(replaceTxWith(BelleLabels.dIInit))
             ,
             if (auto != 'none) {
               //@note derive before DE to keep positions easier
               derive('Rlast, PosInExpr(1 :: Nil)) &
               DE('Rlast) &
-              (if (auto == 'full || auto == 'cex)
+              (if (auto == 'full || auto == 'cex) {
                 TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos), classOf[SubstitutionClashException],
                   (_: SubstitutionClashException) =>
                     DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
@@ -179,14 +180,14 @@ private object DifferentialTactics extends Logging {
                 //@note DW after DE to keep positions easier
                 (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
                   (if (auto == 'full) abbrvPrimes('Rlast) & QE & done | DebuggingTactics.done("Differential invariant must be preserved")
-                   else ?(abbrvPrimes('Rlast) & QE) & label(BelleLabels.dIStep))
-               else {
+                   else ?(abbrvPrimes('Rlast) & QE) & (if (auto != 'full) label(replaceTxWith(BelleLabels.dIStep)) else skip))
+              } else {
                 assert(auto == 'diffInd)
                 (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) &
-                abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) })
-            } else skip
+                abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) & label(replaceTxWith(BelleLabels.dIStep)) })
+            } else label(replaceTxWith(BelleLabels.dIStep))
             )
-        Dconstify(t)(pos)
+        (if (auto != 'full) label(startTx) else skip) & Dconstify(t)(pos)
       } else {
         val t = expand & DI(pos) &
           (if (auto != 'none) {
