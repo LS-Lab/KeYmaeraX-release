@@ -115,12 +115,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "fail inapplicable builtin-rules with legible error messages" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
-    // @TODO: Platform-dependent/line ending-dependent
-      """Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
-        |==> 1:  x=5	Equal
-        |  from
-        |==> 1:  x=5	Equal})""".stripMargin
+    the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should
+      have message "Tactic andR applied at 1 on a non-matching expression in ==> 1:  x=5\tEqual"
   }
 
   "Saturate combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in withMathematica { _ =>
@@ -609,7 +605,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
-      "andR(1) & <(close, close)".asTactic,
+      "andR(1); <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
@@ -617,9 +613,13 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    listener.calls should have size 5
+    listener.calls should have size 10
+    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+
     listener.calls should contain theSameElementsInOrderAs(
-      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
+      andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
       BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
       DebuggingTactics.error("Inapplicable close") :: Nil)
   }
@@ -632,7 +632,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
-      "andR(1) & <(close, close)".asTactic,
+      "andR(1); <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
@@ -640,9 +640,13 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    listener.calls should have size 7
+    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+
+    listener.calls should have size 12
     listener.calls should contain theSameElementsInOrderAs(
-      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
+      andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
       BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
       DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
   }
