@@ -392,26 +392,26 @@ private object DLBySubst {
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
                   /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
-                      label(initCase),
+                      label(rollbackAndAdd(initCase)),
                       (andR(pos) & Idioms.<(closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                         (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                         (if (constSuccs.nonEmpty) notR(pos) else skip) &
                         close & done),
                     cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
                       (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                       else andL('Llast) & hideL('Llast, True)) & label(indStep),
+                       else andL('Llast) & hideL('Llast, True)) & label(rollbackAndAdd(indStep)),
                       andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
                   ),
                   /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
                     (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                     else andL('Llast) & hideL('Llast, True)) & label(useCase)
+                     else andL('Llast) & hideL('Llast, True)) & label(rollbackAndAdd(useCase))
                 )
               }
             case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
             case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
           }}})(afterGhostsPos)
     }
-    pre & discreteGhosts(ov, sequent, doloop)(pos)
+    label(rollback) & pre & discreteGhosts(ov, sequent, doloop)(pos)
   }}
 
   /** Analyzes a loop for counterexamples. */
