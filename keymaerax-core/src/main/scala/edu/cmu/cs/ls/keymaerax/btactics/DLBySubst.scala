@@ -376,7 +376,7 @@ private object DLBySubst {
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
         (inputanon {(pos, sequent) => {
           sequent.sub(pos) match {
-            case Some(b@Box(Loop(a), p)) =>
+            case Some(Box(Loop(a), _)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
               else {
                 val abv = StaticSemantics(a).bv
@@ -387,6 +387,7 @@ private object DLBySubst {
                   if (consts.size > 1) And(oldified, consts.reduceRight(And))
                   else if (consts.size == 1) And(oldified, consts.head)
                   else And(oldified, True)
+                label(startTx) &
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
                   /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
@@ -410,7 +411,7 @@ private object DLBySubst {
             case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
           }}})(afterGhostsPos)
     }
-    label(startTx) & pre & discreteGhosts(ov, sequent, doloop)(pos)
+    pre & discreteGhosts(ov, sequent, doloop)(pos)
   }}
 
   /** Analyzes a loop for counterexamples. */

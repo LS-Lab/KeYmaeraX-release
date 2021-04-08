@@ -966,7 +966,10 @@ case class BelleLabelTx(r: BelleLabel, c: Option[BelleLabel], label: String = ""
     case sl: BelleSubLabel => copy(c = Some(c.map(_.append(sl)).getOrElse(sl)))
     case BelleStartTxLabel => BelleLabelTx(this, None)
     case BelleRollbackTxLabel => BelleLabelTx(r, None)
-    case BelleCommitTxLabel => c.map(r.append).getOrElse(r)
+    case BelleCommitTxLabel => r match {
+      case BelleStartTxLabel => c.getOrElse(throw new IllegalArgumentException("Unable to commit empty label transaction"))
+      case _ => c.map(r.append).getOrElse(r)
+    }
     // shorthand for label(rollback) & label(l) & label(commit)
     case BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, l), None, _) => copy(c = Some(BelleTopLevelLabel(l))).append(BelleCommitTxLabel)
   }
