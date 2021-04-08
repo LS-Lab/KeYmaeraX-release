@@ -24,6 +24,14 @@ object SharedModels {
   // Language examples from Kaisar chapter of thesis. These are not meant to prove interesting theorems, but it's
   // important that the language presented in the thesis actually works in the implementation
 
+  val letEvalAtUse: String =
+    """
+      | x:=0;
+      | let thing() = x;
+      | x:=1;
+      | !(thing() = 1);
+      |""".stripMargin
+
   val assertOnePos: String =
   """?xValue:(x=1);
     |!xPositive:(x > 0);
@@ -51,6 +59,14 @@ object SharedModels {
       |}
       |""".stripMargin
 
+  val switchLiteralArgAlternate:String =
+ """{?bit:(x = 0); ++ ?bit:(x = 1);}
+  |switch (bit) {
+  |  case (x = 0) => !nonneg:(x >= 0);
+  |  case (x = 1) => !nonneg:(x >= 0);
+  |}""".stripMargin
+
+
   val switchLiteralsProgram: String =
     "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
 
@@ -73,15 +89,15 @@ object SharedModels {
   /** Carefully check speed. Should use simple prop proof, not slow QE */
   val propSkipsQE: String =
     """?a:(x = 0 -> y=1);
-      |?b:(x = 0 &  ((z - x*w^2/(2 - w))^42 >= 6));
+      |?b:(x = 0 & ((z - x*w^2/(w^2+1))^42 >= 6));
       |!c: ( y=1) using a b by prop;
       |""".stripMargin
 
   val annotatedAssign: String =
     """x := *;
       |y := x + 1;
-      |?xFact:(z := y);
-      |!compare:(z > x) using xFact ... by auto;
+      |?zFact:(z := y);
+      |!compare:(z > x) using zFact ... by auto;
       |""".stripMargin
 
   val annotatedAssignProgram: String =
@@ -120,6 +136,18 @@ object SharedModels {
       |}*
       |{?(x>=y);}^@
       |""".stripMargin
+
+  val demonicLoopConst: String =
+    """?yZero:(y := 0);
+      |?xZero:(x := 0);
+      |?cPos:(c = 3);
+      |!inv: (x >= 0);
+      |{x:=x+c;
+      | !inductiveStep:(x >= 0) using cPos inv by auto;
+      |}*
+      |!geq:(x >= y) using inv yZero by auto;
+      |""".stripMargin
+
 
   val demonicLoopGhostly: String =
     """?yZero:(y := 0);
@@ -163,6 +191,13 @@ object SharedModels {
       |{x' = y,  y' = -x  & !circle:(x^2 + y^2 = 1) by induction};
       |""".stripMargin
 
+  val solAgainODE: String =
+    """?xInit:(x := 2); y := 0;
+      |{y' = 1, xSol: x' = -2 & ?dc:(x >= 0) & !xSolAgain:(x = 2*(1 - y))};
+      |!xHi:(x <= 2) using xInit xSol by auto;
+      |!xLo:(x >= 0) using dc by auto;
+      |""".stripMargin
+
   val inductODEBC: String =
     """x := 0; y := 1;
       |!bc:(x^2 + y^2 = 1);
@@ -198,7 +233,7 @@ object SharedModels {
       |{x := x + 1;
       |/++ !(x >= y) using inv by auto; ++/
       |}*
-      |!(x > 0) using inv yInit xInit by auto;
+      |!positive:(x > 0) using inv yInit xInit by auto;
       |""".stripMargin
 
   val ghostODE: String =
@@ -208,7 +243,7 @@ object SharedModels {
       |  !inv:(x*y^2 = 1) by auto;
       |++/
       |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction}
-      |!nonZero:(x > 0) using inv by auto;
+      |!positive:(x > 0) using inv by auto;
       |""".stripMargin
 
   /** Program which the ghost ODE refines */
@@ -218,6 +253,11 @@ object SharedModels {
   val inverseGhostODE: String =
     """z := 0;
       |{/-- x' = y, y' = -1 --/ ,  z'=1 & !zPos:(z >= 0) by solution}
+      |""".stripMargin
+
+  val inverseGhostODECircle: String =
+    """z := 0;
+      |{/-- x' = y, y' = -x --/ ,  z'=1 & !zPos:(z >= 0) by solution}
       |""".stripMargin
 
   /** Program which the inverse ghost ODE refines */
@@ -244,6 +284,17 @@ object SharedModels {
   val labelOld: String =
     """old:
       |{x' = 1 & !greater:(x >= x@old)}
+      |""".stripMargin
+
+  val labelOldEq: String =
+    """x:=0; y:=0; old:
+      |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old)};
+    |""".stripMargin
+
+  //@TODO: Reveals terrible bug in solution expression that doesn't account for nonzero initial values?
+  val labelOldestEq: String =
+    """old:
+      |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old)};
       |""".stripMargin
 
   val unwindBlock: String =
@@ -358,7 +409,6 @@ object SharedModels {
       |    !conv:(pos <= (x - x@init) & x <= d) using epsPos consts ... by auto;
       |    ?guard:(pos <= d - (eps + x@init) & x <= d - eps);
       |    pos := pos + eps/2) {
-      |  body:
       |  vel := (d - x)/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T)};
@@ -373,17 +423,20 @@ object SharedModels {
 
   // @TODO: Check SB() vs SB parenthesis... hmm...
   val forwardHypothetical: String =
-    """?init:(T > 0 & A > 0 & B > 0);
-      |let SB() = v^2/(2*B);
-      |let safe() <-> SB() <= (d-x) & v >= 0;
-      |?initSafe:(safe());
-      |{
-      |  {acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
-      |   t:= 0;
-      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
-      |ode(t):
-      |   !step:(safe()) using env init initSafe time vel xSol vSol tSol by auto;
+    """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x) & v >= 0);
+      |?init:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
+      |{{acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
+      | t:= 0; {ts: t' = 1, xs: x' = v, vs: v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
+      |ode(t): !step:(safe()) using env init time vel xs vs ts by auto;
       |}*
+      |""".stripMargin
+
+  val forwardHypotheticalUnsolvable: String =
+    """
+      |!good:((y=1)@ode(T,0,1));
+      |t:=0;x:=1;y:=0;
+      |{t'=1,x'=-y,y'=x & ?(t<=T)};
+      |ode(t,x,y):
       |""".stripMargin
 
 
@@ -1447,8 +1500,10 @@ object SharedModels {
 
   val thesisExamples: List[String] = List(switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, unwindBlock, basicForConv,
+    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, labelOldEq, unwindBlock, basicForConv,
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
+    switchLiteralArgAlternate, solAgainODE, inverseGhostODECircle, letEvalAtUse, demonicLoopConst, solAgainODE,
+    labelOldestEq, forwardHypotheticalUnsolvable
     )
 
   val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)

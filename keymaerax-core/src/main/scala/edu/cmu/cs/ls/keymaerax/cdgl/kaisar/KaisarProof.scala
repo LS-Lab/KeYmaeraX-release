@@ -518,10 +518,10 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
     }
 
-  def solutionsFrom(xys: Map[Variable, Term]): Option[List[(Variable, Term)]] = {
+  def solutionsFrom(xys: Map[Variable, Term], forProof: Boolean): Option[List[(Variable, Term)]] = {
     if (timeVar.isEmpty) None
     else {
-      val ode = asODESystem
+      val ode = getODESystem(forProof)
       try {
         val result = Integrator(xys.toMap, timeVar.get, ode)
         val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
@@ -548,23 +548,26 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     val dummyXys: Set[(Variable, Term)] =
       StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
     try {
-      solutionsFrom(dummyXys.toMap)
+      solutionsFrom(dummyXys.toMap, false)
     } catch { case (m: MatchError) => None }
   }
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
   def hasTrueSolution: Boolean = solutions.isDefined
 
-  /** Get true solution of ODE. Only works if proof is in SSA form */
-  lazy val solutions: Option[List[(Variable, Term)]] = {
-    val ode = asODESystem
+  private def getSolutions(forProof: Boolean = false): Option[List[(Variable, Term)]] = {
+    val ode = getODESystem(forProof)
     val bvs = StaticSemantics(ode).bv.toSet
     val xys: Set[(Variable, Term)] = bvs.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
     try {
-      val sols = solutionsFrom(xys.toMap)
+      val sols = solutionsFrom(xys.toMap, forProof)
       sols
     } catch { case (m: MatchError) => None } // Throws if not in SSA form
   }
+
+  /** Get true solution of ODE. Only works if proof is in SSA form */
+  lazy val solutions = getSolutions(forProof = false)
+  lazy val proofSolutions = getSolutions(forProof = true)
 
   /** Get best avaiable solutions: true solutions if SSA has been performed, else dummy solutions */
   lazy val  bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
@@ -584,11 +587,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   def timeVar: Option[Variable] = if(explicitTimeVar.isDefined) explicitTimeVar else inferredTimeVar
   def overrideTimeVar(v: Variable): Unit = (explicitTimeVar = Some(v))
 
-  lazy val asODESystem: ODESystem = {
-    ODESystem(ds.asDifferentialProgram(modifier), dc.asFormula(isAngelic).getOrElse(True))
+
+  private def getODESystem(forProof: Boolean = false): ODESystem = {
+    ODESystem(ds.asDifferentialProgram(modifier, forProof), dc.asFormula(isAngelic, forProof).getOrElse(True))
   }
 
-  lazy val isAngelic: Boolean = modifier.isDefined
+  lazy val asODESystem: ODESystem = getODESystem(false)
+
+    lazy val isAngelic: Boolean = modifier.isDefined
   lazy val modifier: Option[DomModify] = {
     dc.modifier
   }
@@ -705,7 +711,7 @@ final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[Atom
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
 sealed trait DiffStatement extends ASTNode {
-  private def getDifferentialProgram(mod: Option[DomModify]): Option[DifferentialProgram] = {
+  private def getDifferentialProgram(mod: Option[DomModify], forProof: Boolean = false): Option[DifferentialProgram] = {
     this match {
       case AtomicODEStatement(dp, _solIdent) =>
         (mod, dp.e) match {
@@ -716,22 +722,24 @@ sealed trait DiffStatement extends ASTNode {
         }
         Some(dp)
       case DiffProductStatement(l, r) =>
-        (l.getDifferentialProgram(mod), r.getDifferentialProgram(mod)) match {
+        (l.getDifferentialProgram(mod, forProof), r.getDifferentialProgram(mod, forProof)) match {
           case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
           case (None, r) => r
           case (l, None) => l
         }
-      case InverseDiffGhostStatement(ds) => ds.getDifferentialProgram(mod)
+      case InverseDiffGhostStatement(ds) if forProof => None
+      case InverseDiffGhostStatement(ds) => ds.getDifferentialProgram(mod, forProof)
+      case DiffGhostStatement(ds) if forProof => ds.getDifferentialProgram(mod, forProof)
       case DiffGhostStatement(ds) => None
     }
   }
 
   def hasDifferentialProgram(mod: Option[DomModify]): Boolean = getDifferentialProgram(mod).isDefined
-  def asDifferentialProgram(mod: Option[DomModify]): DifferentialProgram = {
-    val x = DifferentialSymbol(BaseVariable("dummy"))
-    getDifferentialProgram(mod).getOrElse(AtomicODE(x, Number(0)))
-  }
 
+  def asDifferentialProgram(mod: Option[DomModify], forProof: Boolean = false): DifferentialProgram = {
+    val x = DifferentialSymbol(BaseVariable("dummy"))
+    getDifferentialProgram(mod, forProof).getOrElse(AtomicODE(x, Number(0)))
+  }
   lazy val clocks: Set[Variable] = {
     this match {
       case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number), _solIdent) if rhs.value.toInt == 1 => Set(x)
@@ -776,13 +784,14 @@ case class InverseDiffGhostStatement(ds: DiffStatement) extends DiffStatement
 //Proof steps regarding the domain, for example differential cuts and weakening of domain constraints.
 // Angelic solutions require witnesses for duration, also given here
 sealed trait DomainStatement extends ASTNode {
-  def asFormula(isAngelic: Boolean): Option[Formula] = {
+  def asFormula(isAngelic: Boolean, forProof: Boolean = false): Option[Formula] = {
     this match {
       case DomAssume(x, f) => Some(f)
-      case DomAssert(x, f, child) if (isAngelic) => Some(f)
+      case DomAssert(x, f, child) if isAngelic || forProof => Some(f)
       case DomAssert(x, f, child) => None
       case DomModify(id, x, f) => None
-      case DomWeak(dc) => dc.asFormula(isAngelic)
+      case DomWeak(dc) if forProof => None
+      case DomWeak(dc) => dc.asFormula(isAngelic, forProof)
       case DomAnd(l, r) =>
         (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
           case (Some(l), Some(r)) => Some(And(l, r))
