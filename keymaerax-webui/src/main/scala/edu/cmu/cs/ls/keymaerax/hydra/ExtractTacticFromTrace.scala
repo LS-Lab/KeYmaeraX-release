@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 trait TraceToTacticConverter {
@@ -37,8 +38,19 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
     if (subgoalTactics.isEmpty) indent + thisTactic
     else if (subgoalTactics.size == 1) indent + sequentialTactic(thisTactic, subgoalTactics.head, indent)
     else sequentialTactic(thisTactic,
-      subgoalTactics.zip(labels).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + indent + t }).mkString(",\n") +
+      subgoalTactics.zip(minimize(labels)).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + t }).mkString(",\n") +
       "\n" + indent + ")", indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
+  }
+
+  /** Returns the unique tails of labels `l` as labels. */
+  @tailrec
+  private def minimize(l: List[BelleLabel], depth: Int = 1): List[BelleLabel] = {
+    if (depth > l.map(_.components.size).max) throw new IllegalArgumentException("Duplicate label in " +
+      l.map(_.prettyString).mkString("::") + "\n(verbose) " + l.map(_.toString).mkString("::"))
+    val projectedLabels = l.map(_.components.takeRight(depth).map(_.label))
+    if (projectedLabels.size == projectedLabels.toSet.size) projectedLabels.map(l =>
+      l.tail.foldLeft[BelleLabel](BelleTopLevelLabel(l.head))(BelleSubLabel))
+    else minimize(l, depth + 1)
   }
 
   private def sequentialTactic(ts1: String, ts2: String, indent: String, sep: String = SEQ_COMBINATOR.img): String = {

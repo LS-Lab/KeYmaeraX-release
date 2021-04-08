@@ -123,6 +123,79 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
+  it should "record andR case labels" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x^2>=0 & x^4>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal(
+        """andR('R=="x^2>=0 & x^4>=0"); <(
+          |"x^2>=0": nil,
+          |"x^4>=0": nil
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+    }
+  }}
+
+  it should "record unique prop case labels" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1) <(nil, prop)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal (
+        // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
+        """andR(1); <(nil, prop); <(
+          |"x=3": nil,
+          |"x>2//x^2>=4": nil,
+          |"x<(-2)//x^2>=4": nil,
+          |"x<(-2)//x^4>=16": nil,
+          |"x>2//x^4>=16": nil
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+    }
+  }}
+
+  it should "record unique prop case labels (2)" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1))
+    tacticRunner("(1,1)", prop)
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal (
+        """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
+          |"x=3": nil,
+          |"x>2|x < (-2)->x^2>=4&x^4>=16":
+          |  prop; <(
+          |  "x>2//x^2>=4": nil,
+          |  "x<(-2)//x^2>=4": nil,
+          |  "x<(-2)//x^4>=16": nil,
+          |  "x>2//x^4>=16": nil
+          |  )
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+    }
+  }}
+
   it should "prove an easy model with loop invariant generator" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real v,x; End. Problem x>=0 -> [{v:=*;?v>=0; {x'=v}}*] x>=0 End."
     val proofId = db.createProof(modelContents)
@@ -607,6 +680,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
+        val start = System.currentTimeMillis()
         println("Importing and opening " + name + "...")
         val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement
         r1 shouldBe a[CreatedIdResponse]
@@ -640,13 +714,14 @@ class ScriptedRequestTests extends TacticTestBase {
             r6 shouldBe a[ProofVerificationResponse]
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
             r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
+            val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = BelleParser.parseWithInvGen(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value,
-              None, entry.defs, expandAll = true)
+            val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs, expandAll = true)
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
+            println("Done reproving")
         }
-        println("Done")
+        println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")
       }
     }
   }}
