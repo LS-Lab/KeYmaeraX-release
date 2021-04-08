@@ -704,20 +704,20 @@ class ScriptedRequestTests extends TacticTestBase {
         val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
         r5 shouldBe a[AgendaAwesomeResponse]
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
-        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs, expandAll = true) match {
+        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs) match {
           case _: PartialTactic =>
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue("closed")
           case _ =>
             r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
             r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue("closed")
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
-            r6 shouldBe a[ProofVerificationResponse]
+            r6 shouldBe a [ProofVerificationResponse] withClue r6.getJson.prettyPrint
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
             r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
             val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs, expandAll = true)
+            val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs)
             proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
             println("Done reproving")
         }
