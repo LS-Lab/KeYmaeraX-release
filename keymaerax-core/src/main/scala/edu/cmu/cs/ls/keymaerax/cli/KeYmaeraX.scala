@@ -6,13 +6,12 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
-import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, PrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, KeYmaeraXPrettierPrinter, ParsedArchiveEntry, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 
@@ -315,7 +314,7 @@ object KeYmaeraX {
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(model = e.defs.exhaustiveSubst(e.model),
       defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
-    val printer = new KeYmaeraXArchivePrinter()
+    val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
 
     val outFile = options('out).toString

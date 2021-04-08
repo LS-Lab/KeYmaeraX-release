@@ -1279,7 +1279,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               mxProof.conclusion.succ.head,
               ("ModelPlex Monitor Proof", BellePrettyPrinter(monitorProof), monitorProof) :: Nil,
               Nil, Map.empty)
-            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter()(entry)) :: Nil
+            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
@@ -1404,7 +1404,7 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
               case (Name(n, i), _) => symbols.exists(s => s.name == n && s.index == i)
             })
             val lemma = ParsedArchiveEntry(lemmaName, "lemma", "", "", Declaration(defs), goal, Nil, Nil, Map.empty)
-            val fileContents = new KeYmaeraXArchivePrinter()(lemma)
+            val fileContents = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(lemma)
 
             db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
         }
@@ -2718,9 +2718,9 @@ object ArchiveEntryPrinter {
   def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
     ArchiveParser.parser(modelInfo.keyFile) match {
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, modelInfo.name, tactics))
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, entry.name, tactics))
     }
   }
 

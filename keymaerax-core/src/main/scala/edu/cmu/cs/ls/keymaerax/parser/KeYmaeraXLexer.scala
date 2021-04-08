@@ -314,7 +314,7 @@ private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
 private object TOOL_VALUE_PAT {
   // values are nested into quadruple " and set apart with spaces (not until 4.9.3, so for backwards-compatibility we do
   // not insist on presence of spaces), because they can contain and end in single, double, or triple " themselves
-  def regexp: Regex = "(?s)\"{4}(.*?)\"{4}".r
+  def regexp: Regex = "\"{4}([\\s\\S]*?)\"{4}".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
