@@ -168,10 +168,10 @@ object OpSpec {
       r
   }
 
-  /** The sort of an interpreted function or None if uninterpreted */
-  private[parser] def interpretedFuncSort(name: String): Option[Sort] = InterpretedSymbols.byName.get((name, None)) match {
+  /** The sort and domain of an interpreted function or None if uninterpreted */
+  private[parser] def interpretedFuncSortDomain(name: String): Option[(Sort, Sort)] = InterpretedSymbols.byName.get((name, None)) match {
     case None => None
-    case Some(f) => Some(f.sort)
+    case Some(f) => Some(f.sort -> f.domain)
   }
 
   // operator notation specifications

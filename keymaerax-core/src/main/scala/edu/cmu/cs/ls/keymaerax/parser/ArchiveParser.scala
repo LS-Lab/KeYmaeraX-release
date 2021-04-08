@@ -361,7 +361,6 @@ object ArchiveParser extends ArchiveParser {
 
   /** Extracts declarations per static semantics of the expression `parsedContent`. */
   def declarationsOf(parsedContent: Expression, filter: Option[Set[NamedSymbol]] = None): Declaration = {
-    //@todo robustify
     def makeArgsList(args: Term): List[(Name, Sort)] = args match {
       case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
       case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
@@ -369,10 +368,14 @@ object ArchiveParser extends ArchiveParser {
 
     val collectedArgs = scala.collection.mutable.Map.empty[NamedSymbol, List[(Name, Sort)]]
     def collect(fn: Function, args: Term): Unit = {
-      if (filter.isEmpty || filter.get.contains(fn)) {
-        if (!collectedArgs.contains(fn)) collectedArgs(fn) = makeArgsList(args)
-        else assert(collectedArgs(fn) == makeArgsList(args), "Expected consistent arguments to " + fn.prettyString +
-          " everywhere, but found " + collectedArgs(fn).mkString(",") + " vs. " + makeArgsList(args).mkString(","))
+      InterpretedSymbols.byName.get((fn.name, fn.index)) match {
+        case None =>
+          if (filter.isEmpty || filter.get.contains(fn)) {
+            if (!collectedArgs.contains(fn)) collectedArgs(fn) = makeArgsList(args)
+            else assert(collectedArgs(fn) == makeArgsList(args), "Expected consistent arguments to " + fn.prettyString +
+              " everywhere, but found " + collectedArgs(fn).mkString(",") + " vs. " + makeArgsList(args).mkString(","))
+          }
+        case Some(_) => // nothing to do, builtin interpreted symbols do not need to be declared
       }
     }
 

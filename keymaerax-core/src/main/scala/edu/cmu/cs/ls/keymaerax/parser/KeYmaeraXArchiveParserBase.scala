@@ -306,7 +306,8 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Bool => la match {
         case EQUIV =>
           val (pred: Either[Option[Formula], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.formulaTokenParser)
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
+          if (InterpretedSymbols.byName.contains((next.name, next.index))) throw ParseException("Re-definition of interpreted symbol " + next.name + " not allowed; please use a different name for your definition.", next.loc.spanTo(endLoc), next.name, "A name != " + next.name)
+          else ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Bool"), currLoc) +: rest)
         case EQ => throw ParseException("Predicate must be defined by equivalence", st, nextTok, EQUIV.img)
@@ -315,7 +316,8 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Real => la match {
         case EQ =>
           val (term: Either[Option[Term], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.termTokenParser)
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
+          if (InterpretedSymbols.byName.contains((next.name, next.index))) throw ParseException("Re-definition of interpreted symbol " + next.name + " not allowed; please use a different name for your definition.", next.loc.spanTo(endLoc), next.name, "A name != " + next.name)
+          else ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Real"), currLoc) +: rest)
         case EQUIV => throw ParseException("Function must be defined by equality", st, nextTok, EQ.img)
