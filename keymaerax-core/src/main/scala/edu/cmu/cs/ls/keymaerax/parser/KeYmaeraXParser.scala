@@ -414,7 +414,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         //@note Recognized(Variable()) instead of IDENT to avoid item overlap IDENT LPAREN with function/predicate symbols
         //@note Recognized(Variable()) instead of Variable to avoid detecting lookup confusion with Variable PLUS ... too late
         //@note Recognized should also generalize better to block quantifiers and multi-sorted quantifiers
-        if (la == COMMA || firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real) :: Nil), r :+ tok1))
+        if (la == PRIME) shift(reduce(shift(st), 2, Bottom :+ RecognizedQuant(DifferentialSymbol(Variable(name, idx, Real)) :: Nil), r :+ tok1))
+        else if (la == COMMA || firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real) :: Nil), r :+ tok1))
         else error(st, List(COMMA,FIRSTFORMULA))
 
       case _ :+ Token(FORALL | EXISTS, _) => if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
