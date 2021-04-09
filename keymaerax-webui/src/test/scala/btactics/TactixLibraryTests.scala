@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
 
 import scala.collection.immutable._
@@ -705,6 +705,68 @@ class TactixLibraryTests extends TacticTestBase {
     val f = "\\exists X (X>x&\\forall a (x<a&a<=X->P(a)))->\\exists a (a>x&P(a))".asFormula
     //@note master does not yet instantiate quantifiers
     proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
+  }
+
+  "useLemma" should "use unification to bridge between function symbols and terms" in withTactics {
+    val lemmaName = "tests/useLemma/tautology1"
+    val lemma = proveBy("f()>0 -> f()>0".asFormula, prop)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
+    proveBy("==> f()>0 -> f()>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> x>0 -> x>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> x^2+y>0 -> x^2+y>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+  }
+
+  it should "use recorded substitutions" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil),
+      Some("user" + File.separator + lemmaName)))
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    result shouldBe 'proved
+    result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+  }
+
+  it should "use definitions" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val entry = ArchiveParser(
+      """Lemma "Lemma 1"
+        |Definitions Real f(Real x)=x^2; End.
+        |ProgramVariables Real x; End.
+        |Problem f(x)>0->f(x)>0 End.
+        |End.""".stripMargin).head
+    val subst = USubst(entry.defs.substs)
+    val SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, Expand(f, entry.defs.substs.head) & prop, subst=subst)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, ToolEvidence(List("model" -> entry.fileContent, "tactic" -> """expand "f"; prop"""))::Nil),
+      Some("user" + File.separator + lemmaName)))
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    result shouldBe 'proved
+    result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+  }
+
+  it should "not apply when lemma conclusion does not fit" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    lemma shouldBe 'proved
+    lemma.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil)),
+      Some("user" + File.separator + lemmaName)))
+    the [IllFormedTacticApplicationException] thrownBy proveBy("==> 2*x>0 -> 2*x>0".asSequent, useLemmaX(lemmaName, None)) should have message
+      """requirement failed: Conclusion of fact
+        |ElidingProvable(Provable(  ==>  x^2>0->x^2>0 proved))
+        |must match sole open goal in
+        |ElidingProvable(Provable(  ==>  2*x>0->2*x>0
+        |  from     ==>  2*x>0->2*x>0))""".stripMargin
   }
 
   "useLemmaAt" should "apply at provided key" in withQE { _ =>

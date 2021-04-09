@@ -997,44 +997,66 @@ object TactixLibrary extends HilbertCalculus
     }
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Sequent) =>
-    adapt match {
-      case Some(t) =>
-        val substs = lemma.evidence.flatMap({
-          case ToolEvidence(info) =>
-            import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-            val tactic = info.find(_._1 == "tactic").map(_._2)
-            val model = info.find(_._1 == "model")
-            (model, tactic) match {
-              case (Some(model), Some(tactic)) =>
-                val defs = ArchiveParser.parser(model._2).head.defs
-                if (tactic.contains("expandAllDefs")) {
-                  defs.substs
-                } else {
-                  val subst1 = """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
-                  val expandedSymbols = """expand "([^"]+)"""".r("symbol").findAllMatchIn(tactic).map(_.group("symbol")).toList
-                  subst1 ++ defs.substs.filter({
-                    case SubstitutionPair(FuncOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
-                    case SubstitutionPair(PredOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
-                    case SubstitutionPair(PredicationalOf(fn, _), _) =>  expandedSymbols.contains(fn.prettyString)
-                    case _ => false
-                  })
-                }
-              case (None, Some(tactic)) =>
-                """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
-              case (_, None) =>
-                //@todo unify sequent with lemma conclusion
-                Nil
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (seq: Sequent) =>
+    def sanitize(f: Formula): Formula = f match {
+      case Imply(True, f) => f
+      case Imply(f, False) => f
+      case f => f
+    }
+
+    val recordedSubsts = lemma.evidence.flatMap({
+      case ToolEvidence(info) =>
+        import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+        val tactic = info.find(_._1 == "tactic").map(_._2)
+        val model = info.find(_._1 == "model")
+        (model, tactic) match {
+          case (Some(model), Some(tactic)) =>
+            val defs = ArchiveParser.parser(model._2).head.defs
+            if (tactic.contains("expandAllDefs")) {
+              defs.substs
+            } else {
+              val subst1 = """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+              val expandedSymbols = """expand "([^"]+)"""".r("symbol").findAllMatchIn(tactic).map(_.group("symbol")).toList
+              subst1 ++ defs.substs.filter({
+                case SubstitutionPair(FuncOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                case SubstitutionPair(PredOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                case SubstitutionPair(PredicationalOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                case _ => false
+              })
             }
-          case _ => Nil
-        })
-        ExpandAll(substs) & cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
-          (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1)
-           else /* toFormula returns true->conclusion */ implyR(1) & hideL('Llast)) &
-          (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1)
-           else /* toFormula returns conclusion->false */ hideR(1)) &
-          by(lemma))
-      case None => by(lemma)
+          case (None, Some(tactic)) =>
+            """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+          case (_, None) => Nil
+        }
+      case _ => Nil
+    })
+
+    val conclusion = sanitize(lemma.fact.conclusion.toFormula)
+    val goal = USubst(recordedSubsts)(sanitize(seq.toFormula))
+    // bridge additional differences not in the definitions (e.g., constant in lemma but variable in theorem)
+    val subst = try {
+      Some(UnificationMatch(goal, conclusion))
+    } catch {
+      case _: UnificationException => try {
+        Some(UnificationMatch(conclusion, goal))
+      } catch {
+        case _: UnificationException => None
+      }
+    }
+    val byLemma = subst.map(by(lemma, _)).getOrElse(by(lemma))
+
+    adapt match {
+      case None | Some(TactixLibrary.nil) => ExpandAll(recordedSubsts) & byLemma
+      case Some(t) =>
+        ExpandAll(recordedSubsts) & cut(subst.map(_ (conclusion)).getOrElse(conclusion)) < (
+          t,
+          cohideR('Rlast) &
+            (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast) * (lemma.fact.conclusion.ante.size - 1)
+             else /* sanitized toFormula returns conclusion */ skip) &
+            (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast) * (lemma.fact.conclusion.succ.size - 1)
+             else /* sanitized toFormula returns conclusion */ skip) &
+            byLemma
+        )
     }
   }
 
