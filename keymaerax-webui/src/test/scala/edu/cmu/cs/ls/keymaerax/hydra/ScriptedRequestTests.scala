@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real, USubst}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -718,7 +718,7 @@ class ScriptedRequestTests extends TacticTestBase {
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs)
-            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
+            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, subst = USubst(entry.defs.substs)) shouldBe 'proved
             println("Done reproving")
         }
         println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")

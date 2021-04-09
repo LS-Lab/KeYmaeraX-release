@@ -336,26 +336,29 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, defs: Declaration): ProvableSig = {
+  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, subst: USubst): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
-        dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ USubst(defs.substs)) shouldBe s.exhaustiveSubst(dsp.subst ++ USubst(defs.substs))
+        dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ subst) shouldBe s.exhaustiveSubst(dsp.subst ++ subst)
         labelCheck(dsp.label)
         dsp.p
       case BelleProvable(provable, labels) =>
-        provable.conclusion.exhaustiveSubst(USubst(defs.substs)) shouldBe s.exhaustiveSubst(USubst(defs.substs))
+        provable.conclusion.exhaustiveSubst(subst) shouldBe s.exhaustiveSubst(subst)
         labelCheck(labels)
         provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
   def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit): ProvableSig = {
-    proveByS(s, tactic, labelCheck, Declaration(Map.empty))
+    proveByS(s, tactic, labelCheck, USubst(Nil))
+  }
+  def proveByS(s: Sequent, tactic: BelleExpr, subst: USubst): ProvableSig = {
+    proveByS(s, tactic, _ => {}, subst)
   }
 
-  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
-    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, defs)
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, subst: USubst = USubst(Nil)): ProvableSig = {
+    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, subst)
   }
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
