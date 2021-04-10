@@ -334,6 +334,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2), andR(3))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2),
+        |  andR(3)
+        |)""".stripMargin
+
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2); <(andR(3), andR(4)), andR(5))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2) ; <(
+        |    andR(3),
+        |    andR(4)
+        |  ),
+        |  andR(5)
+        |)""".stripMargin
+  }
+
   it should "parse e <()" in {
     val result = BelleParser("andR(1) <()").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
@@ -364,6 +381,24 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       BelleLabels.indStep -> andL(-2),
       BelleLabels.useCase -> andL(-3)
     )
+  }
+
+  it should "print as cases indented" in {
+    BellePrettyPrinter(BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": andL(-1),
+        |  "Step": andL(-2),
+        |  "Post": andL(-3)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""loop("x>=0",1); <("Init":cut("x>=0");<("Use":nil,"Show":nil), "Step":nil, "Post":nil)""")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": cut("x>=0") ; <(
+        |      "Use": nil,
+        |      "Show": nil
+        |    ),
+        |  "Step": nil,
+        |  "Post": nil
+        |)""".stripMargin
   }
 
   it should "parse as case tactic when labels are present on nested tactics" in {
@@ -614,6 +649,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "def tactic parser" should "parse a simple example" in {
     val tactic = BelleParser("tactic t as (assignb('R))")
     tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)))
+
+  }
+
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("tactic t as (assignb('R))")) shouldBe
+      """tactic t as (
+        |  assignb('R)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""tactic t as (cut("x>=0"); <(nil,nil))""")) shouldBe
+      """tactic t as (
+        |  cut("x>=0") ; <(
+        |    nil,
+        |    nil
+        |  )
+        |)""".stripMargin
   }
 
   it should "parse multipe tactic defs" in {
