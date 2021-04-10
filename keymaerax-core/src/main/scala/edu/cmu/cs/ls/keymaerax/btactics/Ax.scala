@@ -1195,7 +1195,7 @@ object Ax extends Logging {
   @Axiom(("¬[]","![]"), conclusion = "__¬[a]P__↔<a>¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notBox: DerivedAxiomInfo = derivedAxiom("![]",
-    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(||)) <-> (<a_;>!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(diamond)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1212,7 +1212,7 @@ object Ax extends Logging {
   @Axiom(("¬<>","!<>"), conclusion = "__¬<a>P__↔[a]¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notDiamond: DerivedAxiomInfo = derivedAxiom("!<>",
-    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(||)) <-> ([a_;]!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(box)(1, 0::Nil) &
       byUS(equivReflexive)
