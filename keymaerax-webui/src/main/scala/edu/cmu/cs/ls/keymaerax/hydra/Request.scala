@@ -2572,7 +2572,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
       backupProof(model, provable, tactic)
-      new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+      new ProofVerificationResponse(proofId, provable, tactic) :: Nil
     }
   }
 }
@@ -2674,7 +2674,7 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
       Some(tactic))
     db.updateProofInfo(newInfo)
-    GetTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+    GetTacticResponse(tactic) :: Nil
   }
 }
 
