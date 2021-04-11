@@ -19,8 +19,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
-import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.{List, _}
@@ -1044,19 +1043,21 @@ object TactixLibrary extends HilbertCalculus
       }
     }
     val byLemma = subst.map(by(lemma, _)).getOrElse(by(lemma))
+    def cutLemma(t: BelleExpr) = cut(subst.map(_ (conclusion)).getOrElse(conclusion)) < (
+      t & Idioms.doIf(!_.isProved)(label("Lemma available as assumption")),
+      cohideR('Rlast) &
+        (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast) * (lemma.fact.conclusion.ante.size - 1)
+        else /* sanitized toFormula returns conclusion */ skip) &
+        (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast) * (lemma.fact.conclusion.succ.size - 1)
+        else /* sanitized toFormula returns conclusion */ skip) &
+        byLemma
+    )
 
     adapt match {
-      case None | Some(TactixLibrary.nil) => ExpandAll(recordedSubsts) & byLemma
-      case Some(t) =>
-        ExpandAll(recordedSubsts) & cut(subst.map(_ (conclusion)).getOrElse(conclusion)) < (
-          t,
-          cohideR('Rlast) &
-            (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast) * (lemma.fact.conclusion.ante.size - 1)
-             else /* sanitized toFormula returns conclusion */ skip) &
-            (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast) * (lemma.fact.conclusion.succ.size - 1)
-             else /* sanitized toFormula returns conclusion */ skip) &
-            byLemma
-        )
+      case None | Some(TactixLibrary.nil) =>
+        ExpandAll(recordedSubsts) & Idioms.doIfElse(p =>
+          subst.map(_ (p.subgoals.head)).getOrElse(p.subgoals.head) == subst.map(_ (lemma.fact.conclusion)).getOrElse(lemma.fact.conclusion))(byLemma, cutLemma(nil))
+      case Some(t) => ExpandAll(recordedSubsts) & cutLemma(t)
     }
   }
 

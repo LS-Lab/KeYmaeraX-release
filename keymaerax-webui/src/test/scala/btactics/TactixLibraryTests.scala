@@ -752,7 +752,7 @@ class TactixLibraryTests extends TacticTestBase {
     result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
   }
 
-  it should "not apply when lemma conclusion does not fit" in withTactics {
+  it should "cut in lemma conclusion as assumption when lemma doesn't close" in withTactics {
     val lemmaName = "tests/useLemma/tautology2"
     val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
     val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
@@ -761,12 +761,10 @@ class TactixLibraryTests extends TacticTestBase {
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil)),
       Some("user" + File.separator + lemmaName)))
-    the [IllFormedTacticApplicationException] thrownBy proveBy("==> 2*x>0 -> 2*x>0".asSequent, useLemmaX(lemmaName, None)) should have message
-      """requirement failed: Conclusion of fact
-        |ElidingProvable(Provable(  ==>  x^2>0->x^2>0 proved))
-        |must match sole open goal in
-        |ElidingProvable(Provable(  ==>  2*x>0->2*x>0
-        |  from     ==>  2*x>0->2*x>0))""".stripMargin
+    proveByS("==> 2*x>0 -> 2*x>0".asSequent, useLemmaX(lemmaName, None), _.value should contain theSameElementsAs List(
+      "Use//Lemma available as assumption".asLabel
+    )).subgoals.loneElement shouldBe
+      "x^2>0 -> x^2>0 ==> 2*x>0->2*x>0".asSequent
   }
 
   "useLemmaAt" should "apply at provided key" in withQE { _ =>
