@@ -18,27 +18,39 @@ trait TraceToTacticConverter {
 class VerboseTraceToTacticConverter extends TraceToTacticConverter {
   private val INDENT_INCREMENT = "  "
 
+  /** Tactic definitions from the tactic script (if any). */
+  private val tacticDefs = scala.collection.mutable.Map.empty[String, BelleExpr]
+
   def getTacticString(node: ProofTreeNode, indent: String): String = {
     assert(!node.children.contains(node), "A node should not be its own child.")
-    val thisTactic = tacticStringAt(node)
+    val nodeMaker = tacticStringAt(node) match {
+      case (nm, Some(DefTactic(name, t))) =>
+        tacticDefs(name) = t
+        nm
+      case (nm, _) => nm
+    }
     val subgoalTactics = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else INDENT_INCREMENT)))
 
     //@note expensive: labels are temporary, need to rerun tactic to create labels
     val labels = if (node.children.size > 1) {
       node.goal.map(s => BelleProvable(ProvableSig.startProof(s))) match {
         case Some(p) =>
-          val t = node.children.headOption.flatMap(_.maker.map(BelleParser)).get
-          LazySequentialInterpreter()(t, p) match {
-            case BelleProvable(_, Some(labels)) => labels
-            case _ => Nil
+          node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser(m)))) match {
+            case Some(t) =>
+              LazySequentialInterpreter()(t, p) match {
+                case BelleProvable(_, Some(labels)) => labels
+                case _ => Nil
+              }
+            case None =>
+              Nil
           }
       }
     } else Nil
 
-    if (subgoalTactics.isEmpty) indent + thisTactic
-    else if (subgoalTactics.size == 1) indent + sequentialTactic(thisTactic, subgoalTactics.head, indent)
-    else sequentialTactic(thisTactic,
-      subgoalTactics.zip(minimize(labels)).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + t }).mkString(",\n") +
+    if (subgoalTactics.isEmpty) indent + nodeMaker
+    else if (subgoalTactics.size == 1) indent + sequentialTactic(nodeMaker, subgoalTactics.head, indent)
+    else sequentialTactic(nodeMaker,
+      subgoalTactics.zip(minimize(labels)).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + indent + "  " + t }).mkString(",\n" + indent + "  ") +
       "\n" + indent + ")", indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
   }
 
@@ -90,19 +102,21 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
   }
 
   //@note all children share the same maker
-  private def tacticStringAt(node: ProofTreeNode): String = node.children.headOption match {
-    case None => "nil"
+  private def tacticStringAt(node: ProofTreeNode): (String, Option[BelleExpr]) = node.children.headOption match {
+    case None => ("nil", None)
     case Some(c) => c.maker match {
-      case None => "nil"
+      case None => ("nil", None)
       case Some(m) =>
-        if (BelleExpr.isInternal(m)) "???" //@note internal tactics are not serializable (and should not be in the trace)
-        else Try(BelleParser(m)).toOption match {
-          case Some(t@AppliedPositionTactic(_, l)) => BellePrettyPrinter(t.copy(locator = convertLocator(l, node)))
+        if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
+        else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
+          case Some(t@AppliedPositionTactic(_, l)) =>
+            (BellePrettyPrinter(t.copy(locator = convertLocator(l, node))), Some(t))
           case Some(t: AppliedDependentPositionTactic) =>
-            BellePrettyPrinter(new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node)))
+            (BellePrettyPrinter(new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))), Some(t))
           case Some(t: AppliedDependentPositionTacticWithAppliedInput) =>
-            BellePrettyPrinter(new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node)))
-          case _ => m
+            (BellePrettyPrinter(new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node))), Some(t))
+          case Some(t) => (BellePrettyPrinter(t), Some(t))
+          case _ => (m, None)
         }
     }
   }

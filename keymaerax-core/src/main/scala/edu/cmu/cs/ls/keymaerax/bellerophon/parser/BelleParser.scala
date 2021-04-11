@@ -43,11 +43,20 @@ object BelleParser extends TacticParser with Logging {
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
     * expand function and predicate symbols. */
   def parseWithInvGen(s: String, g: Option[Generator.Generator[GenProduct]] = None,
-                      defs: Declaration = Declaration(Map()), expandAll: Boolean = false): BelleExpr =
+                      defs: Declaration = Declaration(Map.empty), expandAll: Boolean = false): BelleExpr =
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
       case None => parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
     }
+
+  def parseWithTacticDefs(s: String, defs: Map[String, BelleExpr]): BelleExpr = {
+    firstUnacceptableCharacter(s) match {
+      case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
+      case None => parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](scala.collection.mutable.Map[String, DefTactic](defs.map({
+        case (n, t) => (n, DefTactic(n, t))
+      }).toList:_*)), None, Declaration(Map.empty), expandAll = false)
+    }
+  }
 
   /** Non-unicode characters that are allowed in KeYmaera X input files.
     * Should correspond to the unicode that's printed in the web UI. */
