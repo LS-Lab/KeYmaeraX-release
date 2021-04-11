@@ -100,7 +100,7 @@ private object ToolTactics {
               doQE
               ,
               // else
-              hidePredicates & hideQuantifiedFuncArgsFmls &
+              DebuggingTactics.print("Foo") & hidePredicates & hideQuantifiedFuncArgsFmls & DebuggingTactics.print("Bar") &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
                 doQE & done
                 | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
