@@ -207,6 +207,7 @@ private object EqualityTactics {
     val v = abbrvV match {
       case Some(vv) => vv
       case None => t match {
+        case FuncOf(Function(n, _, _, sort, true), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
         case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
@@ -278,8 +279,8 @@ private object EqualityTactics {
   val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-        val absVar = Variable(fn, freshAbsIdx)
+        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+        val absVar = Variable(fn + "_", freshAbsIdx)
         abbrv(abs, Some(absVar)) &
           useAt(Ax.equalCommute)('L, Equal(absVar, abs)) &
           useAt(Ax.abs)('L, Equal(abs, absVar))
@@ -353,8 +354,8 @@ private object EqualityTactics {
   val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-        val minmaxVar = Variable(fn, freshMinMaxIdx)
+        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+        val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
           useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
         //@todo IDE check if this key is working correctly?
