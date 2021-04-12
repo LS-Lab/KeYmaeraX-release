@@ -48,10 +48,12 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
     } else Nil
 
     if (subgoalTactics.isEmpty) indent + nodeMaker
-    else if (subgoalTactics.size == 1) indent + sequentialTactic(nodeMaker, subgoalTactics.head, indent)
+    else if (subgoalTactics.size == 1) sequentialTactic(nodeMaker, subgoalTactics.head, indent)
     else sequentialTactic(nodeMaker,
-      subgoalTactics.zip(minimize(labels)).map({ case (t, l) => indent + "\"" + l.prettyString + "\":\n" + indent + "  " + t }).mkString(",\n" + indent + "  ") +
-      "\n" + indent + ")", indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
+      subgoalTactics.zip(minimize(labels)).map({ case (t, l) =>
+        indent + INDENT_INCREMENT + "\"" + l.prettyString + "\":\n" + t.linesWithSeparators.map(INDENT_INCREMENT + _).mkString("") }).
+        mkString(",\n") + "\n" + indent + ")",
+      indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
   }
 
   /** Returns the unique tails of labels `l` as labels. */
@@ -65,15 +67,16 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
     else minimize(l, depth + 1)
   }
 
+  /** Composes `ts1` and `ts2` sequentially, trims `ts1` and single-line `ts2` before composing them. */
   private def sequentialTactic(ts1: String, ts2: String, indent: String, sep: String = SEQ_COMBINATOR.img): String = {
-    val (ts1t, ts2t) = (ts1.trim, ts2.trim)
+    val (ts1t, ts2t) = if (ts2.lines.length <= 1) (ts1.trim, ts2.trim) else (ts1.trim, ts2.stripPrefix(indent))
     (ts1t, ts2t) match {
       case ("nil", _) | ("skip", _)=> ts2t
       case (_, "nil") | (_, "skip") => ts1t
       case ("" | "()", "" | "()") => ""
       case (_, "" | "()") => ts1t
       case ("" | "()", _) => ts2t
-      case _ => ts1t + sep + "\n" + indent + ts2t
+      case _ => indent + ts1t + sep + "\n" + indent + ts2t
     }
   }
 
