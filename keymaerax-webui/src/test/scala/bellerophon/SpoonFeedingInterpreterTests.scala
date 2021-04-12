@@ -230,6 +230,110 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, id)")
   }}
 
+  it should "preserve labels" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List(
+          "x>0 ==> x>0".asSequent,
+          "x>0 ==> x>-1".asSequent
+        )
+        l.value should contain theSameElementsAs List("x>0".asLabel, "x>(-1)".asLabel)
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0&x>(-1)\");(andR('R==\"x>0&x>(-1)\");<( \"x>0\": nil, \"x>(-1)\": nil ))")
+  }}
+
+  it should "preserve nested labels" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & CaseTactic(List(
+        "x>0".asLabel -> id,
+        "x>(-1)".asLabel -> cut("x>=0".asFormula)
+      )),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List(
+          "x>0 ==> x>-1, x>=0".asSequent,
+          "x>0, x>=0 ==> x>-1".asSequent
+        )
+        l.value should contain theSameElementsAs List("x>(-1)//Use".asLabel, "x>(-1)//Show".asLabel)
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>(-1)");
+        |andR('R=="x>0&x>(-1)"); <(
+        |  "x>0": id,
+        |  "x>(-1)":
+        |    cut("x>=0"); <(
+        |     "Use": nil,
+        |     "Show": nil
+        |    )
+        |)""".stripMargin)
+  }}
+
+  it should "delete labels of closed branches" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & CaseTactic(List(
+        "x>0".asLabel -> id,
+        "x>(-1)".asLabel -> (cut("x>0".asFormula) & CaseTactic(List(
+          "Use".asLabel -> (hideL(-1) & QE),
+          "Show".asLabel -> (hideR(1) & propClose)
+        )))
+      )),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p shouldBe 'proved
+        l.value shouldBe 'empty
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>(-1)");
+        |andR('R=="x>0&x>(-1)"); <(
+        |  "x>0": id,
+        |  "x>(-1)":
+        |    cut("x>0"); <(
+        |     "Use": hideL('L=="x>0"); QE,
+        |     "Show": hideR('R=="x>(-1)"); propClose
+        |    )
+        |)""".stripMargin)
+  }}
+
+  it should "delete labels of closed goals" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & label("Delete") & propClose,
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p shouldBe 'proved
+        l.value shouldBe 'empty
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("""implyR('R=="true & !(-2<x&x<=1) & x<=1 -> !-2<x"); label("Delete"); propClose""")
+  }}
+
   it should "work nested branching top-level" in withDatabase { db => withMathematica { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
     val proofId = db.createProof(modelContent)
