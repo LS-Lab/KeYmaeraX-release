@@ -498,7 +498,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       case l@Find(_, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(provable, l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
@@ -511,7 +511,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
 
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   @tailrec
-  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig = {
+  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: => BelleThrowable): ProvableSig = {
     if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
       @tailrec
@@ -670,7 +670,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       }
       case l@Find(_, _, start, _) =>
         tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + v.prettyString))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
       case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
@@ -713,7 +713,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(locator: Find, cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
+  private def tryAllAfter(locator: Find, cause: => BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
