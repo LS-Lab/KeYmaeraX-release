@@ -49,10 +49,12 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
 
     if (subgoalTactics.isEmpty) indent + nodeMaker
     else if (subgoalTactics.size == 1) sequentialTactic(nodeMaker, subgoalTactics.head, indent)
-    else sequentialTactic(nodeMaker,
+    else if (subgoalTactics.size == labels.size) sequentialTactic(nodeMaker,
       subgoalTactics.zip(minimize(labels)).map({ case (t, l) =>
         indent + INDENT_INCREMENT + "\"" + l.prettyString + "\":\n" + t.linesWithSeparators.map(INDENT_INCREMENT + _).mkString("") }).
         mkString(",\n") + "\n" + indent + ")",
+      indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
+    else sequentialTactic(nodeMaker, subgoalTactics.mkString(",\n") + "\n" + indent + ")",
       indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
   }
 
