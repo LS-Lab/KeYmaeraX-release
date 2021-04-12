@@ -876,8 +876,8 @@ object ODELiveness {
     val newfml = Diamond(sys,R)
 
     cutR(newfml)(pos) <(
-      skip,
-      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & odeUnify(pos)
+      skip & label(BelleLabels.cutUse),
+      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & odeUnify(pos) & label(BelleLabels.cutShow)
     )
   }}
 
