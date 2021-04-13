@@ -99,6 +99,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           if (!n.isInternal) name
           else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case dot: BelleDot => "_@" + dot.hashCode()
+        case LabelBranch(BelleStartTxLabel) => "nil"
+        case LabelBranch(BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, label), None, _)) => LabelBranch(BelleTopLevelLabel(label)).prettyString
         case l: LabelBranch => l.prettyString
         case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
         case Using(es, t) => pp(t, indent) + " using \"" + es.mkString(" :: ") + (if (es.isEmpty) "" else " :: ") + "nil\""

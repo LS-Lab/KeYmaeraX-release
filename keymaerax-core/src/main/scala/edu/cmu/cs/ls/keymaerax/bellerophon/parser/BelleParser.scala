@@ -274,7 +274,7 @@ object BelleParser extends TacticParser with Logging {
         case Some(t@BelleToken(KLEENE_STAR, _)) => ParserState(stack :+ t, st.input.tail)
         case Some(t@BelleToken(N_TIMES(_), _)) => ParserState(stack :+ t, st.input.tail)
         case Some(t@BelleToken(USING, _)) => ParserState(stack :+ t, st.input.tail)
-        case _ => ParserState(r :+ ParsedBelleExpr(expr, l1.spanTo(l2), Some(BelleTopLevelLabel(label.undelimitedExprString))), st.input)
+        case _ => ParserState(r :+ ParsedBelleExpr(expr, l1.spanTo(l2), Some(label.undelimitedExprString.asLabel)), st.input)
       }
       case _ :+ BelleToken(_: EXPRESSION, _) :+ BelleToken(COLON, _) :+ ParsedBelleExpr(_, _, Some(l)) =>
         throw BelleParseException("Already labeled case '" + l.label + "' cannot be relabeled", st)

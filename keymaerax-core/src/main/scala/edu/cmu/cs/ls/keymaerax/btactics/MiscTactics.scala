@@ -706,15 +706,18 @@ object TacticFactory {
       try {
         seq.sub(pos.checkTop).flatMap(f => unapply(f.asInstanceOf[S])) match {
           case Some((l, r)) =>
-            val (lLabel, rLabel) = labels(l, r)
+            val (lText, rText) = labels(l, r)
+            val (lLabel, rLabel) =
+              if (lText == rText) (BelleSubLabel(BelleTopLevelLabel("L"), lText), BelleSubLabel(BelleTopLevelLabel("R"), rText))
+              else (BelleTopLevelLabel(lText), BelleTopLevelLabel(rText))
             new BuiltInTactic(ANON) {
               override private[keymaerax] def result(pr: ProvableSig) = (rule, pos.checkTop) match {
                 case (Left(lr), p: AntePos) => pr(lr(p), 0)
                 case (Right(rr), p: SuccPos) => pr(rr(p), 0)
               }
             } <(
-              LabelBranch(BelleTopLevelLabel(lLabel)),
-              LabelBranch(BelleTopLevelLabel(rLabel)),
+              LabelBranch(lLabel),
+              LabelBranch(rLabel),
             )
         }
       } catch {
