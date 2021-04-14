@@ -699,7 +699,7 @@ object TacticFactory {
   }
 
   /** Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework. */
-  @inline def corelabelledby[S <: Expression, T <: Expression](name: String, rule: Either[AntePos => Rule, SuccPos => Rule],
+  @inline def corelabelledby[S <: Expression, T <: Expression](name: String, rule: Either[CoreLeftTactic, CoreRightTactic],
       unapply: S => Option[(T, T)], pos: Position, seq: Sequent,
       labels: (T, T) => (String, String) = (s: T, t: T) => (s.prettyString, t.prettyString)): BelleExpr =
     if (pos.isTopLevel) {
@@ -710,12 +710,11 @@ object TacticFactory {
             val (lLabel, rLabel) =
               if (lText == rText) (BelleSubLabel(BelleTopLevelLabel("L"), lText), BelleSubLabel(BelleTopLevelLabel("R"), rText))
               else (BelleTopLevelLabel(lText), BelleTopLevelLabel(rText))
-            new BuiltInTactic(ANON) {
-              override private[keymaerax] def result(pr: ProvableSig) = (rule, pos.checkTop) match {
-                case (Left(lr), p: AntePos) => pr(lr(p), 0)
-                case (Right(rr), p: SuccPos) => pr(rr(p), 0)
-              }
-            } <(
+
+            ((rule, pos.checkTop) match {
+              case (Left(lr), p: AntePos) => lr(p)
+              case (Right(rr), p: SuccPos) => rr(p)
+            }) <(
               LabelBranch(lLabel),
               LabelBranch(rLabel),
             )
