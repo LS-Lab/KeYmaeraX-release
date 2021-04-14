@@ -108,6 +108,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
     case Some(l) => Some(orig.map(_.patch(at, l, 1)).getOrElse(l))
     case None => orig.map(_.patch(at, Nil, 1))
   }
+  private def updateLabels(orig: List[BelleLabel], at: Int, repl: Option[List[BelleLabel]]): List[BelleLabel] = updateLabels(Some(orig), at, repl).getOrElse(Nil)
 
   private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext, strict: Boolean,
                         convertPending: Boolean, executePending: Boolean): (BelleValue, ExecutionContext) = synchronized {
@@ -217,7 +218,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               (accProvables :+ branchResult._1, accCtx.glue(branchResult._2, branchOpenGoals))
             })
 
-            val (resultProvable, resultLabels) = provables.reverse.zipWithIndex.foldRight((p, labels))({
+            val origLabels = labels match {
+              case None => p.subgoals.indices.map(i => BelleTopLevelLabel("__" + i)).toList
+              case Some(l) => l
+            }
+
+            val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
                 (replaceConclusion(provable, i, p.p, Some(p.subst))._1, updateLabels(labels, i, p.label))
               case ((BelleProvable(cp, cl), i), (provable, labels)) =>
@@ -232,6 +238,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                     (provable(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
                 }
             })
+
+            val resultLabels = if (mergedLabels.forall(_.label.startsWith("__"))) None else Some(mergedLabels)
 
             //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
             val substs = provables.flatMap({ case p: BelleDelayedSubstProvable => Some(p.subst) case _ => None })
