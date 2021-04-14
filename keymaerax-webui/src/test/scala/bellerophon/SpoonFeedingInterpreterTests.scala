@@ -153,7 +153,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""pending("implyR(1) ; loop(\"x>0\", 1)")""")
+    tree.tactic shouldBe BelleParser("""pending("implyR(1)") ; pending("loop(\"x>0\", 1)")""")
   }}
 
   it should "record only RHS as pending on failure" in withDatabase { db => withMathematica { _ =>
@@ -2308,6 +2308,48 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
     interpreter(tactic, BelleProvable(p))
     db.extractTactic(proofId) shouldBe BelleParser("""implyR('R=="x>0->[x:=x+1;]x>0"); pending("loop(\"x>0\", 1)")""")
+  }}
+
+  it should "record innermost failed tactic as pending" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> [x:=x+1;]x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser("""implyR(1); cut("x>=0"); <("Use": hideL(-1); loop("x>0", 1), "Show": hideR(1); QE)""")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->[x:=x+1;]x>0");
+        |cut("x>=0"); <(
+        |  "Use": hideL('L=="x>0"); pending("loop(\"x>0\", 1)"),
+        |  "Show": hideR('R=="[x:=x+1;]x>0"); QE
+        |)""".stripMargin)
+  }}
+
+  it should "record innermost failed tactic as pending (2)" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> [x:=x+1;]x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser(
+      """implyR(1); cut("x>=0"); <(
+        |  "Use": loop("x>0", 1); <("Init": id, "Post": id, "Step": auto),
+        |  "Show": hideR(1); QE
+        |)""".stripMargin)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->[x:=x+1;]x>0");
+        |cut("x>=0"); <(
+        |  "Use": pending("loop(\"x>0\", 1)"); pending("<(
+        |    \"Init\": id,
+        |    \"Post\": id,
+        |    \"Step\": auto
+        |  )"),
+        |  "Show": hideR('R=="[x:=x+1;]x>0"); QE
+        |)""".stripMargin)
   }}
 
   "Delayed substitution" should "support introducing variables for function symbols of closed provables" in withMathematica { _ => withDatabase { db =>

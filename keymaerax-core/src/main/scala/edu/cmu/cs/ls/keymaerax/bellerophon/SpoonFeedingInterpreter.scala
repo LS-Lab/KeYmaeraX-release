@@ -118,7 +118,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         // combinators
         case SeqTactic(left, right) =>
           val (leftResult, leftCtx) = try {
-            runTactic(left, goal, level, ctx, strict, convertPending = false, executePending)
+            runTactic(left, goal, level, ctx, strict, convertPending, executePending)
           } catch {
             case e: BelleThrowable =>
               if (convertPending) right match {
@@ -148,6 +148,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               else throw eright.inContext(EitherTactic(eleft.context, eright.context),
               "Failed: both left-hand side and right-hand side " + goal)
           }
+          case eleft: BelleThrowable if convertPending =>
+            if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+              strict, convertPending = false, executePending = false)
+            else throw eleft.inContext(tactic, "Failed: left-hand side " + goal)
         }
         case SaturateTactic(child) =>
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
