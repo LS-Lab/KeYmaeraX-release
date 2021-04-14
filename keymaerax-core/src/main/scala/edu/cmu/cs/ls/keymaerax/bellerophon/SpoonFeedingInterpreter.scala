@@ -138,7 +138,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         case EitherTactic(left, right) => try {
           runTactic(left, goal, level, ctx, strict, convertPending=false, executePending)
         } catch {
-          case eleft: BelleThrowable => try {
+          case eleft: BelleProofSearchControl => try {
             runTactic(right, goal, level, ctx, strict, convertPending=false, executePending)
           } catch {
             case eright: BelleThrowable =>
@@ -164,7 +164,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                   case _ => prevResult
                 }
               } catch {
-                case e: BelleProofSearchControl =>
+                case _: BelleProofSearchControl =>
               }
             } while (progress(prevResult._1, result._1))
           result
@@ -273,7 +273,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             if (unifications.forall(_._1.isEmpty)) unifications.last
             else unifications.filterNot(_._1.isEmpty).head
 
-          runTactic(unification._2(unification._1.asInstanceOf[RenUSubst]), goal, level, ctx, strict, convertPending, executePending)
+          runTactic(unification._2(unification._1), goal, level, ctx, strict, convertPending, executePending)
 
         case OnAll(e) =>
           val provable = goal match {
