@@ -636,8 +636,8 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
           results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -649,7 +649,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
           })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
@@ -738,8 +738,8 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
           results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -751,7 +751,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
                   Some(createLabels(None, 0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
           })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
@@ -795,8 +795,8 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
           results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -808,7 +808,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
             })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)

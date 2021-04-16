@@ -99,7 +99,16 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "report when no unification found with 'Rlike unification matching" in withMathematica { _ =>
     the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
-      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message "Position tactic implyR('R~=\"p_()&q_()->r_()\") is not applicable anywhere in succedent"
+      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message
+      """Position tactic implyR('R~="p_()&q_()->r_()") is not applicable anywhere in succedent of
+        |ElidingProvable(Provable{
+        |==> 1:  a=0	Equal
+        |    2:  b=1	Equal
+        |    3:  c=2->d=3	Imply
+        |  from
+        |==> 1:  a=0	Equal
+        |    2:  b=1	Equal
+        |    3:  c=2->d=3	Imply})""".stripMargin
 
   }
 
@@ -175,7 +184,16 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*2).subgoals.loneElement shouldBe "x=2, y=3, z=4 ==> x=2".asSequent
     val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
     ex should have message "RepeatTactic failed on repetition 3"
-    ex.getCause should have message "Position tactic andL('L) is not applicable anywhere in antecedent"
+    ex.getCause should have message
+      """Position tactic andL('L) is not applicable anywhere in antecedent of
+        |ElidingProvable(Provable{
+        |   -1:  x=2&y=3&z=4	And
+        |==> 1:  x=2	Equal
+        |  from
+        |   -1:  x=2	Equal
+        |   -2:  y=3	Equal
+        |   -3:  z=4	Equal
+        |==> 1:  x=2	Equal})""".stripMargin
   }
 
   "+ combinator" should "saturate with at least 1 repetition" in withMathematica { _ =>

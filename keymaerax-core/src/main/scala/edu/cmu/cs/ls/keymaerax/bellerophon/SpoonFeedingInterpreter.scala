@@ -229,7 +229,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
             val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
-                (replaceConclusion(provable, i, p.p, Some(p.subst))._1, updateLabels(labels, i, p.label))
+                (replaceConclusion(provable, i, p.p, p.subst)._1, updateLabels(labels, i, p.label))
               case ((BelleProvable(cp, cl), i), (provable, labels)) =>
                 // provables may have expanded or not expanded definitions arbitrarily
                 if (provable.sub(i).subgoals.head == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
@@ -341,7 +341,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
             runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
               case p: BelleDelayedSubstProvable =>
-                val r = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, Some(p.subst))._1, lbl, p.subst), ctx.store(tactic))
+                val r = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, p.subst)._1, lbl, p.subst), ctx.store(tactic))
                 runningInner = null
                 r
               case BelleProvable(innerProvable, _) =>
@@ -495,7 +495,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                     runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
                       case p: BelleDelayedSubstProvable =>
                         val resultLabels = updateLabels(labels, 0, p.label)
-                        val result = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, Some(p.subst))._1, resultLabels, p.subst), ctx.store(tactic))
+                        val result = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, p.subst)._1, resultLabels, p.subst), ctx.store(tactic))
                         runningInner = null
                         result
                       case BelleProvable(innerProvable, innerLabels) =>
