@@ -1032,18 +1032,22 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/name/" + newName, {})
     }
 
+    $scope.trimTo = function(str, len) {
+      return str.length > len ? str.substring(0, len) + "..." : str;
+    }
+
     $scope.taskPrefixLabel = function(nodeId) {
       var labels = $scope.prooftree.node(nodeId).labels;
-      return labels.length > 1 ? labels[0] : undefined;
+      return labels.length > 1 ? $scope.trimTo(labels[0], 10) : undefined;
     }
 
     $scope.taskPostfixLabel = function(nodeId) {
       var labels = $scope.prooftree.node(nodeId).labels;
-      return labels.length > 0 ? labels[labels.length - 1] : undefined;
+      return labels.length > 0 ? $scope.trimTo(labels[labels.length - 1], 10) : undefined;
     }
 
     $scope.taskLabels = function(nodeId) {
-      return $scope.prooftree.node(nodeId).labels.join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
+      return $scope.prooftree.node(nodeId).labels.map(function (l) { return trimTo(l, 10); }).join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
     }
 
     $scope.saveTaskName = function(newName, oldName) {
