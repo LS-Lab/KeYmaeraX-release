@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParse
 import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -15,7 +16,7 @@ trait TraceToTacticConverter {
   def getTacticString(node: ProofTreeNode, indent: String): String
 }
 
-class VerboseTraceToTacticConverter extends TraceToTacticConverter {
+class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
   private val INDENT_INCREMENT = "  "
 
   /** Tactic definitions from the tactic script (if any). */
@@ -35,7 +36,7 @@ class VerboseTraceToTacticConverter extends TraceToTacticConverter {
     val labels = if (node.children.size > 1) {
       node.goal.map(s => BelleProvable(ProvableSig.startProof(s))) match {
         case Some(p) =>
-          node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser(m)))) match {
+          node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser.parseWithInvGen(m, None, defs)))) match {
             case Some(t) =>
               LazySequentialInterpreter()(t, p) match {
                 case BelleProvable(_, Some(labels)) => labels
