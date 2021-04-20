@@ -428,9 +428,9 @@ private object ToolTactics {
     * expression by proof. */
   private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
     val nextName: scala.collection.mutable.Map[String, Variable] = scala.collection.mutable.Map(
-        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name), sequent),
-        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name), sequent),
-        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name), sequent))
+        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name + "_"), sequent),
+        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name + "_"), sequent),
+        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name + "_"), sequent))
 
     val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
 
