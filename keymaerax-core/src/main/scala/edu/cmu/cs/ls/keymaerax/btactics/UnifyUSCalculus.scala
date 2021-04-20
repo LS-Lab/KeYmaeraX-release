@@ -1619,7 +1619,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (Ax.monb.provable(USubst(
+            (Ax.monbaxiom.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))

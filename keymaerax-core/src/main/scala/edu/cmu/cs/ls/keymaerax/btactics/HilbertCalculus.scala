@@ -10,7 +10,6 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -91,7 +90,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
     //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "∀x P |- ∀x Q")
-  lazy val monall             : BelleExpr         = anon {byUS(Ax.monall)}
+  lazy val monall             : BelleExpr         = anon {byUS(Ax.monallrule)}
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -102,7 +101,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
   //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "[a]P |- [a]Q")
-  lazy val monb               : BelleExpr         = anon {byUS(Ax.monb)}
+  lazy val monb               : BelleExpr         = anon {byUS(Ax.monbaxiom)}
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -251,7 +250,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   @Tactic(conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R", inputs = "R:formula", revealInternalSteps = true)
   def DCd(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
-    useAt(Ax.DCd,
+    useAt(Ax.DCdaxiom,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   }
@@ -402,7 +401,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     lazy val Dtimes             : DependentPositionTactic = useAt(Ax.Dtimes)
     /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
     lazy val Dquotient          : DependentPositionTactic = useAt(Ax.Dquotient)
-    /** Dpower: ^' derives a power */
+    /** Dpower: `^'` derives a power */
     lazy val Dpower             : DependentPositionTactic = useAt(Ax.Dpower)
     /** Dcompose: o' derives a function composition by chain rule */
       //@todo not sure if useAt can handle this yet

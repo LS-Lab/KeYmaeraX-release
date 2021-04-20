@@ -298,7 +298,7 @@ object Ax extends Logging {
       case _ => Set.empty
     }
 
-    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
+    val failures = mutable.Buffer.empty[(String,Throwable)]
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
@@ -708,7 +708,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt(randomb, PosInExpr(1::Nil))(1) &
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
-        byUS(monb) & hide(-1)
+        byUS(monbaxiom) & hide(-1)
         ,
         hide(1) & HilbertCalculus.boxTrue(1)
         )
@@ -721,7 +721,7 @@ object Ax extends Logging {
     * End.
     */
   @ProofRule("M∀",  premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
-  lazy val monall: DerivedRuleInfo = derivedRuleSequent("all monotone",
+  lazy val monallrule: DerivedRuleInfo = derivedRuleSequent("all monotone",
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
     implyRi()(-1,1) &
       useAt(allDistElim)(1) &
@@ -746,7 +746,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
       // use
-      byUS(monb) & hide(-1)
+      byUS(monbaxiom) & hide(-1)
       ,
       // show
       hide(1) & HilbertCalculus.boxTrue(1)
@@ -907,7 +907,7 @@ object Ax extends Logging {
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
   @ProofRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
-  lazy val monb: DerivedRuleInfo = derivedRuleSequent("[] monotone",
+  lazy val monbaxiom: DerivedRuleInfo = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
@@ -2191,7 +2191,7 @@ object Ax extends Logging {
     andL(-1) & useAt(IIinduction, PosInExpr(1::1::Nil))(1) <(
       close(-1,1)
       ,
-      hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+      hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
       )
   )
 
@@ -2238,7 +2238,7 @@ object Ax extends Logging {
       andR(1) <(
         HilbertCalculus.iterateb(-1) & andL(-1) & close(-1,1)
         ,
-        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
         ),
       useAt(IIinduction, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
       )
@@ -3225,7 +3225,7 @@ object Ax extends Logging {
     */
   @Axiom("DCd", conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
     key = "1.0", recursor = "*")
-  lazy val DCd: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
+  lazy val DCdaxiom: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
