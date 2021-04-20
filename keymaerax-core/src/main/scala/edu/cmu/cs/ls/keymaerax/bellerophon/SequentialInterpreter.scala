@@ -254,25 +254,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(OnAll(e.context), "")
       }
 
-    case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
-      case Some(tactic) =>
-        val c = Cancellable(listeners.synchronized(apply(tactic, v)))
-        try {
-          Await.result(c.future, Duration(timeout, MILLISECONDS))
-        } catch {
-          // current alternative failed within timeout, try next
-          case ex: ExecutionException => ex.getCause match {
-            case _: BelleProofSearchControl => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
-            case e => throw e
-          }
-          case ex: TimeoutException =>
-            c.cancel()
-            //@note otherwise race condition between tactic exceptions (caused by cancel) and BelleNoProgress in notifying listeners
-            listeners.synchronized(throw new BelleNoProgress("Alternative timed out", ex))
-        }
-      case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
-    }
-
     case LabelBranch(label) => v match {
       case BelleProvable(pr, Some(labels)) => BelleProvable(pr, adjustLabels(pr, Some(labels.map(_.append(label)))))
       case BelleProvable(pr, None) =>

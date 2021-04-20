@@ -431,23 +431,6 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
           runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
-        case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
-          case Some(alt) =>
-            val c = Cancellable(runTactic(alt, goal, level, ctx, strict, convertPending, executePending))
-            try {
-              Await.result(c.future, Duration(timeout, MILLISECONDS))
-            } catch {
-              // current alternative failed within timeout, try next
-              case ex: ExecutionException => ex.getCause match {
-                case _: BelleThrowable => runTactic(TimeoutAlternatives(alternatives.tail, timeout), goal, level, ctx, strict, convertPending, executePending)
-                case e => throw e
-              }
-              case ex: TimeoutException =>
-                c.cancel()
-                throw new BelleNoProgress("Alternative timed out", ex)
-            }
-          case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
-        }
 
         case t: InputTactic if level > 0 =>
           runTactic(t.computeExpr(), goal, level-1, ctx, strict, convertPending, executePending)

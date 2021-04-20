@@ -500,60 +500,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     db.proveBy(modelContent, tactic(1)) shouldBe 'proved
   }}
-
-  def testTimeoutAlternatives(fml: Formula, t: Seq[BelleExpr], timeout: Long): (ProvableSig, Seq[String]) = {
-    val namesToRecord = t.map(_.prettyString)
-    val listener = new IOListener {
-      val calls: mutable.Buffer[String] = mutable.Buffer[String]()
-      override def begin(input: BelleValue, expr: BelleExpr): Unit = {
-        val name = expr.prettyString
-        if (namesToRecord.contains(name)) calls += name
-      }
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
-      override def kill(): Unit = {}
-    }
-
-    val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(listener::Nil)(
-      TimeoutAlternatives(t, timeout),
-      BelleProvable(ProvableSig.startProof(fml))
-    )
-    (result, listener.calls)
-  }
-
-  "TimeoutAlternatives" should "succeed sole alternative" in withMathematica { _ =>
-    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, prop::Nil, 1000)
-    result shouldBe 'proved
-    recorded should contain theSameElementsInOrderAs("prop" :: Nil)
-  }
-
-  it should "fail on timeout" in withMathematica { _ =>
-    val wait: BuiltInTactic = new BuiltInTactic("wait") {
-      def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
-    }
-    the [BelleNoProgress] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula, wait::Nil, 1000) should have message "Alternative timed out"
-  }
-
-  it should "succeed the first succeeding alternative" in withMathematica { _ =>
-    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula,
-      prop::DebuggingTactics.error("Should not be executed")::Nil, 1000)
-    result shouldBe 'proved
-    recorded should contain theSameElementsInOrderAs("prop" :: Nil)
-  }
-
-  it should "try until one succeeds" in withMathematica { _ =>
-    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, (implyR(1)&done)::prop::Nil, 1000)
-    result shouldBe 'proved
-    recorded should contain theSameElementsInOrderAs("(implyR(1);done)" :: "prop" :: Nil)
-  }
-
-  it should "stop trying on timeout" in withMathematica { _ =>
-    val wait: BuiltInTactic = new BuiltInTactic("wait") {
-      def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
-    }
-    the [BelleThrowable] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula,
-      wait::DebuggingTactics.error("Should not be executed")::Nil, 1000) should have message "Alternative timed out"
-  }
-
+  
   "Def tactic" should "define a tactic and apply it later" in withMathematica { _ =>
     val fml = "x>0 -> [x:=2;++x:=x+1;]x>0".asFormula
     val tDef = DefTactic("myAssign", assignb('R))

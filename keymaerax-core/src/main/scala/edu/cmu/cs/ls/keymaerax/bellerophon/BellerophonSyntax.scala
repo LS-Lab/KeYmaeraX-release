@@ -763,10 +763,6 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 // advanced combinators
 
-/** Advance through `alternatives` until the first succeeds or hits the timeout (tries each for at most `timeout` time,
-  * fails when first tactic exceeds the timeout or all alternatives are exhausted). */
-case class TimeoutAlternatives(alternatives: Seq[BelleExpr], timeout: Long) extends BelleExpr { override def prettyString: String = "timeout(" + alternatives.map(_.prettyString).mkString(",") + ", " + timeout + ")" }
-
 /**
   * OnAll(e)(BelleProvable(p)) == <(e, ..., e) does the same tactic on all branches
   * where e occurs the appropriate number of times, which is `p.subgoals.length` times.

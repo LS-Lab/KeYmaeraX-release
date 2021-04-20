@@ -84,11 +84,7 @@ private object ToolTactics {
 
     val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
 
-    //@note don't split exhaustively (may explode), but *3 is only a guess
-    val splittingQE =
-      ArithmeticSimplification.smartHide & onAll(Idioms.?(orL('L) | andR('R)))*3 & onAll(plainQE & done)
-
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
+    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & plainQE
 
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
