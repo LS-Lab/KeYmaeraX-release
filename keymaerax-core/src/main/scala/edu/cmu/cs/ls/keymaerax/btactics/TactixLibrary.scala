@@ -868,21 +868,21 @@ object TactixLibrary extends HilbertCalculus
   lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  lazy val alphaRule: BelleExpr = andL('_) |
-    (orR('_) |
-      (implyR('_) |
-        (notL('_) |
-          notR('_)
+  lazy val alphaRule: BelleExpr = andL('L) |
+    (orR('R) |
+      (implyR('R) |
+        (notL('L) |
+          notR('R)
           )
         )
       )
 
   /** Beta rules are propositional rules that split */
-  lazy val betaRule: BelleExpr = andR('_) |
-    (orL('_) |
-      (implyL('_) |
-        (equivL('_) |
-          equivR('_)
+  lazy val betaRule: BelleExpr = andR('R) |
+    (orL('L) |
+      (implyL('L) |
+        (equivL('L) |
+          equivR('R)
           )
         )
       )
