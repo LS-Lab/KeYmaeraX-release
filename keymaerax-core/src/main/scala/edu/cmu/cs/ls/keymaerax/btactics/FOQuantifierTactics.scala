@@ -227,7 +227,7 @@ protected object FOQuantifierTactics {
             assert(namePairs.size == 1);
             ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
           }
-        renaming & DebuggingTactics.print("Renamed") & ProofRuleTactics.skolemizeR(pos) & DebuggingTactics.print("Skolemized") & backrenaming
+        renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
       }
     }
   })
