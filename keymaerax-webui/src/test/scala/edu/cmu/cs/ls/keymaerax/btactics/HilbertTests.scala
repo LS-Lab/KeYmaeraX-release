@@ -304,7 +304,7 @@ class HilbertTests extends TacticTestBase {
   it should "use Barcan" in withTactics {
     proveBy("[x:=2;]\\forall y y<=x".asFormula, useAt(Ax.barcan)(1)).subgoals.loneElement shouldBe "==> \\forall y [x:=2;]y<=x".asSequent
     the [IllFormedTacticApplicationException] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
-      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{^@|x_|};~>x_:=2;)"
+      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{|^@x_|};~>x_:=2;)"
   }
 
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
