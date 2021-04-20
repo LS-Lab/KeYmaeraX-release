@@ -91,7 +91,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   private val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
 
   protected val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
-  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.forall(_.isPredicateFreeFOL) })
   private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   private val qeStdOutListener = new QELogListener((_: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   protected val qeDurationListener = new StopwatchListener((_, t) => t match {
