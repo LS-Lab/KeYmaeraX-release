@@ -64,10 +64,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
             fm.bind(c.newInstance())()
             println("...done")
           } catch {
-            case ex: InvocationTargetException =>
-              val missingDependency = "Lemma ([^\\s]*) should".r.findFirstMatchIn(ex.getCause.getMessage).
-                map(_.group(1)).getOrElse("<unknown>")
-              fail("Missing dependency to '" + missingDependency + "'", ex.getCause)
+            case ex: InvocationTargetException => throw ex.getTargetException
           }
         }
       })

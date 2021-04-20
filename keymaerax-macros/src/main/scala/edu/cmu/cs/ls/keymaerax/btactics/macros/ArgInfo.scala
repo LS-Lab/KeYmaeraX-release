@@ -22,19 +22,23 @@ case class GeneratorArg (override val name: String) extends ArgInfo {
   override val allowsFresh: List[String] = Nil
 }
 
-class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+abstract class ExpressionArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }
 
-class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArg (name, allowsFresh) {
+case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArgBase (name, allowsFresh) {}
+
+abstract class TermArgBase (override val name: String, override val allowsFresh: List[String] = Nil) extends ExpressionArgBase (name, allowsFresh) {
   override val sort = "term"
 }
 
-case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends TermArg (name, allowsFresh) {
+case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends TermArgBase (name, allowsFresh) {}
+
+case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends TermArgBase (name, allowsFresh) {
   override val sort = "variable"
 }
 
-case class NumberArg (override val name: String, override val allowsFresh: List[String] = Nil) extends TermArg (name, allowsFresh) {
+case class NumberArg (override val name: String, override val allowsFresh: List[String] = Nil) extends TermArgBase (name, allowsFresh) {
   override val sort = "number"
 }
 
