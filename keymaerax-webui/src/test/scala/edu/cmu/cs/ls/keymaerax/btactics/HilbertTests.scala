@@ -31,7 +31,7 @@ import org.scalatest.LoneElement._
 @UsualTest
 @CheckinTest
 class HilbertTests extends TacticTestBase {
-  import HilbertCalculus.Derive._
+  import Derive._
 
   object TestLib extends UnifyUSCalculus
 
@@ -116,7 +116,7 @@ class HilbertTests extends TacticTestBase {
 
   it should "derive (x^2)' >= 7 without crashing" in withMathematica{ _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
-      stepAt(1, 0::Nil)
+      HilbertCalculus.stepAt(1, 0::Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
   }
 

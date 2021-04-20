@@ -62,7 +62,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
   def axiomsFor(expr: Expression): List[ProvableInfo] = expr match{
     case term: Term => term match {
       case Differential(t) => t match {
-        case _: Variable => Ax.Dvar :: Ax.equalReflexive :: Nil // skip when Dvar fails in context with bound x'; recover after chase with DvariableTactic follow up
+        case _: Variable => Ax.DvarAxiom :: Ax.equalReflexive :: Nil // skip when Dvar fails in context with bound x'; recover after chase with DvariableTactic follow up
         case _: Number => Ax.Dconst :: Nil
         // optimizations
         case t: Term if StaticSemantics.freeVars(t).isEmpty => Ax.Dconst :: Nil

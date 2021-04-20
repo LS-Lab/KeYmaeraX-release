@@ -453,7 +453,7 @@ object Ax extends Logging {
   val Dconst: CoreAxiomInfo = coreAxiom("c()' derive constant fn")
   @Axiom("x'", conclusion = "__(x)'__=x'", unifier = "linear",
     key = "0", recursor = "")
-  val Dvar: CoreAxiomInfo = coreAxiom("x' derive var")
+  val DvarAxiom: CoreAxiomInfo = coreAxiom("x' derive var")
   @Axiom("-'", conclusion = "__(-f(x))'__=-(f(x))'",
     key = "0", recursor = "0", unifier = "surjlinear")
   val Dneg: CoreAxiomInfo = coreAxiom("-' derive neg")
@@ -2958,7 +2958,7 @@ object Ax extends Logging {
       useAt(flipLess)(1, 1::0::1::Nil) &
         useAt(flipLess)(1, 1::1::1::Nil) &
         useAt(flipLess)(1, 0::1::1::0::Nil) &
-        HilbertCalculus.Derive.Dless(1, 0::1::1::1::Nil) &
+        Derive.Dless(1, 0::1::1::1::Nil) &
         useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
         useExpansionAt(Dgreater)(1, 0::1::1::1::Nil) &
         byUS(DIogreater)
@@ -3575,7 +3575,7 @@ object Ax extends Logging {
   lazy val DvariableCommutedAxiom: DerivedAxiomInfo = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
     useAt(equalCommute)(1) &
-      byUS(Dvar)
+      byUS(DvarAxiom)
   )
 
   /**
