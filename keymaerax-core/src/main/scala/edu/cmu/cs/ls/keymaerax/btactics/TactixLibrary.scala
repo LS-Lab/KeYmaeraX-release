@@ -1028,7 +1028,7 @@ object TactixLibrary extends HilbertCalculus
           case (_, None) => Nil
         }
       case _ => Nil
-    })
+    }).distinct
 
     val conclusion = sanitize(lemma.fact.conclusion.toFormula)
     val goal = USubst(recordedSubsts)(sanitize(seq.toFormula))
