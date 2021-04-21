@@ -2693,7 +2693,7 @@ class TacticDiffRequest(db: DBAbstraction, oldTactic: String, newTactic: String)
       val diff = TacticDiff.diff(oldT, newT)
       new TacticDiffResponse(diff) :: Nil
     } catch {
-      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
   }
 }

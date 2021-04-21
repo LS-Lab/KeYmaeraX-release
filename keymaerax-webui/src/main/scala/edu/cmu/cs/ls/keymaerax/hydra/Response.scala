@@ -161,11 +161,13 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
 
 class GetModelResponse(model: ModelPOJO) extends Response {
 
-  private def illustrationLinks(): List[String] = {
+  private def illustrationLinks(): List[String] = try {
     ArchiveParser.parser(model.keyFile).flatMap(_.info.get("Illustration"))
+  } catch {
+    case _: ParseException => Nil
   }
 
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
