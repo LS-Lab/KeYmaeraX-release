@@ -151,7 +151,12 @@ class QETests extends TacticTestBase {
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))"),
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))")
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->x>=0&\exists s x*s^2>0");
+        |andR('R=="x>=0&\exists s x*s^2>0"); <(
+        |  "x>=0": QE("Z3"),
+        |  "\exists s x*s^2>0": QE("Mathematica")
+        |)""".stripMargin)
     interpreter.kill()
   }
 
@@ -165,7 +170,12 @@ class QETests extends TacticTestBase {
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE, QE)")
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->x>=0&x>=(-1)");
+        |andR('R=="x>=0&x>=(-1)"); <(
+        |  "x>=0": QE,
+        |  "x>=(-1)": QE
+        |)""".stripMargin)
   }
 
   it should "switch between tools from parsed tactic" in {

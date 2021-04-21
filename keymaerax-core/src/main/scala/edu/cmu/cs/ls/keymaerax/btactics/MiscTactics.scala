@@ -256,7 +256,7 @@ object Idioms {
     * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
     * @see [[BelleLabels]]
     */
-  def <(s1: (BelleTopLevelLabel, BelleExpr), spec: (BelleTopLevelLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
+  def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
 
   /* branch by case distinction
   *  cases must be exhaustive (or easily proved to be exhaustive in context)

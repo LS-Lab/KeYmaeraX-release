@@ -652,7 +652,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
     val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kya")).mkString).get.model.asInstanceOf[Formula]
+      getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString).get.model.asInstanceOf[Formula]
     proveBy(problem, master()) shouldBe 'proved
   }
 
