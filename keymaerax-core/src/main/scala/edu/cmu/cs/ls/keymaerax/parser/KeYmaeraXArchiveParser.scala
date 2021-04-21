@@ -31,17 +31,27 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefSc
   * @see [[DLArchiveParser]]
   */
 object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
+  /** The archive file encoding. */
+  private val ENC = "ISO-8859-1"
 
   /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
   override def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        parse(input)
+        val src = scala.io.Source.fromFile(fileName, ENC)
+        try {
+          parse(src.mkString)
+        } finally {
+          src.close()
+        }
       case fileName :: entryName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        getEntry(entryName, input).
-          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+        val src = scala.io.Source.fromFile(fileName, ENC)
+        try {
+          getEntry(entryName, src.mkString).
+            getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+        } finally {
+          src.close()
+        }
     }
   }
 
