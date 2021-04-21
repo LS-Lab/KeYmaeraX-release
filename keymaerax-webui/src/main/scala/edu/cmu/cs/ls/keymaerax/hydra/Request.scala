@@ -1381,7 +1381,7 @@ class CreateProofRequest(db: DBAbstraction, userId: String, modelId: String, nam
   extends UserRequest(userId, _ => true) with WriteRequest {
   def resultingResponses(): List[Response] = {
     val proofId = db.createProofForModel(modelId, name, description, currentDate(), None)
-    new CreatedIdResponse(proofId) :: Nil
+    CreatedIdResponse(proofId) :: Nil
   }
 }
 
@@ -1417,7 +1417,7 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
         case Nil => db.createProofForModel(modelId, "Proof of " + lemmaName, "", currentDate(), None)
       }
     }
-    new CreatedIdResponse(proofId.toString) :: Nil
+    CreatedIdResponse(proofId.toString) :: Nil
   }
 }
 
@@ -1428,7 +1428,7 @@ class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: 
       case Some(tacticText) =>
         val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic",
           "Proof from tactic", currentDate(), Some(tacticText))
-        new CreatedIdResponse(proofId.toString) :: Nil
+        CreatedIdResponse(proofId.toString) :: Nil
       case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated")::Nil
     }
   }
@@ -1784,7 +1784,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId.toString))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
@@ -2274,7 +2274,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
+                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
                   RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
                   ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
@@ -2599,7 +2599,7 @@ class AcceptLicenseRequest(db: DBAbstraction) extends Request with WriteRequest 
 /////
 
 class IsLocalInstanceRequest() extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new BooleanResponse(!HyDRAServerConfig.isHosted) :: Nil
+  override def resultingResponses(): List[Response] = BooleanResponse(!HyDRAServerConfig.isHosted) :: Nil
 }
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
@@ -2661,7 +2661,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
       }
     }.start()
 
-    new BooleanResponse(true) :: Nil
+    BooleanResponse(flag = true) :: Nil
   }
 }
 
@@ -2900,7 +2900,7 @@ object RequestHelper {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
-      case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
+      case "step" | "stepat" if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos, Some(sequent), session.defs.substs) match {
@@ -2909,7 +2909,7 @@ object RequestHelper {
             }
           case _ => Right(DerivationInfo.ofCodeName(tacticId))
         }
-      case ("step" | "stepat") if pos.isDefined && pos2.isDefined =>
+      case "step" | "stepat" if pos.isDefined && pos2.isDefined =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
