@@ -19,14 +19,15 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import java.io.{PrintWriter, StringWriter}
 
+import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -142,18 +143,14 @@ class ProofListResponse(proofs: List[(ProofPOJO, String)]) extends Response {
   def getJson: JsValue = JsArray(objects:_*)
 }
 
-class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends Response {
-  def problemContent(s: String): String = {
-    val i = s.indexOf("Problem")
-    val j = s.indexOf("End.", i)
-    if (i >= 0) s.substring(i + "Problem".length, j).trim()
-    else s.trim()
-  }
-
-  lazy val objects : List[JsObject] = proofs.map({case (proof, model) => JsObject(
+class UserLemmasResponse(proofs: List[(ProofPOJO, Option[(String, Lemma)])]) extends Response {
+  lazy val objects : List[JsObject] = proofs.map({case (proof, lemma) => JsObject(
     "id" -> JsString(proof.proofId.toString),
-    "name" -> (if (model.isDefined) JsString(model.get.name) else JsNull),
-    "conclusion" -> (if (model.isDefined) JsString(problemContent(model.get.keyFile)) else JsNull)
+    "name" -> (lemma match { case Some((n, _)) => JsString(n) case None => JsNull }),
+    "conclusion" -> (lemma match {
+      case Some((_, l)) => JsString(l.fact.conclusion.prettyString)
+      case None => JsNull
+    })
   )})
 
   override def getJson: JsValue = JsArray(objects:_*)

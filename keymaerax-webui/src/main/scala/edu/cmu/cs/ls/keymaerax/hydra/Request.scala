@@ -226,8 +226,10 @@ class ProofsForUserRequest(db: DBAbstraction, userId: String) extends UserReques
 
 class UserLemmasRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   def resultingResponses(): List[Response] = {
+    def getLemma(model: Option[ModelPOJO]): Option[(String, Lemma)] =
+      model.flatMap(m => LemmaDBFactory.lemmaDB.get("user" + File.separator + m.name).map(m.name -> _))
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).filter(_._1.closed).
-      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, proof._1.modelId.map(db.getModel))).toList
+      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, getLemma(proof._1.modelId.map(db.getModel)))).toList
     new UserLemmasResponse(proofs) :: Nil
   }
 }
@@ -1380,8 +1382,13 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
 class CreateProofRequest(db: DBAbstraction, userId: String, modelId: String, name: String, description: String)
   extends UserRequest(userId, _ => true) with WriteRequest {
   def resultingResponses(): List[Response] = {
-    val proofId = db.createProofForModel(modelId, name, description, currentDate(), None)
-    CreatedIdResponse(proofId) :: Nil
+    if (modelId != "undefined") {
+      val proofName = if (name.isEmpty) db.getModel(modelId).name + ": Proof" else name
+      val proofId = db.createProofForModel(modelId, proofName, description, currentDate(), None)
+      CreatedIdResponse(proofId) :: Nil
+    } else {
+      new ErrorResponse("Unable to create proof for unknown model") :: Nil
+    }
   }
 }
 
@@ -2515,16 +2522,16 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   private def exportLemma(lemmaName: String, model: ModelPOJO, provable: ProvableSig, tactic: String) = {
-    if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-      val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
-        "tool" -> "KeYmaera X",
-        "model" -> model.keyFile,
-        "tactic" -> tactic
-      )) :: Nil)
-      LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
-    }
+    val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> model.keyFile,
+      "tactic" -> tactic
+    )) :: Nil)
+    val lemma = new Lemma(provable, evidence, Some(lemmaName))
+    if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+    LemmaDBFactory.lemmaDB.add(lemma)
   }
-  private def backupProof(model: ModelPOJO, provable: ProvableSig, tactic: String) = {
+  private def backupProof(model: ModelPOJO, tactic: String) = {
     val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
@@ -2571,7 +2578,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
       // remember lemma
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
-      backupProof(model, provable, tactic)
+      backupProof(model, tactic)
       new ProofVerificationResponse(proofId, provable, tactic) :: Nil
     }
   }
