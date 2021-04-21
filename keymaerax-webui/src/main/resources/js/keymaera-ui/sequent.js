@@ -126,6 +126,21 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               }
             }
 
+            scope.areAllFmlsUsed = function() {
+              var anteUsed = $.grep(scope.sequent.ante, function(e, i) { return e.use; });
+              var succUsed = scope.sequent.succ;
+              if (anteUsed.length == scope.sequent.ante.length) {
+                succUsed = $.grep(scope.sequent.succ, function(e, i) { return e.use; });
+              }
+              return anteUsed.length == scope.sequent.ante.length && succUsed.length == scope.sequent.succ.length;
+            }
+
+            scope.toggleAllFmls = function() {
+              var use = !scope.areAllFmlsUsed();
+              $.map(scope.sequent.ante, function(e, i) { e.use = use; return e; });
+              $.map(scope.sequent.succ, function(e, i) { e.use = use; return e; });
+            }
+
             scope.isFOL = function(formula) {
               //@todo implement
               return true;
