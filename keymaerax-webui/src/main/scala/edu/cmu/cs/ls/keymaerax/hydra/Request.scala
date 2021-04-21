@@ -2042,13 +2042,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
     try {
       input match {
-        case BelleTermInput(value, Some(arg: TermArg)) =>
-          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: FormulaArg)) =>
           checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: VariableArg)) =>
-          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) =>
+        case BelleTermInput(value, Some(arg: ExpressionArgBase)) =>
           checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: SubstitutionArg)) =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
@@ -2071,11 +2067,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
     val elaborated = exprs.map(e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
 
     val sortMismatch: Option[String] = (arg, elaborated) match {
-      case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
-      case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
-      case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
-      case (ListArg(ai: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
+      case (_: ExpressionArgBase, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
+      case (ListArg(_: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
       case _ => Some("Expected: " + arg.sort + ", found: " + elaborated.map(_.kind).mkString(",") + " " +   elaborated.map(_.prettyString).mkString(","))
     }
 
@@ -2148,10 +2142,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
     val paramStrings: List[String] = inputs.map{
-      case BelleTermInput(value, Some(_:TermArg)) => "\""+value+"\""
       case BelleTermInput(value, Some(_:FormulaArg)) => "\""+value+"\""
-      case BelleTermInput(value, Some(_:VariableArg)) => "\""+value+"\""
-      case BelleTermInput(value, Some(_:ExpressionArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:ExpressionArgBase)) => "\""+value+"\""
       case BelleTermInput(value, Some(_:SubstitutionArg)) => "\""+value+"\""
       /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */

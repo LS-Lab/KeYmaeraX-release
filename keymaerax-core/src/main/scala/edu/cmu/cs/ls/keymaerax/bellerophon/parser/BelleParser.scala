@@ -720,6 +720,14 @@ object BelleParser extends TacticParser with Logging {
     } catch {
       case exn: ParseException => throw ParseException(s"Could not parse $undelim as a variable when a variable was expected. Error: $exn", loc, exn)
     }
+    case _: NumberArg => try {
+      undelim.asExpr match {
+        case n: Number => Left(n)
+        case _ => throw ParseException(s"Could not parse $undelim as a number when a number was expected.", loc)
+      }
+    } catch {
+      case exn: ParseException => throw ParseException(s"Could not parse $undelim as an expression when an expression was expected. Error: $exn", loc, exn)
+    }
     case _: ExpressionArg => try {
       Left(undelim.asExpr)
     } catch {
