@@ -281,12 +281,20 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isBool(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isProgram(sort) =>
-        reduce(st, 2, Bottom :+ ProgramDef(name, index, Left(None), Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
-
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ ProgramDef(name, index, Left(None), Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) if la == LPAREN => shift(st)
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) :+ Token(LPAREN, _) if isReal(la) => shift(st)
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) :+ Token(LPAREN, _) :+ Token(sort, _) if isReal(sort) && la.isInstanceOf[IDENT] => shift(st)
@@ -396,12 +404,18 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         case _: IDENT => shift(st)
         case _ => throw ParseException("Missing identifier", st, Expected.ExpectTerminal(IDENT("<string>")) :: Nil)
       }
-      case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), _) if isReal(sort) => la match {
+      case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), identLoc) if isReal(sort) => la match {
         case SEMI | PERIOD =>
-          reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock, r)
+          (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+            case Some(d) => throw ParseException.duplicateSymbolError(name, index, identLoc, d.loc)
+            case None => reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock, r)
+          }
         case COMMA if isReal(rest.head.tok) => throw ParseException("Unexpected declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
         case COMMA =>
-          reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ Token(sort, startLoc), r)
+          (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+            case Some(d) => throw ParseException.duplicateSymbolError(name, index, identLoc, d.loc)
+            case None => reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ Token(sort, startLoc), r)
+          }
         case LPAREN => throw ParseException("Function definition only allowed in Definitions block", st, Expected.ExpectTerminal(SEMI) :: Expected.ExpectTerminal(COMMA) :: Nil)
         case _ if isReal(la) || isBool(la) || isProgram(la) =>
           throw ParseException("Missing variable declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
