@@ -82,12 +82,12 @@ private object EqualityTactics {
 
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
           case Some(f: Formula) =>
-            val diffPos = FormulaTools.posOf(f, (e: Expression) => e match {
+            val diffPos = FormulaTools.posOf(f, (e: Expression) => e != lhs && (e match {
               case DifferentialSymbol(x) => lhsFv.contains(x)
               case x: Differential => !lhsFv.intersect(StaticSemantics.symbols(x).
                 filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
               case _ => false
-            })
+            }))
             val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
@@ -238,7 +238,7 @@ private object EqualityTactics {
         case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to an expression")
       }
       require(x.isEmpty ||
-        !sequent.sub(pos).map(StaticSemantics.signature).contains(x.get),
+        !sequent.sub(pos).forall(StaticSemantics.signature(_).contains(x.get)),
         "Abbreviation must be fresh at position")
       val v = x match {
         case Some(vv) => vv
