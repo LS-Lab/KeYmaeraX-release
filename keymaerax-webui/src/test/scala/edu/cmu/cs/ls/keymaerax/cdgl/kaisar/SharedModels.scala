@@ -421,13 +421,74 @@ object SharedModels {
       |!(x <= d & x + 2 * eps >= d) using done conv  by auto;
       |""".stripMargin
 
+  val brokenStoppingReachAvoidFor:String =
+    """
+      |pragma option "time=true";
+      |pragma option "trace=true";
+      |pragma option "debugArith=true";
+      |let liveFactor() = 4;
+      |let liveIncr() = V*eps/(liveFactor()*liveFactor());
+      |let inv(pos) <-> (d >= 0 & ((done = 0 & (d@init - d) >= pos) | (done=1  & d<=V*eps)));
+      |?(d >= 0 & V > 0 & eps > 0 & v=0 & t=0 & done=0);
+      |init:
+      |for (pos := 0; !conv:(inv(pos));
+      | ?guard:(pos <= d@init & (d >= V*eps | done=0)); pos := pos + liveIncr()) {
+      |body:
+      |  did:=done;
+      |  switch (andER(conv)) {
+      |    case (done = 1 & d<=V*eps) => v:=0; done:=1; !br:(v=0&done=1&d<=V*eps);
+      |    case (done = 0 & (d@init - d) >= pos) =>
+      |    switch {
+      |      case (d >= V*eps) => v:=V; done:=0; !br:(v=V&done=0&did=0);
+      |      case (true) => v:=0; done:=1; !br:(v=0&done=1&did=0);
+      |    }
+      |  }
+      |  mid:
+      |  t:=0; { d'=-v, t'=1 & ?(t <= eps) & !(d >= v*(eps-t))
+      |    & !(d <= d@body - v*t/liveFactor())};
+      |  ?(t >= eps/liveFactor());
+      |  switch (br) {
+      |    case (v=0&done=1&d@body<=V*eps) => !(inv(pos + liveIncr()));
+      |    case (v=V&done=0&did=0) => !(inv(pos + liveIncr()));
+      |    case (v=0&done=1&did=0) => !(inv(pos + liveIncr()));
+      |  }
+      |}
+      |!(pos >= d@init - eps | d <= V*eps + eps) by guard(eps);
+      |!(d >= 0 & d <= (V+1)*eps);
+      |""".stripMargin
+
+  val disturbReachAvoid:String =
+    """
+      |pragma option "time=true";
+      |pragma option "trace=true";
+      |pragma option "debugArith=true";
+      |let inv(pos) <-> (d >= 0 & (d@init - d) >= pos);
+      |let liveFactor() = 4;
+      |let liveIncr() = V*eps/(4*liveFactor()*liveFactor());
+      |?(d >= 0 & V > 0 & eps > 0 & v=0 & t=0);
+      |init:
+      |for (pos := 0; !conv:(d >= 0 & (d@init - d) >= pos);
+      | ?guard:(pos <= d@init & d >= V*eps); pos := pos + liveIncr()) {
+      |body:
+      |   v:=V;
+      |   disturb:=*; ?dstrb:(0.5 <= disturb & disturb <= 1.0); ?vd:(v:=v*disturb);
+      |   {t:=0; { d'=-v, t'=1 & ?(t <= eps) & !(d >= v*(eps-t)) using dstrb ... by auto;
+      |    & !(d <= d@body - v*t/liveFactor()) using dstrb ... by auto};}
+      | ?(t >= eps/liveFactor());
+      | !(inv(pos + liveIncr())) using dstrb vd ... by auto;
+      |}
+      |!(pos >= d@init - eps | d <= V*eps + eps) by guard(eps);
+      |!(d >= 0 & d <= (V+1)*eps);
+      |
+      |""".stripMargin
+
   // @TODO: Check SB() vs SB parenthesis... hmm...
   val forwardHypothetical: String =
     """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x) & v >= 0);
       |?init:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
       |{{acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
-      | t:= 0; {ts: t' = 1, xs: x' = v, vs: v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
-      |ode(t): !step:(safe()) using env init time vel xs vs ts by auto;
+      | t:= 0; {t' = 1, x' = v, v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
+      |ode(t): !step:(safe()) using env init time vel ... by auto;
       |}*
       |""".stripMargin
 
@@ -442,9 +503,9 @@ object SharedModels {
 
   // @TODO: use less assumptions because I was just guessing at the end
   val sandboxExample: String =
-    """?init:(T > 0 & A > 0 & B > 0);
-      |let SB() = v^2/(2*B);
+    """let SB() = v^2/(2*B);
       |let safe() <-> SB() <= (d-x) & v >= 0;
+      |?init:(T > 0 & A > 0 & B > 0);
       |?initSafe:(safe());
       |{
       |  accCand := *;
@@ -453,16 +514,15 @@ object SharedModels {
       |  switch {
       |    case inEnv:(env()) =>
       |      ?theAcc:(acc := accCand);
-      |      !predictSafe:(safe()@ode(T, acc)) using inEnv theAcc init by auto;
+      |      !predictSafe:(safe()@ode(T, acc));
       |    case true =>
       |      ?theAcc:(acc := -B);
-      |      ?fast:(v@ode(T, acc) >= 0);
-      |      !predictSafe:(safe()@ode(T, acc)) using initSafe fast init theAcc by auto;
+      |      !predictSafe:(safe()@ode(min(T,v/B), acc));
       |  }
       |  t:= 0;
-      |  {tSol: t' = 1, xSol: x' = v, vSol: v' = acc & ?time:(0 <= t & t <= T) & ?vel:(v >= 0)};
+      |  {t' = 1, x' = v, v' = acc & ?time:(0 <= t & t <= T) & ?vel:(v >= 0)};
       |ode(t, acc):
-      |  !step:(safe()) using predictSafe init initSafe tSol xSol vSol time vel by auto;
+      |  !step:(safe()) using predictSafe init initSafe time vel ... by auto;
       |}*
       |""".stripMargin
 
