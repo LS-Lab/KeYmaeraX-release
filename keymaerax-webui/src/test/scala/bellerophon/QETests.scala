@@ -127,6 +127,12 @@ class QETests extends TacticTestBase {
       BelleParser("applyEqualities; toSingleFormula; universalClosure(\"nil\", 1); rcf")) shouldBe 'proved
   }
 
+  it should "abbreviate differential symbols and differentials" in withMathematica { _ =>
+    proveBy("x'>0 ==> x'>=0".asSequent, QE) shouldBe 'proved
+    proveBy("==> (x')^2>=0".asSequent, QE) shouldBe 'proved
+    proveBy("(f(x))'>0 ==> (f(x))'>=0".asSequent, QE) shouldBe 'proved
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved

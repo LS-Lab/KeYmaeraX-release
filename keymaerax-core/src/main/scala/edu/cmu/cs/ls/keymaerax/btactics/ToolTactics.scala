@@ -84,7 +84,7 @@ private object ToolTactics {
 
     val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
 
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & plainQE
+    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & plainQE
 
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
@@ -167,6 +167,27 @@ private object ToolTactics {
     }).map(p => hide(p._2)).reverse
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
+
+  private def differentialsOf(fml: Formula): List[Term] = {
+    val differentials = scala.collection.mutable.ListBuffer.empty[Term]
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case d: Differential =>
+          differentials += d
+          Left(None)
+        case d: DifferentialSymbol =>
+          differentials += d
+          Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    differentials.toList
+  }
+
+  private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
+    flatMap(differentialsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
+    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  )
 
   def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE()(qeTool)
 
