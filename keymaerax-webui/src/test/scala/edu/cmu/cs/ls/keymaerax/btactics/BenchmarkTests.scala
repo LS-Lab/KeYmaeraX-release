@@ -98,7 +98,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val entries = ArchiveParser.parse(content, parseTactics = false)
-    val printer = new KeYmaeraXArchivePrinter()
+    val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = entries.map(stripEntry).map(printer(_)).mkString("\n\n")
 
     val archive = File(EXPORT_DIR + "stripped" + url.substring(url.lastIndexOf("/")+1))

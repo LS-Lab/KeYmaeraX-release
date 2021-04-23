@@ -115,7 +115,10 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   "Abs" should "parse" in {
     "abs(x)".asTerm shouldBe FuncOf(Function("abs", None, Real, Real, interpreted=true), Variable("x"))
     "abs_0".asTerm shouldBe Variable("abs", Some(0))
-    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interpreted=false), Nothing)
+    the [ParseException] thrownBy "abs_0()".asTerm should have message
+      """1:8 Interpreted symbol abs: expected domain Real but got Unit
+        |Found:    Unit at 1:8 to EOF$
+        |Expected: Real""".stripMargin
   }
 
   ///

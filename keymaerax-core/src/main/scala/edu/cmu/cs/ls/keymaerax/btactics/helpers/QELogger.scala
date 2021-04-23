@@ -6,8 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import java.io.FileWriter
-
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -65,7 +64,7 @@ object QELogger extends Logging {
   def measure(s:Sequent): Int = s.succ.map(measure).sum + s.ante.map(measure).sum
 
   /** Default path from the configuration. */
-  private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
+  private lazy val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
   /** Returns a default 'qe.txt' file if path points to a directory, the path file otherwise. */
   private def file(filename: String): java.io.File =
@@ -184,18 +183,21 @@ object QELogger extends Logging {
       }
     }
 
-  private var logTactic = nil
+  private var logTactic: Option[BelleExpr] = None
 
-  def getLogTactic: BelleExpr = logTactic
+  def getLogTactic: BelleExpr = {
+    if (logTactic.isEmpty) logTactic = Some(nil)
+    logTactic.get
+  }
 
   //This bakes the recorder into the QE tactic, so it will record every single QE call, including internal ones made by
   //e.g. the ODE solver
   def enableLogging(loglevel: LogConfig = defaultConf ): Unit = {
-    logTactic = measureRecordQE(loglevel)
+    logTactic = Some(measureRecordQE(loglevel))
   }
 
   def disableLogging(): Unit = {
-    logTactic = nil
+    logTactic = Some(nil)
   }
 
   /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath` */
@@ -236,13 +238,14 @@ object QELogger extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val options = parseOptions(Map(), args.toList)
     options.get("convert") match {
       case Some(format) => format match {
         case "smtlib" =>
           val logPath = options.getOrElse("logpath", throw new Exception("Missing log file path, use argument -logpath path/to/logfile"))
-          val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt")
-          PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+          val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt2")
           exportSmtLibFormat(logPath, outputPath)
         case _ => throw new Exception("Unknown output format " + format + ", use one of [smtlib]")
       }

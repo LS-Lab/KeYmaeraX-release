@@ -49,7 +49,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.loneElement.localProvable.subgoals.loneElement shouldBe "x>0 ==> x>0".asSequent
     tree.root.children.loneElement.makerShortName shouldBe Some("implyR(1)")
 
-    tree.tactic shouldBe tactic
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0\")")
   }}
 
   it should "record pending if not applicable" in withDatabase { db => withMathematica { _ =>
@@ -89,7 +89,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; print(\"Two goals\")")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0&x>0&x>0\"); andR('R==\"x>0&x>0&x>0\"); print(\"Two goals\")")
     db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
       "implyR(1)" :: "andR(1)" :: "print(\"Two goals\")" :: Nil
   }}
@@ -104,7 +104,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; nil")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>0&x>0");
+        |andR('R=="x>0&x>0&x>0"); <(
+        |  "x>0": nil,
+        |  "x>0&x>0": nil
+        |)""".stripMargin)
     db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
       "implyR(1)" :: "andR(1)" :: "nil" :: Nil
   }}
@@ -135,7 +140,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.loneElement.children.loneElement.makerShortName shouldBe Some("id")
     tree.root.children.loneElement.children.loneElement.children shouldBe empty
 
-    tree.tactic shouldBe tactic
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0\"); id")
   }}
 
   it should "be recorded as pending on failure" in withDatabase { db => withMathematica { _ =>
@@ -148,7 +153,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""pending("implyR(1) ; loop(\"x>0\", 1)")""")
+    tree.tactic shouldBe BelleParser("""pending("implyR(1)") ; pending("loop(\"x>0\", 1)")""")
   }}
 
   it should "record only RHS as pending on failure" in withDatabase { db => withMathematica { _ =>
@@ -161,7 +166,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1) ; pending("loop(\"x>0\", 1)")""")
+    tree.tactic shouldBe BelleParser("""implyR('R=="x>0->x>0"); pending("loop(\"x>0\", 1)")""")
   }}
 
   "Either tactic" should "be explored and only successful outcome stored in database" in withDatabase { db => withMathematica { _ =>
@@ -188,7 +193,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.loneElement.children.loneElement.makerShortName shouldBe Some("id")
     tree.root.children.loneElement.children.loneElement.children shouldBe empty
 
-    tree.tactic shouldBe implyR(1) & id
+    tree.tactic shouldBe BelleParser("""implyR('R=="x>0->x>0"); id""")
   }}
 
   it should "be explored and stored pending if failing" in withDatabase { db => withMathematica { _ =>
@@ -227,7 +232,111 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, id)")
+    tree.tactic shouldBe BelleParser("""implyR('R=="x>0->x>0&x>0"); andR('R=="x>0&x>0"); <("L//x>0": id, "R//x>0": id)""")
+  }}
+
+  it should "preserve labels" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List(
+          "x>0 ==> x>0".asSequent,
+          "x>0 ==> x>-1".asSequent
+        )
+        l.value should contain theSameElementsAs List("x>0".asLabel, "x>(-1)".asLabel)
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>0->x>0&x>(-1)\");(andR('R==\"x>0&x>(-1)\");<( \"x>0\": nil, \"x>(-1)\": nil ))")
+  }}
+
+  it should "preserve nested labels" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & CaseTactic(List(
+        "x>0".asLabel -> id,
+        "x>(-1)".asLabel -> cut("x>=0".asFormula)
+      )),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List(
+          "x>0 ==> x>-1, x>=0".asSequent,
+          "x>0, x>=0 ==> x>-1".asSequent
+        )
+        l.value should contain theSameElementsAs List("x>(-1)//Use".asLabel, "x>(-1)//Show".asLabel)
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>(-1)");
+        |andR('R=="x>0&x>(-1)"); <(
+        |  "x>0": id,
+        |  "x>(-1)":
+        |    cut("x>=0"); <(
+        |     "Use": nil,
+        |     "Show": nil
+        |    )
+        |)""".stripMargin)
+  }}
+
+  it should "delete labels of closed branches" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>-1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & CaseTactic(List(
+        "x>0".asLabel -> id,
+        "x>(-1)".asLabel -> (cut("x>0".asFormula) & CaseTactic(List(
+          "Use".asLabel -> (hideL(-1) & QE),
+          "Show".asLabel -> (hideR(1) & propClose)
+        )))
+      )),
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p shouldBe 'proved
+        l shouldBe 'empty
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>(-1)");
+        |andR('R=="x>0&x>(-1)"); <(
+        |  "x>0": id,
+        |  "x>(-1)":
+        |    cut("x>0"); <(
+        |     "Use": hideL('L=="x>0"); QE,
+        |     "Show": hideR('R=="x>(-1)"); propClose
+        |    )
+        |)""".stripMargin)
+  }}
+
+  it should "delete labels of closed goals" in withDatabase { db => withMathematica { _ =>
+    val modelContent = "ProgramVariables Real x, eps; End. Problem true & !(-2<x&x<=1) & x<=1 -> !-2<x End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & label("Delete") & propClose,
+      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent)))
+    ) match {
+      case BelleProvable(p, l) =>
+        p shouldBe 'proved
+        l.value shouldBe 'empty
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("""implyR('R=="true & !(-2<x&x<=1) & x<=1 -> !-2<x"); label("Delete"); propClose""")
   }}
 
   it should "work nested branching top-level" in withDatabase { db => withMathematica { _ =>
@@ -240,7 +349,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, andR(1) ; <(id, id))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>0&x>0");
+        |andR('R=="x>0&x>0&x>0"); <(
+        |  "x>0": id,
+        |  "x>0&x>0": andR('R=="x>0&x>0"); <(
+        |    "L//x>0": id,
+        |    "R//x>0": id
+        |  )
+        |)""".stripMargin)
     db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
       "implyR(1)" :: "andR(1)" :: "andR(1)" :: "id" :: "id" :: "id" :: Nil
   }}
@@ -255,8 +372,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    // tactic extraction rewrites into nicer shape
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, andR(1) ; <(id, id))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>0&x>0");
+        |andR('R=="x>0&x>0&x>0");<(
+        |  "x>0": id,
+        |  "x>0&x>0": andR('R=="x>0&x>0"); <(
+        |    "L//x>0": id,
+        |    "R//x>0": id
+        |  )
+        |)""".stripMargin)
     db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
       "implyR(1)" :: "andR(1)" :: "andR(1)" :: "nil" :: "id" :: "id" :: "nil" :: "id" :: Nil
   }}
@@ -316,7 +440,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n31.goal shouldBe Some("x>0 ==> x>=0".asSequent)
     n31.children shouldBe empty
 
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, nil)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&x>=0");
+        |andR('R=="x>0&x>=0"); <(
+        |  "x>0": id,
+        |  "x>=0": nil
+        |)""".stripMargin)
   }}
 
   it should "work top-level and support complicated branch tactics" taggedAs(SlowTest) in withMathematica { _ => withDatabase { db =>
@@ -374,7 +503,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n40.goal shouldBe None
     n40.children shouldBe empty
 
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, dW(1) ; prop)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0->x>0&[{x'=1&x>=0}]x>=0");
+        |andR('R=="x>0&[{x'=1&x>=0}]x>=0"); <(
+        |  "x>0": id,
+        |  "[{x'=1&x>=0}]x>=0": dW('R=="[{x'=1&x>=0}]x>=0"); prop
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching when every branch is closed" in withMathematica { _ => withDatabase { db =>
@@ -397,7 +531,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(4,0)").flatMap(_.goal) shouldBe Some("x>0 ==> x>0".asSequent)
     tree.locate("(4,1)").flatMap(_.goal) shouldBe Some("x>1 ==> x>0".asSequent)
     tree.openGoals shouldBe empty
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(orL(-1) ; <(id, QE), QE)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0|x>1->x>0&x>=0");
+        |andR('R=="x>0&x>=0"); <(
+        |  "x>0": orL('L=="x>0|x>1"); <(
+        |    "x>0": id,
+        |    "x>1": QE
+        |  ),
+        |  "x>=0": QE
+        |)
+        |""".stripMargin)
   }}
 
   it should "work when early branches remain open and later ones close" in withDatabase { db => withMathematica { _ =>
@@ -419,7 +562,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(2,0)").flatMap(_.goal) shouldBe Some("x>1 ==> x>0".asSequent)
     tree.locate("(2,1)").flatMap(_.goal) shouldBe Some("x>0 ==> x>0".asSequent)
     tree.openGoals should have size 1
-    tree.tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(nil, id)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>1|x>0->x>0");
+        |orL('L=="x>1|x>0"); <(
+        |  "x>1": nil,
+        |  "x>0": id
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching when branches stay open 1" in withDatabase { db => withMathematica { _ =>
@@ -433,7 +581,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(nil, id), nil)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>1|x>0->x>0&x>=0");
+        |andR('R=="x>0&x>=0"); <(
+        |  "x>0": orL('L=="x>1|x>0"); <(
+        |    "x>1": nil,
+        |    "x>0": id
+        |  ),
+        |  "x>=0": nil
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching when branches stay open 2" in withDatabase { db => withMathematica { _ =>
@@ -447,7 +603,15 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(id, nil), nil)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>0|x>1->x>0&x>=0");
+        |andR('R=="x>0&x>=0"); <(
+        |  "x>0": orL('L=="x>0|x>1"); <(
+        |    "x>0": id,
+        |    "x>1": nil
+        |  ),
+        |  "x>=0": nil
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching when branching stay open 3" in withDatabase { db => withMathematica { _ =>
@@ -461,7 +625,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, nil))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|x < y->x>=0&x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0": andR('R=="x>=0&x < y"); <(
+        |    "x>=0": id,
+        |    "x < y": nil
+        |  ),
+        |  "x < y": andR('R=="x>=0&x < y"); <(
+        |    "x>=0": nil,
+        |    "x < y": nil
+        |  )
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching when branching stay open 4" in withDatabase { db => withMathematica { _ =>
@@ -475,7 +650,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, id))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|x < y->x>=0&x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0": andR('R=="x>=0&x < y"); <(
+        |    "x>=0": id,
+        |    "x < y": nil
+        |  ),
+        |  "x < y": andR('R=="x>=0&x < y"); <(
+        |    "x>=0": nil,
+        |    "x < y": id
+        |  )
+        |)""".stripMargin)
   }}
 
   it should "work with nested branching and repeat" in withDatabase { db => withMathematica { _ =>
@@ -489,10 +675,27 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
-    tree.tactic shouldBe BelleParser("implyR(1); orL(-1); <(andR(1); <(id, ((andR(1); <(id, nil)))), andR(1); <(nil, andR(1); <(nil, id)))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|x < y->x>=0&x>=0&x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0": andR('R=="x>=0&x>=0&x < y") <(
+        |    "x>=0": id,
+        |    "x>=0&x < y": andR('R=="x>=0&x < y"); <(
+        |      "x>=0": id,
+        |      "x < y": nil
+        |    )
+        |  ),
+        |  "x < y": andR('R=="x>=0&x>=0&x < y"); <(
+        |    "x>=0": nil,
+        |    "x>=0&x < y": andR('R=="x>=0&x < y"); <(
+        |      "x>=0": nil,
+        |      "x < y": id
+        |    )
+        |  )
+        |)""".stripMargin)
   }}
 
-  it should "work with loop tactic" in withDatabase { db => withMathematica { qeTool =>
+  it should "work with loop tactic" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
     val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -506,18 +709,37 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     //println("What: " + tree.tactic.length  + " vs. " + bp)
     val tl = tree.tactic
     val tr = BelleParser(
-      """implyR(1) ; cutR("[{x:=x+1;}*](x>=0&!false)", 1) ; <(
-        |I(1) ; andR(1) ; <(
-        |andR(1) ; <(
-        |  label("Init"),
-        |    notR(1) ; close
+      """implyR('R=="x>=0->[{x:=x+1;}*]x>=0");
+        |cutR("[{x:=x+1;}*](x>=0&!false)", 'R=="[{x:=x+1;}*]x>=0"); <(
+        |  I('R=="[{x:=x+1;}*](x>=0&!false)");
+        |  andR('R=="(x>=0&!false)&[{x:=x+1;}*](x>=0&!false->[x:=x+1;](x>=0&!false))"); <(
+        |    "x>=0&!false": andR('R=="x>=0&!false"); <(
+        |      "x>=0": label("Init"),
+        |      "!false": notR('R=="!false"); close
+        |    ),
+        |    "[{x:=x+1;}*](x>=0&!false->[x:=x+1;](x>=0&!false))":
+        |      cohide('R=="[{x:=x+1;}*](x>=0&!false->[x:=x+1;](x>=0&!false))");
+        |      Goedel;
+        |      implyR('R=="x>=0&!false->[x:=x+1;](x>=0&!false)");
+        |      boxAnd('R=="[x:=x+1;](x>=0&!false)");
+        |      andR('R=="[x:=x+1;]x>=0&[x:=x+1;](!false)"); <(
+        |        "[x:=x+1;]x>=0":
+        |          andL('Llast);
+        |          hideL('Llast);
+        |          label("Step"),
+        |        "[x:=x+1;](!false)":
+        |          andL('L=="x>=0&!false");
+        |          hideL('L=="x>=0");
+        |          V('R=="[x:=x+1;](!false)");
+        |          closeId(-1,1)
+        |      )
         |  ),
-        |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
-        |  andL('Llast) ; hideL('Llast) ; label("Step"),
-        |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; closeId(-1,1)
-        |  )
-        |),
-        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; hideL('Llast) ; label("Post")
+        |  cohide('R=="[{x:=x+1;}*](x>=0&!false)->[{x:=x+1;}*]x>=0");
+        |  CMonCongruence(".1");
+        |  implyR('R=="x>=0&!false->x>=0");
+        |  andL('Llast);
+        |  hideL('Llast);
+        |  label("Post")
         |)""".stripMargin)
       tl.prettyString shouldBe tr.prettyString
     }
@@ -535,34 +757,62 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
     val (tl, tr) = (tree.tactic,
-      BelleParser("""implyR(1) ; andL('L) ; andL('L) ; andL('L) ; cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 1) ; <(
-        |I(1) ; andR(1) ; <(
-        |andR(1) ; <(
-        |  label("Init"),
-        |    andR(1) ; <(
-        |    idWith(1),
-        |      andR(1) ; <(
-        |      idWith(1),
-        |        andR(1) ; <(
-        |        idWith(1),
-        |          notR(1) ; close
+      BelleParser("""
+        |implyR('R=="x>=0&A()>0&B()>0&C()>0->[{x:=x+B();}*]x>=0");
+        |andL('L=="x>=0&A>0&B>0&C>0");
+        |andL('L=="A>0&B>0&C>0");
+        |andL('L=="B>0&C>0");
+        |cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 'R=="[{x:=x+B;}*]x>=0"); <(
+        |  I('R=="[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)");
+        |  andR('R=="(x>=0&A>0&B>0&C>0&!false)&[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false->[x:=x+B;](x>=0&A>0&B>0&C>0&!false))"); <(
+        |    "x>=0&A>0&B>0&C>0&!false": andR('R=="x>=0&A>0&B>0&C>0&!false"); <(
+        |      "x>=0": label("Init"),
+        |      "A>0&B>0&C>0&!false": andR('R=="A>0&B>0&C>0&!false"); <(
+        |        "A>0": idWith('R=="A>0"),
+        |        "B>0&C>0&!false": andR('R=="B>0&C>0&!false"); <(
+        |          "B>0": idWith('R=="B>0"),
+        |          "C>0&!false": andR('R=="C>0&!false"); <(
+        |            "C>0": idWith('R=="C>0"),
+        |            "!false": notR('R=="!false"); close
+        |          )
         |        )
         |      )
-        |    )
+        |    ),
+        |    "[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false->[x:=x+B;](x>=0&A>0&B>0&C>0&!false))":
+        |      cohide('R=="[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false->[x:=x+B;](x>=0&A>0&B>0&C>0&!false))");
+        |      Goedel;
+        |      implyR('R=="x>=0&A>0&B>0&C>0&!false->[x:=x+B;](x>=0&A>0&B>0&C>0&!false)");
+        |      boxAnd('R=="[x:=x+B;](x>=0&A>0&B>0&C>0&!false)");
+        |      andR('R=="[x:=x+B;]x>=0&[x:=x+B;](A>0&B>0&C>0&!false)"); <(
+        |        "[x:=x+B;]x>=0":
+        |          andL('Llast);
+        |          andL('Llast);
+        |          andL('Llast);
+        |          andL('Llast);
+        |          hideL('Llast);
+        |          label("Step"),
+        |        "[x:=x+B;](A>0&B>0&C>0&!false)":
+        |          andL('L=="x>=0&A>0&B>0&C>0&!false");
+        |          hideL('L=="x>=0");
+        |          V('R=="[x:=x+B;](A>0&B>0&C>0&!false)");
+        |          closeId(-1,1)
+        |      )
         |  ),
-        |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
-        |  andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Step"),
-        |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; closeId(-1,1)
-        |  )
-        |),
-        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Post")
+        |  cohide('R=="[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)->[{x:=x+B;}*]x>=0");
+        |  CMonCongruence(".1");
+        |  implyR('R=="x>=0&A>0&B>0&C>0&!false->x>=0");
+        |  andL('Llast);
+        |  andL('Llast);
+        |  andL('Llast);
+        |  andL('Llast);
+        |  hideL('Llast);
+        |  label("Post")
         |)""".stripMargin))
       tl.prettyString shouldBe tr.prettyString
     }
   }
 
-  // @TODO: Needs better test name
-  it should "id" in withDatabase { db => withMathematica { _ =>
+  it should "record id step" in withDatabase { db => withMathematica { _ =>
     val p = "x>=0 -> x>=0".asFormula
     val ps = ProvableSig.startProof(p)
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $p End."
@@ -574,7 +824,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     val tt = tree.tactic
     tree.openGoals shouldBe empty
-    tt shouldBe BelleParser("implyR(1); id")
+    tt shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
     proveBy(p, tree.tactic) shouldBe 'proved
   }}
 
@@ -589,7 +839,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(orR(1) ; andR(1) ; <(id, andR(1) ; <(id, id) ), orR(1) ; id)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|x < y->x>=0&x>=0&x>=0|x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0":
+        |    orR('R=="x>=0&x>=0&x>=0|x < y");
+        |    andR('R=="x>=0&x>=0&x>=0"); <(
+        |      "x>=0": id,
+        |      "x>=0&x>=0": andR('R=="x>=0&x>=0"); <(
+        |        "L//x>=0": id,
+        |        "R//x>=0": id
+        |      )
+        |    ),
+        |  "x < y": orR('R=="x>=0&x>=0&x>=0|x < y"); id
+        |)""".stripMargin)
     proveBy(problem.asFormula, tree.tactic) shouldBe 'proved
   }}
 
@@ -604,7 +867,22 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals shouldBe empty
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(orR(1) ; andR(1) ; <(id, andR(1); <(id, id) ), orR(1) ; id)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|x < y->x>=0&x>=0&x>=0|x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0":
+        |    orR('R=="x>=0&x>=0&x>=0|x < y");
+        |    andR('R=="x>=0&x>=0&x>=0"); <(
+        |      "x>=0": id,
+        |      "x>=0&x>=0": andR('R=="x>=0&x>=0"); <(
+        |        "L//x>=0": id,
+        |        "R//x>=0": id
+        |      )
+        |    ),
+        |  "x < y":
+        |    orR('R=="x>=0&x>=0&x>=0|x < y");
+        |    id
+        |)""".stripMargin)
     proveBy(problem.asFormula, tree.tactic) shouldBe 'proved
   }}
 
@@ -777,7 +1055,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val extractedTactic = db.extractTactic(proofId)
-    extractedTactic shouldBe BelleParser(tacticText)
+    extractedTactic shouldBe BelleParser(
+      """implyR('R=="v>=0&A()>0->[{x'=v,v'=A()}]v>=0");
+        |andL('L=="v>=0&A()>0");
+        |dC("v>=0", 'R=="[{x'=v,v'=A()}]v>=0"); <(
+        |  "Use": dW('R=="[{x'=v,v'=A()&true&v>=0}]v>=0"); prop,
+        |  "Show": dI('R=="[{x'=v,v'=A()}]v>=0")
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 2 steps" taggedAs SlowTest  in withMathematica { _ => withDatabase { db =>
@@ -793,19 +1077,31 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val extractedTactic = db.extractTactic(proofId)
     extractedTactic shouldBe BelleParser(
-      """
-        |implyR(1) & andL('L) & andL('L) & loop("v>=0",1) & <(
-        |  QE,
-        |  QE,
-        |  composeb(1) & choiceb(1) & andR(1) & <(
-        |    assignb(1) & ODE(1),
-        |    choiceb(1) & andR(1) & <(
-        |      assignb(1) & ODE(1),
-        |      assignb(1) & ODE(1)
+      """implyR('R=="v>=0&A()>0&B()>0->[{{a:=A();++a:=0;++a:=-B();}{x'=v,v'=a&v>=0}}*]v>=0");
+        |andL('L=="v>=0&A()>0&B()>0");
+        |andL('L=="A()>0&B()>0");
+        |loop("v>=0", 'R=="[{{a:=A();++a:=0;++a:=-B();}{x'=v,v'=a&v>=0}}*]v>=0"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    composeb('R=="[{a:=A();++a:=0;++a:=-B();}{x'=v,v'=a&v>=0}]v>=0");
+        |    choiceb('R=="[a:=A();++a:=0;++a:=-B();][{x'=v,v'=a&v>=0}]v>=0");
+        |    andR('R=="[a:=A();][{x'=v,v'=a&v>=0}]v>=0&[a:=0;++a:=-B();][{x'=v,v'=a&v>=0}]v>=0"); <(
+        |      "[a:=A();][{x'=v,v'=a&v>=0}]v>=0":
+        |        assignb('R=="[a:=A();][{x'=v,v'=a&v>=0}]v>=0");
+        |        ODE('R=="[{x'=v,v'=A()&v>=0}]v>=0"),
+        |      "[a:=0;++a:=-B();][{x'=v,v'=a&v>=0}]v>=0":
+        |        choiceb('R=="[a:=0;++a:=-B();][{x'=v,v'=a&v>=0}]v>=0");
+        |        andR('R=="[a:=0;][{x'=v,v'=a&v>=0}]v>=0&[a:=-B();][{x'=v,v'=a&v>=0}]v>=0"); <(
+        |          "[a:=0;][{x'=v,v'=a&v>=0}]v>=0":
+        |            assignb('R=="[a:=0;][{x'=v,v'=a&v>=0}]v>=0");
+        |            ODE('R=="[{x'=v,v'=0&v>=0}]v>=0"),
+        |          "[a:=-B();][{x'=v,v'=a&v>=0}]v>=0":
+        |            assignb('R=="[a:=-B();][{x'=v,v'=a&v>=0}]v>=0");
+        |            ODE('R=="[{x'=v,v'=-B()&v>=0}]v>=0")
+        |        )
         |    )
-        |  )
-        |)
-      """.stripMargin)
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 3a steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
@@ -821,18 +1117,56 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('L) ; andL('L) ; andL('L) ; loop("v >= 0 & x+v^2/(2*B()) <= S()", 1) ; <(
-        |  QE,
-        |  QE,
-        |  composeb(1) ; choiceb(1) ; andR(1) ; <(
-        |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1)),
-        |    choiceb(1) ; andR(1) ; <(
-        |      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1)),
-        |      assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1))
-        |    )
-        |  )
-        |)
-      """.stripMargin)
+      """implyR('R=="v>=0&A()>0&B()>0&x+v^2/(2*B()) < S()->[{{?x+v^2/(2*B()) < S();a:=A();++?v=0;a:=0;++a:=-B();}{{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}}}*]x<=S()");
+        |andL('L=="v>=0&A()>0&B()>0&x+v^2/(2*B()) < S()");
+        |andL('L=="A()>0&B()>0&x+v^2/(2*B()) < S()");
+        |andL('L=="B()>0&x+v^2/(2*B()) < S()");
+        |loop("v>=0&x+v^2/(2*B())<=S()", 'R=="[{{?x+v^2/(2*B()) < S();a:=A();++?v=0;a:=0;++a:=-B();}{{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}}}*]x<=S()"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    composeb('R=="[{?x+v^2/(2*B()) < S();a:=A();++?v=0;a:=0;++a:=-B();}{{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}}](v>=0&x+v^2/(2*B())<=S())");
+        |    choiceb('R=="[?x+v^2/(2*B()) < S();a:=A();++?v=0;a:=0;++a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |    andR('R=="[?x+v^2/(2*B()) < S();a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())&[?v=0;a:=0;++a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())"); <(
+        |      "[?x+v^2/(2*B()) < S();a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |        composeb('R=="[?x+v^2/(2*B()) < S();a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        testb('R=="[?x+v^2/(2*B()) < S();][a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        implyR('R=="x+v^2/(2*B()) < S()->[a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        assignb('R=="[a:=A();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        choiceb('R=="[{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        andR('R=="[{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())&[{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())"); <(
+        |          "[{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |            ODE('R=="[{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())"),
+        |          "[{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |            ODE('R=="[{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())")
+        |        ),
+        |      "[?v=0;a:=0;++a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |        choiceb('R=="[?v=0;a:=0;++a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |        andR('R=="[?v=0;a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())&[a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())"); <(
+        |          "[?v=0;a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |            composeb('R=="[?v=0;a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            testb('R=="[?v=0;][a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            implyR('R=="v=0->[a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            assignb('R=="[a:=0;][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            choiceb('R=="[{x'=v,v'=0&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            andR('R=="[{x'=v,v'=0&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())&[{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())"); <(
+        |              "[{x'=v,v'=0&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |                ODE('R=="[{x'=v,v'=0&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())"),
+        |              "[{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |                ODE('R=="[{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())")
+        |            ),
+        |          "[a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |            assignb('R=="[a:=-B();][{x'=v,v'=a&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=a&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            choiceb('R=="[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())<=S()}++{x'=v,v'=-B()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())");
+        |            andR('R=="[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())&[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())"); <(
+        |              "[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |                ODE('R=="[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())"),
+        |              "[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())":
+        |                ODE('R=="[{x'=v,v'=-B()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())")
+        |            )
+        |        )
+        |     )
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 4a steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
@@ -848,15 +1182,29 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('L) ; loop("v<=V()", 1) ; <(
-        |  QE,
-        |  QE,
-        |  composeb(1) ; choiceb(1) ; andR(1) ; <(
-        |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1),
-        |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; ODE(1)
-        |  )
-        |)
-      """.stripMargin)
+      """implyR('R=="v<=V()&A()>0->[{{?v=V();a:=0;++?v!=V();a:=A();}{x'=v,v'=a&v<=V()}}*]v<=V()");
+        |andL('L=="v<=V()&A()>0");
+        |loop("v<=V()", 'R=="[{{?v=V();a:=0;++?v!=V();a:=A();}{x'=v,v'=a&v<=V()}}*]v<=V()"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    composeb('R=="[{?v=V();a:=0;++?v!=V();a:=A();}{x'=v,v'=a&v<=V()}]v<=V()");
+        |    choiceb('R=="[?v=V();a:=0;++?v!=V();a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |    andR('R=="[?v=V();a:=0;][{x'=v,v'=a&v<=V()}]v<=V()&[?v!=V();a:=A();][{x'=v,v'=a&v<=V()}]v<=V()"); <(
+        |      "[?v=V();a:=0;][{x'=v,v'=a&v<=V()}]v<=V()":
+        |        composeb('R=="[?v=V();a:=0;][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        testb('R=="[?v=V();][a:=0;][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        implyR('R=="v=V()->[a:=0;][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        assignb('R=="[a:=0;][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        ODE('R=="[{x'=v,v'=0&v<=V()}]v<=V()"),
+        |      "[?v!=V();a:=A();][{x'=v,v'=a&v<=V()}]v<=V()":
+        |        composeb('R=="[?v!=V();a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        testb('R=="[?v!=V();][a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        implyR('R=="v!=V()->[a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        assignb('R=="[a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |        ODE('R=="[{x'=v,v'=A()&v<=V()}]v<=V()")
+        |    )
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 4b steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
@@ -873,17 +1221,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 11
     tree.nodes.head.makerShortName shouldBe None
-    val foo = tree.nodes.tail.map(_.makerShortName.value)
     tree.nodes.tail.map(_.makerShortName.value) should contain theSameElementsInOrderAs "implyR(1)"::"andL('L)"::
       """loop("v<=V()", 1)"""::"""loop("v<=V()", 1)"""::"""loop("v<=V()", 1)"""::
       "composeb(1)"::"assignb(1)"::"ODE(1)"::"QE"::"QE"::Nil
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('L) ; loop("v<=V()", 1) ; <(
-        |  QE,
-        |  QE,
-        |  composeb(1) ; assignb(1) ; ODE(1)
-        |)
-      """.stripMargin)
+      """implyR('R=="v<=V()&A()>0->[{a:=A();{x'=v,v'=a&v<=V()}}*]v<=V()");
+        |andL('L=="v<=V()&A()>0");
+        |loop("v<=V()", 'R=="[{a:=A();{x'=v,v'=a&v<=V()}}*]v<=V()"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    composeb('R=="[a:=A();{x'=v,v'=a&v<=V()}]v<=V()");
+        |    assignb('R=="[a:=A();][{x'=v,v'=a&v<=V()}]v<=V()");
+        |    ODE('R=="[{x'=v,v'=A()&v<=V()}]v<=V()")
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 9b steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
@@ -900,31 +1251,59 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tacticString
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
-        |loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2", 1) ; <(
-        |  QE,
-        |  QE,
-        |  andL('L) ; andL('L) ; andL('L) ; composeb(1) ; choiceb(1) ; andR(1) ; <(
-        |    composeb(1) ; assignb(1) ; composeb(1) ; assignb(1) ; testb(1) ; implyR(1) ;
-        |      dC("xm <= x", 1) ; <(
-        |        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1) ; <(
-        |          dW(1) ; QE,
-        |          dI(1)
+      """implyR('R=="v>=0&xm<=x&x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2->[{{xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;++?true;}{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}}*]x<=S()");
+        |andL('L=="v>=0&xm<=x&x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |andL('L=="xm<=x&x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |andL('L=="x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |andL('L=="xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |andL('L=="Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |andL('L=="Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |loop("v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2", 'R=="[{{xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;++?true;}{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}}*]x<=S()"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    andL('L=="v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |    andL('L=="xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |    andL('L=="xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
+        |    composeb('R=="[{xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;++?true;}{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |    choiceb('R=="[xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;++?true;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |    andR('R=="[xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)&[?true;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)"); <(
+        |      "[xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)":
+        |        composeb('R=="[xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        assignb('R=="[xm:=x;][xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        composeb('R=="[xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        assignb('R=="[xr:=(xm+S())/2;][?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        testb('R=="[?5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2;][{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}](v>=0&xm<=x&(xm+S())/2=(xm+S())/2&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        implyR('R=="5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2->[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}](v>=0&xm<=x&(xm+S())/2=(xm+S())/2&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        dC("xm<=x", 'R=="[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}](v>=0&xm<=x&(xm+S())/2=(xm+S())/2&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2)"); <(
+        |          "Use":
+        |            dC("5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2", 'R=="[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0&xm<=x}](v>=0&xm<=x&(xm+S())/2=(xm+S())/2&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2)"); <(
+        |              "Use":
+        |                dW('R=="[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&(v>=0&xm<=x)&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2}](v>=0&xm<=x&(xm+S())/2=(xm+S())/2&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |                QE,
+        |              "Show":
+        |                dI('R=="[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2")
+        |            ),
+        |          "Show":
+        |            dI('R=="[{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}]xm<=x")
         |        ),
-        |        dI(1)
-        |      ),
-        |    testb(1) ; implyR(1) ;
-        |      dC("xm <= x", 1) ; <(
-        |        dC("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2", 1) ; <(
-        |          dW(1) ; QE,
-        |          dI(1)
-        |        ),
-        |        dI(1)
-        |      )
-        |  )
-        |)
-        |
-      """.stripMargin)
+        |      "[?true;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)":
+        |        testb('R=="[?true;][{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        implyR('R=="true->[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |        dC("xm<=x", 'R=="[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)"); <(
+        |          "Use":
+        |            dC("5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2", 'R=="[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)"); <(
+        |              "Use":
+        |                dW('R=="[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&(v>=0&xm<=x)&5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2}](v>=0&xm<=x&xr=(xm+S())/2&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2)");
+        |                QE,
+        |              "Show":
+        |                dI('R=="[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2")
+        |            ),
+        |          "Show":
+        |            dI('R=="[{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}]xm<=x")
+        |        )
+        |     )
+        |)""".stripMargin)
   }}
 
   it should "record STTT tutorial example 10 steps" taggedAs SlowTest in withMathematica { _ => withDatabase { db =>
@@ -942,60 +1321,115 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tacticString
     tree.tactic shouldBe BelleParser(
-      """
-        |implyR(1) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
-        |loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()", 1) ; <(
-        |  QE,
-        |  QE,
-        |  chase('R) ; normalize ; <(
-        |    hideL(-15=="abs(y-ly())+v^2/(2*b()) < lw()") ; dC("c>=0", 1) ; <(
-        |      dC("dx^2+dy^2=1", 1) ; <(
-        |        dC("v=old(v)+a*c", 1) ; <(
-        |          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
-        |            dW(1) ;
-        |            andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
-        |            andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
-        |            transformEquality("ep()=c",-13=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()") ;
-        |            prop ; smartQE
-        |            ,
-        |            dI(1)
-        |          ),
-        |          dI(1)
-        |        ),
-        |        dI(1)
-        |        ),
-        |      dI(1)
-        |      ),
-        |    dC("c>=0", 1) ; <(
-        |      dC("dx^2+dy^2=1", 1) ; <(
-        |        dC("v=old(v)", 1) ; <(
-        |          dC("-c*v <= y - old(y) & y - old(y) <= c*v", 1) ; <(
-        |            dW(1) ; prop ; smartQE,
-        |            dI(1)
+      """implyR('R=="v>=0&A()>0&B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()->[{{?abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw();a:=*;?-B()<=a&a<=A();w:=*;r:=*;?r!=0&w*r=v;++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=-b();}c:=0;{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}}*]abs(y-ly()) < lw()");
+        |andL('L=="v>=0&A()>0&B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="A()>0&B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |andL('L=="dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");
+        |loop("v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw()", 'R=="[{{?abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw();a:=*;?-B()<=a&a<=A();w:=*;r:=*;?r!=0&w*r=v;++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=-b();}c:=0;{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}}*]abs(y-ly()) < lw()"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step":
+        |    chase('R=="[{?abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw();a:=*;?-B()<=a&a<=A();w:=*;r:=*;?r!=0&w*r=v;++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=-b();}c:=0;{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())");
+        |    normalize; <(
+        |      "abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw()->\forall a (-B()<=a&a<=A()->\forall w \forall r (r!=0&w*r=v->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw()))))":
+        |        hideL('L=="abs(y-ly())+v^2/(2*b()) < lw()");
+        |        dC("c>=0", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |          "Use":
+        |            dC("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(v>=0&c<=ep())&c>=0}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |              "Use":
+        |                dC("v=old(v)+a*c", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                  "Use":
+        |                    dC("-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                      "Use":
+        |                        dW('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c)&-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c)}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())");
+        |                        andL('L=="(((((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c)&-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c))&A()>0&B()>=b()&b()>0&ep()>0&lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="((((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c)&-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c)");
+        |                        andL('L=="A()>0&B()>=b()&b()>0&ep()>0&lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c");
+        |                        andL('L=="-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c)");
+        |                        andL('L=="B()>=b()&b()>0&ep()>0&lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1");
+        |                        andL('L=="b()>0&ep()>0&lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="(v>=0&c<=ep())&c>=0");
+        |                        andL('L=="ep()>0&lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="v>=0&c<=ep()");
+        |                        andL('L=="lw()>0&abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()&-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="-B()<=a&a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="a<=A()&r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="r!=0&v_0>=0&r_0!=0");
+        |                        andL('L=="v_0>=0&r_0!=0");
+        |                        transformEquality("ep()=c", 'L=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()");
+        |                        prop;
+        |                        smartQE,
+        |                      "Show":
+        |                        dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c}](-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c))")
+        |                    ),
+        |                  "Show":
+        |                    dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}]v=v_0+a*c")
+        |                ),
+        |              "Show":
+        |                dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(v>=0&c<=ep())&c>=0}]dx^2+dy^2=1")
         |            ),
-        |          dI(1)
-        |          ),
-        |        dI(1)
+        |          "Show":
+        |            dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}]c>=0")
         |        ),
-        |      dI(1)
-        |      ),
-        |    dC("c>=0", 1) ; <(
-        |      dC("dx^2+dy^2=1", 1) & <(
-        |        dC("v=old(v)+a*c", 1) & <(
-        |          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) & <(
-        |            dW(1) ; prop ; smartQE,
-        |            dI(1)
+        |      "v=0->\forall w (w=0->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))":
+        |        dC("c>=0", 'R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |          "Use":
+        |            dC("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&(v>=0&c<=ep())&c>=0}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |              "Use":
+        |                dC("v=old(v)", 'R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                  "Use":
+        |                    dC("-c*v<=y-old(y)&y-old(y)<=c*v", 'R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                      "Use":
+        |                        dW('R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&((((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0)&-c*v<=y-y_0&y-y_0<=c*v}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())");
+        |                        prop;
+        |                        smartQE,
+        |                      "Show":
+        |                        dI('R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0}](-c*v<=y-y_0&y-y_0<=c*v)")
+        |                    ),
+        |                  "Show":
+        |                    dI('R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}]v=v_0")
+        |                ),
+        |              "Show":
+        |                dI('R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&(v>=0&c<=ep())&c>=0}]dx^2+dy^2=1")
         |            ),
-        |          dI(1)
-        |          ),
-        |        dI(1)
+        |          "Show":
+        |            dI('R=="[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}]c>=0")
         |        ),
-        |      dI(1)
-        |      )
-        |  )
-        |)
-        |
-      """.stripMargin)
+        |      "\forall a (-B()<=a&a<=-b()->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))":
+        |        dC("c>=0", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |          "Use":
+        |            dC("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(v>=0&c<=ep())&c>=0}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |              "Use":
+        |                dC("v=old(v)+a*c", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                  "Use":
+        |                    dC("-c*(v-a/2*c)<=y-old(y)&y-old(y)<=c*(v-a/2*c)", 'R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())"); <(
+        |                      "Use":
+        |                        dW('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c)&-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c)}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())");
+        |                        prop;
+        |                        smartQE,
+        |                      "Show":
+        |                        dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1)&v=v_0+a*c}](-c*(v-a/2*c)<=y-y_0&y-y_0<=c*(v-a/2*c))")
+        |                    ),
+        |                  "Show":
+        |                    dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&((v>=0&c<=ep())&c>=0)&dx^2+dy^2=1}]v=v_0+a*c")
+        |                ),
+        |              "Show":
+        |                dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&(v>=0&c<=ep())&c>=0}]dx^2+dy^2=1")
+        |            ),
+        |          "Show":
+        |            dI('R=="[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}]c>=0")
+        |        )
+        |    )
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic that results in a sole open goal" in withMathematica { _ => withDatabase { db =>
@@ -1009,7 +1443,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)",1); <(nil, dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": nil,
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic when following sole open goal" in withMathematica { _ => withDatabase { db =>
@@ -1023,7 +1462,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)", 1); <(dW(1); QE, dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use":
+        |    dW('R=="[{x'=1&true&x>=x_0}]x>=0");
+        |    QE,
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic when continuing on sole open goal" in withMathematica { _ => withDatabase { db =>
@@ -1037,7 +1483,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)", 1); <(dW(1); QE, dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": dW('R=="[{x'=1&true&x>=x_0}]x>=0"); QE,
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic when continuing on sole open goal of a nested branching tactic" in withMathematica { _ => withDatabase { db =>
@@ -1051,7 +1502,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)", 1); <(cut("0<=1"); <(dW(1); QE, cohideR(2); QE), dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use":
+        |    cut("0<=1"); <(
+        |      "Use": dW('R=="[{x'=1&true&x>=x_0}]x>=0"); QE,
+        |      "Show": cohideR('R=="0<=1"); QE
+        |    ),
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic when following sole second open goal" in withMathematica { _ => withDatabase { db =>
@@ -1065,7 +1525,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)", 1); <(dW(1); QE, dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": dW('R=="[{x'=1&true&x>=x_0}]x>=0"); QE,
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for branching tactic when following sole middle open goal" in withMathematica { _ => withDatabase { db =>
@@ -1080,7 +1545,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes
-    tree.tactic shouldBe BelleParser("""implyR(1); loop("x>=0", 1); <(QE, QE, master)""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x:=x+1;}*]x>=0");
+        |loop("x>=0", 'R=="[{x:=x+1;}*]x>=0"); <(
+        |  "Init": QE,
+        |  "Post": QE,
+        |  "Step": master
+        |)""".stripMargin)
   }}
 
   "Continuing a proof" should "work for atomic tactic" in withMathematica { _ => withDatabase { db =>
@@ -1104,7 +1575,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         n.stepTactic(db.user.userName, interpreter, tactic, wait=true)
     }
 
-    tree.tactic shouldBe BelleParser("""implyR(1); dC("x>=old(x)", 1); <(nil, nil)""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": nil,
+        |  "Show": nil
+        |)""".stripMargin)
   }}
 
   "Revealing internal steps" should "work for diffInvariant" in withMathematica { _ => withDatabase { db =>
@@ -1116,7 +1592,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val res = interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR('R) ; dC("x>=old(x)",1) ; <(nil, dI(1))""")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |dC("x>=old(x)", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": nil,
+        |  "Show": dI('R=="[{x'=1}]x>=x_0")
+        |)""".stripMargin)
   }}
 
   it should "work for multiple levels of diffInvariant without let" in withZ3 { _ => withDatabase { db =>
@@ -1131,12 +1612,21 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser(
-      """implyR('R) ; DC("x>=0", 1) ; <(
-        |  nil,
-        |  DI(1) ; implyR(1) ; andR('Rlast) ; <(
-        |    QE,
-        |    derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-        |  )
+      """implyR('R=="x>=0->[{x'=1}]x>=0");
+        |DC("x>=0", 'R=="[{x'=1}]x>=0"); <(
+        |  "Use": nil,
+        |  "Show":
+        |    DI('R=="[{x'=1}]x>=0");
+        |    implyR('R=="true->x>=0&[{x'=1}](x>=0)'");
+        |    andR('Rlast); <(
+        |      "x>=0": QE,
+        |      "[{x'=1}](x>=0)'":
+        |        derive('Rlast.1);
+        |        DE('Rlast);
+        |        Dassignb('Rlast.1);
+        |        GV('Rlast);
+        |        QE
+        |    )
         |)""".stripMargin)
     proveBy(fml, tree.tactic) shouldBe proveBy(fml, tactic)
   }}
@@ -1180,7 +1670,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val trace = db.db.getExecutionTrace(proofId)
     trace.steps should have size 5
     trace.steps.head.rule shouldBe "implyR(1)"
-    tree.tactic shouldBe BelleParser("implyR(1) ; DW(1) ; G(1) ; implyR('R==\"x>0->x>=0\")")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0->[{x'=1&x>0}]x>=0");
+        |DW('R=="[{x'=1&x>0}]x>=0");
+        |G('R=="[{x'=1&x>0}](x>0->x>=0)");
+        |implyR('R=="x>0->x>=0")""".stripMargin)
     proveBy(fml, tree.tactic).subgoals shouldBe proveBy(fml, tactic).subgoals
   }}
 
@@ -1200,9 +1694,17 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       "dC(\"y>=0&z>=0\", 1)", "V('Rlast)", "prop", "skip", "DW(1)", "G(1)", "implyR('R==\"x>=0&y>=0&z>=0->x>=0\")")
 
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('Llast) ; andL('Llast) ; dC("y>=0&z>=0",1) ; <(
-        |  DW(1) ; G(1) ; implyR('R=="x>=0&y>=0&z>=0->x>=0"),
-        |  V('Rlast) ; prop
+      """implyR('R=="x>=0&y>=0&z>=0->[{x'=y+z&x>=0}]x>=0");
+        |andL('Llast);
+        |andL('Llast);
+        |dC("y>=0&z>=0", 'R=="[{x'=y+z&x>=0}]x>=0"); <(
+        |  "Use":
+        |    DW('R=="[{x'=y+z&x>=0&y>=0&z>=0}]x>=0");
+        |    G('R=="[{x'=y+z&x>=0&y>=0&z>=0}](x>=0&y>=0&z>=0->x>=0)");
+        |    implyR('R=="x>=0&y>=0&z>=0->x>=0"),
+        |  "Show":
+        |    V('Rlast);
+        |    prop
         |)""".stripMargin)
     proveBy(fml, tree.tactic).subgoals shouldBe proveBy(fml, tactic).subgoals
   }}
@@ -1213,7 +1715,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
-    val fml = problem.asFormula
+    val fml = ArchiveParser.parseAsFormula(modelContent)
     val tactic = implyR(1) & SaturateTactic(andL('Llast)) & dW(1)
     interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
 
@@ -1221,13 +1723,17 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val trace = db.db.getExecutionTrace(proofId)
 
     trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
-      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "dC(\"g>0&1>=c&c>=0&r>=0\", 1)",
-      "V('Rlast)", "prop", "skip", "DW(1)", "G(1)", "implyR('R==\"(x>=0&v>=0)&g>0&1>=c&c>=0&r>=0->2*g*x<=2*g*H-v^2&x>=0\")")
+      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "dC(\"g()>0&1>=c()&c()>=0&r()>=0\", 1)",
+      "V('Rlast)", "prop", "skip", "DW(1)", "G(1)", "implyR('R==\"(x>=0&v>=0)&g()>0&1>=c()&c()>=0&r()>=0->2*g()*x<=2*g()*H()-v^2&x>=0\")")
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ;
-        |andL('Llast) ; dC("g>0&1>=c&c>=0&r>=0",1) ; <(
-        |  DW(1) ; G(1) ; implyR('R=="(x>=0&v>=0)&g>0&1>=c&c>=0&r>=0->2*g*x<=2*g*H-v^2&x>=0"),
-        |  V('Rlast) ; prop
+      """implyR('R=="2*g()*x<=2*g()*H()-v_0^2&x>=0&g()>0&1>=c()&c()>=0&r()>=0&x=0&v=-c()*v_0->[{x'=v,v'=-g()-r()*v^2&x>=0&v>=0}](2*g()*x<=2*g()*H()-v^2&x>=0)");
+        |andL('Llast);andL('Llast);andL('Llast);andL('Llast);andL('Llast);andL('Llast);andL('Llast);
+        |dC("g()>0&1>=c()&c()>=0&r()>=0", 'R=="[{x'=v,v'=-g()-r()*v^2&x>=0&v>=0}](2*g()*x<=2*g()*H()-v^2&x>=0)"); <(
+        |  "Use":
+        |    DW('R=="[{x'=v,v'=-g()-r()*v^2&(x>=0&v>=0)&g()>0&1>=c()&c()>=0&r()>=0}](2*g()*x<=2*g()*H()-v^2&x>=0)");
+        |    G('R=="[{x'=v,v'=-g()-r()*v^2&(x>=0&v>=0)&g()>0&1>=c()&c()>=0&r()>=0}]((x>=0&v>=0)&g()>0&1>=c()&c()>=0&r()>=0->2*g()*x<=2*g()*H()-v^2&x>=0)");
+        |    implyR('R=="(x>=0&v>=0)&g()>0&1>=c()&c()>=0&r()>=0->2*g()*x<=2*g()*H()-v^2&x>=0"),
+        |  "Show": V('Rlast); prop
         |)""".stripMargin)
     proveBy(fml, tree.tactic).subgoals shouldBe proveBy(fml, tactic).subgoals
   }}
@@ -1242,14 +1748,24 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(id, nil)")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < 0->x>=0");
+        |orL('L=="x>=0|!x < 0"); <(
+        |  "x>=0": id,
+        |  "!x < 0": nil
+        |)""".stripMargin)
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < 0->x>=0");
+        |orL('L=="x>=0|!x < 0"); <(
+        |  "x>=0": closeId(-1,1),
+        |  "!x < 0": notL('L=="!x < 0")
+        |)""".stripMargin)
   }}
 
   it should "work for prop on a simple example" in withDatabase { db => withMathematica { _ =>
@@ -1262,14 +1778,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     //@todo tactic extraction must be strict too (now removes nil)
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; closeId(-1, 1)")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; closeId(-1, 1)")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
   }}
 
   it should "work with onAll without branches" in withDatabase { db => withMathematica { _ =>
@@ -1280,7 +1796,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false))
     interpreter(implyR(1) & id & onAll(nil), BelleProvable(ProvableSig.startProof(problem.asFormula)))
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; id")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
   }}
 
   it should "work for master on a simple example" in withDatabase { db => withMathematica { _ =>
@@ -1292,7 +1808,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; closeId(-1,1)")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
   }}
 
   it should "work for prop on a left-branching example" in withDatabase { db => withMathematica { _ =>
@@ -1300,17 +1816,65 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2))
-    interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, convertPending=false))
+    interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula))) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
+        l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
+    }
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < y->x>=0");
+        |orL('L=="x>=0|!x < y"); <(
+        |  "x>=0": closeId(-1,1),
+        |  "!x < y": notL('L=="!x < y")
+        |)""".stripMargin)
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))(
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, convertPending=false, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < y->x>=0");
+        |orL('L=="x>=0|!x < y"); <(
+        |  "x>=0": closeId(-1,1),
+        |  "!x < y": notL('L=="!x < y")
+        |)""".stripMargin)
+  }}
+
+  it should "FEATURE_REQUEST: work for prop on a left-branching example with depth 2" in withDatabase { db => withMathematica { _ =>
+    val problem = "x>=0|!x<y -> x>=0"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent, "proof1")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, convertPending=false))
+    interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula))) match {
+      case BelleProvable(p, l) =>
+        p.subgoals should contain theSameElementsAs List("==> x>=0, x<y".asSequent)
+        l.value should contain theSameElementsAs List("!x<y".asFormula.prettyString.asLabel)
+    }
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    //@todo step notL seems to have an incorrect parent (none) instead of label("!x<y")
+    //@todo want <(label("x>=0"), label("!x<y"); <("x>=0": closeId(-1,1), "!x<y":notL...)
+    tree.tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < y->x>=0");
+        |orLRule('L=="x>=0|!x < y"); <(
+        |  label("x>=0"); closeId(-1,1),
+        |  label("!x < y"); notL('L=="!x < y")
+        |)""".stripMargin)
+
+    val proofId2 = db.createProof(modelContent, "proof2")
+    registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, convertPending=false, strict=false))(
+      prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
+      """implyR('R=="x>=0|!x < y->x>=0");
+        |orLRule('L=="x>=0|!x < y"); <(
+        |  label("x>=0"); closeId(-1,1),
+        |  label("!x < y"); notL('L=="!x < y")
+        |)""".stripMargin)
   }}
 
   it should "work for prop with nested branching" in withDatabase { db => withMathematica { _ =>
@@ -1318,22 +1882,23 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false))
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     DbProofTree(db.db, proofId.toString).tactic shouldBe BelleParser(
-      """implyR(1) ; orL(-1) ; <(
-        |  andR(1) ; <(
-        |    closeId(-1,1),
-        |    nil
-        |  )
-        |  ,
-        |  andR(1) ; <(
-        |    nil,
-        |    closeId(-1, 1)
-        |  )
-        |)
-      """.stripMargin)
+      """implyR('R=="x>=0|x < y->x>=0&x < y");
+        |orL('L=="x>=0|x < y"); <(
+        |  "x>=0":
+        |    andR('R=="x>=0&x < y"); <(
+        |      "x>=0": closeId(-1,1),
+        |      "x < y": nil
+        |    ),
+        |  "x < y":
+        |    andR('R=="x>=0&x < y"); <(
+        |      "x>=0": nil,
+        |      "x < y": closeId(-1,1)
+        |    )
+        |)""".stripMargin)
   }}
 
   it should "work for master on failing QE" in withDatabase { db => withMathematica { _ =>
@@ -1346,7 +1911,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("==> false".asSequent)
-    tree.tactic shouldBe BelleParser("implyR(1) ; applyEqualities; QE")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=2\"); applyEqualities; QE")
   }}
 
   private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(db: DBAbstraction): (Int, BelleExpr) = {
@@ -1371,20 +1936,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString).load()
     tree.locate("(2,0)") match {
       case Some(node) =>
-        val (_, tactic) = stepInto(node, "prop", 2)(db.db)
+        val (_, tactic) = stepInto(node, "prop", 1)(db.db)
         tactic shouldBe BelleParser(
-          """andR(1) ; <(
-            |  orL(-1) ; <(
-            |    closeId(-1,1),
-            |    nil
-            |  )
-            |  ,
-            |  orL(-1) ; <(
-            |    nil,
-            |    closeId(-1,1)
-            |  )
-            |)
-          """.stripMargin)
+          """andR('R=="x>=0&x < y"); <(
+            |  "x>=0":
+            |    orL('L=="x>=0|x < y"); <(
+            |      "x>=0": closeId(-1,1),
+            |      "x < y": nil
+            |    ),
+            |  "x < y":
+            |    orL('L=="x>=0|x < y"); <(
+            |      "x>=0": nil,
+            |      "x < y": closeId(-1,1)
+            |    )
+            |)""".stripMargin)
     }
   }}
 
@@ -1400,20 +1965,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db, proofId.toString).load()
     tree.locate("(1,0)") match {
       case Some(node) =>
-        val (_, tactic) = stepInto(node, "prop", 2)(db)
+        val (_, tactic) = stepInto(node, "prop", 1)(db)
         tactic shouldBe BelleParser(
-          """andR(1) ; <(
-            |  orL(-1) ; <(
-            |    closeId(-1,1),
-            |    nil
-            |  )
-            |  ,
-            |  orL(-1) ; <(
-            |    nil,
-            |    closeId(-1,1)
-            |  )
-            |)
-          """.stripMargin)
+          """andR('R=="x>=0&x < y"); <(
+            |  "x>=0":
+            |    orL('L=="x>=0|x < y"); <(
+            |      "x>=0": closeId(-1,1),
+            |      "x < y": nil
+            |    ),
+            |  "x < y":
+            |    orL('L=="x>=0|x < y"); <(
+            |      "x>=0": nil,
+            |      "x < y": closeId(-1,1)
+            |    )
+            |)""".stripMargin)
     }
   }
 
@@ -1431,26 +1996,22 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db, proofId.toString).load()
     tree.locate("(3,0)") match {
       case Some(node) =>
-        val (_, tactic) = stepInto(node, "prop", 2)(db)
+        val (_, tactic) = stepInto(node, "prop", 1)(db)
         tactic shouldBe BelleParser(
-          """
-            |andR(1) ; <(
-            |  closeId(-1,1),
-            |  nil
-            |)
-          """.stripMargin)
+          """andR('R=="x>=0&x < y"); <(
+            |  "x>=0": closeId(-1,1),
+            |  "x < y": nil
+            |)""".stripMargin)
     }
 
     tree.locate("(2,0)") match {
       case Some(node) =>
-        val (_, tactic) = stepInto(node, "prop", 2)(db)
+        val (_, tactic) = stepInto(node, "prop", 1)(db)
         tactic shouldBe BelleParser(
-          """
-            |andR(1) & <(
-            |  nil,
-            |  closeId(-1,1)
-            |)
-          """.stripMargin)
+          """andR('R=="x>=0&x < y"); <(
+            |  "x>=0": nil,
+            |  "x < y": closeId(-1,1)
+            |)""".stripMargin)
     }
   }
 
@@ -1468,12 +2029,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.locate("(1,0)") match {
       case Some(node) =>
-        stepInto(node, "prop")(db.db)._2 shouldBe BelleParser("implyR(1) ; andL(-1) ; andL(-2) ; andL(-3)")
+        stepInto(node, "prop")(db.db)._2 shouldBe BelleParser(
+          """implyR('R=="x>=0&y>=1&z<=x+y&3>2->[x:=x+y;]x>=z");
+            |andL('L=="x>=0&y>=1&z<=x+y&3>2");
+            |andL('L=="y>=1&z<=x+y&3>2");
+            |andL('L=="z<=x+y&3>2")""".stripMargin)
     }
 
     tree.locate("(2,0)") match {
       case Some(node) =>
-        stepInto(node, "unfold")(db.db)._2 shouldBe BelleParser("step(1)")
+        stepInto(node, "unfold")(db.db)._2 shouldBe BelleParser("""step('R=="[x:=x+y;]x>=z")""")
     }
 
     //@todo QE uses AnonymousLemmas.cacheTacticResult, which is neither serializable nor executes internal steps visible to the spoonfeeding interpreter
@@ -1486,8 +2051,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
   it should "work for dC+DI" in withZ3 { _ =>
     val problem =
-      """
-        |w()^2*x^2 + y^2 <= c()^2
+      """w()^2*x^2 + y^2 <= c()^2
         |  & d>=0
         |->
         |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
@@ -1503,12 +2067,20 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (id1, tactic1) = stepInto(n1, """diffInvariant("d>=0", 1)""")(db)
-        tactic1 shouldBe BelleParser("""dC("d>=0",1) & <(nil, dI(1))""")
+        tactic1 shouldBe BelleParser(
+          """dC("d>=0", 'R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2"); <(
+            |  "Use": nil,
+            |  "Show": dI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]d>=0")
+            |)""".stripMargin)
         //diffCut
         DbProofTree(db, id1.toString).locate("(2,0)") match {
           case Some(n2) =>
             val (_, tactic2) = stepInto(n2, """dC("d>=0", 1)""")(db)
-            val tacticString = "DC(\"d>=0\", 1) ; <(nil, nil)"
+            val tacticString =
+              """DC("d>=0", 'R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2"); <(
+                |  "Use": nil,
+                |  "Show": nil
+                |)""".stripMargin
             tactic2 shouldBe BelleParser(tacticString)
             BellePrettyPrinter(tactic2) should equal (tacticString) (after being whiteSpaceRemoved)
         }
@@ -1516,14 +2088,19 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(3,1)") match {
           case Some(n2) =>
             val (_, tactic) = stepInto(n2, "dI(1)")(db)
-            val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                                 |  QE,
-                                 |  derive('Rlast.1) ; DE('Rlast) ;
-                                 |  Dassignb('Rlast.1) ; Dassignb('Rlast.1) ; Dassignb('Rlast.1) ;
-                                 |  DW('Rlast) ;
-                                 |  GV('Rlast) ; QE
-                                 |)
-                               """.stripMargin
+            val tacticString =
+              """DI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]d>=0");
+                |implyR('R=="w()>=0->d>=0&[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'");
+                |andR('Rlast); <(
+                |  "d>=0": QE,
+                |  "[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}](d>=0)'":
+                |    derive('Rlast.1);
+                |    DE('Rlast);
+                |    Dassignb('Rlast.1);Dassignb('Rlast.1);Dassignb('Rlast.1);
+                |    DW('Rlast);
+                |    GV('Rlast);
+                |    QE
+                |)""".stripMargin
             tactic shouldBe BelleParser(tacticString)
             BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         }
@@ -1543,10 +2120,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                             |  QE,
-                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-                             |)""".stripMargin
+        val tacticString =
+          """DI('R=="[{x'=3}]x>0");
+            |implyR('R=="true->x>0&[{x'=3}](x>0)'");
+            |andR('Rlast); <(
+            |  "x>0": QE,
+            |  "[{x'=3}](x>0)'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
@@ -1566,10 +2151,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                             |  QE,
-                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-                             |)""".stripMargin
+        val tacticString =
+          """DI('R=="[{x'=a}]x>0");
+            |implyR('R=="true->x>0&[{x'=a}](x>0)'");
+            |andR('Rlast); <(
+            |  "x>0": QE,
+            |  "[{x'=a}](x>0)'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
@@ -1589,11 +2182,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                             |  QE,
-                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-                             |)
-                           """.stripMargin
+        val tacticString =
+          """DI('R=="[{x'=5}]x>a()");
+            |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
+            |andR('Rlast); <(
+            |  "x>a()": QE,
+            |  "[{x'=5}](x>a())'":
+            |    derive('Rlast.1);
+            |    DE('Rlast);
+            |    Dassignb('Rlast.1);
+            |    GV('Rlast);
+            |    QE
+            |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
     }
@@ -1612,10 +2212,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tree = DbProofTree(db, innerId.toString)
     val tactic = tree.tactic
-    val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                         |  QE,
-                         |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-                         |)""".stripMargin
+    val tacticString =
+      """DI('R=="[{x'=5}]x>a()");
+        |implyR('R=="true->x>a()&[{x'=5}](x>a())'");
+        |andR('Rlast); <(
+        |  "x>a()": QE,
+        |  "[{x'=5}](x>a())'":
+        |    derive('Rlast.1);
+        |    DE('Rlast);
+        |    Dassignb('Rlast.1);
+        |    GV('Rlast);
+        |    QE
+        |)""".stripMargin
     tactic shouldBe BelleParser(tacticString)
     BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
   }
@@ -1633,10 +2241,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = DbProofTree(db, innerId.toString).tactic
     //@todo want pending("QE") or pending("QE & done | done") instead of nil
-    val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
-                         |  QE,
-                         |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
-                         |)""".stripMargin
+    val tacticString =
+      """DI('R=="[{x'=5}]x>a()+b()");
+        |implyR('R=="true->x>a()+b()&[{x'=5}](x>a()+b())'");
+        |andR('Rlast); <(
+        |  "x>a()+b()": QE,
+        |  "[{x'=5}](x>a()+b())'":
+        |    derive('Rlast.1);
+        |    DE('Rlast);
+        |    Dassignb('Rlast.1);
+        |    GV('Rlast);
+        |    QE
+        |)""".stripMargin
     tactic shouldBe BelleParser(tacticString)
     BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
   }
@@ -1655,7 +2271,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))
     interpreter(tactic, BelleProvable(p))
-    DbProofTree(db, proofId.toString).tactic shouldBe BelleParser("""implyR(1) ; andL(-1) ; pending("done")""")
+    DbProofTree(db, proofId.toString).tactic shouldBe BelleParser("""implyR('R=="x=1&y=2->x=3"); andL('L=="x=1&y=2"); pending("done")""")
   }}
 
   "Pending" should "execute and record successful tactic" in withQE { _ => withDatabase { db =>
@@ -1667,7 +2283,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))
     interpreter(tactic, BelleProvable(p))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1) ; id")
+    db.extractTactic(proofId) shouldBe BelleParser("implyR('R==\"x>0->x>0\"); id")
   }}
 
   it should "try execute and record again as pending on failure" in withQE { _ => withDatabase { db =>
@@ -1679,7 +2295,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))
     interpreter(tactic, BelleProvable(p))
-    db.extractTactic(proofId) shouldBe BelleParser("""implyR(1) ; pending("andR(1)")""")
+    db.extractTactic(proofId) shouldBe BelleParser("""implyR('R=="x>0->x>0"); pending("andR(1)")""")
   }}
 
   it should "not fail on nested tactic with arguments" in withQE { _ => withDatabase { db =>
@@ -1691,7 +2307,49 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
     interpreter(tactic, BelleProvable(p))
-    db.extractTactic(proofId) shouldBe BelleParser("""implyR(1) ; pending("loop(\"x>0\", 1)")""")
+    db.extractTactic(proofId) shouldBe BelleParser("""implyR('R=="x>0->[x:=x+1;]x>0"); pending("loop(\"x>0\", 1)")""")
+  }}
+
+  it should "record innermost failed tactic as pending" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> [x:=x+1;]x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser("""implyR(1); cut("x>=0"); <("Use": hideL(-1); loop("x>0", 1), "Show": hideR(1); QE)""")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->[x:=x+1;]x>0");
+        |cut("x>=0"); <(
+        |  "Use": hideL('L=="x>0"); pending("loop(\"x>0\", 1)"),
+        |  "Show": hideR('R=="[x:=x+1;]x>0"); QE
+        |)""".stripMargin)
+  }}
+
+  it should "record innermost failed tactic as pending (2)" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> [x:=x+1;]x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser(
+      """implyR(1); cut("x>=0"); <(
+        |  "Use": loop("x>0", 1); <("Init": id, "Post": id, "Step": auto),
+        |  "Show": hideR(1); QE
+        |)""".stripMargin)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->[x:=x+1;]x>0");
+        |cut("x>=0"); <(
+        |  "Use": pending("loop(\"x>0\", 1)"); pending("<(
+        |    \"Init\": id,
+        |    \"Post\": id,
+        |    \"Step\": auto
+        |  )"),
+        |  "Show": hideR('R=="[x:=x+1;]x>0"); QE
+        |)""".stripMargin)
   }}
 
   "Delayed substitution" should "support introducing variables for function symbols of closed provables" in withMathematica { _ => withDatabase { db =>

@@ -51,15 +51,6 @@ abstract class PrettyPrintFormatProvider(format: String, wsPrinter: String => St
   }
 }
 
-case class PrettierPrintFormatProvider(e: Expression, margin: Int) extends PrettyPrintFormatProvider(
-    new KeYmaeraXPrettierPrinter(margin)(e), s => s) {
-  override def print(next: String): String = try {
-    super.print(next)
-  } catch {
-    case _: Throwable => next
-  }
-}
-
 /** Noop format provider. */
 class NoneFormatProvider extends FormatProvider {
   override def printWS(check: String): String = ""

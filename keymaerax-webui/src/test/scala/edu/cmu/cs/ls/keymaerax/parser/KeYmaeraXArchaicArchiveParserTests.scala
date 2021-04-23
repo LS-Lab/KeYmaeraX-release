@@ -159,17 +159,66 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
   it should "complain when variable and function have same name" in {
     val input =
       """ArchiveEntry "Entry 1"
+        | Definitions Real x; End.
+        | ProgramVariables Real x; End.
+        | Problem x=1 -> x<=x() End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:24 Duplicate symbol 'x': already defined at 2:14 to 2:20
+        |Found:    x at 3:24
+        |Expected: <unique name>""".stripMargin
+  }
+
+  it should "complain when variable and function have same name (2)" in {
+    val input =
+      """ArchiveEntry "Entry 1"
         | Definitions Real x() = 2; End.
         | ProgramVariables Real x; End.
         | Problem x=1 -> x<=x() End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> Semantic analysis error
-        |semantics: Expect unique names_index that identify a unique type.
-        |ambiguous: x:Unit->Real and x:Real
-        |symbols:   x, x
-        |Found:    <unknown> at <somewhere>
-        |Expected: <unknown>""".stripMargin
+      """3:24 Duplicate symbol 'x': already defined at 2:14 to 2:26
+        |Found:    x at 3:24
+        |Expected: <unique name>""".stripMargin
+  }
+
+  it should "report re-definition of interpreted functions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions Real abs(Real x) = x^2; End.
+        |  ProgramVariables Real x; End.
+        |  Problem abs(x)>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """2:15 Re-definition of interpreted symbol abs not allowed; please use a different name for your definition.
+        |Found:    abs at 2:15 to 2:36
+        |Expected: A name != abs""".stripMargin
+  }
+
+  it should "report re-declaration with wrong domain of interpreted functions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions Real abs(Real x, Real y); End.
+        |  ProgramVariables Real x,y; End.
+        |  Problem abs(x,y)>=0 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """4:19 Interpreted symbol abs: expected domain Real but got (Real,Real)
+        |Found:    (Real,Real) at 4:19 to 4:20
+        |Expected: Real""".stripMargin
+  }
+
+  it should "report re-declaration with wrong sort of interpreted functions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions Bool abs(Real x); End.
+        |  ProgramVariables Real x; End.
+        |  Problem abs(x) End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Interpreted symbol abs: expected sort Real but got Bool
+        |Found:    Bool at <somewhere>
+        |Expected: Real""".stripMargin
   }
 
   it should "parse definitions after variables" in {
@@ -672,7 +721,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     val ex = the [ParseException] thrownBy parse(input)
-    ex.msg should include ("Duplicate variable 'x'")
+    ex.msg should include ("Duplicate symbol 'x'")
   }
 
   it should "detect duplicate function names" in {
@@ -2347,11 +2396,12 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
-        | Tactic "Proof 1". implyR(1) : End.
+        | Tactic "Proof 1". implyR(1) ~ End.
         |End.""".stripMargin
-    ) should have message """4:30 Lexer 4:30 Lexer does not recognize input at 4:30 to EOF$ beginning with character `:`=-1
-                            |Found:    <unknown> at 4:30 to EOF$
-                            |Expected: <unknown>""".stripMargin
+    ) should have message
+      """4:30 Lexer 4:30 Lexer does not recognize input at 4:30 to EOF$ beginning with character `~`=-1
+        |Found:    <unknown> at 4:30 to EOF$
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "report a missing entry ID separator" in {
@@ -2478,9 +2528,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Problem f(f(f(2,3))) End.
         |End.""".stripMargin
     ) should have message
-      """2:66 Duplicate symbol 'f'
-        |Found:    <unknown> at 2:66 to 2:88
-        |Expected: <unknown>""".stripMargin
+      """2:41 Duplicate symbol 'f': already defined at 2:14 to 2:34
+        |Found:    f at 2:41
+        |Expected: <unique name>""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
@@ -2489,9 +2539,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         | Problem x>0 -> [inc;]x>0 End.
         |End.""".stripMargin
     ) should have message
-      """2:37 Duplicate symbol 'inc'
-        |Found:    <unknown> at 2:37 to 2:58
-        |Expected: <unknown>""".stripMargin
+      """2:40 Duplicate symbol 'inc': already defined at 2:14 to 2:35
+        |Found:    inc at 2:40 to 2:42
+        |Expected: <unique name>""".stripMargin
   }
 
   it should "report variables used as functions" in {

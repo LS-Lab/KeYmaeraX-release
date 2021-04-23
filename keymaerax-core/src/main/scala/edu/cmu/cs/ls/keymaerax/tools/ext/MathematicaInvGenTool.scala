@@ -52,7 +52,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val primedVars = DifferentialHelper.getPrimedVariables(ode)
     val atomicODEs = DifferentialHelper.atomicOdes(ode)
-    val constantSlopeVars = atomicODEs.filter(_.e.isInstanceOf[Number]).map(_.xp.x)
+//    val constantSlopeVars = atomicODEs.filter(_.e.isInstanceOf[Number]).map(_.xp.x)
 //    val isTimeTriggered = FormulaTools.conjuncts(ode.constraint).exists({
 //      //@todo most common case
 //      case LessEqual(x, y) => y match {
@@ -67,7 +67,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val vars = list(primedVars.map(k2m):_*)
     val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
     val problem = list(
-      k2m(assumptions.reduceOption(And).getOrElse(True)),
+      k2m(assumptions.flatMap(FormulaTools.conjuncts).filter(_.isPredicateFreeFOL).reduceOption(And).getOrElse(True)),
       list(vectorField, vars, k2m(ode.constraint)),
       k2m(postCond)
     )

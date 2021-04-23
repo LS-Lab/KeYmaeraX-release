@@ -46,16 +46,16 @@ trait Interpreter {
     *         * The next index for the interpreter to continue, n if `subderivation` is proved (i.e., all later
     *           subgoals move up by 1), or (n+1) if subderivation is not proved.
     */
-  protected def replaceConclusion(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: Option[USubst]): (ProvableSig, Int) = {
+  protected def replaceConclusion(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: USubst): (ProvableSig, Int) = {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
       else if (subderivation.isProved) {
-        val substOrig = subst.map(exhaustiveSubst(original, _)).getOrElse(original)
+        val substOrig = exhaustiveSubst(original, subst)
         (substOrig, exhaustiveSubst(subderivation,
           Try(UnificationMatch(subderivation.conclusion, substOrig.subgoals(n))).toOption.getOrElse(
             UnificationMatch(substOrig.subgoals(n), subderivation.conclusion)).usubst))
-      } else (subst.map(exhaustiveSubst(original, _)).getOrElse(original), subderivation)
+      } else (exhaustiveSubst(original, subst), subderivation)
     if (substParent.subgoals(n) != substChild.conclusion)
       throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${substParent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst", subderivation.underlyingProvable)
     val newProvable = substParent(substChild, n)

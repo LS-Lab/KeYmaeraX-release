@@ -242,9 +242,17 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   /** Elaborate `e` to the expected `kind` of a part of op by lifting defaulted types as needed or return None. */
   private def elaboratable(kind: Kind, e: Expression, lax: Boolean): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
-    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(func(f.name,f.index,f.domain,Bool), t))
+    case FuncOf(f, t) if kind==FormulaKind =>
+      OpSpec.interpretedFuncSortDomain(f.name) match {
+        case None | Some((Bool, _)) => Some(PredOf(func(f.name,f.index,f.domain,Bool), t))
+        case Some((s, _)) => throw ParseException("Interpreted symbol " + f.name + ": expected sort " + s + " but got " + Bool, UnknownLocation, Bool.toString, s.toString)
+      }
     // lift misclassified defaulted predicate application to function application when required by context type.
-    case PredOf(f, t) if kind==TermKind => Some(FuncOf(func(f.name,f.index,f.domain,Real), t))
+    case PredOf(f, t) if kind==TermKind =>
+      OpSpec.interpretedFuncSortDomain(f.name) match {
+        case None | Some((Real, _)) => Some(FuncOf(func(f.name,f.index,f.domain,Real), t))
+        case Some((s, _)) => throw ParseException("Interpreted symbol " + f.name + ": expected sort " + s + " but got " + Real, UnknownLocation, Real.toString, s.toString)
+      }
     // lift misclassified defaulted differential program constant
     case x: Variable if kind==DifferentialProgramKind && x.index.isEmpty => Some(DifferentialProgramConst(x.name, AnyArg))
     // lift misclassified defaulted program constant
@@ -406,7 +414,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         //@note Recognized(Variable()) instead of IDENT to avoid item overlap IDENT LPAREN with function/predicate symbols
         //@note Recognized(Variable()) instead of Variable to avoid detecting lookup confusion with Variable PLUS ... too late
         //@note Recognized should also generalize better to block quantifiers and multi-sorted quantifiers
-        if (la == COMMA || firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real) :: Nil), r :+ tok1))
+        if (la == PRIME) shift(reduce(shift(st), 2, Bottom :+ RecognizedQuant(DifferentialSymbol(Variable(name, idx, Real)) :: Nil), r :+ tok1))
+        else if (la == COMMA || firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real) :: Nil), r :+ tok1))
         else error(st, List(COMMA,FIRSTFORMULA))
 
       case _ :+ Token(FORALL | EXISTS, _) => if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
@@ -980,12 +989,15 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     */
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(_, Token(la, _) :: _) = st
-    OpSpec.interpretedFuncSort(name.name) match {
-      case Some(Real) =>
-        reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
-      case Some(Bool) =>
-        reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
-      case Some(s) => throw ParseException("Unknown sort " + s, st)
+    OpSpec.interpretedFuncSortDomain(name.name) match {
+      // backwards compatibility: allow declaring interpreted functions
+      case Some((Real, d)) =>
+        if (arg.sort == d) reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)
+        else throw ParseException("Interpreted symbol " + name.name + ": expected domain " + d + " but got " + arg.sort, st.location, arg.sort.toString, d.toString)
+      case Some((Bool, d)) =>
+        if (arg.sort == d) reduce(st, consuming, PredOf(func(name.name, name.index, arg.sort, Bool), arg), remainder)
+        else throw ParseException("Interpreted symbol " + name.name + ": expected domain " + d + " but got " + arg.sort, st.location, arg.sort.toString, d.toString)
+      case Some((s, _)) => throw ParseException("Unknown sort " + s, st)
       case None =>
         if (termBinOp(la) || isTerm(st) && followsTerm(la))
           reduce(st, consuming, FuncOf(func(name.name, name.index, arg.sort, Real), arg), remainder)

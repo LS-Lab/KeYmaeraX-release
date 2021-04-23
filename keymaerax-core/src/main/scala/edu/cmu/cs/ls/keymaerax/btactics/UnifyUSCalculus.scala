@@ -286,17 +286,27 @@ trait UnifyUSCalculus {
   @deprecated("Exclusively use for tactic interpreters")
   @Tactic("useAt", codeName = "useAt")
   private[btactics]
-  def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
-    key match {
-      case None => TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
-      case Some(k) =>
-        val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
-        val defaultKey = AxiomInfo(axiom).key
-        if (key != defaultKey) {
-            val ax = ProvableInfo(axiom)
-            TactixLibrary.useAt(ax.provable, key)(pos)
-        } else TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
-    }
+  def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
+    val keyPos = key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
+    val info = AxiomInfo(axiom)
+    TryCatch(
+      keyPos match {
+        case None => TactixLibrary.useAt(info)(pos) //@note serializes as codeName
+        case Some(k) =>
+          if (k != info.key) TactixLibrary.useAt(info.provable, k)(pos)
+          else TactixLibrary.useAt(info)(pos) //@note serializes as codeName
+      },
+      classOf[InapplicableUnificationKeyFailure],
+      (ex: InapplicableUnificationKeyFailure) => {
+        val keyExpr = keyPos match {
+          case None => info.provable.conclusion.sub(SuccPosition.base0(0, info.key))
+          case Some(k) => info.provable.conclusion.sub(SuccPosition.base0(0, k))
+        }
+        throw new InapplicableUnificationKeyFailure("Axiom " + axiom + " is not applicable at " +
+          seq.sub(pos).map(_.prettyString).getOrElse("<unknown>") +
+          "; cannot match with axiom key " + keyExpr.map(_.prettyString).getOrElse("<unknown>"), ex)
+      }
+    )
   }
 
   /**
@@ -1619,7 +1629,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (Ax.monb.provable(USubst(
+            (Ax.monbaxiom.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))

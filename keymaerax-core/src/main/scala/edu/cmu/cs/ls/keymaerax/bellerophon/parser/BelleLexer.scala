@@ -167,6 +167,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     OPEN_PAREN.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, OPEN_PAREN, loc))),
     CLOSE_PAREN.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, CLOSE_PAREN, loc))),
     COMMA.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, COMMA, loc))),
+    COLON.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, COLON, loc))),
     RIGHT_ARROW.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, RIGHT_ARROW, loc)))
   )
 

@@ -41,6 +41,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               });
               if (clicked.length > 0 && e.domEvent.altKey) {
                 $scope.executeTactic(clicked[0], false);
+              } else if (clicked.length > 0 && e.domEvent.shiftKey) {
+                $scope.executeTactic(clicked[0], true);
               }
             });
             editor.on("mouseout", function(e) {

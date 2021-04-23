@@ -168,6 +168,7 @@ object Augmentors {
           case _ => Left(None)
         }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case FuncOf(Function(_, _, _, _, true), _) => Left(None) // interpreted function symbols are allowed
           case FuncOf(_, args) if !bv.intersect(StaticSemantics.freeVars(args)).isEmpty => result = false; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }

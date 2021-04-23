@@ -5,6 +5,7 @@
 import com.wolfram.jlink.Expr
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 
@@ -302,22 +303,22 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     KeYmaeraToMathematica(Variable("abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`abs")
     KeYmaeraToMathematica(Variable("Abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Abs")
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("abs()".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.absF.name, None, Unit, Real, interpreted=true), Nothing))
     KeYmaeraToMathematica("Abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
     KeYmaeraToMathematica("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("abs(x,y)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.absF.name, None, Tuple(Real, Real), Real, interpreted=true), Pair(Variable("x"), Variable("y"))))
     KeYmaeraToMathematica(Variable("min")) shouldBe new MExpr(Expr.SYMBOL, "kyx`min")
     KeYmaeraToMathematica(Variable("Min")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Min")
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.minF.name, None, Real, Real, interpreted=true), Variable("x")))
     KeYmaeraToMathematica("Min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     KeYmaeraToMathematica("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("min(x,y,z)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.minF.name, None, Tuple(Real, Tuple(Real, Real)), Real, interpreted=true), Pair(Variable("x"), Pair(Variable("y"), Variable("z")))))
     KeYmaeraToMathematica(Variable("max")) shouldBe new MExpr(Expr.SYMBOL, "kyx`max")
     KeYmaeraToMathematica(Variable("Max")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Max")
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.maxF.name, None, Real, Real, interpreted=true), Variable("x")))
     KeYmaeraToMathematica("Max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "kyx`Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
-    a [CoreException] should be thrownBy KeYmaeraToMathematica("max(x,y,z)".asTerm)
+    a [CoreException] should be thrownBy KeYmaeraToMathematica(FuncOf(Function(InterpretedSymbols.maxF.name, None, Tuple(Real, Tuple(Real, Real)), Real, interpreted=true), Pair(Variable("x"), Pair(Variable("y"), Variable("z")))))
   }
 
   it should "convert decimal to rational" in {

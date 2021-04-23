@@ -25,7 +25,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
   *
   * Created by smitsch on 01/04/18.
   */
-class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
+class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
   import KeYmaeraXArchivePrinter._
 
   /** Prints the `entry`. */
@@ -47,13 +47,13 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
 
     val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrint(entry.model), printedTactics)
+    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrinter(entry.model).print(entry.model.prettyString), printedTactics)
 
     val finalPrint = if (withComments) {
       assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
-      """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
+      """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
           s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              #
@@ -168,8 +168,6 @@ object KeYmaeraXArchivePrinter {
        #$tacticsBlock
        #$END_BLOCK""".stripMargin('#')
   }
-
-  def prettierPrint(e: Expression): String = PrettierPrintFormatProvider(e, 80).print(e.prettyString)
 }
 
 class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
@@ -277,7 +275,7 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
         assert(ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
           "Expected printed entry and stored problem content to reparse to same model")
 
-        """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
+        """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
           case Some(_) =>
             s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
                #$printedTactics

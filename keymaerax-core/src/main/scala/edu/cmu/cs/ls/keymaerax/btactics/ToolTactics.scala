@@ -84,11 +84,7 @@ private object ToolTactics {
 
     val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
 
-    //@note don't split exhaustively (may explode), but *3 is only a guess
-    val splittingQE =
-      ArithmeticSimplification.smartHide & onAll(Idioms.?(orL('L) | andR('R)))*3 & onAll(plainQE & done)
-
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
+    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & plainQE
 
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
@@ -432,9 +428,9 @@ private object ToolTactics {
     * expression by proof. */
   private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
     val nextName: scala.collection.mutable.Map[String, Variable] = scala.collection.mutable.Map(
-        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name), sequent),
-        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name), sequent),
-        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name), sequent))
+        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name + "_"), sequent),
+        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name + "_"), sequent),
+        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name + "_"), sequent))
 
     val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
 

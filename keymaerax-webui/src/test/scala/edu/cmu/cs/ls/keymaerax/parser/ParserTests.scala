@@ -321,6 +321,12 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     }
   }
 
+  it should "parse quantified differential symbols" in {
+    val xp = DifferentialSymbol(Variable("x"))
+    Parser("\\forall x' x'>=0") shouldBe Forall(xp :: Nil, GreaterEqual(xp, Number(0)))
+    Parser("\\exists x' x'>=0") shouldBe Exists(xp :: Nil, GreaterEqual(xp, Number(0)))
+  }
+
   it should "parse all positive examples" in {
     val files =
       "abs.key" ::

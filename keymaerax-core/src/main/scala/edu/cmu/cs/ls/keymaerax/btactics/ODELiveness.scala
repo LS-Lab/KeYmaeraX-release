@@ -186,7 +186,7 @@ object ODELiveness {
           useAt(Ax.Dminus)(1,1::0::Nil) &
           implyRi &
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
-          useAt(Ax.Dvar)(1,1::0::Nil) &
+          useAt(Ax.DvarAxiom)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
           useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
           G(1) & DassignbCustom(1) &
@@ -876,8 +876,8 @@ object ODELiveness {
     val newfml = Diamond(sys,R)
 
     cutR(newfml)(pos) <(
-      skip,
-      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & odeUnify(pos)
+      skip & label(BelleLabels.cutUse),
+      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & odeUnify(pos) & label(BelleLabels.cutShow)
     )
   }}
 

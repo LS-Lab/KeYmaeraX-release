@@ -295,7 +295,7 @@ private object DLBySubst {
    */
   def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     //@Tactic in [[HybridProgramCalculus.generalize]]
-    case (ctx, Box(a, p)) =>
+    case (ctx, Box(a, _)) =>
       val ov = FormulaTools.argsOf("old", c)
 
       var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
@@ -324,7 +324,7 @@ private object DLBySubst {
             flatMap(FormulaTools.conjuncts).
             filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
         (constConjuncts, isGame) match {
-          case ((Nil, _) | (_, true)) => (oldifiedC, skip, implyR(1))
+          case (Nil, _) | (_, true) => (oldifiedC, skip, implyR(1))
           case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
               boxAnd(afterGhostsPos) &
               abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
@@ -334,10 +334,9 @@ private object DLBySubst {
           )
         }
       }
-      introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
-        /* use */
-        /*label(BranchLabels.genUse)*/ useCleanup,
-        /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
+      label(startTx) & introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
+        /* use */ useCleanup & label(replaceTxWith(BelleLabels.mrUse)),
+        /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup & label(replaceTxWith(BelleLabels.mrShow))
       )
     case (_, e) => throw new TacticInapplicableFailure("MR only applicable to box, but got " + e.prettyString)
   })
@@ -377,7 +376,7 @@ private object DLBySubst {
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
         (inputanon {(pos, sequent) => {
           sequent.sub(pos) match {
-            case Some(b@Box(Loop(a), p)) =>
+            case Some(Box(Loop(a), _)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
               else {
                 val abv = StaticSemantics(a).bv
@@ -388,23 +387,24 @@ private object DLBySubst {
                   if (consts.size > 1) And(oldified, consts.reduceRight(And))
                   else if (consts.size == 1) And(oldified, consts.head)
                   else And(oldified, True)
+                label(startTx) &
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
                   /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
-                      label(initCase),
+                      label(replaceTxWith(initCase)),
                       (andR(pos) & Idioms.<(closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                         (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                         (if (constSuccs.nonEmpty) notR(pos) else skip) &
                         close & done),
                     cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
                       (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                       else andL('Llast) & hideL('Llast, True)) & label(indStep),
+                       else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
                       andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
                   ),
                   /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
                     (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                     else andL('Llast) & hideL('Llast, True)) & label(useCase)
+                     else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
                 )
               }
             case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
@@ -471,16 +471,15 @@ private object DLBySubst {
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
   )
   def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
-    //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
-    //val alast = AntePosition(sequent.ante.length)
+    require(seq(pos) match { case Box(Loop(_),_) => true case _ => false }, "only applicable for [a*]p(||)")
+    label(startTx) &
     cutR(invariant)(pos.checkSucc.top) <(
-        ident & label(BelleLabels.initCase),
+      label(replaceTxWith(BelleLabels.initCase)),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS(Ax.indrule) & label(BelleLabels.indStep)
+          byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep))
           ,
-          ident & label(BelleLabels.useCase)
+          label(replaceTxWith(BelleLabels.useCase))
         )
       )
   }
@@ -544,13 +543,14 @@ private object DLBySubst {
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
           def unstutterABV(pos: Position) = useAt(Ax.selfassignb)(pos)*abvVars.size
 
+          label(startTx) &
           cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
             stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(Ax.pexistsV)(pos) & closeConsts(pos) &
-            assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
+            assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(replaceTxWith(BelleLabels.initCase))
             ,
             cohide(pp) & implyR(1) & byUS(Ax.conflat) <(
-              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
+              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(replaceTxWith(BelleLabels.useCase))
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
               useAt(Ax.pVd, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -561,7 +561,7 @@ private object DLBySubst {
               splitConsts & closeConsts(SuccPos(0)) &
               (assignd(1, 1 :: Nil) & uniformRename(ur) |
                 uniformRename(ur.what, x1) & assignd(1, 1 :: Nil) & boundRename(x1, v)(1, 1::Nil) & uniformRename(x2, v0)
-                ) & label(BelleLabels.indStep)
+                ) & label(replaceTxWith(BelleLabels.indStep))
             )
           )
       }

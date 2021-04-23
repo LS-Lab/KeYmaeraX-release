@@ -226,8 +226,10 @@ class ProofsForUserRequest(db: DBAbstraction, userId: String) extends UserReques
 
 class UserLemmasRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
   def resultingResponses(): List[Response] = {
+    def getLemma(model: Option[ModelPOJO]): Option[(String, Lemma)] =
+      model.flatMap(m => LemmaDBFactory.lemmaDB.get("user" + File.separator + m.name).map(m.name -> _))
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).filter(_._1.closed).
-      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, proof._1.modelId.map(db.getModel))).toList
+      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, getLemma(proof._1.modelId.map(db.getModel)))).toList
     new UserLemmasResponse(proofs) :: Nil
   }
 }
@@ -1279,7 +1281,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               mxProof.conclusion.succ.head,
               ("ModelPlex Monitor Proof", BellePrettyPrinter(monitorProof), monitorProof) :: Nil,
               Nil, Map.empty)
-            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter()(entry)) :: Nil
+            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
@@ -1380,8 +1382,13 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
 class CreateProofRequest(db: DBAbstraction, userId: String, modelId: String, name: String, description: String)
   extends UserRequest(userId, _ => true) with WriteRequest {
   def resultingResponses(): List[Response] = {
-    val proofId = db.createProofForModel(modelId, name, description, currentDate(), None)
-    new CreatedIdResponse(proofId) :: Nil
+    if (modelId != "undefined") {
+      val proofName = if (name.isEmpty) db.getModel(modelId).name + ": Proof" else name
+      val proofId = db.createProofForModel(modelId, proofName, description, currentDate(), None)
+      CreatedIdResponse(proofId) :: Nil
+    } else {
+      new ErrorResponse("Unable to create proof for unknown model") :: Nil
+    }
   }
 }
 
@@ -1404,7 +1411,7 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
               case (Name(n, i), _) => symbols.exists(s => s.name == n && s.index == i)
             })
             val lemma = ParsedArchiveEntry(lemmaName, "lemma", "", "", Declaration(defs), goal, Nil, Nil, Map.empty)
-            val fileContents = new KeYmaeraXArchivePrinter()(lemma)
+            val fileContents = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(lemma)
 
             db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
         }
@@ -1417,7 +1424,7 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
         case Nil => db.createProofForModel(modelId, "Proof of " + lemmaName, "", currentDate(), None)
       }
     }
-    new CreatedIdResponse(proofId.toString) :: Nil
+    CreatedIdResponse(proofId.toString) :: Nil
   }
 }
 
@@ -1428,7 +1435,7 @@ class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: 
       case Some(tacticText) =>
         val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic",
           "Proof from tactic", currentDate(), Some(tacticText))
-        new CreatedIdResponse(proofId.toString) :: Nil
+        CreatedIdResponse(proofId.toString) :: Nil
       case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated")::Nil
     }
   }
@@ -1784,7 +1791,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId.toString))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
@@ -2035,13 +2042,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: Declaration): Response = {
     try {
       input match {
-        case BelleTermInput(value, Some(arg: TermArg)) =>
-          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: FormulaArg)) =>
           checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: VariableArg)) =>
-          checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) =>
+        case BelleTermInput(value, Some(arg: ExpressionArgBase)) =>
           checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: SubstitutionArg)) =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
@@ -2064,11 +2067,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
     val elaborated = exprs.map(e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
 
     val sortMismatch: Option[String] = (arg, elaborated) match {
-      case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
-      case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
-      case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
-      case (ListArg(ai: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
+      case (_: ExpressionArgBase, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
+      case (ListArg(_: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
       case _ => Some("Expected: " + arg.sort + ", found: " + elaborated.map(_.kind).mkString(",") + " " +   elaborated.map(_.prettyString).mkString(","))
     }
 
@@ -2141,10 +2142,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(sequent: Sequent): String = {
     val paramStrings: List[String] = inputs.map{
-      case BelleTermInput(value, Some(_:TermArg)) => "\""+value+"\""
       case BelleTermInput(value, Some(_:FormulaArg)) => "\""+value+"\""
-      case BelleTermInput(value, Some(_:VariableArg)) => "\""+value+"\""
-      case BelleTermInput(value, Some(_:ExpressionArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:ExpressionArgBase)) => "\""+value+"\""
       case BelleTermInput(value, Some(_:SubstitutionArg)) => "\""+value+"\""
       /* Tactic parser uses same syntax for formula argument as for singleton formula list argument.
        * if we encounter a singleton list (for example in dC), then present it as a single argument. */
@@ -2156,10 +2155,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else "\"" + values.mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:StringArg)) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
         "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
+      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
@@ -2274,7 +2273,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
+                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
                   RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
                   ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
@@ -2515,16 +2514,16 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   private def exportLemma(lemmaName: String, model: ModelPOJO, provable: ProvableSig, tactic: String) = {
-    if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-      val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
-        "tool" -> "KeYmaera X",
-        "model" -> model.keyFile,
-        "tactic" -> tactic
-      )) :: Nil)
-      LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
-    }
+    val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+      "tool" -> "KeYmaera X",
+      "model" -> model.keyFile,
+      "tactic" -> tactic
+    )) :: Nil)
+    val lemma = new Lemma(provable, evidence, Some(lemmaName))
+    if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+    LemmaDBFactory.lemmaDB.add(lemma)
   }
-  private def backupProof(model: ModelPOJO, provable: ProvableSig, tactic: String) = {
+  private def backupProof(model: ModelPOJO, tactic: String) = {
     val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
@@ -2571,8 +2570,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
       // remember lemma
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
-      backupProof(model, provable, tactic)
-      new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+      backupProof(model, tactic)
+      new ProofVerificationResponse(proofId, provable, tactic) :: Nil
     }
   }
 }
@@ -2599,7 +2598,7 @@ class AcceptLicenseRequest(db: DBAbstraction) extends Request with WriteRequest 
 /////
 
 class IsLocalInstanceRequest() extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new BooleanResponse(!HyDRAServerConfig.isHosted) :: Nil
+  override def resultingResponses(): List[Response] = BooleanResponse(!HyDRAServerConfig.isHosted) :: Nil
 }
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest with RegisteredOnlyRequest {
@@ -2661,7 +2660,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
       }
     }.start()
 
-    new BooleanResponse(true) :: Nil
+    BooleanResponse(flag = true) :: Nil
   }
 }
 
@@ -2674,7 +2673,7 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
       Some(tactic))
     db.updateProofInfo(newInfo)
-    GetTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+    GetTacticResponse(tactic) :: Nil
   }
 }
 
@@ -2693,7 +2692,7 @@ class TacticDiffRequest(db: DBAbstraction, oldTactic: String, newTactic: String)
       val diff = TacticDiff.diff(oldT, newT)
       new TacticDiffResponse(diff) :: Nil
     } catch {
-      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
   }
 }
@@ -2718,9 +2717,9 @@ object ArchiveEntryPrinter {
   def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
     ArchiveParser.parser(modelInfo.keyFile) match {
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, modelInfo.name, tactics))
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, entry.name, tactics))
     }
   }
 
@@ -2900,7 +2899,7 @@ object RequestHelper {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
-      case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
+      case "step" | "stepat" if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos, Some(sequent), session.defs.substs) match {
@@ -2909,7 +2908,7 @@ object RequestHelper {
             }
           case _ => Right(DerivationInfo.ofCodeName(tacticId))
         }
-      case ("step" | "stepat") if pos.isDefined && pos2.isDefined =>
+      case "step" | "stepat" if pos.isDefined && pos2.isDefined =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(pos.get, pos2.get, sequent) match {

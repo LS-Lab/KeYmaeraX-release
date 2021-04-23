@@ -298,7 +298,7 @@ object Ax extends Logging {
       case _ => Set.empty
     }
 
-    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
+    val failures = mutable.Buffer.empty[(String,Throwable)]
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
@@ -453,7 +453,7 @@ object Ax extends Logging {
   val Dconst: CoreAxiomInfo = coreAxiom("c()' derive constant fn")
   @Axiom("x'", conclusion = "__(x)'__=x'", unifier = "linear",
     key = "0", recursor = "")
-  val Dvar: CoreAxiomInfo = coreAxiom("x' derive var")
+  val DvarAxiom: CoreAxiomInfo = coreAxiom("x' derive var")
   @Axiom("-'", conclusion = "__(-f(x))'__=-(f(x))'",
     key = "0", recursor = "0", unifier = "surjlinear")
   val Dneg: CoreAxiomInfo = coreAxiom("-' derive neg")
@@ -708,7 +708,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt(randomb, PosInExpr(1::Nil))(1) &
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
-        byUS(monb) & hide(-1)
+        byUS(monbaxiom) & hide(-1)
         ,
         hide(1) & HilbertCalculus.boxTrue(1)
         )
@@ -721,7 +721,7 @@ object Ax extends Logging {
     * End.
     */
   @ProofRule("M∀",  premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
-  lazy val monall: DerivedRuleInfo = derivedRuleSequent("all monotone",
+  lazy val monallrule: DerivedRuleInfo = derivedRuleSequent("all monotone",
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
     implyRi()(-1,1) &
       useAt(allDistElim)(1) &
@@ -746,7 +746,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
       // use
-      byUS(monb) & hide(-1)
+      byUS(monbaxiom) & hide(-1)
       ,
       // show
       hide(1) & HilbertCalculus.boxTrue(1)
@@ -907,7 +907,7 @@ object Ax extends Logging {
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
   @ProofRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
-  lazy val monb: DerivedRuleInfo = derivedRuleSequent("[] monotone",
+  lazy val monbaxiom: DerivedRuleInfo = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
@@ -1195,7 +1195,7 @@ object Ax extends Logging {
   @Axiom(("¬[]","![]"), conclusion = "__¬[a]P__↔<a>¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notBox: DerivedAxiomInfo = derivedAxiom("![]",
-    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(||)) <-> (<a_;>!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(diamond)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1212,7 +1212,7 @@ object Ax extends Logging {
   @Axiom(("¬<>","!<>"), conclusion = "__¬<a>P__↔[a]¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notDiamond: DerivedAxiomInfo = derivedAxiom("!<>",
-    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(||)) <-> ([a_;]!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(box)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1581,7 +1581,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "boxSplitRight".
-    *    [a;](p(||)&q(||)) -> q(||)
+    *    [a;](p(||)&q(||)) -> [a;]q(||)
     * End.
     * }}}
     *
@@ -2191,7 +2191,7 @@ object Ax extends Logging {
     andL(-1) & useAt(IIinduction, PosInExpr(1::1::Nil))(1) <(
       close(-1,1)
       ,
-      hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+      hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
       )
   )
 
@@ -2238,7 +2238,7 @@ object Ax extends Logging {
       andR(1) <(
         HilbertCalculus.iterateb(-1) & andL(-1) & close(-1,1)
         ,
-        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
         ),
       useAt(IIinduction, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
       )
@@ -2958,7 +2958,7 @@ object Ax extends Logging {
       useAt(flipLess)(1, 1::0::1::Nil) &
         useAt(flipLess)(1, 1::1::1::Nil) &
         useAt(flipLess)(1, 0::1::1::0::Nil) &
-        HilbertCalculus.Derive.Dless(1, 0::1::1::1::Nil) &
+        Derive.Dless(1, 0::1::1::1::Nil) &
         useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
         useExpansionAt(Dgreater)(1, 0::1::1::1::Nil) &
         byUS(DIogreater)
@@ -3225,7 +3225,7 @@ object Ax extends Logging {
     */
   @Axiom("DCd", conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
     key = "1.0", recursor = "*")
-  lazy val DCd: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
+  lazy val DCdaxiom: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
@@ -3341,9 +3341,7 @@ object Ax extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
-      //@todo IDE why is the second argument necessary? It should be redundant?
-      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3356,7 +3354,7 @@ object Ax extends Logging {
           ProofRuleTactics.skolemizeR(1) & implyR(1),
           //3) finish up
           cohide(1) & CMon(PosInExpr(Nil)) &
-          byUS(existsGeneralizey,(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+          byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
@@ -3396,9 +3394,7 @@ object Ax extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        //@todo IDE why is the second argument not redundant and both lines equivalent?
-        //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
-        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3411,7 +3407,7 @@ object Ax extends Logging {
               ProofRuleTactics.skolemizeR(1) & implyR(1),
             //3) finish up
             cohide(1) & CMon(PosInExpr(Nil)) &
-              byUS(existsGeneralizey,(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+              byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
@@ -3579,7 +3575,7 @@ object Ax extends Logging {
   lazy val DvariableCommutedAxiom: DerivedAxiomInfo = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
     useAt(equalCommute)(1) &
-      byUS(Dvar)
+      byUS(DvarAxiom)
   )
 
   /**

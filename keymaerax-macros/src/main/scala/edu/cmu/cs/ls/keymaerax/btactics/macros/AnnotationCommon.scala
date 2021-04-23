@@ -19,11 +19,11 @@ object AnnotationCommon {
     } else {
       tpe.trim.toLowerCase match {
         case "variable" => VariableArg(name, allowFresh)
-        case "term" => new TermArg(name, allowFresh)
+        case "term" => TermArg(name, allowFresh)
         case "formula" => FormulaArg(name, allowFresh)
         case "number" => NumberArg(name, allowFresh)
         case "string" => StringArg(name, allowFresh)
-        case "expression" => new ExpressionArg(name, allowFresh)
+        case "expression" => ExpressionArg(name, allowFresh)
         case "substitution" => SubstitutionArg(name, allowFresh)
         case s => c.abort(c.enclosingPosition, "Unexpected type name: " + s + ", should be number, string, substitution, variable, term, formula, expression, list[t], or option[t]")
       }

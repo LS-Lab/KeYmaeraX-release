@@ -938,7 +938,7 @@ object DerivationInfoRegistry extends Logging {
       }})
     val fieldMirrors = fieldFields.map({case (x, y) => (x, im.reflectMethod(y))})
     val methodMirrors = methodFields.map({case (x, y) => (x, im.reflectMethod(y))})
-    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
+    val failures = mutable.Buffer.empty[(String,Throwable)]
     methodMirrors.indices.foreach(idx => {
       try {
         val (fn, fm) = methodMirrors(idx)
@@ -997,6 +997,7 @@ object DerivationInfoRegistry extends Logging {
       (ArithmeticSpeculativeSimplification.getClass, ru.typeOf[ArithmeticSpeculativeSimplification.type]),
       (ComponentSystem.getClass, ru.typeOf[ComponentSystem.type]),
       (DebuggingTactics.getClass, ru.typeOf[DebuggingTactics.type]),
+      (Derive.getClass, ru.typeOf[Derive.type]),
       (DifferentialEquationCalculus.getClass, ru.typeOf[btactics.DifferentialEquationCalculus.type]),
       (DifferentialTactics.getClass, ru.typeOf[DifferentialTactics.type]),
       (DLBySubst.getClass, ru.typeOf[DLBySubst.type]),

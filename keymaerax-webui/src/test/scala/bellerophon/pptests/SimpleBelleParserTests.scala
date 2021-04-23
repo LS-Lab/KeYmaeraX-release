@@ -334,6 +334,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2), andR(3))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2),
+        |  andR(3)
+        |)""".stripMargin
+
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2); <(andR(3), andR(4)), andR(5))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2) ; <(
+        |    andR(3),
+        |    andR(4)
+        |  ),
+        |  andR(5)
+        |)""".stripMargin
+  }
+
   it should "parse e <()" in {
     val result = BelleParser("andR(1) <()").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
@@ -341,18 +358,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq()
   }
 
-  it should "parse e <(e)" in {
-    val result = BelleParser("andR(1) <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
-  }
-
-  it should "parse e & <(e) as well" in {
-    val result = BelleParser("andR(1) & <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
+  it should "report an error on e <(e)" in {
+    the [ParseException] thrownBy BelleParser("andR(1) <(andR(1))") should
+      have message """1:9 Branch tactic has only a single child
+                     |Found:    <unknown> at 1:9
+                     |Expected: <unknown>""".stripMargin
   }
 
   it should "parse e & <(e,e)" in {
@@ -362,6 +372,63 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))
   }
 
+  it should "parse as case tactic when labels are present" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> andL(-2),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
+  it should "print as cases indented" in {
+    BellePrettyPrinter(BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": andL(-1),
+        |  "Step": andL(-2),
+        |  "Post": andL(-3)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""loop("x>=0",1); <("Init":cut("x>=0");<("Use":nil,"Show":nil), "Step":nil, "Post":nil)""")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": cut("x>=0") ; <(
+        |      "Use": nil,
+        |      "Show": nil
+        |    ),
+        |  "Step": nil,
+        |  "Post": nil
+        |)""".stripMargin
+  }
+
+  it should "parse as case tactic when labels are present on nested tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> (andL(-1) & orL(-1)),
+      BelleLabels.indStep -> (orL(-2) <(andL(-2), orR(2))),
+      BelleLabels.useCase -> (Using("x=2".asFormula::Nil, andL(-3)) | andR(3))
+    )
+  }
+
+  it should "parse nested case tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> orL(-2).switch("LHS".asLabel -> andL(-2), "RHS".asLabel -> orR(2)),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
+  it should "require case labels on all branches" in {
+    the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
+      have message """1:17 Not all branches have labels
+                     |Found:    <unknown> at 1:17
+                     |Expected: <unknown>""".stripMargin
+  }
 
 
   //endregion
@@ -582,6 +649,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "def tactic parser" should "parse a simple example" in {
     val tactic = BelleParser("tactic t as (assignb('R))")
     tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)))
+
+  }
+
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("tactic t as (assignb('R))")) shouldBe
+      """tactic t as (
+        |  assignb('R)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""tactic t as (cut("x>=0"); <(nil,nil))""")) shouldBe
+      """tactic t as (
+        |  cut("x>=0") ; <(
+        |    nil,
+        |    nil
+        |  )
+        |)""".stripMargin
   }
 
   it should "parse multipe tactic defs" in {
@@ -887,6 +969,20 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }
+  }
+
+  it should "allow escaped quotation marks in arguments" in {
+    BelleParser(""" useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
+      useLemmaX("Lemma 1", Some("dC(\"x>=0\",1)"))
+  }
+
+  it should "lex backslash followed by any character" in {
+    BelleParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR('R, "\\exists x x=0".asFormula)
+    BelleParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR('R, "\\forall x x^2>=0".asFormula)
+    the [ParseException] thrownBy BelleParser(""" hideR('R=="\x x^2=1") """) should
+      have message """1:1 Unexpected token cannot be parsed
+                     |Found:    \\ at 1:1 to 1:2
+                     |Expected: <BeginningOfExpression>""".stripMargin
   }
 
   //endregion

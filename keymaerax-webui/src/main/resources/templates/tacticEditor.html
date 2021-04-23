@@ -1,5 +1,10 @@
 <script type="text/ng-template" id="tacticPopover.html">
-    <kbd>Alt</kbd>-Click underlined text to execute <code>{{tacticExecPopover.tactic.text}}</code>
+    <p><kbd>Alt</kbd>-Click underlined text for atomic execution</p>
+    <p><kbd>Shift</kbd>-Click for step-by-step execution</p>
+    <p>
+        Tactic: <code>{{tacticExecPopover.tactic.text.substring(0,100)}}</code>
+        <code ng-if="tacticExecPopover.tactic.text.length > 100">...</code>
+    </p>
 </script>
 <div class="row k4-vertical-fill-flex">
     <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex"

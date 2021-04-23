@@ -123,6 +123,9 @@ object ParseException {
 
   def typeDeclError(msg: String, declaredType: String, expectedType: String, loc: Location, hint: String = ""): ParseException =
     typeException(msg, loc, declaredType, expectedType, hint=hint)
+
+  def duplicateSymbolError(n: String, i: Option[Int], loc: Location, other: Location): ParseException =
+    ParseException("Duplicate symbol '" + (n + i.map("_" + _).getOrElse("")) + "': already defined at " + other, loc, n + i.map("_" + _).getOrElse(""), "<unique name>")
 }
 
 object LexException {

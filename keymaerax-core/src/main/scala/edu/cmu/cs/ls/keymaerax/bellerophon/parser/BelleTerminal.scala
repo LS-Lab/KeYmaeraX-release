@@ -1,10 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator
-import edu.cmu.cs.ls.keymaerax.core.{And, Bool, Compose, Expression, Formula, FuncOf, Function, Nothing, Plus, PredOf, Program, ProgramConst, Real, SubstitutionPair, Term, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.parser.{LexException, Parser, UnknownLocation}
 
 import scala.util.matching.Regex
@@ -100,6 +98,8 @@ private object CLOSE_PAREN extends BelleTerminal(")") {
 }
 private object COMMA extends BelleTerminal(",")
 
+private object COLON extends BelleTerminal(":")
+
 private trait TACTIC_ARGUMENT
 
 // Positions
@@ -167,7 +167,10 @@ private object PARTIAL extends BelleTerminal("partial") {
 
 /** A tactic argument expression. We allow strings, terms, and formulas as arguments. */
 private abstract class BELLE_EXPRESSION(val exprString: String, val delimiters: (String, String)) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
-  lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2)
+  lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2).
+    // un-escape escaped delimiters
+    replaceAllLiterally("\\" + delimiters._1, delimiters._1).
+    replaceAllLiterally("\\" + delimiters._2, delimiters._2)
 
   override def regexp: Regex = BELLE_EXPRESSION.regexp
   override val startPattern: Regex = BELLE_EXPRESSION.startPattern
@@ -181,7 +184,6 @@ private abstract class BELLE_EXPRESSION(val exprString: String, val delimiters: 
 }
 
 private case class EXPRESSION(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL expression. May throw a parse exception. */
   def expression: Expression = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
@@ -191,7 +193,6 @@ private case class EXPRESSION(override val exprString: String, override val deli
 }
 
 private case class SUBSTITUTION_PAIR(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL substitution pair. May throw a parse exception. */
   def expression: SubstitutionPair = {
     import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -202,7 +203,6 @@ private case class SUBSTITUTION_PAIR(override val exprString: String, override v
 }
 
 private case class EXPRESSION_SUB(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
-
   /** Parses the `exprString` as dL expression and sub-position. May throw a parse exception. */
   def expression: (Expression, PosInExpr) = {
     assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
@@ -228,10 +228,11 @@ private case class EXPRESSION_SUB(override val exprString: String, override val 
 }
 
 private object BELLE_EXPRESSION {
-  def regexp: Regex = """(\{`[\s\S]*?`})|("[^"]*")""".r
+  def regexp: Regex = """(\{`[\s\S]*?`})|("(?:[^\\"]*(?:\\.)?)*")""".r // allows \" inside "..."
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 
   def apply(exprString: String, delimiters: (String, String)): BELLE_EXPRESSION = {
+    //@todo detect strings that are neither substitution pairs nor expressions (for now they're misclassified depending on content)
     if (exprString.contains("~>")) SUBSTITUTION_PAIR(exprString, delimiters)
     else if (exprString.contains("#")) EXPRESSION_SUB(exprString, delimiters)
     else EXPRESSION(exprString, delimiters)

@@ -10,6 +10,7 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
@@ -17,6 +18,7 @@ import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+import org.scalatest.OptionValues._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
 
@@ -285,7 +287,9 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
-    proveBy("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1)).subgoals should contain theSameElementsInOrderAs
+    proveByS("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.dIInit, BelleLabels.dIStep
+    ), USubst("a()~>a".asSubstitutionPair :: Nil)).subgoals should contain theSameElementsInOrderAs
       "x>=a()&a()>=0, true ==> x>=a()".asSequent ::
       "x>=a()&a()>=0, true ==> [x':=a();]x'>=0".asSequent :: Nil
   }

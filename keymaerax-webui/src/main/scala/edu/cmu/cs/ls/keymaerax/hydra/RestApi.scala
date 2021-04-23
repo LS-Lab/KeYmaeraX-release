@@ -431,13 +431,8 @@ object RestApi extends Logging {
         entity(as[String]) { x => {
           val obj = x.parseJson
           val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
-          val proofName = if (submittedProofName == "") {
-            val model = database.getModel(modelId)
-            model.name + ": Proof"
-          } else submittedProofName
           val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
-
-          val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
+          val request = new CreateProofRequest(database, userId, modelId, submittedProofName, proofDescription)
           completeRequest(request, t)
         }}
       }
