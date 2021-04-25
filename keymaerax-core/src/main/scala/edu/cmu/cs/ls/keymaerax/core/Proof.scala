@@ -793,6 +793,18 @@ object Provable {
   }
 
   /**
+    * Create a differential axiom for an arbitrary interpreted function symbol.
+    * Used by ImplicitDefinition stuff
+    */
+  def funcDiffAxiom(funcApp: FuncOf, diff: Term): Provable = {
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
+      Equal(
+        Differential(funcApp),
+        diff
+      ))), immutable.IndexedSeq())
+  }
+
+  /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
     *
     * @param conclusion the desired conclusion.

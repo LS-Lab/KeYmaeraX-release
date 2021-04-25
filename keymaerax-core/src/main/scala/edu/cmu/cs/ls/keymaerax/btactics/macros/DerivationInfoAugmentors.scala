@@ -66,6 +66,9 @@ object DerivationInfoAugmentors {
             case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
             case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
             case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
+            case diffai: DifferentialAxiomInfo => ElidingProvable(Provable.funcDiffAxiom(
+              diffai.funcOf.asInstanceOf[FuncOf],
+              diffai.diff.asInstanceOf[Term]))
           }
           pi.theProvable = Some(provable)
           provable

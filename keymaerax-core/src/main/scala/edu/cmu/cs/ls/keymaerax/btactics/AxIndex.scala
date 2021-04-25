@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, DerivationInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 
 import scala.annotation.switch
 
@@ -26,6 +26,14 @@ import scala.annotation.switch
   * @see [[TactixLibrary.sequentStepIndex]]
  */
 object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
+
+  /**
+    * PURELY EXPERIMENTAL HACK. DO NOT MERGE.
+    *
+    * Map of (implicit) functions to the relevant differential axiom for their definition
+    */
+  val implFuncDiffs: scala.collection.mutable.Map[Function, AxiomInfo] =
+    scala.collection.mutable.Map.empty
 
   /** lookup canonical axioms or tactics for an expression (index) */
   def apply(expr: Expression) = axiomsFor(expr)
@@ -76,6 +84,10 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
         case _: Divide => Ax.Dquotient :: Nil
         case _: Power => Ax.Dpower :: Nil
         case FuncOf(_, Nothing) => Ax.Dconst :: Nil
+        case FuncOf(f,_) => implFuncDiffs.get(f) match {
+          case Some(value) => value :: Nil
+          case None => Nil
+        }
         case _ => Nil
       }
 

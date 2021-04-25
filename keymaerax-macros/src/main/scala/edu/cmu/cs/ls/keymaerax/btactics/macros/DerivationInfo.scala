@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
-import scala.collection.immutable.HashMap
+import scala.collection.immutable.{HashMap, List, Nil}
 
 ////////////////////////////////////////////////////////////
 // Type structure for central registry of derivation steps
@@ -287,6 +287,14 @@ case class DerivedAxiomInfo(  override val canonicalName: String
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
+}
+
+case class DifferentialAxiomInfo(funcName: String, funcOf: Any, diff: Any, override val theRecursor: List[ExprPos]) extends AxiomInfo {
+  val unifier = 'surjlinear
+  val canonicalName = s"$funcName' implicitFn $funcName differential"
+  lazy val display = AxiomDisplayInfo(SimpleDisplayInfo(s"$funcName'",s"$funcName'"),"")
+  val codeName = s"$funcName' implicitFn $funcName differential"
+  val displayLevel = 'all
 }
 
 // axiomatic proof rules

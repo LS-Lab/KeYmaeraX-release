@@ -10,6 +10,9 @@ import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
+import edu.cmu.cs.ls.keymaerax.btactics.AxIndex
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
+import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.Signature
 
 import scala.collection.immutable._
 
@@ -236,6 +239,28 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     (sort ~ ident ~ ("," ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
       .rep.map(xs => Declaration(xs.flatten.map(x=>x._1->(None,x._2,None,None,UnknownLocation)).toMap))
     ~ "End." )
+
+  /** ImplicitDefinitions Real cos(Real x) ':= sin(x) * (x)'; Real sin(Real x) ':= -cos(x) * (x)'; End. */
+  def implicitDefs[_: P]: P[Declaration] = {
+    P("ImplicitDefinitions" ~~ blank ~/
+      (declPart ~ "':=" ~ term ~ ";")
+        .map{case ((fnName, fnNameNum), (Some(Real), Real, Some(vars), None, loc), diff) =>
+          AxIndex.implFuncDiffs( Function(fnName, fnNameNum, Real, Real) ) =
+            DifferentialAxiomInfo(
+              funcName = fnName,
+              funcOf = FuncOf(Function(fnName, fnNameNum, Real, Real),
+                              vars.map({case ((vnam,vidx),s) => Variable(vnam,vidx,s)})
+                                  .reduceRightOption(Pair).getOrElse(Nothing)),
+              diff = diff,
+              theRecursor = Nil
+            )
+          Declaration(Map(
+            (fnName, fnNameNum) -> (Some(Real), Real, Some(vars), None, loc)
+          ))
+        }
+      .rep.map(_.fold(Declaration(Map()))(_++_))
+    ~ "End."
+  )}
 
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
