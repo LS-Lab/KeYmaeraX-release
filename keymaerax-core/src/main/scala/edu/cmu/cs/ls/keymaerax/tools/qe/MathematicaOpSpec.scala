@@ -99,6 +99,9 @@ object MathematicaOpSpec {
   /** Mathematica function application f(args). */
   def apply(f: Expr): Seq[Expr] => Expr = (args: Seq[Expr]) => new Expr(f, args.toArray)
 
+  /** Mathematica compound expression `;`. */
+  def compoundExpr(f: Expr*): Expr = MathematicaOpSpec(symbol("CompoundExpression"))(f)
+
   //</editor-fold>
 
   //<editor-fold desc="Terms">
