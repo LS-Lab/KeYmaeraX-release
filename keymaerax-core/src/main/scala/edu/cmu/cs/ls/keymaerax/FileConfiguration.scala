@@ -73,6 +73,15 @@ object FileConfiguration extends Configuration {
   override def getBigInteger(key: String): Option[BigInt] = safeGet(key, config.getBigInteger)
   /** Returns the value of `key` as BigDecimal or None, if not present. */
   override def getBigDecimal(key: String): Option[BigDecimal] = safeGet(key, config.getBigDecimal)
+  /** @inheritdoc */
+  override def getList(key: String): List[String] = getString(key).map(_.split(",").toList).getOrElse(Nil)
+  /** @inheritdoc */
+  override def getMap(key: String): Map[String, String] = {
+    getList(key).map(entry => {
+      val k :: v :: Nil = entry.split("->").toList
+      k.trim -> v.trim.stripPrefix("->").trim
+    }).toMap
+  }
 
   /** Returns the configuration entry `key` as an absolute path with file separators. */
   override def path(key: String): String = {
