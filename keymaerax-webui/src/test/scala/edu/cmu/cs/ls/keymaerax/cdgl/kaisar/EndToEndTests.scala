@@ -453,7 +453,7 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(SharedModels.maybeBugs)
+    testExampleSet(SharedModels.thesisExamples)
     // disturbReachAvoiddurationODE  solAgain
     // .labelOldEq .demonicLoopConst    .inverseGhostODECircle
       /*switchLiteralArgAlternate forwardHypotheticalUnsolvable*/

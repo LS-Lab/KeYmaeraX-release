@@ -70,7 +70,13 @@ object SharedModels {
   val switchLiteralsProgram: String =
     "{{?(x <= 1); ?(x <= 2);} ++ {?(x >= 0);?(x + 1 > 0);}}^@"
 
-  val noteAnd: String =
+  val noteAndSquare: String =
+    """let square(z) = z * z;
+      |?left:(x < 0); ?right:(square(y) > 0);
+      |note both = andI(left, right);
+      |""".stripMargin
+
+  val noteAndFull: String =
     """?left:(x < 0);
       |?right:(y < 0);
       |note both = andI(left, right);
@@ -86,11 +92,17 @@ object SharedModels {
       |!allSquaresNonneg:(nonneg(square(y)));
       |""".stripMargin
 
+  val squareNonnegAlt: String =
+    """let squareX() = x*x;
+      |let nonnegX() <-> squareX() >= 0;
+      |!squareXNonneg:(nonnegX());
+      |""".stripMargin
+
   /** Carefully check speed. Should use simple prop proof, not slow QE */
   val propSkipsQE: String =
     """?a:(x = 0 -> y=1);
       |?b:(x = 0 & ((z - x*w^2/(w^2+1))^42 >= 6));
-      |!c: ( y=1) using a b by prop;
+      |!c:(y=1) using a b by prop;
       |""".stripMargin
 
   val annotatedAssign: String =
@@ -170,20 +182,21 @@ object SharedModels {
 
   val straightODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0)};
-      |!xFinal:(x <= 4) using dc x y by auto;
+      |{x' = 2, y' = -1 & ?dom:(y >= 0)};
+      |!xFinal:(x + y <= 4);
       |""".stripMargin
 
+  //  using dc x y by auto
   val assertODE: String =
     """x:= 0; y := 2;
-      |{x' = 2, y' = -1 & ?dc:(y >= 0) & !xEq:(x =  2*(2 - y))};
-      |!xFinal:(x >= 0) using xEq dc by auto;
+      |{x' = 2, y' = -1 & ?dom:(y >= 0) & !xEq:(x =  2*(2 - y))};
+      |!xFinal:(x >= 0) using xEq dom by auto;
       |""".stripMargin
 
   val justxSolODE: String =
     """?xInit:(x:=0); y:=2;
-      |{xSol: x' = 2, y' = 1 & ?dc:(y >= 0)};
-      |!xFinal:(x >= 0) using  xSol xInit by auto;
+      |{xSol: x' = 2, y' = 1 & ?dom:(y >= 0)};
+      |!xFinal:(x >= 0) using xInit xSol by auto;
       |""".stripMargin
 
   val inductODE: String =
@@ -242,7 +255,7 @@ object SharedModels {
       |  y := (1/x)^(1/2);
       |  !inv:(x*y^2 = 1) by auto;
       |++/
-      |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction}
+      |{x' = -x, /++ y' = y * (1/2) ++/ & !inv:(x*y^2 = 1) by induction};
       |!positive:(x > 0) using inv by auto;
       |""".stripMargin
 
@@ -340,8 +353,8 @@ object SharedModels {
     """x := 0;
       |y := x@mid;
       |init:
-      |     {{ x := x + 3; mid: x := x * x;}
-      |++ { x := 5;}}
+      |     { x := x + 3; mid: x := x * x;
+      |++  x := 5;}
       |""".stripMargin
 
   val outOfChoice: String =
@@ -513,10 +526,10 @@ object SharedModels {
       |""".stripMargin
 
   // @TODO: Check SB() vs SB parenthesis... hmm...
-  val forwardHypothetical: String =
-    """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x) & v >= 0);
+  val forwardHypothetical: String = // in safe: .. & v >= 0
+    """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x));
       |?init:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
-      |{{acc := *; ?env:(-B <= acc & acc <= A & safe()@ode(T));}
+      |{acc := *; ?env:(-B <= acc & acc <= A & (safe() & v >= 0)@ode(T));
       | t:= 0; {t' = 1, x' = v, v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
       |ode(t): !step:(safe()) using env init time vel ... by auto;
       |}*
@@ -534,20 +547,20 @@ object SharedModels {
   // @TODO: use less assumptions because I was just guessing at the end
   val sandboxExample: String =
     """let SB() = v^2/(2*B);
-      |let safe() <-> SB() <= (d-x) & v >= 0;
+      |let safe() <-> SB() <= (d-x);
       |?init:(T > 0 & A > 0 & B > 0);
       |?initSafe:(safe());
       |{
       |  accCand := *;
       |  let admiss() <-> -B <= accCand & accCand <= A;
-      |  let env()    <->  safe()@ode(T, accCand);
+      |  let env()    <->  (safe() & v >= 0)@ode(T, accCand);
       |  switch {
       |    case inEnv:(env()) =>
       |      ?theAcc:(acc := accCand);
-      |      !predictSafe:(safe()@ode(T, acc));
+      |      !predictSafe:((safe() & v >= 0)@ode(T, acc));
       |    case true =>
       |      ?theAcc:(acc := -B);
-      |      !predictSafe:(safe()@ode(min(T,v/B), acc));
+      |      !predictSafe:((safe() & v >= 0)@ode(min(T,v/B), acc));
       |  }
       |  t:= 0;
       |  {t' = 1, x' = v, v' = acc & ?time:(0 <= t & t <= T) & ?vel:(v >= 0)};
@@ -1597,13 +1610,43 @@ object SharedModels {
     discreteInverseGhostInsideForward
   )
 
-  val thesisExamples: List[String] = List(forwardHypotheticalUnsolvable,switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
-    propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld,  unwindBlock, basicForConv,
-    intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
-    switchLiteralArgAlternate, solAgainODE, inverseGhostODECircle, letEvalAtUse, demonicLoopConst, solAgainODE,
+  val thesisExtra: List[String] = List(
+    basicForConv,
+    basicReachAvoid,
+    letEvalAtUse, demonicLoopConst,
+    forwardHypotheticalUnsolvable,switchLiteralArg,  switchLiterals
+    , inverseGhostODE,  superfluousGhost
+  )
 
-    )
+  val thesisExamples: List[String] = List(
+    assertOnePos,
+    assertBranchesNonzero,
+    switchLiteralArgAlternate,
+    noteAndSquare,
+    squareNonneg,
+    squareNonnegAlt,
+    propSkipsQE,
+    annotatedAssign,
+    demonicLoop,
+    straightODE,
+    justxSolODE,
+    solAgainODE,
+    inductODE,
+    inductODEBC,
+    durationODE,
+    ghostAssert,
+    ghostAssign,
+    ghostODE,
+    inverseGhostODECircle,
+    labelInit,
+    labelOld,
+    unwindBlock,
+    intoChoice,
+    outOfChoice,
+    forwardHypothetical,
+    printSolution,
+    sandboxExample,
+    revisedReachAvoidFor)
 
   val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)
 
