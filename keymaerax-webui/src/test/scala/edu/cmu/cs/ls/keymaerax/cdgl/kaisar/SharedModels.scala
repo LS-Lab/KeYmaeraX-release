@@ -193,9 +193,9 @@ object SharedModels {
 
   val solAgainODE: String =
     """?xInit:(x := 2); y := 0;
-      |{y' = 1, xSol: x' = -2 & ?dc:(x >= 0) & !xSolAgain:(x = 2*(1 - y))};
+      |{y' = 1, xSol: x' = -2 & ?dom:(x >= 0) & !xSolAgain:(x = 2*(1 - y))};
       |!xHi:(x <= 2) using xInit xSol by auto;
-      |!xLo:(x >= 0) using dc by auto;
+      |!xLo:(x >= 0) using dom by auto;
       |""".stripMargin
 
   val inductODEBC: String =
@@ -212,7 +212,7 @@ object SharedModels {
       |  & !vSol: (v = t * acc) by solution
       |  & !xSol:(x = acc*(t^2)/2) by induction
       |  & ?dur:(t := T)};
-      |!finalV:(x = acc*(t^2)/2) using dur xSol by auto;
+      |!finalV:(x = acc*(T^2)/2) using dur xSol by auto;
       |""".stripMargin
 
   val ghostAssert: String =
@@ -266,6 +266,36 @@ object SharedModels {
       |{x' = y, y' = -1,  z'=1}
       |""".stripMargin
 
+  // Correctly rejected
+  val ghostBothWays: String =
+    """x:=0;  y:=0; /++?foo:(z:=0);++/
+      |{x' = 1, /-- y'=1 --/, /++ z'=1 ++/
+      |& !inv:(x=y);};
+      |!atEnd:(x=y);
+      |""".stripMargin
+
+  val discreteInverseGhostInsideForward: String =
+    """/++ /-- x:= 0; --/ ++/
+      |
+      |""".stripMargin
+
+  val discreteForwardGhostInsideInverse: String =
+    """/-- /++ x:= 0; ++/ --/
+      |
+      |""".stripMargin
+
+  val odeInverseGhostInsideForward: String =
+    """/++y:=0;++/
+      |{x'=1, /++ /-- y'=0 --/ ++/};
+      |
+      |""".stripMargin
+
+  val odeForwardGhostInsideInverse: String =
+    """{x'=1, /-- /++ y'=0 ++/ --/};
+      |
+      |""".stripMargin
+
+
   val superfluousGhost: String =
     """x:=0; /-- y := 25; z := -10; --/
       |{x' = 3}
@@ -287,8 +317,8 @@ object SharedModels {
       |""".stripMargin
 
   val labelOldEq: String =
-    """x:=0; y:=0; old:
-      |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old)};
+    """?xInit:(x:=0); y:=0; old:
+      |{x' = 1, y' = -1 & !greater:(x+y = (x+y)@old) using xInit ... by auto};
     |""".stripMargin
 
   //@TODO: Reveals terrible bug in solution expression that doesn't account for nonzero initial values?
@@ -412,7 +442,7 @@ object SharedModels {
       |  vel := (d - x)/T;
       |  t := 0;
       |  {t' = 1, x' = vel & ?time:(t <= T)};
-      |  !safe:(x <= d) using conv guard vel time by auto;
+      |  !safe:(x <= d) using time ... by auto;
       |  ?high:(t >= T/2);
       |  !prog:(pos + eps/2 <= (x - x@init)) using high ... by auto;
       |  note step = andI(prog, safe);
@@ -1558,12 +1588,21 @@ object SharedModels {
   val rssExamples: List[String] = List(/*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
     robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/)
 
-  val thesisExamples: List[String] = List(switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
+  val knownFeatureRequests: List[String] = List(labelOldEq)
+  val knownBugs: List[String] = List(labelOldestEq)
+  val maybeBugs: List[String] = List(
+    odeForwardGhostInsideInverse,
+    odeInverseGhostInsideForward,
+    discreteForwardGhostInsideInverse,
+    discreteInverseGhostInsideForward
+  )
+
+  val thesisExamples: List[String] = List(forwardHypotheticalUnsolvable,switchLiteralArg, justxSolODE, assertOnePos, assertBranchesNonzero, switchLiterals, noteAnd, squareNonneg,
     propSkipsQE, annotatedAssign, demonicLoop, straightODE, inductODE, inductODEBC, durationODE, ghostAssert,
-    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld, labelOldEq, unwindBlock, basicForConv,
+    ghostAssign, ghostODE, inverseGhostODE,  superfluousGhost, labelInit, labelOld,  unwindBlock, basicForConv,
     intoChoice, outOfChoice, printSolution, forwardHypothetical, sandboxExample, basicReachAvoid,
     switchLiteralArgAlternate, solAgainODE, inverseGhostODECircle, letEvalAtUse, demonicLoopConst, solAgainODE,
-    labelOldestEq, forwardHypotheticalUnsolvable
+
     )
 
   val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)
