@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.immutable._
@@ -55,16 +55,23 @@ protected object FOQuantifierTactics {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
+      def ax[T <: ProvableInfo](vars: Seq[Variable], base: T, prime: T): T = {
+        if (vars.forall({ case _: DifferentialSymbol => false case _ => true })) base
+        else if (vars.forall({ case _: DifferentialSymbol => true case _ => false })) prime
+        else throw new TacticRequirementError("No mixed variables/differential symbols in block quantifiers")
+      }
+
       sequent.at(pos) match {
         case (_, Forall(vars, _)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
-          useAt(Ax.alle)(pos)
+          useAt(ax(vars, Ax.alle, Ax.alleprime))(pos)
         case (_, Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
-          StaticSemantics.symbols(qf).intersect(vars.map(DifferentialSymbol).toSet).isEmpty &&
+          StaticSemantics.symbols(qf).intersect(vars.filter({ case _: DifferentialSymbol => false case _ => true }).map(DifferentialSymbol).toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
           //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
-          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1,  (uso: Option[Subst]) => uso match {
+          val axiom = ax(vars, Ax.allInst, Ax.allInstPrime)
+          useAt(axiom, AxIndex.axiomIndex(axiom)._1,  (uso: Option[Subst]) => uso match {
             case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil)
             case None => throw new IllFormedTacticApplicationException("Expected a partial substitution, but got None")
           })(pos)
@@ -87,7 +94,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
           SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
-            cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
+            cohide('Rlast) & CMon(pos.inExpr) & byUS(ax(vars, Ax.allInst, Ax.allInstPrime)) & done
             )
         case (_, f@Forall(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)

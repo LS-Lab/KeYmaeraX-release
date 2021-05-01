@@ -220,6 +220,17 @@ class FOQuantifierTests extends TacticTestBase {
       loneElement shouldBe "(f(x))'=g(y) ==>".asSequent
   }
 
+  it should "instantiate differential symbols" in withTactics {
+    proveBy("\\forall x' x'>=0 ==> y'>=0".asSequent, allL("y'".asTerm)(-1)).subgoals.
+      loneElement shouldBe "y'>=0 ==> y'>=0".asSequent
+  }
+
+  it should "FEATURE_REQUEST: instantiate differential symbol assignments" taggedAs TodoTest in withTactics {
+    //@todo requires [x_':=x_']P and more importantly, uniform renaming of x_' to x' for applying the stutter axiom
+    proveBy("\\forall y' [y':=y'+1;]y'>0 ==>".asSequent, allInstantiate(Some("y'".asVariable), Some("z+1".asTerm))(-1)).
+      subgoals.loneElement shouldBe "[y':=z+1+1;]y'>0 ==> ".asSequent
+  }
+
   "existsR" should "instantiate simple formula" in withTactics {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
