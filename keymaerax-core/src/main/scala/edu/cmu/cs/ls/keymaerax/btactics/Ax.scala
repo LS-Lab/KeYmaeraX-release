@@ -355,6 +355,9 @@ object Ax extends Logging {
   @Axiom("[:=]", conclusion = "__[x':=c]p(x')__↔p(c)",
     key = "0", recursor = "*", unifier = "full")
   val Dassignb: CoreAxiomInfo = coreAxiom("[':=] differential assign")
+  @Axiom("[:=]=", conclusion = "__[x':=e]P__↔∀x'(x'=e→P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*", unifier = "surjlinearpretend")
+  val Dassignbeq: CoreAxiomInfo = coreAxiom("[':=] assign equality")
   @Axiom("[:*]", conclusion = "__[x:=*]P__↔∀x P", displayLevel = "all",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val randomb: CoreAxiomInfo = coreAxiom("[:*] assign nondet")
@@ -536,6 +539,9 @@ object Ax extends Logging {
   @Axiom(("∀e", "alle"), conclusion = "__∀x P__ → P",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alle: CoreAxiomInfo = coreAxiom("all eliminate")
+  @Axiom(("∀e'", "allep"), conclusion = "__∀x' P__ → P",
+    key = "0", recursor = "*", unifier = "surjlinear")
+  val alleprime: CoreAxiomInfo = coreAxiom("all eliminate prime")
 
 
   //***************
@@ -795,6 +801,27 @@ object Ax extends Logging {
     //    \forall x (x=f -> p(x)) -> p(f)
     //   -------------------------------- CMon(p(x) -> (x=f->p(x)))
     //   \forall x p(x) -> p(f)
+  )
+
+  @Axiom(("∀inst'","allInstPrime"), conclusion = "__∀x' p(x')__ → p(f())", key = "0", recursor = "*")
+  lazy val allInstPrime: DerivedAxiomInfo = derivedFormula("all instantiate prime",
+    "(\\forall x_' p(x_')) -> p(f())".asFormula,
+    cutR("(\\forall x_' (x_'=f()->p(x_'))) -> p(f())".asFormula)(1) <(
+      useAt(Dassignbeq, PosInExpr(1::Nil))(1, 0::Nil) &
+        useAt(Dassignb)(1, 0::Nil) &
+        implyR(1) & close(-1,1)
+      ,
+      CMon(PosInExpr(0::0::Nil)) &
+        implyR(1) & implyR(1) & close(-1,1)
+    )
+    //      ------------refl
+    //      p(f) -> p(f)
+    //      ------------------ [':=]
+    //    [x':=f]p(x') -> p(f)
+    //   --------------------------------[':=]=
+    //    \forall x' (x'=f -> p(x')) -> p(f)
+    //   -------------------------------- CMon(p(x') -> (x'=f->p(x')))
+    //   \forall x' p(x') -> p(f)
   )
 
   /**
