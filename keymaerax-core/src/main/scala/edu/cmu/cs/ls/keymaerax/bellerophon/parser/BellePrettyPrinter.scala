@@ -103,7 +103,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case LabelBranch(BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, label), None, _)) => LabelBranch(BelleTopLevelLabel(label)).prettyString
         case l: LabelBranch => l.prettyString
         case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
-        case Using(es, t) => pp(t, indent) + " using \"" + es.mkString(" :: ") + (if (es.isEmpty) "" else " :: ") + "nil\""
+        case Using(es, t) => "(" + pp(t, indent) + ") using \"" + es.mkString(" :: ") + (if (es.isEmpty) "" else " :: ") + "nil\""
         case _ => throw PrinterException(s"Do not know how to pretty-print $e")
       }
     }
