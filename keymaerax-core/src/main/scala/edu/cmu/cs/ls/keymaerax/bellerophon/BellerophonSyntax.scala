@@ -169,7 +169,7 @@ case class TryCatch[T <: Throwable](t: BelleExpr, cCatch: Class[T], c: T => Bell
 /** Positive mention of expressions `es` to use when executing tactic `t`. */
 case class Using(es: List[Expression], t: BelleExpr) extends BelleExpr {
   override def prettyString: String =
-    if (es.nonEmpty) t.prettyString + " using \"" + es.map(_.prettyString).mkString("::") + "::nil\""
+    if (es.nonEmpty) "(" + t.prettyString + ") using \"" + es.map(_.prettyString).mkString("::") + "::nil\""
     else t.prettyString
 }
 
