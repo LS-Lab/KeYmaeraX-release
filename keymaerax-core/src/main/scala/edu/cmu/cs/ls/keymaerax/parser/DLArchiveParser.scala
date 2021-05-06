@@ -137,19 +137,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
-    (definitions.? ~ programVariables.?).
-      map({case (a,b) => optjoin(a,b).getOrElse(Declaration(Map.empty))})
+    NoCut((programVariables | definitions | implicitDefs).rep).map(_.reduce(_++_))
   )
-
-  private def optjoin(a: Option[Declaration], b: Option[Declaration]): Option[Declaration] = a match {
-    case None => b
-    case Some(d) => b match {
-      case None => a
-        //@todo complain about conflicting declarations
-      case Some(e) => Some(d++e)
-    }
-  }
 
   /** `Description "text".` parsed. */
   def description[_: P]: P[String] = P("Description" ~~ blank~/ string ~ "." )
@@ -206,16 +195,18 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   /** `sort name(sort1 arg1, sorg2 arg2)` single declaration part.*/
   //type Signature = (Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)
   def declPart[_: P]: P[(Name,Signature)] = P(
+    /* TODO: check that handling of arguments is right */
     sort ~~ blank ~~/ ident ~~ (
       ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
         map(xs =>
-          (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
-            //@todo ,xs.reduceRightOption(namedArgs)
-            )
+          ( xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+          , xs.zipWithIndex.foldRight(Nil: List[(Name,Sort)]){case (((sort, name),i),acc) =>
+              (name.getOrElse(("_default",Some(i))), sort) :: acc}
+          )
         )
       //| "".!.map(_ => (core.Unit,Some(Nil)))
     )
-  ).map({case (ty,n,args) => (n, (Some(args), ty, /*@todo names and sorts of arguments */ Some(Nil), None, UnknownLocation))})
+  ).map({case (ty,n,args) => (n, (Some(args._1), ty, Some(args._2), None, UnknownLocation))})
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
   def declPartList[_: P]: P[List[(Name,Signature)]] = P(
@@ -244,18 +235,19 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def implicitDefs[_: P]: P[Declaration] = {
     P("ImplicitDefinitions" ~~ blank ~/
       (declPart ~ "':=" ~ term ~ ";")
-        .map{case ((fnName, fnNameNum), (Some(Real), Real, Some(vars), None, loc), diff) =>
-          AxIndex.implFuncDiffs( Function(fnName, fnNameNum, Real, Real) ) =
+        .map{case ((fnName, fnNameNum), sig @ (Some(argSort), Real, Some(vars), None, loc), diff) =>
+          val func = Function(fnName, fnNameNum, argSort, Real)
+          AxIndex.implFuncDiffs(func) =
             DifferentialAxiomInfo(
               funcName = fnName,
-              funcOf = FuncOf(Function(fnName, fnNameNum, Real, Real),
+              funcOf = FuncOf(func,
                               vars.map({case ((vnam,vidx),s) => Variable(vnam,vidx,s)})
                                   .reduceRightOption(Pair).getOrElse(Nothing)),
               diff = diff,
               theRecursor = Nil
             )
           Declaration(Map(
-            (fnName, fnNameNum) -> (Some(Real), Real, Some(vars), None, loc)
+            (fnName, fnNameNum) -> sig
           ))
         }
       .rep.map(_.fold(Declaration(Map()))(_++_))

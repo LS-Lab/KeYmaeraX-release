@@ -173,6 +173,53 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
+  it should "parse implicit function definition" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ImplicitDefinitions Real cos(Real x) ':= sin(x) * (x)'; Real sin(Real x) ':= -cos(x) * (x)'; End.
+        | ProgramVariables Real y; End.
+        | Problem (sin(y))^2 + (cos(y))^2 = 1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("cos", None) -> (Some(Real), Real, Some(List((("x",None),Real))), None, UnknownLocation),
+        ("sin", None) -> (Some(Real), Real, Some(List((("x",None),Real))), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "(sin(y))^2 + (cos(y))^2 = 1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
+  it should "parse implicit function multi-variate definitions" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ImplicitDefinitions Real saddle(Real x, Real y) ':= (x*x - y*y)'; End.
+        | ProgramVariables Real x; End.
+        | Problem saddle(0,0) = 0 -> saddle(x,0) = x*x End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("saddle", None) -> (Some(Tuple(Real,Real)), Real, Some(List((("x",None),Real), (("y",None),Real))), None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
+      )))
+    entry.model shouldBe "saddle(0,0) = 0 -> saddle(x,0) = x*x".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
   it should "parse simple nullary predicate definition" in {
     val input =
       """
