@@ -358,6 +358,8 @@ object Ax extends Logging {
   @Axiom("[:=]=", conclusion = "__[x':=e]P__↔∀x'(x'=e→P)", displayLevel = "all",
     key = "0", recursor = "0.1;*", unifier = "surjlinearpretend")
   val Dassignbeq: CoreAxiomInfo = coreAxiom("[':=] assign equality")
+  @Axiom("[':=]", conclusion = "__[x':=x']P__↔P")
+  val Dselfassignb: CoreAxiomInfo = coreAxiom("[':=] self assign")
   @Axiom("[:*]", conclusion = "__[x:=*]P__↔∀x P", displayLevel = "all",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val randomb: CoreAxiomInfo = coreAxiom("[:*] assign nondet")
@@ -535,6 +537,9 @@ object Ax extends Logging {
   @Axiom(("∀d", "alld"), conclusion = "__¬∃x ¬P__ ↔ ∀x P", displayLevel = "all",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alld: CoreAxiomInfo = coreAxiom("all dual")
+  @Axiom(("∀'d", "allPd"), conclusion = "__¬∃x' ¬P__ ↔ ∀x' P", displayLevel = "all",
+    key = "0", recursor = "*", unifier = "surjlinear")
+  val allPd: CoreAxiomInfo = coreAxiom("all prime dual")
   /** all eliminate */
   @Axiom(("∀e", "alle"), conclusion = "__∀x P__ → P",
     key = "0", recursor = "*", unifier = "surjlinear")
@@ -1168,6 +1173,15 @@ object Ax extends Logging {
       byUS(equivReflexive)
   )
 
+  @Axiom(("∃'d","existsprimed"), key = "0", recursor = "*")
+  lazy val existsPDual: DerivedAxiomInfo = derivedAxiom("exists prime dual",
+    Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_' (!p_(||))) <-> \\exists x_' p_(||)".asFormula)),
+    useAt(allPd, PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegation)(1, 0::Nil) &
+      useAt(doubleNegation)(1, 0::0::Nil) &
+      byUS(equivReflexive)
+  )
+
   @Axiom(("∃d","existsdy"), displayLevel = "internal")
   lazy val existsDualy: DerivedAxiomInfo = derivedAxiom("exists dual y",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
@@ -1647,6 +1661,14 @@ object Ax extends Logging {
     //      byUS(equivReflexiveAxiom)
   )
 
+  @Axiom("':=D")
+  lazy val DassignDual2: DerivedAxiomInfo = derivedFormula("':= assign dual 2",
+    "<x_':=f();>p(||) <-> [x_':=f();]p(||)".asFormula,
+    useAt(Dselfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &
+      useAt(DassigndAxiom)(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
   /**
     * {{{Axiom "<:=> assign equality".
     *    <x:=f();>p(||) <-> \exists x (x=f() & p(||))
@@ -1668,6 +1690,18 @@ object Ax extends Logging {
       byUS(assignbeq)
   )
 
+  @Axiom("<':=>", conclusion = "__<x':=e>P__↔∃x'(x'=e∧P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*")
+  lazy val DassigndEqualityAxiom: DerivedAxiomInfo = derivedAxiom("<':=> assign equality",
+    Sequent(IndexedSeq(), IndexedSeq("<x_':=f_();>p_(||) <-> \\exists x_' (x_'=f_() & p_(||))".asFormula)),
+    useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(existsPDual, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(notAnd)(1, 1::0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      CE(PosInExpr(0::Nil)) &
+      byUS(Dassignbeq)
+  )
+
   /**
     * {{{Axiom "[:=] assign equality exists".
     *   [x:=f();]p(||) <-> \exists x (x=f() & p(||))
@@ -1686,6 +1720,12 @@ object Ax extends Logging {
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
     //        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
+
+  @Axiom(("[':=]", "[':=] assign exists"))
+  lazy val Dassignbequalityexists: DerivedAxiomInfo = derivedFormula("[':=] assign equality exists",
+    "[x_':=f();]p(||) <-> \\exists x_' (x_'=f() & p(||))".asFormula,
+    useAt(DassignDual2, PosInExpr(1::Nil))(1, 0::Nil) & byUS(DassigndEqualityAxiom)
   )
 
   /**
@@ -1780,6 +1820,16 @@ object Ax extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(assignbAxiom)(1, 0::0::Nil) &
+      useAt(doubleNegation)(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
+  @Axiom("<':=>", conclusion ="__&langle;x':=e&rangle;p(x')__↔p(e)",
+    key = "0", recursor = "*", unifier = "full")
+  lazy val DassigndAxiom: DerivedAxiomInfo = derivedAxiom("<':=> assign",
+    Sequent(IndexedSeq(), IndexedSeq("<x_':=f();>p(x_') <-> p(f())".asFormula)),
+    useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(Dassignb)(1, 0::0::Nil) &
       useAt(doubleNegation)(1, 0::Nil) &
       byUS(equivReflexive)
   )
