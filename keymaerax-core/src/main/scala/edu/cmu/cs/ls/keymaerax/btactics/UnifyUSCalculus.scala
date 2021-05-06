@@ -1698,7 +1698,7 @@ trait UnifyUSCalculus {
               case _ => us
             }) ++ RenUSubst(vars.head match {
                 case _: BaseVariable => Seq((Variable("x_"), vars.head))
-                case _: DifferentialSymbol => Seq((DifferentialSymbol(Variable("x_")), vars.head))
+                case DifferentialSymbol(v) => Seq((Variable("x_"), v))
                 case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
               }
             )
