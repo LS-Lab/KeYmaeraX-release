@@ -23,7 +23,11 @@ protected object FOQuantifierTactics {
     TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Exists(vars, _)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
-        useAt(Ax.existsDual, PosInExpr(1::Nil))(pos) &
+        val dual = vars.head match {
+          case _: BaseVariable => Ax.existsDual
+          case _: DifferentialSymbol => Ax.existsPDual
+        }
+        useAt(dual, PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos.top) & base('Rlast) & notR('Rlast) else notR(pos.top) & base('Llast) & notL('Llast)
           } else base(pos++PosInExpr(0::Nil)) & useAt(Ax.doubleNegation)(pos))
@@ -203,7 +207,8 @@ protected object FOQuantifierTactics {
           map(_.prettyString).mkString(",")
         throw new UnexpandedDefinitionsFailure("Skolemization not possible because formula " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
       }
-      if (StaticSemantics.freeVars(p).symbols.intersect(xs.toSet.map(x => DifferentialSymbol(x)).map(_.asInstanceOf[Variable])).nonEmpty) {
+      //@todo bound renaming of x' not supported
+      if (StaticSemantics.freeVars(p).symbols.intersect(xs.map(DifferentialSymbol).toSet[Variable]).nonEmpty) {
         //@note bound renaming at pos not allowed, so rename everywhere else with stuttering and bound renaming
         val np = namePairs.toMap
         val stutter = xs.map(DLBySubst.stutter)

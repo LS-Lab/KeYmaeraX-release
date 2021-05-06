@@ -225,10 +225,14 @@ class FOQuantifierTests extends TacticTestBase {
       loneElement shouldBe "y'>=0 ==> y'>=0".asSequent
   }
 
-  it should "FEATURE_REQUEST: instantiate differential symbol assignments" taggedAs TodoTest in withTactics {
-    //@todo requires [x_':=x_']P and more importantly, uniform renaming of x_' to x' for applying the stutter axiom
+  it should "instantiate differential symbol assignments" in withTactics {
     proveBy("\\forall y' [y':=y'+1;]y'>0 ==>".asSequent, allInstantiate(Some("y'".asVariable), Some("z+1".asTerm))(-1)).
-      subgoals.loneElement shouldBe "[y':=z+1+1;]y'>0 ==> ".asSequent
+      subgoals.loneElement shouldBe "y'=z+1, [y':=y'+1;]y'>0 ==> ".asSequent
+  }
+
+  it should "FEATURE_REQUEST: instantiate differential symbol assignments when renaming is required" taggedAs TodoTest in withTactics {
+    proveBy("y'=4, \\forall y' [y':=y'+1;]y'>0 ==>".asSequent, allInstantiate(Some("y'".asVariable), Some("z+1".asTerm))(-2)).
+      subgoals.loneElement shouldBe "y_0'=4, y'=z+1, [y':=y'+1;]y'>0 ==> ".asSequent
   }
 
   "existsR" should "instantiate simple formula" in withTactics {
