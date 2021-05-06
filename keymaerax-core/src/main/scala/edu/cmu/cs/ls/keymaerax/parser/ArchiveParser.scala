@@ -363,6 +363,7 @@ object ArchiveParser extends ArchiveParser {
   def declarationsOf(parsedContent: Expression, filter: Option[Set[NamedSymbol]] = None): Declaration = {
     def makeArgsList(args: Term): List[(Name, Sort)] = args match {
       case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
+      case FuncOf(n, _) => List(Name(n.name, n.index) -> n.sort)
       case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
     }
 
