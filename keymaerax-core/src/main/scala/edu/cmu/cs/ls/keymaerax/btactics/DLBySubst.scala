@@ -138,7 +138,10 @@ private object DLBySubst {
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
         cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS(Ax.selfassignb.provable(URename("x_".asVariable, x, semantic=true))) & done
+          (x match {
+            case v: BaseVariable => byUS(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic=true)))
+            case DifferentialSymbol(v) => byUS(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic=true)))
+          })
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -236,9 +239,15 @@ private object DLBySubst {
     // [x:=f(x)]P(x)
     case Some(Box(Assign(x, _), p)) =>
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      val rename =
-        if (universal) Ax.assignbeq.provable(URename("x_".asVariable, x, semantic=true))
-        else Ax.assignbequalityexists.provable(URename("x_".asVariable, x, semantic=true))
+      val rename = x match {
+        case v: BaseVariable =>
+          if (universal) Ax.assignbeq.provable(URename("x_".asVariable, v, semantic=true))
+          else Ax.assignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
+        case DifferentialSymbol(v) =>
+          if (universal) Ax.Dassignbeq.provable(URename("x_".asVariable, v, semantic=true))
+          else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
+      }
+
 
       if (StaticSemantics.freeVars(p).isInfinite) {
         val unexpandedSymbols = StaticSemantics.symbols(p).
@@ -247,7 +256,7 @@ private object DLBySubst {
         throw new UnexpandedDefinitionsFailure("Assignment not possible because postcondition " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
       }
 
-      if (StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+      if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
         // bound renaming not possible when
         useAt(rename)(pos) &
           (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
@@ -255,11 +264,19 @@ private object DLBySubst {
           else ident)
       } else {
         //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-        val y = TacticHelper.freshNamedSymbol(x, sequent)
-        ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
-          (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-          else ident)
+        x match {
+          case _: BaseVariable =>
+            val y = TacticHelper.freshNamedSymbol(x, sequent)
+            ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
+              (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+              else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+              else ident)
+          case _: DifferentialSymbol => useAt(rename)(pos) &
+            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+            else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+            else ident)
+        }
+
       }
     case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
