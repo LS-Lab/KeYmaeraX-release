@@ -241,6 +241,15 @@ object FormulaTools extends Logging {
     positions
   }
 
+  def posOfTerm(term: Term, cond: Term=>Boolean): List[PosInExpr] = {
+    var positions: List[PosInExpr] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+        if (cond(t)) { positions = p :: positions; Left(None) } else Left(None)
+    }, term)
+    positions
+  }
+
   /** Finds the closest parent to `pos` in `formula` that is a formula. */
   @tailrec
   def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr =

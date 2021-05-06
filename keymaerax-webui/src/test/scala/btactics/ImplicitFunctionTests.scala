@@ -5,33 +5,27 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{Axiom, AxiomDisplayInfo, AxiomInfo, DifferentialAxiomInfo, DisplayInfo, SimpleDisplayInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
+import edu.cmu.cs.ls.keymaerax.btactics.{AxIndex, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.DLArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
-import org.scalatest.LoneElement._
-import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
+import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-import scala.reflect.io.File
 
 /**
  * Tests for implicit function definitions & the involved substitutions.
  * @author James Gallicchio
  */
 class ImplicitFunctionTests extends TacticTestBase {
+  private val parser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
 
+  private def parse (input: String) = parser.parse(input).loneElement
 
   """
   Axiom "exp' derive exp"
@@ -44,6 +38,8 @@ class ImplicitFunctionTests extends TacticTestBase {
   ----
   \forall x \exists e exp(e,x)
   """
+
+  "throwaway" should "fail" in withMathematica { _ =>  }
 
   "chase" should "use registered implicit differentials" in withMathematica { _ =>
     val exp = "e(x)".asTerm.asInstanceOf[FuncOf]
@@ -62,16 +58,49 @@ class ImplicitFunctionTests extends TacticTestBase {
     proof shouldBe 'proved
   }
 
+  "DLparser" should "parse & register implicit function definitions" in withMathematica { _ =>
+    val input =
+      """ArchiveEntry "entry1"
+        | ProgramVariables Real y; End.
+        | ImplicitDefinitions
+        |  Real exp(Real x) ':= exp(x) * (x)';
+        | End.
+        | Problem [y':=1;](exp(y))' = exp(y)*y' End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+    val fml = prog.model.asInstanceOf[Formula]
+    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+  }
+
   "examples" should "allow arithmetic over implicit functions" in withMathematica { _ =>
-    val arith1 = "exp(x) > 1".asFormula
-    val arith2 = "sin(x)^2 + cos(x)^2 = 1".asFormula
+    val input =
+      """ArchiveEntry "entry1"
+        | ProgramVariables Real y; End.
+        | ImplicitDefinitions
+        |  Real sin(Real x) ':= cos(x) * (x)';
+        |  Real cos(Real x) ':= -sin(x) * (x)';
+        | End.
+        | Problem sin(y)^2 + cos(y)^2 = 1 -> [{y'=1}] sin(y)^2 + cos(y)^2 = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+    val fml = prog.model.asInstanceOf[Formula]
 
-    val pr1 = proveBy(arith1, skip)
-    val pr2 = proveBy(arith2, skip)
-    // Ideally: prove by QE
+    val proof = proveBy(fml, implyR(1) & dI()(1))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+  }
 
-    println(pr1)
-    println(pr2)
+  it should "prove exp always positive" in withMathematica { _ =>
+    // Assumes exp already in the map (hack)
+    val fml = "exp(x) > 0 -> [{x'=1}] exp(x) > 0".asFormula
+
+    val proof = proveBy(fml, implyR(1))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
   }
 
   it should "work under assignments and nesting" in withMathematica { _ =>
@@ -79,7 +108,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove by ODE(1), dI('full)(1), etc.
 
-    println(pr)
+    //println(pr)
   }
 
   it should "be usable as a loop invariant" in withMathematica { _ =>
@@ -87,7 +116,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove using loop with loop invariants like x>=0 or exp(x)>=1
 
-    println(pr)
+    //println(pr)
   }
 
   it should "work with DI (1)" in withMathematica { _ =>
@@ -95,7 +124,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove by dI('full)(1), etc.
 
-    println(pr)
+    //println(pr)
   }
 
   it should "work with DI (2)" in withMathematica { _ =>
@@ -103,7 +132,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove by dI('full)(1), etc.
 
-    println(pr)
+    //println(pr)
   }
 
   it should "work with DI (3)" in withMathematica { _ =>
@@ -111,7 +140,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // Ideally: prove by dI('full)(1), etc.
 
-    println(pr)
+    //println(pr)
   }
 
   it should "prove an exponential solution" in withMathematica { _ =>
@@ -119,7 +148,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // may be provable using ODE(1) or dbx
 
-    println(pr)
+    //println(pr)
   }
 
   it should "prove a trig solution" in withMathematica { _ =>
@@ -127,7 +156,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // may be provable using ODE(1) or dbx
 
-    println(pr)
+    //println(pr)
   }
 
   it should "model a pendulum" in withMathematica { _ =>
@@ -135,7 +164,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val pr = proveBy(fml, skip)
     // end goal: prove something like this or more
 
-    println(pr)
+    //println(pr)
   }
 
 }

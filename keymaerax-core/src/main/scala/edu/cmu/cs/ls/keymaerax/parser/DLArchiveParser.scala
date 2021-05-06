@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
 import edu.cmu.cs.ls.keymaerax.btactics.AxIndex
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.Signature
 
 import scala.collection.immutable._
@@ -244,7 +245,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
                               vars.map({case ((vnam,vidx),s) => Variable(vnam,vidx,s)})
                                   .reduceRightOption(Pair).getOrElse(Nothing)),
               diff = diff,
-              theRecursor = Nil
+              theRecursor = FormulaTools.posOfTerm(diff, _.isInstanceOf[Differential]).map(_.pos)
             )
           Declaration(Map(
             (fnName, fnNameNum) -> sig
