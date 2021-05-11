@@ -500,11 +500,8 @@ object SharedModels {
       |!(d >= 0 & d <= (V+1)*eps);
       |""".stripMargin
 
-  val disturbReachAvoid:String =
+  val pldiReachAvoidDisturbance:String =
     """
-      |pragma option "time=true";
-      |pragma option "trace=true";
-      |pragma option "debugArith=true";
       |let inv(pos) <-> (d >= 0 & (d@init - d) >= pos);
       |let liveFactor() = 4;
       |let liveIncr() = V*eps/(4*liveFactor()*liveFactor());
@@ -514,8 +511,9 @@ object SharedModels {
       | ?guard:(pos <= d@init & d >= V*eps); pos := pos + liveIncr()) {
       |body:
       |   v:=V;
-      |   disturb:=*; ?dstrb:(0.5 <= disturb & disturb <= 1.0); ?vd:(v:=v*disturb);
-      |   {t:=0; { d'=-v, t'=1 & ?(t <= eps) & !(d >= v*(eps-t)) using dstrb ... by auto;
+      |   c:=*; ?dstrb:(0.5 <= c & c <= 1.0); ?vd:(v:=v*c);
+      |   {t:=0; { d'=-v, t'=1 & ?(t <= eps) & !(d >= v*(eps-t))
+      |     using dstrb ... by auto;
       |    & !(d <= d@body - v*t/liveFactor()) using dstrb ... by auto};}
       | ?(t >= eps/liveFactor());
       | !(inv(pos + liveIncr())) using dstrb vd ... by auto;
@@ -528,10 +526,10 @@ object SharedModels {
   // @TODO: Check SB() vs SB parenthesis... hmm...
   val forwardHypothetical: String = // in safe: .. & v >= 0
     """let SB() = v^2/(2*B); let safe() <-> (SB() <= (d-x));
-      |?init:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
+      |?bnds:(T > 0 & A > 0 & B > 0); ?initSafe:(safe());
       |{acc := *; ?env:(-B <= acc & acc <= A & (safe() & v >= 0)@ode(T));
       | t:= 0; {t' = 1, x' = v, v' = acc & ?time:(t <= T) & ?vel:(v >= 0)};
-      |ode(t): !step:(safe()) using env init time vel ... by auto;
+      |ode(t): !step:(safe()) using env bnds time vel ... by auto;
       |}*
       |""".stripMargin
 
@@ -548,7 +546,7 @@ object SharedModels {
   val sandboxExample: String =
     """let SB() = v^2/(2*B);
       |let safe() <-> SB() <= (d-x);
-      |?init:(T > 0 & A > 0 & B > 0);
+      |?bnds:(T > 0 & A > 0 & B > 0);
       |?initSafe:(safe());
       |{
       |  accCand := *;
@@ -565,22 +563,19 @@ object SharedModels {
       |  t:= 0;
       |  {t' = 1, x' = v, v' = acc & ?time:(0 <= t & t <= T) & ?vel:(v >= 0)};
       |ode(t, acc):
-      |  !step:(safe()) using predictSafe init initSafe time vel ... by auto;
+      |  !step:(safe()) using predictSafe bnds initSafe time vel ... by auto;
       |}*
       |""".stripMargin
 
   val pldiModelSafeFull: String =
     """
-      |pragma option "time=true";
-      |pragma option "trace=true";
-      |pragma option "debugArith=true";
       | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
       | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
       | !(inv());
       | {
       |  {?(d >= eps*V); v:=*; ?(0<=v & v<=V); ++ v:=0;}
       |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps)};}
-      |  !brk:(inv());
+      |  !(inv());
       | }*
       | !(d >= 0);
       |""".stripMargin
@@ -665,6 +660,60 @@ object SharedModels {
       |   !(inv());
       | }*
       |""".stripMargin
+
+  val pldiAngelicSandbox: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | !(inv());
+      | {
+      |  vCand :=*;
+      |  switch {
+      |    case (d>=eps*V & 0 <=vCand & vCand <= V) => v:=vCand;
+      |    case (true) => v:=0;
+      |  }
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps); & !(d >= v*(eps-t));};}
+      |  !(inv());
+      | }*
+      | !(d >= 0);
+      |""".stripMargin
+
+  val pldiTimedAngelicControl: String =
+    """
+      | let inv() <-> (d>=v*(eps-t) & t>=0 & t<=eps & 0<=v&v<=V);
+      | ?(d >= 0 & V >= 0 & eps >= 0 & v=0 & t=0);
+      | for (time := 0; !(inv()); ?(time <= 10000); time := (time + 600);) {
+      |  switch {
+      |    case (d>=eps*V) => v:=V; ?(0<=v&v<=V);
+      |    case (true) => v:=0;
+      |  }
+      |  {t := 0; {d' = -v, t' = 1 & ?(t <= eps); & !(d >= v*(eps-t));};}
+      |  !(inv());
+      | }
+      | !(d >= 0);
+      |""".stripMargin
+
+  val pldiReachAvoid: String =
+    """
+      |let inv(pos) <-> (d >= 0 & (d@init - d) >= pos);
+      |let liveFactor() = 4;
+      |let liveIncr() = V*eps/(liveFactor()*liveFactor());
+      |?(d >= 0 & V > 0 & eps > 0 & v=0 & t=0);
+      |init:
+      |for (pos := 0; !conv:(d >= 0 & (d@init - d) >= pos);
+      | ?guard:(pos <= d@init & d >= V*eps); pos := pos + liveIncr()) {
+      |body:
+      |   v:=V;
+      |   {t:=0; { d'=-v, t'=1 & ?(t <= eps) & !(d >= v*(eps-t))
+      |    & !(d <= d@body - v*t/liveFactor())};}
+      | ?(t >= eps/liveFactor());
+      | !(inv(pos + liveIncr()));
+      |}
+      |!(pos >= d@init - eps | d <= V*eps + eps) by guard(eps);
+      |!(d >= 0 & d <= (V+1)*eps);
+      |""".stripMargin
+
+
 
   /** @TODO:Discuss whether we should just cheat and use classical arithmetic.
     *       Original proof also should have been broken but it already contained a soundness issue: current reduction of abs/max is only
@@ -840,28 +889,41 @@ object SharedModels {
       |let bounds() <-> A >= 0 & b > 0 & T > 0;
       |let norm(x, y) = (x^2 + y^2)^(1/2);
       |let dist(xl, yl, xr, yr) = norm (xl - xr, yl - yr);
-      |let initialState() <-> (v = 0 & dist(x,y,xo,yo) > 1 & norm(dx, dy) = 1);
-      |let infdistGr(x1, y1, x2, y2, z) <-> (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
+      |let initialState() <->
+      |  (v = 0 & dist(x,y,xo,yo) > 1 & norm(dx, dy) = 1);
+      |let infdistGr(x1, y1, x2, y2, z) <->
+      |  (x1-x2 > z | x2 - x1 > z | y1 - y2 > z | y2 - y1 > z);
       |/* Disjuncts of infdistGr predicate, useful in case analysis */
       |let goal() <-> (dist(x,y,xo,yo) > 0);
       |?(bnds, st):(bounds() & initialState());
-      |/* Prove infdist > 0 in base case by case-analyzing x,y and using assumption on euclidean distance > 1*/
+      |/* Prove infdist > 0 in base case by case-analyzing x,y and
+      |   using assumption on euclidean distance > 1*/
       |!splitX:(x-xo >= 0.25 | x-xo <= 0.35) by exhaustion;
       |!splitXO:(xo-x >= 0.25 | xo-x <= 0.35) by exhaustion;
       |!splitY:(y-yo >= 0.25 | y-yo <= 0.35) by exhaustion;
-      |!sd:(infdistGr(x, y, xo, yo, stopDist(v))) using splitX splitXO splitY bnds st by auto;
+      |!sd:(infdistGr(x, y, xo, yo, stopDist(v)))
+      |  using splitX splitXO splitY bnds st by auto;
       |/* Base case invariant */
-      |!(vSign, dxyNorm, safeDist):(v >= 0 & norm(dx, dy) = 1 & infdistGr(x, y, xo, yo, stopDist(v))) using bnds st sd by auto;
+      |!(vSign, dxyNorm, safeDist):
+      |  (  v >= 0
+      |   & norm(dx, dy) = 1
+      |   & infdistGr(x, y, xo, yo, stopDist(v)))
+      |   using bnds st sd by auto;
       |{body:
       |  {
       |    {
-      |     let monCond() <-> ((a = -b | (a = 0 & v = 0)) & infdistGr(x, y, xo, yo,  stopDist(v)) | a = A & infdistGr(x, y, xo, yo,  admissibleSeparation(v,A)));
+      |     let monCond() <->
+      |       ( (a = -b
+      |       | (a = 0 & v = 0)) & infdistGr(x, y, xo, yo,  stopDist(v))
+      |       | a = A & infdistGr(x, y, xo, yo,  admissibleSeparation(v,A)));
       |      { {  {?aB:(a := -b);
       |           xo := xo; yo := yo;
-      |           !admiss:(monCond()) using safeDist vSign bnds aB by auto; }
+      |           !admiss:(monCond())
+      |             using safeDist vSign bnds aB by auto; }
       |        ++ {?vZ:(v = 0); ?aZ:(a := 0); w := 0;
       |           xo := xo; yo := yo;
-      |           !admiss:(monCond()) using safeDist vSign bnds aZ vZ by auto; }
+      |           !admiss:(monCond())
+      |             using safeDist vSign bnds aZ vZ by auto; }
       |        ++ {?aA:(a := A); w := *; ?(-W<=w & w<=W);
       |            r := *;
       |            xo := *; yo := *;
@@ -872,14 +934,19 @@ object SharedModels {
       |        ?tZ:(t := 0);
       |        { x' = v * dx, y' = v * dy, v' = a,
       |          dx' = -w * dy, dy' = w * dx, w' = a/r,
-      |          t' = 1 & ?dom:(t <= T & v >= 0);
+      |          t' = 1 & ?dom:(t <= T & v >= 0)
       |         & !tSign:(t >= 0) using tZ by induction
       |         & !dir:(norm(dx, dy) =  1) using dxyNorm by induction
       |         & !vSol:(v = v@body + a*t) using tZ by induction
-      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body & x - x@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction
-      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body & y - y@body <= t * (v@body + a/2*t)) using bnds vSol dir tSign dom tZ by induction
+      |         & !xBound:(-t * (v@body + a/2*t) <= x - x@body
+      |             & x - x@body <= t * (v@body + a/2*t))
+      |             using bnds vSol dir tSign dom tZ by induction
+      |         & !yBound:(-t * (v@body + a/2*t) <= y - y@body
+      |            & y - y@body <= t * (v@body + a/2*t))
+      |            using bnds vSol dir tSign dom tZ by induction
       |        };
-      |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v))) using admiss xBound yBound vSol dom bnds tSign by auto;
+      |        !infInd:(infdistGr(x,y,xo,yo, stopDist(v)))
+      |        using admiss xBound yBound vSol dom bnds tSign by auto;
       |      }
       |    }
       |  }
@@ -1601,6 +1668,504 @@ object SharedModels {
   val rssExamples: List[String] = List(/*robixRefinedObstacle,robixRefinedObstacle, robixDynamicWindowFriendly,
     robixSensorUncertainty, robixRefinedObstacle, robixActuatorUncertainty*/)
 
+
+  val ralWaypointSafety: String =
+    """
+      |let sq(x) = (x*x);
+      |let onUpperHalfPlane(x, y) <-> (y > 0);
+      |let circle(x, y, k) = (k*(sq(x)+sq(y)) - 2*x);
+      |let isAnnulus(k) <-> (abs(k)*eps <= 1);
+      |let onAnnulus(x, y, k) <-> (
+      |                    (k*sq(eps) - 2*eps) < circle(x,y,k)
+      |  & circle(x,y,k) < (k*sq(eps) + 2*eps));
+      |let isIvl(vl, vh) <-> (0 <= vl & vl < vh);
+      |let loCSG(vl, vh) <-> (A * T <=  (vh - vl));
+      |let hiCSG(vl, vh) <-> (B * T <=  (vh - vl));
+      |let controllableSpeedGoal(vl, vh) <-> (
+      |  isIvl(vl, vh) &
+      |  loCSG(vl, vh) &
+      |  hiCSG(vl, vh));
+      |let controllableGoalDist(v1, v2, a, xg, yg, k) <-> (
+      |    v1 <= v2 |
+      |    (xg>=0&k>=0 &
+      |     ((1 + 2*eps*  k + sq(eps*k)) * (sq(v1)-sq(v2)) <= (2*a) *
+      |     (yg-eps) |
+      |      (1 + 2*eps*k + sq(eps*k)) * (sq(v1)-sq(v2)) <= (2*a) * (xg-eps))
+      |   | xg<=0&k<=0 &
+      |     ((1 + 2*eps*(-k) + sq(eps*k)) * (sq(v1)-sq(v2)) <= (2*a) *
+      |     (yg-eps) |
+      |      (1 + 2*eps*(-k) + sq(eps*k)) * (sq(v1)-sq(v2)) <= (2*a) *
+      |      (-xg-eps))));
+      |let J(xg, yg, k, v, vl, vh) <-> (
+      |  v >= 0 &
+      |  isAnnulus(k) &
+      |  onAnnulus(xg,yg,k) &
+      |  controllableSpeedGoal(vl,vh) &
+      |  controllableGoalDist(v,vh,B,xg,yg,k) &
+      |  controllableGoalDist(vl,v,A,xg,yg,k));
+      |let admRange(a) <-> (-B <= a & a <= A);
+      |let admBrake(v,a) <-> (v + a*T >= 0);
+      |let negBounds(xg,yg,v,vl,vh,a,k) <->
+      |   ((xg<=0&k<=0) &
+      |     ((vl <= v & vl <= v+a*T
+      |     |  (1 + 2*eps*(-k) + sq(eps*k)) * (A*(2*v*T+a*sq(T)) + (sq(vl) -
+      |     sq(v+a*T))) <= (2*A) * (-xg-eps)
+      |     |  (1 + 2*eps*(-k) + sq(eps*k)) * (A*(2*v*T+a*sq(T)) + (sq(vl) -
+      |     sq(v+a*T))) <= (2*A) * (yg-eps))
+      |   & (v <= vh & v+a*T <= vh
+      |     | (1 + 2*eps*(-k) + sq(eps*k)) * (B*(2*v*T+a*sq(T)) + (sq(v+a*T)
+      |     - sq(vh))) <= (2*B) * (-xg-eps)
+      |     | (1 + 2*eps*(-k) + sq(eps*k)) * (B*(2*v*T+a*sq(T)) + (sq(v+a*T)
+      |     - sq(vh))) <= (2*B) * (yg-eps))));
+      |let posBounds(xg,yg,v,vl,vh,a,k) <->
+      |   ((xg>=0&k>=0) &
+      |     (( vl <= v & vl <= v+a*T
+      |     | (1 + 2*eps*(k) + sq(eps*k)) * (A*(2*v*T+a*sq(T)) + (sq(vl) - sq
+      |     (v+a*T))) <= (2*A) * (xg-eps)
+      |     | (1 + 2*eps*(k) + sq(eps*k)) * (A*(2*v*T+a*sq(T)) + (sq(vl) - sq
+      |     (v+a*T))) <= (2*A) * (yg-eps))
+      |   & (v <= vh & v+a*T <= vh
+      |     | (1 + 2*eps*(k) + sq(eps*k)) * (B*(2*v*T+a*sq(T)) + (sq(v+a*T)
+      |     - sq(vh))) <= (2*B) * (xg-eps)
+      |     | (1 + 2*eps*(k) + sq(eps*k)) * (B*(2*v*T+a*sq(T)) + (sq(v+a*T)
+      |     - sq(vh))) <= (2*B) * (yg-eps))));
+      |let anyBounds(xg,yg,v,vl,vh,a,k) <-> (vl <= v & v+a*T >= vl & v <= vh
+      |& v+a*T <= vh);
+      |let admBounds(xg,yg,v,vl,vh,a,k) <-> (
+      |   negBounds(xg,yg,v,vl,vh,a,k)
+      | | posBounds(xg,yg,v,vl,vh,a,k)
+      | | anyBounds(xg,yg,v,vl,vh,a,k));
+      |let admissibleAcc(xg, yg, v, vl, vh, a, k) <-> (
+      |  admRange(a) &
+      |  admBrake(v,a) &
+      |  admBounds(xg,yg,v,vl,vh,a,k));
+      |?(const, bc):((T > 0 & eps > 0 & A > 0 & B > 0) & J(xg,yg,k,v,vl,vh));
+      |!constA:(T > 0 & eps > 0 & A > 0) using const by prop;
+      |!constB:(T > 0 & eps > 0 & B > 0) using const by prop;
+      |!inv:(J(xg, yg, k, v, vl, vh));
+      |{body:
+      | !ihV:(v >= 0) using inv by prop;
+      | !ihCgdL:(controllableGoalDist(vl,v,A,xg,yg,k)) using inv by prop;
+      | !ihCgdU:(controllableGoalDist(v,vh,B,xg,yg,k)) using inv by prop;
+      | {xg:=*;yg:=*;vl:=*;vh:=*;k:=*;a:=*;
+      |  ?dir:(xg>=0&k>=0|xg<=0&k<=0);
+      |  ?(uhp, isAnn, onAnn, csgIvl, csgLo, csgHi):
+      |   (onUpperHalfPlane(xg,yg) &
+      |    isAnnulus(k) &
+      |    onAnnulus(xg,yg,k) &
+      |    isIvl(vl, vh) &
+      |    loCSG(vl, vh) &
+      |    hiCSG(vl, vh));
+      |  note csg = andI(csgIvl, andI(csgLo, csgHi));
+      |  adm:
+      |  ?(accLo, accHi, noBrake, admBounds):(-B <= a & a <= A & admBrake
+      |  (v,a) & admBounds(xg,yg,v,vl,vh,a,k));
+      |  note accRange = andI(accLo, accHi);
+      |  ?accSgn:(a <= 0 | a >= 0);}
+      | switch (admBounds) {
+      | case kAnyAdm:(anyBounds(xg,yg,v,vl,vh,a,k)) =>
+      |   print("CASE sgn(k) irrelevant");
+      |   switch (accSgn) {
+      |     case accNeg:(a<=0) =>
+      |      print("subcase a<=0");
+      |       t:=0;
+      |       { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |       & ?dom:(v >= 0 & t <= T);
+      |       & !tPos:(t>=0);
+      |       & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |       using isAnn onAnn by induction;
+      |       & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |       using isAnn onAnn by induction;
+      |       & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |       & !vLoInd:(v + a*(T-t) >= vl)
+      |using  accSgn  kAnyAdm dLo dHi dom tPos vBound const by induction;
+      |       & !vHiInd:(v + a*(T-t) <= vh)
+      |using  accSgn  kAnyAdm dLo dHi dom tPos vBound const by induction;
+      |       & !vDec:(v <= v@adm) using accNeg by induction;
+      |       & !vDecSlo:(v >= v@adm + a*t) using accNeg by induction;};
+      |       ?xgSgnC:(xg<=0);
+      |       !indVPos:(v >= 0) using dom by auto;
+      |       !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |       !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |       print("After ODE, CASE sgn(k), irrelevant, a <= 0");
+      |       !indCGDHBndA:(v <= vh)
+      |using vDec vHiInd kAnyAdm dom tPos accRange by auto;
+      |       !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |       using indCGDHBndA by auto;
+      |       !indCGDLBndA:(vl <= v)
+      |using vDec vDecSlo vLoInd kAnyAdm dom tPos accRange csg by auto;
+      |       !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |       using indCGDLBndA by auto;
+      |       !indCSG:(controllableSpeedGoal(vl,vh)) using vDec csg by auto;
+      |       note indStepA = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |       indOnAnn), indCSG), indCGDH), indCGDL);
+      |       !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepA by auto;
+      |     case accPos:(a>=0) =>
+      |       print("subcase a>=0");
+      |       t:=0;
+      |       { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |       & ?dom:(v >= 0 & t <= T);
+      |       & !tPos:(t>=0);
+      |       & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |       using isAnn onAnn by induction;
+      |       & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |       using isAnn onAnn by induction;
+      |       & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |       & !vLoInd:(v + a*(T-t) >= vl)
+      |using  accSgn  kAnyAdm dLo dHi dom tPos vBound const by induction;
+      |       & !vHiInd:(v + a*(T-t) <= vh)
+      |using  accSgn  kAnyAdm dLo dHi dom tPos vBound const by induction;
+      |       & !vInc:(v >= v@adm) using accPos by induction;
+      |       & !vIncSlo:(v <= v@adm + a*t) using accPos by induction;};
+      |       ?xgSgnC:(xg<=0);
+      |       !indVPos:(v >= 0) using dom by auto;
+      |       !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |       !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |       print("After ODE, CASE sgn(k), irrelevant, a >= 0");
+      |       !indCGDHBndA:(v <= vh)
+      |       using vInc vIncSlo vHiInd kAnyAdm dom tPos accRange by auto;
+      |       !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |       using indCGDHBndA by auto;
+      |       !indCGDLBndA:(vl <= v)
+      |       using vInc vLoInd kAnyAdm dom tPos accRange csg by auto;
+      |       !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |       using indCGDLBndA by auto;
+      |       !indCSG:(controllableSpeedGoal(vl,vh))
+      |       using vInc vIncSlo csg by auto;
+      |       note indStepA = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |       indOnAnn), indCSG), indCGDH), indCGDL);
+      |       !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepA by auto;}
+      | case kNegAdm:(negBounds(xg,yg,v,vl,vh,a,k)) =>
+      |   note kSgn = andEL(kNegAdm);
+      |   note admL = andEL(andER(kNegAdm));
+      |   note admH = andER(andER(kNegAdm));
+      |   switch (accSgn) {
+      |     case accNeg:(a<=0) =>
+      |        print("CASE k<=0,a<=0");
+      |        t := 0;
+      |        { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |        & ?dom:(v >= 0 & t <= T);
+      |        & !tPos:(t>=0) by induction;
+      |        & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |	using isAnn onAnn by induction;
+      |        & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |	using isAnn onAnn by induction;
+      |        & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |        & !bigL:(((a<=0&vl<=v+a*(T-t))
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*((-xg)-eps)))
+      |          using constA dom tPos dLo dHi vBound accHi noBrake csgIvl
+      |	  csgHi uhp isAnn onAnn accSgn kSgn admL accNeg by induction;
+      |        & !bigH:(((a<=0&v<=vh)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(v+a*(T-t))-sq(vh)))<=2*B*((-xg)-eps)))
+      |using constB dom tPos dLo dHi vBound accRange noBrake csgIvl csgLo
+      |uhp isAnn onAnn accSgn kSgn admH accNeg by induction;};
+      |        ?xgSgnC:(xg<=0);
+      |        !indVPos:(v >= 0) using dom by auto;
+      |        !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |        !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |        print("After ODE, CASE k<=0,a<=0");
+      |        switch(bigL) {
+      |          case loA:((a<=0&vl<=v+a*(T-t))) =>
+      |            print("loA<<");
+      |            !lem:(vl <= v) using loA accNeg dom tPos by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case loB:((1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t))
+      |	  )+(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)) =>
+      |            print("loB<<");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (yg-eps))
+      |              using const csgLo accRange vBound dom loB by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case loC:((1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*
+      |	  (sq(T-t)))+(sq(vl)-sq(v+a*(T-t))))<=2*A*((-xg)-eps)) =>
+      |            print("loC<<");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (-xg-eps))
+      |              using const csgLo accRange vBound  dom  loC by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |        }
+      |        switch(bigH) {
+      |          case hiA:((a<=0&v<=vh)) =>
+      |            print("hiA<<");
+      |            !lem:(v <= vh) using hiA by prop;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case hiB:((1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t))
+      |	  )+(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)) =>
+      |            print("hiB<<");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (yg-eps))
+      |              using const csgHi accRange vBound dom  hiB by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case hiC:((1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t))
+      |	  )+(sq(v+a*(T-t))-sq(vh)))<=2*B*((-xg)-eps)) =>
+      |            print("hiC<<");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (-xg-eps))
+      |              using const csgHi accRange vBound dom hiC by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        !indCSG:(controllableSpeedGoal(vl,vh)) using csg by auto;
+      |        note indStepC = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |	indOnAnn), indCSG), indCGDH), indCGDL);
+      |        !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepC by auto;
+      |     case accPos:(a>=0) =>
+      |        print("CASE k<=0,a>=0");
+      |        t := 0;
+      |        { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |        & ?dom:(v >= 0 & t <= T);
+      |        & !tPos:(t>=0) by induction;
+      |        & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |	using isAnn onAnn by induction;
+      |        & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |	using isAnn onAnn by induction;
+      |        & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |        & !bigL:(((a>=0&v>=vl)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*((-xg)-eps)))
+      |using constA dom tPos dLo dHi vBound accHi noBrake csgIvl csgHi uhp
+      |isAnn onAnn accSgn kSgn admL accPos by induction;
+      |        & !bigH:(((a>=0&v+a*(T-t)<=vh)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)
+      |                  |(1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(v+a*(T-t))-sq(vh)))<=2*B*((-xg)-eps)))
+      |using constB dom tPos dLo dHi vBound accRange noBrake csgIvl csgLo
+      |uhp isAnn onAnn accSgn kSgn admH accPos by induction;};
+      |        ?xgSgnC:(xg<=0);
+      |        !indVPos:(v >= 0) using dom by auto;
+      |        !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |        !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |        print("After ODE, CASE k<=0,a>=0");
+      |        switch(bigL) {
+      |          case loA:(a>=0& v>= vl) =>
+      |            print("loA<>");
+      |            !lem:(vl <= v) using loA by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case loB:((1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)
+      |	  ))+(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)) =>
+      |            print("loB<>");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (yg-eps))
+      |              using constA csgLo accRange vBound  dom  loB by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case loC:((1+2*eps*(-k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)
+      |	  ))+(sq(vl)-sq(v+a*(T-t))))<=2*A*((-xg)-eps)) =>
+      |            print("loC<>");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (-xg-eps))
+      |              using constA csgLo accRange vBound  dom  loC by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        switch(bigH) {
+      |          case hiA:(a>=0&v+a*(T-t)<=vh) =>
+      |            print("hiA<>");
+      |            !lem:(v <= vh)
+      |            using hiA accPos dom tPos by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case hiB:((1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t))
+      |	  )+(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)) =>
+      |            print("hiB<>");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (yg-eps))
+      |              using constB csgHi accRange vBound dom  hiB by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case hiC:((1+2*eps*(-k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t))
+      |	  )+(sq(v+a*(T-t))-sq(vh)))<=2*B*((-xg)-eps)) =>
+      |            print("hiC");
+      |            !lem:((1 + 2*eps*(-k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (-xg-eps))
+      |              using constB csgHi accRange vBound dom hiC by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        !indCSG:(controllableSpeedGoal(vl,vh)) using csg by auto;
+      |        note indStepC = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |	indOnAnn), indCSG), indCGDH), indCGDL);
+      |        !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepC by auto;}
+      | case kPosAdm:(posBounds(xg,yg,v,vl,vh,a,k)) =>
+      |   note kSgn = andEL(kPosAdm);
+      |   note admL = andEL(andER(kPosAdm));
+      |   note admH = andER(andER(kPosAdm));
+      |   switch (accSgn) {
+      |     case accNeg:(a<=0) =>
+      |        print("CASE k>=0,a<=0");
+      |        t := 0;
+      |        { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |        & ?dom:(v >= 0 & t <= T);
+      |        & !tPos:(t>=0) by induction;
+      |        & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |	using isAnn onAnn by induction;
+      |        & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |	using isAnn onAnn by induction;
+      |        & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |        & !bigL:(((a<=0&vl<=v+a*(T-t))
+      |                  |(1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |		  +(sq(vl)-sq(v+a*(T-t))))<=2*A*((xg)-eps)))
+      |          using constA dom tPos dLo dHi vBound accHi noBrake csgIvl
+      |	  csgHi uhp isAnn onAnn accSgn kSgn admL accNeg by induction;
+      |        & !bigH:(((a<=0&v<=vh)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(v+a*(T-t))-sq(vh)))<=2*B*((xg)-eps)))
+      |          using constB dom tPos dLo dHi vBound accRange noBrake csgIvl
+      |csgLo uhp isAnn onAnn accSgn kSgn admH accNeg by induction;};
+      |        ?xgSgnC:(xg>=0);
+      |        !indVPos:(v >= 0) using dom by auto;
+      |        !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |        !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |        print("After ODE, CASE k>=0,a<=0");
+      |        switch(bigL) {
+      |          case loA:((a<=0&vl<=v+a*(T-t))) =>
+      |            print("loA><");
+      |            !lem:(vl <= v) using loA accNeg dom tPos by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case loB:((1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)) =>
+      |            print("loB><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (yg-eps))
+      |              using constA csgLo accRange vBound  dom  loB by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case loC:((1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(vl)-sq(v+a*(T-t))))<=2*A*((xg)-eps)) =>
+      |            print("loC><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (xg-eps))
+      |              using constA csgLo accRange vBound  dom  loC by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        switch(bigH) {
+      |          case hiA:((a<=0&v<=vh)) =>
+      |            print("hiA<<");
+      |            !lem:(v <= vh) using hiA by prop;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case hiB:((1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)) =>
+      |            print("hiB<<");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (yg-eps))
+      |              using constB csgHi accRange vBound dom  hiB by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case hiC:((1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(v+a*(T-t))-sq(vh)))<=2*B*((xg)-eps)) =>
+      |            print("hiC<<");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(v)-sq(vh)) <=
+      |	    (2*B) * (xg-eps))
+      |              using constB csgHi accRange vBound dom hiC by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        !indCSG:(controllableSpeedGoal(vl,vh)) using csg by auto;
+      |        note indStepC = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |	indOnAnn), indCSG), indCGDH), indCGDL);
+      |        !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepC by auto;
+      |     case accPos:(a>=0) =>
+      |        print("CASE k>=0,a>=0");
+      |        t := 0;
+      |        { xg'=-v*k*yg, yg'=v*(k*xg-1), v'=a, t'=1
+      |        & ?dom:(v >= 0 & t <= T);
+      |        & !tPos:(t>=0) by induction;
+      |        & !dLo:((k*(eps*eps)-2*eps) < k*(sq(xg)+sq(yg))-2*xg)
+      |	using isAnn onAnn by induction;
+      |        & !dHi:(k*(xg*xg+yg*yg)-2*xg < (k*sq(eps)+2*eps))
+      |	using isAnn onAnn by induction;
+      |        & !vBound:(v+a*(T-t)>=0) using tPos noBrake by induction;
+      |        & !bigL:(((a>=0&v>=vl)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(vl)-sq(v+a*(T-t))))<=2*A*((xg)-eps)))
+      |          using constA dom tPos dLo dHi vBound accHi noBrake csgIvl
+      |	  csgHi uhp isAnn onAnn accSgn kSgn admL accPos by induction;
+      |        & !bigH:(((a>=0&v+a*(T-t)<=vh)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)
+      |                  |(1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))+
+      |		  (sq(v+a*(T-t))-sq(vh)))<=2*B*((xg)-eps)))
+      |          using constB dom tPos dLo dHi vBound accRange noBrake
+      |csgIvl csgLo uhp isAnn onAnn accSgn kSgn admH accPos by induction;};
+      |        ?xgSgnC:(xg>=0);
+      |        !indVPos:(v >= 0) using dom by auto;
+      |        !indIsAnn:(isAnnulus(k)) using isAnn by auto;
+      |        !indOnAnn:(onAnnulus(xg,yg,k)) using onAnn dLo dHi by auto;
+      |        print("After ODE, CASE k<=0,a<=0");
+      |        switch(bigL) {
+      |          case loA:(a>=0&v>=vl) =>
+      |            print("loA><");
+      |            !lem:(vl <= v) using loA by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case loB:((1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(vl)-sq(v+a*(T-t))))<=2*A*(yg-eps)) =>
+      |            print("loB><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (yg-eps))
+      |              using constA csgLo accRange vBound dom  loB by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case loC:((1+2*eps*(k)+sq(eps*k))*(A*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(vl)-sq(v+a*(T-t))))<=2*A*((xg)-eps)) =>
+      |            print("loC><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(vl)-sq(v)) <=
+      |	    (2*A) * (xg-eps))
+      |              using constA csgLo accRange vBound dom  loC by auto;
+      |            !indCGDL:(controllableGoalDist(vl,v,A,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        switch(bigH) {
+      |          case hiA:(a>=0&v+a*(T-t)<=vh) =>
+      |            print("hiA><");
+      |            !lem:(v <= vh)
+      |            using hiA accPos dom tPos by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn by auto;
+      |          case hiB:((1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(v+a*(T-t))-sq(vh)))<=2*B*(yg-eps)) =>
+      |            print("hiB><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(v)-sq(vh))
+      |	    <= (2*B) * (yg-eps))
+      |              using constB csgHi accRange vBound dom  hiB by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;
+      |          case hiC:((1+2*eps*(k)+sq(eps*k))*(B*(2*v*(T-t)+a*(sq(T-t)))
+      |	  +(sq(v+a*(T-t))-sq(vh)))<=2*B*((xg)-eps)) =>
+      |            print("hiC><");
+      |            !lem:((1 + 2*eps*(k) + sq(eps*k)) * (sq(v)-sq(vh))
+      |	    <= (2*B) * (xg-eps))
+      |              using constB csgHi accRange vBound dom hiC by auto;
+      |            !indCGDH:(controllableGoalDist(v,vh,B,xg,yg,k))
+      |	    using lem kSgn xgSgnC by auto;}
+      |        !indCSG:(controllableSpeedGoal(vl,vh)) using csg by auto;
+      |        note indStepC = andI(andI(andI(andI(andI(indVPos, indIsAnn),
+      |	indOnAnn), indCSG), indCGDH), indCGDL);
+      |        !indAssert:(J(xg, yg, k, v, vl, vh)) using indStepC by auto;}}
+      | !fullIndStep:(J(xg, yg, k, v, vl, vh)) using indAssert by prop;}*
+      |!safe:(sq(xg) + sq(yg) <= sq(eps) -> vl <= v & v <= vh)
+      |using inv const by auto;
+      |
+      |""".stripMargin
+
   val knownFeatureRequests: List[String] = List(labelOldEq)
   val knownBugs: List[String] = List(labelOldestEq)
   val maybeBugs: List[String] = List(
@@ -1648,9 +2213,22 @@ object SharedModels {
     sandboxExample,
     revisedReachAvoidFor)
 
+
   val pldiExamples: List[String] = List(pldiModelSafeFull, pldiModelSafeSimple, pldiSandboxSafe)
 
-  val thesisCaseStudies: List[String] = pldiExamples ++ rssExamples ++ ijrrModels
+  val thesisCaseStudies: List[String] =
+    List(
+      pldiModelSafeFull,
+      pldiAngelicSandbox,
+      pldiTimedAngelicControl,
+      pldiReachAvoid,
+      pldiReachAvoidDisturbance,
+      ijrrStaticSafetySimplified,
+      ralWaypointSafety
+    )
+
+  val allThesis = thesisExamples ++ thesisCaseStudies
+  //pldiExamples ++ rssExamples ++ ijrrModels
   val allExamples: List[String] = pldiExamples ++ rssExamples ++ ijrrModels ++ thesisExamples
 
 
@@ -1670,21 +2248,21 @@ object SharedModels {
       |""".stripMargin
 
   val referenceOverChoice: String =
-    """y:=x@end;
+    """y:=x@theEnd;
     |{x:= 1; ++ x := 2;}
-    |end:""".stripMargin
+    |theEnd:""".stripMargin
 
   val referenceOverStar: String =
-    """ x := y@end;
+    """ x := y@theEnd;
       | y := *;
-      | end:
+      | theEnd:
       |""".stripMargin
 
   val referenceOverODE: String =
-    """x := y@end;
+    """x := y@theEnd;
       |y := 0;
       |{y' = 2 & y <= 5}
-      |end:""".stripMargin
+      |theEnd:""".stripMargin
 
   val thesisCounterexamples: List[String] = List(cyclicLabel, referenceOverChoice, referenceOverStar, referenceOverODE)
 }
