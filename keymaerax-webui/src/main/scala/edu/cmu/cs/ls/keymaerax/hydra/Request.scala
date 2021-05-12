@@ -1913,7 +1913,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
           }
           case (s: ProgramConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
           case (s: SystemConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
-        })
+        }).filter(e => e._4 || e._3.isDefined)
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
     }
