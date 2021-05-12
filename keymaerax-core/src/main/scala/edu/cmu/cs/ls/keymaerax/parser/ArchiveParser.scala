@@ -100,6 +100,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     case None => (name, signature)
     case Some(interpretation) => signature.arguments match {
       case None => (name, signature)
+      case Some((Name(Nothing.name, Nothing.index), Unit) :: Nil) => (name, signature)
       case Some(argNames) =>
         val arg = signature.domain match {
           case Some(Unit) => Nothing
