@@ -93,6 +93,14 @@ output {
   padding-right: 0px !important;
 }
 
+.k4-def-expandto {
+  display: block;
+  width: 300px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .navbar {
   min-height: 30px;
 }
