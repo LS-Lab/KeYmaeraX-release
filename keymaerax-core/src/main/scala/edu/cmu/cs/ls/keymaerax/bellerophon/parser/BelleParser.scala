@@ -586,7 +586,7 @@ object BelleParser extends TacticParser with Logging {
       try {
         val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
         // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
-        if (expandAll && defs.decls.nonEmpty) {
+        if (expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
           t.prettyString match {
             case "QE" | "smartQE" | "master" => ExpandAll(defs.substs) & t
             case text =>
