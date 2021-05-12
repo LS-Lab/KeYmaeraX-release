@@ -149,7 +149,13 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.formulaAxiomsMap = {};
             scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) { return scope.tacticPopover.openFormulaId && scope.tacticPopover.openFormulaId.startsWith(formulaId); },
+              isOpen: function(formulaId) {
+                // open if formulaId is prefix of openFormulaId (prefix elements separated by ,)
+                return scope.tacticPopover.openFormulaId &&
+                  (scope.tacticPopover.openFormulaId.length == formulaId.length ||
+                   scope.tacticPopover.openFormulaId.charAt(formulaId.length) == ',') &&
+                  scope.tacticPopover.openFormulaId.startsWith(formulaId);
+              },
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() { scope.derivationInfos.infos = []; scope.tacticPopover.openFormulaId = undefined; }
