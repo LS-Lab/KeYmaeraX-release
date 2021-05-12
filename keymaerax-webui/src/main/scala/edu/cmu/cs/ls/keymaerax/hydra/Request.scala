@@ -2549,10 +2549,16 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     // proof may have expanded some definitions itself and used lemmas that expanded some definitions
     val provable = tree.root.provable
     val conclusionSignature = StaticSemantics.signature(provable.conclusion)
-    val substs = entry.defs.substs.filter(_.what match {
-      case n: NamedSymbol => !conclusionSignature.contains(n) // expand definition if conclusion doesn't mention it anymore
-      case _ => true // should not get here
+
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    // find expanded definitions (including delayed model assumptions)
+    val substs = (entry.defs.substs ++ proofSession.defs.substs).distinct.filter(_.what match {
+      case FuncOf(n, _) => !conclusionSignature.contains(n)
+      case PredOf(n, _) => !conclusionSignature.contains(n)
+      case n: NamedSymbol => !conclusionSignature.contains(n)
+      case _ => false
     })
+
     val conclusionFormula = entry.model.exhaustiveSubst(USubst(substs)).asInstanceOf[Formula]
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
 
