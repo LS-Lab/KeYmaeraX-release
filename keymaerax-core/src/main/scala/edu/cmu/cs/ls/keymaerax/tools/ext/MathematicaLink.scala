@@ -9,12 +9,11 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
-
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
-import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{ExprFactory, JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -374,7 +373,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
   /** Checks if Mathematica is activated by querying the license expiration date */
   private def isActivated(version: Version): Option[(Boolean, LocalDate)] = {
-    val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+    val infinity = ExprFactory.makeExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
       def toDate(date: Array[MExpr]): Option[LocalDate] = {
         logger.debug(engineName + " license expires: " + date.mkString)
@@ -570,7 +569,7 @@ class WolframScript extends MathematicaLink with Logging {
 
   /** Checks if Wolfram Engine is activated by querying the license expiration date */
   private def isActivated(version: Version): Option[(Boolean, LocalDate)] = {
-    val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+    val infinity = ExprFactory.makeExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
       def toDate(date: Array[MExpr]): Option[LocalDate] = {
         logger.debug("Wolfram Engine license expires: " + date.mkString)
@@ -663,7 +662,7 @@ class WolframScript extends MathematicaLink with Logging {
       case JsNull => new MExpr(Expr.SYMBOL, "null")
       case JsArray(elems) =>
         val converted = elems.map(convertJSON)
-        new MExpr(converted.head, converted.tail.toArray)
+        ExprFactory.makeExpr(converted.head, converted.tail.toArray)
     }
     val json = try {
       JsonParser(expr)

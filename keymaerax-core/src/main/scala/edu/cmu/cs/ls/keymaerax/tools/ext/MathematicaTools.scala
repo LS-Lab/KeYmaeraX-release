@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
 
@@ -664,7 +664,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
     val f = MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "f")
-    val fall = new MExpr(f, vars)
+    val fall = ExprFactory.makeExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
       case AtomicODE(DifferentialSymbol(x),t) =>
         MathematicaOpSpec.times(k2m(t), ExtMathematicaOpSpec.d(fall, k2m(x)))
