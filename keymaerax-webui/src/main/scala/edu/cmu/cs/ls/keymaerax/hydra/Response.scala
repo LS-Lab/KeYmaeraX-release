@@ -693,8 +693,6 @@ object Helpers {
     }
 
     expr match {
-      //case t: UnaryCompositeTerm => print("", q, "term", hasStep, isEditable, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
-      //case t: BinaryCompositeTerm => print("", q, "term", hasStep, isEditable, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
       case f: ComparisonFormula =>
         print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
       case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString, print("(", fp), print(g.prettyString, fp), print(")", fp), op(expr, fp))
@@ -705,6 +703,8 @@ object Helpers {
       case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString, fp))
       case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
       case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p, fp):_*)
+      case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp):_*)
+      case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString, wrapLeft(t, printJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right, fp), fp):_*)
       case _ => print(q, expr.prettyString, "term", fp)
     }
   }
