@@ -20,7 +20,10 @@ trait MathematicaOpSpec {
 
 /** Creates [[Expr]] objects. */
 object ExprFactory {
-  def makeExpr(head: Expr, args: Array[Expr]): Expr = new Expr(head, args)
+  def makeExpr(head: Expr, args: Array[Expr]): Expr = {
+    //@note uses reflection to bridge JLink API differences that do not occur in Bytecode (type erasure)
+    classOf[Expr].getDeclaredConstructor(classOf[Expr], classOf[Array[Expr]]).newInstance(head, args)
+  }
 }
 
 /** Math literals. */
