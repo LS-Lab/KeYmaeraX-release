@@ -131,6 +131,11 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "0=x ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
+  it should "rewrite differentials" in withTactics {
+    proveBy("x_0=(f(x))' ==> (f(x))'>0".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).subgoals.
+      loneElement shouldBe "==> x_0>0".asSequent
+  }
+
   "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in withTactics {
     val result = proveBy("x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2, z<0+1".asSequent
@@ -269,6 +274,14 @@ class EqualityTests extends TacticTestBase {
   it should "not try to abbreviate inside programs when not free 2" in withQE { _ =>
     val result = proveBy("x+1>0 ==> [x:=x+1;x:=x+1;]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
     result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [x:=y;x:=x+1;]x>0".asSequent
+  }
+
+  it should "abbreviate differentials" in withQE { _ =>
+    proveBy("==> (f(x))'>0".asSequent, abbrv("(f(x))'".asTerm, None)).subgoals.loneElement shouldBe "x_0=(f(x))' ==> x_0>0".asSequent
+  }
+
+  it should "abbreviate differential symbols" in withQE { _ =>
+    proveBy("==> x'>0".asSequent, abbrv("x'".asTerm, None)).subgoals.loneElement shouldBe "x_0=x' ==> x_0>0".asSequent
   }
 
   "AbbrvAt tactic" should "abbreviate in places where at least one of the arguments is bound" in withQE { _ =>

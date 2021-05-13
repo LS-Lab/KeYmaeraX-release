@@ -15,7 +15,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
   */
 class DBTests extends TacticTestBase {
 
-  "Stored tactics" should "be reparseable" in withDatabase { db =>
+  "Stored tactics" should "be reparseable" in withTactics { withDatabase { db =>
     val entries = (
       "/examples/tutorials/sttt/sttt.kyx" ::
       "/examples/tutorials/cpsweek/cpsweek.kyx" ::
@@ -40,6 +40,6 @@ class DBTests extends TacticTestBase {
       BelleParser(storedProofTactic.get) shouldBe tactic
     }
 
-  }
+  }}
 
 }

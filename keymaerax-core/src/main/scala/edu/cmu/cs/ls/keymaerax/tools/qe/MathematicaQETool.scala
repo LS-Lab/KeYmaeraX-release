@@ -18,6 +18,16 @@ import edu.cmu.cs.ls.keymaerax.tools._
   * @author Stefan Mitsch
   */
 class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
+  /** QE options, see [[https://reference.wolfram.com/language/tutorial/RealPolynomialSystems.html]] (InequalitySolvingOptions). */
+  private val qeOptions = Configuration.getMap(Configuration.Keys.MATHEMATICA_QE_OPTIONS).map({ case (k, v) =>
+    MathematicaOpSpec.rule(MathematicaOpSpec.string(k), v match {
+      case "true" | "false" => MathematicaOpSpec.bool(v.toBoolean)
+      case _ => MathematicaOpSpec.string(v)
+    })
+  }).toList
+
+  /** QE method, one of `Resolve` or `Reduce`. */
+  private val qeMethod = Configuration.getString(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce")
 
   /** @inheritdoc */
   override def quantifierElimination(formula: Formula): Formula = {
@@ -27,12 +37,21 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
       case ex: ConversionException => throw ex
       case ex: Throwable => throw ConversionException("Error converting to Mathematica: " + formula.prettyString, ex)
     }
-    val method = Configuration.getString(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
-      case "Reduce" => MathematicaOpSpec.reduce
-      case "Resolve" => MathematicaOpSpec.resolve
+    val doQE = qeMethod match {
+      case "Reduce" => (f: MathematicaConversion.MExpr) => MathematicaOpSpec.reduce(f, MathematicaOpSpec.list(), MathematicaOpSpec.reals.op)
+      case "Resolve" => (f: MathematicaConversion.MExpr) => MathematicaOpSpec.resolve(f, MathematicaOpSpec.reals.op)
       case m => throw ToolCommunicationException("Unknown Mathematica QE method '" + m + "'. Please configure either 'Reduce' or 'Resolve'.")
     }
-    val input = method(f, MathematicaOpSpec.list(), MathematicaOpSpec.reals.op)
+    val input =
+      if (qeOptions.nonEmpty) MathematicaOpSpec.compoundExpr(
+        MathematicaOpSpec(MathematicaOpSpec.symbol("SetSystemOptions"))(
+          MathematicaOpSpec.rule(
+            MathematicaOpSpec.string("InequalitySolvingOptions"),
+            MathematicaOpSpec.list(qeOptions:_*)) :: Nil
+        ),
+        doQE(f)
+      )
+      else doQE(f)
     try {
       val (_, result) = link.run(input, MathematicaToKeYmaera)
       result match {

@@ -318,6 +318,14 @@ class DLTests extends TacticTestBase {
     proveBy("[x:=y;](f(x))'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x_0=2, (f(x))'=y ==>".asSequent
   }
 
+  it should "assign differential symbols" in withTactics {
+    proveBy("==> [x':=y;]x'=y".asSequent, DLBySubst.assignEquality(1)).subgoals.loneElement shouldBe "x'=y ==> x'=y".asSequent
+  }
+
+  it should "FEATURE_REQUEST: rename when assigning differential symbols" taggedAs TodoTest in withTactics {
+    proveBy("x'=4 ==> [x':=y;]x'=y".asSequent, DLBySubst.assignEquality(1)).subgoals.loneElement shouldBe "x_0'=4, x'=y ==> x'=y".asSequent
+  }
+
   "generalize" should "introduce intermediate condition" in withTactics {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1),
       _.value should contain theSameElementsAs List(BelleLabels.mrShow, BelleLabels.mrUse))

@@ -356,7 +356,7 @@ object BelleParser extends TacticParser with Logging {
       case r :+ BelleToken(EXPAND, loc) => st.input match {
         case BelleToken(all@IDENT("All"), allLoc) :: tail =>
           // resolve clash with builtin tactic expandAll
-          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs)
+          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs, expandAll)
           ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(allLoc), None), tail)
         case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
           val x: NamedSymbol = expr.undelimitedExprString.asExpr match {
@@ -466,7 +466,7 @@ object BelleParser extends TacticParser with Logging {
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
           if (!isOpenParen(st.input)) {
-            val parsedExpr = constructTactic(name, None, identLoc, tacticDefs, g, defs)
+            val parsedExpr = constructTactic(name, None, identLoc, tacticDefs, g, defs, expandAll)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc, None), st.input)
           } else {
             val (args, remainder) = parseArgumentList(name, st.input, defs, expandAll)
@@ -478,7 +478,7 @@ object BelleParser extends TacticParser with Logging {
             }
             val spanLoc = if(endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
-            val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs, g, defs)
+            val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs, g, defs, expandAll)
             parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc, None), remainder)
           }
@@ -566,7 +566,7 @@ object BelleParser extends TacticParser with Logging {
   /** Constructs a tactic using the reflective expression builder. */
   private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location,
                               tacticDefs: DefScope[String, DefTactic], g: Option[Generator.Generator[GenProduct]],
-                              defs: Declaration) : BelleExpr = {
+                              defs: Declaration, expandAll: Boolean) : BelleExpr = {
     // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by making a bunch of one-tuples.
     val newArgs = args match {
       case None => Nil
@@ -584,7 +584,19 @@ object BelleParser extends TacticParser with Logging {
       ApplyDefTactic(tacticDef.get)
     } else {
       try {
-        ReflectiveExpressionBuilder(name, newArgs, g, defs)
+        val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
+        // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
+        if (expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
+          t.prettyString match {
+            case "QE" | "smartQE" | "master" => ExpandAll(defs.substs) & t
+            case text =>
+              if (text.startsWith("ODE") ||
+                text.startsWith("diffInvariant") ||
+                text.startsWith("dI")
+              ) ExpandAll(defs.substs) & t
+              else t
+          }
+        } else t
       } catch {
         case e: ReflectiveExpressionBuilderExn =>
           throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)

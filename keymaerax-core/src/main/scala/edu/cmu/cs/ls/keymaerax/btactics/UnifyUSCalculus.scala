@@ -1667,19 +1667,53 @@ trait UnifyUSCalculus {
                 //@note transpose substitution since subsequent renaming does the same
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
-                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+                  sp.repl match {
+                    case t: Term => vars.head match {
+                      case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                    case f: Formula => vars.head match {
+                      case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                  })))
               case usB4URen: FastUSubstAboveURen =>
                 //@note transpose substitution since subsequent renaming does the same
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
-                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+                  sp.repl match {
+                    case t: Term => vars.head match {
+                      case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                    case f: Formula => vars.head match {
+                      case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                  })))
               case _ => us
-            }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
-            // NB: all eliminate axiom not implemented
-            useFor(Ax.alle, PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
-              Sequent(ante, succ),
-              Skolemize(SuccPos(0))
+            }) ++ RenUSubst(vars.head match {
+                case _: BaseVariable => Seq((Variable("x_"), vars.head))
+                case DifferentialSymbol(v) => Seq((Variable("x_"), v))
+                case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+              }
             )
+            // NB: all eliminate axiom not implemented
+            if (vars.forall({ case _: DifferentialSymbol => false case _ => true })) {
+              useFor(Ax.alle, PosInExpr(1 :: Nil), rename)(AntePosition.base0(1 - 1))(monStep(Context(c), mon))(
+                Sequent(ante, succ),
+                Skolemize(SuccPos(0))
+              )
+            } else {
+              useFor(Ax.alleprime, PosInExpr(1 :: Nil), rename)(AntePosition.base0(1 - 1))(monStep(Context(c), mon))(
+                Sequent(ante, succ),
+                Skolemize(SuccPos(0))
+              )
+            }
 
           /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
             useFor(DerivedAxioms.allV)(SuccPosition(0))(

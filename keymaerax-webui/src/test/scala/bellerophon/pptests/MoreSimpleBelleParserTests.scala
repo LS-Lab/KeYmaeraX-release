@@ -154,6 +154,11 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     BellePrettyPrinter(Using(Nil, TactixLibrary.id)) shouldBe """id using "nil""""
   }
 
+  it should "pretty print binding strong" in withTactics {
+    BellePrettyPrinter(parser(""" implyR(1); id using "x>=0" """)).trim shouldBe """ implyR(1) ; id using "x>=0" """.trim
+    BellePrettyPrinter(parser(""" (implyR(1); id) using "x>=0::y>=0::nil" """)).trim shouldBe """ (implyR(1) ; id) using "x>=0 :: y>=0 :: nil" """.trim
+  }
+
   "Propositional Examples" should "close p() -> p()" in withTactics {
     val tactic = parser("implyR(1) & id")
     val value = BelleProvable(ProvableSig.startProof("p() -> p()".asFormula))

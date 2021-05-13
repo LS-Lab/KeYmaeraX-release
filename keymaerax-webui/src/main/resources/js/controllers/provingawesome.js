@@ -733,7 +733,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.onTacticScript = function(tacticText, stepwise) {
       //@todo forward all to onMultiNodeTactic once it is robustified
-      var doallTactic = tacticText.replace(/doall\((.*)\)/g, function(match, inner, offset, string) {
+      var doallTactic = tacticText.replace(/^doall\((.*)\)/g, function(match, inner, offset, string) {
         return inner;
       });
       if (doallTactic !== tacticText) $scope.onMultiNodeTactic({text: doallTactic, stepwise: stepwise}, undefined);

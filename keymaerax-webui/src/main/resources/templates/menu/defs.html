@@ -47,7 +47,7 @@
     <li ng-repeat="d in definitions | filter: {definition: {editable:false,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
         <a ng-class="{'disabled': agenda.items().length <= 0 }"
            ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
-            <span>{{d.definition.what}}</span> &map; <span>{{d.definition.repl}}</span>
+            <span>{{d.definition.what}}</span> &map; <span class="k4-def-expandto">{{d.definition.repl}}</span>
             <code class="pull-right">expand "{{d.symbol}}"</code>
         </a>
     </li>

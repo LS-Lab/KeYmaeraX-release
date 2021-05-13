@@ -100,6 +100,7 @@ case class Declaration(decls: Map[Name, Signature]) {
     case None => (name, signature)
     case Some(interpretation) => signature.arguments match {
       case None => (name, signature)
+      case Some((Name(Nothing.name, Nothing.index), Unit) :: Nil) => (name, signature)
       case Some(argNames) =>
         val arg = signature.domain match {
           case Some(Unit) => Nothing
@@ -121,7 +122,7 @@ case class Declaration(decls: Map[Name, Signature]) {
         val undeclaredDots = dotsOf(dottedInterpretation) -- dotsOf(arg)
         if (undeclaredDots.nonEmpty) throw ParseException(
           "Function/predicate " + name.name + name.index.map("_" + _).getOrElse("") + "(" +
-            argNames.map(an => (if (an._1.name != DotTerm().name) an._1.name else "•") + an._1.index.map("_" + _).getOrElse("")).mkString(",") + ")" +
+            argNames.map(an => (if (an._1.name != DotTerm().name) an._1.name else ".") + an._1.index.map("_" + _).getOrElse("")).mkString(",") + ")" +
             " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
           UnknownLocation)
         (name, signature.copy(interpretation = Some(dottedInterpretation)))
@@ -363,6 +364,7 @@ object ArchiveParser extends ArchiveParser {
   def declarationsOf(parsedContent: Expression, filter: Option[Set[NamedSymbol]] = None): Declaration = {
     def makeArgsList(args: Term): List[(Name, Sort)] = args match {
       case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
+      case FuncOf(n, _) => List(Name(n.name, n.index) -> n.sort)
       case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
     }
 

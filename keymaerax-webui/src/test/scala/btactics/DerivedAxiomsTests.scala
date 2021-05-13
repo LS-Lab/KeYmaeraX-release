@@ -119,6 +119,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDist)}
   it should "prove all instantiate" in {check(allInst)}
+  it should "prove all instantiate prime" in {check(allInstPrime)}
   it should "prove all then exists" in {check(allThenExists)}
   it should "prove all distribute elim" in {check(allDistElim)}
   it should "prove equiv expand" in {check(equivExpand)}

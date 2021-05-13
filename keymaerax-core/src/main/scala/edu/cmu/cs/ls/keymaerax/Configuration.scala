@@ -47,6 +47,7 @@ trait Configuration {
     val QE_TOOL = "QE_TOOL"
     val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
+    val MATHEMATICA_QE_OPTIONS = "QE_OPTIONS"
     val SMT_CACHE_PATH = "SMT_CACHE_PATH"
     val TEST_DB_PATH = "TEST_DB_PATH"
     val Z3_PATH = "Z3_PATH"
@@ -165,6 +166,10 @@ trait Configuration {
   def getBigInteger(key: String): Option[BigInt]
   /** Returns the value of `key` as BigDecimal or None, if not present. */
   def getBigDecimal(key: String): Option[BigDecimal]
+  /** Returns the value of key as a `List`. */
+  def getList(key: String): List[String]
+  /** Returns the value of `key` as a Map. */
+  def getMap(key: String): Map[String, String]
 }
 
 object Configuration extends Configuration {
@@ -205,6 +210,10 @@ object Configuration extends Configuration {
   override def getBigInteger(key: String): Option[BigInt] = conf.getBigInteger(key)
 
   override def getBigDecimal(key: String): Option[BigDecimal] = conf.getBigDecimal(key)
+
+  override def getList(key: String): List[String] = conf.getList(key)
+
+  override def getMap(key: String): Map[String, String] = conf.getMap(key)
 
   /** Executes `code` with a temporary configuration that gets reset after execution. */
   def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {

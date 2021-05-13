@@ -78,6 +78,7 @@ object TacticHelper {
     freshIndex(t.name) match {
       case Some(i) => t match {
         case BaseVariable(vName, _, vSort) => Variable(vName, Some(i), vSort).asInstanceOf[T]
+        case DifferentialSymbol(v) => DifferentialSymbol(Variable(v.name, Some(i), v.sort)).asInstanceOf[T]
         case Function(fName, _, fDomain, fSort, false) => Function(fName, Some(i), fDomain, fSort).asInstanceOf[T]
         case DotTerm(s, _) => DotTerm(s, Some(i)).asInstanceOf[T]
         case _ => throw new IllegalArgumentException("Cannot obtain fresh symbol, since " + t.getClass + " does not have index")

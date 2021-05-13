@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
 
 import scala.annotation.tailrec
@@ -320,14 +321,34 @@ object FormulaTools extends Logging {
     case Dual(a)         => false
   }
 
+  /** Check whether `fml` is dual-free. */
+  def dualFree(fml: Formula): Boolean = allProgramsPass(fml, dualFree)
+
+  /** Check whether `sequent` is dual-free. */
+  def dualFree(sequent: Sequent): Boolean = dualFree(sequent.toFormula)
+
   /** Check whether given `program` contains literal [[Dual]]. */
   def literalDualFree(program: Program): Boolean = program match {
-    case Dual(a) => false
+    case Dual(_) => false
     case Choice(a, b)    => literalDualFree(a) && literalDualFree(b)
     case Compose(a, b)   => literalDualFree(a) && literalDualFree(b)
     case Loop(a)         => literalDualFree(a)
     case _       => true
   }
+
+  /** Check whether `fml` contains literal [[Dual]]. */
+  def literalDualFree(fml: Formula): Boolean = allProgramsPass(fml, literalDualFree)
+
+  /** Check whether `sequent` contains literal [[Dual]]. */
+  def literalDualFree(sequent: Sequent): Boolean = literalDualFree(sequent.toFormula)
+
+  /** Returns true if all programs in `fml` pass the `check`, false otherwise. */
+  private def allProgramsPass(fml: Formula, check: Program=>Boolean): Boolean = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+    override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+      if (check(e)) Left(None)
+      else Left(Some(stop))
+    }
+  }, fml).isDefined //@note traversal stops with None if check is violated at some point during the traversal
 
   /** Returns all terms {{{b^e}}} such that e is not a natural number occurring in given formula .
     * @note This is soundness-critical.

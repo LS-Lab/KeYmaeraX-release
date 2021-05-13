@@ -1913,7 +1913,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
           }
           case (s: ProgramConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
           case (s: SystemConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
-        })
+        }).filter(e => e._4 || e._3.isDefined)
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
     }
@@ -2064,7 +2064,19 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
                                                     defs: Declaration) = {
 
-    val elaborated = exprs.map(e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e)))
+    //@note function/predicate/program symbols are proof parameters if not in input, otherwise look up in definitions
+    val elaborated = exprs.map({
+      case e@FuncOf(n, a) if !defs.asNamedSymbols.contains(n) => arg match {
+        case _: FormulaArg => PredOf(n.copy(sort = Bool), a)
+        case _ => e
+      }
+      case e@PredOf(n, a) if !defs.asNamedSymbols.contains(n) => arg match {
+        case _: TermArg => FuncOf(n.copy(sort = Real), a)
+        case _ => e
+      }
+      case a: ProgramConst if FormulaTools.dualFree(sequent) => SystemConst(a.name, a.space)
+      case e => defs.elaborateToSystemConsts(defs.elaborateToFunctions(e))
+    })
 
     val sortMismatch: Option[String] = (arg, elaborated) match {
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
@@ -2076,8 +2088,16 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
     sortMismatch match {
       case None =>
         val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
-        val paramFV: Set[NamedSymbol] =
-          elaborated.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+        val paramFV: Set[NamedSymbol] = {
+          //@note function/predicate/system/game symbols are proof parameters if they are not declared in the input
+          elaborated.flatMap({
+            case FuncOf(n, a) if !defs.asNamedSymbols.contains(n) => StaticSemantics.symbols(a)
+            case PredOf(n, a) if !defs.asNamedSymbols.contains(n) => StaticSemantics.symbols(a)
+            case n: SystemConst if !defs.asNamedSymbols.contains(n) => Set.empty[NamedSymbol]
+            case n: ProgramConst if !defs.asNamedSymbols.contains(n) => Set.empty[NamedSymbol]
+            case e => StaticSemantics.symbols(e)
+          }).toSet
+        }
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
@@ -2088,7 +2108,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
           val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
             filter(_._2.isDefined)
           if (fnVarMismatch.isEmpty) {
-            BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+            BooleanResponse(flag = false, Some("argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
               (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
               else ", is it a typo?")))
           } else BooleanResponse(flag=true)
@@ -2549,10 +2569,16 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     // proof may have expanded some definitions itself and used lemmas that expanded some definitions
     val provable = tree.root.provable
     val conclusionSignature = StaticSemantics.signature(provable.conclusion)
-    val substs = entry.defs.substs.filter(_.what match {
-      case n: NamedSymbol => !conclusionSignature.contains(n) // expand definition if conclusion doesn't mention it anymore
-      case _ => true // should not get here
+
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    // find expanded definitions (including delayed model assumptions)
+    val substs = (entry.defs.substs ++ proofSession.defs.substs).distinct.filter(_.what match {
+      case FuncOf(n, _) => !conclusionSignature.contains(n)
+      case PredOf(n, _) => !conclusionSignature.contains(n)
+      case n: NamedSymbol => !conclusionSignature.contains(n)
+      case _ => false
     })
+
     val conclusionFormula = entry.model.exhaustiveSubst(USubst(substs)).asInstanceOf[Formula]
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
 

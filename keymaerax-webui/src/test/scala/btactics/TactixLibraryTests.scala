@@ -446,6 +446,16 @@ class TactixLibraryTests extends TacticTestBase {
       ))
   }
 
+  it should "unfold equational assignments" in withTactics {
+    val result = proveBy("[x:=x+1;][{x'=1}]x>0".asFormula, normalize)
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> [{x'=1}]x>0".asSequent
+  }
+
+  it should "unfold equational diamond assignments" in withTactics {
+    val result = proveBy("<x:=x+1;><{x'=1}>x>0".asFormula, normalize)
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x'=1}>x>0".asSequent
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout

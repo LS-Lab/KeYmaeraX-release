@@ -74,11 +74,11 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
   private def sequentialTactic(ts1: String, ts2: String, indent: String, sep: String = SEQ_COMBINATOR.img): String = {
     val (ts1t, ts2t) = if (ts2.lines.length <= 1) (ts1.trim, ts2.trim) else (ts1.trim, ts2.stripPrefix(indent))
     (ts1t, ts2t) match {
-      case ("nil", _) | ("skip", _)=> ts2t
-      case (_, "nil") | (_, "skip") => ts1t
+      case ("nil", _) | ("skip", _)=> indent + ts2t
+      case (_, "nil") | (_, "skip") => indent + ts1t
       case ("" | "()", "" | "()") => ""
-      case (_, "" | "()") => ts1t
-      case ("" | "()", _) => ts2t
+      case (_, "" | "()") => indent + ts1t
+      case ("" | "()", _) => indent + ts2t
       case _ => indent + ts1t + sep + "\n" + indent + ts2t
     }
   }

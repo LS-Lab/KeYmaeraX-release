@@ -283,6 +283,14 @@ Axiom "[':=] differential assign"
   [x_':=f();]p(x_') <-> p(f())
 End.
 
+Axiom "[':=] assign equality"
+  [x_':=f();]p(||) <-> \forall x_' (x_'=f() -> p(||))
+End.
+
+Axiom "[':=] self assign"
+  [x_':=x_';]p(||) <-> p(||)
+End.
+
 Axiom "[:*] assign nondet"
   [x_:=*;]p(||) <-> \forall x_ p(||)
 End.
@@ -529,9 +537,16 @@ Axiom "all dual"
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
+Axiom "all prime dual"
+  (!\exists x_' !p(||)) <-> \forall x_' p(||)
+End.
+
 /* generalized "all instantiate" */
 Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
+End.
+Axiom "all eliminate prime"
+  (\forall x_' p(||)) -> p(||)
 End.
 """
 }

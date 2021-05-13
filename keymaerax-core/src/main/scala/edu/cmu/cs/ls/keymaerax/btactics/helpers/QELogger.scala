@@ -200,8 +200,12 @@ object QELogger extends Logging {
     logTactic = Some(nil)
   }
 
-  /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath` */
-  def exportSmtLibFormat(logPath: String, exportPath: String): Unit = {
+  /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath`, filtering out duplicate
+    * entries if `filterDuplicates` is true (note: keeps all content in memory, avoid for large log files).  */
+  def exportSmtLibFormat(logPath: String, exportPath: String,
+                         printPrefix: Formula => String = _ => "",
+                         printSuffix: Formula => String = _ => "",
+                         filterDuplicates: Boolean = false): Unit = {
     val uniqueIndex: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map.empty
 
     def uniqueName(n: String): String = {
@@ -217,23 +221,28 @@ object QELogger extends Logging {
     }
 
     val filePath = if (exportPath.contains("${entryname}")) exportPath else exportPath + "${entryname}"
+
+    val exporter = (f: Formula) => printPrefix(f) + DefaultSMTConverter(f) + printSuffix(f)
+    val seqs = scala.collection.mutable.Set.empty[Sequent]
     def export(e: (String, Sequent)): Unit = {
-      print("Exporting " + e._1 + "...")
-      try {
-        exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)))
-        println("done")
-      } catch {
-        case ex: Throwable => println("failed: " + ex.getMessage)
-      }
+      if (!filterDuplicates || !seqs.contains(e._2)) {
+        print("Exporting " + e._1 + "...")
+        try {
+          exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)), exporter)
+          println("done")
+        } catch {
+          case ex: Throwable => println("failed: " + ex.getMessage)
+        }
+      } else if (filterDuplicates) seqs += e._2
     }
     processLog(parseStr2, export, logPath)
   }
 
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
-  def exportSmtLibFormat(fml: Formula, exportFile: String): Unit = {
+  def exportSmtLibFormat(fml: Formula, exportFile: String, exporter: Formula => String): Unit = {
     val f = file(exportFile)
     val fw = new FileWriter(f)
-    fw.append(DefaultSMTConverter(fml))
+    fw.append(exporter(fml))
     fw.close()
   }
 
