@@ -122,7 +122,7 @@ case class Declaration(decls: Map[Name, Signature]) {
         val undeclaredDots = dotsOf(dottedInterpretation) -- dotsOf(arg)
         if (undeclaredDots.nonEmpty) throw ParseException(
           "Function/predicate " + name.name + name.index.map("_" + _).getOrElse("") + "(" +
-            argNames.map(an => (if (an._1.name != DotTerm().name) an._1.name else "•") + an._1.index.map("_" + _).getOrElse("")).mkString(",") + ")" +
+            argNames.map(an => (if (an._1.name != DotTerm().name) an._1.name else ".") + an._1.index.map("_" + _).getOrElse("")).mkString(",") + ")" +
             " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
           UnknownLocation)
         (name, signature.copy(interpretation = Some(dottedInterpretation)))
