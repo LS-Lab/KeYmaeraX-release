@@ -221,6 +221,178 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: Real""".stripMargin
   }
 
+  it should "report use with wrong sort in other definition" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real f();
+        |    Bool p() <-> f();
+        |  End.
+        |  Problem f()>0 -> p() End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> assertion failed: Cannot elaborate:
+        |  Symbol f used with inconsistent kinds f:Unit->Real,f:Unit->Bool
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report interpreted symbol use with wrong sort in other definition" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real f() = 1+1;
+        |    Bool p() <-> f();
+        |  End.
+        |  Problem f()>0 -> p() End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Definition p() uses f:Unit->Bool inconsistent with definition f:Unit->Real
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report undeclared symbol use" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p(Real x) <-> x=2 & q() & [a;]f>3;
+        |  End.
+        |  Problem p(2) End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Definition p(.) uses undefined symbol(s) a;,f,q. Please add arguments or define as functions/predicates/programs
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report inconsistent symbol use in same definition" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p(Real x, Real y) <-> x+x()=2 & y^2=y() & x(2);
+        |  End.
+        |  Problem p(1,2) End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:5 Definition p at 3:5 to 3:56 uses names inconsistently
+        |  y:Real vs. y:Unit->Real
+        |  x:Unit->Real vs. x:Real vs. x:Real->Bool
+        |Found:    <unknown> at 3:5 to 3:56
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "not elaborate argument names" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real x;
+        |    Real f(Real x) = x+2;
+        |  End.
+        |  Problem x=3 -> f(2)>=x End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "x()=3 -> f(2)>=x()".asFormula
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("x", None) -> Signature(Some(Unit), Real, Some(List.empty), None, UnknownLocation),
+        Name("f", None) -> Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Some(".+2".asTerm), UnknownLocation)
+      ))
+    )
+  }
+
+  it should "allow same name for definition and argument" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real x(Real x) = x+2;
+        |  End.
+        |  Problem x(2)>=3 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "x(2)>=3".asFormula
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("x", None) -> Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Some(".+2".asTerm), UnknownLocation)
+      ))
+    )
+  }
+
+  it should "elaborate differential symbols to differentials" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real f(Real x) = x+x';
+        |  End.
+        |  Problem f(3)>=3 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "f(3)>=3".asFormula
+    entry.expandedModel shouldBe "3+(3)'>=3".asFormula
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("f", None) -> Signature(Some(Real), Real, Some(List(Name("x", None) -> Real)), Some(".+(.)'".asTerm), UnknownLocation)
+      ))
+    )
+  }
+
+  it should "elaborate only free differential symbols to differentials" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p(Real x) <-> \forall x' x+x' <= x+(x')^2;
+        |  End.
+        |  Problem \forall y p(y) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "\\forall y p(y)".asFormula
+    entry.expandedModel shouldBe "\\forall y \\forall x' y+x' <= y+(x')^2".asFormula
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("p", None) -> Signature(Some(Real), Bool, Some(List(Name("x", None) -> Real)), Some("\\forall x' .+x' <= .+(x')^2".asFormula), UnknownLocation)
+      ))
+    )
+  }
+
+  it should "complain about undeclared differential symbol arguments" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Real f(Real x) = x+y';
+        |  End.
+        |  Problem f(2)>=3 End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """<somewhere> Definition f(.) uses undefined symbol(s) y. Please add arguments or define as functions/predicates/programs
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "FEATURE_REQUEST: expand program definitions to decide whether symbol is undefined" taggedAs TodoTest in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    HP b ::= { y:=4; };
+        |    Bool p(Real x) <-> [y:=x; ++ b;]y>=2;
+        |  End.
+        |  Problem p(2) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "p(2)".asFormula
+  }
+
+  it should "FEATURE_REQUEST: expand program definitions to decide whether symbol is undefined (2)" taggedAs TodoTest in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    HP b ::= { y:=y+1; };
+        |    Bool p(Real x) <-> [y:=x; ++ b;]y>=2;
+        |  End.
+        |  Problem p(2) End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message """todo"""
+  }
+
   it should "parse definitions after variables" in {
     val input =
       """
@@ -586,8 +758,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.
         |End.""".stripMargin
     the [ParseException] thrownBy parse(input) should have message
-      """<somewhere> assertion failed: Cannot elaborate:
-        |  Symbol x used with inconsistent kinds x:Unit->Real,x:Real
+      """<somewhere> Symbol x is bound but is declared constant; please use a different name in the quantifier/program binding x
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }
