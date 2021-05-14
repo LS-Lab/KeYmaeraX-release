@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{AxIndex, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.DLArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 
 import scala.collection.immutable._
@@ -42,21 +43,29 @@ class ImplicitFunctionTests extends TacticTestBase {
   "throwaway" should "fail" in withMathematica { _ =>  }
 
   "chase" should "use registered implicit differentials" in withMathematica { _ =>
-    val exp = "e(x)".asTerm.asInstanceOf[FuncOf]
-    val diff = "e(x)*(x)'".asTerm
-    AxIndex.implFuncDiffs(Function("e", None, Real, Real)) =
+    val exp = Function("exp", None, Real, Real, true)
+
+    AxIndex.implFuncDiffs(exp) =
       DifferentialAxiomInfo(
-        funcName = "e",
-        funcOf = exp,
-        diff = diff,
+        funcName = "exp",
+        funcOf = FuncOf(exp, Variable("x")), //exp(x)
+        diff = Times(FuncOf(exp, Variable("x")), Differential(Variable("x"))), //exp(x) * (x)'
         theRecursor = (1::Nil)::Nil
       )
     /* (e(x))' = e(x) * (x)' */
-    val fml = "[y':=1;](e(y))' = e(y)*y'".asFormula
-    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
+
+    val subst = USubst(SubstitutionPair(
+      FuncOf(Function("e", None, Real, Real, false),DotTerm()),
+      FuncOf(exp,DotTerm()))::Nil)
+
+    val fml = "[y':=1;](e(y))' = e(y)*y'".asFormula.exhaustiveSubst(subst).asInstanceOf[Formula]
+
+    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & byUS(Ax.equalReflexive))
+
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
+
 
   "DLparser" should "parse & register implicit function definitions" in withMathematica { _ =>
     val input =
