@@ -284,42 +284,56 @@ object ArchiveParser extends ArchiveParser {
   /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
     * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
   def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
+    val defsWithDotArgs = entry.defs.decls.filter({
+      case (_, Signature(_, _, Some(args), _, _)) => args.exists(_._1.name == "\\cdot")
+      case (_, Signature(_, _, None, _, _)) => false
+    })
+    if (defsWithDotArgs.nonEmpty) {
+      val (name, Signature(_, _, _, _, loc)) = defsWithDotArgs.head
+      throw ParseException("Definition " + name.prettyString + " uses unsupported anonymous (dot) arguments; please use named arguments (e.g., Real x) instead", loc)
+    }
+
     val elaboratedDefs = elaborateDefs(entry.defs)
 
-    val uses = elaboratedDefs.substs.map(sp => sp.what ->
-      // symbols of repl minus declared arguments in what
-      (freeBaseSymbols(sp.repl) -- StaticSemantics.symbols(sp.what)).groupBy(n => Name(n.name, n.index))).toMap
-    val inconsistentUses = uses.filter(_._2.exists(_._2.size > 1))
+    val uses = elaboratedDefs.decls.map({
+      case (name, Signature(_, _, args, int, loc)) => name -> ((args match {
+        case Some(args) =>
+          int.map(freeBaseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))
+        case None => int.map(freeBaseSymbols)
+      }).getOrElse(Set.empty).groupBy(n => Name(n.name, n.index)), loc)
+    })
+    val inconsistentUses = uses.filter(_._2._1.exists(_._2.size > 1))
     if (inconsistentUses.nonEmpty) {
-      throw ParseException(inconsistentUses.map({ case (where, what) => "Definition " + where.prettyString +
-        " uses same name for " + what.map(_._2.map(_.fullString).mkString(" vs. ")) }).mkString("\n"), UnknownLocation)
+      val (name, (symbols, loc)) = inconsistentUses.head
+      throw ParseException("Definition " + name.prettyString +
+        " uses same name for " + symbols.map(_._2.map(_.fullString).mkString(" vs. ")), loc)
     }
-    val locallyConsistentUses = uses.map({ case (k, v) => k -> v.map(_._2.head).toSet })
+    val locallyConsistentUses = uses.map({ case (k, (v, loc)) => k -> (v.map(_._2.head).toSet, loc) })
 
     //@note except program/system constants, which don't have arguments yet
     val undeclaredUses = locallyConsistentUses.
       filter({ case (_: ProgramConst | _: SystemConst, _) => false case _ => true }).
-      map({ case (n, symbols) => n -> symbols.filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))) }).
-      filter({ case (_, s) => s.nonEmpty })
+      map({ case (n, (symbols, loc)) => n -> (symbols.filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))), loc) }).
+      filter({ case (_, (s, _)) => s.nonEmpty })
     if (undeclaredUses.nonEmpty) {
-      throw ParseException(undeclaredUses.map({
-        case (n, s) => "Definition " + n.prettyString + " uses undefined symbol(s) " +
-          s.toList.sortBy(_.name).map(_.prettyString).mkString(",") + ". Please add arguments or define as functions/predicates/programs" }).mkString("\n"), UnknownLocation)
+      val (name, (symbols, loc)) = undeclaredUses.head
+      throw ParseException("Definition " + name.prettyString + " uses undefined symbol(s) " +
+        symbols.toList.sortBy(_.name).map(_.prettyString).mkString(",") + ". Please add arguments or define as functions/predicates/programs", loc)
     }
 
     val inconsistentWithDecls = locallyConsistentUses.
-      map({ case (k, used) => k -> used.map(n => n -> elaboratedDefs.decls.get(Name(n.name, n.index))) }).
-      filter({ case (_, symbols) => symbols.exists({ case (use, decl) => decl.exists({
+      map({ case (k, (used, loc)) => k -> (used.map(n => n -> elaboratedDefs.decls.get(Name(n.name, n.index))), loc) }).
+      filter({ case (_, (symbols, _)) => symbols.exists({ case (use, decl) => decl.exists({
         case Signature(domain, sort, _, _, _) => use match {
           case fn: Function => fn.sort != sort || !domain.contains(fn.domain)
           case _ => false
         }
       }) }) })
     if (inconsistentWithDecls.nonEmpty) {
-      throw ParseException(inconsistentWithDecls.map({ case (where, symbols) => "Definition " + where.prettyString +
+      val (name, (symbols, loc)) = inconsistentWithDecls.head
+      throw ParseException("Definition " + name.prettyString +
         " uses " + symbols.map({ case (s, d) => s.fullString + " inconsistent with definition " +
-          s.prettyString + d.map(s => ":" + s.domain.map(_ + "->").getOrElse("") + s.codomain).getOrElse("") }).mkString(",")
-      }).mkString("\n"), UnknownLocation)
+        s.prettyString + d.map(s => ":" + s.domain.map(_ + "->").getOrElse("") + s.codomain).getOrElse("") }), loc)
     }
 
     // elaborate model and check
@@ -477,9 +491,12 @@ object ArchiveParser extends ArchiveParser {
       ds.foldLeft(e)({ case (e, n) => e.replaceFree(n, Differential(n.x)) })
     }
 
-    defs.copy(decls = defs.decls.map({ case (name, sig@Signature(_, _, argNames, interpretation, _)) =>
-      (name, sig.copy(interpretation = interpretation.map(i =>
-        defs.elaborateToSystemConsts(defs.elaborateToFunctions(elaborateToDifferentials(i), taboos(argNames.getOrElse(Nil)))))))
+    defs.copy(decls = defs.decls.map({ case (name, sig@Signature(_, sort, argNames, interpretation, loc)) =>
+      (name, sig.copy(interpretation = interpretation.map(i => {
+        val elaborated = defs.elaborateToSystemConsts(defs.elaborateToFunctions(elaborateToDifferentials(i), taboos(argNames.getOrElse(Nil))))
+        if (elaborated.sort != sort) throw ParseException("Definition " + name.prettyString + " does not fit declared sort " + sort + "; right-hand side is of sort " + elaborated.sort, loc)
+        elaborated
+      })))
     }))
   }
 
