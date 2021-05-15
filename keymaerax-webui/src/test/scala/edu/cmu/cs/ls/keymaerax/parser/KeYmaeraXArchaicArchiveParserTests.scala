@@ -266,6 +266,22 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |Expected: <unknown>""".stripMargin
   }
 
+  it should "not report builtin interpreted symbols as undeclared" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p() <-> min(4,5) >= 3;
+        |  End.
+        |  Problem p() End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.defs should beDecl(
+      Declaration(Map(
+        Name("p", None) -> Signature(Some(Unit), Bool, Some(List.empty), Some("min(4,5)>=3".asFormula), UnknownLocation)
+      ))
+    )
+  }
+
   it should "report inconsistent symbol use in same definition" in {
     val input =
       """ArchiveEntry "Entry 1"
