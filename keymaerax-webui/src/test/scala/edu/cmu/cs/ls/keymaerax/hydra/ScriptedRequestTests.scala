@@ -573,7 +573,7 @@ class ScriptedRequestTests extends TacticTestBase {
     )
   }
 
-  it should "fail fresh symbols" in withDatabase { db =>
+  it should "fail fresh symbols" in withTactics { withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -584,9 +584,9 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
-      'errorText (Some("Argument J uses new names that do not occur in the sequent: y, is it a typo?"))
+      'errorText (Some("argument J uses new names that do not occur in the sequent: y, is it a typo?"))
     )
-  }
+  }}
 
   it should "allow defined functions" in withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
