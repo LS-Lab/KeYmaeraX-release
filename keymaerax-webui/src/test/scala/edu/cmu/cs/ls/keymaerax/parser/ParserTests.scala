@@ -519,7 +519,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "not expand properties to their definition" in {
-    val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
+    val input = "Definitions Bool init() <-> x>=2; Bool safe(Real x) <-> x=0; End. ProgramVariables Real x; End. Problem init() -> [{x:=x+1;}*]safe(x) End."
     val entry = ArchiveParser.parser(input).loneElement
     inside (entry.defs.decls(Name("init", None))) {
       case Signature(domain, sort, argNames, expr, _) =>
@@ -532,8 +532,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
-        argNames shouldBe Some((Name("\\cdot", Some(0)), Real) :: Nil)
-        expr.value shouldBe ".>=0".asFormula
+        argNames shouldBe Some((Name("x", None), Real) :: Nil)
+        expr.value shouldBe ".=0".asFormula
     }
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
   }

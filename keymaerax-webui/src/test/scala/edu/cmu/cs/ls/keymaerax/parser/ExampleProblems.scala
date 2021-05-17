@@ -30,16 +30,15 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
   "parser line messages" should "be properly offset" in {
     val f =
-      """|   ProgramVariables.
-        |   R x. R y. R z.
-        |   End.
-        |   Problem.
+      """ProgramVariables
+        |   Real x, y, z;
+        |End.
+        |Problem
         |   (x*x*y >= 0 & x >= 0 & z >= x)
         |   ->
         |   [
         |   {x := 2x; y := 2y;}
-        |  ]
-        | (x*y >= 0)
+        |   ](x*y >= 0)
         |End.""".stripMargin
 
     val ex = the [ParseException] thrownBy ArchiveParser.parser(f)
@@ -51,13 +50,13 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
   it should "be properly offset in another example" in {
     val f =
-      """ ProgramVariables.
+      """ ProgramVariables
         |
-        |   R x. R y. R z.
+        |   Real x, y, z;
         |
         |   End.
         |
-        |   Problem.
+        |   Problem
         |
         |   (x*x*y >= 0 & x >= 0 & z >= x)
         |
@@ -81,27 +80,39 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   }
 
   it should "work from file input" in {
-    val f = " ProgramVariables.\n\n   R x. R y. R z. \n\n   End.  \n\n   Problem.\n\n   (x*x*y >= 0 & x >= 0 & z >= x) \n\n   -> \n\n   [\n\n   {x := 2x; y := 2y;}\n\n  ]\n\n (x*y >= 0)\n\nEnd."
+    val f =
+      """ProgramVariables
+        |   Real x, y, z;
+        |End.
+        |
+        |Problem
+        |   (x*x*y >= 0 & x >= 0 & z >= x)
+        |   ->
+        |   [
+        |   {x := 2x; y := 2y;}
+        |   ](x*y >= 0)
+        |End.
+        |""".stripMargin
 
     val ex = the [ParseException] thrownBy ArchiveParser.parseAsFormula(f)
     ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
-    ex.loc.begin.line shouldBe 15
+    ex.loc.begin.line shouldBe 9
     ex.loc.begin.column shouldBe 11
   }
 
   "The Parser" should "parse a simple file" in {
     val theProblem =
       """
-        |Functions.
-        |  R f(R, R).
-        |  R g(R).
+        |Definitions
+        |  Real f(Real x, Real y);
+        |  Real g(Real x);
         |End.
-        |ProgramVariables.
-        |  R x.
-        |  R y.
+        |ProgramVariables
+        |  Real x;
+        |  Real y;
         |End.
-        |Problem.
+        |Problem
         |  x > 0 ->
         |  [
         |   x := x + 1;
@@ -118,11 +129,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     val problem = "x>0 -> \\exists d [{x'=d}]x>0"
     val declProblem =
       s"""
-        |ProgramVariables.
-        |  R x.
+        |ProgramVariables
+        |  Real x;
         |End.
         |
-        |Problem.
+        |Problem
         |  $problem
         |End.
       """.stripMargin
@@ -133,11 +144,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   "Interpretation parser" should "parse simple function declarations" in {
     val problem =
       """
-        |Functions.
-        |  R f() = (5).
+        |Definitions
+        |  Real f() = 5;
         |End.
         |
-        |Problem.
+        |Problem
         |  f()>3
         |End.
       """.stripMargin
@@ -157,11 +168,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "parse function declarations with one parameter" in {
     val problem =
       """
-        |Functions.
-        |  R f(R) = (5 + .*.).
+        |Definitions
+        |  Real f(Real x) = 5 + x*x;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(4)>3
         |End.
       """.stripMargin
@@ -172,7 +183,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Real
       sort shouldBe Real
-      argNames shouldBe Some((Name("\\cdot", Some(0)), Real) :: Nil)
+      argNames shouldBe Some((Name("x", None), Real) :: Nil)
       interpretation.value shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))
     }
     entry.model shouldBe Parser("f(4)>3")
@@ -181,11 +192,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "parse n-ary function declarations" in {
     val problem =
       """
-        |Functions.
-        |  R f(R,R,R) = (._0 + ._1*._2).
+        |Definitions
+        |  Real f(Real x, Real y, Real z) = x + y*z;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(2,3,4)>3
         |End.
       """.stripMargin
@@ -196,35 +207,35 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
       domain.value shouldBe Tuple(Real, Tuple(Real, Real))
       sort shouldBe Real
-      argNames shouldBe Some((Name("\\cdot", Some(0)), Real) :: (Name("\\cdot", Some(1)), Real) :: (Name("\\cdot", Some(2)), Real) :: Nil)
+      argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: (Name("z", None), Real) :: Nil)
       interpretation.value shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
     }
     entry.model shouldBe Parser.parser("f(2,3,4)>3")
   }
 
-  it should "detect undeclared dots" in {
+  it should "detect undeclared arguments" in {
     val problem =
       """
-        |Functions.
-        |  R f(R,R,R) = (._1 + ._2*._3).
+        |Definitions
+        |  Real f(Real x, Real y, Real z) = y + z*u;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(2,3,4)>3
         |End.
       """.stripMargin
 
     val thrown = the [ParseException] thrownBy ArchiveParser.parseProblem(problem)
-    thrown.getMessage should include ("Function/predicate f(._0,._1,._2) defined using undeclared ._3")
+    thrown.getMessage should include ("Definition f uses undefined symbol(s) u")
   }
 
   it should "replace names with the appropriate dots" in {
     val problem =
-      """Functions.
-        |  R f(R x, R y, R z) = (x + y*z).
+      """Definitions
+        |  Real f(Real x, Real y, Real z) = x + y*z;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(2,3,4)>3
         |End.
       """.stripMargin
@@ -244,11 +255,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "not confuse arguments of same name across definitions" in {
     val problem =
       """Definitions.
-        |  R f(R x, R y, R z) = (x+y*z).
-        |  R g(R a, R x, R y) = (f(x,y,a)).
+        |  Real f(Real x, Real y, Real z) = x+y*z;
+        |  Real g(Real a, Real x, Real y) = f(x,y,a);
         |End.
         |
-        |Problem.
+        |Problem
         |  f(1,2,3)>0 -> g(3,1,2)>0
         |End.
       """.stripMargin
@@ -276,10 +287,10 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "correctly dottify in the presence of unused arguments" in {
     val problem =
       """Definitions.
-        |  R f(R x, R y) = (y+3).
+        |  Real f(Real x, Real y) = y+3;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(1,2)>0
         |End.
       """.stripMargin
@@ -298,11 +309,11 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
 
   it should "replace argument name of unary function with non-indexed dot (for backwards compatibility)" in {
     val problem =
-      """Functions.
-        |  R f(R x) = (x + 2).
+      """Definitions
+        |  Real f(Real x) = x + 2;
         |End.
         |
-        |Problem.
+        |Problem
         |  f(2)>3
         |End.
       """.stripMargin
@@ -319,53 +330,19 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
     entry.model shouldBe Parser("f(2)>3")
   }
 
-  it should "allow both . and explicit ._0 in unary function definition" ignore {
-    def problem(dot: String): String =
-      s"""Functions.
-        |  R f(R) = ($dot + 2).
-        |End.
-        |
-        |Problem.
-        |  f(2)>3
-        |End.
-      """.stripMargin
-
-    val entry = ArchiveParser.parseProblem(problem("._0"))
-    entry.defs.decls should have size 1
-    entry.defs.decls should contain key Name("f", None)
-    entry.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
-      domain.value shouldBe Real
-      sort shouldBe Real
-      argNames shouldBe 'empty
-      interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
-    }
-    entry.model shouldBe Parser("f(2)>3")
-
-    val entry2 = ArchiveParser.parseProblem(problem("."))
-    entry2.defs.decls should have size 1
-    entry2.defs.decls should contain key Name("f", None)
-    entry2.defs.decls(Name("f", None)) match { case Signature(domain, sort, argNames, interpretation, _) =>
-      domain.value shouldBe Real
-      sort shouldBe Real
-      argNames shouldBe 'empty
-      interpretation.value shouldBe Plus(DotTerm(Real), Number(2))
-    }
-    entry2.model shouldBe Parser("f(2)>3")
-  }
-
   it should "parse program definitions" in {
     val problem =
       """
-        |Functions.
+        |Definitions
         |  HP a ::= { x:=*; ?x<=5; ++ x:=y; }.
         |End.
         |
-        |ProgramVariables.
-        |  R x.
-        |  R y.
+        |ProgramVariables
+        |  Real x;
+        |  Real y;
         |End.
         |
-        |Problem.
+        |Problem
         |  y<=5 -> [a;]x<=5
         |End.
       """.stripMargin
@@ -384,18 +361,18 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "parse functions and predicates in program definitions" in {
     val problem =
       """
-        |Functions.
-        |  R f(R) = (.+2).
-        |  B p(R,R) <-> (._0<=._1).
-        |  HP a ::= { x:=*; ?p(x,5); ++ x:=f(y); }.
+        |Definitions
+        |  Real f(Real x) = x+2;
+        |  Bool p(Real x, Real y) <-> x<=y;
+        |  HP a ::= { x:=*; ?p(x,5); ++ x:=f(y); };
         |End.
         |
-        |ProgramVariables.
-        |  R x.
-        |  R y.
+        |ProgramVariables
+        |  Real x;
+        |  Real y;
         |End.
         |
-        |Problem.
+        |Problem
         |  y<=5 -> [a;]x<=5
         |End.
       """.stripMargin
@@ -414,17 +391,17 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "parse annotations" in {
     val problem =
       """
-        |Functions.
-        |  B p(R,R) <-> (._0>=._1).
-        |  HP loopBody ::= { x:=x+2; }.
-        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) }.
+        |Definitions
+        |  Bool p(Real x, Real y) <-> x>=y;
+        |  HP loopBody ::= { x:=x+2; };
+        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) };
         |End.
         |
-        |ProgramVariables.
-        |  R x.
+        |ProgramVariables
+        |  Real x;
         |End.
         |
-        |Problem.
+        |Problem
         |  [a;]x>=1
         |End.
       """.stripMargin
@@ -452,17 +429,17 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach wit
   it should "be allowed to ignore later definitions when elaborating annotations" in {
     val problem =
       """
-        |Functions.
-        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) }.
-        |  B p(R,R) <-> (._0>=._1).
-        |  HP loopBody ::= { x:=x+2; }.
+        |Definitions
+        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) };
+        |  Bool p(Real x, Real y) <-> x>=y;
+        |  HP loopBody ::= { x:=x+2; };
         |End.
         |
-        |ProgramVariables.
-        |  R x.
+        |ProgramVariables
+        |  Real x;
         |End.
         |
-        |Problem.
+        |Problem
         |  [a;]x>=1
         |End.
       """.stripMargin
