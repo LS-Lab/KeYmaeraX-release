@@ -677,7 +677,11 @@ class ScriptedRequestTests extends TacticTestBase {
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
     modelInfos should have size 85  // change when ListExamplesRequest is updated
-    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
+
+    // STTT16/Tutorial Example 10
+    // FM16/Tutorial Example 5
+
+    val modelInfosTable = Table(("name", "id"), modelInfos.filter(_._1=="FM16/Tutorial Example 5"):_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
         val start = System.currentTimeMillis()

@@ -89,7 +89,7 @@ private object ToolTactics {
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
         assertT(_.isFOL, "QE on FOL only") &
-        allTacticChase()(notL, andL, notR, implyR, orR, allR) &
+          SaturateTactic(alphaRule | allR('R)) &
           Idioms.doIf(!_.isProved)(
             close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
               // if

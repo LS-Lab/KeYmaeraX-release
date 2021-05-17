@@ -2147,9 +2147,14 @@ trait UnifyUSCalculus {
 
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
-    * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
+    * Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the chosen formula in place. */
   @Tactic(longDisplayName = "Decompose")
-  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3)(pos)}
+  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.axiomsFor(_: Expression))(pos)}
+
+  /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
+    * exhaustively. */
+  @Tactic(longDisplayName = "Deep Decompose")
+  lazy val deepChase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos)}
 
   /** Chase with bounded breadth and giveUp to stop.
     *

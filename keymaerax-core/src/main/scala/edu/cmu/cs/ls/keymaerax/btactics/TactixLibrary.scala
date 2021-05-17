@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
@@ -13,8 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{BranchRecursor, TacticRecursor, TacticRecursors}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
@@ -106,11 +104,13 @@ object TactixLibrary extends HilbertCalculus
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
-  val step : DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
+  val step: DependentPositionTactic = doStep(sequentStepIndex)
+
+  def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     TryCatch(
-      //@todo optimizable: move assignb tactic into AxIndex once supported
-      if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) else HilbertCalculus.stepAt(pos),
+      //@todo optimizable: move assignb tactic into AxIndex once supported (but remember: assignb is applicable in context)
+      if (pos.isTopLevel) stepAt(index(pos.isAnte)(_))(pos) else UnifyUSCalculus.stepAt(index(pos.isAnte))(pos),
       classOf[Throwable], (ex: Throwable) => seq.sub(pos) match {
         case Some(Box(_: Assign, _)) => assignb(pos)
         case Some(Diamond(_: Assign, _)) => assignd(pos)
@@ -128,158 +128,82 @@ object TactixLibrary extends HilbertCalculus
         }
       } ))
 
-  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
+  /** Normalize to sequent form. */
   @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
-  lazy val normalize: BelleExpr =  normalize(orL, implyL, equivL, andR, equivR)
-  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = anon (allTacticChase(
-    new DefaultTacticIndex {
-      override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case f@Not(_)      if f.isPredicateFreeFOL => (Nil, Nil)
-        case f@And(_, _)   if f.isPredicateFreeFOL => (andL::Nil, Nil)
-        case f@Or(_, _)    if f.isPredicateFreeFOL => (Nil, orR::Nil)
-        case f@Imply(_, _) =>
-          if (f.isPredicateFreeFOL) (Nil, implyR::Nil)
-          else (PropositionalTactics.autoMP::implyL::Nil, implyR::Nil)
-        case f@Equiv(_, _) if f.isPredicateFreeFOL => (Nil, Nil)
-        case _ => super.tacticsFor(expr)
-      }
+  lazy val normalize: BelleExpr = anon {
+    def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
+      case (f: Not, true) if f.isPredicateFreeFOL => None
+      case (f: Not, false) if f.isPredicateFreeFOL => None
+      case (f: And, false) if f.isPredicateFreeFOL => None
+      case (f: Or, true) if f.isPredicateFreeFOL => None
+      case (f: Imply, true) if f.isPredicateFreeFOL => None
+      case (f: Equiv, true) if f.isPredicateFreeFOL => None
+      case (f: Equiv, false) if f.isPredicateFreeFOL => None
+      case (_: Forall, true) => Some(TacticInfo("deepChase"))
+      case (_: Exists, false) => Some(TacticInfo("deepChase"))
+      case _ => sequentStepIndex(isAnte)(expr)
     }
-  )(notL::andL::notR::implyR::orR::PropositionalTactics.autoMP::allR::TacticIndex.allLStutter::
-    existsL::TacticIndex.existsRStutter::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::
-    ProofRuleTactics.closeFalse::Nil ++ beta:_*))
 
-  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
+    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id |
+      DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil))
+  }
+
+  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)
-  val unfoldProgramNormalize: BelleExpr = anon {normalize(andR)}
+  val unfoldProgramNormalize: BelleExpr = anon {
+    //normalize(andR)
 
-  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
-    * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
-    * @see [[chase]] */
-  def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)
-                 (restrictTo: AtPosition[_ <: BelleExpr]*)
-                 (expected: Option[Formula]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
-    val restrictions = restrictTo.toList
-
-    /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    def atPos(except: Option[Position]): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
-      if (except.contains(pos)) skip
-      else s.sub(pos) match {
-        case Some(fml) =>
-          val si = s.succ.indexOf(fml)
-          if (pos.isAnte && si >= 0) closeId(pos.checkAnte.top, SuccPos(si))
-          else {
-            val ai = s.ante.indexOf(fml)
-            if (pos.isSucc && ai >= 0) closeId(AntePos(ai), pos.checkSucc.top)
-            else {
-              val (ta, ts) = tacticIndex.tacticsFor(fml)
-              if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
-              else ts.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
-            }
-          }
-        case _ => skip
-      }
-    })
-
-    /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): DependentTactic = anon ((s: Sequent) => p match {
-      case Fixed(pp, Some(fml), exact) =>
-        if (( exact && s.sub(pp).contains(fml)) ||
-            (!exact && s.sub(pp).exists(UnificationMatch.unifiable(fml, _).isDefined))) atPos(None)(Fixed(pp))
-        else if (pp.isAnte) atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact))
-        else                atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact))
-      case _ => atPos(None)(p)
-    })
-
-    /** Do all the tactics of a branch in sequence. */
-    def applyBranchRecursor(rec: BranchRecursor): BelleExpr =
-      //@note onAll tries on too many branches, but optional atOrSearch compensates for this
-      rec.positions.map(r => onAll(?(atOrSearch(r)))).reduce(_&_)
-
-    /** Turn branches (if any) into a branching tactic. */
-    def applyRecursor(rec: TacticRecursor): BelleExpr = rec.branches match {
-      case Nil => skip
-      case r::Nil => onAll(applyBranchRecursor(r))
-      case r => DebuggingTactics.assertProvableSize(r.length, new IllFormedTacticApplicationException(_)) &
-        BranchTactic(r.map(applyBranchRecursor))
+    def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
+      case (f: Not, true) if f.isPredicateFreeFOL => None
+      case (f: Not, false) if f.isPredicateFreeFOL => None
+      case (f: And, false) if f.isPredicateFreeFOL => None
+      case (_: Imply, true) => Some(TacticInfo("autoMP"))
+      case (_: Or, true) => None
+      case (_: Equiv, _) => None
+      case _ => sequentStepIndex(isAnte)(expr)
     }
 
-    /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
-    def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
-      //@note tactic recursors also check top-level vs. non-toplevel tactic applicability
-      tacticIndex.tacticRecursors(t)(s, pos) match {
-        case Left(r@TacticRecursor(branches)) =>
-          //@note Left(recursors) execute tactic then recurse;
-          // if recursor continues working on the same position: insist that t made progress
-          val tactic =
-            if (branches.exists(_.positions.exists({ case Fixed(pp, _, _) => pp == pos case _ => false }))) must(t(new Fixed(pos)))
-            else t(new Fixed(pos))
-          if (branches.nonEmpty) tactic & Idioms.doIf(!_.isProved)(applyRecursor(r))
-          else tactic
-        case Right(r@TacticRecursor(branches)) =>
-          //@note skip tactic, recurse right away
-          if (branches.exists(_.positions.exists({ case Fixed(pp, _, _) => pp == pos case _ => false })))
-            throw new IllegalArgumentException("Tactic index error: skip recursor must not point to original position")
-          else applyRecursor(r)
-      }
-    }
-
-    seq.sub(pos) match {
-      case Some(fml: Formula) =>
-        if (expected.isEmpty || expected.contains(fml)) onAll(atPos(None)(pos, fml))
-        else onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case Some(e) => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas, but got " + e.prettyString)
-      case None =>
-        if (expected.isDefined) onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-        else throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
-    }
-  })
-
-  /** Exhaustively chase all formulas in the sequent.
-    * @see [[tacticChase]] */
-  def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
-    //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
-      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(
-        onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
-    }))) &
-    Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
-      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
-      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(
-        onAll(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
-    })))
-  )
+    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
+  }
 
   @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
-  def chaseAtX: DependentPositionTactic = chaseAt()(
-    TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
-    TactixLibrary.existsL, TacticIndex.existsRStutter,
-    ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
-  )
-  /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
-    * in `restrictTo`) at a position. */
-  def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
-             (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+  def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) => chaseAt(
+    (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
+      case (_: Forall, true) => Some(TacticInfo("chase"))
+      case (_: Exists, false) => Some(TacticInfo("chase"))
+      case _ => sequentStepIndex(isAnte)(expr)
+    }
+  )(pos) }
+
+  /** Chases program operators according to [[AxIndex]] or tactics according to `index`. */
+  def chaseAt(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
-      case Some(e) =>
-        if (AxIndex.axiomsFor(e).nonEmpty) {
-          chase(pos)
-        } else {
-          val tactics = tacticIndex.tacticFor(e, restrictTo.toList)
-          if (pos.isAnte && tactics._1.isDefined || pos.isSucc && tactics._2.isDefined) {
-            tacticChase(tacticIndex)(restrictTo:_*)(None)(pos)
-          } else {
-            throw new TacticInapplicableFailure("Chase is not applicable, please try other tactics at position " + pos.prettyString + " in\n" + seq.prettyString)
-          }
-        }
+      case Some(_) =>
+        //@todo avoid recursion
+        def recurse: DependentTactic = anon { (result: Sequent) => {
+          //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
+          val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+          val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+          if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
+          else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
+        }}
+        doStep(index)(pos) & recurse
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
     }
   })
 
   @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
-  val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
-                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
+  val prop: BelleExpr = anon {
+    def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
+      case (_: Forall, _) => None
+      case (_: Exists, _) => None
+      case (_: Diamond, _) => None
+      case (_: Box, _) => None
+      case _ => sequentStepIndex(isAnte)(expr)
+    }
+
+    SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | nil))
+  }
 
   /** Automated propositional reasoning, only keeps result if proved. */
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
@@ -292,34 +216,18 @@ object TactixLibrary extends HilbertCalculus
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
              keepQEFalse: Boolean): BelleExpr = anon {
-    /** Tactic index that hands out loop tactics and configurable ODE tactics. */
-    val autoTacticIndex = new DefaultTacticIndex {
-      override def tacticRecursors(tactic: BelleExpr): TacticRecursors = {
-        //@note BEWARE! .eq for true reference comparison! needed since anon tactic factories create indistinguishable
-        // case classes (all have the same name, none mentions the concrete tactic instance)
-        if (tactic.eq(loop)) {
-          //@todo positions? what to expect there?
-          (_: Sequent, p: Position) => Left(TacticRecursor(
-            BranchRecursor(Fixed(p) :: Nil) ::
-            BranchRecursor(Fixed(p) :: Nil) ::
-            BranchRecursor(Fixed(p) :: Nil) :: Nil))
-        } else if (tactic.eq(odeR)) {
-          (_: Sequent, p: Position) => Left(TacticRecursor(BranchRecursor(Fixed(p) :: Nil) :: Nil))
-        } else super.tacticRecursors(tactic)
-      }
 
-      override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(_: Loop, _) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
-        case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
-        case f@Not(_)      if f.isPredicateFreeFOL => (Nil, Nil)
-        case f@And(_, _)   if f.isPredicateFreeFOL => (TactixLibrary.andL::Nil, Nil)
-        case f@Or(_, _)    if f.isPredicateFreeFOL => (Nil, TactixLibrary.orR::Nil)
-        case f@Imply(_, _) =>
-          if (f.isPredicateFreeFOL) (Nil, TactixLibrary.implyR::Nil)
-          else (PropositionalTactics.autoMP::implyL::Nil, implyR::Nil)
-        case f@Equiv(_, _) if f.isPredicateFreeFOL => (Nil, Nil)
-        case _ => super.tacticsFor(expr)
-      }
+    def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
+      case (f: Not, true) if f.isPredicateFreeFOL => None
+      case (f: Not, false) if f.isPredicateFreeFOL => None
+      case (f: And, false) if f.isPredicateFreeFOL => None
+      case (f: Or, true) if f.isPredicateFreeFOL => None
+      case (f: Imply, true) if f.isPredicateFreeFOL => None
+      case (f: Equiv, true) if f.isPredicateFreeFOL => None
+      case (f: Equiv, false) if f.isPredicateFreeFOL => None
+      case (_: Forall, true) => Some(TacticInfo("chase"))
+      case (_: Exists, false) => Some(TacticInfo("chase"))
+      case _ => sequentStepIndex(isAnte)(expr)
     }
 
     def composeChase: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
@@ -365,10 +273,8 @@ object TactixLibrary extends HilbertCalculus
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
-      SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
-        TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
-        implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+      SaturateTactic(onAll(doStep(index)('R) | loop('R) | odeR('R) | solve('R) | doStep(index)('L) | solve('L) |
+        id | DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil)) &
         Idioms.doIf(!_.isProved)(onAll(
           //@note apply equalities inside | to undo in case branches do not close
           (EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done)
@@ -1105,7 +1011,7 @@ object TactixLibrary extends HilbertCalculus
     case (_: And, false) => Some(TacticInfo("andR"))
     case (_: Or, true) => Some(TacticInfo("orL"))
     case (_: Or, false) => Some(TacticInfo("orR"))
-    case (_: Imply, true) => Some(TacticInfo("implyL"))
+    case (_: Imply, true) => Some(/* TacticInfo("autoMP") :: */ TacticInfo("implyL"))
     case (_: Imply, false) => Some(TacticInfo("implyR"))
     case (_: Equiv, true) => Some(TacticInfo("equivL"))
     case (_: Equiv, false) => Some(TacticInfo("equivR"))

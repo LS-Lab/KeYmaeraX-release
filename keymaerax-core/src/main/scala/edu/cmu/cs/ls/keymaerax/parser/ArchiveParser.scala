@@ -433,6 +433,7 @@ object ArchiveParser extends ArchiveParser {
       case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
       case FuncOf(n, _) => List(Name(n.name, n.index) -> n.sort)
       case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
+      case _ => List() //@note unable to guess argument name from general terms x+y
     }
 
     val collectedArgs = scala.collection.mutable.Map.empty[NamedSymbol, List[(Name, Sort)]]

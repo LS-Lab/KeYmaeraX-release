@@ -147,7 +147,10 @@ object DatabasePopulator extends Logging {
   def prepareInterpreter(db: DBAbstraction, proofId: Int, listeners: Seq[IOListener] = Nil): Interpreter = {
     def listener(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int) = {
       val trace = db.getExecutionTrace(proofId, withProvables=false)
-      assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+      assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Unable to record " + tacticName +
+        " because invalid parent trace index " + parentInTrace +
+        ", expected -1<=i<" + trace.steps.length + " (trace.length) in\n" +
+        trace.steps.map(s => s.rule + "@" + s.stepId).mkString(", "))
       val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
       val globalProvable = parentStep match {
         case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable

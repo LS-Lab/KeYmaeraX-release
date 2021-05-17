@@ -197,6 +197,11 @@ class UnifyUSCalculusTest extends TacticTestBase {
     proveBy("==> <{{a;^@}*}^@>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> [{a;^@}*]P()".asSequent
   }
 
+  it should "chase inside quantifiers" in {
+    proveBy("==> \\exists x [x:=x+1;]\\exists y [y:=y-1;]x>=y".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> \\exists x \\exists y x+1>=y-1".asSequent
+    proveBy("\\forall x \\forall y [x:=x+y;]x>=0 ==>".asSequent, chase(3, 3)(-1)).subgoals.loneElement shouldBe "\\forall x \\forall y x+y>=0 ==>".asSequent
+  }
+
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (ProvableSig.startProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))

@@ -1,9 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{InterpreterConsistencyListener, PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -152,10 +151,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
+      //@note KeYmaeraXTool.init overwrites the interpreter that we set up in beforeEach!
+      val i = theInterpreter
       KeYmaeraXTool.init(Map(
         KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
         KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
       ))
+      BelleInterpreter.setInterpreter(i)
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = (_: Thread) => {
@@ -255,11 +257,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    val listeners =
+    val listeners = {
+      (new InterpreterConsistencyListener() :: Nil) ++
       (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
+    }
     dbTester = new Lazy(new TempDBTools(listeners))
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)

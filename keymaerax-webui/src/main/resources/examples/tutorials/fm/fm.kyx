@@ -238,16 +238,19 @@ End.
 
 Tactic "Proof Formal Methods Tutorial Example 5"
 implyR(1); (andL('L)*); loop("v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))", 1); <(
-  prop; done,
-  QE; done,
-  unfold; <(
+  print("Base"); prop; print("Base done"); done,
+  print("Use"); QE; print("Use done"); done,
+  print("Unfolding..."); unfold; print("Unfolded"); <(
+    print("Case 1");
     diffInvariant("t>=0", 1);
+    print("Bar");
     diffInvariant("dx^2+dy^2=1", 1);
     diffInvariant("v=old(v)-B()*t", 1);
     diffInvariant("-t*(v+B()/2*t)<=x-old(x)&x-old(x)<=t*(v+B()/2*t)", 1);
     diffInvariant("-t*(v+B()/2*t)<=y-old(y)&y-old(y)<=t*(v+B()/2*t)", 1);
     dW(1); QE; done
     ,
+    print("Case 2");
     diffInvariant("t>=0", 1);
     diffInvariant("dx^2+dy^2=1", 1);
     diffInvariant("v=old(v)", 1);
@@ -255,8 +258,11 @@ implyR(1); (andL('L)*); loop("v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y
     diffInvariant("y=old(y)", 1);
     dW(1); QE; done
     ,
+    print("Case 3");
     hideL(-13=="abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())");
+    print("Foo");
     diffInvariant("t>=0", 1);
+    print("Bar");
     diffInvariant("dx^2+dy^2=1", 1);
     diffInvariant("v=old(v)+a*t", 1);
     diffInvariant("-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)", 1);

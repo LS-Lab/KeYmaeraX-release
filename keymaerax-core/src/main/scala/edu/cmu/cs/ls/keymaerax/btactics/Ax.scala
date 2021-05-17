@@ -4789,7 +4789,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("all stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("all stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4810,7 +4810,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("exists stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4819,6 +4819,81 @@ object Ax extends Logging {
   @Axiom("exists stutter'", key = "0", recursor = "", displayLevel = "internal")
   lazy val existsStutterPrime: DerivedAxiomInfo = derivedAxiom("exists stutter prime",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_' p_(||) <-> \\exists x_' p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "and stutter".
+    *    P&Q <-> P&Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("and stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val andStutter: DerivedAxiomInfo = derivedAxiom("and stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) & q_(||) <-> p_(||) & q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "or stutter".
+    *    P|Q <-> P|Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("or stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val orStutter: DerivedAxiomInfo = derivedAxiom("or stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) | q_(||) <-> p_(||) | q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "imply stutter".
+    *    (P->Q) <-> (P->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("imply stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val implyStutter: DerivedAxiomInfo = derivedAxiom("imply stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) -> q_(||)) <-> (p_(||) -> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "equiv stutter".
+    *    (P<->Q) <-> (P<->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("equiv stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val equivStutter: DerivedAxiomInfo = derivedAxiom("equiv stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) <-> q_(||)) <-> (p_(||) <-> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "not stutter".
+    *    !P <-> !P
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("not stutter", key = "0", recursor = "0", displayLevel = "internal")
+  lazy val notStutter: DerivedAxiomInfo = derivedAxiom("not stutter",
+    Sequent(IndexedSeq(), IndexedSeq("!p_(||) <-> !p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 

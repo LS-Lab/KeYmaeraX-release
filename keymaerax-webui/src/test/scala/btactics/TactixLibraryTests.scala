@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.TacticInfo
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
@@ -392,9 +393,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "auto modus ponens" in withQE { _ =>
     val f = "(y>0->p(x)) -> (y>0 -> p(y))".asFormula
-    //@todo chase first traverse into autoMP in antecedent before working on implyR, so autoMP creates an additional
-    // y>0 since it is not available verbatim yet
-    proveBy(f, normalize).subgoals.loneElement shouldBe "p(x), y>0, y>0 ==> p(y)".asSequent
+    proveBy(f, normalize).subgoals.loneElement shouldBe "p(x), y>0 ==> p(y)".asSequent
   }
 
   it should "not fail when trying to chase non-toplevel" in {
@@ -403,7 +402,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
   }
 
-  it should "chase non-toplevel" in {
+  it should "chase non-toplevel" in withTactics {
     val f = "X>x&\\forall a ([x:=2;]x<a&a<=X->[z:=Y;]a<=z) -> \\exists a (a>x&a<=Y)".asFormula
     //@note master does not yet instantiate quantifiers, but tries to chase inside
     proveBy(f, normalize).subgoals.loneElement shouldBe "X>x, \\forall a (2<a&a<=X->a<=Y) ==> \\exists a (a>x&a<=Y)".asSequent
@@ -417,10 +416,10 @@ class TactixLibraryTests extends TacticTestBase {
         #->  \forall a (-B()<=a&a<=A()->\forall w \forall r (r!=0&w*r=v->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))))
         #  & (v=0->\forall w (w=0->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw()))))
         #  & \forall a (-B()<=a&a<=-b()->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))""".stripMargin('#').asSequent, normalize)
-    result.subgoals should have size 3
-    result.subgoals(0) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw(), -B()<=a, a<=A(), r!=0, w*r=v, c=0, v>=0, dx^2+dy^2=1, r_0!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
-    result.subgoals(1) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, v=0, w=0, c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
-    result.subgoals(2) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, -B()<=a, a<=-b(), c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
+    result.subgoals should contain theSameElementsInOrderAs List(
+      "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw(), c=0, v>=0, -B()<=a, a<=A(), r!=0, w*r=v, dx^2+dy^2=1, r_0!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent,
+      "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, v=0, w=0, c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent,
+      "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, c=0, v>=0, -B()<=a, a<=-b(), dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent)
   }
 
   it should "use abstraction" in {
@@ -454,6 +453,16 @@ class TactixLibraryTests extends TacticTestBase {
   it should "unfold equational diamond assignments" in withTactics {
     val result = proveBy("<x:=x+1;><{x'=1}>x>0".asFormula, normalize)
     result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x'=1}>x>0".asSequent
+  }
+
+  it should "not stack overflow" in {
+    val s = """v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())), A()>=0, B()>0, ep()>0
+      |==> [{{a:=-B();++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=A();r:=*;?r!=0;w:=*;?v=w/r;xo:=*;yo:=*;?abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v);}t:=0;}{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))""".stripMargin.asSequent
+    proveBy(s, unfoldProgramNormalize).subgoals should contain theSameElementsInOrderAs List(
+      "A()>=0, B()>0, ep()>0, t=0, v>=0, dx^2+dy^2=1, r!=0, abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())\n  ==>  [{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))".asSequent,
+      "A()>=0, B()>0, ep()>0, v=0, w=0, t=0, v>=0, dx^2+dy^2=1, r!=0, abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())\n  ==>  [{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))".asSequent,
+      "A()>=0, B()>0, ep()>0, r!=0, v=w/r, abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v), t=0, v>=0, -B()<=a, a<=A(), dx^2+dy^2=1, r_0!=0, abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())\n  ==>  [{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))".asSequent
+    )
   }
 
   "QE" should "reset timeout when done" in withQE {
@@ -503,7 +512,7 @@ class TactixLibraryTests extends TacticTestBase {
       result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent
     }
 
-    i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
+    i shouldBe 3 /* decomposeToODE calls ODE, and so does master twice after decomposeToODE is done */
   }
 
   it should "not apply stutter axioms infinitely" in withQE { _ =>
@@ -516,30 +525,32 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "inherit labels from core rules with prop" in {
     proveBy("x>=0 | y>=0 -> x^2>=0 & y^2>=0".asFormula, prop, _.value should contain theSameElementsAs
-      "x>=0//x^2>=0::y>=0//x^2>=0::x>=0//y^2>=0::y>=0//y^2>=0".asLabels
+      "x^2>=0//x>=0::y^2>=0//x>=0::y^2>=0//y>=0::x^2>=0//y>=0".asLabels
     )
   }
 
   it should "chase at position" in withTactics {
-    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, tacticChase()(implyR,step)(None)(2))
-    result.subgoals.loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
+    proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, chaseAtX(2)).subgoals.
+      loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
   }
 
   it should "search for expected formula if positions shifted" in withTactics {
-    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
-      implyR(1) & tacticChase()(implyR,step)(Some("y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula))(2))
-    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+    proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
+      implyR(1) & chaseAtX('R, "y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula)).subgoals.
+      loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
   it should "chase everywhere" in withTactics {
-    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, allTacticChase()(implyR,step))
-    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+    proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
+      SaturateTactic(chaseAtX('R))).subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
   it should "chase multiple tactic options" in withMathematica { _ =>
-    val result = proveBy("l() < r(), l()<=x, x<=r(), x=l() ==> [{x'=1&l()>=x|x>=r()}](l()<=x&x<=r())".asSequent,
-      allTacticChase()(ODE, solve))
-    result.subgoals.loneElement shouldBe "l() < r(), l()<=x_0, x_0<=r(), x_0=l(), l()>=x_0|x_0>=r(), time_=0, x_0=x ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+time_>=0&s_+x=s_+time_+x_0)->t_+x<=r())".asSequent
+    proveBy("x>0 -> y>0 ==>".asSequent,
+      chaseAt((isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
+        case (_: Imply, true) => Some(TacticInfo("autoMP")) // @todo List with autoMP,implyL
+        case _ => None
+      })(-1)).subgoals should contain theSameElementsInOrderAs List("==> x>0".asSequent, "y>0 ==>".asSequent)
   }
 
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>
