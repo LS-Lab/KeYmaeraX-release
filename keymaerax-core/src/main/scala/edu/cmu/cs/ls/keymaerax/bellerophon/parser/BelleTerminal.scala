@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator
-import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Program, SubstitutionPair, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.{LexException, Parser, UnknownLocation}
 
@@ -211,15 +211,15 @@ private case class EXPRESSION_SUB(override val exprString: String, override val 
     val subEnd = undelimitedExprString.lastIndexOf('#')
     assert(subStart >= 1 && subEnd > subStart, "Non-empty sub-position marker expected")
     val subString = undelimitedExprString.slice(subStart, subEnd)
-    val sub = Parser.parser(subString)
+    val sub = Parser(subString)
     val (expr, inExpr) =
       if (undelimitedExprString.indexOf(subString) != subStart) {
         // marked sub-expression is not leftmost in expr, mark with "hash" placeholders
         val (markedStr, placeholder) = PositionLocator.withMarkers(undelimitedExprString, sub, subStart - 1, subEnd - subStart + 2)
-        val expr = Parser.parser(markedStr)
-        (Parser.parser(undelimitedExprString.replaceAllLiterally("#", "")), FormulaTools.posOf(expr, placeholder))
+        val expr = Parser(markedStr)
+        (Parser(PositionLocator.replaceHashesParenthesized(undelimitedExprString, sub.kind)), FormulaTools.posOf(expr, placeholder))
       } else {
-        val expr = Parser.parser(undelimitedExprString.replaceAllLiterally("#", ""))
+        val expr = Parser(PositionLocator.replaceHashesParenthesized(undelimitedExprString, sub.kind))
         (expr, FormulaTools.posOf(expr, sub))
       }
 

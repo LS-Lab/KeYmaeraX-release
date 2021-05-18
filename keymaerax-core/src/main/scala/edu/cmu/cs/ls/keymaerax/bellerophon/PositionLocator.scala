@@ -40,6 +40,15 @@ object PositionLocator {
       (Compose(Compose(h, p), h), Regex.quote("{" + h.prettyString), Regex.quote("}" + h.prettyString))
   }
 
+  /** Replaces `#` in `s` with parentheses/braces per `kind`. */
+  def replaceHashesParenthesized(s: String, kind: Kind): String = {
+    val (l, r) = kind match {
+      case TermKind | FormulaKind => ("(", ")")
+      case ProgramKind => ("{", "}")
+    }
+    s.replaceFirst("#", l).replaceFirst("#",r)
+  }
+
   def withMarkers(e: Expression, pos: PosInExpr): String = {
     import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     if (pos == HereP) e.prettyString
@@ -55,7 +64,12 @@ object PositionLocator {
 
   def withMarkers(s: String, sub: Expression, start: Int, end: Int): (String, Expression) = {
     val (p, _, _) = placeholder(sub)
-    (s.patch(start, p.prettyString, end), p)
+    //@note [[withMarkers]] removes enclosing () and {} for more concise appearance
+    val (l, r) = sub.kind match {
+      case TermKind | FormulaKind => ("(", ")")
+      case ProgramKind => ("{", "}")
+    }
+    (s.patch(start, l + p.prettyString + r, end), p)
   }
 }
 
