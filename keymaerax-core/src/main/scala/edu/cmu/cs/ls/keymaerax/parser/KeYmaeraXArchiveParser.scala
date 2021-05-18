@@ -69,8 +69,10 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
   } catch {
     case ex: ParseException if ex.msg.startsWith("Lexer") =>
       val shiftedLoc = shiftLoc(ex.loc, t.belleExprLoc)
-      val msg = (ex.msg.substring(0, ex.msg.indexOf("in `")) +
-        ex.msg.substring(ex.msg.indexOf("beginning with character"))).
+      val omitStart = ex.msg.indexOf("in `")
+      val restStart = ex.msg.indexOf("beginning with character")
+      val msg =
+        (if (omitStart < 0 || restStart < 0) ex.msg else ex.msg.substring(0, omitStart) + ex.msg.substring(restStart)).
         replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
       throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }
