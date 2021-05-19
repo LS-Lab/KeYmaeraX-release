@@ -584,9 +584,9 @@ trait SequentCalculus {
     inputs = "x:Variable;;y[y]:Variable")
   def alphaRenAll(what: Variable, to: Variable): InputTactic = inputanon { (seq: Sequent) =>
     val anteIdxs = seq.ante.indices.filter(i =>
-      StaticSemantics.boundVars(seq.ante(i)).contains(what) && !StaticSemantics.freeVars(seq.ante(i)).contains(to))
+      !StaticSemantics.boundVars(seq.ante(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty && !StaticSemantics.freeVars(seq.ante(i)).contains(to))
     val succIdxs = seq.succ.indices.filter(i =>
-      StaticSemantics.boundVars(seq.succ(i)).contains(what) && !StaticSemantics.freeVars(seq.succ(i)).contains(to))
+      !StaticSemantics.boundVars(seq.succ(i)).intersect(Set(what, DifferentialSymbol(what))).isEmpty && !StaticSemantics.freeVars(seq.succ(i)).contains(to))
     val anteRewrite = anteIdxs.map(i => alphaRen(what, to)(AntePos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
     val succRewrite = succIdxs.map(i => alphaRen(what, to)(SuccPos(i)) <(Idioms.nil, id)).reduceRightOption[BelleExpr](_&_).getOrElse(Idioms.nil)
 
