@@ -658,7 +658,7 @@ abstract class SequentialInterpreter(override val listeners: scala.collection.im
         logger.debug("ChooseSome: try " + o)
         val someResult: Option[BelleValue] = try {
           Some(apply(e(o), v))
-        } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
+        } catch { case err: BelleProofSearchControl => errors += "in " + o + " " + err + "\n"; None }
         logger.debug("ChooseSome: try " + o + " got " + someResult)
         (someResult, e) match {
           case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
