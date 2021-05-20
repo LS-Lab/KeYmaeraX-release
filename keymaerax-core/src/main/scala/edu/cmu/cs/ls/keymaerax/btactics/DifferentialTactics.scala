@@ -1606,7 +1606,10 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
   def DGauto: DependentPositionTactic = anon((pos:Position,seq:Sequent) => {
-    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("DGAuto requires a AlgebraTool, but got None")
+    val algebraTool = ToolProvider.algebraTool() match {
+      case None => throw new ProverSetupException("DGAuto requires a AlgebraTool, but got None")
+      case Some(t) => t
+    }
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n == 0 => a
@@ -1627,16 +1630,17 @@ private object DifferentialTactics extends Logging {
     // [x':=f(x)](quantity)'
     val lie = DifferentialHelper.lieDerivative(ode, quantity)
 
-    lazy val constrGGroebner: Term = {
-      val groebnerBasis: List[Term] = ToolProvider.algebraTool().getOrElse(throw new ProverSetupException("DGAuto requires an AlgebraTool, but got None")).groebnerBasis(
-        quantity :: Nil)
-      ToolProvider.algebraTool().getOrElse(throw new ProverSetupException("DGAuto requires an AlgebraTool, but got None")).polynomialReduce(
+    lazy val constrGGroebner: Term = try {
+      val groebnerBasis: List[Term] = algebraTool.groebnerBasis(quantity :: Nil)
+      algebraTool.polynomialReduce(
         lie match {
           case Minus(Number(n), l) if n == 0 => l //@note avoid negated ghost from (f()-x)'
           case _ => lie
         },
         groebnerBasis.map(Times(Number(-2), _))
       )._1.head
+    } catch {
+      case ex: ToolException => throw new TacticInapplicableFailure("DGAuto: error computing Groebner basis", ex)
     }
 
     val odeBoundVars = StaticSemantics.boundVars(ode).symbols[NamedSymbol].toList.filter(_.isInstanceOf[BaseVariable]).sorted.map(_.asInstanceOf[BaseVariable])
@@ -1859,23 +1863,23 @@ private object DifferentialTactics extends Logging {
     * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
     */
   def domQuoRem(poly: Term, div: Term, dom: Formula): (Term,Term) = {
-    if (ToolProvider.algebraTool().isEmpty) {
-      throw new ProverSetupException(s"duoQuoRem requires a AlgebraTool, but got None")
-      // val polynorm = PolynomialArith.normalise(poly,true)._1
-      // val divnorm = PolynomialArith.normalise(div,true)._1
+    val algTool = ToolProvider.algebraTool() match {
+      case None => throw new ProverSetupException(s"domQuoRem requires a AlgebraTool, but got None")
+      case Some(t) => t
     }
-    else {
-      val algTool = ToolProvider.algebraTool().get
+    try {
       val gb = algTool.groebnerBasis(domainEqualities(dom))
       val quo = algTool.polynomialReduce(poly, div :: gb)
       // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
 
-      (quo._1.head,quo._2)
+      (quo._1.head, quo._2)
       //Older support for rational functions
       //val (g, q) = stripDenom(quo._1.head)
       //if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
       //else (Number(0), Number(1), poly)
+    } catch {
+      case ex: ToolException => throw new TacticInapplicableFailure("domQuoRem: error computing Groebner basis", ex)
     }
   }
 
