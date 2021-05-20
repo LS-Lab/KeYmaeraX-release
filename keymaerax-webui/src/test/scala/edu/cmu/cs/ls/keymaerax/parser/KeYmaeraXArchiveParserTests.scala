@@ -187,9 +187,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("cos", None) -> (Some(Real), Real, Some(List((("x",None),Real))), None, UnknownLocation),
-        ("sin", None) -> (Some(Real), Real, Some(List((("x",None),Real))), None, UnknownLocation),
-        ("y", None) -> (None, Real, None, None, UnknownLocation)
+        Name("cos", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), None, UnknownLocation),
+        Name("sin", None) -> Signature(Some(Real), Real, Some(List((Name("x",None),Real))), None, UnknownLocation),
+        Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "(sin(y))^2 + (cos(y))^2 = 1".asFormula
     entry.tactics shouldBe empty
@@ -211,8 +211,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("saddle", None) -> (Some(Tuple(Real,Real)), Real, Some(List((("x",None),Real), (("y",None),Real))), None, UnknownLocation),
-        ("x", None) -> (None, Real, None, None, UnknownLocation)
+        Name("saddle", None) -> Signature(Some(Tuple(Real,Real)), Real, Some(List((Name("x",None),Real), (Name("y",None),Real))), None, UnknownLocation),
+        Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "saddle(0,0) = 0 -> saddle(x,0) = x*x".asFormula
     entry.tactics shouldBe empty
@@ -321,7 +321,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
     DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
     val input =
       """
