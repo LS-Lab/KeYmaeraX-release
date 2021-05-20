@@ -85,12 +85,12 @@ object ProofTraversal {
             BoxChoice(traverse(conL, coneL, left, tf), traverse(conR, coneR, right, tf))
           case While(x, j, ss) =>
             While(x, j, traverse(kc, kce, ss, tf))
-          case fr@For(metX, metF, metIncr, conv, guard, body) =>
+          case fr@For(metX, metF, metIncr, conv, guard, body, guardEps) =>
             val grd: Assume = traverse(kc, kce, guard, tf).asInstanceOf[Assume]
             val cnv: Option[Assert] = conv.map(as => traverse(kc, kce, as, tf).asInstanceOf[Assert])
             val prog = (ForProgress(fr, Triv()))
             // @TODO: if progress helps, use it in all constructors of traverse
-            For(metX, metF, metIncr, cnv, grd, traverse(kc.:+(prog), kce.:+(prog), body, tf))
+            For(metX, metF, metIncr, cnv, grd, traverse(kc.:+(prog), kce.:+(prog), body, tf), guardEps)
           case BoxLoop(s, ih) =>
             BoxLoop(traverse(kc, kce, s, tf), ih)
           case Ghost(ss) =>
@@ -103,7 +103,7 @@ object ProofTraversal {
             Assert(x, f, traverse(kc, kce, child, tf))
           case Note(x, pt, ann) =>
             Note(x, traverse(kc, kce, pt, tf), ann)
-          case _: Modify | _: PrintGoal | _: Assume | _: Label | _: LetSym | _: Match | _: Triv | _: Pragma => s
+          case _: Modify | _: PrintGoal | _: Assume | _: Label | _: LetSym | _: Match | _: Triv | _: Pragma | _: Comment => s
         }
         locate(tf.postS(kc, kce, locate(mid, s)), s)
     }
@@ -163,7 +163,7 @@ object ProofTraversal {
       case Some(outM) => locate(outM, m)
       case None =>
         val mid = m match {
-          case _ : RCF | _ : Auto | _ : Prop | _: Triv | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => m
+          case _ : RCF | _ : Auto | _ : Prop | _: Triv | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis | _: GuardDone => m
           case Using(uses, m) => Using(uses.map(traverse(kc, kce, _, tf)), traverse(kc, kce, m, tf))
           case ByProof(ss) => ByProof(ss.map(traverse(kc, kce, _, tf)))
         }

@@ -256,16 +256,7 @@ object Idioms {
     * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
     * @see [[BelleLabels]]
     */
-  def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
-    override def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = {
-      val labelledTactics = (s1 +: spec).toMap
-      Idioms.<(labels.map(l => labelledTactics(l)):_*)
-    }
-    override def computeExpr(provable: ProvableSig): BelleExpr = {
-      logger.debug("No branch labels, executing by branch order")
-      Idioms.<((s1 +: spec).map(_._2):_*)
-    }
-  }
+  def <(s1: (BelleTopLevelLabel, BelleExpr), spec: (BelleTopLevelLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
 
   /* branch by case distinction
   *  cases must be exhaustive (or easily proved to be exhaustive in context)
@@ -631,7 +622,7 @@ object TacticFactory {
         }
       })
 
-/** Creates a Tactic with applied inputs from a function turning provables and antecedent positions into new provables. */
+    /** Creates a Tactic with applied inputs from a function turning provables and antecedent positions into new provables. */
     def byWithInputsP(inputs: Seq[Any], t: (ProvableSig, Position) => ProvableSig): DependentPositionWithAppliedInputTactic =
       byWithInputs(inputs, (pos: Position, _: Sequent) => {
         new BuiltInTactic(name) {
@@ -706,6 +697,35 @@ object TacticFactory {
       }
     }
   }
+
+  /** Creates labels for a core tactic that produces 2 subgoals. @note: not hooked into the annotation macros framework. */
+  @inline def corelabelledby[S <: Expression, T <: Expression](name: String, rule: Either[CoreLeftTactic, CoreRightTactic],
+      unapply: S => Option[(T, T)], pos: Position, seq: Sequent,
+      labels: (T, T) => (String, String) = (s: T, t: T) => (s.prettyString, t.prettyString)): BelleExpr =
+    if (pos.isTopLevel) {
+      try {
+        seq.sub(pos.checkTop).flatMap(f => unapply(f.asInstanceOf[S])) match {
+          case Some((l, r)) =>
+            val (lText, rText) = labels(l, r)
+            val (lLabel, rLabel) =
+              if (lText == rText) (BelleSubLabel(BelleTopLevelLabel("L"), lText), BelleSubLabel(BelleTopLevelLabel("R"), rText))
+              else (BelleTopLevelLabel(lText), BelleTopLevelLabel(rText))
+
+            ((rule, pos.checkTop) match {
+              case (Left(lr), p: AntePos) => lr(p)
+              case (Right(rr), p: SuccPos) => rr(p)
+            }) <(
+              LabelBranch(lLabel),
+              LabelBranch(rLabel),
+            )
+        }
+      } catch {
+        case ex: ClassCastException => throw new TacticInapplicableFailure("Tactic " + name +
+          " applied at " + pos + " on a non-matching expression in " + seq.prettyString, ex)
+        case ex: MatchError => throw new TacticInapplicableFailure("Tactic " + name +
+          " applied at " + pos + " on a non-matching expression in " + seq.prettyString, ex)
+      }
+    } else throw new IllFormedTacticApplicationException(name + " only at top-level, but was applied at " + pos.prettyString)
 
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = ANON by t

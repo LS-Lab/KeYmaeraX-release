@@ -98,6 +98,16 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=x ==> [x:=2;]x>=y".asSequent
   }
 
+  it should "not fail bound occurrences 5" in withQE { _ =>
+    proveBy("y=x ==> [{x'=2}]x>=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> [{x'=2}]x>=y".asSequent
+    proveBy("x=y ==> [{x'=2}]x>=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "x=y ==> [{x'=2}]x>=y".asSequent
+  }
+
+  it should "not try to rewrite differential symbols and differentials" in withQE { _ =>
+    proveBy("y=x ==> y'=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> y'=x".asSequent
+    proveBy("y=x ==> (f(y))'=y".asSequent, eqL2R(-1)(1)).subgoals.loneElement shouldBe "y=x ==> (f(y))'=x".asSequent
+  }
+
   "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
     val result = proveBy("0=x ==> x*y=0".asSequent, eqR2L(-1)(1))
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
@@ -238,7 +248,7 @@ class EqualityTests extends TacticTestBase {
   it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in withQE { _ =>
     val result = proveBy("min(a,b) < c, x>y, 5 < min(a,b) ==> min(a,b) + 2 = 7, a<b, [b:=2;]min(a,b) < 9".asSequent,
       abbrv("min(a,b)".asTerm, None))
-    result.subgoals.loneElement shouldBe "min_0<c, x>y, 5<min_0, min_0 = min(a,b) ==> min_0+2=7, a<b, [b:=2;]min(a,b)<9".asSequent
+    result.subgoals.loneElement shouldBe "min_<c, x>y, 5<min_, min_ = min(a,b) ==> min_+2=7, a<b, [b:=2;]min(a,b)<9".asSequent
   }
 
   it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in withQE { _ =>
@@ -283,17 +293,17 @@ class EqualityTests extends TacticTestBase {
 
   "abs" should "expand abs(x) in succedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
-    result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=5".asSequent
+    result.subgoals.loneElement shouldBe "x>=0&abs_=x | x<0&abs_=-x ==> abs_>=5".asSequent
   }
 
   it should "expand abs(x) in non-top-level succedent" in withQE { _ =>
     val result = proveBy("y=2 | abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
-    result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> y=2 | abs_0>=5".asSequent
+    result.subgoals.loneElement shouldBe "x>=0&abs_=x | x<0&abs_=-x ==> y=2 | abs_>=5".asSequent
   }
 
   it should "expand abs(x) in antecedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5 ==> ".asSequent, abs(-1, 0::Nil))
-    result.subgoals.loneElement shouldBe "abs_0>=5, x>=0&abs_0=x | x<0&abs_0=-x ==> ".asSequent
+    result.subgoals.loneElement shouldBe "abs_>=5, x>=0&abs_=x | x<0&abs_=-x ==> ".asSequent
   }
 
   it should "expand abs(x) in context that binds x" in withQE { _ =>
@@ -325,12 +335,12 @@ class EqualityTests extends TacticTestBase {
 
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
-    result.subgoals.loneElement shouldBe "x<=y&min_0=x | x>y&min_0=y ==> min_0>=5".asSequent
+    result.subgoals.loneElement shouldBe "x<=y&min_=x | x>y&min_=y ==> min_>=5".asSequent
   }
 
   it should "expand min(x,y) in antecedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
-    result.subgoals.loneElement shouldBe "min_0>=5, x<=y&min_0=x | x>y&min_0=y ==> ".asSequent
+    result.subgoals.loneElement shouldBe "min_>=5, x<=y&min_=x | x>y&min_=y ==> ".asSequent
   }
 
   it should "expand min(x,y) in binding context" in withQE { _ =>
@@ -357,17 +367,17 @@ class EqualityTests extends TacticTestBase {
   it should "be possible to combine with abbrv to expand min(x,y) broadly" in withQE { _ =>
     val result = proveBy("(min(x,y) >= 2 | y=7) & min(x,y) <= 10".asFormula,
       abbrv("min(x,y)".asTerm, None) & minmax(-1, 1::Nil))
-    result.subgoals.loneElement shouldBe "min_0=min_1, x<=y&min_1=x|x>y&min_1=y ==> (min_0>=2|y=7)&min_0<=10".asSequent
+    result.subgoals.loneElement shouldBe "min_=min__0, x<=y&min__0=x|x>y&min__0=y ==> (min_>=2|y=7)&min_<=10".asSequent
   }
 
   "max" should "expand max(x,y) in succedent" in withQE { _ =>
     val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
-    result.subgoals.loneElement shouldBe "x>=y&max_0=x | x<y&max_0=y ==> max_0>=5".asSequent
+    result.subgoals.loneElement shouldBe "x>=y&max_=x | x<y&max_=y ==> max_>=5".asSequent
   }
 
   it should "expand max(x,y) in antecedent" in withQE { _ =>
     val result = proveBy("max(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
-    result.subgoals.loneElement shouldBe "max_0>=5, x>=y&max_0=x | x<y&max_0=y ==> ".asSequent
+    result.subgoals.loneElement shouldBe "max_>=5, x>=y&max_=x | x<y&max_=y ==> ".asSequent
   }
 
   it should "expand max(x,y) binding context in succedent" in withQE { _ =>
@@ -382,38 +392,38 @@ class EqualityTests extends TacticTestBase {
 
   it should "expand with a term search locator" in withQE { _ =>
     val result = proveBy("y=max(x,4) ==> y>=4".asSequent, BelleParser("minmax('L=={`max(x,4)`})"))
-    result.subgoals.loneElement shouldBe "y=max_0, x>=4&max_0=x|x < 4&max_0=4 ==> y>=4".asSequent
+    result.subgoals.loneElement shouldBe "y=max_, x>=4&max_=x|x < 4&max_=4 ==> y>=4".asSequent
   }
 
   "expandAll" should "expand abs everywhere" in withQE { _ =>
     val result = proveBy("abs(x-y)>0 ==> abs(a-5)>0, abs(x-y)>37".asSequent, expandAll)
-    result.subgoals.loneElement shouldBe "abs_0>0, x-y>=0&abs_0=x-y|x-y < 0&abs_0=-(x-y), a-5>=0&abs_1=a-5|a-5 < 0&abs_1=-(a-5) ==> abs_1>0, abs_0>37".asSequent
+    result.subgoals.loneElement shouldBe "abs_>0, x-y>=0&abs_=x-y|x-y < 0&abs_=-(x-y), a-5>=0&abs__0=a-5|a-5 < 0&abs__0=-(a-5) ==> abs__0>0, abs_>37".asSequent
   }
 
   it should "expand all special functions everywhere" in withQE { _ =>
     val result = proveBy("min(x,y)>0 ==> abs(a-5)>0, max(x,y)>37".asSequent, expandAll)
-    result.subgoals.loneElement shouldBe "min_0>0, x<=y&min_0=x|x>y&min_0=y, a-5>=0&abs_0=a-5|a-5 < 0&abs_0=-(a-5), x>=y&max_0=x|x < y&max_0=y ==> abs_0>0, max_0>37".asSequent
+    result.subgoals.loneElement shouldBe "min_>0, x<=y&min_=x|x>y&min_=y, a-5>=0&abs_=a-5|a-5 < 0&abs_=-(a-5), x>=y&max_=x|x < y&max_=y ==> abs_>0, max_>37".asSequent
   }
 
   it should "expand in context" in withQE { _ =>
     val result = proveBy("min(x,y)>0, abs(a-5)>7 ==> abs(a-5)>0, [a:=3;]abs(a-5)>=2, max(x,y)>0, [x:=4;]min(x,y)>=4".asSequent, expandAll)
     result.subgoals.loneElement shouldBe
-      """min_0>0,
-        |abs_0>7,
-        |x<=y&min_0=x|x>y&min_0=y,
-        |a-5>=0&abs_0=a-5|a-5 < 0&abs_0=-(a-5),
-        |x>=y&max_0=x|x < y&max_0=y
+      """min_>0,
+        |abs_>7,
+        |x<=y&min_=x|x>y&min_=y,
+        |a-5>=0&abs_=a-5|a-5 < 0&abs_=-(a-5),
+        |x>=y&max_=x|x < y&max_=y
         |==>
-        |abs_0>0,
+        |abs_>0,
         |[a:=3;](a-5>=0&a-5>=2|a-5 < 0&-(a-5)>=2),
-        |max_0>0,
+        |max_>0,
         |[x:=4;](x<=y&x>=4|x>y&y>=4)
       """.stripMargin.asSequent
   }
 
   it should "expand anywhere in a term" in withQE { _ =>
     val result = proveBy("(x+4)/min(1,3) >= x".asFormula, expandAll)
-    result.subgoals.loneElement shouldBe "1<=3 & min_0=1 | 1>3 & min_0=3 ==> (x+4)/min_0 >= x".asSequent
+    result.subgoals.loneElement shouldBe "1<=3 & min_=1 | 1>3 & min_=3 ==> (x+4)/min_ >= x".asSequent
   }
 
   it should "not infinite recurse but report exception" in withQE { _ =>
@@ -424,7 +434,7 @@ class EqualityTests extends TacticTestBase {
 
   it should "expand in the context of quantifiers" in withQE { _ =>
     proveBy("\\exists t_ (t>=0 & \\forall s_ (0<=s_&s_<=t_ -> !(abs(x)<abs(x+s_))))".asFormula, expandAll).subgoals.
-      loneElement shouldBe "x>=0&abs_0=x|x < 0&abs_0=-x ==> \\exists t_ (t>=0 & \\forall s_ (0<=s_&s_<=t_->!(x+s_>=0&abs_0 < x+s_|x+s_ < 0&abs_0 < -(x+s_))))".asSequent
+      loneElement shouldBe "x>=0&abs_=x|x < 0&abs_=-x ==> \\exists t_ (t>=0 & \\forall s_ (0<=s_&s_<=t_->!(x+s_>=0&abs_ < x+s_|x+s_ < 0&abs_ < -(x+s_))))".asSequent
   }
 
   "Alpha renaming" should "rename in ODEs in succedent" in withQE { _ =>

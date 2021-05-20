@@ -126,13 +126,13 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     ABSOLUTE_POSITION.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, ABSOLUTE_POSITION(pos), loc))),
     LAST_SUCCEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_SUCCEDENT(pos), loc))),
     LAST_ANTECEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_ANTECEDENT(pos), loc))),
-    SEARCH_SUCCEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_SUCCEDENT, loc))),
-    SEARCH_ANTECEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_ANTECEDENT, loc))),
-    SEARCH_EVERYWHERE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_EVERYWHERE, loc))),
+    SEARCH_SUCCEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_SUCCEDENT(pos), loc))),
+    SEARCH_ANTECEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_ANTECEDENT(pos), loc))),
+    SEARCH_EVERYWHERE.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, SEARCH_EVERYWHERE(pos), loc))),
     EXACT_MATCH.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EXACT_MATCH, loc))),
     UNIFIABLE_MATCH.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, UNIFIABLE_MATCH, loc))),
     // delimited expressions
-    EXPRESSION.startPattern -> ((s: String, loc: Location, expr: String) => Right(try {
+    BELLE_EXPRESSION.startPattern -> ((s: String, loc: Location, expr: String) => Right(try {
       //Constructing an EXPRESSION results in an attempt to parse expressionString, which might
       //result in a parse error that should be passed back to the user.
       if (expr.startsWith("{`")) {
@@ -148,7 +148,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
           closing += suffix.sliding(2).count(_ == "`}")
           expression.append(suffix)
         }
-        consumeTerminalLength(s, EXPRESSION(expression.toString, "{`" -> "`}"), loc)
+        consumeTerminalLength(s, BELLE_EXPRESSION(expression.toString, "{`" -> "`}"), loc)
       } else if (expr.startsWith("\"")) {
         // new syntax (does not support nesting since opening delimiter indistinguishable from closing delimiter)
         if (expr.endsWith("\\\"")) {
@@ -156,9 +156,9 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
           while (endQuoteIdx > 0 && s.charAt(endQuoteIdx - 1) == '\\') {
             endQuoteIdx = s.indexOf("\"", endQuoteIdx + 1)
           }
-          if (endQuoteIdx >= 0) consumeTerminalLength(s, EXPRESSION(s.substring(0, endQuoteIdx + 1), "\"" -> "\""), loc)
+          if (endQuoteIdx >= 0) consumeTerminalLength(s, BELLE_EXPRESSION(s.substring(0, endQuoteIdx + 1), "\"" -> "\""), loc)
           else throw LexException("Missing end delimiter \" in expression " + expr, loc)
-        } else consumeTerminalLength(s, EXPRESSION(expr, "\"" -> "\""), loc)
+        } else consumeTerminalLength(s, BELLE_EXPRESSION(expr, "\"" -> "\""), loc)
       } else throw LexException(s"Unknown starting delimiter in expression $expr", loc)
     } catch {
       case _: Throwable => throw LexException(s"Could not parse expression: $expr", loc)
@@ -167,6 +167,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     OPEN_PAREN.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, OPEN_PAREN, loc))),
     CLOSE_PAREN.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, CLOSE_PAREN, loc))),
     COMMA.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, COMMA, loc))),
+    COLON.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, COLON, loc))),
     RIGHT_ARROW.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, RIGHT_ARROW, loc)))
   )
 

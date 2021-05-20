@@ -303,7 +303,7 @@ object KeYmaeraX {
         "Aborting sandbox synthesis: sandbox safety was not derivable from input model safety proof.")
       println("Done checking sandbox safety")
 
-      val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+      val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(_)).mkString("\n\n")
       val pw = new PrintWriter(outputFileName)
       pw.write(archive)
       pw.close()

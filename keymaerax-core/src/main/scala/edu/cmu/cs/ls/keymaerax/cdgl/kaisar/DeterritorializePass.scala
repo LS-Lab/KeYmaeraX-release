@@ -83,14 +83,23 @@ case class DeterritorializePass(tt: TimeTable) {
             case ((x, None), acc) if !argMap.contains(x) =>
               throw TransformationException(s"Cannot determine value of $f@$lr because variable $x is under-defined. " +
               s"To fix this, add a parameter to label ${lr.label}, e.g. ${LabelDef(ld.label, ld.args :+ x)}", node = node)}
-        case proveODE@ProveODE(ds, dc) if proveODE.hasTrueSolution =>
+        case proveODE@ProveODE(ds, dc)  =>
+          // @TODO: More elegant non-buggy algorithm version which substitutes at best time
+          if (proveODE.hasTrueSolution) {
           // solution RHS has label arguments pre-applied
-          val solMap = proveODE.solutions.get.toMap.map({case (x, t) => (x, SubstitutionHelper.replacesFree(t)({case x: BaseVariable => argMap.get(x) case _ => None}))})
-          val fullMap = argMap.foldLeft[Map[Variable, Term]](solMap)({case (acc, (k, v)) => acc.+(k -> v)})
-          if (DeterritorializePass.DEBUG) println(s"Replacing solutions $fullMap in $f")
-          val res = SubstitutionHelper.replacesFree(f)({case x: BaseVariable => fullMap.get(x) case _ => None})
-          if (DeterritorializePass.DEBUG) println(s"Replacing to: $res")
-          res
+            val solMap = proveODE.solutions.get.toMap.map({case (x, t) => (x, SubstitutionHelper.replacesFree(t)({case x: BaseVariable => argMap.get(x) case _ => None}))})
+            val fullMap = argMap.foldLeft[Map[Variable, Term]](solMap)({case (acc, (k, v)) => acc.+(k -> v)})
+            if (DeterritorializePass.DEBUG) println(s"Replacing solutions $fullMap in $f")
+            val res = SubstitutionHelper.replacesFree(f)({case x: BaseVariable => fullMap.get(x) case _ => None})
+            if (DeterritorializePass.DEBUG) println(s"Replacing to: $res")
+            res
+          } else {
+            val fullMap = argMap
+            if (DeterritorializePass.DEBUG) println(s"Replacing solutions $fullMap in $f")
+            val res = SubstitutionHelper.replacesFree(f)({case x: BaseVariable => fullMap.get(x) case _ => None})
+            if (DeterritorializePass.DEBUG) println(s"Replacing to: $res")
+            res
+          }
         case Block(ss) => ss.foldRight[Expression](f)(traverse)
         case BoxChoice(l, r) =>
           // Note: This can lead to surprising behavior, this will allow a user to prove some p(x@l) and then
@@ -101,7 +110,7 @@ case class DeterritorializePass(tt: TimeTable) {
           else if (rr == f) ll
           else fail
         case Phi(asgns) => traverse(asgns, f)
-        case fr@For(metX, met0, metIncr, conv, guard, body) =>
+        case fr@For(metX, met0, metIncr, conv, guard, body, guardDelta) =>
           val f0 = traverse(Modify(Nil, List((metX, Some(met0)))), f)
           val fBody = traverse(body, f)
           val fIncr = traverse(Modify(Nil, List((metX, Some(metIncr)))), f)
@@ -230,19 +239,22 @@ case class DeterritorializePass(tt: TimeTable) {
       override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
           case Assume(pat, f) => Assume(pat, translate(kc, f, List(), s))
-          case Assert(pat, f, m) => Assert(pat, translate(kc, f, List(), s), m)
+          case Assert(pat, f, m) =>
+            val tf = translate(kc, f, List(), s)
+            Assert(pat, tf, m)
           case mod: Modify => Modify(mod.ids, mod.mods.map({case (x, f) => (x, f.map(z => translate(kc, z, Nil)))}))
           case Note(x, proof, Some(annotation)) => Note(x, proof, Some(translate(kc, annotation, List(), s)))
           case LetSym(f, args, e: Term) => LetSym(f, args, translate(kc, e, localVars = args))
           case Match(pat, e) => Match(translatePat(kc, pat, s), translate(kc, e, List(), s))
           case Switch(scrutinee, pats) => Switch(scrutinee, pats.map({case (e1, e2, bs) => (e1, translatePat(kc, e2, s), bs)}))
           case While(x, j, bs) => While(x, translate(kc, j, List(), s), bs)
-          case For(metX, metF, metIncr, guard, conv, body) =>
+          case For(metX, metF, metIncr, guard, conv, body, guardEpsilon) =>
             For(metX, translate(kc, metF, List(), s)
               , translate(kc, metIncr, List(), s)
               , guard
               , conv
-              , body)
+              , body
+              , guardEpsilon)
           // Filter out no-op'd labels
           case BoxChoice(Ghost(Triv()), right) => right
           case BoxChoice(left, Ghost(Triv())) => left

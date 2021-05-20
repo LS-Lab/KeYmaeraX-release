@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.collection.immutable._
 
@@ -81,7 +82,13 @@ private object EqualityTactics {
 
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
           case Some(f: Formula) =>
-            val lhsPos = FormulaTools.posOf(f, _ == lhs)
+            val diffPos = FormulaTools.posOf(f, (e: Expression) => e match {
+              case DifferentialSymbol(x) => lhsFv.contains(x)
+              case x: Differential => !lhsFv.intersect(StaticSemantics.symbols(x).
+                filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
+              case _ => false
+            })
+            val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })
@@ -200,6 +207,7 @@ private object EqualityTactics {
     val v = abbrvV match {
       case Some(vv) => vv
       case None => t match {
+        case FuncOf(Function(n, _, _, sort, true), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
         case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
@@ -271,8 +279,8 @@ private object EqualityTactics {
   val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-        val absVar = Variable(fn, freshAbsIdx)
+        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+        val absVar = Variable(fn + "_", freshAbsIdx)
         abbrv(abs, Some(absVar)) &
           useAt(Ax.equalCommute)('L, Equal(absVar, abs)) &
           useAt(Ax.abs)('L, Equal(abs, absVar))
@@ -346,8 +354,8 @@ private object EqualityTactics {
   val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-        val minmaxVar = Variable(fn, freshMinMaxIdx)
+        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+        val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
           useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
         //@todo IDE check if this key is working correctly?
@@ -428,9 +436,9 @@ private object EqualityTactics {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     )
@@ -442,9 +450,9 @@ private object EqualityTactics {
   val expandAllAt: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val tactics =
       Idioms.mapSubpositions(pos, seq, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.absF, _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(InterpretedSymbols.minF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(InterpretedSymbols.maxF, _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     tactics.reduceOption(_ & _).getOrElse(skip)

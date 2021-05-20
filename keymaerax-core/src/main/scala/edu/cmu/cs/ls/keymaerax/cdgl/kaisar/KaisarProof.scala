@@ -10,13 +10,12 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.btactics.Integrator
-import edu.cmu.cs.ls.keymaerax.cdgl.Metric
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import fastparse.Parsed.{Failure, TracedFailure}
 import StandardLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
@@ -155,9 +154,9 @@ object KaisarProof {
   }
 
   // Special functions max, min, and abs are already used in KeYmaera X, but are often used in Kaisar proofs as well
-  val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)
-  val min: Function = Function("min", domain = Tuple(Real, Real), sort = Real, interpreted = true)
-  val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
+  val max: Function = InterpretedSymbols.maxF
+  val min: Function = InterpretedSymbols.minF
+  val abs: Function = InterpretedSymbols.absF
 
   // We reuse expression syntax for patterns over expressions. We use an interpreted function wild() for the wildcard
   // patttern "*" or "_". This is elaborated before proofchecking
@@ -256,6 +255,8 @@ case class Using(use: List[Selector], method: Method) extends Method {
 }
 // discharge goal with structured proof
 case class ByProof(proof: Statements) extends Method
+// for loop guard termination facts. delta is the comparison delta
+case class GuardDone(delta: Option[Term]) extends Method
 
 // Forward-chaining natural deduction proof term.
 sealed trait ProofTerm extends ASTNode {
@@ -416,13 +417,19 @@ sealed trait Metric {
   /** Value at which metric terminates */
   def bound: Term
   /** Formula which holds once the loop has terminated, in term of the changing loop index variable */
-    // @TODO: Make sure to get comparisons right with double epsilons
-  def guardPost(index: Variable): Formula = {
-    if (isIncreasing) (GreaterEqual(index, bound)) else (LessEqual(index, bound))
-  }
 }
 
 object Metric {
+  def weakNegation(guard: Formula, delta: Term): Formula = {
+    guard  match {
+      case And(l, r) => Or(weakNegation(l, delta), weakNegation(r, delta))
+      case Or(l, r) => And(weakNegation(l, delta), weakNegation(r, delta))
+      case Less(l, r) => Greater(l, Minus(r, delta))
+      case LessEqual(l, r) => GreaterEqual(l, Minus(r, delta))
+      case Greater(l, r) => Less(l, Plus(r, delta))
+      case GreaterEqual(l, r) => LessEqual(l, Plus(r, delta))
+    }
+  }
   /** @return A termination bound and flag indicating whether loop increases vs decreases
     * @throws MatchError If this conjunct is not a loop bound  */
   private def conjunctBound(mvar: Variable): PartialFunction[Formula, (Term, Boolean)] = {
@@ -482,7 +489,12 @@ case class ProvablyConstantMetric(override val delta: Term, override val bound: 
   }
 }
 
-case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement) extends Statement
+// guardDelta is the precision used for the comparison in the guard.
+// Can be explicitly specified immediately after loop, in an assert
+//   !(foo >= bar) by guard(delta);  else can try to infer with ... by guard;.
+//   guardEpsilon is None initially
+// and should not be changed once set to Some(delta)
+case class For(metX: Ident, met0: Term, metIncr: Term, conv: Option[Assert], guard: Assume, body: Statement, var guardDelta:Option[Term] = None) extends Statement
 // @TODO: Possibly delete once for loops are supported.
 // x is an identifier  pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
@@ -506,10 +518,10 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
       case BaseVariable(x, Some(i), s) => BaseVariable(x, Some(i-1), s)
     }
 
-  def solutionsFrom(xys: Map[Variable, Term]): Option[List[(Variable, Term)]] = {
+  def solutionsFrom(xys: Map[Variable, Term], forProof: Boolean): Option[List[(Variable, Term)]] = {
     if (timeVar.isEmpty) None
     else {
-      val ode = asODESystem
+      val ode = getODESystem(forProof)
       try {
         val result = Integrator(xys.toMap, timeVar.get, ode)
         val resultAlist = result.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofCheckException(s"Solve expected $p to have shape x=f", node = this) })
@@ -536,23 +548,26 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
     val dummyXys: Set[(Variable, Term)] =
       StaticSemantics(asODESystem).bv.toSet.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> Number(0)))
     try {
-      solutionsFrom(dummyXys.toMap)
+      solutionsFrom(dummyXys.toMap, false)
     } catch { case (m: MatchError) => None }
   }
 
   def hasDummySolution: Boolean = dummySolutions.isDefined
   def hasTrueSolution: Boolean = solutions.isDefined
 
-  /** Get true solution of ODE. Only works if proof is in SSA form */
-  lazy val solutions: Option[List[(Variable, Term)]] = {
-    val ode = asODESystem
+  private def getSolutions(forProof: Boolean = false): Option[List[(Variable, Term)]] = {
+    val ode = getODESystem(forProof)
     val bvs = StaticSemantics(ode).bv.toSet
     val xys: Set[(Variable, Term)] = bvs.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).map(x => (x -> initOf(x)))
     try {
-      val sols = solutionsFrom(xys.toMap)
+      val sols = solutionsFrom(xys.toMap, forProof)
       sols
     } catch { case (m: MatchError) => None } // Throws if not in SSA form
   }
+
+  /** Get true solution of ODE. Only works if proof is in SSA form */
+  lazy val solutions = getSolutions(forProof = false)
+  lazy val proofSolutions = getSolutions(forProof = true)
 
   /** Get best avaiable solutions: true solutions if SSA has been performed, else dummy solutions */
   lazy val  bestSolutions: Option[List[(Variable, Term)]] = if (solutions.isDefined) solutions else dummySolutions
@@ -572,11 +587,14 @@ case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement {
   def timeVar: Option[Variable] = if(explicitTimeVar.isDefined) explicitTimeVar else inferredTimeVar
   def overrideTimeVar(v: Variable): Unit = (explicitTimeVar = Some(v))
 
-  lazy val asODESystem: ODESystem = {
-    ODESystem(ds.asDifferentialProgram(modifier), dc.asFormula(isAngelic).getOrElse(True))
+
+  private def getODESystem(forProof: Boolean = false): ODESystem = {
+    ODESystem(ds.asDifferentialProgram(modifier, forProof), dc.asFormula(isAngelic, forProof).getOrElse(True))
   }
 
-  lazy val isAngelic: Boolean = modifier.isDefined
+  lazy val asODESystem: ODESystem = getODESystem(false)
+
+    lazy val isAngelic: Boolean = modifier.isDefined
   lazy val modifier: Option[DomModify] = {
     dc.modifier
   }
@@ -612,6 +630,13 @@ case class PrintString(msg: String) extends Printable
 case class PrintExpr(e: Expression) extends Printable
 
 case class PrintGoal(printable: Printable) extends MetaNode {
+  override val children: List[Statement] = Nil
+}
+
+/** Note this is not for comments parsed from source files since the parser strips out comments. This is used
+  * for the insertion of machine-generated comments in machine-generated Kaisar files
+  *  */
+case class Comment(str: String) extends MetaNode {
   override val children: List[Statement] = Nil
 }
 
@@ -686,7 +711,7 @@ final case class DiffCollection(atoms: Set[AtomicODEStatement], ghosts: Set[Atom
 
 // Proof steps regarding the differential program, such as ghosts and inverse ghosts used in solutions.
 sealed trait DiffStatement extends ASTNode {
-  private def getDifferentialProgram(mod: Option[DomModify]): Option[DifferentialProgram] = {
+  private def getDifferentialProgram(mod: Option[DomModify], forProof: Boolean = false): Option[DifferentialProgram] = {
     this match {
       case AtomicODEStatement(dp, _solIdent) =>
         (mod, dp.e) match {
@@ -697,22 +722,24 @@ sealed trait DiffStatement extends ASTNode {
         }
         Some(dp)
       case DiffProductStatement(l, r) =>
-        (l.getDifferentialProgram(mod), r.getDifferentialProgram(mod)) match {
+        (l.getDifferentialProgram(mod, forProof), r.getDifferentialProgram(mod, forProof)) match {
           case (Some(l), Some(r)) => Some(DifferentialProduct(l, r))
           case (None, r) => r
           case (l, None) => l
         }
-      case InverseDiffGhostStatement(ds) => ds.getDifferentialProgram(mod)
+      case InverseDiffGhostStatement(ds) if forProof => None
+      case InverseDiffGhostStatement(ds) => ds.getDifferentialProgram(mod, forProof)
+      case DiffGhostStatement(ds) if forProof => ds.getDifferentialProgram(mod, forProof)
       case DiffGhostStatement(ds) => None
     }
   }
 
   def hasDifferentialProgram(mod: Option[DomModify]): Boolean = getDifferentialProgram(mod).isDefined
-  def asDifferentialProgram(mod: Option[DomModify]): DifferentialProgram = {
-    val x = DifferentialSymbol(BaseVariable("dummy"))
-    getDifferentialProgram(mod).getOrElse(AtomicODE(x, Number(0)))
-  }
 
+  def asDifferentialProgram(mod: Option[DomModify], forProof: Boolean = false): DifferentialProgram = {
+    val x = DifferentialSymbol(BaseVariable("dummy"))
+    getDifferentialProgram(mod, forProof).getOrElse(AtomicODE(x, Number(0)))
+  }
   lazy val clocks: Set[Variable] = {
     this match {
       case AtomicODEStatement(AtomicODE(DifferentialSymbol(x), rhs: Number), _solIdent) if rhs.value.toInt == 1 => Set(x)
@@ -757,13 +784,14 @@ case class InverseDiffGhostStatement(ds: DiffStatement) extends DiffStatement
 //Proof steps regarding the domain, for example differential cuts and weakening of domain constraints.
 // Angelic solutions require witnesses for duration, also given here
 sealed trait DomainStatement extends ASTNode {
-  def asFormula(isAngelic: Boolean): Option[Formula] = {
+  def asFormula(isAngelic: Boolean, forProof: Boolean = false): Option[Formula] = {
     this match {
       case DomAssume(x, f) => Some(f)
-      case DomAssert(x, f, child) if (isAngelic) => Some(f)
+      case DomAssert(x, f, child) if isAngelic || forProof => Some(f)
       case DomAssert(x, f, child) => None
       case DomModify(id, x, f) => None
-      case DomWeak(dc) => dc.asFormula(isAngelic)
+      case DomWeak(dc) if forProof => None
+      case DomWeak(dc) => dc.asFormula(isAngelic, forProof)
       case DomAnd(l, r) =>
         (l.asFormula(isAngelic), r.asFormula(isAngelic)) match {
           case (Some(l), Some(r)) => Some(And(l, r))

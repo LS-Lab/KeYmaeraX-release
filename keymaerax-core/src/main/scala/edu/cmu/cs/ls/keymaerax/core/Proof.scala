@@ -8,6 +8,7 @@
   * @author Andre Platzer
   * @author Jan-David Quesel
   * @author nfulton
+  * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -792,6 +793,50 @@ object Provable {
     )
   }
 
+  /**
+    * Axiom schema for differential adjoints, schematic in dimension.
+    * {{{
+    *   <{x_'=f_(x_) & q_(x_)}>x_=y_ <-> <{y_'=-f_(y_) & q_(y_)}>x_=y_
+    * }}}
+    *
+    * @param dim The dimension of ODE x_'=f_(x_)
+    */
+  final def diffAdjoint(dim : Int): Provable = {
+    insist(dim > 0, "Diff. adjoint over ODE with at least 1 variable.")
+
+    //Indices 1,2,...dim
+    val indices = 1 to dim
+    // The list of LHS variables x__1, x__2, ..., x__dim
+    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
+    // The list of LHS variables y__1, y__2, ..., y__dim
+    val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
+    // The sort of RHS functions and predicates is (real,(real,...)) n times
+    val sort = indices.map( _ => Real).reduceRight(Tuple)
+    val RHSfunc = indices.map(i => Function("f_", Some(i), sort,Real))
+    // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
+    val RHSxarg = xLHS.reduceRight(Pair)
+    val xRHS =  RHSfunc.map{ f => FuncOf(f,RHSxarg) }
+    // The application f_(y_) where y_ is written as a tuple of the right sort (y_1,(y_2,(...))
+    val RHSyarg = yLHS.reduceRight(Pair)
+    val yRHS =  RHSfunc.map{ f => FuncOf(f,RHSyarg) }
+
+    // ODEs for x_, y_
+    val xODE = (xLHS zip xRHS).map{case (x,rhs) => AtomicODE(DifferentialSymbol(x), rhs)}
+      .reduceRight(DifferentialProduct.apply)
+    val yODE = (yLHS zip yRHS).map{case (y,rhs) => AtomicODE(DifferentialSymbol(y), Neg(rhs))}
+      .reduceRight(DifferentialProduct.apply)
+    // Domains for x_, y_
+    val xDom = PredOf(Function("q_", None, sort, Bool), RHSxarg)
+    val yDom = PredOf(Function("q_", None, sort, Bool), RHSyarg)
+    // Postcondition x_ = y_
+    val eq = (xLHS zip yLHS).map( xy => Equal(xy._1,xy._2)).reduceRight(And)
+
+    //<x_'=f_(x_)&q_(x_)>x_=y_ <-> <y_'=-f_(y_)&q_(y_)>x_=y_
+    val diffAdj = Equiv(Diamond(ODESystem(xODE,xDom),eq),Diamond(ODESystem(yODE,yDom),eq))
+
+    //@note soundness-critical
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
+  }
   /**
     * Create a differential axiom for an arbitrary interpreted function symbol.
     * Used by ImplicitDefinition stuff

@@ -4,9 +4,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real, USubst}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -119,7 +119,80 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR(1=="x>=0->x>=0")"""
+      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
+    }
+  }}
+
+  it should "record andR case labels" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x^2>=0 & x^4>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal(
+        """andR('R=="x^2>=0 & x^4>=0"); <(
+          |"x^2>=0": nil,
+          |"x^4>=0": nil
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+    }
+  }}
+
+  it should "record unique prop case labels" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1) <(nil, prop)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal (
+        // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
+        """andR(1); <(nil, prop); <(
+          |"x=3": nil,
+          |"x>2//x^2>=4": nil,
+          |"x<(-2)//x^2>=4": nil,
+          |"x<(-2)//x^4>=16": nil,
+          |"x>2//x^4>=16": nil
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+    }
+  }}
+
+  it should "record unique prop case labels (2)" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", andR(1))
+    tacticRunner("(1,1)", prop)
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText) => tacticText should equal (
+        """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
+          |"x=3": nil,
+          |"x>2|x < (-2)->x^2>=4&x^4>=16":
+          |  prop; <(
+          |  "x>2//x^2>=4": nil,
+          |  "x<(-2)//x^2>=4": nil,
+          |  "x<(-2)//x^4>=16": nil,
+          |  "x>2//x^4>=16": nil
+          |  )
+          |)""".stripMargin) (after being whiteSpaceRemoved)
     }
   }}
 
@@ -227,14 +300,14 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(("x", None) -> (None, Real, None, None, UnknownLocation))))
+      FixedGenerator(Nil), Declaration(Map(Name("x", None) -> Signature(None, Real, None, None, UnknownLocation))))
     val proofSession = () => SessionManager.session(t)(proofId.toString).asInstanceOf[ProofSession]
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1) & cut("\\exists x0 x0=x".asFormula))
     // proof session should pick up new variable introduced by cut
-    proofSession().defs.decls.keySet should contain ("x0", None)
-    proofSession().defs.decls(("x0", None)) should be (None, Real, None, None, UnknownLocation)
+    proofSession().defs.decls.keySet should contain (Name("x0", None))
+    proofSession().defs.decls(Name("x0", None)) shouldBe Signature(None, Real, None, None, UnknownLocation)
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -253,7 +326,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("(2,1)", dIRule(1))
     // proof session should not pick up elaborated variables
-    proofSession().defs.decls(("x0", None))._1 should not be 'defined
+    proofSession().defs.decls(Name("x0", None)).domain should not be 'defined
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
         leaves.flatMap(_.goal) should contain theSameElementsInOrderAs List(
@@ -369,14 +442,14 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
-        stepsTactic shouldBe "implyR(1) ; andL(-1)"
+        BelleParser(stepsTactic) shouldBe BelleParser("implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")")
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
   }}
 
   it should "expand auto" in withMathematica { _ => withDatabase { db =>
-    val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y;]x>=z End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -387,7 +460,46 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "auto"
-        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; applyEqualities ; QE"
+        BelleParser(stepsTactic) shouldBe BelleParser(
+          """implyR('R=="x>=0&y>0&z=0->[x:=x+y;]x>=z");
+            |andL('L=="x>=0&y>0&z=0");
+            |andL('L=="y>0&z=0");
+            |step('R=="[x:=x+y;]x>=z");
+            |applyEqualities;
+            |QE""".stripMargin)
+      case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
+      case e: ErrorResponse if e.exn == null => fail(e.msg)
+    }
+  }}
+
+  it should "expand auto with branches" in withMathematica { _ => withDatabase { db =>
+    val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y; ++ x:=x*y;]x>=z End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", master())
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
+      case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
+        parentTactic shouldBe "auto"
+        BelleParser(stepsTactic) shouldBe BelleParser(
+          """implyR('R=="x>=0&y>0&z=0->[x:=x+y;++x:=x*y;]x>=z");
+            |andL('L=="x>=0&y>0&z=0");
+            |andL('L=="y>0&z=0");
+            |step('R=="[x:=x+y;++x:=x*y;]x>=z");
+            |andR('R=="[x:=x+y;]x>=z&[x:=x*y;]x>=z"); <(
+            |  "[x:=x+y;]x>=z":
+            |    step('R=="[x:=x+y;]x>=z");
+            |    applyEqualities;
+            |    QE
+            |  ,
+            |  "[x:=x*y;]x>=z":
+            |    step('R=="[x:=x*y;]x>=z");
+            |    applyEqualities;
+            |    QE
+            |)""".stripMargin)
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
@@ -481,7 +593,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      FixedGenerator(Nil), Declaration(Map(("f", None) -> (None, Real, None, Some("3+5".asTerm), null))))
+      FixedGenerator(Nil), Declaration(Map(Name("f", None) -> Signature(None, Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
@@ -493,7 +605,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), FixedGenerator(Nil),
-      Declaration(Map(("f", None) -> (Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
+      Declaration(Map(Name("f", None) -> Signature(Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
@@ -568,6 +680,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
+        val start = System.currentTimeMillis()
         println("Importing and opening " + name + "...")
         val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement
         r1 shouldBe a[CreatedIdResponse]
@@ -591,23 +704,24 @@ class ScriptedRequestTests extends TacticTestBase {
         val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
         r5 shouldBe a[AgendaAwesomeResponse]
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
-        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs, expandAll = true) match {
+        BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs) match {
           case _: PartialTactic =>
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue("closed")
           case _ =>
             r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue("closed")
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
-            r6 shouldBe a[ProofVerificationResponse]
+            r6 shouldBe a [ProofVerificationResponse] withClue r6.getJson.prettyPrint
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
-            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true
+            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
+            val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")
-            val extractedTactic = BelleParser.parseWithInvGen(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value,
-              None, entry.defs, expandAll = true)
-            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
+            val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs)
+            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, subst = USubst(entry.defs.substs)) shouldBe 'proved
+            println("Done reproving")
         }
-        println("Done")
+        println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")
       }
     }
   }}

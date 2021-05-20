@@ -5,9 +5,9 @@
   <p>
     For example, occurrences of <i>dist(a,b+1)</i> are expanded to <i>a^2+(b+1)^2</i> etc. given these definitions:
     <pre>Definitions
-  Real dist(Real x, Real y) = (x^2+y^2).
-  Bool sep(Real x, Real y) &lt;-&gt; (x^2+y^2 &gt;= 9).
-  HP ctrl ::= {x:=x+1;}.
+  Real dist(Real x, Real y) = x^2+y^2;
+  Bool sep(Real x, Real y) &lt;-&gt; x^2+y^2 &gt;= 9;
+  HP ctrl ::= {x:=x+1;};
 End.</pre>
   </p>
 </div>

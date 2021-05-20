@@ -31,8 +31,8 @@
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideL')"
-                           uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-eye-slash"></span></a>
+                           uib-tooltip="Hide permanently" tooltip-placement="left" tooltip-popup-delay="500">
+                        <span class="fa fa-trash-o"></span></a>
                     </li>
                     <li ng-if="f.formula.name === 'equals'">
                         <a ng-click="onTactic(f.id,'allL2R')"
@@ -46,8 +46,9 @@
                     </li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-check-square-o':f.use,'fa-square-o':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
+                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-eye':f.use,'fa-eye-slash':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
                     <k4-formula class="k4-formula-container"
+                                ng-class="{'text-muted':!f.use}"
                             k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                             formula="f.formula" highlight="!collapsed" collapsed="collapsed"
@@ -118,8 +119,8 @@
             <div class="col-sm-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideR')"
-                           uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-eye-slash"></span></a>
+                           uib-tooltip="Hide permanently" tooltip-placement="left" tooltip-popup-delay="500">
+                        <span class="fa fa-trash-o"></span></a>
                     </li>
                     <li><a ng-click="onTactic(f.id, 'simplify')"
                            uib-tooltip="Simplify formula" tooltip-placement="top" tooltip-popup-delay="500">
@@ -131,8 +132,9 @@
                     </li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-check-square-o':f.use,'fa-square-o':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
+                    <ul><li><span class="k4-nobreak"><i class="fa" ng-class="{'fa-eye':f.use,'fa-eye-slash':!f.use}" ng-click="f.use=!f.use"></i>&nbsp;{{f.id}}:</span></li></ul>
                     <k4-formula class="k4-formula-container"
+                                ng-class="{'text-muted':!f.use}"
                                 user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}" goal-id="{{goalId}}"
                                 formula="f.formula" highlight="!collapsed" collapsed="collapsed"
                                 on-expr-right-click="onExprRightClick(formulaId)"

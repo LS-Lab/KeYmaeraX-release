@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 // @TODO: Add syntax for printable comments, insert comments about where controls need to be added
 // @TODO: Add pretty-printer for Kaisar statements
 object Totalizer {
+  var useComments: Boolean = true
+
   /** Return pair of controller and plant, if any.
     * If the statement is all-plant or all-controller, we succeed with Triv() for the controller or plant respectively.
     * Failure only occurs when there is not a *unique* controller-plant pair, e.g. when different proof branches have
@@ -136,7 +138,10 @@ object Totalizer {
     val newMods =
       fallback match {
         case Some(fall) => List(fall)
-        case None => x.map({case Modify(ids, mods) => Modify(ids, mods.map(xs => synthMod(xs._1, xs._2)))})
+        case None =>
+          val comments = if(useComments)  Comment("Auto-generated fallback controller: INSERT PROOF HERE IF NEEDED") :: Nil else Nil
+          comments ++
+          x.map({case Modify(ids, mods) => Modify(ids, mods.map(xs => synthMod(xs._1, xs._2)))})
       }
     KaisarProof.block(ll :: (newMods ++ List(rr)))
   }

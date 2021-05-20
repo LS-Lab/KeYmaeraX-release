@@ -306,7 +306,8 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Bool => la match {
         case EQUIV =>
           val (pred: Either[Option[Formula], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.formulaTokenParser)
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
+          if (InterpretedSymbols.byName.contains((next.name, next.index))) throw ParseException("Re-definition of interpreted symbol " + next.name + " not allowed; please use a different name for your definition.", next.loc.spanTo(endLoc), next.name, "A name != " + next.name)
+          else ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Bool"), currLoc) +: rest)
         case EQ => throw ParseException("Predicate must be defined by equivalence", st, nextTok, EQUIV.img)
@@ -315,7 +316,8 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Real => la match {
         case EQ =>
           val (term: Either[Option[Term], List[Token]], endLoc, remainder) = parseDefinition(rest, text, KeYmaeraXParser.termTokenParser)
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
+          if (InterpretedSymbols.byName.contains((next.name, next.index))) throw ParseException("Re-definition of interpreted symbol " + next.name + " not allowed; please use a different name for your definition.", next.loc.spanTo(endLoc), next.name, "A name != " + next.name)
+          else ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Real"), currLoc) +: rest)
         case EQUIV => throw ParseException("Function must be defined by equality", st, nextTok, EQ.img)
@@ -612,7 +614,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         }
         ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-            case v: Variable if definitions.decls.exists({ case ((n, i), (d, s, _, _, _)) => d.isDefined && v.name == n && v.index == i && v.sort == s }) =>
+            case v: Variable if definitions.decls.exists({ case (Name(n, i), Signature(d, s, _, _, _)) => d.isDefined && v.name == n && v.index == i && v.sort == s }) =>
               val bv = StaticSemanticsTools.boundAt(fullyExpanded, p)
               if (bv.contains(v)) {
                 // isInfinite case should never occur because expandFull elaborates first;
@@ -717,15 +719,15 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
 
   private def convert(d: Definition): Declaration = d match {
     case FuncPredDef(name, index, sort, signature, Left(definition), loc) =>
-      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, Some(signature.map(s => ((s.name, s.index), s.sort))), definition, loc)))
+      Declaration(Map(Name(name, index) -> Signature(Some(toSort(signature)), sort, Some(signature.map(s => (Name(s.name, s.index), s.sort))), definition, loc)))
     case FuncPredDef(name, index, sort, signature, Right(_), loc) =>
-      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, Some(signature.map(s => ((s.name, s.index), s.sort))), None, loc)))
+      Declaration(Map(Name(name, index) -> Signature(Some(toSort(signature)), sort, Some(signature.map(s => (Name(s.name, s.index), s.sort))), None, loc)))
     case ProgramDef(name, index, Left(definition), _, loc) =>
-      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, definition, loc)))
+      Declaration(Map(Name(name, index) -> Signature(Some(Unit), Trafo, None, definition, loc)))
     case ProgramDef(name, index, Right(_), _, loc) =>
-      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, None, loc)))
+      Declaration(Map(Name(name, index) -> Signature(Some(Unit), Trafo, None, None, loc)))
     case VarDef(name, index, loc) =>
-      Declaration(Map((name, index) -> (None, Real, None, None, loc)))
+      Declaration(Map(Name(name, index) -> Signature(None, Real, None, None, loc)))
   }
 
   private def extractAnnotations(d: Definition): List[Annotation] = d match {

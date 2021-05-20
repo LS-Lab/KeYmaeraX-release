@@ -1,36 +1,111 @@
-<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+<a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown" role="button"
    aria-haspopup="true" aria-expanded="false">Defs <span class="caret"></span></a>
 <ul class="dropdown-menu">
     <li><a ng-click="openModelEditor(agenda.modelId)">
-                                    <span class="fa fa-keyboard-o"
-                                          uib-tooltip="View model or edit model and rerun proof">
-                                        <span class="k4-btn-optional-text"> Edit Model...</span>
-                                    </span>
-    </a>
+            <span class="fa fa-keyboard-o"
+                  uib-tooltip="View model or edit model and rerun proof">
+                <span class="k4-btn-optional-text"> Edit Model...</span>
+            </span>
+        </a>
     </li>
-    <li class="divider" ng-if="definitions.length > 0"></li>
+    <li class="divider"></li>
+    <li><small>&nbsp;Special functions</small></li>
     <li ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all special functions<code class="pull-right">expandAll</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAll')">Expand all<code class="pull-right">expandAll</code></a>
     </li>
-    <li class="divider" ng-if="definitions.length > 0"></li>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="abs" code-name="absExp"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
+            proof-id="{{proofId}}" user-id="{{userId}}"
+            name="min/max" code-name="minmax"
+            exec="openTacticPosInputDialog(codeName, 'R')" option-exec="doSearch(codeName, 'R')"></k4-tactic-menu-entry>
+    <li class="divider"></li>
+    <li>
+        <small>&nbsp;Definitions
+            <span class="pull-right">
+            <i class="fa fa-question-circle"
+               ng-click="$event.stopPropagation()"
+               uib-popover-html="'Lists definitions from the model source. Provide a <code>Definitions</code> block in
+               the model input, e.g.,
+               <code>Definitions Real f(x) = x^2; Bool p(x) <-> f(x)>0; HP inc ::= { x:=x+1; }; End.</code>
+               to specify functions, predicates, and hybrid programs'"
+               popover-append-to-body="true"
+               popover-class="k4-rulemenu-helppopover-long"
+               popover-placement="auto bottom"
+               popover-trigger="'outsideClick'"></i>&nbsp;
+            </span>
+        </small>
+    </li>
     <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all definitions<code class="pull-right">expandAllDefs</code></a>
+        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
     </li>
-    <li ng-repeat="d in definitions" ng-class="{'disabled': agenda.items().length <= 0 }">
-        <a ng-if="d.definition.editable">
-                                        <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
-                                            {{d.definition.what}}
-                                        </span>
-            ~>
+    <li ng-if="definitions.length > 0" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a href ng-click="onMultiNodeTactic({id:'expandAllDefs'}, undefined)">...everywhere<code class="pull-right">doall(expandAllDefs)</code></a>
+    </li>
+    <li ng-repeat="d in definitions | filter: {definition: {editable:false,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a ng-class="{'disabled': agenda.items().length <= 0 }"
+           ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+            <span>{{d.definition.what}}</span> &map; <span>{{d.definition.repl}}</span>
+            <code class="pull-right">expand "{{d.symbol}}"</code>
+        </a>
+    </li>
+    <li class="divider"></li>
+    <li>
+        <small>&nbsp;Proof Parameters
+            <span class="pull-right">
+            <i class="fa fa-question-circle"
+               ng-click="$event.stopPropagation()"
+               uib-popover-html="'Use an uninterpreted function symbol <code>f(x)</code> or predicate symbol
+                <code>p(x)</code> as tactic input. Such symbols are then listed below and can be specified later in
+                the proof by entering a concrete term or formula in the text box next to the symbol.'"
+               popover-append-to-body="true"
+               popover-class="k4-rulemenu-helppopover-long"
+               popover-placement="auto bottom"
+               popover-trigger="'outsideClick'"></i>&nbsp;
+            </span>
+        </small>
+    </li>
+    <li ng-repeat="d in definitions | filter: {definition: {editable:true,assumptionsCart:false}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a>
+            <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
+                {{d.definition.what}}
+            </span>
+            &map;
             <input type="text" ng-model="d.definition.repl"
                    ng-click="$event.stopPropagation()"
                    ng-blur="setDefinition(d.definition.what, d.definition.repl)">
         </a>
-        <a ng-if="!d.definition.editable"
-           ng-class="{'disabled': agenda.items().length <= 0 }"
-           ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
-            <span>{{d.definition.what}}</span> ~> <span>{{d.definition.repl}}</span>
-            <code class="pull-right">expand "{{d.symbol}}"</code>
+    </li>
+    <li class="divider"></li>
+    <li>
+        <small>&nbsp;Unmodeled Constant Assumptions
+            <span class="pull-right">
+            <i class="fa fa-question-circle"
+               ng-click="$event.stopPropagation()"
+               uib-popover-html="'Apply assumptions about 0-ary function symbols during the proof. Use reserved predicate
+                symbol <code>A__i()</code> in the model source, e.g., <code>A__0() -> x>0 -> [x:=x/y()]x>0</code>.
+                When a symbol <code>A__i()</code> is present in the model, a text box appears below to enter concrete
+                formulas with unmodeled assumptions about constants during the proof. Append <code>A__i+1()</code> when
+                supplying an assumption, e.g., <code>y()>0 & A__1()</code>. The new <code>A__i+1()</code> can collect
+                additional assumptions later.'"
+               popover-append-to-body="true"
+               popover-class="k4-rulemenu-helppopover-long"
+               popover-placement="auto bottom"
+               popover-trigger="'outsideClick'"></i>&nbsp;
+            </span>
+        </small>
+    </li>
+    <li ng-repeat="d in definitions | filter: {definition: {assumptionsCart:true}}" ng-class="{'disabled': agenda.items().length <= 0 }">
+        <a>
+            <span ng-click='doInputTactic(undefined, "US", [{"type":"formula","param":"S(P)","value":"\"" + d.definition.what + "~>" + d.definition.repl + "\""}])'>
+                <i class="fa fa-shopping-cart"></i><sub>{{d.symbol}}</sub>
+            </span>
+            &map;
+            <input type="text" ng-model="d.definition.repl"
+                   ng-click="$event.stopPropagation()"
+                   ng-blur="setDefinition(d.definition.what, d.definition.repl)">
         </a>
     </li>
 </ul>

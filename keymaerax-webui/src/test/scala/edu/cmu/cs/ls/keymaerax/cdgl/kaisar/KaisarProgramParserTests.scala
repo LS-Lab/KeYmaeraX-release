@@ -439,6 +439,14 @@ class KaisarProgramParserTests extends TacticTestBase {
           DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
   }
 
+  it should "allow optional ; in domain" in {
+    p("{x' = y & ?(t := T) & !dc:(x > 0) by auto}", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+      DifferentialSymbol(BaseVariable("x")), Variable("y")))
+      , DomAnd(
+        DomModify(Nothing, Variable("t"), Variable("T")),
+        DomAssert(Variable("dc"), Greater(Variable("x"), Number(0)), Using(List(DefaultSelector), Auto()))))
+  }
+
   it should "parse example from 1d car" in {
     val nt = Nothing
     p("{{x' = v, v' = a, t' = 1 & ?(t <= T & v>=0);}; }*", pp.statement(_)) shouldBe BoxLoop(ProveODE(DiffProductStatement(

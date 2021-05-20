@@ -36,10 +36,23 @@ class EndToEndTests extends TacticTestBase {
       ff shouldBe "[?x_0>=1;x_1:=x_0;{x_2:=x_1+1; {?x_2>=1;}^@ x_1:=x_2;}*{?x_1>=0;}^@]true".asFormula
   }
 
+  it should "handle reassignment after loop" in withMathematica { _ =>
+    val pfStr = "?xZero:(x >= 1); {{x := x + 1; !IS:(x >= 1) using x xZero by auto;}*} !xFin:(x>=0) using xZero by auto; x:= x + 3;"
+    val ff = check(pfStr)
+    ff shouldBe "[?x_0>=1;x_1:=x_0;{x_2:=x_1+1; {?x_2>=1;}^@ x_1:=x_2;}*{?x_1>=0;}^@ x_2:=x_1+3;]true".asFormula
+
+  }
+
   it should "resolve lets in assertions" in withMathematica { _ =>
     val pfStr = "let square(x) = x*x; !fact:(square(2) = 4) by auto;  !also:(square(2) >= 2) using fact by auto;"
     val ff = check(pfStr)
     ff shouldBe "[{?(2*2 = 4);}^@ {?(2*2 >= 2);}^@]true".asFormula
+  }
+
+  it should "expand let's free var at use site, not def" in withMathematica { _ =>
+    val pfStr = SharedModels.letEvalAtUse
+    val ff = check(pfStr)
+    ff shouldBe "[x_1 := 0; x_2:=1; {?(x_2=1);}^@]true".asFormula
   }
 
   it should "support let inside @" in withMathematica { _ =>
@@ -397,7 +410,7 @@ class EndToEndTests extends TacticTestBase {
           Nil
         }
       )
-    val short = true
+    val short = false
     println("\n\n\n")
     if(parseErrors.nonEmpty) {
       if (short)
@@ -440,7 +453,13 @@ class EndToEndTests extends TacticTestBase {
   }
 
   it should "parse and prove specific examples" in withMathematica { _ =>
-    testExampleSet(/*SharedModels.ijrrStaticSafetyRough*/ SharedModels.switchLiteralArg :: Nil)
+    testExampleSet(SharedModels.inverseGhostODECircle :: Nil)
+    // .labelOldEq .demonicLoopConst
+      /*switchLiteralArgAlternate forwardHypotheticalUnsolvable*/
+    // SharedModels.basicForConv :: SharedModels.revisedReachAvoidFor :: SharedModels.basicForNoConv
+    // SharedModels.basicForConv forwardHypothetical
+    // basicForConv revisedReachAvoidFor basicForNoConv
+
   }
 
   it should "allow ghosts of invariants in loop induction proofs " in withMathematica { _ =>

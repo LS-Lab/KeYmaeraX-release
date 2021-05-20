@@ -436,6 +436,10 @@ object Ax extends Logging {
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
 
+  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ TODO",
+    key = "0", recursor = "*")
+  val RI: CoreAxiomInfo = coreAxiom("RI& real induction")
+
   @Axiom("IVT", conclusion = "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))", unifier = "full")
   val IVT: CoreAxiomInfo = coreAxiom("IVT")
   @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", unifier = "linear",
@@ -1148,7 +1152,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "!exists".
-    *   (!\exists x (p(x))) <-> \forall x (!p(x))
+    *   (!\exists x (p(||))) <-> \forall x (!p(||))
     * End.
     * }}}
     *
@@ -1157,7 +1161,7 @@ object Ax extends Logging {
   @Axiom(("¬∃","!exists"), conclusion ="__(¬∃x (p(x)))__↔∀x (¬p(x))"
   , key = "0", recursor = "0;*")
   lazy val notExists: DerivedAxiomInfo = derivedAxiom("!exists",
-    Sequent(IndexedSeq(), IndexedSeq("(!\\exists x_ (p_(x_))) <-> \\forall x_ (!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(!\\exists x_ (p_(||))) <-> \\forall x_ (!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
       useAt(alld)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1191,7 +1195,7 @@ object Ax extends Logging {
   @Axiom(("¬[]","![]"), conclusion = "__¬[a]P__↔<a>¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notBox: DerivedAxiomInfo = derivedAxiom("![]",
-    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(||)) <-> (<a_;>!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(diamond)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1208,7 +1212,7 @@ object Ax extends Logging {
   @Axiom(("¬<>","!<>"), conclusion = "__¬<a>P__↔[a]¬P",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notDiamond: DerivedAxiomInfo = derivedAxiom("!<>",
-    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(||)) <-> ([a_;]!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(box)(1, 0::Nil) &
       byUS(equivReflexive)
@@ -1313,7 +1317,7 @@ object Ax extends Logging {
     *   End.
     * }}}
     */
-  @Axiom("Kd2", conclusion = "[a]P) → (<a>Q → __<a>(P∧Q)__)",
+  @Axiom("Kd2", conclusion = "[a]P → (<a>Q → __<a>(P∧Q)__)",
     key = "1.1", recursor = "*", unifier = "surjlinear")
   lazy val Kd2: DerivedAxiomInfo = derivedAxiom("Kd2 diamond modus ponens",
     Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))".asFormula)),
@@ -3256,9 +3260,10 @@ object Ax extends Logging {
               implyR(1) &
               dR("p_(|t_|)>0".asFormula)(1) & Idioms.<(
               useAt(Cont, PosInExpr(1::Nil))(1) &
+                andR(1)<(cohideR(1) & QE,
                 useAt(greaterEqual)(-1, 1::1::0::Nil) &
                 prop &
-                done,
+                done),
               useAt(DW)(1) &
                 TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), nil) /* TODO: Goedel? */ &
                 useAt(greaterEqual)(1, 1::Nil) &
@@ -5595,5 +5600,4 @@ object Ax extends Logging {
         notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close
     )
   )
-
 }

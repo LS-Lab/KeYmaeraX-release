@@ -160,7 +160,7 @@ private object DLBySubst {
 
         val diffRenameStep: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
             case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-              stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+              stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) &
                 eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
             case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
           })
@@ -235,17 +235,32 @@ private object DLBySubst {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
     case Some(Box(Assign(x, _), p)) =>
-      val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       val rename =
         if (universal) Ax.assignbeq.provable(URename("x_".asVariable, x, semantic=true))
         else Ax.assignbequalityexists.provable(URename("x_".asVariable, x, semantic=true))
 
-      //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-      ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
-      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-       else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
-       else ident)
+      if (StaticSemantics.freeVars(p).isInfinite) {
+        val unexpandedSymbols = StaticSemantics.symbols(p).
+          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
+          map(_.prettyString).mkString(",")
+        throw new UnexpandedDefinitionsFailure("Assignment not possible because postcondition " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
+      }
+
+      if (StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+        // bound renaming not possible when
+        useAt(rename)(pos) &
+          (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast) & eqL2R(AntePosition.base0(sequent.ante.length-1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length-1))
+          else ident)
+      } else {
+        //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+        val y = TacticHelper.freshNamedSymbol(x, sequent)
+        ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
+          (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+          else ident)
+      }
     case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -280,7 +295,7 @@ private object DLBySubst {
    */
   def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     //@Tactic in [[HybridProgramCalculus.generalize]]
-    case (ctx, Box(a, p)) =>
+    case (ctx, Box(a, _)) =>
       val ov = FormulaTools.argsOf("old", c)
 
       var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
@@ -309,7 +324,7 @@ private object DLBySubst {
             flatMap(FormulaTools.conjuncts).
             filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
         (constConjuncts, isGame) match {
-          case ((Nil, _) | (_, true)) => (oldifiedC, skip, implyR(1))
+          case (Nil, _) | (_, true) => (oldifiedC, skip, implyR(1))
           case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
               boxAnd(afterGhostsPos) &
               abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
@@ -319,10 +334,9 @@ private object DLBySubst {
           )
         }
       }
-      introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
-        /* use */
-        /*label(BranchLabels.genUse)*/ useCleanup,
-        /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
+      label(startTx) & introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
+        /* use */ useCleanup & label(replaceTxWith(BelleLabels.mrUse)),
+        /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup & label(replaceTxWith(BelleLabels.mrShow))
       )
     case (_, e) => throw new TacticInapplicableFailure("MR only applicable to box, but got " + e.prettyString)
   })
@@ -362,7 +376,7 @@ private object DLBySubst {
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
         (inputanon {(pos, sequent) => {
           sequent.sub(pos) match {
-            case Some(b@Box(Loop(a), p)) =>
+            case Some(Box(Loop(a), _)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
               else {
                 val abv = StaticSemantics(a).bv
@@ -373,23 +387,24 @@ private object DLBySubst {
                   if (consts.size > 1) And(oldified, consts.reduceRight(And))
                   else if (consts.size == 1) And(oldified, consts.head)
                   else And(oldified, True)
+                label(startTx) &
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
                   /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
-                      label(initCase),
+                      label(replaceTxWith(initCase)),
                       (andR(pos) & Idioms.<(closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                         (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
                         (if (constSuccs.nonEmpty) notR(pos) else skip) &
                         close & done),
                     cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
                       (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                       else andL('Llast) & hideL('Llast, True)) & label(indStep),
+                       else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
                       andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
                   ),
                   /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
                     (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                     else andL('Llast) & hideL('Llast, True)) & label(useCase)
+                     else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
                 )
               }
             case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
@@ -456,16 +471,15 @@ private object DLBySubst {
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
   )
   def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
-    //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
-    //val alast = AntePosition(sequent.ante.length)
+    require(seq(pos) match { case Box(Loop(_),_) => true case _ => false }, "only applicable for [a*]p(||)")
+    label(startTx) &
     cutR(invariant)(pos.checkSucc.top) <(
-        ident & label(BelleLabels.initCase),
+      label(replaceTxWith(BelleLabels.initCase)),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS(Ax.indrule) & label(BelleLabels.indStep)
+          byUS(Ax.indrule) & label(replaceTxWith(BelleLabels.indStep))
           ,
-          ident & label(BelleLabels.useCase)
+          label(replaceTxWith(BelleLabels.useCase))
         )
       )
   }
@@ -529,13 +543,14 @@ private object DLBySubst {
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
           def unstutterABV(pos: Position) = useAt(Ax.selfassignb)(pos)*abvVars.size
 
+          label(startTx) &
           cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
             stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(Ax.pexistsV)(pos) & closeConsts(pos) &
-            assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
+            assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(replaceTxWith(BelleLabels.initCase))
             ,
             cohide(pp) & implyR(1) & byUS(Ax.conflat) <(
-              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
+              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(replaceTxWith(BelleLabels.useCase))
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
               useAt(Ax.pVd, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -546,7 +561,7 @@ private object DLBySubst {
               splitConsts & closeConsts(SuccPos(0)) &
               (assignd(1, 1 :: Nil) & uniformRename(ur) |
                 uniformRename(ur.what, x1) & assignd(1, 1 :: Nil) & boundRename(x1, v)(1, 1::Nil) & uniformRename(x2, v0)
-                ) & label(BelleLabels.indStep)
+                ) & label(replaceTxWith(BelleLabels.indStep))
             )
           )
       }
@@ -620,13 +635,6 @@ private object DLBySubst {
             case _ => f //@note new: arbitrary term ghosts
           }
 
-          val subst = (_: Option[Subst]) => RenUSubst(
-            ("x_".asVariable, theGhost) ::
-              ("f()".asTerm, e) ::
-              ("p(.)".asFormula, theF) ::
-              Nil
-          )
-
           val execAssignment = assignEquality(pos) &
             //@note allR2L does not allow rewriting numbers
             (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
@@ -634,8 +642,30 @@ private object DLBySubst {
               else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
             } else skip)
 
-          useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
-            (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+          theGhost match {
+            case DifferentialSymbol(x) =>
+              val subst = (_: Option[Subst]) => RenUSubst(
+                ("f()".asTerm, e) ::
+                ("p(.)".asFormula, theF) ::
+                Nil)
+              val y = TacticHelper.freshNamedSymbol(x, f)
+              useAt(Ax.Dassignb, PosInExpr(1::Nil), subst)(pos) &
+                stutter("x_".asVariable)(pos) &
+                stutter(x)(pos) &
+                boundRename(x, y)(pos) &
+                boundRename("x_".asVariable, x)(pos ++ PosInExpr(1::Nil)) &
+                V(pos ++ PosInExpr(1::Nil)) & assignb(pos)
+            case _ =>
+              val subst = (_: Option[Subst]) => RenUSubst(
+                ("x_".asVariable, theGhost) ::
+                ("f()".asTerm, e) ::
+                ("p(.)".asFormula, theF) ::
+                Nil)
+              useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
+                (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+          }
+
+
         case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }

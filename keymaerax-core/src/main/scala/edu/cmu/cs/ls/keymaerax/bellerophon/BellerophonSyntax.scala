@@ -90,6 +90,7 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
   def <(children: BelleExpr*): BelleExpr = SeqTactic(this, BranchTactic(children))
+  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(this, CaseTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(this, USubstPatternTactic(p))
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
@@ -135,6 +136,8 @@ case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def pre
 case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*" + times + ")" }
 /** `<(e1,...,en)` branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+/** `<("l1":e1,...,"ln":en)` branching to run tactic `ei` on label `li`, failing if any of them fail, if there are not exactly `n` branches, or if any of the labels does not exist. */
+case class CaseTactic(children: Seq[(BelleLabel, BelleExpr)]) extends BelleExpr { override def prettyString: String = "<( " + children.map({ case (l, c) => "\"" + l.prettyString + "\": " + c.prettyString }).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
   *
@@ -495,7 +498,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       case l@Find(_, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(provable, l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
@@ -508,7 +511,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
 
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   @tailrec
-  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig = {
+  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: => BelleThrowable): ProvableSig = {
     if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
       @tailrec
@@ -632,7 +635,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
     case _ => false
   }
 }
-class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
+class AppliedDependentPositionTacticWithAppliedInput(override val pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
     if (pt.inputs.nonEmpty) {
       val each = BelleExpr.persistable(pt.inputs).flatMap(BelleExpr.printOne(_, pt.inputs.size <= 1))
@@ -666,9 +669,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case None => pt.factory(pos).computeExpr(v)
       }
       case l@Find(_, _, start, _) =>
-        require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + v.prettyString))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
       case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
@@ -711,7 +713,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(locator: Find, cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
+  private def tryAllAfter(locator: Find, cause: => BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
@@ -926,10 +928,12 @@ trait BelleLabel {
   def components: List[BelleLabel]
   /** Appends a label to the end of this label. */
   def append(l: BelleLabel): BelleLabel
+  /** Returns true if `l` is a suffix of this label (ignoring top- vs.sub-label differences), false otherwise. */
+  def endsWith(l: BelleLabel): Boolean = components.map(_.label).endsWith(l.components.map(_.label))
 }
 object BelleLabel {
-  val LABEL_SEPARATOR: String = ","
-  val LABEL_DELIMITER: String = ":"
+  val LABEL_SEPARATOR: String = "::"
+  val LABEL_DELIMITER: String = "//"
 
   def fromString(s: String): List[BelleLabel] = {
     s.split(LABEL_SEPARATOR).map(topLabel => {
@@ -950,7 +954,45 @@ case class BelleTopLevelLabel(label: String) extends BelleLabel {
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
     case sl: BelleSubLabel => BelleSubLabel(this.append(sl.parent), sl.label)
+    case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
   }
+}
+/** Label transaction with rollback point `r` and collected labels `c` since rollback point. */
+case class BelleLabelTx(r: BelleLabel, c: Option[BelleLabel], label: String = "") extends BelleLabel {
+  override def prettyString: String = r.prettyString
+  override def components: List[BelleLabel] = this +: r.components
+  override def append(l: BelleLabel): BelleLabel = l match {
+    case tl: BelleTopLevelLabel => copy(c = Some(c.map(_.append(tl)).getOrElse(tl)))
+    case sl: BelleSubLabel => copy(c = Some(c.map(_.append(sl)).getOrElse(sl)))
+    case BelleStartTxLabel => BelleLabelTx(this, None)
+    case BelleRollbackTxLabel => BelleLabelTx(r, None)
+    case BelleCommitTxLabel => r match {
+      case BelleStartTxLabel => c.getOrElse(throw new IllegalArgumentException("Unable to commit empty label transaction"))
+      case _ => c.map(r.append).getOrElse(r)
+    }
+    // shorthand for label(rollback) & label(l) & label(commit)
+    case BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, l), None, _) => copy(c = Some(BelleTopLevelLabel(l))).append(BelleCommitTxLabel)
+  }
+}
+/** Rollback a label transaction. */
+object BelleRollbackTxLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l
+}
+/** Commits a label transaction. */
+object BelleCommitTxLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l
+}
+object BelleStartTxLabel extends BelleLabel {
+  override val label = ""
+  override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l
 }
 /** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
@@ -961,6 +1003,7 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
   override def append(l: BelleLabel): BelleLabel = l match {
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
     case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
+    case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
   }
 }
 

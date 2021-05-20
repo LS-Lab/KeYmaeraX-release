@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleLabel, BelleTopLevelLabel}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -59,4 +59,17 @@ class StringConverter(val s: String) {
 
   /** Converts to a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = UnificationSubstitutionParser.parseSubstitutionPair(s)
+
+  /** Converts to proof state labels. */
+  def asLabel: BelleLabel = BelleLabel.fromString(s) match {
+    case l :: Nil => l
+    case _ => throw new IllegalArgumentException(s + " is not a single label")
+  }
+  /** Converts to proof state top-level label. */
+  def asTopLevelLabel: BelleTopLevelLabel = BelleLabel.fromString(s) match {
+    case (l: BelleTopLevelLabel) :: Nil => l
+    case _ => throw new IllegalArgumentException(s + " is not a single top-level label")
+  }
+  /** Converts to proof state labels. */
+  def asLabels: List[BelleLabel] = BelleLabel.fromString(s)
 }

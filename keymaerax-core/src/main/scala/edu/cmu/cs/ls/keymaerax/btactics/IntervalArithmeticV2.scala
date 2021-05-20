@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, R
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 
 import scala.collection.immutable._
 

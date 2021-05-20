@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import org.slf4j.LoggerFactory
 
 /**
@@ -50,19 +51,30 @@ object ODEInvariance {
   // Rewrite >=
   private[btactics] lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
   // Cont with the domain constraint already refined to >= instead of >
+  // todo: uses c{|s_|} instead of c to work around USubstOne conservativity
+  // around substituted differential program constants
   private[btactics] lazy val contAx =
-    remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
+    remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=g()".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
-        implyRi & byUS(Ax.Cont),
+        cutL("1!=0 & f(||)>0".asFormula)(-1) <( implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) <(hideL(-1) & QE,id) ),
         DW(1) & G(1) & useAt(Ax.flipGreater)(1,0::Nil) &
           useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
       ), namespace)
 
+  private[btactics] lazy val contAxR =
+    remember("f(||) > 0 -> <{t_'=-(1),c&f(||)>=0}>t_!=g()".asFormula,
+      implyR(1) &
+        dR("f(||)>0".asFormula)(1) <(
+          cutL("-(1)!=0 & f(||)>0".asFormula)(-1) <( implyRi & byUS(Ax.Cont), hideR(1) & implyR(1) & andR(1) <(hideL(-1) & QE,id) ),
+          DW(1) & G(1) & useAt(Ax.flipGreater)(1,0::Nil) &
+            useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
+        ), namespace)
+
   // unconditional cont with true in the domain constraint
   private lazy val contAxTrue =
-    remember("<{t_'=1,c&1 > 0}>t_!=0".asFormula,
-          cutR("1 > 0".asFormula)(1) <( QE,  byUS(Ax.Cont)), namespace)
+    remember("<{t_'=1,c&1 > 0}>t_!=g()".asFormula,
+          cutR("1!=0 & 1 > 0".asFormula)(1) <( QE,  byUS(Ax.Cont)), namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
@@ -106,10 +118,6 @@ object ODEInvariance {
   private lazy val fastSOS = proveBy("g() >= 0 & (P() <-> g() <= 0) -> (P()&f()=0 <-> g()+f()*f()<=0)".asFormula,
     prop & OnAll(QE)
   )
-
-  private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
-  private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
-  private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
 
   /** Given a polynomial p, and an ODE system, generates the formula
     * p*>0
@@ -218,7 +226,8 @@ object ODEInvariance {
         orL('Llast) <(
           //Strict case
           //DebuggingTactics.print("Cont STEP") &
-          useAt(contAx,PosInExpr(1::Nil))(pos) & id,
+          useAt(contAx,PosInExpr(1::Nil))(pos) & id |
+            useAt(contAxR,PosInExpr(1::Nil))(1) & id,
           //Integral case
           //DebuggingTactics.print("DI STEP") &
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
@@ -240,9 +249,10 @@ object ODEInvariance {
   // Helper tactic proving p*>0 -> <t'=1, x'=f(x)& p>=0> t!=0
   private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
-      useAt(contAx,PosInExpr(1::Nil))(1) & id
+        useAt(contAx,PosInExpr(1::Nil))(1) & id |
+        useAt(contAxR,PosInExpr(1::Nil))(1) & id
     else //Could also make this fallback to the continuity step for early termination
-      //DebuggingTactics.print("start "+bound) &
+      // DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1)< (
         hideL(-2) & useAt(geq)(-1) & id,
         hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound-1))
@@ -314,7 +324,6 @@ object ODEInvariance {
             hideL(-3) & lpgen(r)
           )
         case GeqFml(r, gs, cofs) =>
-          DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
             useAt(refOrL, PosInExpr(1 :: Nil))(1) & // drop t_ = 0 disjunct in domain of progress fml
             DebuggingTactics.debug(">= case, rank: "+r+" "+gs, doPrint = debugTactic) &
             (
@@ -443,12 +452,12 @@ object ODEInvariance {
       )
   })
 
-
   // Similar to lpgeq but proves the unlocked version
   // t=0 , p*>0 -> <t'=1, x'=f(x)& p - t^(2k) >=0> t!=0
   private def lpgeqUnlock(bound:Int) : BelleExpr =
     if (bound <= 1)
-      useAt(contAx,PosInExpr(1::Nil))(1) & exhaustiveEqL2R(-1) & hideL(-1) & QE
+      (useAt(contAx,PosInExpr(1::Nil))(1) | useAt(contAxR,PosInExpr(1::Nil))(1))  &
+        exhaustiveEqL2R(-1) & hideL(-1) & QE
     else //Could also make this fallback to the continuity step for early termination
       andL(-2) & lpstep(1) &
       < (
@@ -463,14 +472,15 @@ object ODEInvariance {
   //additionally, the domain is assumed to be exactly g>0 | t=0
   //Unfortunately, this tactic has to prove the power bounds on the fly but hopefully remember() can store them
   private def lpgt(bound:Int): DependentTactic = anon ((seq: Sequent) => {
-    val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
-    val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
-      case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
+    val boundPr = remember(("f_()-(g_()-h_())^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=h_()").asFormula, QE, namespace)
+
+    val (p,t,s) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
+      case Some(Or(Greater(p,_),Equal(t,s))) => (p,t,s)
       case Some(e) => throw new TacticInapplicableFailure("lpgt only applicable to disjunction of strict inequality and equality, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position does not point to a valid position in sequent " + seq.prettyString)
     }
     //println(p,t)
-    val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
+    val unlocked = GreaterEqual(Minus(p,Power(Minus(t,s),Number(2*bound))),Number(0))
     dR(unlocked)(1)<(
       lpgeqUnlock(bound),
       diffWeakenG(1) & byUS(boundPr))
@@ -675,29 +685,36 @@ object ODEInvariance {
     val fvs = StaticSemantics.freeVars(post)
     val freeAtoms = atoms.filter( p => fvs.contains(p.xp.x))
 
-    val timeLike = atoms.flatMap(_ match {
-      case AtomicODE(v ,n:Number) if n.value!=0 => Some(v.x)
-      case _=> None
-    })
-    val constRHS = domConj.filter(_ match {
-      //todo: this can be generalized
-      case Equal(l,_:Number) if timeLike.contains(l) => true
-      case _ => false})
+    // Handle the special case where postcondition is constant
+    if(freeAtoms.isEmpty)
+      V(pos) & QE & done
+    else {
+      val timeLike = atoms.flatMap(_ match {
+        case AtomicODE(v, n: Number) if n.value != 0 => Some(v.x)
+        case _ => None
+      })
+      val constRHS = domConj.filter(_ match {
+        //todo: this can be generalized
+        case Equal(l, r) if StaticSemantics.freeVars(r).intersect(StaticSemantics.boundVars(ode)).isEmpty &&
+          timeLike.contains(l) => true
+        case _ => false
+      })
 
-    constRHS match {
-      case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
-      case Equal(t,d)::_ =>
-        //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
-        val left = freeAtoms.map(f =>
-          Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
-        val right = Times(freeAtoms.map(f => Times(Number(2),
-          Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+      constRHS match {
+        case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+        case Equal(t, d) :: _ =>
+          //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
+          val left = freeAtoms.map(f =>
+            Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), Number(2)): Term).reduce(Plus)
+          val right = Times(freeAtoms.map(f => Times(Number(2),
+            Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)): Term).reduce(Plus), Minus(t, d))
 
-        //dC with old(.) moves the formula to the last position
-        dC(LessEqual(left,right))(pos)<(
-          dW('Rlast) & QE & done,
-          diffInd('full)('Rlast)
-        )
+          //dC with old(.) moves the formula to the last position
+          dC(LessEqual(left, right))(pos) < (
+            dW('Rlast) & QE & done,
+            diffInd('full)('Rlast)
+          )
+      }
     }
   })
 
@@ -1945,4 +1962,298 @@ object ODEInvariance {
   })
 
   lazy val dCClosure = DifferentialTactics.dCClosure(true)
+
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    *
+    * G|-P  Q,Q*,P |- P*   Q,Q-*, !P |- (!P)-*
+    * --------------- (sAI)
+    * G |- [x'=f(x)&Q]P
+    *
+    * @return closes the subgoal if P is indeed invariant,
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+    */
+  def sAI : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("sAI: position " + pos + " must point to a top-level succedent position")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("sAI needs an algebra tool (and Mathematica)")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("sAI only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    //todo: robustness against s_, t_, fv_* appearing in model
+    val svar = BaseVariable("s_")
+    val tvar = BaseVariable("t_")
+
+    val atoms = AtomicODE(DifferentialSymbol(tvar),Number(1))::atomicListify(sys.ode)
+    val oldnames = atoms.map(p => p.xp.x)
+    val newnames = (1 to atoms.length).map( i => BaseVariable("fv_",Some(i)))
+    val nameszip = oldnames zip newnames
+    val ipost = Not(Imply(And(sys.constraint,Or(post,Equal(tvar,svar))) ,Imply(Equal(tvar,svar), post)))
+    val renfvipost = nameszip.foldLeft(ipost : Formula)( (tt, c) => tt.replaceFree(c._1,c._2))
+
+    val eqs = nameszip.map(c => Equal(c._1,c._2)).reduceRight(And)
+//    val dfml = Diamond(
+//      ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),
+//        And(sys.constraint,Or(post,Equal(tvar,svar)))
+//      ),eqs)
+    //val cutfml = newnames.foldLeft(And(renfvipost,dfml):Formula)( (f,c) => Exists(c::Nil,f))
+    val dfml = Diamond(
+          ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),
+            And(sys.constraint,Or(post,Equal(tvar,svar)))
+          ),And(eqs,renfvipost))
+    val cutfml = newnames.foldLeft(dfml:Formula)( (f,c) => Exists(c::Nil,f))
+
+    val barcantac =
+      (0 to atoms.length-1).map( List.fill(_)(0)).foldLeft(skip:BelleExpr)( (p,t) =>
+        useAt(dBarcan)(1,t) & p
+      )
+
+    val existstac = oldnames.foldLeft(skip:BelleExpr) ( (p,t) =>
+      existsR(t)(1) & p
+    )
+
+    val dadj = getDiffAdjInst(atoms)
+
+    //P
+    val (pfml,pfmlpropt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    //P*
+    val (pstarpf, pstarinst) = try {
+      fStar(sys,pfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // Normalizes the postcondition appearing in local progress
+    val ptac = pfmlpropt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(1,0::1::0::Nil)
+    }
+
+    //!Q
+    val (nqfml,nqfmlpropt) = try {
+      semiAlgNormalize(Not(sys.constraint))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    //(!Q)*
+    val (nqstarpf,nqstarinst) = try {
+      fStar(sys,nqfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f* for f: "+nqfml, ex)
+    }
+
+    // Normalizes the postcondition appearing in local progress
+    val nqtac = nqfmlpropt match {
+      case None => skip
+      case Some(pr) => useAt(pr,PosInExpr(1::Nil))(-2,0::1::0::Nil)
+    }
+
+    // <ODE & !Q> O
+    val nqlp = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),Or(nqfml,Equal(tvar,svar))),NotEqual(tvar,svar))
+    // <ODE & Q>o
+    val qlpi = Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(tvar),Number(1)),sys.ode),sys.constraint),NotEqual(tvar,svar))
+
+    //Renamed
+    val revodeList = atoms.map{ case AtomicODE(x,rhs) => AtomicODE(x, Neg(rhs))}
+    val revode = revodeList.reduce(DifferentialProduct.apply)
+    val revsys = nameszip.foldLeft(ODESystem(revode,sys.constraint):Program)( (tt, c) => tt.replaceAll(c._1,c._2)).asInstanceOf[ODESystem]
+
+    val renpost = nameszip.foldLeft(post : Formula)( (tt, c) => tt.replaceFree(c._1,c._2))
+    val rendom = revsys.constraint
+    //Use to strengthen after dadj
+    val revMon = Diamond(ODESystem(revsys.ode,And(revsys.constraint,Or(renpost,Equal(newnames.head,svar)))), NotEqual(newnames.head,svar))
+
+    //!P
+    val (npfml,npfmlpropt) = try {
+      semiAlgNormalize(Not(renpost))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    //(!P)-*
+    val (nprstarpf,nprstarinst) = try {
+      fStar(revsys,npfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // Normalizes the negated postcondition appearing in local progress
+    val nptac = npfmlpropt match {
+      case None => skip
+      case Some(pr) => useAt(pr,PosInExpr(1::Nil))(-2,0::1::0::Nil)
+    }
+
+    //!Q
+    val (rennqfml,rennqfmlpropt) = try {
+      semiAlgNormalize(Not(rendom))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
+    //(!Q)-*
+    val (rennqrstarpf,rennqrstarinst) = try {
+      fStar(revsys,rennqfml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
+
+    // Normalizes the postcondition appearing in local progress
+    val rennqtac = rennqfmlpropt match {
+      case None => skip
+      case Some(pr) => useAt(pr,PosInExpr(1::Nil))(-2,0::1::0::Nil)
+    }
+
+    // <-ODE & !Q> O
+    val rennqrlp = Diamond(ODESystem(revsys.ode,Or(rennqfml,Equal(newnames.head,svar))),NotEqual(newnames.head,svar))
+    // <-ODE & !P> O
+    val nprlp = Diamond(ODESystem(revsys.ode,Or(npfml,Equal(newnames.head,svar))),NotEqual(newnames.head,svar))
+
+    // Can skip the O -> o step for forward branch if there are no equalities in domain
+    val skipLock = domainEqualities(sys.constraint).isEmpty
+
+    useAt(Ax.RI)(pos) & allR(pos) &
+      useAt(and_imp,PosInExpr(0::Nil))(pos++PosInExpr(1::1::Nil)) &
+      useAt(imp_and,PosInExpr(0::Nil))(pos++PosInExpr(1::Nil)) & boxAnd(pos) & andR(pos) <(
+      cutR(Or(Equal(tvar,svar),NotEqual(svar,tvar)))(pos) <(
+        cohideR(pos) & QE,
+        //implyR moves succedent to 'Rlast
+        implyR(pos) & orL('Llast) <(
+          //initial branch
+          useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast)<(
+            timeBound('Rlast),
+            cohideOnlyR('Rlast) & cohideOnlyL('Llast) &
+            dC(GreaterEqual(tvar,svar))(1) <(
+              DW(1) & G(1) & implyR(1) & implyR(1) &
+              andL(-1) & hideL(-2) &
+              dC(Greater(tvar,svar))(1) <(
+                DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+                DifferentialTactics.dI(1)
+              ),
+              DifferentialTactics.dI(1)
+            )
+          ),
+          //backwards branch
+          DW('Rlast) & useAt(Ax.box,PosInExpr(1::Nil))('Rlast) & notR('Rlast) &
+          cutL(cutfml)('Llast) <(
+            (existsL('Llast) * newnames.length) &
+              useAt(Ax.pVd)('Llast) & andL('Llast) &
+              notL('Llast) & useAt(dadj)('Llast) &
+              cutL(revMon)('Llast) <(
+                implyR('Rlast) & andL('Llast) & hideL('Llast) &
+                cut(Or(nprstarpf,rennqrstarpf)) <(
+                  //Cleanup the sequent
+                  (hideL(-1) * seq.ante.length) & // hide original antecedents
+                  hideL(-1) & // hide s_!=t_
+                  cohideOnlyR('Rlast) & //hide all succedents
+                  hideL(-2) & // hide domain
+                  useAt(Ax.UniqIff,PosInExpr(1::Nil))(-1) & andL(-1) &
+                  implyR(1) & exchangeL(-1,-4) & exchangeL(-3,-4) & orL(-3) <(
+                    //(!P)-* branch
+                    cutR(nprlp)(1) <(
+                      hideL(-4) & lpgen(nprstarinst),
+                      hideL(-1) & hideL(-1) & hideL(-1) & implyR(1) & nptac &
+                      andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+                      diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+                        implyR(1) & andL(-1) & orL(-1) <(orL(-2) <(notL(-2) & id,id), id)
+                    ),
+                    //(!Q)-* branch
+                    cutR(rennqrlp)(1) <(
+                      hideL(-4) & lpgen(rennqrstarinst),
+                      hideL(-1) & hideL('Llast) &  hideL('Llast) & implyR(1) & rennqtac &
+                      andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+                      diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+                      implyR(1) & andL(-1) & orL(-2) <( notL(-2) & id, id)
+                    )
+                  ),
+                  ToolTactics.hideNonFOL & ?(QE & done)
+                )
+                ,
+                //useAt(Ax.UniqIff,PosInExpr(1::Nil))('Llast),
+                cohideOnlyL('Llast) & cohideOnlyR('Rlast) & useAt(Ax.Kd,PosInExpr(1::Nil))(1) &
+                dW(1) & QE // todo: can do manually
+              )
+
+            ,
+            cohideR('Rlast) & implyR(1) & barcantac &
+            mond & existstac & andR(1) <(cohideR(1) & QE,id) // todo: maybe prove manually
+          )
+        )
+      ),
+      dW(pos) & andL(-1) & hideL(-2) & implyR(1) & implyR(1) & implyR(1) &
+        ptac & cutR(Or(pstarpf,nqstarpf))(1) <(
+        ToolTactics.hideNonFOL & ?(QE & done), //prove P* | (!Q)* from assumptions
+        (if (skipLock) skip
+        else {
+        cutL(qlpi)('Llast) <(skip,
+          cohideOnlyR('Rlast) &  useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
+          dC(Imply(Equal(tvar,svar),sys.constraint))(1) <(
+            DW(1) & G(1) &
+              implyR(1) & andL(-1) &
+              orL(-1) <(id, implyL(-2) <(id,id)),
+            useAt(Ax.DCC, PosInExpr(1::Nil))(1) & andR(1) <(cohideOnlyL(-1) & timeBound(1),
+              dC(GreaterEqual(tvar,svar))(1) <(
+                DW(1) & G(1) & implyR(1) & implyR(1) &
+                andL(-1) & hideL(-2) &
+                  dC(Greater(tvar,svar))(1) <(
+                    DW(1) & G(1) & implyR(1) & andL(-1) & hideL(-1) & QE,
+                    DifferentialTactics.dI(1)
+                  ),
+                cohideOnlyL(-2) & DifferentialTactics.dI(1)))
+           )
+        ) }) &
+        implyR(1) & orL('Llast) <(
+          // P* branch
+          hideL(-3) & hideL(-1) & // set up into shape expected by lpgen
+            lpgen(pstarinst),
+          hideL(-3) & hideL(-1) & cutR(nqlp)(1) <(
+            lpgen(nqstarinst),
+            hideL(-1) & hideL('Llast) & implyR(1) & nqtac & andLi & useAt(Ax.UniqIff, PosInExpr(0 :: Nil))(-1) &
+              diamondd(-1) & hideR(1) & notL(-1) & DW(1) & G(1) & useAt(Ax.notNotEqual)(1,1::Nil) &
+              implyR(1) & andL(-1) &
+              (if(skipLock) orL(-1) <( orL(-2) <(notL(-2) & id,id), id)
+              else orL(-2) <( notL(-2) & id, id))
+          )
+        ))
+    )
+  })
+
+  private val and_imp = remember("p() & q() <-> p() & (p() -> q())".asFormula,prop)
+  private val imp_and = remember("(r() -> p() & q()) <-> ((r() -> p()) & (r() -> q()))".asFormula,prop)
+  private val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
+
+  //todo: move to Ax.scala
+  private lazy val dBarcan = proveBy("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
+    diamondd(1,1::Nil) &
+    diamondd(1,0::0::Nil) &
+    useAt(Ax.existsDual,PosInExpr(1::Nil))(1,0::Nil) &
+    useAt(Ax.doubleNegation)(1,0::0::0::Nil) &
+    useAt(Ax.notExists)(1,1::0::1::Nil) & //@todo substitution clash
+    useAt(Ax.barcan)(1,1::0::Nil) &
+    byUS(Ax.equivReflexive)
+  )
+
+  private def getDiffAdjInst(odels:List[AtomicODE]) : ProvableSig = {
+
+    val dim = odels.length
+    val diffadj = Provable.diffAdjoint(dim)
+
+    // @TODO: this very manually applies the uniform renaming part, since it's not automated elsewhere yet (?)
+    // would also be much cleaner if one could access the renaming part more easily.
+    val dadjlhs = (1 to dim).map( i => BaseVariable("x_", Some(i)))
+    val lhs = odels.map(_.xp.x)  // variables in the ODE
+    val diffadjren = (lhs zip dadjlhs).foldLeft(diffadj)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
+
+    ElidingProvable(diffadjren)
+  }
+
+
 }

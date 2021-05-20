@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -17,6 +17,7 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
+import org.scalatest.OptionValues._
 
 /**
  * Very fine-grained tests of the sequential interpreter.
@@ -25,6 +26,14 @@ import org.scalatest.LoneElement._
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends TacticTestBase {
+
+  "Locators" should "apply searchy with sub-positions" in withTactics {
+    inside(theInterpreter(composeb(Find.FindR(0, Some("[x:=2;][y:=*;?y>=x;]y>=2".asFormula), PosInExpr(1::Nil), exact=true)),
+      BelleProvable(ProvableSig.startProof("==> [x:=2;][y:=*;?y>=x;]y>=2".asSequent)))) {
+      case BelleProvable(p, _) =>
+        p.subgoals.loneElement shouldBe "==> [x:=2;][y:=*;][?y>=x;]y>=2".asSequent
+    }
+  }
 
   "AndR" should "prove |- 1=1 ^ 2=2" in withMathematica { _ =>
     inside (theInterpreter(andR(1), BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))) {
@@ -90,7 +99,16 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "report when no unification found with 'Rlike unification matching" in withMathematica { _ =>
     the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
-      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message "Position tactic implyR('R~=\"p_()&q_()->r_()\") is not applicable anywhere in succedent"
+      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message
+      """Position tactic implyR('R~="p_()&q_()->r_()") is not applicable anywhere in succedent of
+        |ElidingProvable(Provable{
+        |==> 1:  a=0	Equal
+        |    2:  b=1	Equal
+        |    3:  c=2->d=3	Imply
+        |  from
+        |==> 1:  a=0	Equal
+        |    2:  b=1	Equal
+        |    3:  c=2->d=3	Imply})""".stripMargin
 
   }
 
@@ -106,12 +124,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "fail inapplicable builtin-rules with legible error messages" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
-    // @TODO: Platform-dependent/line ending-dependent
-      """Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
-        |==> 1:  x=5	Equal
-        |  from
-        |==> 1:  x=5	Equal})""".stripMargin
+    the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should
+      have message "Tactic andR applied at 1 on a non-matching expression in ==> 1:  x=5\tEqual"
   }
 
   "Saturate combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in withMathematica { _ =>
@@ -170,7 +184,16 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*2).subgoals.loneElement shouldBe "x=2, y=3, z=4 ==> x=2".asSequent
     val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
     ex should have message "RepeatTactic failed on repetition 3"
-    ex.getCause should have message "Position tactic andL('L) is not applicable anywhere in antecedent"
+    ex.getCause should have message
+      """Position tactic andL('L) is not applicable anywhere in antecedent of
+        |ElidingProvable(Provable{
+        |   -1:  x=2&y=3&z=4	And
+        |==> 1:  x=2	Equal
+        |  from
+        |   -1:  x=2	Equal
+        |   -2:  y=3	Equal
+        |   -3:  z=4	Equal
+        |==> 1:  x=2	Equal})""".stripMargin
   }
 
   "+ combinator" should "saturate with at least 1 repetition" in withMathematica { _ =>
@@ -332,9 +355,73 @@ class SequentialInterpreterTests extends TacticTestBase {
       ), (labels: Option[List[BelleLabel]]) => {
       labels shouldBe Some(
         BelleLabels.useCase.append(BelleLabels.QECEX) ::
-        BelleSubLabel(BelleLabels.indStep, "1") ::
-        BelleLabels.indStep :: Nil)
+        BelleLabels.indStep.append("[x:=x+1;]x>=0".asLabel).append("1".asLabel) ::
+        BelleLabels.indStep.append("[x:=x+2;]x>=0".asLabel) :: Nil)
     })
+  }
+
+  "Case combinator" should "match tactics with labels" in withMathematica { _ =>
+    val ts = List(
+      BelleLabels.initCase -> nil,
+      BelleLabels.useCase -> id,
+      BelleLabels.indStep -> assignb(1)
+    ).permutations.map(t => implyR(1) & loop("x>1".asFormula)(1) & CaseTactic(t))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, _) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x>2 ==> x>1".asSequent,
+            "x>1 ==> x+1>1".asSequent)
+      }
+    }
+  }
+
+  it should "match tactics with label suffixes" in withMathematica { _ =>
+    val ts = List(
+      BelleLabels.initCase -> nil,
+      BelleLabels.useCase -> id,
+      BelleLabels.indStep -> assignb(1)
+    ).permutations.map(t => implyR(1) & andR(1) /* creates labels that become parents of loop labels */ <(
+      loop("x>1".asFormula)(1) & CaseTactic(t), id))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, _) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x>2 ==> x>1".asSequent,
+            "x>1 ==> x+1>1".asSequent)
+      }
+    }
+  }
+
+  it should "match tactics with label suffixes (2)" in withMathematica { _ =>
+    val ts = List(
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.initCase) -> nil,
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.useCase) -> id,
+      "[x:=1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.indStep) -> assignb(1),
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.initCase) -> QE,
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.useCase) -> label("A manual label"),
+      "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.indStep) -> assignb(1)
+    ).permutations.map(t => prop & unfoldProgramNormalize /* create labels that become parents of loop labels */ &
+      onAll(loop("x>=1".asFormula)(1)) & CaseTactic(t))
+    val v = BelleProvable(ProvableSig.startProof("x>2 -> [x:=1;++x:=x-1;][{x:=x+1;}*]x>=1 & x>2".asFormula))
+    for (t <- ts) {
+      inside(theInterpreter.apply(t, v)) {
+        case BelleProvable(p, labels) =>
+          p.subgoals should contain theSameElementsAs List(
+            "x_0>2, x=1 ==> x>=1".asSequent,
+            "x>=1, x_0>2 ==> x>=1".asSequent,
+            "x>=1, x_0>2 ==> x+1>=1".asSequent,
+            "x>=1, x_0>2 ==> x+1>=1".asSequent
+          )
+          labels.value should contain theSameElementsAs List(
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=1;][{x:=x+1;}*]x>=1//Init".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=x-1;][{x:=x+1;}*]x>=1//Post//A manual label".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=x-1;][{x:=x+1;}*]x>=1//Step".asLabel,
+            "[x:=1;++x:=x-1;][{x:=x+1;}*]x>=1//[x:=1;][{x:=x+1;}*]x>=1//Step".asLabel)
+      }
+    }
   }
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in withMathematica { _ =>
@@ -536,7 +623,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
-      "andR(1) & <(close, close)".asTactic,
+      "andR(1); <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
@@ -544,9 +631,13 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    listener.calls should have size 5
+    listener.calls should have size 10
+    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+
     listener.calls should contain theSameElementsInOrderAs(
-      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
+      andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
       BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
       DebuggingTactics.error("Inapplicable close") :: Nil)
   }
@@ -559,7 +650,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
-      "andR(1) & <(close, close)".asTactic,
+      "andR(1); <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
@@ -567,9 +658,13 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    listener.calls should have size 7
+    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+
+    listener.calls should have size 12
     listener.calls should contain theSameElementsInOrderAs(
-      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
+      andT :: andRRule :: labelT :: labels(0) :: labels(1) ::
       BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
       DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
   }

@@ -1,7 +1,6 @@
 package bellerophon.pptests
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -9,8 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Region, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, ParseException, Region, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -80,7 +78,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
-    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation)
+    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation, None, exact=true)
     BelleParser("boxAnd(1.1)") shouldBe (round trip HilbertCalculus.boxAnd(pos))
   }
 
@@ -90,6 +88,30 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "parse a built-in argument with a searchy position locator" in {
     BelleParser("boxAnd('L=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula))))
+  }
+
+  it should "parse a built-in argument with a searchy sub-position locator" in {
+    BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+    BellePrettyPrinter(BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")")) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
+  }
+
+  it should "parse a built-in argument with a searchy formula sub-position locator in new notation" in {
+    BelleParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+  }
+
+  it should "parse a built-in argument with a searchy term sub-position locator in new notation" in {
+    BelleParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2;](x>0+0&x>1)".asFormula), PosInExpr(1::0::1::Nil))))
+  }
+
+  it should "parse a built-in argument with a searchy program sub-position locator in new notation" in {
+    BelleParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil))))
+    BellePrettyPrinter(SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil)))) shouldBe "simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")"
+  }
+
+  it should "parse a built-in argument with a searchy term sub-position locator in new notation (term occurs thrice)" in {
+    BelleParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::1::1::Nil))))
   }
 
   it should "parse a built-in argument with a searchy unification position locator" in {
@@ -312,6 +334,23 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2), andR(3))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2),
+        |  andR(3)
+        |)""".stripMargin
+
+    BellePrettyPrinter(BelleParser("andR(1); <(andR(2); <(andR(3), andR(4)), andR(5))")) shouldBe
+      """andR(1) ; <(
+        |  andR(2) ; <(
+        |    andR(3),
+        |    andR(4)
+        |  ),
+        |  andR(5)
+        |)""".stripMargin
+  }
+
   it should "parse e <()" in {
     val result = BelleParser("andR(1) <()").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
@@ -319,18 +358,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq()
   }
 
-  it should "parse e <(e)" in {
-    val result = BelleParser("andR(1) <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
-  }
-
-  it should "parse e & <(e) as well" in {
-    val result = BelleParser("andR(1) & <(andR(1))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1))
+  it should "report an error on e <(e)" in {
+    the [ParseException] thrownBy BelleParser("andR(1) <(andR(1))") should
+      have message """1:9 Branch tactic has only a single child
+                     |Found:    <unknown> at 1:9
+                     |Expected: <unknown>""".stripMargin
   }
 
   it should "parse e & <(e,e)" in {
@@ -340,6 +372,63 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(1), TactixLibrary.andR(1))
   }
 
+  it should "parse as case tactic when labels are present" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> andL(-2),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
+  it should "print as cases indented" in {
+    BellePrettyPrinter(BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": andL(-1),
+        |  "Step": andL(-2),
+        |  "Post": andL(-3)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""loop("x>=0",1); <("Init":cut("x>=0");<("Use":nil,"Show":nil), "Step":nil, "Post":nil)""")) shouldBe
+      """loop("x>=0", 1) ; <(
+        |  "Init": cut("x>=0") ; <(
+        |      "Use": nil,
+        |      "Show": nil
+        |    ),
+        |  "Step": nil,
+        |  "Post": nil
+        |)""".stripMargin
+  }
+
+  it should "parse as case tactic when labels are present on nested tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1); orL(-1), \"Step\": orL(-2); <(andL(-2), orR(2)), \"Post\": andL(-3) using \"x=2\" | andR(3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> (andL(-1) & orL(-1)),
+      BelleLabels.indStep -> (orL(-2) <(andL(-2), orR(2))),
+      BelleLabels.useCase -> (Using("x=2".asFormula::Nil, andL(-3)) | andR(3))
+    )
+  }
+
+  it should "parse nested case tactics" in {
+    val result@SeqTactic(loop, CaseTactic(children)) = BelleParser("loop(\"x>=0\",1); <(\"Init\": andL(-1), \"Step\": orL(-2); <(\"LHS\": andL(-2), \"RHS\": orR(2)), \"Post\": andL(-3))")
+    result shouldBe (round trip result)
+    loop shouldBe TactixLibrary.loop("x>=0".asFormula)(1)
+    children should contain theSameElementsAs List(
+      BelleLabels.initCase -> andL(-1),
+      BelleLabels.indStep -> orL(-2).switch("LHS".asLabel -> andL(-2), "RHS".asLabel -> orR(2)),
+      BelleLabels.useCase -> andL(-3)
+    )
+  }
+
+  it should "require case labels on all branches" in {
+    the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
+      have message """1:17 Not all branches have labels
+                     |Found:    <unknown> at 1:17
+                     |Expected: <unknown>""".stripMargin
+  }
 
 
   //endregion
@@ -560,6 +649,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "def tactic parser" should "parse a simple example" in {
     val tactic = BelleParser("tactic t as (assignb('R))")
     tactic shouldBe (round trip DefTactic("t", TactixLibrary.assignb('R)))
+
+  }
+
+  it should "print indented" in {
+    BellePrettyPrinter(BelleParser("tactic t as (assignb('R))")) shouldBe
+      """tactic t as (
+        |  assignb('R)
+        |)""".stripMargin
+    BellePrettyPrinter(BelleParser("""tactic t as (cut("x>=0"); <(nil,nil))""")) shouldBe
+      """tactic t as (
+        |  cut("x>=0") ; <(
+        |    nil,
+        |    nil
+        |  )
+        |)""".stripMargin
   }
 
   it should "parse multipe tactic defs" in {
@@ -603,15 +707,15 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   "Expand" should "parse a simple definition expand" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
-      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation)))))
+      Declaration(scala.collection.immutable.Map((Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation)))))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Function("f", None, Unit, Real), "f() ~> 3*2".asSubstitutionPair)
   }
 
   it should "elaborate variables to functions" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
       Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), UnknownLocation))
       )
     ))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
@@ -620,20 +724,21 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "elaborate variables to functions in tactic arguments" in {
-    val tactic = BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None,
-      Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Real, None, None, UnknownLocation)),
-        (("g", None), (Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
-      )
-      ), expandAll=true)
-    tactic shouldBe ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+    val defs = Declaration(scala.collection.immutable.Map(
+      (Name("f", None), Signature(Some(Unit), Real, None, None, UnknownLocation)),
+      (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
+    ))
+    BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=true) shouldBe
+      ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+    BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=false) shouldBe
+      TactixLibrary.hideL('L, "f()=g()".asFormula)
   }
 
   it should "elaborate variables to functions per declarations" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
       Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Real, None, Some("g".asExpr), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Real, None, Some("g".asExpr), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Some("0".asExpr), UnknownLocation))
       )
       ))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
@@ -644,8 +749,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "elaborate functions to predicates per declarations" in {
     val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f\"", None,
       Declaration(scala.collection.immutable.Map(
-        (("f", None), (Some(Unit), Bool, None, Some("g".asExpr), UnknownLocation)),
-        (("g", None), (Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
+        (Name("f", None), Signature(Some(Unit), Bool, None, Some("g".asExpr), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation))
       )
       ))
     tactic shouldBe TactixLibrary.implyR(1) & Expand(Variable("f"), SubstitutionPair(
@@ -655,8 +760,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "elaborate programconsts to systemconsts" in {
     val decls = Declaration(scala.collection.immutable.Map(
-      (("p", None), (Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation)),
-      (("a", None), (Some(Unit), Trafo, None, Some("x:=x+1;".asExpr), UnknownLocation))
+      (Name("p", None), Signature(Some(Unit), Bool, None, Some("3*2>=0".asExpr), UnknownLocation)),
+      (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asExpr), UnknownLocation))
     ))
     BelleParser.parseWithInvGen("implyR(1) ; cut(\"[a;]p\")", None, decls) shouldBe
       TactixLibrary.implyR(1) & cut("[a{|^@|};]p()".asFormula)
@@ -672,8 +777,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
         //@note locations just so that parser knows the definitions are supposed to originate from a file
-        (("f", None), (Some(Unit), Real, None, Some("3*2".asExpr), Region(0, 0, 0, 0))),
-        (("g", None), (Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asExpr), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) => defs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
@@ -684,8 +789,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
         //@note UnknownLocation identifies proof definitions, known locations identify model definitions
-        (("f", None), (Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
-        (("g", None), (Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Unit), Real, None, Some("g*2".asExpr), UnknownLocation)),
+        (Name("g", None), Signature(Some(Unit), Real, None, Some("4".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic shouldBe TactixLibrary.uniformSubstitute(
       USubst(SubstitutionPair(FuncOf(Function("f", None, Unit, Real), Nothing),
@@ -697,8 +802,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
         //@note UnknownLocation identifies proof definitions, known locations identify model definitions
-        (("f", None), (Some(Real), Bool, None, Some("g(.)".asExpr), UnknownLocation)),
-        (("g", None), (Some(Real), Bool, None, Some(".>0".asExpr), Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, None, Some("g(.)".asExpr), UnknownLocation)),
+        (Name("g", None), Signature(Some(Real), Bool, None, Some(".>0".asExpr), Region(0, 0, 0, 0)))
       )))
     tactic shouldBe TactixLibrary.uniformSubstitute(USubst(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), PredOf(Function("g", None, Real, Bool), DotTerm())) :: Nil)) &
@@ -709,8 +814,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = BelleParser.parseWithInvGen("""dC("f(x)", 1)""", None,
       Declaration(scala.collection.immutable.Map(
         //@note Known locations identify model definitions
-        (("f", None), (Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
-        (("g", None), (Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
       )), expandAll = true)
     tactic shouldBe ExpandAll(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
@@ -721,8 +826,8 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     val tactic = BelleParser.parseWithInvGen("""dC("x>g", 1)""", None,
       Declaration(scala.collection.immutable.Map(
         //@note Known locations identify model definitions
-        (("f", None), (Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
-        (("g", None), (Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
+        (Name("f", None), Signature(Some(Real), Bool, None, Some(".>g".asExpr), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, None, Region(0, 0, 0, 0)))
       )), expandAll = true)
     tactic shouldBe ExpandAll(
       SubstitutionPair(PredOf(Function("f", None, Real, Bool), DotTerm()), Greater(DotTerm(), FuncOf(Function("g", None, Unit, Real), Nothing))) :: Nil) &
@@ -732,11 +837,11 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   it should "topologically sort definitions" in {
     val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
-        (("h", None), (Some(Unit), Real, None, Some("g()*2".asTerm), Region(0, 0, 0, 0))),
-        (("i", None), (Some(Unit), Real, None, Some("1".asTerm), Region(0, 0, 0, 0))),
-        (("f", None), (Some(Unit), Real, None, Some("3*2".asTerm), Region(0, 0, 0, 0))),
-        (("g", None), (Some(Unit), Real, None, Some("f()+4".asTerm), Region(0, 0, 0, 0))),
-        (("j", None), (Some(Unit), Trafo, None, Some("x:=g()+i();".asProgram), Region(0, 0, 0, 0)))
+        (Name("h", None), Signature(Some(Unit), Real, None, Some("g()*2".asTerm), Region(0, 0, 0, 0))),
+        (Name("i", None), Signature(Some(Unit), Real, None, Some("1".asTerm), Region(0, 0, 0, 0))),
+        (Name("f", None), Signature(Some(Unit), Real, None, Some("3*2".asTerm), Region(0, 0, 0, 0))),
+        (Name("g", None), Signature(Some(Unit), Real, None, Some("f()+4".asTerm), Region(0, 0, 0, 0))),
+        (Name("j", None), Signature(Some(Unit), Trafo, None, Some("x:=g()+i();".asProgram), Region(0, 0, 0, 0)))
       )))
     tactic match {
       case ExpandAll(defs) =>
@@ -800,14 +905,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
-        Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
+        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), adpt: AppliedDependentPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
@@ -816,14 +921,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "expand definitions in the middle of parsing only when asked to" in {
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
       case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), SeqTactic(_, adpt: AppliedDependentPositionTactic)) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         adpt.pt should have ('inputs ("y>0".asFormula::Nil))
@@ -836,12 +941,12 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-        Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
+        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
@@ -854,16 +959,30 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     }
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))))) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
-      Declaration(Map(("safeDist", None) -> (None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
+      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
       case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
         apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }
+  }
+
+  it should "allow escaped quotation marks in arguments" in {
+    BelleParser(""" useLemma("Lemma 1", "dC(\"x>=0\",1)") """) shouldBe
+      useLemmaX("Lemma 1", Some("dC(\"x>=0\",1)"))
+  }
+
+  it should "lex backslash followed by any character" in {
+    BelleParser(""" hideR('R=="\exists x x=0") """) shouldBe hideR('R, "\\exists x x=0".asFormula)
+    BelleParser(""" hideR('R=="\forall x x^2>=0") """) shouldBe hideR('R, "\\forall x x^2>=0".asFormula)
+    the [ParseException] thrownBy BelleParser(""" hideR('R=="\x x^2=1") """) should
+      have message """1:1 Unexpected token cannot be parsed
+                     |Found:    \\ at 1:1 to 1:2
+                     |Expected: <BeginningOfExpression>""".stripMargin
   }
 
   //endregion

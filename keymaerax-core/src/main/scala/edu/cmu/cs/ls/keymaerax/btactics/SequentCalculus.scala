@@ -117,11 +117,17 @@ trait SequentCalculus {
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
     conclusion = "Γ |- P∧Q, Δ")
-  val andR    : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
+  val andR    : DependentPositionTactic = anon { (pos: Position, seq: Sequent) => corelabelledby("andR", Right(andRRule), And.unapply, pos, seq) }
+  @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
+    conclusion = "Γ |- P∧Q, Δ")
+  val andRRule : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   @Tactic(("∨L", "|L"), premises = "P, Γ |- Δ ;; Q, Γ |- Δ",
     conclusion = "P∨Q, Γ |- Δ")
-  val orL     : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
+  val orL     : DependentPositionTactic = anon { (pos: Position, seq: Sequent) => corelabelledby("orL", Left(orLRule), Or.unapply, pos, seq) }
+  @Tactic(("∨L", "|L"), premises = "P, Γ |- Δ ;; Q, Γ |- Δ",
+    conclusion = "P∨Q, Γ |- Δ")
+  val orLRule  : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
   /** Inverse of [[orR]].
     * {{{
     *   G |- D, D', D'', a | b
@@ -138,7 +144,10 @@ trait SequentCalculus {
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
   @Tactic(("→L", "->L"), premises = "Γ |- Δ, P ;; Q, Γ |- Δ",
     conclusion = "P→Q, Γ |- Δ")
-  val implyL  : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
+  val implyL  : DependentPositionTactic = anon { (pos: Position, seq: Sequent) => corelabelledby("implyL", Left(implyLRule), Imply.unapply, pos, seq) }
+  @Tactic(("→L", "->L"), premises = "Γ |- Δ, P ;; Q, Γ |- Δ",
+    conclusion = "P→Q, Γ |- Δ")
+  val implyLRule : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   @Tactic(("→R", "->R"), premises = "Γ, P |- Q, Δ",
     conclusion = "Γ |- P→Q, Δ")
@@ -158,11 +167,19 @@ trait SequentCalculus {
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   @Tactic(("↔L", "<->L"), premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
     conclusion = "P↔Q, Γ |- Δ")
-  val equivL  : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
+  val equivL  : DependentPositionTactic = anon {(pos: Position, seq: Sequent) => corelabelledby("equivL", Left(equivLRule), Equiv.unapply,
+    pos, seq, (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString)) }
+  @Tactic(("↔L", "<->L"), premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
+    conclusion = "P↔Q, Γ |- Δ")
+  val equivLRule : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
   @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
     conclusion = "Γ |- P↔Q, Δ")
-  val equivR  : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
+  val equivR  : DependentPositionTactic = anon {(pos: Position, seq: Sequent) => corelabelledby("equivR", Right(equivRRule), Equiv.unapply,
+    pos, seq, (l: Formula, r: Formula) => (And(l, r).prettyString, And(Not(l), Not(r)).prettyString)) }
+  @Tactic(("↔R", "<->R"), premises = "Γ, P |- Δ, Q ;; Γ, Q |- Δ, P",
+    conclusion = "Γ |- P↔Q, Δ")
+  val equivRRule : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]).
     * {{{

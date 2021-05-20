@@ -245,6 +245,9 @@ object ProofParser {
   def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
   def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
   def hypothesis[_: P]: P[Hypothesis] = P("by" ~ ws ~ Index ~ "hypothesis").map(i => locate(Hypothesis(), i))
+  def guardDone[_: P]: P[GuardDone] = P("by" ~ ws ~ Index ~ "guard" ~ ("(" ~ term ~ ")").?).map({
+    case (i, fOpt) => locate(GuardDone(fOpt), i)
+  })
 
   def solution[_: P]: P[Solution] = P("by" ~ ws ~ Index ~ "solution").map(i => locate(Solution(), i))
   def diffInduction[_: P]: P[DiffInduction] = P("by" ~ ws ~ Index ~ "induction").map(i => locate(DiffInduction(), i))
@@ -260,13 +263,29 @@ object ProofParser {
   def defaultSelector[_: P]: P[DefaultSelector.type] = P("...").map(_ => DefaultSelector)
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector | defaultSelector)
 
-  def rawMethod[_: P]: P[Method] = auto | rcf |  prop | hypothesis | solution | diffInduction | exhaustive | using | byProof
+  def rawMethod[_: P]: P[Method] = auto | rcf |  prop | hypothesis | solution |
+    diffInduction | exhaustive | using | byProof |  guardDone
   // If method has no selectors, then insert the "default" heuristic selection method
   // If terminator ; is seen instead of method, default to auto method
-  def method[_: P]: P[Method] = (P(";").map(_ => None) | (rawMethod ~/ ";").map(Some(_))).map({
+
+  def method[_: P]: P[Method] = (P(";").map(_ => None) | (rawMethod ~/ P(";")).map(Some(_))).map({
     case None => Using(List(DefaultSelector), Auto())
     case Some(u: Using) => u
     case Some(m) => Using(List(DefaultSelector), m)})
+
+  // domain terminator is ; which is optional, but if it's left out, make sure we're followed by one of the things
+  // we might expect to come next using lookahead
+  def domainEnd[_: P]: P[Unit] = P(";" | &("&") | &("}") | &("--/") | &("++/"))
+  def domainMethod[_: P]: P[Method] = {
+    (domainEnd.map(_ => None) | (rawMethod ~/ domainEnd).map(Some(_))).map({
+      case None => Using(List(DefaultSelector), Auto())
+      case Some(u: Using) => u
+      case Some(m) => Using(List(DefaultSelector), m)
+    })
+  }
+
+  // method in domain constraint has optional ; terminator but needs to be followed by & or } otherwise representing
+  // either end of ODE or start of next evolution domain conjunct
 
   def wildPat[_: P]: P[WildPat] = (Index ~  CharIn("_*")).map(i => locate(WildPat(), i))
   def tuplePat[_: P]: P[AsgnPat] = (Index ~ "(" ~/ idPat.rep(sep=",") ~/ ")").map({case (i, ss) =>
@@ -405,13 +424,13 @@ object ProofParser {
     map({case (i, dps)=> locate(dps.reduceRight(DiffProductStatement), i)})
 
   // @TODO: Special error message for missing ?(); maybe
-  def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  fullExPat ~ "(" ~/ expression ~ ")" ~/ ";").map({
+  def domAssume[_: P]: P[DomainStatement] = { (Index ~ "?" ~/  fullExPat ~ "(" ~/ expression ~ ")" ~/ domainEnd).map({
     case (i, pat, fml: Formula) => locate(DomAssume(pat, fml), i)
     case (i, pat, hp: Assign) =>  locate(DomModify(pat, hp.x, hp.e), i)
     case (a,b,c) => throw new Exception("Unexpected assumption syntax")
   })}
 
-  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~/ fullExPat ~ "(" ~ formula ~ ")" ~ method.opaque("; or <method>")).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
+  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~/ fullExPat ~ "(" ~ formula ~ ")" ~ domainMethod.opaque("; or <method>")).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
 //  included under "assume" case
 //  def domModify[_: P]: P[DomModify] = (Index ~ ExpressionParser.variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(id, f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "/--" ~/ domainStatement ~ "--/").map({case (i, ds) => locate(DomWeak(ds), i)})
@@ -505,6 +524,20 @@ object KaisarProgramParser {
   def prettyIndex(index: Int, input: String): (Int, Int) = {
     val arr = IndexedParserInput(input).prettyIndex(index).split(':')
     (arr(0).toInt, arr(1).toInt)
+  }
+
+  def prettyIndex(index: Int, inputs: List[String], sepLength: Int = 2): (Int, Int) = {
+    var inp = inputs
+    var idx = index
+    var (l: Int, c: Int) = (0, 1)
+    while(inp.nonEmpty && idx >= 0) {
+      c = idx + 1
+      idx = idx - (inp.head.length + sepLength)
+      l = l + 1
+      inp = inp.tail
+    }
+    {if(inp.isEmpty) {c = idx + 1}}
+    (l, c)
   }
 
   def parseSingle(s: String): Statement = {

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefSc
 
 /**
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the `.kyx`` format and possibly a (partial) proof tactic.
+  * at least one entry combining a model in the `.kyx` format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -39,8 +39,7 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
         val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
         parse(input)
       case fileName :: entryName :: Nil =>
-        val input
-        = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
+        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
         getEntry(entryName, input).
           getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
     }
@@ -50,7 +49,7 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
     // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
-    val usMatchers = defs.decls.filter(_._2._3.isDefined).map({ case ((name, idx), _) => name + idx.map("_" + _).getOrElse("") })
+    val usMatchers = defs.decls.filter(_._2.arguments.isDefined).map({ case (Name(name, idx), _) => name + idx.map("_" + _).getOrElse("") })
     val expandAll = usMatchers.nonEmpty &&
       !BelleParser.tacticExpandsDefsExplicitly(t.tacticText) &&
       usMatchers.mkString("US\\(\"(", "|", ")").r.findFirstIn(t.tacticText).isEmpty

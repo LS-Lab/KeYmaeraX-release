@@ -2,16 +2,33 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
+import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
+
+import scala.collection.immutable.Map
 
 /**
  * Created by ran on 3/23/15.
  * @author Ran Ji
  */
-class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    KeYmaeraXTool.init(Map(
+      KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> "false",
+      KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
+    ))
+  }
+
+  override def afterAll(): Unit = {
+    KeYmaeraXTool.shutdown()
+  }
+
   private val converter = DefaultSMTConverter
 
   "Numbers" should "convert numbers" in {

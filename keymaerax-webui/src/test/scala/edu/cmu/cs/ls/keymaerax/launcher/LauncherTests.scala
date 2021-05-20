@@ -3,11 +3,10 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import resource._
@@ -79,8 +78,8 @@ class LauncherTests extends TacticTestBase {
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil))
-    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
-    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
     val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-conjecture", conjectureFileName, "-out", outputFileName)
     exitVal shouldBe 0
@@ -114,8 +113,8 @@ class LauncherTests extends TacticTestBase {
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil)).take(2)
-    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
-    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
     val (_, errors, exitVal) = runKeYmaeraX("-prove", inputFileName, "-conjecture", conjectureFileName, "-out", outputFileName)
     exitVal shouldBe 1
@@ -138,8 +137,8 @@ class LauncherTests extends TacticTestBase {
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(e => e.copy(name = e.name + "Mismatch", tactics = Nil))
-    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
-    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
     val (_, errors, exitVal) = runKeYmaeraX("-prove", inputFileName, "-conjecture", conjectureFileName, "-out", outputFileName)
     exitVal shouldBe 1

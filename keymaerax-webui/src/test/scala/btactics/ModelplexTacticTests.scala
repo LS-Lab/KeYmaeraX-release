@@ -1076,14 +1076,14 @@ class ModelplexTacticTests extends TacticTestBase {
       val serializableTactic = db.extractSerializableTactic(fml, tactic)
       ParsedArchiveEntry(name, "lemma", "", "", defs(fml), fml,
       (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)})
-    val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+    val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(_)).mkString("\n\n")
     checkArchiveEntries(ArchiveParser.parse(lemmaTempArchive))
 
     val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", "", defs(sandbox),
       sandbox, (entry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)
 
-    val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+    val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(_)).mkString("\n\n")
     checkArchiveEntries(ArchiveParser.parse(archive))
   }}
 

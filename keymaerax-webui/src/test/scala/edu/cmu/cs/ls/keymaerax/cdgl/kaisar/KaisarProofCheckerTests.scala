@@ -159,7 +159,7 @@ class KaisarProofCheckerTests extends TacticTestBase {
     a[ProofCheckException] shouldBe thrownBy(ProofChecker(Context.empty, pf))
   }
 
-  it should "prove solution cut that requires domain constraint assumption" in withMathematica { _ =>
+  it should "catch invalid ODE variable names in non-SSA file" in withMathematica { _ =>
     val pfStr = "t:= 0; ?xInit:(x:= 1);  {t' = 1, x' = -1 & ?xRange:(x >=0); & !tRange:(t <= 1) using xInit xRange by solution;};"
     val pf = p(pfStr, pp.statement(_))
     a[ODEAdmissibilityException] shouldBe thrownBy(ProofChecker(Context.empty, pf))

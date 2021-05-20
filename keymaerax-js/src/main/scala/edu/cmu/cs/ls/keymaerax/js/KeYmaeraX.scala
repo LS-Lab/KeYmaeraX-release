@@ -3,9 +3,8 @@ package edu.cmu.cs.ls.keymaerax.js
 import edu.cmu.cs.ls.keymaerax.{Configuration, MapConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PositionLocator}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParseException, Parser, SubstitutionParser, KeYmaeraXArchiveParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXPrettyPrinter, ParseException, Parser, SubstitutionParser, KeYmaeraXArchiveParser}
 
 import scala.util.Try
 import scala.scalajs.js.{Array, Dictionary}
@@ -16,9 +15,6 @@ object KeYmaeraX {
   Configuration.setConfiguration(MapConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   ArchiveParser.setParser(KeYmaeraXArchiveParser)
-//  ArchiveParser.setParser(new DLArchiveParser(new DLBelleParser(
-//    (t: BelleExpr) => "",
-//    (t: String, args: List[Either[Seq[Any], PositionLocator]], defs: Declaration) => new BelleExpr())))
 
   @JSExportTopLevel("parseArchive")
   def parseArchive(input: String): Array[Dictionary[Any]] = {

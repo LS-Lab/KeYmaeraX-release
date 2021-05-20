@@ -48,7 +48,9 @@ class TotalizerTests extends TacticTestBase with Matchers {
 
   "Totality pass" should "make PLDI model total" in withMathematica { _ =>
     allTests.foreach (ttc => {
+      Totalizer.useComments = false
       val result = Totalizer(ttc.model, ttc.fallback)
+      println("Result:\n" + PrettyPrinter.full(result))
       // Fancy equality
       implicit val equiv: Equality[Statement] = ProofEquality
       (result should equal (ttc.sandbox)) withClue s"in testcase ${ttc.prettyString}"

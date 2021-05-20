@@ -73,6 +73,23 @@ object IOListeners {
     override def kill(): Unit = {}
   }
 
+  class InterpreterConsistencyListener extends IOListener() {
+    private var stack: List[BelleExpr] = Nil
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+      //println("Begin " + expr.prettyString + "@" + expr.hashCode() + " on " + Thread.currentThread().hashCode())
+      stack = expr +: stack
+    }
+
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
+      val expected = stack.head
+      //println("End " + expr.prettyString + "@" + expr.hashCode() + " on " + Thread.currentThread().hashCode())
+      assert(expr.eq(expected), "Popping unexpected " + expr.prettyString + "@" + expr.hashCode() + "; tail is " + expected.prettyString + "@" + expected.hashCode())
+      stack = stack.tail
+    }
+
+    override def kill(): Unit = {}
+  }
+
   /** Prints tactic progress to the console. */
   class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil, printer: PrintStream = Console.out) extends IOListener() {
     private var executionStack = (t->0) :: Nil // branch index =0 except for BranchTactic

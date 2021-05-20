@@ -312,8 +312,9 @@ private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
   override def regexp: Regex = TOOL_VALUE_PAT.regexp
 }
 private object TOOL_VALUE_PAT {
-  // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-  def regexp: Regex = "(?s)\"{4}(.*?)\"{4}".r
+  // values are nested into quadruple " and set apart with spaces (not until 4.9.3, so for backwards-compatibility we do
+  // not insist on presence of spaces), because they can contain and end in single, double, or triple " themselves
+  def regexp: Regex = "\"{4}([\\s\\S]*?)\"{4}".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
@@ -544,7 +545,9 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     //Lemma file cases (2)
     TOOL_VALUE_PAT.startPattern -> ((s: String, loc: Location, mode: LexerMode, str: String) => mode match { //@note must be before DOUBLE_QUOTES_STRING
       case LemmaFileMode =>
-        Right(consumeColumns(s, str.length, TOOL_VALUE(str.stripPrefix("\"\"\"\"").stripSuffix("\"\"\"\"")), loc))
+        // also try stripping spaces around value (are not present up to and including 4.9.3, so may alter old evidence
+        // content that had explicit spaces; recover from it in [[ToolEvidence.equals]])
+        Right(consumeColumns(s, str.length, TOOL_VALUE(str.stripPrefix("\"\"\"\"").stripSuffix("\"\"\"\"").stripPrefix(" ").stripSuffix(" ")), loc))
       case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
     }),
     //Axiom file cases

@@ -98,7 +98,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val entries = ArchiveParser.parse(content, parseTactics = false)
-    val printer = new KeYmaeraXArchivePrinter()
+    val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = entries.map(stripEntry).map(printer(_)).mkString("\n\n")
 
     val archive = File(EXPORT_DIR + "stripped" + url.substring(url.lastIndexOf("/")+1))
@@ -316,7 +316,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       case Some(t) =>
         println(s"Proving $name")
 
-        val hasDefinitions = defs.decls.exists(_._2._3.isDefined)
+        val hasDefinitions = defs.decls.exists(_._2.interpretation.isDefined)
         val tacticExpands = BelleParser.tacticExpandsDefsExplicitly(t)
         if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
         val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)

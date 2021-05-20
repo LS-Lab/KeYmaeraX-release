@@ -30,7 +30,7 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.state(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) >=  (goal * factory.number(Rational(0.8)))) shouldBe KnownTrue()
     (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
 
@@ -45,7 +45,7 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.get(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) >=  (goal * factory.number(Rational(0.8)))) shouldBe KnownTrue()
     (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
 
@@ -59,18 +59,23 @@ class ProofPlexShimTests extends TacticTestBase {
     a[TestFailureException] shouldBe thrownBy(new Play(factory)(env, angel, demon))
     println("Final state: " + env.state)
     val goal = env.get(Variable("d"))
-    (env.state(Variable("x")) >=  (goal * factory.number(0.8))) shouldBe KnownTrue()
+    (env.state(Variable("x")) >=  (goal * factory.number(Rational(0.8)))) shouldBe KnownTrue()
     (env.state(Variable("x")) <=  goal) shouldBe KnownTrue()
   }
 }
 
 class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val env: Environment[number]) extends BasicDemonStrategy[number] {
+  override def init(stringArg: Option[String], intArgs: List[NodeID]): Unit = {}
+  override def exit(): Unit = {}
+  override def reportViolation(): Unit = {}
+
+
   var iterationsLeft: Int = 100
   val readInitState: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
       Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
-      map({case (k,v) => (k, env.factory.number(v))})
+      map({case (k,v) => (k, env.factory.number(Rational(v)))})
 
   def readDemonLoop(id: NodeID): Boolean = {
     iterationsLeft = iterationsLeft - 1;
@@ -84,12 +89,12 @@ class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val e
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: number = if (aVal >= env.factory.number(0) == KnownTrue()) T else T.min(vVal) / -aVal
+    val dur: number = if (aVal >= env.factory.number(Rational(0)) == KnownTrue()) T else T.min(vVal) / -aVal
     x match {
       case "t" => dur
       case "v" => vVal + aVal * dur
-      case "x" => xVal + vVal * dur + aVal * dur * dur * env.factory.number(0.5)
-      case "t'" => env.factory.number(1)
+      case "x" => xVal + vVal * dur + aVal * dur * dur * env.factory.number(Rational(0.5))
+      case "t'" => env.factory.number(Rational(1))
       case "v'" => aVal
       case "x'" => vVal + aVal * dur
       case _ => throw new DemonException("Demon does not know how to assign variable: " + x)
@@ -100,11 +105,12 @@ class EssentialsSafeCar1DBasicStrategy[number <: Numeric[number, Ternary]](val e
 }
 
 class EssentialsSafeCar1DShim[number <: Numeric[number, Ternary]] (val env: Environment[number]) extends DemonStrategy[number] {
+  override def reportViolation(): Unit = {}
   val initValues: Map[Ident, number] =
     Map(Variable("A") -> 2, Variable("B") -> 2, Variable("x") -> 0, Variable("v") -> 0, Variable("a") -> 0,
       DifferentialSymbol(Variable("x")) -> 0, DifferentialSymbol(Variable("v")) -> 0,
       Variable("d") -> 200, Variable("T") -> 1, Variable("t") -> 0, DifferentialSymbol(Variable("t")) -> 1).
-      map({case (k,v) => (k, env.factory.number(v))})
+      map({case (k,v) => (k, env.factory.number(Rational(v)))})
 
   var iterationsLeft: Int = 100
 
@@ -149,12 +155,12 @@ class EssentialsSafeCar1DShim[number <: Numeric[number, Ternary]] (val env: Envi
     // Note: avoid failing the v >= 0 constraint
     val T = valFor(Variable("T"))
     val (xVal, vVal, aVal) = (valFor(Variable("x")), valFor(Variable("v")), valFor(Variable("a")))
-    val dur: number = if (KnownTrue() == aVal >= env.factory.number(0)) T else T.min(vVal) / -aVal
+    val dur: number = if (KnownTrue() == aVal >= env.factory.number(Rational(0))) T else T.min(vVal) / -aVal
     x match {
       case BaseVariable("t", _, _) => updated(xSSA, dur)
       case BaseVariable("v", _, _) => updated(xSSA, vVal + aVal * dur)
-      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * env.factory.number(0.5))
-      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, env.factory.number(1))
+      case BaseVariable("x", _, _) => updated(xSSA, xVal + vVal * dur + aVal * dur * dur * env.factory.number(Rational(0.5)))
+      case DifferentialSymbol(BaseVariable("t", _, _)) => updated(xSSA, env.factory.number(Rational(1)))
       case DifferentialSymbol(BaseVariable("v", _, _)) => updated(xSSA, aVal)
       case DifferentialSymbol(BaseVariable("x", _, _)) => updated(xSSA, vVal + aVal * dur)
       case _ =>

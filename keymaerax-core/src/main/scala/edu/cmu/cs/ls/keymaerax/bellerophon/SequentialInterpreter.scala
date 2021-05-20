@@ -8,12 +8,9 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ForwardTactic
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.ProvableInfoAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -57,22 +54,18 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       listeners.foreach(_.end(v, expr, Left(result)))
       result
     } catch {
-      case err: BelleThrowable =>
-        listeners.foreach(_.end(v, expr, Right(err)))
-        throw err
-      case e: StackOverflowError =>
-        // unable to recover, listeners are likely corrupted
-        logger.error("Fatal error: stack overflow, please restart KeYmaera X with increased stack size")
-        throw new ProverSetupException("Fatal error: stack overflow, please restart KeYmaera X with increased stack size", e)
-      case e: Throwable =>
+      case e: Throwable => throw try {
         listeners.foreach(_.end(v, expr, Right(e)))
-        throw e
+        e
+      } catch {
+        case ex: Throwable => ex.initCause(e)
+      }
     }
   }
 
   override def kill(): Unit = {
     isDead = true
-    listeners.foreach(_.kill())
+    listeners.synchronized(listeners.foreach(_.kill()))
   }
 
   /** Adjusts the number of labels to match the number of subgoals. */
@@ -174,6 +167,19 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       }
       result
 
+    case CaseTactic(children) => v match {
+      case BelleProvable(p, Some(labels)) =>
+        if (p.subgoals.size != labels.size) throw new BelleUnexpectedProofStateError("Number of labels does not match number of subgoals, got\nlabels  " + labels.map(_.prettyString).mkString("\n  ") + "\nfor " + p.prettyString, p.underlyingProvable)
+        if (children.size != labels.size) throw new IllFormedTacticApplicationException("Number of cases does not match number of subgoals, got\ncases\n  " + children.map(_._1.prettyString).mkString("\n  ") + "\nfor\n  " + labels.map(_.prettyString).mkString("\n  "))
+        def getBranchTactic(l: BelleLabel): BelleExpr = children.filter(c => l.endsWith(c._1)).toList match {
+          case c :: Nil => c._2
+          case Nil => throw new IllFormedTacticApplicationException("No case for branch " + l.prettyString)
+          case c => throw new IllFormedTacticApplicationException("Multiple labels apply to branch " + l.prettyString + "; please disambiguate cases " + c.map(_._1.prettyString).mkString("::"))
+        }
+        apply(BranchTactic(labels.map(getBranchTactic)), v)
+      case _ => throw new IllFormedTacticApplicationException("Case tactic applied on a proof state without labels")
+    }
+
     case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:CoreLeftTactic | _:CoreRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
       throw new IllFormedTacticApplicationException(s"Need to apply position tactic at a position before executing it: $expr(???)").inContext(expr, "")
 
@@ -250,7 +256,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
       case Some(tactic) =>
-        val c = Cancellable(apply(tactic, v))
+        val c = Cancellable(listeners.synchronized(apply(tactic, v)))
         try {
           Await.result(c.future, Duration(timeout, MILLISECONDS))
         } catch {
@@ -261,15 +267,17 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           }
           case ex: TimeoutException =>
             c.cancel()
-            throw new BelleNoProgress("Alternative timed out", ex)
+            //@note otherwise race condition between tactic exceptions (caused by cancel) and BelleNoProgress in notifying listeners
+            listeners.synchronized(throw new BelleNoProgress("Alternative timed out", ex))
         }
       case None => throw new BelleNoProgress("Exhausted all timeout alternatives")
     }
 
-
     case LabelBranch(label) => v match {
       case BelleProvable(pr, Some(labels)) => BelleProvable(pr, adjustLabels(pr, Some(labels.map(_.append(label)))))
-      case BelleProvable(pr, None) => BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
+      case BelleProvable(pr, None) =>
+        if (label == BelleStartTxLabel || label == BelleRollbackTxLabel) BelleProvable(pr, adjustLabels(pr, Some(BelleLabelTx(BelleStartTxLabel, None) :: Nil)))
+        else BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
       case _ => throw new IllFormedTacticApplicationException(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
     }
 
@@ -628,8 +636,8 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
           results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -641,7 +649,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
           })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
@@ -730,8 +738,8 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
           results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -743,7 +751,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
                   Some(createLabels(None, 0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
           })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
@@ -787,8 +795,8 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
           results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
               val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
+                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+                case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
@@ -800,7 +808,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+              (combinedProvable, nextIdx, combinedLabels, substs)
             })
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
         else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)

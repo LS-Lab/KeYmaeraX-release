@@ -61,7 +61,7 @@ object RefinementChecker {
 
   private def isIgnored(s: Statement): Boolean ={
     s match {
-      case Triv() | _: Label | _: LetSym | _: Ghost | _: PrintGoal | _: Pragma | _: Was | _: Match => true
+      case Triv() | _: Label | _: LetSym | _: Ghost | _: PrintGoal | _: Pragma | _: Was | _: Match | _: Comment => true
       case _ => false
     }
   }
@@ -282,7 +282,7 @@ object RefinementChecker {
                     case ((_pat, fml, s), g) => refine(con, s, g, gvs) // make guards optional
                   }})
             }
-          case (Block((phi: Phi) :: (fr@For(metX, met0, metIncr, conv, guard, body)) :: Nil), assignMetZ) =>
+          case (Block((phi: Phi) :: (fr@For(metX, met0, metIncr, conv, guard, body, guardEps)) :: Nil), assignMetZ) =>
             def stripLoopFooter(s: Statement): (Statement, Phi) = {
               val ss = KaisarProof.flatten(List(s))
               if(!ss.last.isInstanceOf[Phi])
@@ -314,11 +314,11 @@ object RefinementChecker {
             val proofBodyPhi = Phi(KaisarProof.block(Modify(Nil, List((metX, Some(metXFooter)))) :: proofBodyRawPhi :: Nil))
             checkForHeaderAgrees(phi, gamePhi, metX)
             checkForHeaderAgrees(proofBodyPhi, bodyPhi, metX)
-            val metric = Metric(metX, metIncr, guard.f, Set()) // Note: assume taboos checked elsewhere
-            val termCond = metric.guardPost(metX)
-            val theConcl = conv.map(_.f) match {
-              case None => termCond
-              case Some(f) => And(f, termCond)
+            val termCond = fr.guardDelta.map(gd => Metric.weakNegation(fr.guard.f, gd))
+            val theConcl = (conv.map(_.f), termCond) match {
+              case (None, Some(tc)) => tc
+              case (Some(f), Some(tc)) => And(f, tc)
+              case (Some(f), None) => f
             }
             // If tail starts with test of for loop termination condition, remove it before recursive call,
             // @TODO: Try to give helpful heuristic that looks for typos in final test condition

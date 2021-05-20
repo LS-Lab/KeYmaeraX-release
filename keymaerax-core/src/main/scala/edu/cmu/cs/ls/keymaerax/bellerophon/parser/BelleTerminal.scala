@@ -1,7 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, SubstitutionPair}
-import edu.cmu.cs.ls.keymaerax.parser.Parser
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.{LexException, Parser, UnknownLocation}
 
 import scala.util.matching.Regex
 
@@ -96,11 +98,13 @@ private object CLOSE_PAREN extends BelleTerminal(")") {
 }
 private object COMMA extends BelleTerminal(",")
 
+private object COLON extends BelleTerminal(":")
+
 private trait TACTIC_ARGUMENT
 
 // Positions
-private abstract class BASE_POSITION(positionString: String) extends BelleTerminal(positionString) with TACTIC_ARGUMENT
-private case class ABSOLUTE_POSITION(positionString: String) extends BASE_POSITION(positionString) {
+private abstract class BASE_POSITION(val positionString: String) extends BelleTerminal(positionString) with TACTIC_ARGUMENT
+private case class ABSOLUTE_POSITION(override val positionString: String) extends BASE_POSITION(positionString) {
   override def regexp: Regex = ABSOLUTE_POSITION.regexp
   override val startPattern: Regex = ABSOLUTE_POSITION.startPattern
   override def toString = s"ABSOLUTE_POSITION($positionString)"
@@ -109,7 +113,7 @@ private object ABSOLUTE_POSITION {
   def regexp: Regex = """(-?\d+(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
-private case class LAST_SUCCEDENT(positionString: String) extends BASE_POSITION(positionString) {
+private case class LAST_SUCCEDENT(override val positionString: String) extends BASE_POSITION(positionString) {
   override def regexp: Regex = LAST_SUCCEDENT.regexp
   override val startPattern: Regex = LAST_SUCCEDENT.startPattern
   override def toString: String = s"LAST_SUCCEDENT($positionString)"
@@ -118,7 +122,7 @@ private object LAST_SUCCEDENT {
   def regexp: Regex = """('Rlast(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
-private case class LAST_ANTECEDENT(positionString: String) extends BASE_POSITION(positionString) {
+private case class LAST_ANTECEDENT(override val positionString: String) extends BASE_POSITION(positionString) {
   override def regexp: Regex = LAST_ANTECEDENT.regexp
   override val startPattern: Regex = LAST_ANTECEDENT.startPattern
   override def toString: String = s"LAST_ANTECEDENT($positionString)"
@@ -127,10 +131,32 @@ private object LAST_ANTECEDENT {
   def regexp: Regex = """('Llast(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
-private object SEARCH_SUCCEDENT extends BelleTerminal("'R") with TACTIC_ARGUMENT
-private object SEARCH_ANTECEDENT extends BelleTerminal("'L") with TACTIC_ARGUMENT
-private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMENT {
-  override def regexp: Regex = "'\\_".r
+private case class SEARCH_SUCCEDENT(override val positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_SUCCEDENT.regexp
+  override val startPattern: Regex = SEARCH_SUCCEDENT.startPattern
+  override def toString: String = s"SEARCH_SUCCEDENT($positionString)"
+}
+private object SEARCH_SUCCEDENT {
+  def regexp: Regex = """('R(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
+private case class SEARCH_ANTECEDENT(override val positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_ANTECEDENT.regexp
+  override val startPattern: Regex = SEARCH_ANTECEDENT.startPattern
+  override def toString: String = s"SEARCH_ANTECEDENT($positionString)"
+}
+private object SEARCH_ANTECEDENT {
+  def regexp: Regex = """('L(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
+private case class SEARCH_EVERYWHERE(override val positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = SEARCH_EVERYWHERE.regexp
+  override val startPattern: Regex = SEARCH_EVERYWHERE.startPattern
+  override def toString: String = s"SEARCH_EVERYWHERE($positionString)"
+}
+private object SEARCH_EVERYWHERE {
+  def regexp: Regex = """('_(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object EXACT_MATCH extends BelleTerminal("==") with TACTIC_ARGUMENT
 private object UNIFIABLE_MATCH extends BelleTerminal("~=") with TACTIC_ARGUMENT
@@ -140,37 +166,77 @@ private object PARTIAL extends BelleTerminal("partial") {
 }
 
 /** A tactic argument expression. We allow strings, terms, and formulas as arguments. */
-private case class EXPRESSION(exprString: String, delimiters: (String, String)) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
-  lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2)
+private abstract class BELLE_EXPRESSION(val exprString: String, val delimiters: (String, String)) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
+  lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2).
+    // un-escape escaped delimiters
+    replaceAllLiterally("\\" + delimiters._1, delimiters._1).
+    replaceAllLiterally("\\" + delimiters._2, delimiters._2)
 
-  /** Parses the `exprString` as dL expression. May throw a parse exception. */
-  lazy val expression: Either[Expression, SubstitutionPair] = {
-    assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
-      s"EXPRESSION.regexp should ensure delimited expression begin }and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
-
-    //Remove delimiters and parse the expression.
-    val exprs = undelimitedExprString.split("~>")
-    assert(1 <= exprs.size && exprs.size <= 2, "Expected either single expression or substitution pair of expressions, but got " + undelimitedExprString)
-    if (exprs.size == 1) Left(Parser.parser(exprs.head))
-    else {
-      import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      Right(undelimitedExprString.asSubstitutionPair)
-    }
-  }
-
-  override def regexp: Regex = EXPRESSION.regexp
-  override val startPattern: Regex = EXPRESSION.startPattern
+  override def regexp: Regex = BELLE_EXPRESSION.regexp
+  override val startPattern: Regex = BELLE_EXPRESSION.startPattern
 
   override def toString = s"EXPRESSION($exprString)"
 
   override def equals(other: Any): Boolean = other match {
-    case EXPRESSION(str, _) => str == exprString
+    case be: BELLE_EXPRESSION => be.exprString == exprString
     case _ => false
   }
 }
-private object EXPRESSION {
-  def regexp: Regex = """(\{\`[\s\S]*?\`\})|(\"[^\"]*\")""".r
+
+private case class EXPRESSION(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
+  /** Parses the `exprString` as dL expression. May throw a parse exception. */
+  def expression: Expression = {
+    assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
+      s"EXPRESSION.regexp should ensure delimited expression begin and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
+    Parser.parser(undelimitedExprString)
+  }
+}
+
+private case class SUBSTITUTION_PAIR(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
+  /** Parses the `exprString` as dL substitution pair. May throw a parse exception. */
+  def expression: SubstitutionPair = {
+    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+    assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
+      s"EXPRESSION.regexp should ensure delimited expression begin and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
+    undelimitedExprString.asSubstitutionPair
+  }
+}
+
+private case class EXPRESSION_SUB(override val exprString: String, override val delimiters: (String, String)) extends BELLE_EXPRESSION(exprString, delimiters) {
+  /** Parses the `exprString` as dL expression and sub-position. May throw a parse exception. */
+  def expression: (Expression, PosInExpr) = {
+    assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
+      s"EXPRESSION.regexp should ensure delimited expression begin and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
+    val subStart = undelimitedExprString.indexOf('#')+1
+    val subEnd = undelimitedExprString.lastIndexOf('#')
+    assert(subStart >= 1 && subEnd > subStart, "Non-empty sub-position marker expected")
+    val subString = undelimitedExprString.slice(subStart, subEnd)
+    val sub = Parser.parser(subString)
+    val (expr, inExpr) =
+      if (undelimitedExprString.indexOf(subString) != subStart) {
+        // marked sub-expression is not leftmost in expr, mark with "hash" placeholders
+        val (markedStr, placeholder) = PositionLocator.withMarkers(undelimitedExprString, sub, subStart - 1, subEnd - subStart + 2)
+        val expr = Parser.parser(markedStr)
+        (Parser.parser(undelimitedExprString.replaceAllLiterally("#", "")), FormulaTools.posOf(expr, placeholder))
+      } else {
+        val expr = Parser.parser(undelimitedExprString.replaceAllLiterally("#", ""))
+        (expr, FormulaTools.posOf(expr, sub))
+      }
+
+    (expr, inExpr.getOrElse(throw LexException("Sub-expression " + subString + " does not exist in " + undelimitedExprString, UnknownLocation)))
+  }
+}
+
+private object BELLE_EXPRESSION {
+  def regexp: Regex = """(\{`[\s\S]*?`})|("(?:[^\\"]*(?:\\.)?)*")""".r // allows \" inside "..."
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+
+  def apply(exprString: String, delimiters: (String, String)): BELLE_EXPRESSION = {
+    //@todo detect strings that are neither substitution pairs nor expressions (for now they're misclassified depending on content)
+    if (exprString.contains("~>")) SUBSTITUTION_PAIR(exprString, delimiters)
+    else if (exprString.contains("#")) EXPRESSION_SUB(exprString, delimiters)
+    else EXPRESSION(exprString, delimiters)
+  }
 }
 
 object EOF extends BelleTerminal("<EOF>") {

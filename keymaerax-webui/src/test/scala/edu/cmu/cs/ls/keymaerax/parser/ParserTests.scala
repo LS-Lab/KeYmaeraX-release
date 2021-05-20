@@ -65,7 +65,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
-    entry.defs.decls(("J", None))._4.value shouldBe "1>=0".asFormula
+    entry.defs.decls(Name("J", None)).interpretation.value shouldBe "1>=0".asFormula
     entry.model shouldBe "J() -> [{x:=x+1;}*]J()".asFormula
   }
 
@@ -82,11 +82,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
-    inside (entry.defs.decls(("J", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("J", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
-        argNames shouldBe Some((("x", None), Real) :: Nil)
+        argNames shouldBe Some((Name("x", None), Real) :: Nil)
         expr.value shouldBe ".>=0".asFormula
     }
     entry.model shouldBe "J(x) -> [{x:=x+1;}*]J(x)".asFormula
@@ -106,11 +106,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
-    inside (entry.defs.decls(("J", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("J", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Tuple(Real, Real)
         sort shouldBe Bool
-        argNames shouldBe Some((("x", None), Real) :: (("y", None), Real) :: Nil)
+        argNames shouldBe Some((Name("x", None), Real) :: (Name("y", None), Real) :: Nil)
         expr.value shouldBe "._0>=._1".asFormula
     }
     entry.model shouldBe "J(x,y) -> [{x:=x+1;}*]J(x,y)".asFormula
@@ -129,8 +129,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       |End.
     """.stripMargin
     val entry = ArchiveParser.parser(input).loneElement
-    inside (entry.defs.decls(("prg", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("prg", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Trafo
         argNames shouldBe 'empty
@@ -319,6 +319,12 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         Parser(makeInput(badInput))
       }
     }
+  }
+
+  it should "parse quantified differential symbols" in {
+    val xp = DifferentialSymbol(Variable("x"))
+    Parser("\\forall x' x'>=0") shouldBe Forall(xp :: Nil, GreaterEqual(xp, Number(0)))
+    Parser("\\exists x' x'>=0") shouldBe Exists(xp :: Nil, GreaterEqual(xp, Number(0)))
   }
 
   it should "parse all positive examples" in {
@@ -515,18 +521,18 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "not expand properties to their definition" in {
     val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
     val entry = ArchiveParser.parser(input).loneElement
-    inside (entry.defs.decls(("init", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("init", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Bool
         argNames shouldBe Some(Nil)
         expr.value shouldBe "x>=2".asFormula
     }
-    inside (entry.defs.decls(("safe", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("safe", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
-        argNames shouldBe Some((("\\cdot", Some(0)), Real) :: Nil)
+        argNames shouldBe Some((Name("\\cdot", Some(0)), Real) :: Nil)
         expr.value shouldBe ".>=0".asFormula
     }
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
@@ -557,15 +563,15 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     (listener.apply _).expects("{x:=x+b();}*".asProgram, "x>=3+b()".asFormula).once
     Parser.parser.setAnnotationListener(listener)
     val entry = ArchiveParser.parser(input).loneElement
-    inside (entry.defs.decls(("inv", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("inv", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Bool
         argNames shouldBe Some(Nil)
         expr.value shouldBe "x>=y()".asFormula
     }
-    inside (entry.defs.decls(("y", None))) {
-      case (domain, sort, argNames, expr, _) =>
+    inside (entry.defs.decls(Name("y", None))) {
+      case Signature(domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Real
         argNames shouldBe Some(Nil)

@@ -1,12 +1,16 @@
-<div class="modal-header">
-    <h3>Tactic Editor</h3>
-</div>
-<div class="modal-body">
-    <!-- TODO text-editor-like toolbox -->
-    <!-- TODO CSS -->
-    <textarea style="width:100%;font-family:monospace;" ng-model="customTactic" rows="20" placeholder="Enter your tactic here"></textarea>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary" ng-click="execute()">Execute</button>
-    <button class="btn btn-primary" ng-click="cancel()">Cancel</button>
+<script type="text/ng-template" id="tacticPopover.html">
+    <p><kbd>Alt</kbd>-Click underlined text for atomic execution</p>
+    <p><kbd>Shift</kbd>-Click for step-by-step execution</p>
+    <p>
+        Tactic: <code>{{tacticExecPopover.tactic.text.substring(0,100)}}</code>
+        <code ng-if="tacticExecPopover.tactic.text.length > 100">...</code>
+    </p>
+</script>
+<div class="row k4-vertical-fill-flex">
+    <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex"
+         uib-popover-template="'tacticPopover.html'" popover-trigger="'none'"
+         popover-is-open="tacticExecPopover.tactic !== undefined">
+        <div ui-ace="{theme:'github',mode:'bellerophon',showGutter:true,onLoad:aceLoaded,onChange:aceChanged}"
+             ng-model="tactic.tacticText" id="tacticeditor"></div>
+    </div>
 </div>

@@ -1150,7 +1150,7 @@ object SimplifierV3 {
   private lazy val ltFlip: ProvableSig = remember("0 < g_() <-> g_() > 0".asFormula,QE,namespace).fact
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
-  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
+  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() > 0 | g_() - f_() > 0 ".asFormula,QE,namespace).fact
 
   // Additional formulas for specialized normalizers
   private lazy val trueGeqNorm:ProvableSig = remember("true<->1>=0".asFormula,QE,namespace).fact
@@ -1191,7 +1191,7 @@ object SimplifierV3 {
       case Less(l,r) => List(ltFlip,ltNorm)
       case Greater(l,r) => if (r == Number(0)) List() else List(gtNorm)
       case Equal(l,r) => if (r == Number(0)) List() else List(eqNorm)
-      case NotEqual(l,r) => if (r == Number(0)) List() else List(neqNorm)
+      case NotEqual(l,r) => List(neqNorm) //if (r == Number(0)) List() else
       case And(l,r) =>  Nil
       case Or(l,r) =>  Nil
       case True => List(trueEqNorm)

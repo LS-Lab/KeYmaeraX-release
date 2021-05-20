@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 import scala.annotation.tailrec
@@ -56,9 +57,9 @@ abstract class SMTConverter extends (Formula=>String) {
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
         //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
-        case fn@Function("min", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
-        case fn@Function("max", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
-        case fn@Function("abs", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
+        case fn@InterpretedSymbols.minF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
+        case fn@InterpretedSymbols.maxF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
+        case fn@InterpretedSymbols.absF => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
         case fn@Function(_, _, _, _, false) =>
           require(fn.sort==Real, "Only support functions of type real, but not " + fn.sort)
           "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) +  ") " + fn.sort + ")"
@@ -76,9 +77,9 @@ abstract class SMTConverter extends (Formula=>String) {
     require(s.sort == Real, "Only real-valued symbols are currently supported, but got " + s.prettyString + " of sort " + s.sort)
     def nameOf(n: String, i: Option[Int]): String = if (i.isEmpty) n else n + "_" + i.get
     s match {
-      case Function("min", _, _, _, true) => SMT_MIN
-      case Function("max", _, _, _, true) => SMT_MAX
-      case Function("abs", _, _, _, true) => SMT_ABS
+      case InterpretedSymbols.minF => SMT_MIN
+      case InterpretedSymbols.maxF => SMT_MAX
+      case InterpretedSymbols.absF => SMT_ABS
       case Function(name, index, _, _, false) => FUNC_PREFIX + nameOf(name, index)
       case BaseVariable(name, index, _) => VAR_PREFIX + nameOf(name, index)
       case DifferentialSymbol(BaseVariable(name, index, _)) => DIFFSYMBOL_PREFIX + nameOf(name, index)

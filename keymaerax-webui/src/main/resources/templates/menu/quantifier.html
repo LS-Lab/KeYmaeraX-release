@@ -1,4 +1,4 @@
-<a class="dropdown-toggle" data-toggle="dropdown" role="button"
+<a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown" role="button"
    aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifier <span class="caret"></span></a>
 <ul class="dropdown-menu">
     <k4-tactic-menu-entry

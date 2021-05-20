@@ -43,14 +43,16 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       // directly for those.
       case Some(info) if info.belleExpr == e || info.needsGenerator => info.codeName
       case _ => e match {
-        case DefTactic(name, t) => op(e).terminal.img + " " + name + " " + AS.img + " (" + pp(t, indent) + ")"
+        case DefTactic(name, t) => op(e).terminal.img + " " + name + " " + AS.img + " (" + newline(indent+1) + pp(t, indent+1) + newline(indent) + ")"
         case ApplyDefTactic(DefTactic(name, _)) => name
         case e: ExpandAll => e.prettyString
         case e: Expand => e.prettyString
         case SeqTactic(l,r)    => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case EitherTactic(l,r) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case BranchTactic(ts) => op(e).terminal.img +
-          "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
+          "(" + newline(indent+1) + ts.map(pp(_, indent+1)).mkString("," + newline(indent+1)) + newline(indent) + ")"
+        case CaseTactic(ts) => op(e).terminal.img +
+          "(" + newline(indent+1) + ts.map({ case (label, t) => "\"" + label.prettyString + "\": " + pp(t, indent+2) }).mkString("," + newline(indent+1)) + newline(indent) + ")"
         case SaturateTactic(t) => sanitizeUnary(wrapLeft(e, t, indent), op(e).terminal.img)
         case it: StringInputTactic =>
           if (it.inputs.nonEmpty) {
@@ -97,9 +99,11 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           if (!n.isInternal) name
           else throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case dot: BelleDot => "_@" + dot.hashCode()
+        case LabelBranch(BelleStartTxLabel) => "nil"
+        case LabelBranch(BelleLabelTx(BelleSubLabel(BelleRollbackTxLabel, label), None, _)) => LabelBranch(BelleTopLevelLabel(label)).prettyString
         case l: LabelBranch => l.prettyString
         case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
-        case Using(es, t) => pp(t, indent) + " using " + es.mkString("\"", " :: ", " :: nil\"")
+        case Using(es, t) => pp(t, indent) + " using \"" + es.mkString(" :: ") + (if (es.isEmpty) "" else " :: ") + "nil\""
         case _ => throw PrinterException(s"Do not know how to pretty-print $e")
       }
     }
@@ -130,13 +134,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   }
 
   private val TAB = "  "
-  private def newline(indent: Int) = {
-    var s : String = "\n"
-    for(i <- 1 until indent) {
-      s = s + TAB
-    }
-    s
-  }
+  private def newline(indent: Int) = "\n" + TAB*indent
 
   private def wrapLeft(parent: BelleExpr, current: BelleExpr, indent: Int) : String =
     if(op(parent) < op(current) || (op(parent) == op(current) && !op(current).leftAssoc))

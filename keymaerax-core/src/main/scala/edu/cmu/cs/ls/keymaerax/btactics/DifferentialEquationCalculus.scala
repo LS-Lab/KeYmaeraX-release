@@ -295,17 +295,6 @@ trait DifferentialEquationCalculus {
     */
   def openDiffInd: DependentPositionTactic = DifferentialTactics.openDiffInd
 
-  /** DV: Differential Variant proves a formula to become true at some point after a differential equation.
-    *
-    * @example {{{
-    *         *
-    *    ------------------------- DV(1)
-    *    a()>0 |- <{x'=a()}>x>=b()
-    * }}}
-    */
-  @deprecated
-  def diffVar: DependentPositionTactic = DifferentialTactics.diffVar
-
   /** Refine top-level antecedent/succedent ODE domain constraint
     * G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R, (D)?
     * ---------------------------------------------- dR

@@ -7,9 +7,9 @@ import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
-import java.math.BigDecimal
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import java.math.BigDecimal
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{BaseKeYmaeraMathematicaBridge, JLinkMathematicaLink, UncheckedBaseK2MConverter, UncheckedBaseM2KConverter}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
@@ -18,9 +18,10 @@ import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  private val mathematicaConfig: Map[String, String] = Map(
+  private lazy val mathematicaConfig: Map[String, String] = Map(
       "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
       "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+  private lazy val origConfig = Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
 
   private var link: JLinkMathematicaLink = _
   private var ml: BaseKeYmaeraMathematicaBridge[KExpr] = _ //var so that we can instantiate within a test case.
@@ -30,8 +31,6 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   private val xFn = Function("x", None, Real, Real)
 
   private val zero = Number(new BigDecimal("0"))
-
-  private val origConfig = Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
 
   private def num(n : Integer) = Number(new BigDecimal(n.toString))
 
@@ -47,6 +46,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     //@note only once for the entire test suite, reduce number of Mathematica inits/shutdowns
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
     link = new JLinkMathematicaLink("Mathematica")

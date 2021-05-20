@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, UnexpandedDefinitionsFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -208,6 +208,16 @@ class FOQuantifierTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("\\forall t_ [{x'=2,t_'=1&true}]x>b".asFormula), IndexedSeq()),
       allInstantiate(None, Some("0".asTerm))(-1))
     result.subgoals.loneElement shouldBe "t_=0, [{x'=2,t_'=1&true}]x>b ==> ".asSequent
+  }
+
+  it should "instantiate in the presence of self assignments" in withTactics {
+    proveBy("\\forall x [x:=x;][{x'=1}]x>=2 ==>".asSequent, allL("y".asVariable)(-1)).subgoals.
+      loneElement shouldBe "[y:=y;][{y'=1}]y>=2 ==>".asSequent
+  }
+
+  it should "instantiate in the presence of differentials" in withTactics {
+    proveBy("\\forall x (f(x))'=g(x) ==>".asSequent, allL("y".asVariable)(-1)).subgoals.
+      loneElement shouldBe "(f(x))'=g(y) ==>".asSequent
   }
 
   "existsR" should "instantiate simple formula" in withTactics {
@@ -479,6 +489,16 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "[a:=*;][b:=*;]a>0 ==> [a:=*;]a>0".asSequent
   }
 
+  it should "give advice on program constant formula" in withTactics {
+    the [UnexpandedDefinitionsFailure] thrownBy proveBy("x=0 ==> \\forall x (x=2 -> [ode;]x>=0)".asSequent, allSkolemize(1)) should
+      have message "Skolemization not possible because formula x=2->[ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+  }
+
+  it should "work in the presence of differential symbols and differentials" in withTactics {
+    proveBy("x=0 ==> \\forall x x'=0".asSequent, allR(1)).subgoals.loneElement shouldBe "x_0=0 ==> x'=0".asSequent
+    proveBy("x=0 ==> \\forall x (f(x))'=0".asSequent, allR(1)).subgoals.loneElement shouldBe "x_0=0 ==> (f(x))'=0".asSequent
+  }
+
   "exists skolemize" should "skolemize simple" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
     result.subgoals.loneElement shouldBe "x>0 ==> ".asSequent
@@ -487,6 +507,10 @@ class FOQuantifierTests extends TacticTestBase {
   it should "skolemize with boundrenaming when variable to skolemize is there already" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-2))
     result.subgoals.loneElement shouldBe "x_0>0, x>0 ==> ".asSequent
+  }
+
+  it should "FEATURE_REQUEST: keep positions stable" in withTactics {
+    proveBy("\\exists x (x=y&x>=0), y=2 ==>".asSequent, existsSkolemize(-1)).subgoals.loneElement shouldBe "x=y&x>=0, y=2 ==>".asSequent
   }
 
   "quantifier rules" should "not prove false \\forall x \\exists y p(x,y) -> \\exists y \\forall x p(x,y)" in withTactics {

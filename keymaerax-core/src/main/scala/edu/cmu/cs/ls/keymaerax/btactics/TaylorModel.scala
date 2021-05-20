@@ -8,18 +8,11 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import java.util.UUID
-
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, KeYmaeraXPrettierPrinter}
 import cc.redberry.rings
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
-import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2.{BoundMap, StaticSingleAssignmentExpression}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
-import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import rings.poly.PolynomialMethods._
 import rings.scaladsl._
 import syntax._
 
@@ -102,8 +95,8 @@ object TaylorModelTactics extends Logging {
   // Terms
 
   def constR(name: String) = FuncOf(Function(name, None, Unit, Real), Nothing)
-  def minF(a: Term, b: Term) = FuncOf(BigDecimalQETool.minF, Pair(a, b))
-  def maxF(a: Term, b: Term) = FuncOf(BigDecimalQETool.maxF, Pair(a, b))
+  def minF(a: Term, b: Term) = FuncOf(InterpretedSymbols.minF, Pair(a, b))
+  def maxF(a: Term, b: Term) = FuncOf(InterpretedSymbols.maxF, Pair(a, b))
 
   // Formulas
 
@@ -226,7 +219,7 @@ object TaylorModelTactics extends Logging {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
                 case Some(ub_fml@LessEqual(_, ub)) =>
                   toc(" found upper bound")
-                  cutL(LessEqual(l, Plus(FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g))), c)))(pos) &
+                  cutL(LessEqual(l, Plus(FuncOf(InterpretedSymbols.maxF, Pair(Number(0), Times(ub, g))), c)))(pos) &
                     Idioms.<(skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
@@ -253,7 +246,7 @@ object TaylorModelTactics extends Logging {
               seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s==t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
                 case Some(ub_fml @ LessEqual(_, ub)) =>
-                  cutL(LessEqual(Plus(FuncOf(BigDecimalQETool.minF, Pair(Number(0), Times(ub, g))), c), u))(pos) &
+                  cutL(LessEqual(Plus(FuncOf(InterpretedSymbols.minF, Pair(Number(0), Times(ub, g))), c), u))(pos) &
                     Idioms.<( skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
@@ -278,10 +271,10 @@ object TaylorModelTactics extends Logging {
 
   // only the cases that I need here...
   private [btactics] def unfoldMinMax = chaseCustom({
-    case Greater(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minGtNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case GreaterEqual(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minGeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minLeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(_, FuncOf(BigDecimalQETool.maxF, _)) => (Ax.leMaxNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case Greater(FuncOf(InterpretedSymbols.minF, _), _) => (Ax.minGtNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case GreaterEqual(FuncOf(InterpretedSymbols.minF, _), _) => (Ax.minGeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(FuncOf(InterpretedSymbols.minF, _), _) => (Ax.minLeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(_, FuncOf(InterpretedSymbols.maxF, _)) => (Ax.leMaxNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
     case _ => Nil
   })
 

@@ -47,8 +47,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser.{InputSignature, Name, Signature}
+import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
@@ -1280,7 +1279,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               mxProof.conclusion.succ.head,
               ("ModelPlex Monitor Proof", BellePrettyPrinter(monitorProof), monitorProof) :: Nil,
               Nil, Map.empty)
-            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter()(entry)) :: Nil
+            new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CGenerator.getInputs(prg)
             val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
@@ -1398,50 +1397,14 @@ class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName
           case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
           case Some(node) if node.goal.isEmpty => return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
           case Some(node) if node.goal.isDefined =>
-            def printName(name: String, index: Option[Int]) = name +
-              (index match { case Some(i) => "_" + i case None => "" })
-
-            def defsStringsOf(defs: Map[Name, Signature]): List[String] = {
-              defs.map({
-                case ((name, index), (domain, sort, _, interpretation, _)) =>
-                  sort.toString + " " + printName(name, index) +
-                    (domain match {
-                      case Some(Unit) => ""
-                      case Some(d: Tuple) => d.toString
-                      case Some(d) => "(" + d.toString + ")"
-                      case None => ""
-                    }) +
-                    (interpretation match {
-                      case Some(i) => (if (sort == Real) " = " else " <-> ") + "(" + i.prettyString + ")"
-                      case None => ""
-                    }) + ";"
-              }).toList
-            }
-
             val goal = node.goal.get.toFormula
             val proofSession = session(parentProofId).asInstanceOf[ProofSession]
             val symbols = StaticSemantics.symbols(goal)
-            val (defs, vars) = proofSession.defs.decls.
-              filter({ case ((n, i), _) => symbols.exists(s => s.name == n && s.index == i) }).
-              partition({ case (_, (domain, _, _, _, _)) => domain.isDefined })
-
-            val printedVars = vars.map(v => "Real " + (printName _ tupled v._1) + ";").mkString("\n  ")
-            val printedDefs = defsStringsOf(defs).mkString("\n  ")
-            val fileContents =
-              s"""Lemma "$lemmaName"
-                 |
-                 |Definitions
-                 |  $printedDefs
-                 |End.
-                 |
-                 |ProgramVariables
-                 |  $printedVars
-                 |End.
-                 |
-                 |Problem
-                 |  ${goal.prettyString}
-                 |End.
-                 |End.""".stripMargin
+            val defs = proofSession.defs.decls.filter({
+              case (Name(n, i), _) => symbols.exists(s => s.name == n && s.index == i)
+            })
+            val lemma = ParsedArchiveEntry(lemmaName, "lemma", "", "", Declaration(defs), goal, Nil, Nil, Map.empty)
+            val fileContents = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(lemma)
 
             db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
         }
@@ -1902,37 +1865,47 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
-        //@todo InputSignature no longer available from simplified parser -> simplify data structure
-        val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
+        val applicable: Map[NamedSymbol, Signature] = symbols.
           filter({ case _: Function => true case _: ProgramConst => true case _: SystemConst => true case _ => false }).
-          flatMap(s => {
-            val defs = proofSession.defs.find(s.name, s.index)
-            defs match {
-              case Some(f) => Some(s -> (f, None))
-              case None => None
+          flatMap(s => proofSession.defs.find(s.name, s.index).map(s -> _)).toMap
+        /** Translates the list of parsed argument names `args` into a function argument (Pair). */
+        def asPairs(args: Option[List[(Name, Sort)]]): Term = args.map({
+          case Nil => Nothing
+          case (Name(n, i), _) :: Nil =>
+            if (n == Nothing.name) Nothing
+            else Variable(n, i)
+          case (n, _) :: ns => Pair(Variable(n.name, n.index), asPairs(Some(ns)))
+        }).getOrElse(Nothing)
+        /** Replaces `.` in expression `repl` with the corresponding argument name from `args`. */
+        def withArgs(repl: Option[Expression], args: Option[List[(Name, Sort)]]): Option[Expression] = args match {
+          case None => repl
+          case Some(a) =>
+            //@note can be optimized to just a single traversal if we are sure that . and ._0 do not co-occur and ._i is
+            //      a contiguous range
+            def argsMap(dots: List[NamedSymbol], i: Int): Map[NamedSymbol, Name] = dots match {
+              case Nil => Map.empty
+              case dot :: Nil => Map(dot -> a(i)._1)
+              case dot :: dots => Map(dot -> a(i)._1) ++ argsMap(dots, i+1)
             }
-          }).toMap
-        // name, name expression (what), optional repl, optional plaintext definition from the model file
-        def dotted(d: Option[Sort]): Term = d.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
-        val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
-          // functions, predicates, and programs with definition
-          case (s: Function, ((domain, sort, _, repl, _), insig)) if repl.isDefined =>
-            val arg = insig.map(_._1.map(_.asInstanceOf[Term]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(dotted(domain))
-            sort match {
-              case Real => (s, FuncOf(s, arg), repl, insig)
-              case Bool => (s, PredOf(s, arg), repl, insig)
-            }
-          case (s: ProgramConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
-          case (s: SystemConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
-          // functions, predicates, and programs without definition
-          case (s: Function, ((domain, sort, _, None, _), _)) =>
-            val arg = dotted(domain)
-            sort match {
-              case Real => (s, FuncOf(s, arg), None, None)
-              case Bool => (s, PredOf(s, arg), None, None)
-            }
-          case (s: ProgramConst, ((_, _, _, None, _), _)) => (s, s, None, None)
-          case (s: SystemConst, ((_, _, _, None, _), _)) => (s, s, None, None)
+            val dots = argsMap(repl.map(StaticSemantics.symbols).getOrElse(Set.empty).
+              filter({ case _: DotTerm => true case _ => false }).toList.
+              sortBy({ case DotTerm(_, None) => -1 case DotTerm(_, Some(i)) => i }), 0)
+            repl.flatMap(ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+                case s: DotTerm =>
+                  val n = dots(s)
+                  Right(Variable(n.name, n.index))
+                case _ => Left(None)
+              }
+            }, _))
+        }
+        val expansions: List[(NamedSymbol, Expression, Option[Expression], Boolean)] = applicable.toList.map({
+          case (s: Function, Signature(_, sort, args, repl, loc)) => sort match {
+            case Real => (s, FuncOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
+            case Bool => (s, PredOf(s, asPairs(args)), withArgs(repl, args), loc == UnknownLocation)
+          }
+          case (s: ProgramConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
+          case (s: SystemConst, Signature(_, _, _, repl, loc)) => (s, s, repl, loc == UnknownLocation)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
@@ -1960,9 +1933,20 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
                 case c: ProgramConst => Function(c.name, c.index, Unit, Trafo)
                 case c: SystemConst => Function(c.name, c.index, Unit, Trafo)
               }
-              session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-                ((fnwhat.name, fnwhat.index) -> (Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
-              BooleanResponse(flag = true) :: Nil
+              val name = Name(fnwhat.name, fnwhat.index)
+              proofSession.defs.decls.get(name) match {
+                case None =>
+                  session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, None, Some(erepl), UnknownLocation))))
+                  BooleanResponse(flag = true) :: Nil
+                case Some(Signature(_, _, args, None, _)) =>
+                  session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+                    (Name(fnwhat.name, fnwhat.index) -> Signature(Some(fnwhat.domain), fnwhat.sort, args, Some(erepl), UnknownLocation))))
+                  BooleanResponse(flag = true) :: Nil
+                case Some(Signature(_, _, _, Some(i), _)) =>
+                  new ErrorResponse("Cannot change " + fnwhat.prettyString + ", it is already defined as " + i.prettyString) :: Nil
+              }
+
             } else BooleanResponse(flag = false, Some("Expected a replacement of sort " + ewhat.sort + ", but got " + erepl.sort)) :: Nil
         }
     }
@@ -2172,10 +2156,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else "\"" + values.mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(_:StringArg)) => "\""+value+"\""
+      case BelleTermInput(value, Some(_:StringArg)) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
         "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
-      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value+"\""
+      case BelleTermInput(value, Some(OptionArg(_))) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
@@ -2588,7 +2572,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
       backupProof(model, provable, tactic)
-      new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+      new ProofVerificationResponse(proofId, provable, tactic) :: Nil
     }
   }
 }
@@ -2690,7 +2674,7 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
       Some(tactic))
     db.updateProofInfo(newInfo)
-    GetTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+    GetTacticResponse(tactic) :: Nil
   }
 }
 
@@ -2734,9 +2718,9 @@ object ArchiveEntryPrinter {
   def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
     ArchiveParser.parser(modelInfo.keyFile) match {
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, modelInfo.name, tactics))
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
-        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
+        new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, entry.name, tactics))
     }
   }
 
@@ -2954,17 +2938,21 @@ object RequestHelper {
     })
     val elaboratedToFns = symbols.filter({
       case Function(n, i, Unit, s, _) => proofSession.defs.decls.exists({
-        case ((vn, vi), (None, vs, _, _, _)) => vn == n && vi == i && vs == s
+        case (Name(vn, vi), Signature(None, vs, _, _, _)) => vn == n && vi == i && vs == s
         case _ => false
       })
       case _ => false
     })
-    val undefined = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns
-    val newDefs: Map[ArchiveParser.Name, ArchiveParser.Signature] = undefined.map({
-      case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
-      case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
-      case SystemConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
-      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // cuts may introduce variables
+    val undefinedSymbols = symbols.filter(s => !proofSession.defs.asNamedSymbols.contains(s)) -- elaboratedToFns -- InterpretedSymbols.symbols
+    val nodeFml = node.children.flatMap(_.localProvable.subgoals.map(_.toFormula)).reduceRightOption(And).getOrElse(True)
+    val collectedArgs = ArchiveParser.declarationsOf(nodeFml, Some(undefinedSymbols))
+
+    val newDefs: Map[Name, Signature] = undefinedSymbols.map({
+      case fn@Function(name, index, domain, sort, _) => Name(name, index) -> Signature(Some(domain), sort,
+        collectedArgs.decls.get(Name(fn.name, fn.index)).flatMap(_.arguments), None, UnknownLocation)
+      case ProgramConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
+      case SystemConst(name, _) => Name(name, None) -> Signature(None, Trafo, None, None, UnknownLocation)
+      case u => Name(u.name, u.index) -> Signature(None, u.sort, None, None, UnknownLocation) // cuts may introduce variables
     }).toMap
     //@note TactixInit.invSupplier, once non-empty, is proofSession.invSupplier + invariants discovered when executing tactics
     val mergedInvSupplier = TactixInit.invSupplier match {

@@ -72,11 +72,11 @@ class ElaborationPass() {
   }
 
   /** @return list of assumption proof term for method, paired with underlying method  */
-  private def collectPts(kc: Context, m: Method, goal: Formula): (List[Selector], Method) = {
+  private def collectPts(kc: Context, kce: Context, asrt: Assert, m: Method, goal: Formula): (List[Selector], Method) = {
     m match {
       case Using(use, m) =>
         val useAssms = use.flatMap(collectPts(kc, _, goal))
-        val (assms, meth) = collectPts(kc, m, goal)
+        val (assms, meth) = collectPts(kc, kce, asrt, m, goal)
         val combineAssms = useAssms ++ assms
         if(combineAssms.isEmpty && use != List(DefaultSelector) && use != List(DefaultAssignmentSelector))
           throw ElaborationException("Non-default selector should select at least one fact.", node = m)
@@ -86,16 +86,27 @@ class ElaborationPass() {
         (freePt ++ combineAssms, meth)
       case ByProof(pf) => (List(), locate(ByProof(apply(locate(Block(pf), m)) :: Nil), m))
       case _: ByProof | _: RCF | _: Auto | _: Prop | _: Solution | _: DiffInduction | _: Exhaustive | _: Hypothesis => (List(), m)
+      case GuardDone(fOpt) =>
+        val delta = fOpt match {
+          case Some(delta) => delta
+          case None => kce.inferGuardDelta(asrt)
+        }
+        val deltaElab = kce.elaborateFunctions(delta, m)
+        // @TODO: Check this see if it works on not
+        kc.sideEffect(Assert(asrt.pat, asrt.f, GuardDone(Some(deltaElab))))
+        kce.sideEffect(Assert(asrt.pat, asrt.f, GuardDone(Some(deltaElab))))
+        (List(), GuardDone(Some(deltaElab)))
     }
   }
 
   /** @return domain statement with proofvar and programvar resolved. Does not introduce notes. */
-  private def collectPts(kc: Context, dc: DomainStatement): DomainStatement = {
+  private def collectPts(kc: Context, kce: Context, dc: DomainStatement): DomainStatement = {
     dc match {
       case DomAnd(l, r) =>
-        val dsL = collectPts(kc, l)
+        val dsL = collectPts(kc, kce, l)
         // If left branch introduces domain constraint assumptions / assertions, then assertions in right half can mention.
-        val dsR = collectPts(kc.:+(dsL.collect.constraints.s), r)
+        // @TODO: Add to kce or not?
+        val dsR = collectPts(kc.:+(dsL.collect.constraints.s), kce:+(dsL.collect.constraints.s), r)
         locate(DomAnd(dsL, dsR), dc)
       case DomAssume(x, f) =>
         StandardLibrary.factBindings(x, kc.elaborateFunctions(f, dc), dc).map({case (x, y) => locate(DomAssume(IdentPat(x), y), dc)}).
@@ -103,7 +114,7 @@ class ElaborationPass() {
       case DomAssert(x, f, m) =>
         if(x != Nothing && !x.isInstanceOf[Variable])
           throw ElaborationException(s"Non-scalar fact patterns not allowed in domain constraint assertion ${dc}", node = dc)
-        val (assump, meth) = collectPts(kc, m, f)
+        val (assump, meth) = collectPts(kc, kce, Assert(x,f,m), m, f)
         locate(DomAssert(x, kc.elaborateFunctions(f, dc), Using(assump, meth)), dc)
       case DomModify(id, x, f) => locate(DomModify(id, x, kc.elaborateFunctions(f, dc)), dc)
       case DomWeak(dc) => locate(DomWeak(dc), dc)
@@ -203,8 +214,8 @@ class ElaborationPass() {
           case Assume(e, f) =>
             // @Note: Splitting up assumes would be bad because it breaks lastFact
             Some(locate(Assume(e, kce.elaborateFunctions(f, sel)), sel))
-          case Assert(e, f, m) =>
-            val (fullSels, meth) = collectPts(kc, m, f)
+          case asrt@Assert(e, f, m) =>
+            val (fullSels, meth) = collectPts(kc, kce, asrt, m, f)
             val finalMeth = locate(Using(fullSels, meth), meth)
             val assertion = locate(Assert(e, kce.elaborateFunctions(f, sel), finalMeth), sel)
             Some(locate(assertion, sel))
@@ -212,7 +223,8 @@ class ElaborationPass() {
             requireTimeVarForSolution(ds, ds.clocks)
             // Context should include ODE during collection, because we want to know about domain constraint fmls and we may
             // want to remember selectors of the ODE bound variables for later (e.g. remember Phi nodes during SSA)
-            val dom = collectPts(kce.:+(sel), dc)
+            // @TODO: kce, kce or kc, kce
+            val dom = collectPts(kce.:+(sel), kce.:+(sel), dc)
             Some(ProveODE(ds, dom))
           case Note(x, plainPt, ann) =>
             val pt = coercePTSorts(plainPt)
@@ -246,21 +258,22 @@ class ElaborationPass() {
       // elaborate terms and formulas in all terms that mention them, Asserts which were handled earlier.
       override def postS(kc: Context, kce: Context, s: Statement): Statement = {
         s match {
-          case Assume(pat, f) => Assume(pat, kce.elaborateFunctions(f, s))
+          case Assume(pat, f) => locate(Assume(pat, kce.elaborateFunctions(f, s)),s)
           // Elaborate all functions that are defined *before* f
           case LetSym(f, args, e: Term) =>
             val rhs = kce.elaborateFunctions(e, s)
-            LetSym(f, args, rhs)
-          case LetSym(f, args, e: Formula) => LetSym(f, args, kce.elaborateFunctions(e, s))
+            locate(LetSym(f, args, rhs),s)
+          case LetSym(f, args, e: Formula) => locate(LetSym(f, args, kce.elaborateFunctions(e, s)),s)
           case LetSym(_, _, _: Program) => throw ElaborationException("Lets of programs are only allowed in top-level declarations, not in proofs")
-          case Match(pat, e: Term) => Match(pat, kce.elaborateFunctions(e, s))
-          case While(x, j, body) => While(x, kce.elaborateFunctions(j, s), body)
-          case For(metX, metF, metIncr, guard, conv, body) =>
-            For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body)
-          case BoxLoop(body, Some((ihk, ihv, None))) => BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None)))
+          case Match(pat, e: Term) => locate(Match(pat, kce.elaborateFunctions(e, s)),s)
+          case While(x, j, body) => locate(While(x, kce.elaborateFunctions(j, s), body),s)
+          case For(metX, metF, metIncr, guard, conv, body, metGuard) =>
+            locate(For(metX, kce.elaborateFunctions(metF, s), kce.elaborateFunctions(metIncr, s), guard, conv, body, metGuard.map{f => kce.elaborateFunctions(f, s)}), s)
+          case BoxLoop(body, Some((ihk, ihv, None))) =>
+            locate(BoxLoop(body, Some((ihk, kce.elaborateFunctions(ihv, s), None))),s)
           // dc was elaborated in preS
-          case ProveODE(ds, dc) => ProveODE(elaborateODE(kc, kce, ds), dc)
-          case Switch(scrut, pats) => Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kce.elaborateFunctions(f, s), b)}))
+          case ProveODE(ds, dc) => locate(ProveODE(elaborateODE(kc, kce, ds), dc), s)
+          case Switch(scrut, pats) => locate(Switch(scrut, pats.map({case (x, f: Formula, b) => (x, kce.elaborateFunctions(f, s), b)})), s)
           case s => s
         }
       }

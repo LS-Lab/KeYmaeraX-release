@@ -17,13 +17,14 @@ import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.time.SpanSugar._
+import org.scalatest.OptionValues._
 
 import scala.reflect.io.File
 
@@ -427,6 +428,24 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(f, normalize) shouldBe 'proved
   }
 
+  it should "inherit labels from core rules" in {
+    proveBy("x>=0 | y>=0 -> [z:=x; ++ z:=y;{z'=1}](z=x | z>=y)".asFormula, normalize, _.value should contain theSameElementsAs
+      "[z:=x;](z=x|z>=y)::[z:=y;{z'=1}](z=x|z>=y)".asLabels
+    ).subgoals should contain theSameElementsAs List(
+      "x>=0|y>=0 ==> x=x, x>=y".asSequent,
+      "x>=0|y>=0, z=y ==> [{z'=1}](z=x|z>=y)".asSequent
+    )
+  }
+
+  it should "apply tactics on core labels" in withQE { _ =>
+    val bt = List("[z:=x;](z=x|z>=y)".asLabel -> useAt(Ax.equalRefl)(1), "[z:=y;{z'=1}](z=x|z>=y)".asLabel -> solve(1)).permutations
+    bt.foreach(t =>
+      proveBy("x>=0 | y>=0 -> [z:=x; ++ z:=y;{z'=1}](z=x|z>=y)".asFormula, normalize & CaseTactic(t)).subgoals should contain theSameElementsAs List(
+        "x>=0|y>=0 ==> true, x>=y".asSequent,
+        "x>=0|y>=0, z=y ==> \\forall t_ (t_>=0 -> t_+z=x|t_+z>=y)".asSequent
+      ))
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
@@ -483,6 +502,12 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
+  }
+
+  it should "inherit labels from core rules with prop" in {
+    proveBy("x>=0 | y>=0 -> x^2>=0 & y^2>=0".asFormula, prop, _.value should contain theSameElementsAs
+      "x>=0//x^2>=0::y>=0//x^2>=0::x>=0//y^2>=0::y>=0//y^2>=0".asLabels
+    )
   }
 
   it should "chase at position" in withTactics {
@@ -680,6 +705,66 @@ class TactixLibraryTests extends TacticTestBase {
     val f = "\\exists X (X>x&\\forall a (x<a&a<=X->P(a)))->\\exists a (a>x&P(a))".asFormula
     //@note master does not yet instantiate quantifiers
     proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
+  }
+
+  "useLemma" should "use unification to bridge between function symbols and terms" in withTactics {
+    val lemmaName = "tests/useLemma/tautology1"
+    val lemma = proveBy("f()>0 -> f()>0".asFormula, prop)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
+    proveBy("==> f()>0 -> f()>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> x>0 -> x>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    proveBy("==> x^2+y>0 -> x^2+y>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+  }
+
+  it should "use recorded substitutions" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil),
+      Some("user" + File.separator + lemmaName)))
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    result shouldBe 'proved
+    result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+  }
+
+  it should "use definitions" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val entry = ArchiveParser(
+      """Lemma "Lemma 1"
+        |Definitions Real f(Real x)=x^2; End.
+        |ProgramVariables Real x; End.
+        |Problem f(x)>0->f(x)>0 End.
+        |End.""".stripMargin).head
+    val subst = USubst(entry.defs.substs)
+    val SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, Expand(f, entry.defs.substs.head) & prop, subst=subst)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, ToolEvidence(List("model" -> entry.fileContent, "tactic" -> """expand "f"; prop"""))::Nil),
+      Some("user" + File.separator + lemmaName)))
+    proveBy("==> x^2>0 -> x^2>0".asSequent, useLemmaX(lemmaName, None)) shouldBe 'proved
+    val result = proveBy("==> f(x)>0 -> f(x)>0".asSequent, useLemmaX(lemmaName, None))
+    result shouldBe 'proved
+    result.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+  }
+
+  it should "cut in lemma conclusion as assumption when lemma doesn't close" in withTactics {
+    val lemmaName = "tests/useLemma/tautology2"
+    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    lemma shouldBe 'proved
+    lemma.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma,
+      Lemma.requiredEvidence(lemma, Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil)),
+      Some("user" + File.separator + lemmaName)))
+    proveByS("==> 2*x>0 -> 2*x>0".asSequent, useLemmaX(lemmaName, None), _.value should contain theSameElementsAs List(
+      "Use//Lemma available as assumption".asLabel
+    )).subgoals.loneElement shouldBe
+      "x^2>0 -> x^2>0 ==> 2*x>0->2*x>0".asSequent
   }
 
   "useLemmaAt" should "apply at provided key" in withQE { _ =>

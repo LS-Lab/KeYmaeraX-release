@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
@@ -16,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 
 import scala.collection.immutable._
 
@@ -27,10 +27,6 @@ import scala.collection.immutable._
 object IsabelleSyntax {
 
   private val DEBUG = true
-
-  private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
-  private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
-  private val absF = Function("min", None, Real, Real, interpreted=true)
 
   //axiomatized functions
   private val axFuncs = List(maxF,minF,absF)

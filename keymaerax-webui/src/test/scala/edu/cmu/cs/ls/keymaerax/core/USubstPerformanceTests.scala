@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Statistics
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -44,6 +45,10 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   /* Test teardown */
   override def afterEach(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
+  }
+
+  override def beforeAll(): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
   }
 
   override def afterAll(): Unit = {

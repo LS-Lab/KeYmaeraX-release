@@ -25,7 +25,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
   *
   * Created by smitsch on 01/04/18.
   */
-class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
+class KeYmaeraXArchivePrinter(prettierPrinter: Expression => FormatProvider, withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
   import KeYmaeraXArchivePrinter._
 
   /** Prints the `entry`. */
@@ -47,13 +47,13 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (ParsedArch
 
     val defsBlock = printDefsBlock(entry.defs, symbols)
 
-    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrint(entry.model), printedTactics)
+    val printed = print(head, entry.name, defsBlock, varsBlock, prettierPrinter(entry.model).print(entry.model.prettyString), printedTactics)
 
     val finalPrint = if (withComments) {
       assert(ArchiveParser(printed).map(_.model) == ArchiveParser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
-      """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
+      """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
         case Some(header) =>
           s"""${entry.problemContent.replaceAllLiterally(header, head + " \"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              #
@@ -123,16 +123,16 @@ object KeYmaeraXArchivePrinter {
 
   /** Prints a `Definitions` block, excluding base variables occurring in `symbols`. */
   def printDefsBlock(decl: Declaration, symbols: Set[NamedSymbol]): String = {
-    val defs = decl.decls.filter(_._2._1.isDefined)
+    val defs = decl.decls.filter(_._2.domain.isDefined)
 
-    val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
-      case Function(name, idx, domain, sort, _) if !decl.decls.contains((name, idx)) =>
+    val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
+      case Function(name, idx, domain, sort, _) if !decl.decls.contains(Name(name, idx)) =>
         s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
     val printedDefs = defs.map({
-      case ((name, idx), (domain, codomain, _, interpretation, _)) =>
+      case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) =>
         val printedSort = codomain match {
           case Trafo => "" //@todo program arguments not yet supported
           case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
@@ -168,8 +168,6 @@ object KeYmaeraXArchivePrinter {
        #$tacticsBlock
        #$END_BLOCK""".stripMargin('#')
   }
-
-  def prettierPrint(e: Expression): String = PrettierPrintFormatProvider(e, 80).print(e.prettyString)
 }
 
 class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (ParsedArchiveEntry => String) {
@@ -228,18 +226,18 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
     try {
       val symbols = StaticSemantics.symbols(entry.model)
 
-      val defs = entry.defs.decls.filter(_._2._1.isDefined)
+      val defs = entry.defs.decls.filter(_._2.domain.isDefined)
 
-      val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
-        case Function(name, idx, domain, sort, _) if !entry.defs.decls.contains((name, idx)) =>
+      val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
+        case Function(name, idx, domain, sort, _) if !entry.defs.decls.contains(Name(name, idx)) =>
           s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)})."
         case _ => "" // either printedDefs or printedVars
       }).filter(_.nonEmpty).mkString("\n")
 
       val printedDefs = defs.map({
-        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain == Trafo =>
+        case (Name(name, idx), Signature(_, codomain, _, interpretation, _)) if codomain == Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)} ${printDef(codomain, interpretation)}."
-        case ((name, idx), (domain, codomain, _, interpretation, _)) if codomain != Trafo =>
+        case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) if codomain != Trafo =>
           s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
         case _ => ""
       }).filter(_.nonEmpty)
@@ -277,7 +275,7 @@ class KeYmaeraXLegacyArchivePrinter(withComments: Boolean = false) extends (Pars
         assert(ArchiveParser.parser(printed).map(_.model) == ArchiveParser.parser(entry.problemContent).map(_.model),
           "Expected printed entry and stored problem content to reparse to same model")
 
-        """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
+        """(Theorem|Lemma|ArchiveEntry|Exercise)[^"]*"[^"]*"""".r.findFirstIn(entry.problemContent) match {
           case Some(_) =>
             s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
                #$printedTactics

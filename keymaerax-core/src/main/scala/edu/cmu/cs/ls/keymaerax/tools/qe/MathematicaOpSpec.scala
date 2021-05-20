@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.core.{Function, NamedSymbol, Real, Tuple}
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 /** Mathematica operator notation. */
 trait MathematicaOpSpec {
@@ -129,11 +130,11 @@ object MathematicaOpSpec {
     override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
   }
 
-  def abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), Function("abs", None, Real, Real, interpreted=true))
+  def abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), InterpretedSymbols.absF)
 
-  def min: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Min"), Function("min", None, Tuple(Real, Real), Real, interpreted=true))
+  def min: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Min"), InterpretedSymbols.minF)
 
-  def max: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Max"), Function("max", None, Tuple(Real, Real), Real, interpreted=true))
+  def max: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Max"), InterpretedSymbols.maxF)
 
   def variable: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {

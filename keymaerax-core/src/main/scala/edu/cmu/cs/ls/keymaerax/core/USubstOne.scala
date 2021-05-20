@@ -269,8 +269,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case a@AssignAny(x)    => (u+x, a)
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
-        //@todo improve: u++substBoundVars(ode) would be smaller for substituted DifferentialProgramConst
-        val v = u++boundVars(ode)
+        val v = u++substBoundVars(ode)
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))

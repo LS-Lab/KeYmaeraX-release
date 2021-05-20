@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 import java.math.RoundingMode
 
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof.Ident
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 //import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.Play.{, number, state}
 import edu.cmu.cs.ls.keymaerax.core
 import spire.math._
@@ -19,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 /** Indicates that expression was not in the executable fragment */
 case class UnsupportedStrategyException(nodeID: Int) extends Exception
 /** Indicates that we tried to evaluate something whose value could not be determined */
-case class NoValueException(nodeID: Int = -1) extends Exception
+case class NoValueException(nodeID: Int = -1, msg: String) extends Exception
 /** Indicates that a Demonic test failed, thus Demon loses */
 case class TestFailureException(nodeID: Int) extends Exception
 
@@ -60,14 +61,14 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
       case Equiv (l, r) =>  holds(r).iff(holds(l))
       case True => KnownTrue()
       case False => KnownFalse()
-      case _ => throw NoValueException()
+      case _ => throw NoValueException(msg = "Unknown connective: " + fml)
     }
   }
 
   /** Evaluate computable term at current state */
   def eval(f: Term): number = {
     f match {
-      case n: core.Number => factory.number(n.value)
+      case n: core.Number => factory.number(Rational(n.value))
       case Plus(l, r) => eval(l) + eval(r)
       case Minus(l, r) => eval(l) - eval(r)
       case Times(l, r) => eval(l) * eval(r)
@@ -87,18 +88,18 @@ class Environment[number <: Numeric[number, Ternary]] (val factory: NumberFactor
           case ("max", Pair(l, r)) => eval(l).max(eval(r))
           case ("min", Pair(l, r)) => eval(l).min(eval(r))
           case ("abs", l) => eval(l).abs
-          case _ => throw NoValueException()
+          case _ => throw NoValueException(msg = "Unknown interpreted function: " + f.name)
         }
       case v: Variable =>
         if (state.contains(v))
           state(v)
         else {
           println(s"Unknown value for variable $v")
-          throw NoValueException()
+          throw NoValueException(msg = s"Unknown value for variable $v")
         }
       case _ =>
         println(s"Couldn't evaluate $f in state $state")
-        throw NoValueException()
+        throw NoValueException(msg = s"Unknown term connective $f")
     }
   }
 }
@@ -107,6 +108,8 @@ object Play {
   type state[T] = Map[Ident, T]
   /** For printing,  etc. */
   val ROUNDING_SCALE = 5
+
+  var continueOnViolation: Boolean = false
 }
 
 /** Interpreter for strategies */
@@ -127,12 +130,42 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
     as match {
       case STest(f) =>
         try {
-          if (env.holds(f) != KnownTrue()) {
-            println(s"""Test \"$f\" failed in state ${env.state}""")
-            throw TestFailureException(as.nodeID)
+          val alwaysPrint = false
+          val fails = env.holds(f) != KnownTrue()
+          if (fails || alwaysPrint) {
+            val id = as.nodeID
+            val gotLoc = IDCounter.getLocation(as.nodeID)
+            val asLoc = as.location
+            val locOpt = asLoc match {
+              case Some(x) => Some(x)
+              case None => gotLoc
+            }
+            println(id + "\n" + gotLoc + "\n" + asLoc + "\n" + locOpt)
+            val mapped = locOpt.map({ case (l, c) => s"at line $l column $c" })
+            val locStr = mapped match {
+              case Some(it) => it
+              case None =>
+                "at unknown source location"
+            }
+            val prettyState = env.state.toList.map { case (k, v) => s"$k |-> ${v}" }.mkString("\n")
+            println(s"Failed Test: $id in $prettyState")
+            println(s"""ID($id): Test \"${f.prettyString}\"\n failed in state:\n$prettyState""")
+            val conjs = FormulaTools.conjuncts(f)
+            if (conjs.length > 1) {
+              val failingConjs = conjs.filter(f => env.holds(f) != KnownTrue())
+              //println("Failing conjuncts:")
+              failingConjs.foreach(f => println(s"${f.prettyString}"))
+            }
+            println(locStr)
+            if (fails) {
+              ds.reportViolation()
+              if (!Play.continueOnViolation)
+                throw TestFailureException(as.nodeID)
+            }
           }
         } catch {
-          case v: NoValueException => throw NoValueException(as.nodeID)
+          case v: NoValueException =>
+            throw NoValueException(as.nodeID, msg = v.msg)
         }
       case SAssign(x, f) =>
         try {
@@ -141,7 +174,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
           //println(s"Interpreter assigned $x -> $v")
           env.set(x, v)
         } catch {
-          case v: NoValueException => throw NoValueException(as.nodeID)
+          case v: NoValueException => throw NoValueException(as.nodeID, msg = v.msg)
         }
       case SAssignAny(x) =>
         val v = ds.readAssign(as.nodeID, x)
@@ -149,7 +182,7 @@ class Play[N <: Numeric[N, Ternary]] (factory: NumberFactory[Ternary, N ]) {
         env.set(x, v)
       case SLoop(s) =>
         // in-place update
-        while(ds.readLoop(as.nodeID)) {
+        while (ds.readLoop(as.nodeID)) {
           apply(env, s, ds)
         }
       case SCompose(children) =>

@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 
 import scala.collection.immutable.Map
 
@@ -23,12 +24,7 @@ object BigDecimalQETool extends Tool with QETool {
   /** @inheritdoc */
   override val name: String = "BigDecimalQETool"
 
-  // TODO: taken from DifferentialTactics, should perhaps be in a more central place?
-  val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
-  val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
-  val absF = Function("abs", None, Real, Real, interpreted=true)
-
-  private def unableToEvaluate(e: Expression) = (name + " unable to evaluate " + e)
+  private def unableToEvaluate(e: Expression) = name + " unable to evaluate " + e
 
   /** Returns [[Some]] [[Int]] if the argument [[java.math.BigDecimal]] can be represented as an integer or [[None]] otherwise */
   private def getIntOption(d: java.math.BigDecimal) : Option[Int] =

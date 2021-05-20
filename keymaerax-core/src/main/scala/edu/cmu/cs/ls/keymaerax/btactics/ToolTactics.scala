@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
@@ -99,7 +100,7 @@ private object ToolTactics {
               doQE
               ,
               // else
-              hidePredicates & hideQuantifiedFuncArgsFmls &
+              DebuggingTactics.print("Foo") & hidePredicates & hideQuantifiedFuncArgsFmls & DebuggingTactics.print("Bar") &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
                 doQE & done
                 | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
@@ -431,9 +432,9 @@ private object ToolTactics {
     * expression by proof. */
   private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
     val nextName: scala.collection.mutable.Map[String, Variable] = scala.collection.mutable.Map(
-        "abs" -> TacticHelper.freshNamedSymbol(Variable("abs"), sequent),
-        "min" -> TacticHelper.freshNamedSymbol(Variable("min"), sequent),
-        "max" -> TacticHelper.freshNamedSymbol(Variable("max"), sequent))
+        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name), sequent),
+        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name), sequent),
+        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name), sequent))
 
     val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
 
@@ -447,9 +448,9 @@ private object ToolTactics {
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
         case FuncOf(Function("expand", None, _, _, _), t) => t match {
-          case FuncOf(Function("abs", _, _, _, _), _) => Right(getNextName("abs", p))
-          case FuncOf(Function("min", _, _, _, _), _) => Right(getNextName("min", p))
-          case FuncOf(Function("max", _, _, _, _), _) => Right(getNextName("max", p))
+          case FuncOf(InterpretedSymbols.absF, _) => Right(getNextName(InterpretedSymbols.absF.name, p))
+          case FuncOf(InterpretedSymbols.minF, _) => Right(getNextName(InterpretedSymbols.minF.name, p))
+          case FuncOf(InterpretedSymbols.maxF, _) => Right(getNextName(InterpretedSymbols.maxF.name, p))
         }
         case _ => Left(None)
       }
@@ -460,8 +461,8 @@ private object ToolTactics {
       else ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Term]).get
 
     val tactic = expandedVars.toIndexedSeq.sortWith((a, b) => a._1.pos < b._1.pos).map({
-      case (p, "abs") => EqualityTactics.abs(pos.topLevel ++ p)
-      case (p, "min" | "max") => EqualityTactics.minmax(pos.topLevel ++ p)
+      case (p, InterpretedSymbols.absF.name) => EqualityTactics.abs(pos.topLevel ++ p)
+      case (p, InterpretedSymbols.minF.name | InterpretedSymbols.maxF.name) => EqualityTactics.minmax(pos.topLevel ++ p)
     }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
     (expandTo, tactic)
   }

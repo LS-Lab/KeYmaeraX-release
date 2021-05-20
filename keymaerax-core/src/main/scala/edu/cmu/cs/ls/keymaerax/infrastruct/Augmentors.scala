@@ -168,6 +168,7 @@ object Augmentors {
           case _ => Left(None)
         }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case FuncOf(Function(_, _, _, _, true), _) => Left(None) // interpreted function symbols are allowed
           case FuncOf(_, args) if !bv.intersect(StaticSemantics.freeVars(args)).isEmpty => result = false; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }
@@ -251,6 +252,18 @@ object Augmentors {
   }
 
   implicit class ExpressionAugmentor[E <: Expression](val e: E) {
+    def sub(pos: PosInExpr): Option[Expression] = e match {
+      case f: Formula => f.sub(pos)
+      case t: Term => t.sub(pos)
+      case h: Program => h.sub(pos)
+    }
+
+    def replaceAt(pos: PosInExpr, repl: Expression): Expression = e match {
+      case f: Formula => f.replaceAt(pos, repl)
+      case t: Term => t.replaceAt(pos, repl)
+      case h: Program => h.replaceAt(pos, repl)
+    }
+
     def replaceFree(what: Term, repl: Term): E = e match {
       case f: Formula => f.replaceFree(what, repl).asInstanceOf[E]
       case t: Term => t.replaceFree(what, repl).asInstanceOf[E]

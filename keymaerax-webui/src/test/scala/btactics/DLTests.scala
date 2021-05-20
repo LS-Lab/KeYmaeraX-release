@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import org.scalatest.OptionValues._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
@@ -40,6 +41,19 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "[x:=2;][x:=x;]x>0 ==> ".asSequent
   }
 
+  it should "introduce self assignments before differentials" in withTactics {
+    proveBy("==> (f(x))'=5".asSequent, DLBySubst.stutter("x".asVariable)(1)).subgoals.
+      loneElement shouldBe "==> [x:=x;](f(x))'=5".asSequent
+  }
+
+  it should "introduce self assignments in universal context in antecedent" in withTactics {
+    proveBy("\\forall x x=2 ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;]x=2 ==>".asSequent
+    proveBy("\\forall x (f(x))'=2 ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;](f(x))'=2 ==>".asSequent
+    proveBy("\\forall x (f(x))'=g(x) ==>".asSequent, DLBySubst.stutter("x".asVariable)(-1, 0::Nil)).subgoals.
+      loneElement shouldBe "\\forall x [x:=x;](f(x))'=g(x) ==>".asSequent
+  }
 
   "Box abstraction" should "work on top-level" in withTactics {
     val result = proveBy("[x:=2;]x>0".asFormula, abstractionb(1))
@@ -282,8 +296,31 @@ class DLTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x_0=1, [x_0:=2;]x_0=2, x=3 ==> x>0, [x_0:=5;]x_0>6, x_0=7".asSequent
   }
 
+  it should "give advice on program constant postcondition" in withTactics {
+    the [BelleUserCorrectableException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
+      DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+  }
+
+  it should "assign with antecedent context present" in withTactics {
+    proveBy("[x:=y;]x>=0, x>=4 ==>".asSequent, DLBySubst.assignEquality(-1)).subgoals.loneElement shouldBe "x_0>=4, x=y, x>=0 ==>".asSequent
+  }
+
+  it should "assign in the presence of differential symbols and differentials" in withTactics {
+    proveBy("==> [x:=y;]x'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> x'=y".asSequent
+    proveBy("==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "==> (f(x))'=y".asSequent
+    proveBy("x=2 ==> [x:=y;](f(y))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x=2 ==> (f(y))'=y".asSequent
+    proveBy("x=2 ==> [x:=y;](f(x))'=x".asSequent, assignb(1)).subgoals.loneElement shouldBe "x_0=2 ==> (f(x))'=y".asSequent
+  }
+
+  it should "assign in the antecedent in the presence of differential symbols and differentials" in withTactics {
+    proveBy("[x:=y;]x'=x ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y ==>".asSequent
+    proveBy("[x:=y;]x'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y, x=2 ==>".asSequent
+    proveBy("[x:=y;](f(x))'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x_0=2, (f(x))'=y ==>".asSequent
+  }
+
   "generalize" should "introduce intermediate condition" in withTactics {
-    val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
+    val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1),
+      _.value should contain theSameElementsAs List(BelleLabels.mrShow, BelleLabels.mrUse))
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
@@ -324,7 +361,10 @@ class DLTests extends TacticTestBase {
   }
 
   "postCut" should "introduce implication in simple example" in withTactics {
-    val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
+    val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.cutUse,
+      BelleLabels.cutShow
+    ))
     result.subgoals shouldBe "==> [a:=5;]a>1".asSequent :: "==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
@@ -415,6 +455,18 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
   }
 
+  "Loop rule" should "generate labels" in withTactics {
+    proveByS("x=3 ==> [{x:=x+1;}*]x>=2".asSequent, DLBySubst.loopRule("x>=3".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase,
+      BelleLabels.useCase,
+      BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "x=3 ==> x>=3".asSequent,
+      "x>=3 ==> x>=2".asSequent,
+      "x>=3 ==> [{x:=x+1;}]x>=3".asSequent
+    )
+  }
+
   "I gen" should "work on a simple example" in withTactics {
     val succ@Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
     val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
@@ -464,11 +516,21 @@ class DLTests extends TacticTestBase {
   }
 
   "Convergence" should "work in easy case" in withTactics {
-    val result = proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1))
-    result.subgoals should have size 3
-    result.subgoals(0) shouldBe "==> \\exists v_ v_>x".asSequent
-    result.subgoals(1) shouldBe "v_<=0, v_>x ==> x < 0".asSequent
-    result.subgoals(2) shouldBe "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent
+    proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase, BelleLabels.useCase, BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "==> \\exists v_ v_>x".asSequent,
+      "v_<=0, v_>x ==> x < 0".asSequent,
+      "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent)
+  }
+
+  it should "work as rule" in withTactics {
+    proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.conRule("v_".asVariable, "v_>x".asFormula)(1), _.value should contain theSameElementsAs List(
+      BelleLabels.initCase, BelleLabels.useCase, BelleLabels.indStep
+    )).subgoals should contain theSameElementsAs List(
+      "==> \\exists v_ v_>x".asSequent,
+      "v_<=0, v_>x ==> x < 0".asSequent,
+      "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent)
   }
 
   it should "work with preconditions" in withTactics {
@@ -771,6 +833,13 @@ class DLTests extends TacticTestBase {
     //@todo last step (implyR) in assignEquality step used in discreteGhost changes position
     val result = proveBy("a=1 ==> b=2, [x:=5+0;]x>0, c=3".asSequent, discreteGhost("0".asTerm, Some("z".asVariable))(2))
     result.subgoals.loneElement shouldBe "a=1, z=0 ==> b=2, [x:=5+z;]x>z, c=3".asSequent
+  }
+
+  it should "introduce differential symbol ghosts" in withTactics {
+    proveBy("==> y=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]y=x'".asSequent
+    proveBy("==> x=1".asSequent, discreteGhost("1".asTerm, Some("x'".asVariable))(1)).subgoals.
+      loneElement shouldBe "==> [x':=1;]x=x'".asSequent
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in withTactics {

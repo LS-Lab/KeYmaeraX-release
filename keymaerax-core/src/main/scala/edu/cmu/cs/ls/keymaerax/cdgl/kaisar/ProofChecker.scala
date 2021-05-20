@@ -226,6 +226,15 @@ object ProofChecker {
     }
   }
 
+  private def guardDone(con: Context,  delta: Term, interpF: Formula): Boolean = {
+    con.getFor match {
+      case Some(fr: For) =>
+        val postCond = Metric.weakNegation(fr.guard.f, delta)
+        interpF == postCond
+      case _ => false
+    }
+  }
+
   /** @return unit if f proves by method [[m]], else throw. */
   private def apply(con: Context, f: Formula, m: Method, outerStatement: ASTNode = Triv()): Unit = {
     val query = methodAssumptions(con, m, f)
@@ -247,6 +256,7 @@ object ProofChecker {
         val branches = FormulaTools.disjuncts(interpF)
         qeAssert (exhaustive(branches), assms, f, m, outerStatement)
       // discharge goal with structured proof
+      case GuardDone(Some(delta)) => qeAssert(guardDone(con, delta, interpF), assms, f, m, outerStatement)
       case ByProof(proof: Statements) => apply(con, proof)
     }
     ProofOptions.countBranches()
@@ -324,7 +334,7 @@ object ProofChecker {
   }
 
   private case class ODEContext(c: Context, header: ODEProofHeader) {
-    def dropPhi: ODEContext = ODEContext(c.dropPhi, header)
+    def bakePhi: ODEContext = ODEContext(c.bakePhi, header)
     def applyPhi(fml: Formula): Formula = SubstitutionHelper.replacesFree(fml)({case v: Variable => header.phiAssigns.get(v) case _ => None})
     def containsFact(fml: Formula, shouldApplyPhi: Boolean = true): Boolean = {
       val fmls = if (shouldApplyPhi) Set(fml, applyPhi(fml)) else Set(fml)
@@ -334,13 +344,16 @@ object ProofChecker {
   }
   private object ODEContext {
       def apply(c: Context): ODEContext = {
-        val last = c.lastBlock
+        val last = c.lastBlockSmall
         val header = last.ss.foldLeft(ODEProofHeader.empty)({case (acc, s) =>
           s match {
             case Phi(Modify(ps, (x, Some(f)) :: Nil)) =>
               acc.addFact(ps.headOption, Equal(x, f)).addPhiAssign(x, f)
             case Ghost(Modify(ps, (x, Some(f)) :: Nil)) =>
               acc.addFact(ps.headOption, Equal(x, f)).addGhostAssign(x, f)
+            //case Modify(ps, (x, None) :: Nil) => acc.
+              ////acc.addAssign()
+              //acc.addFact(ps.headOption, Equal(x, f)).addAssign(x, f)
             case Modify(ps, (x, Some(f)) :: Nil) =>
               acc.addFact(ps.headOption, Equal(x, f)).addAssign(x, f)
             case Ghost(Note(x, pt, Some(fml))) => acc.addFact(Some(x), fml)
@@ -415,7 +428,7 @@ object ProofChecker {
     val DomAssert(x, plainF, m) = assertion
     val f = discreteCon.c.elaborateStable(plainF)
     val methAssumps = m.selectors
-    val fullSols = proveODE.solutions.get
+    val fullSols = proveODE.proofSolutions.get
     val sols = fullSols.filter({case ((x, f)) => !proveODE.timeVar.contains(x) })
     val subSol = solveFml(sols, f)
     val subContext = odeContext.map({
@@ -436,7 +449,7 @@ object ProofChecker {
 
   private def inductAssertion(odeCon: ODEContext, domainFacts: List[DomainFact], proveODE: ProveODE, assertion: DomAssert, coll: DomCollection): DomAssert = {
     val baseConBC = domainFacts.foldLeft(odeCon.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
-    val baseConIH = domainFacts.foldLeft(odeCon.dropPhi.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
+    val baseConIH = domainFacts.foldLeft(odeCon.bakePhi.c)({case (acc, df) => acc.:+(df.mapF(odeCon.c.elaborateStable).asStatement)})
     val DomAssert(x, plainF, m) = assertion
     val f = odeCon.c.elaborateStable(plainF)
     val discreteAssumps = coll.assumptions.toList.map({case DomAssume(x, f) => Assume(x, odeCon.c.elaborateStable(f))})
@@ -522,11 +535,16 @@ object ProofChecker {
   /** Throw an exception if proveODE unsoundly reuses variables from context. Assumes SSA. */
   private def checkODEContext(kc: ODEContext, proveODE: ProveODE): Unit = {
     val bv = VariableSets(proveODE).boundVars.filter(_.isInstanceOf[BaseVariable])
-    val kv = VariableSets(kc.c.s)
-    val taboo = kv.freeVars ++ kv.boundVars
-    val clash = bv.intersect(taboo)
-    if (clash.nonEmpty)
-      throw ODEAdmissibilityException(clash, node = proveODE)
+    val lasts = kc.c.lastBlock.ss.reverse.takeWhile(x => x.isInstanceOf[Phi])
+    lasts match {
+      case phiBlock =>
+        val kvJustPhi = VariableSets(Block(phiBlock)).boundVars
+        val clash = bv -- kvJustPhi
+        if (clash.nonEmpty)
+          throw ODEAdmissibilityException(clash, node = proveODE)
+      case _ =>
+        throw ODEAdmissibilityException(bv, node = proveODE)
+    }
   }
 
     /**  Check a differential equation proof */
@@ -609,6 +627,7 @@ object ProofChecker {
   * by that elaborated program */
   def apply(con: Context, s: Statement): (Context, Formula) = {
     Pragmas.listen(con, s)
+    val (Context(resS), resF) =
     s match {
       case Assert(x , f, m) =>
         val taboo: Set[Variable] = if (con.isGhost) Set() else VariableSets(con).tabooVars
@@ -617,6 +636,7 @@ object ProofChecker {
         if(debugNames.map(Variable(_): Term).contains(x)) {
           println("Checking debug assertion: " + x)
         }
+        con.sideEffect(s)
         apply(con, elabF, m, s)
         val conflict = taboo.intersect(StaticSemantics(elabF).fv.toSet)
         if (conflict.nonEmpty)
@@ -668,7 +688,7 @@ object ProofChecker {
         val Diamond(a, p) = asDiamond(fa)
         val fml = Diamond(Loop(a), p)
         (Context(ss), fml)
-      case fr@For(metX, plainMet0, plainMetIncr, plainMaybeConv, plainGuard, body) =>
+      case fr@For(metX, plainMet0, plainMetIncr, plainMaybeConv, plainGuard, body, guardEpsilon) =>
         // @TODO: Double check side conditions / edge cases
         // throws exception if metric ill-formed
         val taboos = VariableSets(body).boundVars
@@ -683,7 +703,6 @@ object ProofChecker {
         val met0 = con.elaborateStable(plainMet0)
         // check whether loop metric is well-founded, throw if not
         val metric = Metric(metX, metIncr, guard.f, taboos)
-        val termCond = metric.guardPost(metX)
         // check additional metric side condition if any, e.g. increment amount must have lower bound
         metric.sideCondition match {
           case None => ()
@@ -710,8 +729,13 @@ object ProofChecker {
         val progCon = ForProgress(progFor, Triv())
         // Check body
         val (sBody, fBody) = apply(con.:+(progCon), body)
+        val maybeStepConv = maybeConv.map(cnv => SubstitutionHelper.replacesFree(cnv.f)({
+          case bv: BaseVariable if bv == metX =>
+            Some(metIncr)
+          case _ => None
+        }))
         val indStepResults = sBody.lastFacts
-        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => maybeConv.exists({case Assert(x,f,m) => f == kElab})})
+        val indStepConv = indStepResults.find({case (kName, kFml, kElab) => maybeStepConv.contains(kElab)})
         // Check that convergence inductive step has been proven which matches the convergence condition, if there is any
         val cnvConcl: Formula =
         (indStepConv, maybeConv) match {
@@ -722,10 +746,11 @@ object ProofChecker {
         // NB: progress is ensured by side conditions / increment conditions, no separate proof needed in loop body */
         // Package proof results
         val Box(a, p) = asBox(fBody)
-        val theConcl = cnvConcl match {case True => termCond case f => And(f, termCond)}
+        val termCond = fr.guardDelta.map(gd => Metric.weakNegation(fr.guard.f, gd))
+        val theConcl = (cnvConcl, termCond) match {case (True, Some(tc)) => tc case (f, None) => f case (f, Some(tc)) => And(f, tc)}
         // @TODO: reconsider result formula format. Complicated one here needed when proved formula mentions metX though
         val ff = Box(Compose(Compose(Assign(metX, met0),Dual(Loop(Compose(Dual(a), Assign(metX,metIncr))))), Dual(Test(theConcl))), True)
-        val ss = For(metX, met0, metIncr, maybeConv, guard, sBody.s)
+        val ss = For(metX, met0, metIncr, maybeConv, guard, sBody.s, guardEpsilon)
         (Context(ss), ff)
       case bl@BoxLoop(s: Statement, _) =>
         con.lastFact match {
@@ -770,7 +795,7 @@ object ProofChecker {
       case InverseGhost(s: Statement) =>
         val (ss, f) = apply(con.withInverseGhost, s)
         (Context(InverseGhost(ss.s)), f)
-      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (con.:+(s), True)
+      case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.empty, True)
       case Was(now, was) =>
         val (ss, f) = apply(con, now)
         (Context(Was(ss.s, was)), f)
@@ -800,5 +825,6 @@ object ProofChecker {
       case _: Triv | _: Label => (Context(s), True)
       case pr: Pragma => Pragmas.update(pr.ps); (Context(s), True)
     }
+    (Context(ASTNode.locate(resS, s)), resF)
   }
 }

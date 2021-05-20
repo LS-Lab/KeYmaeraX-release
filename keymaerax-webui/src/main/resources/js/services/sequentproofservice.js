@@ -1,5 +1,10 @@
 /** Makes a node that fetches its sequent lazily */
 makeLazyNode = function(http, userId, proofId, node) {
+  if (node.sequent) {
+    node.sequent.ante.forEach(function(f, i) { f.use = true; });
+    node.sequent.succ.forEach(function(f, i) { f.use = true; });
+  }
+
   /** Returns a sequent object that may be filled in later. Use callback to wait for a filled sequent. */
   node.getSequent = function(callback) {
     var theNode = node;
@@ -204,18 +209,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     /** The tactic model */
     tactic: {
       tacticText: "",
-      lastExecutedTacticText: "",
-      currentSuggestions: undefined,
-      tacticDiff: "",
-      tacticDel: "",
+      snapshot: undefined,
 
       fetch: function(userId, proofId) {
         var theTactic = this;
+        theTactic.synced = false;
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract').then(function (response) {
+          theTactic.snapshot = response.data.tacticText;
           theTactic.tacticText = response.data.tacticText;
-          theTactic.lastExecutedTacticText = theTactic.tacticText;
-          theTactic.tacticDiff = "";
-          theTactic.tacticDel = "";
         })
         .catch(function(data) {
           $rootScope.$broadcast('tactic.extractError', userId, proofId);
@@ -224,10 +225,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
       reset: function() {
         this.tacticText = "";
-        this.lastExecutedTacticText = "";
-        this.tacticDiff = "";
-        this.tacticDel = "";
-        this.currentSuggestions = undefined;
+        this.snapshot = undefined;
       }
     },
 
@@ -347,10 +345,6 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.modelId = response.data.modelId;
           theAgenda.itemsMap = response.data.agendaItems;
           $.each(response.data.proofTree.nodes, function(i, v) {
-            if (v.sequent) {
-              v.sequent.ante.forEach(function(f, i) { f.use = true; });
-              v.sequent.succ.forEach(function(f, i) { f.use = true; });
-            }
             makeLazyNode($http, userId, proofId, v);
           });
           theProofTree.nodesMap = response.data.proofTree.nodes;
@@ -386,6 +380,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         var oldAgendaItem = theAgenda.itemsMap[proofUpdate.parent.id];
         $.each(proofUpdate.newNodes, function(i, node) {
           // update tree
+
           theProofTree.nodesMap[node.id] = makeLazyNode($http, userId, proofId, node);
           var parent = theProofTree.nodesMap[node.parent]
           if (parent.children === undefined || parent.children === null) parent.children = [node.id];

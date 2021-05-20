@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -540,7 +540,7 @@ case class DbLoadedProofTreeNode(db: DBAbstraction,
   /** The node label. */
   override def label: Option[BelleLabel] = step match {
     case None => None
-    case Some(s) => nameLabel.flatMap(_._2.lift(goalIdx))
+    case Some(_) => nameLabel.flatMap(_._2.lift(goalIdx))
   }
 
   /** A local provable, whose subgoals are filled in by the node's children. Triggers a database operation if the node's
@@ -648,7 +648,10 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
 
   /** The tactic to produce this tree from its root conclusion. */
-  override def tacticString: String = { load(); new ExtractTacticFromTrace(db).getTacticString(this) }
+  override def tacticString: String = {
+    load()
+    new VerboseTraceToTacticConverter(dbDefs).getTacticString(this)
+  }
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed
@@ -703,12 +706,14 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   // cached db query results
   private lazy val dbProofInfo = db.getProofInfo(proofId)
 
-  private lazy val dbSubsts = {
+  private lazy val dbDefs = {
     info.modelId.map(db.getModel).map(m => ArchiveParser.parser(m.keyFile)) match {
-      case Some(e :: Nil) => e.defs.substs
-      case _ => Nil
+      case Some(e :: Nil) => e.defs
+      case _ => Declaration(Map.empty)
     }
   }
+
+  private lazy val dbSubsts = dbDefs.substs
 
   private lazy val dbRoot = locate(DbStepPathNodeId(None, None)).get
 
