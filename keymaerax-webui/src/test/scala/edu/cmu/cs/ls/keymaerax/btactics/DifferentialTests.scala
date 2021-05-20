@@ -492,6 +492,13 @@ class DifferentialTests extends TacticTestBase {
     )
   }
 
+  "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
+    val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
+    proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = false)(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = true)(1)) shouldBe 'proved
+  }
+
   "Derive" should "derive quantifiers" in withTactics {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\forall x x'>=0".asSequent
   }
