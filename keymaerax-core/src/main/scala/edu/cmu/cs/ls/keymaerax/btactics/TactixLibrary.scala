@@ -401,7 +401,7 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(autoClose & done) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(auto(gen, keepQEFalse=None) & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
@@ -414,7 +414,7 @@ object TactixLibrary extends HilbertCalculus
                   logger.warn("ChooseSome: error listing options " + err, err)
                   List[Formula]().iterator
               },
-              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(autoClose) & done
+              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(auto(gen, keepQEFalse=None) & done) & done
             )
       }
     case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")
