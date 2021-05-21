@@ -1104,10 +1104,10 @@ private object DifferentialTactics extends Logging {
         case (True, Some(PegasusProofHint(true, Some("PreInv")))) =>
           val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
-          diffCut(preInv)(pos) <(
+          diffCut(preInv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(<(
             skip,
             odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
-          )
+          ), throw new BelleNoProgress("Pre-invariant already present in evolution domain constraint"))
         case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
           odeInvariant(tryHard = true, useDw = true)(pos) & done
         case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
@@ -1120,8 +1120,8 @@ private object DifferentialTactics extends Logging {
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
           DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-            /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-            diffCut(inv)(pos) <(
+            /*@note diffCut skips previously cut in invs, fail with BelleNoProgress and try the next candidate */
+            diffCut(inv)(pos) & Idioms.doIfElse(_.subgoals.size == 2)(<(
               skip,
               proofHint match {
                 case Some(PegasusProofHint(_, Some("Barrier"))) =>
@@ -1138,7 +1138,9 @@ private object DifferentialTactics extends Logging {
                 case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
                 case _ => odeInvariant(tryHard = false, useDw = false)(afterCutPos) & done
               }
-            ) &
+            ),
+            throw new BelleNoProgress("Invariant already present in evolution domain constraint")
+          ) &
           // continue outside <(skip, ...) so that cut is proved before used
           (odeInvariant()(pos) & done | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
