@@ -1765,7 +1765,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           }
         } else {
           val innerTree = DbProofTree(db, localProofId.toString).load()
-          val stepDetails = innerTree.tacticString
+          val stepDetails = innerTree.tacticString(new VerboseTraceToTacticConverter(_))
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
@@ -1794,7 +1794,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(_)), innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -2587,7 +2587,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-      val tactic = tree.tacticString
+      val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
       // remember tactic string
       val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
         tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
@@ -2690,10 +2690,13 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
   }
 }
 
-class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
+class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
-    val tactic = tree.tacticString
+    val tactic = tree.tacticString(
+      if (verbose) new VerboseTraceToTacticConverter(_)
+      else new SuccinctTraceToTacticConverter(_)
+    )
     // remember tactic string
     val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
@@ -2728,7 +2731,7 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val tactic = tree.tacticString
+    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
     val provable = tree.root.provable
     val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
       "tool" -> "KeYmaera X",
@@ -2759,7 +2762,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     val proofName = tree.info.name
-    val tactic = tree.tacticString
+    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
     val model = db.getModel(tree.info.modelId.get)
 
     def getLemmas(model: ModelPOJO, tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
@@ -2806,7 +2809,7 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
   extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     def modelProofs(modelId: Int): List[(String, String)] = {
-      if (withProofs) db.getProofsForModel(modelId).map(p => p.name -> DbProofTree(db, p.proofId.toString).tacticString)
+      if (withProofs) db.getProofsForModel(modelId).map(p => p.name -> DbProofTree(db, p.proofId.toString).tacticString(new VerboseTraceToTacticConverter(_)))
       else Nil
     }
     val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)

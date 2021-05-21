@@ -343,6 +343,11 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         });
     }
   }
+
+  $scope.toggleTacticVerbosity = function() {
+    sequentProofData.tactic.verbose = !sequentProofData.tactic.verbose;
+    sequentProofData.tactic.fetch($scope.userId, $scope.proofId);
+  }
 });
 
 angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
