@@ -44,7 +44,7 @@ object ArithmeticSimplification {
     assert(p.subgoals.length == 1, s"smartHide is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
       //Should already be sorted highest-to-lowest, but check just in case.
-      val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(x => x.index0).reverse
+      val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(_.index0).reverse
 
       //Build up a tactic that hides all non-relevant antecedent positions.
       proveBy(p,
@@ -86,8 +86,7 @@ object ArithmeticSimplification {
     hideAnte & hideSucc
   })
 
-
-  def replaceTransform(left:Term, right:Term) = transformEquality(Equal(left,right))
+  def replaceTransform(left: Term, right: Term): DependentPositionWithAppliedInputTactic = transformEquality(Equal(left, right))
   /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch
     */
@@ -96,15 +95,16 @@ object ArithmeticSimplification {
     //    transformEquality(equality f=g) -----------
     conclusion="Γ |- P(equalityLHS), Δ",
     displayLevel="browse")
-  def transformEquality(equality:Formula) : DependentPositionWithAppliedInputTactic = inputanon ((pos:Position, sequent:Sequent) => {
-      assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
-      val what = equality.asInstanceOf[Equal].left
-      val to   = equality.asInstanceOf[Equal].right
-      cutLR(sequent(pos.top).replaceFree(what, to))(pos) <(
+  def transformEquality(equality: Formula): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, seq: Sequent) => equality match {
+    case Equal(what, to) =>
+      //@todo find assumptions needed to prove transformation (remember dependencies) for Using(assumptions, QE)
+      cutLR(seq(pos.top).replaceFree(what, to))(pos) <(
         skip,
-        if (pos.isAnte) implyR('Rlast) & sequent.succ.indices.map(i => hideR(i+1)).reverse.foldLeft[BelleExpr](skip)((a, b) => a & b) & QE & done
-        else implyR(pos) & sequent.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.foldLeft[BelleExpr](skip)((a, b) => a & b) & QE & done
-      )})
+        if (pos.isAnte) implyR('Rlast) & seq.succ.indices.map(i => hideR(i+1)).reverse.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+        else implyR(pos) & seq.succ.indices.dropRight(1).map(i => hideR(i+1)).reverse.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+      )
+    case _ => throw new IllFormedTacticApplicationException(s"Expected equality but found ${equality.prettyString}")
+  })
 
 //  def abbreviate(f:Formula) = new AppliedDependentTactic("abbreviate") {
 //
