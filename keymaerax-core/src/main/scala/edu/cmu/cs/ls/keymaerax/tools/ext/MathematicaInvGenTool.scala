@@ -21,7 +21,7 @@ import scala.collection.immutable.Seq
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
+  extends BaseKeYmaeraMathematicaBridge[Expression](link, PegasusK2MConverter, PegasusM2KConverter)
     with InvGenTool with Logging {
 
   private val PEGASUS_NAMESPACE = "Pegasus`"

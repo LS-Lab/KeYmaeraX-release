@@ -79,11 +79,15 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
   override def m2k: M2KConverter[KExpr] = null
   override def apply(e: KExpr): MExpr = convert(e)
 
+  override protected def convertFormula(f: Formula): MExpr = f match {
+    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case _ => super.convertFormula(f)
+  }
+
   override protected[tools] def convertTerm(t: Term): MExpr = t match {
     case FuncOf(Function(name, index, Unit, Real, false), Nothing) =>
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
-    case FuncOf(Function(name, index, Unit, Bool, false), Nothing) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -91,11 +95,6 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
 object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
 
   private val baseConverter = new UncheckedBaseK2MConverter {
-    override protected def convertFormula(f: Formula): MExpr = f match {
-      case PredOf(fn@Function(_, _, Unit, Bool, false), Nothing) => CEXK2MConverter.this.convert(Right(fn))
-      case _ => super.convertFormula(f)
-    }
-
     override def convert(e: KExpr): MExpr = {
       //insist on less strict input: interpreted function symbols allowed here
       insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true }),
@@ -121,10 +120,8 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
   private[tools] def convert(e: Either[KExpr, NamedSymbol]): MExpr = e match {
     case Left(expr) => baseConverter.convert(expr)
     case Right(v: Variable) => baseConverter.convert(v)
-    case Right(Function(name, index, Unit, Real, false)) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
-    case Right(Function(name, index, Unit, Bool, false)) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case Right(fn@Function(_, _, Unit, Real, false)) => baseConverter.convert(FuncOf(fn, Nothing))
+    case Right(fn@Function(_, _, Unit, Bool, false)) => baseConverter.convert(PredOf(fn, Nothing))
   }
 
   override def m2k: M2KConverter[Either[KExpr, NamedSymbol]] = null
@@ -185,6 +182,34 @@ object IdentityConverter extends M2KConverter[MExpr] {
 
   /** @inheritdoc */
   override private[tools] def convert(e: MExpr): MExpr = e
+}
+
+object PegasusK2MConverter extends UncheckedBaseK2MConverter {
+  override protected def convertFormula(f: Formula): MExpr = f match {
+    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case _ => super.convertFormula(f)
+  }
+
+  override def convert(e: KExpr): MExpr = {
+    //insist on less strict input: interpreted function symbols allowed here
+    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true }),
+      "Interpreted functions must have expected domain and sort")
+    insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
+    e match {
+      case t: Term => convertTerm(t)
+      case f: Formula => convertFormula(f)
+      case _: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
+      case _: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
+    }
+  }
+
+  override protected[tools] def convertTerm(t: Term): MExpr = t match {
+    //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
+    case Differential(c) => ExtMathematicaOpSpec.primed(convert(c))
+    case DifferentialSymbol(c) => ExtMathematicaOpSpec.primed(convert(c))
+    case _ => super.convertTerm(t)
+  }
 }
 
 object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
