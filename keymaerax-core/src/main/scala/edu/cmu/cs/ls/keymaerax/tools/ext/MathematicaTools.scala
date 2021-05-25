@@ -112,7 +112,6 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
       //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
       case Differential(c) => ExtMathematicaOpSpec.primed(convert(c))
       case DifferentialSymbol(c) => ExtMathematicaOpSpec.primed(convert(c))
-      case FuncOf(fn@Function(_, _, Unit, Real, false), Nothing) => CEXK2MConverter.this.convert(Right(fn))
       case _ => super.convertTerm(t)
     }
   }
@@ -122,6 +121,7 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
     case Right(v: Variable) => baseConverter.convert(v)
     case Right(fn@Function(_, _, Unit, Real, false)) => baseConverter.convert(FuncOf(fn, Nothing))
     case Right(fn@Function(_, _, Unit, Bool, false)) => baseConverter.convert(PredOf(fn, Nothing))
+    case Right(e) => throw new IllegalArgumentException("Cannot convert " + e.prettyString)
   }
 
   override def m2k: M2KConverter[Either[KExpr, NamedSymbol]] = null
