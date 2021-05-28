@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.dbx
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
 import edu.cmu.cs.ls.keymaerax.btactics.{AxIndex, TacticTestBase}
@@ -15,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.DLArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -28,40 +30,34 @@ class ImplicitFunctionTests extends TacticTestBase {
 
   private def parse (input: String) = parser.parse(input).loneElement
 
-  """
-  Axiom "exp' derive exp"
-  (exp(f(||)))' = f(||)' * exp(f(||))
-  End.
+  private def markInterpreted(fn: Function, expr: Formula): Formula =
+    // change to substitution
+    expr.exhaustiveSubst(
+      USubst(Seq(
+        SubstitutionPair(
+          FuncOf(Function(fn.name, fn.index, fn.domain, fn.sort, interpreted = false),
+            DotTerm(s = fn.sort)),
+          FuncOf(Function(fn.name, fn.index, fn.domain, fn.sort, interpreted = true),
+            DotTerm(s = fn.sort))
+        )
+      ))
+    ).asInstanceOf[Formula]
 
-  sqrt(2)=a <-> a^2 = 2
-
-
-  ----
-  \forall x \exists e exp(e,x)
-  """
-
-  "throwaway" should "fail" in withMathematica { _ =>  }
+  "throwaway" should "fail" in withMathematica { _ => }
 
   "chase" should "use registered implicit differentials" in withMathematica { _ =>
-    val exp = Function("exp", None, Real, Real, true)
-
-    AxIndex.implFuncDiffs(exp) =
+    val fn = Function("e", None, Real, Real, interpreted = true)
+    /* (e(x))' = e(x) * (x)' */
+    AxIndex.implFuncDiffs(fn) =
       DifferentialAxiomInfo(
-        funcName = "exp",
-        funcOf = FuncOf(exp, Variable("x")), //exp(x)
-        diff = Times(FuncOf(exp, Variable("x")), Differential(Variable("x"))), //exp(x) * (x)'
+        funcName = "e",
+        funcOf = FuncOf(fn, Variable("x")),
+        diff = Times(FuncOf(fn, Variable("x")), Differential(Variable("x"))),
         theRecursor = (1::Nil)::Nil
       )
-    /* (e(x))' = e(x) * (x)' */
-
-    val subst = USubst(SubstitutionPair(
-      FuncOf(Function("e", None, Real, Real, false),DotTerm()),
-      FuncOf(exp,DotTerm()))::Nil)
-
-    val fml = "[y':=1;](e(y))' = e(y)*y'".asFormula.exhaustiveSubst(subst).asInstanceOf[Formula]
-
-    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & byUS(Ax.equalReflexive))
-
+    val fml = markInterpreted(fn, "[y':=1;](e(y))' = e(y)*y'".asFormula)
+    println(fml)
+    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
@@ -78,7 +74,10 @@ class ImplicitFunctionTests extends TacticTestBase {
         |End.
         |""".stripMargin
     val prog = parse(input)
-    val fml = prog.model.asInstanceOf[Formula]
+    val fml = markInterpreted(
+      Function("exp", None, Real, Real, interpreted = true),
+      prog.model.asInstanceOf[Formula])
+
     val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
@@ -96,18 +95,35 @@ class ImplicitFunctionTests extends TacticTestBase {
         |End.
         |""".stripMargin
     val prog = parse(input)
-    val fml = prog.model.asInstanceOf[Formula]
+    val fml = markInterpreted(
+      Function("sin", None, Real, Real, interpreted = true),
+      markInterpreted(
+        Function("cos", None, Real, Real, interpreted = true),
+        prog.model.asInstanceOf[Formula]))
 
     val proof = proveBy(fml, implyR(1) & dI()(1))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
 
-  it should "prove exp always positive" in withMathematica { _ =>
+  it should "prove exp always positive by Mathematica" in withMathematica { _ =>
     // Assumes exp already in the map (hack)
-    val fml = "exp(x) > 0 -> [{x'=1}] exp(x) > 0".asFormula
+    val fml = markInterpreted(
+      Function("exp", None, Real, Real, interpreted = true),
+      "exp(x) > 0 -> [{x'=1}] exp(x) > 0".asFormula)
 
     val proof = proveBy(fml, implyR(1))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+  }
+
+  it should "prove exp always positive within dL" in withMathematica { _ =>
+    // Assumes exp already in the map (hack)
+    val fml = markInterpreted(
+      Function("exp", None, Real, Real, interpreted = true),
+      "exp(x) > 0 -> [{x'=1}] exp(x) > 0".asFormula)
+
+    val proof = proveBy(fml, implyR(1) & dbx(Some("1".asTerm))(1))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
@@ -154,7 +170,7 @@ class ImplicitFunctionTests extends TacticTestBase {
 
   it should "prove an exponential solution" in withMathematica { _ =>
     val fml = "x=x0 & t=0 -> [{x'=x, t' =1}] x = x0*exp(t)".asFormula
-    val pr = proveBy(fml, skip)
+    val pr = proveBy(fml, dbx(Some("1".asTerm))(1))
     // may be provable using ODE(1) or dbx
 
     //println(pr)

@@ -231,7 +231,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     P("ImplicitDefinitions" ~~ blank ~/
       (declPart ~ "':=" ~ term ~ ";")
         .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), diff) =>
-          val func = Function(fnName, fnNameNum, argSort, Real)
+          val func = Function(fnName, fnNameNum, argSort, Real, interpreted = true)
           AxIndex.implFuncDiffs(func) =
             DifferentialAxiomInfo(
               funcName = fnName,
