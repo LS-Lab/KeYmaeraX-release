@@ -67,24 +67,15 @@ private object ToolTactics {
     if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
       seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
-    val doRcf = rcf(qeTool)
-
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
-    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
     val expand =
-      if (convertInterpretedSymbols) skip
+      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
       else EqualityTactics.expandAll &
         assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }),
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
-    val plainQESteps =
-      if (convertInterpretedSymbols) (closure & doRcf) :: (EqualityTactics.expandAll & closure & doRcf) :: Nil
-      else (closure & doRcf) :: Nil // expanded already
-
-    val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
-
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & plainQE
+    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & rcf(qeTool)
 
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
