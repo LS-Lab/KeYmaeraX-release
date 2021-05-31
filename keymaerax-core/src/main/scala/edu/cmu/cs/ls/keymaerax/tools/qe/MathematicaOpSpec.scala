@@ -217,6 +217,22 @@ object MathematicaOpSpec {
 
   //</editor-fold>
 
+  //<editor-fold desc="Modules">
+
+  def module: NaryMathOpSpec = NaryMathOpSpec(symbol("Module"))
+
+  def set: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Set"))
+
+  //</editor-fold>
+
+  //<editor-fold desc="Execution">
+  def waitNext: UnaryMathOpSpec = UnaryMathOpSpec(symbol("WaitNext"))
+
+  def parallelSubmit: UnaryMathOpSpec = UnaryMathOpSpec(symbol("ParallelSubmit"))
+
+  def abortKernels: NaryMathOpSpec = NaryMathOpSpec(symbol("AbortKernels"))
+  //</editor-fold>
+
   //<editor-fold desc="Diagnostics">
 
   def aborted: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$Aborted"))

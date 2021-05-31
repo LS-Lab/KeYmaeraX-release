@@ -947,7 +947,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
     val step = ExtMathematicaOpSpec.setDelayed(
         MathematicaOpSpec.symbol("kyx`step"),
         ExtMathematicaOpSpec.function(
-          ExtMathematicaOpSpec.module(
+          MathematicaOpSpec.module(
             MathematicaOpSpec.list(stepModuleInit:_*),
             ExtMathematicaOpSpec.findInstance(
               basek2m(stateRelation),

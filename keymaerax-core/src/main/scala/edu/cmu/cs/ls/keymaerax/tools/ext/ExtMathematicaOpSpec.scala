@@ -43,8 +43,6 @@ object ExtMathematicaOpSpec {
 
   def replaceAll: NaryMathOpSpec = NaryMathOpSpec(symbol("ReplaceAll"))
 
-  def module: NaryMathOpSpec = NaryMathOpSpec(symbol("Module"))
-
   def nestList: NaryMathOpSpec = NaryMathOpSpec(symbol("NestList"))
 
   def compoundExpression: NaryMathOpSpec = NaryMathOpSpec(symbol("CompoundExpression"))
