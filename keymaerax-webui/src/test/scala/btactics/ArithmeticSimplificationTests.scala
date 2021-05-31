@@ -5,87 +5,77 @@
 
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Bound, Sign, SignAnalysis}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, DebuggingTactics, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
   * @author Nathan Fulton
   */
-@SlowTest
-//@todo @IgnoreInBuildTest
 class ArithmeticSimplificationTests extends TacticTestBase {
   "smartHide" should "simplify x=1,y=1 ==> x=1 to x=1 ==> x=1" in withMathematica { _ =>
-    val tactic = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) & ArithmeticSimplification.smartHide
-    val result = proveBy("x=1 & y=1 -> x=1".asFormula, tactic)
-    result.subgoals(0).ante shouldBe result.subgoals(0).succ
+    proveBy("x=1, y=1 ==> x=1".asSequent, smartHide).subgoals.loneElement shouldBe "x=1 ==> x=1".asSequent
+  }
+
+  it should "simplify x>=1,x=1,y=1 ==> x=1 to x=1 ==> x=1" in withMathematica { _ =>
+    val result = proveBy("x>=1, x=1, y=1 ==> x>=0".asSequent, smartHide)
+    result.subgoals.loneElement shouldBe "x=1 ==> x>=0".asSequent
+  }
+
+  it should "hide implied facts" in withMathematica { _ =>
+    val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*(v_0/B), abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
+    proveBy(s, smartHide).subgoals.loneElement shouldBe "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
   }
 
   it should "not throw away transitivity info" in withMathematica { _ =>
-    val tactic = TactixLibrary.implyR(1) & SaturateTactic(andL('L)) & ArithmeticSimplification.smartHide
-    val goal = "x=y & y=z & z > 0 -> x>0".asFormula
-    val result = proveBy(goal, tactic)
-    result.subgoals(0).ante.length shouldBe 3
-    proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
+    val goal = "x=y, y=z, z>0 ==> x>0".asSequent
+    proveBy(goal, smartHide).subgoals.loneElement shouldBe "x=y, y=z, z>0 ==> x>0".asSequent
+    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe 'proved
   }
 
   it should "forget useless stuff" in withMathematica { _ =>
-    val tactic = TactixLibrary.implyR(1) & SaturateTactic(andL('L)) & ArithmeticSimplification.smartHide
-    val goal = "x>y & y>z & a > 0 & z > 0 -> x>0".asFormula
-    val result = proveBy(goal, tactic)
-    result.subgoals(0).ante.length shouldBe 3 //forget about a>0
-    result.subgoals(0).ante.contains("a>0".asFormula) shouldBe false
-    proveBy(goal, tactic & TactixLibrary.QE) shouldBe 'proved
+    val goal = "x>y, y>z, a>0, z>0 ==> x>0".asSequent
+    proveBy(goal, smartHide).subgoals.loneElement shouldBe "x>y, y>z, z>0 ==> x>0".asSequent
+    proveBy(goal, smartHide & TactixLibrary.QE) shouldBe 'proved
   }
 
   it should "forget useless stuff about ODEs" in withMathematica { _ =>
-    val tactic = TactixLibrary.implyR(1) & SaturateTactic(andL('L)) & ArithmeticSimplification.smartHide
-    val goal = "x>y & y>z & a > 0 & z > 0 -> [{x'=1}]x>0".asFormula
-    val result = proveBy(goal, tactic)
-    result.subgoals should have size 1
-    result.subgoals(0).ante.length shouldBe 3 //forget about a>0
-    result.subgoals(0).ante shouldNot contain ("a>0".asFormula)
-    proveBy(result.subgoals(0), diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe 'proved
+    val goal = "x>y, y>z, a>0, z>0 ==> [{x'=1}]x>0".asSequent
+    val result = proveBy(goal, smartHide)
+    result.subgoals.loneElement shouldBe "x>y, y>z, z>0 ==> [{x'=1}]x>0".asSequent
+    proveBy(result.subgoals.loneElement, diffInvariant("x>0".asFormula)(1) & dW(1) & QE) shouldBe 'proved
   }
 
   "smartSuccHide" should "simplify x=1 ==> x-1,y=1 to x=1 ==> x=1" in {
-    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
-    val result = proveBy("x=1 -> x=1 | y=1".asFormula, tactic)
-    result.subgoals(0).succ shouldBe result.subgoals(0).ante
+    proveBy("x=1 ==> x=1, y=1".asSequent, smartSuccHide).subgoals.loneElement shouldBe "x=1 ==> x=1".asSequent
   }
 
   it should "simplify x=1 ==> x-1,y=x to x=1 ==> x=1" in {
-    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
-    val result = proveBy("x=1 -> x=1 | y=x".asFormula, tactic)
-    result.subgoals(0).succ shouldBe result.subgoals(0).ante
+    proveBy("x=1 ==> x=1, y=x".asSequent, smartSuccHide).subgoals.loneElement shouldBe "x=1 ==> x=1".asSequent
   }
 
   it should "simplify x=1 ==> x-1,[y'=1}y>0 to x=1 ==> x=1" in {
-    val tactic = implyR(1) & orR(1) & ArithmeticSimplification.smartSuccHide
-    val result = proveBy("x=1 -> x=1 | [{y'=1}]y>0".asFormula, tactic)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1".asFormula
-    result.subgoals.head.succ should contain only "x=1".asFormula
+    proveBy("x=1 ==> x=1, [{y'=1}]y>0".asSequent, smartSuccHide).subgoals.loneElement shouldBe "x=1 ==> x=1".asSequent
   }
 
   "replaceTransform" should "work in the antecedent" in withMathematica { _ =>
-    proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> x>=x_0+v*t".asFormula,
-      prop & transformEquality("ep=t".asFormula)(-3) & id) shouldBe 'proved
+    proveBy("t<=ep, v>=0, x>=x_0+v*ep ==> x>=x_0+v*t".asSequent,
+      transformEquality("ep=t".asFormula)(-3) & id) shouldBe 'proved
   }
 
   it should "work in the succedent" in withMathematica { _ =>
-    proveBy("t<=ep & v>=0 & x>=x_0+v*ep -> a<5 | x>=x_0+v*t | b<7".asFormula,
-      prop & transformEquality("t=ep".asFormula)(2) & id) shouldBe 'proved
+    proveBy("t<=ep, v>=0, x>=x_0+v*ep ==> a<5, x>=x_0+v*t, b<7".asSequent,
+      transformEquality("t=ep".asFormula)(2) & id) shouldBe 'proved
   }
 
   "absQE" should "prove abs(x-y)>=t -> abs(x-y+0)>=t+0" in withMathematica { _ =>
@@ -114,16 +104,16 @@ class ArithmeticSimplificationTests extends TacticTestBase {
 
   "autoTransform" should "transform formulas from worst-case bounds to concrete variables" in withMathematica { _ =>
     val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
-    proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform) shouldBe "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=t, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
+    proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform).subgoals.loneElement shouldBe "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*t^2+t*(v_0+V())), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=t, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
   }
 
   it should "transform formulas from worst-case bounds to concrete variables (2)" in withMathematica { _ =>
     val s = "A()>0, -c*(v_0+a*c-a/2*c)<=y-y_0, y-y_0<=c*(v_0+a*c-a/2*c), B()>=b(), dx^2+dy^2=1, b()>0, c>=0, ep()>0, v_0+a*c>=0, c<=ep(), lw()>0, v_0>=0, r_0!=0, abs(y_0-ly())+v_0^2/(2*b()) < lw(), abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw(), -B()<=a, a<=A(), r!=0\n  ==>  abs(y-ly())+(v_0+a*c)^2/(2*b()) < lw()".asSequent
-    proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform) shouldBe "A()>0, -c*(v_0+a*c-a/2*c)<=y-y_0, y-y_0<=c*(v_0+a*c-a/2*c), B()>=b(), dx^2+dy^2=1, b()>0, c>=0, ep()>0, v_0+a*c>=0, c<=c, lw()>0, v_0>=0, r_0!=0, abs(y_0-ly())+v_0^2/(2*b()) < lw(), abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*c^2+c*v_0) < lw(), -B()<=a, a<=A(), r!=0 ==> abs(y-ly())+(v_0+a*c)^2/(2*b()) < lw()".asSequent
+    proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform).subgoals.loneElement shouldBe "A()>0, -c*(v_0+a*c-a/2*c)<=y-y_0, y-y_0<=c*(v_0+a*c-a/2*c), B()>=b(), dx^2+dy^2=1, b()>0, c>=0, ep()>0, v_0+a*c>=0, c<=c, lw()>0, v_0>=0, r_0!=0, abs(y_0-ly())+v_0^2/(2*b()) < lw(), abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*c^2+c*v_0) < lw(), -B()<=a, a<=A(), r!=0 ==> abs(y-ly())+(v_0+a*c)^2/(2*b()) < lw()".asSequent
   }
 
   "Sign analysis" should "compute seed from antecedent" in {
-    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
+    val s = "A>=0, -B<0, v^2<=2*B*(m-x), A<0, 2*C-C^2>=0 ==> x<=m".asSequent
     SignAnalysis.seedSigns(s) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -144,7 +134,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   it should "aggregate signs from seed" in {
-    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
+    val s = "A>=0, -B<0, v^2<=2*B*(m-x), A<0, 2*C-C^2>=0 ==> x<=m".asSequent
     SignAnalysis.aggregateSigns(SignAnalysis.seedSigns(s)) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -164,10 +154,9 @@ class ArithmeticSimplificationTests extends TacticTestBase {
       )
   }
 
-  it should "pushDown signs from seed after aggregation" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
-    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
+  it should "pushDown signs from seed after aggregation" in {
+    val s = "A>=0, -B<0, v^2<=2*B*(m-x), A<0, 2*C-C^2>=0 ==> x<=m".asSequent
     val seed = SignAnalysis.seedSigns(s)
-    println("Seed\n" + seed.mkString("\n"))
     SignAnalysis.pushDownSigns(SignAnalysis.aggregateSigns(seed)) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2)/*, SeqPos(-3)*/)),
@@ -187,8 +176,8 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     )
   }
 
-  it should "pingpong until fixpoint" taggedAs KeYmaeraXTestTags.IgnoreInBuildTest in {
-    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "A<0".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
+  it should "pingpong until fixpoint" in {
+    val s = "A>=0, -B<0, v^2<=2*B*(m-x), A<0, 2*C-C^2>=0 ==> x<=m".asSequent
     SignAnalysis.computeSigns(s) shouldBe Map(
       "A".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-1)), Sign.Neg0 -> Set(SeqPos(-4))),
       "B".asVariable -> Map(Sign.Pos0 -> Set(SeqPos(-2))),
@@ -252,7 +241,7 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Bound computation" should "compute wanted bounds from succedent" in {
-    val s = Sequent(IndexedSeq("A>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula), IndexedSeq("x+5<=m".asFormula, "v^2<=2*B*(m-x)".asFormula))
+    val s = "A>=0, -B<0, v^2<=2*B*(m-x) ==> x+5<=m, v^2<=2*B*(m-x)".asSequent
     val signs = SignAnalysis.computeSigns(s)
     SignAnalysis.bounds(s.succ, signs, SuccPos) shouldBe Map(
       SeqPos(1) -> Map(
@@ -292,36 +281,27 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Bounds hiding" should "find formulas with non-matching bounds" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-
+    val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
     proveBy(s, QE) shouldBe 'proved
-
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-5)
   }
 
   it should "find formulas with non-matching bounds (2)" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula), IndexedSeq("x-xo >= 2*V*t".asFormula))
-
+    val s = "-t*V <= x-x_0, x-x_0 <= t*V, V>=0, t>=0 ==> x-xo >= 2*V*t".asSequent
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
   it should "not choke on !=" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("-t*V <= x-x_0".asFormula, "x-x_0 <= t*V".asFormula, "V>=0".asFormula, "t>=0".asFormula, "r!=0".asFormula), IndexedSeq("x-xo >= 2*V*t".asFormula))
-
+    val s = "-t*V <= x-x_0, x-x_0 <= t*V, V>=0, t>=0, r!=0 ==> x-xo >= 2*V*t".asSequent
     SignAnalysis.boundHideCandidates(s) should contain only SeqPos(-2)
   }
 
   it should "hide formulas with non-matching bounds" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-
+    val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
     proveBy(s, QE) shouldBe 'proved
-
     val boundHidden = proveBy(s, ArithmeticSpeculativeSimplification.hideNonmatchingBounds)
-    boundHidden.subgoals should have size 1
-    boundHidden.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "2*C-C^2>=0".asFormula)
-    boundHidden.subgoals.head.succ should contain only "x<=m".asFormula
-
-    proveBy(boundHidden.subgoals.head, ArithmeticSpeculativeSimplification.speculativeQE) shouldBe 'proved
+    boundHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0, 2*C-C^2>=0 ==> x<=m".asSequent
+    proveBy(boundHidden.subgoals.loneElement, ArithmeticSpeculativeSimplification.speculativeQE) shouldBe 'proved
   }
 
   it should "work on a Robix example" in withMathematica { _ =>
@@ -337,30 +317,21 @@ class ArithmeticSimplificationTests extends TacticTestBase {
   }
 
   "Sign hiding" should "find inconsistent sign formulas" in {
-    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-
+    val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
     SignAnalysis.signHideCandidates(s) should contain theSameElementsAs List(SeqPos(-2), SeqPos(-3), SeqPos(-5), SeqPos(-6), SeqPos(1))
   }
 
   it should "hide inconsistent sign formulas" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-
+    val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
     proveBy(s, ArithmeticSpeculativeSimplification.hideInconsistentSigns & QE) shouldBe 'proved
   }
 
   "Multiple hidings together" should "figure it out" in withMathematica { _ =>
-    val s = Sequent(IndexedSeq("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "x>m".asFormula, "2*C-C^2>=0".asFormula), IndexedSeq("x<=m".asFormula))
-
+    val s = "v>=0, -B<0, v^2<=2*B*(m-x), v<0, x>m, 2*C-C^2>=0 ==> x<=m".asSequent
     val boundHidden = proveBy(s, ArithmeticSpeculativeSimplification.hideNonmatchingBounds)
-    boundHidden.subgoals should have size 1
-    boundHidden.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula, "2*C-C^2>=0".asFormula)
-    boundHidden.subgoals.head.succ should contain only "x<=m".asFormula
-
-    val smartHidden = proveBy(boundHidden.subgoals.head, smartHide)
-    smartHidden.subgoals should have size 1
-    smartHidden.subgoals.head.ante should contain theSameElementsAs List("v>=0".asFormula, "-B<0".asFormula, "v^2<=2*B*(m-x)".asFormula, "v<0".asFormula)
-    smartHidden.subgoals.head.succ should contain only "x<=m".asFormula
-
-    proveBy(smartHidden.subgoals.head, QE) shouldBe 'proved
+    boundHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0, 2*C-C^2>=0 ==> x<=m".asSequent
+    val smartHidden = proveBy(boundHidden.subgoals.loneElement, smartHide)
+    smartHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0 ==> x<=m".asSequent
+    proveBy(smartHidden.subgoals.loneElement, QE) shouldBe 'proved
   }
 }

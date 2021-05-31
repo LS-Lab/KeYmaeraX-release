@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 
 import scala.annotation.tailrec
 
@@ -40,17 +41,16 @@ object ArithmeticSimplification {
 //     smartHide -------------------------
     conclusion="Γ |- Δ",
     displayLevel="browse")
-  lazy val smartHide: BuiltInTactic = anon ( (p : ProvableSig) => {
+  lazy val smartHide: BuiltInTactic = anon ( (p: ProvableSig) => {
     assert(p.subgoals.length == 1, s"smartHide is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
-      //Should already be sorted highest-to-lowest, but check just in case.
-      val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(_.index0).reverse
+    //Should already be sorted highest-to-lowest, but check just in case.
+    val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(_.index0).reverse
 
-      //Build up a tactic that hides all non-relevant antecedent positions.
-      proveBy(p,
-        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition)))
-    })
+    //Build up a tactic that hides all non-relevant antecedent positions.
+    if (toHide.nonEmpty) proveBy(p, toHide.map(hideL(_)).reduce[BelleExpr](_ & _))
+    else p
+  })
 
   /** Simplifies arithmetic by removing formulas that are **probably** unprovable from the current facts.
     * Does not necessarily retain validity??? */
@@ -147,9 +147,13 @@ object ArithmeticSimplification {
   def irrelevantIndices(fmls: IndexedSeq[Formula], baseline: IndexedSeq[Formula]): Seq[Int] = {
     val theFilter: (Seq[(Formula, Int)], Set[NamedSymbol]) => Seq[(Formula, Int)] = transitiveRelevance //    relevantFormulas(s.ante.zipWithIndex, symbols(s.succ))
     val relevantIndexedFormulas = theFilter(fmls.zipWithIndex, symbols(baseline))
-    val complementOfRelevantFormulas = fmls.zipWithIndex.filter(x => !relevantIndexedFormulas.contains(x))
+    val relevantStrongestFormulas = ToolProvider.cexTool() match {
+      case Some(cex) => retainStrongest(relevantIndexedFormulas, cex)
+      case None => relevantIndexedFormulas
+    }
+    val complementOfRelevantFormulas = fmls.zipWithIndex.filter(!relevantStrongestFormulas.contains(_))
     //Sort highest-to-lowest so that we don't end up hiding the wrong stuff.
-    complementOfRelevantFormulas.map(x => x._2).sorted.reverse
+    complementOfRelevantFormulas.map(_._2).sorted.reverse
   }
 
   /** Returns only irrelevant antecedent positions. */
@@ -178,18 +182,34 @@ object ArithmeticSimplification {
     val relevantFmls = relevantFormulas(fmls, relevantSymbols)
     val newlyRelevantSymbols = symbols(relevantFmls.map(_._1)) -- relevantSymbols
 
-    if(newlyRelevantSymbols.isEmpty) relevantFmls
+    if (newlyRelevantSymbols.isEmpty) relevantFmls
     else transitiveRelevance(fmls, relevantSymbols ++ newlyRelevantSymbols) //sic: recurse on [[indexedFmls]], not [[relevantFmls]], because some of the previously irrelevant formulas might now be relevant.
+  }
+
+  /** Retains the strongest formulas in `fmls` (i.e., filters out formulas that are implied by other formulas). */
+  private def retainStrongest(fmls: Seq[(Formula, Int)], cex: CounterExampleTool): Seq[(Formula, Int)] = {
+    val (simpleFmls, complexFmls) = fmls.partition({ case (p, _) => StaticSemantics.symbols(p).size <= 1 })
+    val strongestSimpleFmls = retainStrongest(simpleFmls, True, cex)
+    val assumptions = strongestSimpleFmls.map(_._1).reduceRightOption(And).getOrElse(True)
+    strongestSimpleFmls ++ retainStrongest(complexFmls, assumptions, cex)
+  }
+
+  private def retainStrongest(fmls: Seq[(Formula, Int)], assumptions: Formula, cex: CounterExampleTool): Seq[(Formula, Int)] = {
+    val pairs = (for (i <- fmls; j <- fmls) yield (i, j)).filter({ case (i@(p, _), j@(q, _)) =>
+      i != j && StaticSemantics.symbols(q).subsetOf(StaticSemantics.symbols(p))
+    })
+    val irrelevant = pairs.filter({ case ((p, _), (q, _)) => cex.findCounterExample(Imply(And(assumptions, p), q)).isEmpty }).map(_._2)
+    fmls.filter(!irrelevant.contains(_))
   }
 
   /** Returns all formulas that mention a relevantSymbol, together with that formula's position in the original sequence. */
   private def relevantFormulas(indexedFmls: Seq[(Formula, Int)], relevantSymbols: Set[NamedSymbol]) : Seq[(Formula, Int)] = {
-    indexedFmls.filter(p => TacticHelper.symbols(p._1).intersect(relevantSymbols).nonEmpty)
+    indexedFmls.filter(p => StaticSemantics.symbols(p._1).intersect(relevantSymbols).nonEmpty)
   }
 
   /** Returns the union of all symbols mentioned in fmls. */
   private def symbols(fmls: Seq[Formula]) =
-    fmls.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ TacticHelper.symbols(nextFml))
+    fmls.foldLeft(Set[NamedSymbol]())((symbols, nextFml) => symbols ++ StaticSemantics.symbols(nextFml))
 
   //endregion
 }
