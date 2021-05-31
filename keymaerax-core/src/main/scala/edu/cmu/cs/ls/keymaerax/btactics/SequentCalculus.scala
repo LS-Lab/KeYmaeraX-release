@@ -666,6 +666,13 @@ trait SequentCalculus {
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
+  // Equality rewriting tactics
+
+  /** Expands all special functions (abs/min/max). */
+  def expandAll: BelleExpr = EqualityTactics.expandAll
+
+  /** Rewrites all atom equalities in the assumptions. */
+  def applyEqualities: BelleExpr = EqualityTactics.applyEqualities
 
   //  meta-tactics for proof structuring information but no effect
 
