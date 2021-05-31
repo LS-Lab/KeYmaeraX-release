@@ -135,7 +135,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             mQE.timeout = qeMaxTimeout
             mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
           case Some(cexFml) => Lemma(
-            ProvableSig.startProof(False),
+            ProvableSig.startProof(Equiv(formula, False)),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
         }
       case ex: MathematicaComputationUserAbortException => throw ex
