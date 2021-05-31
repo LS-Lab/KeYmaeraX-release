@@ -553,6 +553,11 @@ class TactixLibraryTests extends TacticTestBase {
       })(-1)).subgoals should contain theSameElementsInOrderAs List("==> x>0".asSequent, "y>0 ==>".asSequent)
   }
 
+  it should "chase in context" in withMathematica { _ =>
+    proveBy("==> \\forall x \\forall y [{?y>=x;y:=y^2; ++ y:=x;}]y>=x".asSequent, chaseAtX(1, PosInExpr(0::0::Nil))).
+      subgoals.loneElement shouldBe "==> \\forall x \\forall y ( (y>=x -> y^2>=x) & x>=x)".asSequent
+  }
+
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
     val vari = "x<v+1".asFormula

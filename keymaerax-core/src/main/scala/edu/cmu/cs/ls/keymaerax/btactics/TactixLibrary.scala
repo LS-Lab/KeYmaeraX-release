@@ -166,7 +166,7 @@ object TactixLibrary extends HilbertCalculus
 
   /** Chases program operators according to [[AxIndex]] or tactics according to `index`. */
   def chaseAt(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
-    seq.sub(pos) match {
+    if (pos.isTopLevel) seq.sub(pos) match {
       case Some(_) =>
         //@todo avoid recursion
         def recurse: DependentTactic = anon { (result: Sequent) => {
@@ -178,7 +178,7 @@ object TactixLibrary extends HilbertCalculus
         }}
         doStep(index)(pos) & recurse
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
-    }
+    } else chase(pos) //@todo forward index to chase
   })
 
   @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
