@@ -440,10 +440,10 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   /** DotTerms of different "colors" for components of a Tuple, uncolored DotTerm for non-Tuples
     * @example
     *   coloredDotsTerm(Real) = •
-    *   coloredDotsTerm(Real*Real) = (•_1, •_2)
-    *   coloredDotsTerm(Real*Real*Real) = (•_1, •_2, •_3)
+    *   coloredDotsTerm(Real*Real) = (•_0, •_1)
+    *   coloredDotsTerm(Real*Real*Real) = (•_0, •_1, •_2)
     * */
-  def coloredDotsTerm(s: Sort, color: Int = 1) : Term = {
+  def coloredDotsTerm(s: Sort, color: Int = 0) : Term = {
     def coloredDotsTermWithIndex(s: Sort, color: Int) : (Int, Term) = s match {
       case Tuple(l, r) => {
         val (colorLeft,  dotsLeft)  = coloredDotsTermWithIndex(l, color)
@@ -466,14 +466,14 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     *    `f(•) ~> ua^-1(e2)`
     *
     * @example given `t = (a, b)`, `e2 = a^2*b`
-    *   1) `unify((•_1, •_2), (a, b))` yields
-    *      `ua = •_1 ~> a, •_2 ~> b`
-    *   2) the inverse is `ua^-1 = a ~> •_1, b ~> •_2`, therefore
-    *      `ua^-1(e2) = •_1^2*•_2`, resulting in
-    *      `f(•_1, •_2) ~> (•_1^2*•_2)`
+    *   1) `unify((•_0, •_1), (a, b))` yields
+    *      `ua = •_0 ~> a, •_1 ~> b`
+    *   2) the inverse is `ua^-1 = a ~> •_0, b ~> •_1`, therefore
+    *      `ua^-1(e2) = •_0^2*•_1`, resulting in
+    *      `f(•_0, •_1) ~> (•_0^2*•_1)`
     *
     * the inverse substitution is applied top-down, i.e., larger abstractions get precedence when components of `t` overlap:
-    *   `t = (x, y, x + y)` and `e2 = x + y` yields `f(•_1, •_2, •_3) ~> •_3`; not `f(•_1, •_2, •_3) ~> •_1 + •_2`
+    *   `t = (x, y, x + y)` and `e2 = x + y` yields `f(•_0, •_1, •_2) ~> •_2`; not `f(•_0, •_1, •_2) ~> •_0 + •_1`
     * */
   protected def unifyApplicationOf(F: (Function, Term) => Expression, f: Function, t: Term, e2: Expression): List[SubstRepl] = {
     val dt = coloredDotsTerm(t.sort)
