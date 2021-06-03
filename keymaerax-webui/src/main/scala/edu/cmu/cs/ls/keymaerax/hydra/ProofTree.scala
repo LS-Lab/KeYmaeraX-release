@@ -186,7 +186,7 @@ trait ProofTreeNode {
       val subst = RenUSubst(minSubsts.map(sp => sp.what -> sp.repl)).usubst
       unificationSubst(goal, sub, subst)
     } else {
-      unificationSubst(goal, sub, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)
+      unificationSubst(goal, sub, USubst(Nil))
     }
   }
 
