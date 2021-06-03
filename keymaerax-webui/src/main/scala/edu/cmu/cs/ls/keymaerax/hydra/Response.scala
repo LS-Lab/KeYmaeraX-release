@@ -710,6 +710,7 @@ object Helpers {
         wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
       case p: Program => print(q, "program", hasStep=false, isEditable=false, expr.prettyString, printPrgJson(q, p, fp))
       case d: Differential => print(q, expr.prettyString, "term", fp)
+      case t@Neg(Number(_)) => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: (print("(", fp)::printJson(q ++ 0, t.child, fp)::print(")", fp)::Nil))
       case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp))
       case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString,
         wrapLeft(t, printJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right, fp), fp))
