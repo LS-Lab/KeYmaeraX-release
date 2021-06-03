@@ -464,6 +464,29 @@ class EqualityTests extends TacticTestBase {
       "y=x, [{y'=y}]y>=0 ==> [{x'=x}]x>=0, y=x".asSequent)
   }
 
+  it should "rename quantified differential symbols" in withQE { _ =>
+    proveBy("\\forall x' x'>0 ==>".asSequent, SequentCalculus.alphaRen("x".asVariable, "y".asVariable)(-1)).
+      subgoals should contain theSameElementsInOrderAs List(
+        "\\forall y' y'>0 ==>".asSequent,
+        "\\forall x' x'>0 ==> x=y".asSequent
+    )
+  }
+
+  it should "rename quantified differential symbols inside differentials" in withQE { _ =>
+    proveBy("\\forall x' (f(x))'>0 ==>".asSequent, SequentCalculus.alphaRen("x".asVariable, "y".asVariable)(-1)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "\\forall y' (f(y))'>0 ==>".asSequent,
+      "\\forall x' (f(x))'>0 ==> x=y".asSequent
+    )
+    proveBy("\\forall x' (f(x))'>0 ==>".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "\\forall y' (f(y))'>0 ==>".asSequent,
+      "\\forall x' (f(x))'>0 ==> x=y".asSequent
+    )
+    proveBy("x=y, \\forall x' (f(x))'>0 ==> ".asSequent, SequentCalculus.alphaRenAllBy(-1)).
+      subgoals.loneElement shouldBe "x=y, \\forall y' (f(y))'>0 ==>".asSequent
+  }
+
   "Alpha renaming all" should "rename in ODEs in succedent" in withQE { _ =>
     val result = proveBy("x=y, [{y'=y}]y>=0 ==> [{x'=x}]x>=0".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable))
     result.subgoals.loneElement shouldBe "x=y, [{y'=y}]y>=0 ==> [{y'=y}]y>=0".asSequent

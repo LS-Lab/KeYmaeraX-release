@@ -5,6 +5,7 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
  * See LICENSE.txt for the conditions of this license.
  */
 
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
@@ -29,7 +30,10 @@ import scala.collection.immutable._
 @UsualTest
 class UnificationMatchTest extends SystemTestBase {
 
-  val matcher = if (true) UnificationMatch else new FreshPostUnificationMatch
+  val matcher = {
+    Configuration.setConfiguration(FileConfiguration)
+    if (true) UnificationMatch else new FreshPostUnificationMatch
+  }
   private def Subst(subs: immutable.Seq[(Expression,Expression)]): RenUSubst = if (!semanticRenaming) RenUSubst(subs) else
     new FastURenAboveUSubst(subs)
   private def Subst(us: USubst): RenUSubst = Subst(us.subsDefsInput.map(sp=>(sp.what,sp.repl)))
@@ -564,8 +568,8 @@ class UnificationMatchTest extends SystemTestBase {
     shouldUnify("3+f(x,y)".asTerm,
       "3+(x^2+y)".asTerm, USubst(
         SubstitutionPair(
-          "f((•_1,•_2))".asTerm,
-          "•_1^2+•_2".asTerm
+          "f((•_0,•_1))".asTerm,
+          "•_0^2+•_1".asTerm
         ) :: Nil
       ))
   }
@@ -574,8 +578,8 @@ class UnificationMatchTest extends SystemTestBase {
     shouldUnify("3+f(x,y,z)".asTerm,
       "3+(x^y+z)".asTerm, USubst(
         SubstitutionPair(
-          "f((•_1,•_2,•_3))".asTerm,
-          "•_1^•_2+•_3".asTerm
+          "f((•_0,•_1,•_2))".asTerm,
+          "•_0^•_1+•_2".asTerm
         ) :: Nil
       ))
   }
@@ -584,29 +588,29 @@ class UnificationMatchTest extends SystemTestBase {
   it should "unify renaming and instance p(x,y) and x*y>5" in {
     shouldMatch("p(x,y)".asFormula,
       "x*y>5".asFormula, Subst(
-        ("p((•_1,•_2))".asFormula,
-          "•_1*•_2>5".asFormula) :: Nil
+        ("p((•_0,•_1))".asFormula,
+          "•_0*•_1>5".asFormula) :: Nil
       ))
   }
 
   it should "unify renaming and instance p(x,y,z) and x*y>z" in {
     shouldMatch("p(x,y,z)".asFormula,
       "x*y>z".asFormula, Subst(
-        ("p((•_1,•_2,•_3))".asFormula,
-          "•_1*•_2>•_3".asFormula) :: Nil
+        ("p((•_0,•_1,•_2))".asFormula,
+          "•_0*•_1>•_2".asFormula) :: Nil
       ))
   }
 
   it should "unify renaming and instance f(x,y,x*y)" in {
     shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
       "x*y = a*b".asFormula, Subst(
-        ("f((•_1,•_2,•_3))".asTerm,
-          "•_1*•_2".asTerm) :: Nil
+        ("f((•_0,•_1,•_2))".asTerm,
+          "•_0*•_1".asTerm) :: Nil
       ))
     shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
       "x*y = c".asFormula, Subst(
-        ("f((•_1,•_2,•_3))".asTerm,
-          "•_3".asTerm) :: Nil
+        ("f((•_0,•_1,•_2))".asTerm,
+          "•_2".asTerm) :: Nil
       ))
   }
 }

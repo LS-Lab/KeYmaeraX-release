@@ -8,9 +8,9 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -494,30 +494,38 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
               USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
           })
 
-        def selfAssign(substs: Seq[SubstitutionPair]): BelleExpr = substs.map(s => s.what match {
-          case PredOf(Function(fn, Some(i), _, _, _), arg) =>
-            if (fn == "p_") {
-              TactixLibrary.useAt(Ax.selfassignb)(AntePos(i))*StaticSemantics.symbols(arg).size
-            } else if (fn == "q_") {
-              TactixLibrary.useAt(Ax.selfassignb)(SuccPos(i))*StaticSemantics.symbols(arg).size
-            } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+        def backAssign(substs: Seq[SubstitutionPair]): BelleExpr = substs.map(s => s.what match {
+          case PredOf(Function(fn, Some(_), _, _, _), arg) =>
+            //@note positions are not stable, can't rely on p-index/q-index to refer to the right formula
+            TacticFactory.anon ((seq: Sequent) => {
+              if (fn == "p_") {
+                val i = seq.ante.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml).nonEmpty)
+                TactixLibrary.assignb(AntePos(i))*StaticSemantics.symbols(arg).size
+              } else if (fn == "q_") {
+                val i = seq.succ.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml).nonEmpty)
+                TactixLibrary.assignb(SuccPos(i))*StaticSemantics.symbols(arg).size
+              } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
+            })
           case _ => throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
         }).reduceRightOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip)
 
-        def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs.foldRight(p)({ case (s, zee) => s.what match {
+        def selfAssignFor(p: ProvableSig, substs: Seq[SubstitutionPair]): ProvableSig = substs.foldRight(p)({ case (s, pr) => s.what match {
           case PredOf(Function(fn, Some(i), _, _, _), arg) =>
             if (fn == "p_") {
-              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(AntePos(i))).foldRight(zee)({ case (t, p) => t(p) })
+              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(AntePos(i))).foldRight(pr)({ case (t, p) => t(p) })
             } else if (fn == "q_") {
-              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(SuccPos(i))).foldRight(zee)({ case (t, p) => t(p) })
+              List.fill(StaticSemantics.symbols(arg).size)(TactixLibrary.useFor(Ax.selfassignb)(SuccPos(i))).foldRight(pr)({ case (t, p) => t(p) })
             } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
           case _ => throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
         }})
 
-        val goalResults = filteredGoals.map({ case (p, s) => apply(OnAll(selfAssign(s.subsDefsInput)), apply(t, BelleProvable(p, labels)) match {
-          case BelleProvable(rp, rl) => BelleProvable(selfAssignFor(rp(s), s.subsDefsInput), rl)
-          case r => r
-        }) })
+        val goalResults = filteredGoals.map({ case (p, s) =>
+          val tr = apply(t, BelleProvable(p, labels)) match {
+            case BelleProvable(rp, rl) => BelleProvable(selfAssignFor(rp(s), s.subsDefsInput), rl)
+            case r => r
+          }
+          apply(OnAll(backAssign(s.subsDefsInput)), tr)
+        })
 
         //@todo labels if parent didn't have any but some subgoals produced labels
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l), (BelleProvable(sp, sl), i)) =>

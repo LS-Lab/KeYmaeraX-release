@@ -4795,6 +4795,12 @@ object Ax extends Logging {
     byUS(equivReflexive)
   )
 
+  @Axiom("all stutter'", key = "0", recursor = "", displayLevel = "internal")
+  lazy val allStutterPrime: DerivedAxiomInfo = derivedAxiom("all stutter prime",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_' p_(||) <-> \\forall x_' p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
   /**
     * {{{Axiom "exists stutter".
     *    \exists x P <-> \exists x P
@@ -4807,6 +4813,12 @@ object Ax extends Logging {
   @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  @Axiom("exists stutter'", key = "0", recursor = "", displayLevel = "internal")
+  lazy val existsStutterPrime: DerivedAxiomInfo = derivedAxiom("exists stutter prime",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_' p_(||) <-> \\exists x_' p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 

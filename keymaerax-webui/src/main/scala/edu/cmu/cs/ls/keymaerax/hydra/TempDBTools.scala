@@ -5,12 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, Sort, StaticSemantics, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchivePrinter.printDomain
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -30,23 +30,16 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
 
   /** Turns a formula into a model problem with mandatory declarations. */
   def makeModel(content: String): String = {
-    def printDomain(d: Sort): String = d match {
-      case Real => "R"
-      case Bool => "B"
-      case Unit => ""
-      case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
-    }
-
     def augmentDeclarations(content: String, parsedContent: Formula): String =
       if (content.contains("Problem")) content //@note determine by mandatory "Problem" block of KeYmaeraXArchiveParser
       else {
         val symbols = StaticSemantics.symbols(parsedContent)
         val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-          if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
-          else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
+          if (fn.sort == Real) s"Real ${fn.asString}(${printDomain(fn, "x")});"
+          else if (fn.sort == Bool) s"Bool ${fn.asString}(${printDomain(fn.domain, "x")});"
           else throw new Exception("Unknown sort: " + fn.sort)
         ).mkString("\n  ")
-        val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
+        val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"Real ${v.prettyString};").mkString("\n  ")
         s"""Definitions
            |  $fnDecls
            |End.

@@ -39,8 +39,11 @@ object TacticIndex {
 
   lazy val default: TacticIndex = new DefaultTacticIndex
 
+  /** Stutter axioms used only in chase */
   val allLStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutter)
+  val allLStutterPrime: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutterPrime)
   val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
+  val existsRStutterPrime: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutterPrime)
 }
 
 /**
@@ -114,7 +117,7 @@ class DefaultTacticIndex extends TacticIndex {
     case TactixLibrary.allR => (s: Sequent, p: Position) =>
       if (p.isTopLevel) Left(one(Fixed(p, child(s(p.checkTop)))))
       else Right(one(child(s, p)))
-    case TacticIndex.allLStutter => (s: Sequent, p: Position) => {
+    case TacticIndex.allLStutter | TacticIndex.allLStutterPrime => (s: Sequent, p: Position) => {
       val (childPos, c) = (PosInExpr(0::Nil), s.sub(p) match {
         case Some(f: Forall) => child(f)
         case _ => throw new IllFormedTacticApplicationException("Position " + p.prettyString + " does not point to universal quantifier in " + s.prettyString)
@@ -124,7 +127,7 @@ class DefaultTacticIndex extends TacticIndex {
     case TactixLibrary.existsL => (s: Sequent, p: Position) =>
       if (p.isTopLevel) Left(one(new Fixed(p, child(s(p.checkTop)))))
       else Right(one(child(s, p)))
-    case TacticIndex.existsRStutter => (s: Sequent, p: Position) => {
+    case TacticIndex.existsRStutter | TacticIndex.existsRStutterPrime => (s: Sequent, p: Position) => {
       val (childPos, c) = (PosInExpr(0::Nil), s.sub(p) match {
         case Some(f: Exists) => child(f)
         case _ => throw new IllFormedTacticApplicationException("Position " + p.prettyString + " does not point to existential quantifier in " + s.prettyString)
@@ -178,8 +181,14 @@ class DefaultTacticIndex extends TacticIndex {
         }
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)
-      case Forall(_, _) => (TacticIndex.allLStutter::Nil, TactixLibrary.allR::Nil)
-      case Exists(_, _) => (TactixLibrary.existsL::Nil, TacticIndex.existsRStutter::Nil)
+      case Forall(xs, _) =>
+        if (xs.forall(_.isInstanceOf[BaseVariable])) (TacticIndex.allLStutter::Nil, TactixLibrary.allR::Nil)
+        else if (xs.forall(_.isInstanceOf[DifferentialSymbol])) (TacticIndex.allLStutterPrime::Nil, TactixLibrary.allR::Nil)
+        else throw new IllFormedTacticApplicationException("Mixed base variable + differential symbol quantification not supported, but got " + expr.prettyString)
+      case Exists(xs, _) =>
+        if (xs.forall(_.isInstanceOf[BaseVariable])) (TactixLibrary.existsL::Nil, TacticIndex.existsRStutter::Nil)
+        else if (xs.forall(_.isInstanceOf[DifferentialSymbol])) (TactixLibrary.existsL::Nil, TacticIndex.existsRStutterPrime::Nil)
+        else throw new IllFormedTacticApplicationException("Mixed base variable + differential symbol quantification not supported, but got " + expr.prettyString)
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)
       case And(_, _) => (TactixLibrary.andL::Nil, TactixLibrary.andR::Nil)
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)

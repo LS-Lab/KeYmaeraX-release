@@ -818,4 +818,20 @@ class SequentialInterpreterTests extends TacticTestBase {
       "x>0, y=0 | y>0, z=1 ==> [{x'=z*x}]x>0".asSequent
     )
   }
+
+  it should "keep track of original values" in withTactics {
+    proveBy("x=2, c()=3 ==> [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality(1))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x=c() ==> x=2".asSequent
+    proveBy("x=2, [{x'=x}]x>=0, c()=3 ==> [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality(1))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x_1=c(), x=x_0, [{x'=x}]x>=0 ==> x_1=2".asSequent
+    proveBy("x=1 | x=2, c()=3 | c()=4 ==> [x:=c();]x<=2, [{x'=x}]x>=0".asSequent,
+      Using("c()=3 | c()=4".asFormula :: "[x:=c();]x<=2".asFormula :: Nil,
+        TactixLibrary.prop <(DLBySubst.assignEquality(1), skip))).
+      subgoals should contain theSameElementsInOrderAs List(
+        "x_0=1 | x_0=2, c()=3, x_1=c(), x=x_0 ==> x_1<=2, [{x'=x}]x>=0".asSequent,
+        "x=1 | x=2, c()=4 ==> [x:=c();]x<=2, [{x'=x}]x>=0".asSequent
+      )
+  }
 }

@@ -1249,7 +1249,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tacticString
+    tree.tacticString(new VerboseTraceToTacticConverter(_))
     tree.tactic shouldBe BelleParser(
       """implyR('R=="v>=0&xm<=x&x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2->[{{xm:=x;xr:=(xm+S())/2;?5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2;++?true;}{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0}}*]x<=S()");
         |andL('L=="v>=0&xm<=x&x<=S()&xr=(xm+S())/2&Kp()=2&Kd()=3&5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2");
@@ -1319,7 +1319,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     //db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tacticString
+    tree.tacticString(new VerboseTraceToTacticConverter(_))
     tree.tactic shouldBe BelleParser(
       """implyR('R=="v>=0&A()>0&B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()->[{{?abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw();a:=*;?-B()<=a&a<=A();w:=*;r:=*;?r!=0&w*r=v;++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=-b();}c:=0;{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}}*]abs(y-ly()) < lw()");
         |andL('L=="v>=0&A()>0&B()>=b()&b()>0&ep()>0&lw()>0&y=ly()&r!=0&dx^2+dy^2=1&abs(y-ly())+v^2/(2*b()) < lw()");

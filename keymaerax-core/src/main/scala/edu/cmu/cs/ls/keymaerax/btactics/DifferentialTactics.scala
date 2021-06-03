@@ -2012,7 +2012,7 @@ private object DifferentialTactics extends Logging {
     }
 
     val (q, propt) = try {
-      semiAlgNormalize(post)
+      semiAlgNormalizeUnchecked(post)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
     }
@@ -2024,12 +2024,12 @@ private object DifferentialTactics extends Logging {
     val closure = FormulaTools.closure(q)
 
     val (_, proptGt) = try {
-      maxMinGtNormalize(interior)
+      maxMinGtNormalizeUnchecked(interior)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize interior", ex)
     }
     val (_, proptGe) = try {
-      maxMinGeqNormalize(closure)
+      maxMinGeqNormalizeUnchecked(closure)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize closure", ex)
     }

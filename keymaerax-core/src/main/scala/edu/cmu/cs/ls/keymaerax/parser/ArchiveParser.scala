@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Differential, DifferentialSymbol, DotTerm, Exists, Expression, Forall, Formula, FuncOf, Function, NamedSymbol, Nothing, Pair, PredOf, Program, ProgramConst, Real, Sort, StaticSemantics, SubstitutionClashException, SubstitutionPair, SystemConst, Term, Trafo, Tuple, USubst, Unit, UnitFunctional, UnitPredicational, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -10,7 +10,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import scala.collection.immutable.List
 
 /** Name is alphanumeric name and index. */
-case class Name(name: String, index: Option[Int])
+case class Name(name: String, index: Option[Int]) {
+  def prettyString: String = name + index.map("_" + _).getOrElse("")
+}
 /** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration. */
 case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[List[(Name, Sort)]],
                      interpretation: Option[Expression], loc: Location)
@@ -19,9 +21,11 @@ case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[Lis
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation.isDefined).map({
-    case (name, sig@Signature(_, _, _, interpretation, _)) =>
-      // elaborate to functions for topSort (topSort uses signature)
-      (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_))))
+    case (name, sig@Signature(_, _, args, interpretation, _)) =>
+      // except named arguments and dots, elaborate all symbols to functions for topSort because topSort uses signature
+      val taboo = args.map(_.filter({ case (Name("\\cdot", _), _) => false case _ => true }).
+        map({ case (Name(n, i), sort) => Function(n, i, Unit, sort) }).toSet).getOrElse(Set.empty)
+      (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_, taboo))))
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
@@ -115,7 +119,7 @@ case class Declaration(decls: Map[Name, Signature]) {
           else argNames.zipWithIndex.map({ case (v, i) => v -> DotTerm(v._2, Some(i)) })
         val dottedInterpretation = dotTerms.foldRight(interpretation)({ case (((Name(name, index), sort), dot), dotted) =>
           // signature may contain DotTerms because of anonymous arguments
-          if (name != DotTerm().name) dotted.replaceFree(Variable(name, index, sort), dot)
+          if (name != DotTerm().name) dotted.replaceFree(Variable(name, index, sort), dot).replaceFree(Differential(Variable(name, index, sort)), Differential(dot))
           else dotted
         })
 
@@ -266,11 +270,74 @@ object ArchiveParser extends ArchiveParser {
       Declaration(Map(Name("old", None) -> Signature(Some(Real), Real, Some(List((Name("\\cdot", None), Real))), None, UnknownLocation)))
   }
 
+  /** Returns the free base symbols of expression `e`. */
+  private def freeBaseSymbols(e: Expression): Set[NamedSymbol] =
+    (StaticSemantics.symbols(e) -- (e match {
+      case _: Term => Set.empty
+      case f: Formula =>
+        val s = StaticSemantics(f)
+        (s.bv--s.fv).toSet
+      case p: Program => StaticSemantics(p).mbv.toSet
+    })).filterNot(_.isInstanceOf[DifferentialSymbol])
+
 
   /** Elaborates variable uses of nullary function symbols in `entry` and its definitions/annotations, performs
     * DotTerm abstraction in entry definitions, and semantic/type analysis of the results. */
   def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
+    val defsWithDotArgs = entry.defs.decls.filter({
+      case (_, Signature(_, _, Some(args), _, _)) => args.exists(_._1.name == "\\cdot")
+      case (_, Signature(_, _, None, _, _)) => false
+    })
+    if (defsWithDotArgs.nonEmpty) {
+      val (name, Signature(_, _, _, _, loc)) = defsWithDotArgs.head
+      throw ParseException("Definition " + name.prettyString + " uses unsupported anonymous (dot) arguments; please use named arguments (e.g., Real x) instead", loc)
+    }
+
     val elaboratedDefs = elaborateDefs(entry.defs)
+
+    val uses = elaboratedDefs.decls.map({
+      case (name, Signature(_, _, args, int, loc)) => name -> ((args match {
+        case Some(args) =>
+          int.map(freeBaseSymbols(_).filterNot(n => args.contains((Name(n.name, n.index), n.sort))))
+        case None => int.map(freeBaseSymbols)
+      }).getOrElse(Set.empty).groupBy(n => Name(n.name, n.index)), loc)
+    })
+    val inconsistentUses = uses.filter(_._2._1.exists(_._2.size > 1))
+    if (inconsistentUses.nonEmpty) {
+      val (name, (symbols, loc)) = inconsistentUses.head
+      throw ParseException("Definition " + name.prettyString +
+        " uses same name for " + symbols.map(_._2.map(_.fullString).mkString(" vs. ")), loc)
+    }
+    val locallyConsistentUses = uses.map({ case (k, (v, loc)) => k -> (v.map(_._2.head).toSet, loc) })
+
+    //@note except program/system constants, which don't have arguments yet
+    val undeclaredUses = locallyConsistentUses.
+      filter({ case (_: ProgramConst | _: SystemConst, _) => false case _ => true }).
+      map({ case (n, (symbols, loc)) => n ->
+        (symbols.
+          filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))).
+          filterNot(InterpretedSymbols.symbols.contains), loc) }).
+      filter({ case (_, (s, _)) => s.nonEmpty })
+    if (undeclaredUses.nonEmpty) {
+      val (name, (symbols, loc)) = undeclaredUses.head
+      throw ParseException("Definition " + name.prettyString + " uses undefined symbol(s) " +
+        symbols.toList.sortBy(_.name).map(_.prettyString).mkString(",") + ". Please add arguments or define as functions/predicates/programs", loc)
+    }
+
+    val inconsistentWithDecls = locallyConsistentUses.
+      map({ case (k, (used, loc)) => k -> (used.map(n => n -> elaboratedDefs.decls.get(Name(n.name, n.index))), loc) }).
+      filter({ case (_, (symbols, _)) => symbols.exists({ case (use, decl) => decl.exists({
+        case Signature(domain, sort, _, _, _) => use match {
+          case fn: Function => fn.sort != sort || !domain.contains(fn.domain)
+          case _ => false
+        }
+      }) }) })
+    if (inconsistentWithDecls.nonEmpty) {
+      val (name, (symbols, loc)) = inconsistentWithDecls.head
+      throw ParseException("Definition " + name.prettyString +
+        " uses " + symbols.map({ case (s, d) => s.fullString + " inconsistent with definition " +
+        s.prettyString + d.map(s => ":" + s.domain.map(_ + "->").getOrElse("") + s.codomain).getOrElse("") }), loc)
+    }
 
     // elaborate model and check
     val elaboratedModel = try {
@@ -412,9 +479,27 @@ object ArchiveParser extends ArchiveParser {
       filter({ case (Name(name, _), _) => name != "\\cdot" }).
       map({ case(Name(name, idx), sort) => Function(name, idx, Unit, sort) }).toSet
 
-    defs.copy(decls = defs.decls.map({ case (name, sig@Signature(_, _, argNames, interpretation, _)) =>
-      (name, sig.copy(interpretation = interpretation.map(i =>
-        defs.elaborateToSystemConsts(defs.elaborateToFunctions(i, taboos(argNames.getOrElse(Nil)))))))
+    val inconsistentDecls = defs.decls.
+      map({ case (n, Signature(_, _, _, i, loc)) =>
+        (n, loc) -> i.map(freeBaseSymbols(_).groupBy(n => Name(n.name, n.index))).getOrElse(Map.empty) }).
+      filter({ case (_, symbols) => symbols.exists(_._2.size > 1) })
+    if (inconsistentDecls.nonEmpty) {
+      val loc = if (inconsistentDecls.size == 1) inconsistentDecls.head._1._2 else UnknownLocation
+      throw ParseException(inconsistentDecls.map({ case ((name, loc), symbols) => "Definition " + name.prettyString + " at " + loc +
+        " uses names inconsistently\n" + symbols.map({ case (_, s) => "  " + s.map(_.fullString).mkString(" vs. ") }).mkString("\n") }).mkString("\n"), loc)
+    }
+
+    def elaborateToDifferentials(e: Expression): Expression = {
+      val ds = StaticSemantics.symbols(e).filter(_.isInstanceOf[DifferentialSymbol]).map(_.asInstanceOf[DifferentialSymbol])
+      ds.foldLeft(e)({ case (e, n) => e.replaceFree(n, Differential(n.x)) })
+    }
+
+    defs.copy(decls = defs.decls.map({ case (name, sig@Signature(_, sort, argNames, interpretation, loc)) =>
+      (name, sig.copy(interpretation = interpretation.map(i => {
+        val elaborated = defs.elaborateToSystemConsts(defs.elaborateToFunctions(elaborateToDifferentials(i), taboos(argNames.getOrElse(Nil))))
+        if (elaborated.sort != sort) throw ParseException("Definition " + name.prettyString + " does not fit declared sort " + sort + "; right-hand side is of sort " + elaborated.sort, loc)
+        elaborated
+      })))
     }))
   }
 

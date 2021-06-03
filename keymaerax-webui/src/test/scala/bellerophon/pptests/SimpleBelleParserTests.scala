@@ -114,6 +114,22 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BelleParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::1::1::Nil))))
   }
 
+  it should "correctly parenthesize postconditions with a searchy formula sub-position locator in new notation" in {
+    BelleParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindL(0, Some("[x:=2;](true&x>1)".asFormula), PosInExpr(1::Nil))))
+    BelleParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindL(0, Some("[x:=2;](true&x>1)".asFormula), PosInExpr(1::Nil))))
+    //@note allow more concise notation with # forming parentheses
+    BelleParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindL(0, Some("[x:=2;](true&x>1)".asFormula), PosInExpr(1::Nil))))
+    BelleParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindL(0, Some("(true&x>1)&[x:=2;](true&x>1)".asFormula), PosInExpr(1::1::Nil))))
+  }
+
+  it should "correctly parenthesize programs with a searchy formula sub-position locator in new notation" in {
+    BelleParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindL(0, Some("[{x:=1; ++ x:=2;};ode;]x>1".asFormula), PosInExpr(0::0::Nil))))
+    BelleParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindL(0, Some("[{x:=1; ++ x:=2;};ode;]x>1".asFormula), PosInExpr(0::0::Nil))))
+    //@note allow more concise notation with # forming braces
+    BelleParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindL(0, Some("[{x:=1; ++ x:=2;};ode;]x>1".asFormula), PosInExpr(0::0::Nil))))
+    BelleParser("chase('L==\"[{x:=1; ++ x:=2;};#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindL(0, Some("[{x:=1; ++ x:=2;};{x:=1; ++ x:=2;};ode;]x>1".asFormula), PosInExpr(0::1::0::Nil))))
+  }
+
   it should "parse a built-in argument with a searchy unification position locator" in {
     BelleParser("boxAnd('L~={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula), exact=false)))
   }
