@@ -19,8 +19,8 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-
 import java.io.{PrintWriter, StringWriter}
+
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
@@ -31,6 +31,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -655,7 +656,9 @@ object Helpers {
 
   private def skipParens(expr: Modal): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParens(expr: Quantified): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
-  private def skipParens(expr: UnaryComposite): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
+  private def skipParens(expr: UnaryComposite): Boolean =
+    if (expr.isInstanceOf[Term]) OpSpec.op(expr.child) <= OpSpec.op(expr) && !leftMostLeaf(expr.child).exists(_.isInstanceOf[Number])
+    else OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParensLeft(expr: BinaryComposite): Boolean =
     OpSpec.op(expr.left) < OpSpec.op(expr) || OpSpec.op(expr.left) <= OpSpec.op(expr) &&
       OpSpec.op(expr).assoc == LeftAssociative && OpSpec.op(expr.left).assoc == LeftAssociative
@@ -677,6 +680,13 @@ object Helpers {
     if (skipParensLeft(expr)) left else print("{", fp, "prg-open")+:left:+print("}", fp, "prg-close")
   private def pwrapRight(expr: BinaryCompositeProgram, right: => List[JsValue], fp: FormatProvider): List[JsValue] =
     if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
+
+  @tailrec
+  private def leftMostLeaf(t: Expression): Option[Expression] = t match {
+    case _: UnaryComposite => None
+    case b: BinaryComposite => leftMostLeaf(b.left)
+    case x => Some(x)
+  }
 
   private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
     val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None, Nil).nonEmpty
