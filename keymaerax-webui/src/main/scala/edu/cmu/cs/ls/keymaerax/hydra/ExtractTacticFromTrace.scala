@@ -129,7 +129,7 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
 }
 
 /** A succinct trace to tactic converter whose tactics are not verbose but unfortunately not robust either. */
-class SuccinctTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
+class SuccinctTraceToTacticConverter extends TraceToTacticConverter {
 
   def getTacticString(node: ProofTreeNode, indent: String): String = {
     assert(!node.children.contains(node), "A node should not be its own child.")

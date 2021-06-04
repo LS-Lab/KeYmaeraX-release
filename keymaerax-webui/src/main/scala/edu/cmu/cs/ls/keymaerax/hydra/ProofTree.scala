@@ -311,10 +311,10 @@ trait ProofTree {
   /** Locates the tree root, which contains the original conjecture that this proof tries to prove. */
   /** String representation of the global tactic that reproduces this whole proof tree from the
     * conjecture at the root (very expensive). Uses `converter` to turn the recorded steps into a tactic. */
-  def tacticString(converter: Declaration=>TraceToTacticConverter): String
+  def tacticString(converter: TraceToTacticConverter): String
 
   /** The global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
-  def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(_)))
+  def tactic: BelleExpr
 
   /** The proof info with meta information about this proof, e.g., its name. */
   def info: ProofPOJO
@@ -648,10 +648,13 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
 
   /** The tactic to produce this tree from its root conclusion. */
-  override def tacticString(converter: Declaration=>TraceToTacticConverter): String = {
+  override def tacticString(converter: TraceToTacticConverter): String = {
     load()
-    converter(dbDefs).getTacticString(this)
+    converter.getTacticString(this)
   }
+
+  /** @inheritdoc */
+  override def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(dbDefs)))
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed
@@ -706,12 +709,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   // cached db query results
   private lazy val dbProofInfo = db.getProofInfo(proofId)
 
-  private lazy val dbDefs = {
-    info.modelId.map(db.getModel).map(m => ArchiveParser.parser(m.keyFile)) match {
-      case Some(e :: Nil) => e.defs
-      case _ => Declaration(Map.empty)
-    }
-  }
+  private lazy val dbDefs = info.defs(db)
 
   private lazy val dbSubsts = dbDefs.substs
 

@@ -5,12 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
-import java.io.File
 
+import java.io.File
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 
 import scala.collection.immutable.Nil
 
@@ -46,7 +47,16 @@ class ExamplePOJO(val id: Int, val title: String, val description: String, val i
  */
 case class ModelPOJO(modelId: Int, userId: String, name: String, date: String, keyFile: String,
                      description: String, pubLink: String, title: String, tactic: Option[String],
-                     numAllProofSteps: Int, temporary: Boolean) //the other guys on this linke should also be optional.
+                     //the other guys on this linke should also be optional.
+                     numAllProofSteps: Int, temporary: Boolean) {
+
+  /** Returns the function, predicate, program symbol definitions of this model. */
+  lazy val defs: Declaration = ArchiveParser(keyFile) match {
+    case e :: Nil => e.defs
+    case _ => Declaration(Map.empty)
+  }
+
+}
 
 /**
   * Data object for users.
@@ -75,6 +85,10 @@ case class ProofPOJO(proofId: Int, modelId: Option[Int], name: String, descripti
                      date: String, stepCount: Int, closed: Boolean, provableId: Option[Int],
                      temporary: Boolean = false, tactic: Option[String]) {
   assert(modelId.isDefined || provableId.isDefined, "Require either model or provable")
+
+  /** Returns the function, predicate, program symbol definitions of the model associated with this proof. */
+  def defs(db: DBAbstraction): Declaration = modelId.map(db.getModel).map(_.defs).getOrElse(Declaration(Map.empty))
+
 }
 
 case class ProvablePOJO(provableId: Int, provable:ProvableSig)
