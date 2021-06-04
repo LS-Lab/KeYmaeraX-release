@@ -57,6 +57,7 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
 
     lazy val allDefs: List[Definition] = (problem match {
       case Left(fml) =>
+        @tailrec
         def transitiveNames(from: List[Definition], visited: Set[String], unvisited: Set[String]): Set[String] = {
           val nextToVisit = (unvisited -- visited).flatMap(s => from.filter(_.indexedName == s)).map(_.symbols)
           if (nextToVisit.isEmpty) visited
@@ -87,10 +88,14 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
             }
             val varNames = vars.map(_.indexedName) ++ problemVars.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString)
             val definedNames = inheritedDefinitions.map(_.indexedName) //@note are still variables here but will be elaborated later
-            inheritedDefinitions.filterNot(_.symbols.isEmpty).filter({
+            val (useOnlyDefSymbols, useUndefSymbols) = inheritedDefinitions.filterNot(_.symbols.isEmpty).partition({
               case d: FuncPredDef => (d.freeVars.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).isEmpty
               case d: ProgramDef => (d.symbols.get.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).isEmpty
             })
+            val report = useUndefSymbols.filter(transitiveUsed.contains)
+            if (report.nonEmpty) throw ParseException("Definition " + report.head.indexedName + " uses undefined symbols " +
+              (report.head.symbols.get.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).mkString(","), report.head.loc)
+            useOnlyDefSymbols
           }
         }
       case _ => inheritedDefinitions //@note entry formula is an exercise

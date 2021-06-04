@@ -2220,6 +2220,38 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     result.model shouldBe "\\forall y [contincy{|^@|};]y>=old(y)".asFormula
   }
 
+  it should "report undeclared variables when a shared definition is used" in {
+    val input = """
+      |SharedDefinitions
+      |  HP contincy ::= { {y'=1} };
+      |End.
+      |
+      |Theorem "Forgets to define y"
+      |  Problem [contincy;]y>=old(y) End.
+      |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:3 Definition contincy uses undefined symbols y
+        |Found:    <unknown> at 3:3 to 3:29
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "ignore an unused shared definition" in {
+    val input = """
+      |SharedDefinitions
+      |  HP contincy ::= { {y'=1} };
+      |End.
+      |
+      |Theorem "Doesn't define y but doesn't use contincy either"
+      |  ProgramVariables Real x; End.
+      |  Problem [x:=2;]x>=2 End.
+      |End.""".stripMargin
+    parse(input).loneElement.fileContent shouldBe
+      """Theorem "Doesn't define y but doesn't use contincy either"
+        |  ProgramVariables Real x; End.
+        |  Problem [x:=2;]x>=2 End.
+        |End.""".stripMargin
+  }
+
   it should "add to exercises selectively according to definitions used" in {
     val input = """
       |SharedDefinitions
