@@ -2239,6 +2239,22 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     }
   }
 
+  it should "TODO: complain about undeclared must-bound variables in programs" ignore {
+    val input = """
+      |SharedDefinitions
+      |  Bool p() <-> \exists y (y=1 & y>=1); /* not a parse error */
+      |  HP yOne ::= { y:=1; };      /* should be a parse error (y not declared as variable in problem) */
+      |  Bool p() <-> <yOne;>(y>=1)  /* parse error or not? inverse assign equality of p() above but would be parse error if entered verbatim in problem */
+      |End.
+      |
+      |Theorem "Uses inc"
+      |  ProgramVariables Real x; End.
+      |  Problem [yOne;]x=x End.
+      |End.
+      |""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message ""
+  }
+
   "Archive parser error message" should "report an invalid meta info key" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
