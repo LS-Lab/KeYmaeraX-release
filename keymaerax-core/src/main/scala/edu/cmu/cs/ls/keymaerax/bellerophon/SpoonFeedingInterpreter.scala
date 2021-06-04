@@ -556,8 +556,18 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
       (preservedSubstResult, resultCtx)
     } catch {
       case e: BelleThrowable =>
-        if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-          strict, convertPending = false, executePending = false)
+        if (convertPending) tactic match {
+          case CaseTactic(children) => runTactic(
+            BranchTactic(children.map({ case (l, t) =>
+              DebuggingTactics.pending("\"" + l.prettyString + "\": " + BellePrettyPrinter(t))
+            })), goal, level, ctx,
+            strict, convertPending = false, executePending = false)
+          case BranchTactic(children) => runTactic(
+            BranchTactic(children.map(c => DebuggingTactics.pending(BellePrettyPrinter(c)))), goal, level, ctx,
+            strict, convertPending = false, executePending = false)
+          case _ => runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+            strict, convertPending = false, executePending = false)
+        }
         else throw e
     }
   }
