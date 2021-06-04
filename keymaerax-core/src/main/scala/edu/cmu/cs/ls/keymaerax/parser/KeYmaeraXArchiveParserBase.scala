@@ -55,7 +55,26 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       ArchiveEntry(name, kind, loc, inheritedDefinitions ++ defs, definitions, vars, problem, annotations, tactics, info)
     }
 
-    lazy val allDefs: List[Definition] = inheritedDefinitions ++ definitions ++ vars
+    lazy val allDefs: List[Definition] = (problem match {
+      case Left(fml) =>
+        def transitiveNames(from: List[Definition], visited: Set[String], unvisited: Set[String]): Set[String] = {
+          val nextToVisit = (unvisited -- visited).flatMap(s => from.filter(_.indexedName == s)).map(_.symbols)
+          if (nextToVisit.isEmpty) visited
+          else if (nextToVisit.exists(_.isEmpty)) from.map(_.indexedName).toSet //@note entry is an exercise
+          else transitiveNames(from, visited ++ unvisited, nextToVisit.flatMap(_.get).map(_.toString))
+        }
+
+        val defSymbols = definitions.map(_.symbols)
+        if (defSymbols.exists(_.isEmpty)) {
+          //@note one of the entry definitions is an exercise: we don't know yet which of the shared definitions might be used, so return all
+          inheritedDefinitions
+        } else {
+          val used = StaticSemantics.symbols(fml) ++ defSymbols.flatMap(_.get).toSet
+          val transitiveUsed = transitiveNames(inheritedDefinitions, Set.empty, used.map(_.toString))
+          inheritedDefinitions.filter(s => transitiveUsed.contains(s.indexedName))
+        }
+      case _ => inheritedDefinitions //@note entry formula is an exercise
+    }) ++ definitions ++ vars
 
     def allAnnotations: List[Annotation] = annotations ++ definitions.flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
   }
@@ -67,6 +86,16 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
                                             val definition: Either[Option[Expression], List[Token]],
                                             val loc: Location) extends ArchiveItem {
     def extendLocation(end: Location): Definition
+
+    /** Prints the indexed name. */
+    def indexedName: String = name + index.map("_" + _).getOrElse("")
+
+    /** Returns the symbols used in the definition; None for exercises since not yet fully known. */
+    def symbols: Option[Set[NamedSymbol]] = definition match {
+      case Left(Some(e)) => Some(StaticSemantics.symbols(e))
+      case Left(None) => Some(Set.empty)
+      case Right(_) => None
+    }
   }
   private[parser] case class FuncPredDef(override val name: String, override val index: Option[Int], sort: Sort,
                                          signature: List[NamedSymbol],
@@ -714,9 +743,10 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
   }
 
   private def createStandaloneEntryText(entry: ArchiveEntry, text: String): (String, String) = {
-    val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
+    val usedSharedDefs = entry.inheritedDefinitions.filter(entry.allDefs.contains)
+    val sharedDefsText = if (usedSharedDefs.nonEmpty) {
       "SharedDefinitions\n" +
-        entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
+        usedSharedDefs.map(d => "  " + slice(text, d.loc)).mkString("\n") +
         "\nEnd.\n"
     } else ""
 
