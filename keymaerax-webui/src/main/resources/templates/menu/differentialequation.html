@@ -53,6 +53,11 @@
             name="Diff. Refine ..." code-name="dR"
             exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
     <k4-tactic-menu-entry
+            ng-if="menu.odemenu.kind=='box'"
+            proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
+            name="ODE Inv. Comp ..." code-name="odeInvC"
+            exec="openTacticPosInputDialog(codeName, 'R')"></k4-tactic-menu-entry>
+    <k4-tactic-menu-entry
             ng-if="menu.odemenu.kind=='diamond'"
             proof-id="{{proofId}}" user-id="{{userId}}" disabled="agenda.items().length <= 0"
             name="Differential Variant ..." code-name="dV" help-class="k4-rulemenu-helppopover-medium"

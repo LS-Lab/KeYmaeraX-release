@@ -350,9 +350,9 @@ object RestApi extends Logging {
   }}
 
   /** Extracts and stores a tactic from the recorded proof steps. */
-  val extractTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userName, proofId) => { pathEnd {
+  val extractTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract" / Map("verbose" -> true, "succinct" -> false)) { (userName, proofId, verbose) => { pathEnd {
     get {
-      val request = new ExtractTacticRequest(database, userName, proofId)
+      val request = new ExtractTacticRequest(database, userName, proofId, verbose)
       completeRequest(request, t)
     }
   }}}

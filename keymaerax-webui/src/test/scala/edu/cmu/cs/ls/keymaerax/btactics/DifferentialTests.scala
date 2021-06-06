@@ -1879,6 +1879,19 @@ class DifferentialTests extends TacticTestBase {
     "a=1, b()=2 ==> x>=0, y>=0, [{x'=a,y'=b()&true&0-x>=0&0-y>=0}](0-x>0&0-y>0)".asSequent
   }
 
+  it should "add work with function symbols" in withMathematica { _ =>
+    val result = proveBy("a=1,b()=2 ==> x>=0,y>=0,[{x'=a,y'=b()}](f(x,y)>1)".asSequent,
+      DifferentialTactics.dCClosure(true)(3)
+        <(
+        skip,
+        skip
+      ))
+
+    result.subgoals should have size 2
+    result.subgoals.head shouldBe "a=1, b()=2  ==>  x>=0, y>=0, f(x,y)-1>0".asSequent
+    result.subgoals(1) shouldBe "a=1, b()=2  ==>  x>=0, y>=0, [{x'=a,y'=b()&true&f(x,y)-1>=0}]f(x,y)-1>0".asSequent
+  }
+
   "dIClosed" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
     val ode = DifferentialTactics.ODESpecific("{t'=1, x'=x}".asDifferentialProgram)
     val prv = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1/2}](x>=1&x<=1+3*t)".asSequent, ode.dIClosed(1))

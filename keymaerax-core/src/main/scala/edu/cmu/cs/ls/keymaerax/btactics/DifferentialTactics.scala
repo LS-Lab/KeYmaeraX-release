@@ -2018,7 +2018,7 @@ private object DifferentialTactics extends Logging {
     }
 
     val (q, propt) = try {
-      semiAlgNormalize(post)
+      semiAlgNormalizeUnchecked(post)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
     }
@@ -2030,12 +2030,12 @@ private object DifferentialTactics extends Logging {
     val closure = FormulaTools.closure(q)
 
     val (_, proptGt) = try {
-      maxMinGtNormalize(interior)
+      maxMinGtNormalizeUnchecked(interior)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize interior", ex)
     }
     val (_, proptGe) = try {
-      maxMinGeqNormalize(closure)
+      maxMinGeqNormalizeUnchecked(closure)
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize closure", ex)
     }
@@ -2057,7 +2057,7 @@ private object DifferentialTactics extends Logging {
     /* cut right subgoal */
     starter &
     cutR(if(cutInterior) interior else closure)(pos) <(
-      skip,
+      skip & label(BelleLabels.cutShow),
       // Turn postcondition into interior
       implyR(pos) & generalize(interior)(pos) <(
         //@todo check always with doIfElse or use TryCatch exception?
@@ -2065,7 +2065,7 @@ private object DifferentialTactics extends Logging {
           useAt(Ax.openInvariantClosure)(pos) & Idioms.doIf(_.subgoals.length == 2)(
             //@todo may no longer be necessary at all, useAt seems to close precondition automatically now
             Idioms.<(
-              backGt & backGe1 & hideL('Llast),
+              backGt & backGe1 & hideL('Llast) & label(BelleLabels.cutUse),
               backGe2 &
                 (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
                 else id)

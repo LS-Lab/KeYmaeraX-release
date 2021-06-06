@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, Tacti
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -1757,7 +1758,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "lemma"
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1765,7 +1766,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1787,7 +1788,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "theorem"
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Theorem "Entry 2"
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
@@ -1834,7 +1835,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "lemma"
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1842,7 +1843,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1864,7 +1865,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "theorem"
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Theorem "Entry 2"
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
@@ -1912,7 +1913,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry1.kind shouldBe "lemma"
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1920,7 +1921,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x, y; End.
@@ -1942,7 +1943,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry2.kind shouldBe "theorem"
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> x > y;
+        |  Bool gt(Real x, Real y) <-> x > y;
         |End.
         |Theorem "Entry 2"
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
@@ -2015,7 +2016,7 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe
       """SharedDefinitions
-        |Bool gt(Real x, Real y) <-> \exists t (t=1 & x*t > y);
+        |  Bool gt(Real x, Real y) <-> \exists t (t=1 & x*t > y);
         |End.
         |Lemma "Entry 1"
         | Definitions Bool geq(Real x, Real y) <-> x >= y; End.
@@ -2114,6 +2115,233 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
     entry.model shouldBe "false".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
+  }
+
+  it should "add to entries selectively according to definitions used" in {
+    //@note add all definitions whose free variables/symbols are entry program variables because those can be useful
+    // e.g. for cuts even when they are not occurring in the input model
+
+    val input = """
+      |SharedDefinitions
+      |  Real sq(Real x) = x^2 + (x')^2;
+      |  Bool nonneg(Real x) <-> x>=0;
+      |  HP asgn ::= {{x:=x;}*};
+      |  HP discincy ::= { y:=y+1; };
+      |  HP contincy ::= { {y'=1} };
+      |  HP incy ::= { contincy; ++ discincy; };
+      |End.
+      |
+      |Theorem "Declares x and y"
+      |  ProgramVariables Real x, y; End.
+      |  Problem [asgn;]y=y End.
+      |End.
+      |
+      |Theorem "Declares only y but does not use asgn"
+      |  ProgramVariables Real y; End.
+      |  Problem [y:=y;]y=y End.
+      |End.""".stripMargin
+    inside (parse(input)) {
+      case (e1 :: e2 :: Nil) =>
+        e1.fileContent shouldBe
+          """SharedDefinitions
+            |  Real sq(Real x) = x^2 + (x')^2;
+            |  Bool nonneg(Real x) <-> x>=0;
+            |  HP asgn ::= {{x:=x;}*};
+            |  HP discincy ::= { y:=y+1; };
+            |  HP contincy ::= { {y'=1} };
+            |  HP incy ::= { contincy; ++ discincy; };
+            |End.
+            |Theorem "Declares x and y"
+            |  ProgramVariables Real x, y; End.
+            |  Problem [asgn;]y=y End.
+            |End.""".stripMargin
+        e1.defs should beDecl(
+          Declaration(Map(
+            Name("asgn", None) -> Signature(Some(Unit), Trafo, None, Some("{x:=x;}*".asProgram), UnknownLocation),
+            Name("discincy", None) -> Signature(Some(Unit), Trafo, None, Some("y:=y+1;".asProgram), UnknownLocation),
+            Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=1}".asProgram), UnknownLocation),
+            Name("incy", None) -> Signature(Some(Unit), Trafo, None, Some("{contincy{|^@|}; ++ discincy{|^@|};}".asProgram), UnknownLocation),
+            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+(.')^2".asTerm), UnknownLocation),
+            Name("nonneg", None) -> Signature(Some(Real), Bool, Some(List((Name("x", None), Real))), Some(".>=0".asFormula), UnknownLocation),
+            Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+            Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+          )))
+        e1.model shouldBe "[asgn{|^@|};]y=y".asFormula
+
+        e2.fileContent shouldBe
+          """SharedDefinitions
+            |  Real sq(Real x) = x^2 + (x')^2;
+            |  Bool nonneg(Real x) <-> x>=0;
+            |  HP discincy ::= { y:=y+1; };
+            |  HP contincy ::= { {y'=1} };
+            |  HP incy ::= { contincy; ++ discincy; };
+            |End.
+            |Theorem "Declares only y but does not use asgn"
+            |  ProgramVariables Real y; End.
+            |  Problem [y:=y;]y=y End.
+            |End.""".stripMargin
+        e2.defs should beDecl(
+          Declaration(Map(
+            Name("discincy", None) -> Signature(Some(Unit), Trafo, None, Some("y:=y+1;".asProgram), UnknownLocation),
+            Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=1}".asProgram), UnknownLocation),
+            Name("incy", None) -> Signature(Some(Unit), Trafo, None, Some("{contincy{|^@|}; ++ discincy{|^@|};}".asProgram), UnknownLocation),
+            Name("sq", None) -> Signature(Some(Real), Real, Some(List((Name("x", None), Real))), Some(".^2+(.')^2".asTerm), UnknownLocation),
+            Name("nonneg", None) -> Signature(Some(Real), Bool, Some(List((Name("x", None), Real))), Some(".>=0".asFormula), UnknownLocation),
+            Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+          )))
+        e2.model shouldBe "[y:=y;]y=y".asFormula
+    }
+  }
+
+  it should "combine program variables and bound variables in formula when filtering" in {
+    val input = """
+      |SharedDefinitions
+      |  Real one = 1;
+      |  HP contincy ::= { {y'=one} };
+      |End.
+      |
+      |Theorem "Universally quantifies y"
+      |  Problem \forall y [contincy;]y>=old(y) End.
+      |End.""".stripMargin
+    val result = parse(input).loneElement
+    result.fileContent shouldBe
+      """SharedDefinitions
+        |  Real one = 1;
+        |  HP contincy ::= { {y'=one} };
+        |End.
+        |Theorem "Universally quantifies y"
+        |  Problem \forall y [contincy;]y>=old(y) End.
+        |End.""".stripMargin
+    result.defs should beDecl(
+      Declaration(Map(
+        Name("one", None) -> Signature(Some(Unit), Real, Some(List.empty), Some("1".asTerm), UnknownLocation),
+        Name("contincy", None) -> Signature(Some(Unit), Trafo, None, Some("{y'=one()}".asProgram), UnknownLocation)
+      )))
+    result.model shouldBe "\\forall y [contincy{|^@|};]y>=old(y)".asFormula
+  }
+
+  it should "report undeclared variables when a shared definition is used" in {
+    val input = """
+      |SharedDefinitions
+      |  HP contincy ::= { {y'=1} };
+      |End.
+      |
+      |Theorem "Forgets to define y"
+      |  Problem [contincy;]y>=old(y) End.
+      |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:3 Definition contincy uses undefined symbols y
+        |Found:    <unknown> at 3:3 to 3:29
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "ignore an unused shared definition" in {
+    val input = """
+      |SharedDefinitions
+      |  HP contincy ::= { {y'=1} };
+      |End.
+      |
+      |Theorem "Doesn't define y but doesn't use contincy either"
+      |  ProgramVariables Real x; End.
+      |  Problem [x:=2;]x>=2 End.
+      |End.""".stripMargin
+    parse(input).loneElement.fileContent shouldBe
+      """Theorem "Doesn't define y but doesn't use contincy either"
+        |  ProgramVariables Real x; End.
+        |  Problem [x:=2;]x>=2 End.
+        |End.""".stripMargin
+  }
+
+  it should "add to exercises selectively according to definitions used" in {
+    val input = """
+      |SharedDefinitions
+      |  HP inc ::= { x:=x+1; };
+      |  HP asgn ::= { __________; };
+      |End.
+      |
+      |Exercise "Formula"
+      |  ProgramVariables Real x, y; End.
+      |  Problem [__________;]y=y End.
+      |End.
+      |
+      |Exercise "Definition"
+      |  ProgramVariables Real x, y; End.
+      |  Problem [asgn;]y=y End.
+      |End.
+      |
+      |Theorem "Ordinary"
+      |  ProgramVariables Real x; End.
+      |  Problem [inc;]x>=old(x) End.
+      |End.""".stripMargin
+    inside (parse(input)) {
+      case (e1 :: e2 :: e3 :: Nil) =>
+        e1.fileContent shouldBe
+          """SharedDefinitions
+            |  HP inc ::= { x:=x+1; };
+            |  HP asgn ::= { __________; };
+            |End.
+            |Exercise "Formula"
+            |  ProgramVariables Real x, y; End.
+            |  Problem [__________;]y=y End.
+            |End.""".stripMargin
+        e1.defs should beDecl(
+          Declaration(Map(
+            Name("inc", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+            Name("asgn", None) -> Signature(Some(Unit), Trafo, None, None, UnknownLocation),
+            Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+            Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+          )))
+        e1.model shouldBe "false".asFormula
+
+        e2.fileContent shouldBe
+          """SharedDefinitions
+            |  HP inc ::= { x:=x+1; };
+            |  HP asgn ::= { __________; };
+            |End.
+            |Exercise "Definition"
+            |  ProgramVariables Real x, y; End.
+            |  Problem [asgn;]y=y End.
+            |End.""".stripMargin
+        e2.defs should beDecl(
+          Declaration(Map(
+            Name("inc", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+            Name("asgn", None) -> Signature(Some(Unit), Trafo, None, None, UnknownLocation),
+            Name("x", None) -> Signature(None, Real, None, None, UnknownLocation),
+            Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
+          )))
+        e2.model shouldBe "[asgn;]y=y".asFormula
+
+        e3.fileContent shouldBe
+          """SharedDefinitions
+            |  HP inc ::= { x:=x+1; };
+            |End.
+            |Theorem "Ordinary"
+            |  ProgramVariables Real x; End.
+            |  Problem [inc;]x>=old(x) End.
+            |End.""".stripMargin
+        e3.defs should beDecl(
+          Declaration(Map(
+            Name("inc", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+            Name("x", None) -> Signature(None, Real, None, None, UnknownLocation)
+          )))
+        e3.model shouldBe "[inc{|^@|};]x>=old(x)".asFormula
+    }
+  }
+
+  it should "TODO: complain about undeclared must-bound variables in programs, but not inside predicates" ignore {
+    val input = """
+      |SharedDefinitions
+      |  Bool p() <-> \exists y (y=1 & y>=1); /* not a parse error */
+      |  HP yOne ::= { y:=1; };      /* should be a parse error (y not declared as variable in problem) */
+      |  Bool p() <-> <yOne;>(y>=1)  /* not a parse error */
+      |End.
+      |
+      |Theorem "Uses inc"
+      |  ProgramVariables Real x; End.
+      |  Problem [yOne;]x=x End.
+      |End.
+      |""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message ""
   }
 
   "Archive parser error message" should "report an invalid meta info key" in {

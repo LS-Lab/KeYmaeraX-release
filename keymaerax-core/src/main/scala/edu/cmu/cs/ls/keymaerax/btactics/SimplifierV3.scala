@@ -1275,5 +1275,7 @@ object SimplifierV3 {
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
   val semiAlgNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex, checkTerms= false)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
+  val maxMinGeqNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex, checkTerms= false)(_)
   val maxMinGtNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex)(_)
+  val maxMinGtNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex, checkTerms= false)(_)
 }

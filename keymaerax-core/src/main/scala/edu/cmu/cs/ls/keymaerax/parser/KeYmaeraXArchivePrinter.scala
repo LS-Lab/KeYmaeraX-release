@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 
 /**
@@ -158,13 +159,19 @@ object KeYmaeraXArchivePrinter {
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
+    def nameDots(e: Expression, name: String): Expression = {
+      val dots = StaticSemantics.symbols(e).filter(_.isInstanceOf[DotTerm])
+      assert(dots.map(_.index).map(_.getOrElse(0)).size == dots.size, "Interpretation uses both . and ._0")
+      dots.foldLeft(e)({ case (e, d) => e.replaceAll(d, Variable(name, Some(d.index.getOrElse(0)))) })
+    }
+
     val printedDefs = defs.map({
       case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) =>
         val printedDomain = codomain match {
           case Trafo => "" //@todo program arguments not yet supported
           case _ => "(" + printDomain(domain.getOrElse(Unit), "x") + ")"
         }
-        s"  ${printSort(codomain)} ${printName(name, idx)}$printedDomain${printDef(codomain, interpretation)};"
+        s"  ${printSort(codomain)} ${printName(name, idx)}$printedDomain${printDef(codomain, interpretation.map(nameDots(_, "x")))};"
       case _ => ""
     }).filter(_.nonEmpty)
 

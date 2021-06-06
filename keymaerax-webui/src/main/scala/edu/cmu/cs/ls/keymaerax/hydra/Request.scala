@@ -1765,7 +1765,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           }
         } else {
           val innerTree = DbProofTree(db, localProofId.toString).load()
-          val stepDetails = innerTree.tacticString
+          val stepDetails = innerTree.tacticString(new VerboseTraceToTacticConverter(innerTree.info.defs(db)))
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
@@ -1794,7 +1794,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db))), innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -2587,7 +2587,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-      val tactic = tree.tacticString
+      val tactic = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
       // remember tactic string
       val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
         tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
@@ -2690,10 +2690,13 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
   }
 }
 
-class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
+class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
-    val tactic = tree.tacticString
+    val tactic = tree.tacticString(
+      if (verbose) new VerboseTraceToTacticConverter(tree.info.defs(db))
+      else new SuccinctTraceToTacticConverter()
+    )
     // remember tactic string
     val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
@@ -2728,7 +2731,7 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val tactic = tree.tacticString
+    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
     val provable = tree.root.provable
     val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
       "tool" -> "KeYmaera X",
@@ -2740,13 +2743,31 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 }
 
 object ArchiveEntryPrinter {
-  def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
+  def archiveEntry(modelInfo: ModelPOJO, tactics: List[(String, String)], withComments: Boolean): String = try {
     ArchiveParser.parser(modelInfo.keyFile) match {
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
         new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, modelInfo.name, tactics))
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
         new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, entry.name, tactics))
     }
+  } catch {
+    case _: ParseException =>
+      val printedTactics = tactics.map({
+        case (name, steps) =>
+        s"""Tactic "$name"
+          |$steps
+          |End.""".stripMargin
+      }).mkString("\n")
+      s"""/* Model or tactics did not reparse, printed verbatim, needs manual editing */
+        |
+        |/* Input content */
+        |${modelInfo.keyFile}
+        |/* End input content */
+        |
+        |/* Printed tactics */
+        |$printedTactics
+        |/* End printed tactics */
+        |""".stripMargin
   }
 
   private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
@@ -2759,10 +2780,16 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     val proofName = tree.info.name
-    val tactic = tree.tacticString
+    val tactic = try {
+      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
+    } catch {
+      case _: ParseException =>
+        // fallback if for whatever reason model or tactic is not parseable: print verbatim without beautification
+        tree.info.tactic.getOrElse("/* no tactic recorded */")
+    }
     val model = db.getModel(tree.info.modelId.get)
 
-    def getLemmas(model: ModelPOJO, tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
+    def getLemmas(tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
       val lemmaFinder = """useLemma\(\"([^\"]*)\"""".r
       val lemmaNames = lemmaFinder.findAllMatchIn(tactic).map(m => m.group(1))
       val lemmaModels = lemmaNames.map(n => n -> db.getModelList(userId).find(n == _.name))
@@ -2775,7 +2802,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
       })).toList
       val parentLemmas: List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = lemmas.flatMap({ case (_, (mp, pp)) => (mp, pp) match {
         case (Some(m), Some(p)) => p.tactic match {
-          case Some(t) => getLemmas(m, t)
+          case Some(t) => getLemmas(t)
           case _ => Nil
         }
         case _ => Nil
@@ -2784,7 +2811,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
       parentLemmas ++ lemmas
     }
 
-    val lemmas = getLemmas(model, tactic)
+    val lemmas = getLemmas(tactic)
     val printedLemmas = lemmas.map({
       case (_, (Some(modelPOJO), proofPOJO)) =>
         ArchiveEntryPrinter.archiveEntry(modelPOJO,
@@ -2805,11 +2832,20 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
                                    withProofs: Boolean, exportEmptyProof: Boolean)
   extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    def modelProofs(modelId: Int): List[(String, String)] = {
-      if (withProofs) db.getProofsForModel(modelId).map(p => p.name -> DbProofTree(db, p.proofId.toString).tacticString)
+    def printProof(tree: ProofTree, model: ModelPOJO): String = try {
+      tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
+    } catch {
+      case _: ParseException => tree.info.tactic.getOrElse("/* no tactic steps recorded */")
+    }
+
+    def modelProofs(model: ModelPOJO): List[(String, String)] = {
+      if (withProofs) db.getProofsForModel(model.modelId).map(p => p.name -> printProof(DbProofTree(db, p.proofId.toString), model))
       else Nil
     }
-    val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
+    val models = modelIds.map(mid => {
+      val model = db.getModel(mid)
+      model -> modelProofs(model)
+    }).filter(exportEmptyProof || _._2.nonEmpty)
     val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs, withComments=true)}).mkString("\n\n")
     new ExtractProblemSolutionResponse(archiveContent + "\n") :: Nil
   }

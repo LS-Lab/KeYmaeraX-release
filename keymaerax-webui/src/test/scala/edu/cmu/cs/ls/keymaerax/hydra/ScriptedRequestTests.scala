@@ -118,7 +118,7 @@ class ScriptedRequestTests extends TacticTestBase {
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
     }
   }}
@@ -136,7 +136,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
     )
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal(
         """andR('R=="x^2>=0 & x^4>=0"); <(
           |"x^2>=0": nil,
@@ -158,7 +158,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
     )
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal (
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
         """andR(1); <(nil, prop); <(
@@ -181,7 +181,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", andR(1))
     tacticRunner("(1,1)", prop)
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal (
         """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
           |"x=3": nil,

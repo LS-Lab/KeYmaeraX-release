@@ -709,7 +709,8 @@ class ProofTreeTests extends TacticTestBase {
       durations(i) = end-start
     }
 
-    DbProofTree(db.db, proofId.toString).tacticString
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
     val medianDuration = median(durations.toList)
     val averageDuration = durations.sum/numStepsPerProof
@@ -730,7 +731,7 @@ class ProofTreeTests extends TacticTestBase {
       val start = System.currentTimeMillis()
       val tree = DbProofTree(db.db, proofId.toString)
 
-      tree.tacticString
+      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
       val goals = tree.openGoals
       goals should have size 1
@@ -750,7 +751,8 @@ class ProofTreeTests extends TacticTestBase {
       durations(i) = end-start
     }
 
-    DbProofTree(db.db, proofId.toString).tacticString
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
     val medianDuration = median(durations.toList)
     val averageDuration = durations.sum/numStepsPerProof
