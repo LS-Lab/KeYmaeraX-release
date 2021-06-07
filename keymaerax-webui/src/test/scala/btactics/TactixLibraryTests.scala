@@ -465,6 +465,11 @@ class TactixLibraryTests extends TacticTestBase {
     )
   }
 
+  it should "try autoMP on non-FOL left implications, but not otherwise unfold left implications" in withQE { _ =>
+    val s = "x>=0, x>=-1 -> [x:=x+1;]x>=0, x>=-2 -> x<=2 -> x^2<=4 ==> ".asSequent
+    proveBy(s, unfoldProgramNormalize).subgoals.loneElement shouldBe "x>=0, x+1>=0, x>=-2 -> x<=2 -> x^2<=4 ==>".asSequent
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
