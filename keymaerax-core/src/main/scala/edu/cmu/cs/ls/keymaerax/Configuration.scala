@@ -217,7 +217,7 @@ object Configuration extends Configuration {
   override def getMap(key: String): Map[String, String] = conf.getMap(key)
 
   /** Executes `code` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {
+  def withTemporaryConfig[T](tempConfig: Map[String, String])(code: => T): T = {
     val origConfig = tempConfig.keys.map(k => k -> Configuration.getString(k))
     try {
       tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })

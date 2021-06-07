@@ -143,7 +143,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     val common = Map(
       Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
       Configuration.Keys.QE_TOOL -> WOLFRAM)
-    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false"))
     withTemporaryConfig(common) {
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
@@ -251,7 +251,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
+  def withTemporaryConfig[T](tempConfig: Map[String, String])(testcode: => T): T =
     Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   /** Test setup */
