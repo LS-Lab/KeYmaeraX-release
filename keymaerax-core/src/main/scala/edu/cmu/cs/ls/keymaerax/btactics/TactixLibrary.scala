@@ -112,8 +112,12 @@ object TactixLibrary extends HilbertCalculus
       //@todo optimizable: move assignb tactic into AxIndex once supported (but remember: assignb is applicable in context)
       if (pos.isTopLevel) stepAt(index(pos.isAnte)(_))(pos) else UnifyUSCalculus.stepAt(index(pos.isAnte))(pos),
       classOf[Throwable], (ex: Throwable) => seq.sub(pos) match {
-        case Some(Box(_: Assign, _)) => assignb(pos)
-        case Some(Diamond(_: Assign, _)) => assignd(pos)
+        case Some(p@Box(_: Assign, _)) =>
+          if (index(pos.isAnte)(p).isDefined) assignb(pos)
+          else throw ex
+        case Some(p@Diamond(_: Assign, _)) =>
+          if (index(pos.isAnte)(p).isDefined) assignd(pos)
+          else throw ex
         case _ => throw ex
       } ))
 
