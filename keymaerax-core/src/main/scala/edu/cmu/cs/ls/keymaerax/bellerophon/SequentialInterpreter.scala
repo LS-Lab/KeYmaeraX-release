@@ -469,6 +469,14 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case Using(es, t) => v match {
       case bp@BelleProvable(p, labels) =>
+        def keepPos(seq: Sequent, pos: Position): Boolean = es.contains(seq(pos.top)) || (t match {
+          case d: AppliedDependentPositionTactic => d.locator.toPosition(seq).contains(pos)
+          case d: AppliedPositionTactic => d.locator.toPosition(seq).contains(pos)
+          case d: AppliedBuiltinTwoPositionTactic => d.posOne == pos || d.posTwo == pos
+          case d: AppliedDependentPositionTacticWithAppliedInput => d.locator.toPosition(seq).contains(pos)
+          case _ => false
+        })
+
         val filteredGoals = p.subgoals.
           map(s => {
             def abbrv(f: Formula, i: Int, name: String): (PredOf, Option[SubstitutionPair]) = {
@@ -482,11 +490,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             }
 
             val antes = s.ante.zipWithIndex.map({ case (f, i) =>
-              if (es.contains(f)) (f, None)
+              if (keepPos(s, AntePos(i))) (f, None)
               else abbrv(f, i, "p_")
             })
             val succs = s.succ.zipWithIndex.map({ case (f, i) =>
-              if (es.contains(f)) (f, None)
+              if (keepPos(s, SuccPos(i))) (f, None)
               else abbrv(f, i, "q_")
             })
 

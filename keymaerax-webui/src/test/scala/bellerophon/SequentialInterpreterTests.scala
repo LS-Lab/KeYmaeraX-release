@@ -834,4 +834,35 @@ class SequentialInterpreterTests extends TacticTestBase {
         "x=1 | x=2, c()=4 ==> [x:=c();]x<=2, [{x'=x}]x>=0".asSequent
       )
   }
+
+  it should "be allowed but optional to mention formulas of position tactics" in withQE { _ =>
+    proveBy("x=2, c()=3 ==> [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality(1))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x=c() ==> x=2".asSequent
+    proveBy("x=2, c()=3 ==> [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: Nil, DLBySubst.assignEquality(1))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x=c() ==> x=2".asSequent
+    proveBy("x=2, c()=3 ==> [{x'=c()}]x>=2".asSequent,
+      Using("c()=3".asFormula :: Nil, diffInvariant("x>=old(x)".asFormula)(1))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x_0=x ==> [{x'=c() & true & x>=x_0}]x>=2".asSequent
+  }
+
+  it should "be allowed but optional to mention formulas of searchy position locators" in withTactics {
+    proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality('R, "[x:=c();]x=2".asFormula))).
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x=c() ==> [x:=4;]x=4, x=2".asSequent
+    proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
+      Using("c()=3".asFormula :: "[x:=c();]x=2".asFormula :: Nil, DLBySubst.assignEquality('Rlike, "[x:=c();]x=c()".asFormula))).
+      //@todo undesired renaming
+      subgoals.loneElement shouldBe "x_0=2, c()=3, x=4 ==> [x_0:=c();]x_0=2, x=4".asSequent
+  }
+
+  it should "be allowed but optional to mention formulas of two-position tactics" in withTactics {
+    proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
+      Using(Nil, SequentCalculus.exchangeL(-1, -2))).
+      subgoals.loneElement shouldBe "c()=3, x=2 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent
+    proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
+      Using(Nil, SequentCalculus.exchangeR(1, 2))).
+      subgoals.loneElement shouldBe "x=2, c()=3 ==> [x:=c();]x=2, [x:=4;]x=4".asSequent
+  }
 }
