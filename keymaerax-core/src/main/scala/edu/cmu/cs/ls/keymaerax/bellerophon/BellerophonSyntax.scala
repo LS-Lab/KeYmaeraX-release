@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -581,7 +581,7 @@ abstract case class DependentTactic(name: String) extends NamedBelleExpr {
   def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
   def computeExpr(v : BelleValue): BelleExpr = v match {
-    case BelleProvable(provable, _) => computeExpr(provable)
+    case BelleProvable(provable, _, _) => computeExpr(provable)
     case e: BelleThrowable => computeExpr(e)
   }
 }
@@ -655,7 +655,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       //@note interprets PositionLocator
       case Fixed(pos, shape, exact) => shape match {
         case Some(f) => v match {
-          case BelleProvable(provable, _) =>
+          case BelleProvable(provable, _, _) =>
             require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
             //@note (implicit .apply needed to ensure subposition to pos.inExpr
             if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
@@ -671,15 +671,15 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case l@Find(_, _, start, _) =>
         tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + v.prettyString))
-      case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
-      case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
+      case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
+      case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
   } catch {
     //note the following exceptions are likely caused by wrong positioning
     case be: BelleCriticalException => locator match {
       case _: Find => throw be
       case Fixed(pos, _, _) => v match {
-        case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
+        case BelleProvable(provable, _, _) if provable.subgoals.size == 1 =>
           def printParents(p: Position): String =
             if (p.isTopLevel) {
               provable.subgoals.head(p.top).prettyString + " at " + p.prettyString
@@ -715,7 +715,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
   private def tryAllAfter(locator: Find, cause: => BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
+      case BelleProvable(provable, _, _) =>
         if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           @tailrec
@@ -850,9 +850,13 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
+object Expand {
+  def apply(name: NamedSymbol, s: SubstitutionPair): Expand = Expand(name, Some(s))
+}
+
 /** Expands symbol `name` per uniform substitution `s`.
   * @see [[USubstOne]] */
-case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
+case class Expand(name: NamedSymbol, s: Option[SubstitutionPair]) extends BelleExpr {
   //@note serialize `s` for database since required in the proof tree when assembling provables
   override def prettyString: String = s"""expand "${name.prettyString}""""
 }
@@ -870,15 +874,21 @@ trait BelleValue {
   def prettyString: String = toString
 }
 
+object BelleProvable {
+  def plain(p: ProvableSig): BelleProvable = BelleProvable(p, None, Declaration(Map.empty))
+  def labeled(p: ProvableSig, label: Option[List[BelleLabel]]): BelleProvable = BelleProvable(p, label, Declaration(Map.empty))
+}
+
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
-case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
+case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]], defs: Declaration) extends BelleExpr with BelleValue {
   if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
 }
 
 /** A Provable that was produced with a delayed substitution `subst`. */
-class BelleDelayedSubstProvable(override val p: ProvableSig, override val label: Option[List[BelleLabel]] = None, val subst: USubst) extends BelleProvable(p, label) {
+class BelleDelayedSubstProvable(override val p: ProvableSig, override val label: Option[List[BelleLabel]], override val defs: Declaration, val subst: USubst)
+  extends BelleProvable(p, label, defs) {
   override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
   override def prettyString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
 }
@@ -899,8 +909,8 @@ abstract class LabelledGoalsDependentTactic(override val name: String) extends D
   def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new NotImplementedError
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
   override def computeExpr(v : BelleValue): BelleExpr = v match {
-    case BelleProvable(provable, Some(labels)) => computeExpr(provable, labels)
-    case BelleProvable(provable, None) => computeExpr(provable)
+    case BelleProvable(provable, Some(labels), _) => computeExpr(provable, labels)
+    case BelleProvable(provable, None, _) => computeExpr(provable)
     case e: BelleThrowable => super.computeExpr(e)
   }
 }

@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.Calendar
-
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -167,7 +166,7 @@ object DatabasePopulator extends Logging {
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
+    interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }
 

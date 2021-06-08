@@ -29,48 +29,48 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "Locators" should "apply searchy with sub-positions" in withTactics {
     inside(theInterpreter(composeb(Find.FindR(0, Some("[x:=2;][y:=*;?y>=x;]y>=2".asFormula), PosInExpr(1::Nil), exact=true)),
-      BelleProvable(ProvableSig.startProof("==> [x:=2;][y:=*;?y>=x;]y>=2".asSequent)))) {
-      case BelleProvable(p, _) =>
+      BelleProvable.plain(ProvableSig.startProof("==> [x:=2;][y:=*;?y>=x;]y>=2".asSequent)))) {
+      case BelleProvable(p, _, _) =>
         p.subgoals.loneElement shouldBe "==> [x:=2;][y:=*;][?y>=x;]y>=2".asSequent
     }
   }
 
   "AndR" should "prove |- 1=1 ^ 2=2" in withMathematica { _ =>
-    inside (theInterpreter(andR(1), BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))) {
-      case BelleProvable(p, _) =>
+    inside (theInterpreter(andR(1), BelleProvable.plain(ProvableSig.startProof("1=1 & 2=2".asFormula)))) {
+      case BelleProvable(p, _, _) =>
         p.subgoals should contain theSameElementsInOrderAs "==> 1=1".asSequent :: "==> 2=2".asSequent :: Nil
     }
   }
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in withMathematica { _ =>
-    inside (theInterpreter(implyR(1) & close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter(implyR(1) & close, BelleProvable.plain(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in withMathematica { _ =>
-    inside (theInterpreter(andR(1) | (implyR(1) & close), BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter(andR(1) | (implyR(1) & close), BelleProvable.plain(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in withMathematica { _ =>
-    inside (theInterpreter((implyR(1) & close) | andR(1), BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter((implyR(1) & close) | andR(1), BelleProvable.plain(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
   it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in withMathematica { _ =>
     val tactic = implyR(1) & DebuggingTactics.done | skip
-    inside (theInterpreter(tactic, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "==> 1=2 -> 1=2".asSequent
+    inside (theInterpreter(tactic, BelleProvable.plain(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "==> 1=2 -> 1=2".asSequent
     }
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in withMathematica { _ =>
     val tactic = implyR(1) & DebuggingTactics.done | (skip & skip) & DebuggingTactics.done
     val f = "1=2 -> 1=2".asFormula
-    a [BelleThrowable] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
+    a [BelleThrowable] should be thrownBy theInterpreter(tactic, BelleProvable.plain(ProvableSig.startProof(f))
     )
   }
 
@@ -225,8 +225,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close,
       implyR(SuccPos(0)) & close
     )
-    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
@@ -236,8 +236,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close,
       implyR(SuccPos(0)) & close
       )
-    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
@@ -257,7 +257,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a [BelleThrowable] shouldBe thrownBy(
-      theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof(f)))
+      theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startProof(f)))
     )
   }
 
@@ -275,16 +275,16 @@ class SequentialInterpreterTests extends TacticTestBase {
       (BelleTopLevelLabel("bar"), orR(1) & notR(1) & close),
       (BelleTopLevelLabel("foo"), implyR(1) & close)
     )
-    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
+    inside (theInterpreter.apply(tactic, BelleProvable.plain(ProvableSig.startProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)))) {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
     }
   }
 
   it should "work with loop labels" in withMathematica { _ =>
     val tactic = implyR(1) & loop("x>1".asFormula)(1)
-    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>0".asFormula))
+    val v = BelleProvable.plain(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>0".asFormula))
     inside (theInterpreter.apply(tactic, v)) {
-      case BelleProvable(p, Some(l)) =>
+      case BelleProvable(p, Some(l), _) =>
         p.subgoals should have size 3
         l should contain theSameElementsInOrderAs(BelleLabels.initCase :: BelleLabels.useCase :: BelleLabels.indStep :: Nil)
     }
@@ -366,10 +366,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       BelleLabels.useCase -> id,
       BelleLabels.indStep -> assignb(1)
     ).permutations.map(t => implyR(1) & loop("x>1".asFormula)(1) & CaseTactic(t))
-    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1".asFormula))
+    val v = BelleProvable.plain(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1".asFormula))
     for (t <- ts) {
       inside(theInterpreter.apply(t, v)) {
-        case BelleProvable(p, _) =>
+        case BelleProvable(p, _, _) =>
           p.subgoals should contain theSameElementsAs List(
             "x>2 ==> x>1".asSequent,
             "x>1 ==> x+1>1".asSequent)
@@ -384,10 +384,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       BelleLabels.indStep -> assignb(1)
     ).permutations.map(t => implyR(1) & andR(1) /* creates labels that become parents of loop labels */ <(
       loop("x>1".asFormula)(1) & CaseTactic(t), id))
-    val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
+    val v = BelleProvable.plain(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>1 & x>2".asFormula))
     for (t <- ts) {
       inside(theInterpreter.apply(t, v)) {
-        case BelleProvable(p, _) =>
+        case BelleProvable(p, _, _) =>
           p.subgoals should contain theSameElementsAs List(
             "x>2 ==> x>1".asSequent,
             "x>1 ==> x+1>1".asSequent)
@@ -405,10 +405,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       "[x:=x-1;][{x:=x+1;}*]x>=1".asLabel.append(BelleLabels.indStep) -> assignb(1)
     ).permutations.map(t => prop & unfoldProgramNormalize /* create labels that become parents of loop labels */ &
       onAll(loop("x>=1".asFormula)(1)) & CaseTactic(t))
-    val v = BelleProvable(ProvableSig.startProof("x>2 -> [x:=1;++x:=x-1;][{x:=x+1;}*]x>=1 & x>2".asFormula))
+    val v = BelleProvable.plain(ProvableSig.startProof("x>2 -> [x:=1;++x:=x-1;][{x:=x+1;}*]x>=1 & x>2".asFormula))
     for (t <- ts) {
       inside(theInterpreter.apply(t, v)) {
-        case BelleProvable(p, labels) =>
+        case BelleProvable(p, labels, _) =>
           p.subgoals should contain theSameElementsAs List(
             "x_0>2, x=1 ==> x>=1".asSequent,
             "x>=1, x_0>2 ==> x>=1".asSequent,
@@ -553,7 +553,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         & Idioms.nil
         & split
         & Idioms.nil
-        & Idioms.nil, BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))
+        & Idioms.nil, BelleProvable.plain(ProvableSig.startProof("1=1 & 2=2".asFormula)))
     }
     thrown.printStackTrace()
     thrown.getMessage should include ("Fails...")
@@ -571,7 +571,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
       "andR(1); <(close, close)".asTactic,
-      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
+      BelleProvable.plain(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
           |==> 1:  false	False$
@@ -580,7 +580,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     listener.calls should have size 10
     val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
-      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+      computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should contain theSameElementsInOrderAs(
       "andR(1); <(close, close)".asTactic :: "andR(1)".asTactic ::
@@ -598,7 +598,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
       "andR(1); <(close, close)".asTactic,
-      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
+      BelleProvable.plain(ProvableSig.startProof("false & true".asFormula))) should have message
         """Inapplicable close
           |Provable{
           |==> 1:  false	False$
@@ -606,7 +606,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           |==> 1:  false	False$}""".stripMargin
 
     val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
-      computeExpr(BelleProvable(ProvableSig.startProof("==> false & true".asSequent)))
+      computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should have size 12
     listener.calls should contain theSameElementsInOrderAs(
@@ -622,9 +622,9 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     // should take about 1min
     failAfter(2 minutes) {
-      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
+      val BelleProvable(result, _, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
         SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
-        BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
+        BelleProvable.plain(ProvableSig.startProof(Imply(ante, succ)))
       )
       result.subgoals.head.ante should have size 100
       result.subgoals.head.succ should have size 50
@@ -638,9 +638,9 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     // should take about 500ms
     failAfter(2 seconds) {
-      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
+      val BelleProvable(result, _, _) = ExhaustiveSequentialInterpreter(Nil)(
         SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
-        BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
+        BelleProvable.plain(ProvableSig.startProof(Imply(ante, succ)))
       )
       result.subgoals.head.ante should have size 100
       result.subgoals.head.succ should have size 50
@@ -660,9 +660,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     ExhaustiveSequentialInterpreter(listener :: Nil)(
       SaturateTactic(prop),
-      BelleProvable(ProvableSig.startProof("x>0 -> x>0".asFormula))
+      BelleProvable.plain(ProvableSig.startProof("x>0 -> x>0".asFormula))
     ) match {
-      case BelleProvable(pr, _) => pr shouldBe 'proved
+      case BelleProvable(pr, _, _) => pr shouldBe 'proved
     }
     listener.calls should have size 1
   }

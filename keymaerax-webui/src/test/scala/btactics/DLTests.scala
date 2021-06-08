@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DbProofTree
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -297,8 +297,11 @@ class DLTests extends TacticTestBase {
   }
 
   it should "give advice on program constant postcondition" in withTactics {
-    the [BelleUserCorrectableException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
-      DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+    the [IllFormedTacticApplicationException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
+      DLBySubst.assignEquality(1)) should have message "Unknown symbol ode;: neither file definitions nor proof definitions provide information how to expand"
+    proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent, DLBySubst.assignEquality(1), Declaration(Map(
+      Name("ode", None) -> Signature(None, Trafo, None, Some("{{x'=1}}^@".asProgram), UnknownLocation)
+    ))).subgoals.loneElement shouldBe "x_0=0, x=x_0+1 ==> [{{x'=1}}^@]x>=0".asSequent
   }
 
   it should "assign with antecedent context present" in withTactics {
@@ -642,7 +645,7 @@ class DLTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
 
-    val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
+    val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3
     val finalTree = DbProofTree(db.db, proofId.toString).load()
     finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals

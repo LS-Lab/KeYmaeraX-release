@@ -122,7 +122,7 @@ class TraceRecordingListener(db: DBAbstraction,
       if (node == null) {
         result match {
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-          case Left(BelleProvable(p, labels)) =>
+          case Left(BelleProvable(p, labels, _)) =>
             // no longer want to construct global provables (want to allow halfway done substitutions)
             current.local = p
             current.branchLabel = labels.map(BelleLabel.toPrettyString)

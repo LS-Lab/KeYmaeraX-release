@@ -217,8 +217,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Tests with both Mathematica and Z3 as QE tools. */
   def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
+    println("=====With Mathematica=====")
     withClue("Mathematica") { withMathematica(testcode, timeout, initLibrary) }
     afterEach()
+    println("=====With Z3=====")
     beforeEach()
     withClue("Z3") { withZ3(testcode, timeout, initLibrary) }
   }
@@ -341,13 +343,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, subst: USubst): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s))
+    val v = BelleProvable.plain(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
         dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ subst) shouldBe s.exhaustiveSubst(dsp.subst ++ subst)
         labelCheck(dsp.label)
         dsp.p
-      case BelleProvable(provable, labels) =>
+      case BelleProvable(provable, labels, _) =>
         provable.conclusion.exhaustiveSubst(subst) shouldBe s.exhaustiveSubst(subst)
         labelCheck(labels)
         provable
@@ -367,27 +369,28 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s))
+  def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = proveBy(s, tactic, Declaration(Map.empty))
+  def proveBy(s: Sequent, tactic: BelleExpr, defs: Declaration): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(s), None, defs)
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
 
   def proveBy(p: Provable, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(ElidingProvable(p))
+    val v = BelleProvable.plain(ElidingProvable(p))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
 
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(p: ProvableSig, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(p)
+    val v = BelleProvable.plain(p)
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }

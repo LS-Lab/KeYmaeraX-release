@@ -248,35 +248,32 @@ private object DLBySubst {
           else Ax.Dassignbequalityexists.provable(URename("x_".asVariable, v, semantic=true))
       }
 
-
       if (StaticSemantics.freeVars(p).isInfinite) {
         val unexpandedSymbols = StaticSemantics.symbols(p).
-          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false }).
-          map(_.prettyString).mkString(",")
-        throw new UnexpandedDefinitionsFailure("Assignment not possible because postcondition " + p.prettyString + " contains unexpanded symbols " + unexpandedSymbols + ". Please expand first.")
-      }
-
-      if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
-        // bound renaming not possible when
-        useAt(rename)(pos) &
-          (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
-          else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast) & eqL2R(AntePosition.base0(sequent.ante.length-1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length-1))
-          else ident)
+          filter({ case _: SystemConst => true case _: ProgramConst => true case _ => false })
+        unexpandedSymbols.map(n => Expand(n, None)).reduceRight[BelleExpr](_ & _) & assignEquality(pos)
       } else {
-        //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
-        x match {
-          case _: BaseVariable =>
-            val y = TacticHelper.freshNamedSymbol(x, sequent)
-            ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
+        if (x.isInstanceOf[BaseVariable] && StaticSemantics.freeVars(p).symbols.contains(DifferentialSymbol(x))) {
+          // bound renaming not possible when
+          useAt(rename)(pos) &
+            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) & eqL2R(AntePosition.base0(sequent.ante.length))(pos, p) & hideL('Llast)
+            else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast) & eqL2R(AntePosition.base0(sequent.ante.length - 1))('Llast, p) & hideL(AntePosition.base0(sequent.ante.length - 1))
+            else ident)
+        } else {
+          //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+          x match {
+            case _: BaseVariable =>
+              val y = TacticHelper.freshNamedSymbol(x, sequent)
+              ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
+                (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+                else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+                else ident)
+            case _: DifferentialSymbol => useAt(rename)(pos) &
               (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
               else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
               else ident)
-          case _: DifferentialSymbol => useAt(rename)(pos) &
-            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-            else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-            else ident)
+          }
         }
-
       }
     case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)

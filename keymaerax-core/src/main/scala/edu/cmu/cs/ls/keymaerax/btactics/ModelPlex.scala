@@ -202,7 +202,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "throughout" =>
         loopBranch = Some(b)
       case SeqTactic(t: AppliedDependentPositionTactic, s: BelleExpr) if t.name == "dW" => input match {
-        case BelleProvable(p, _) =>
+        case BelleProvable(p, _, _) =>
           assert(p.subgoals.size == 1, "dW expected on a single subgoal")
           val dWResult = proveBy(p.subgoals.head, t)
           assert(dWResult.subgoals.size == 1, "dW expected to result in a single subgoal")
@@ -211,7 +211,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
         invariant = Some(t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula])
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
-        case BelleProvable(p, _) =>
+        case BelleProvable(p, _, _) =>
           val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
           p.subgoals.head.sub(t.locator.toPosition(p).getOrElse(throw new IllFormedTacticApplicationException("ModelPlex input proof provides position locator that points to no valid position in the sequent"))) match {
             case Some(Box(ODESystem(_, qq@And(_, prevDi)), _)) if qq != q =>
@@ -229,7 +229,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           }
       }
       case b@BranchTactic(children) if loopBranch.contains(b) => input match {
-        case BelleProvable(p, _) =>
+        case BelleProvable(p, _, _) =>
           //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
           assert(children.size == 4 && children.size == p.subgoals.size, "4 open goals expected after throughout")
           throughoutLemmas = p.subgoals.zip(children).zipWithIndex.map({ case ((s, t), i) => (name+"_"+i, s.toFormula, implyR(1) & t) }).toList
@@ -254,7 +254,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val nondetPlant = plantVars.map(AssignAny).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, q, x0)
-      LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(fml)))
+      LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
 
       val diffInvariants = pl.diffInvariants.map(replaceOld(_, x0)).map(f => FormulaTools.conjuncts(f).toSet[Formula]).map(_.reduceRightOption(And).getOrElse(True)).reduceRightOption(Or).getOrElse(True)
       val evolDomain = if (q == True) diffInvariants else And(q, diffInvariants)
@@ -289,7 +289,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val x0 = senseVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, formula))).toMap
 
         val pl = proofListener(name, senseVars.toSet, q, x0)
-        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula)))
 
         val plantApprox = pl.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
 
@@ -374,7 +374,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val readConsts = consts.values.toList.sorted[NamedSymbol].map(AssignAny).reduceOption(Compose).getOrElse(Test(True))
 
         val pl = proofListener(name, senseVars.toSet, q, x0)
-        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(formula)))
         val inv = replace(pl.invariant.get, consts)
 
         val plantApprox = (pl.diffInvariants :+ q).

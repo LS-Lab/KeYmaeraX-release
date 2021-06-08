@@ -12,10 +12,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.slf4j.LoggerFactory
@@ -264,14 +264,26 @@ object TactixLibrary extends HilbertCalculus
       (QE(timeout = Some(5)) | DebuggingTactics.print("smartQE") & ArithmeticSpeculativeSimplification.speculativeQE) |
       (QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE)*/
 
+    val hpExpand = anon ((seq: Sequent) => {
+      val fml = seq.toFormula
+      StaticSemantics.symbols(seq).
+        filter({ case _: ProgramConst | _: SystemConst => true case _ => false }).toList.
+        sortBy(n => FormulaTools.posOf(fml, n).get.pos.size) match {
+          case Nil => nil
+          case hp :: _ => Expand(hp, None)
+        }
+    })
+
+    val autoStep = doStep(index)('R) | loop('R) | expandAll & odeR('R) | solve('R) | doStep(index)('L) | solve('L) |
+      id | DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | hpExpand | nil
+
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
-      SaturateTactic(onAll(doStep(index)('R) | loop('R) | odeR('R) | solve('R) | doStep(index)('L) | solve('L) |
-        id | DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | nil)) &
+      SaturateTactic(onAll(autoStep)) &
         Idioms.doIf(!_.isProved)(onAll(
           //@note apply equalities inside | to undo in case branches do not close
-          (EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done)
-            | ?(EqualityTactics.applyEqualities & autoQE & (if (keepQEFalse) nil else done))))))
+          (ExpandAll(Nil) & EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done)
+            | ?(ExpandAll(Nil) & EqualityTactics.applyEqualities & autoQE & (if (keepQEFalse) nil else done))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -859,9 +871,9 @@ object TactixLibrary extends HilbertCalculus
     * @see [[proveBy()]]
     */
   def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(goal)
+    val v = BelleProvable(goal, None, Declaration(Map.empty))
     BelleInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
 //      //@note there is no other case at the moment
 //      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }

@@ -733,6 +733,24 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(f, master()).subgoals.loneElement shouldBe "X>x, \\forall a (x<a&a<=X->P(a)) ==> \\exists a (a>x&P(a))".asSequent
   }
 
+  it should "expand definitions" in withQE { _ =>
+    val entry = ArchiveParser(
+      """Theorem "Simple"
+        |Definitions
+        |  Real ep;
+        |  Real b;
+        |  Real m;
+        |  Bool loopinv(Real x, Real v) <-> v>=0 & x+v^2/(2*b)<=m;
+        |  HP ctrl ::= { a:=-b; ++ ?x+v*ep+v^2/(2*b)<=m; a:=0; };
+        |  HP ode  ::= { x'=v, v'=a, t'=1 & v>=0 & t<=ep };
+        |End.
+        |ProgramVariables Real x,v,a,t; End.
+        |Problem loopinv(x,v) & b>0 & ep>=0 -> [{ctrl;t:=0;ode;}*@invariant(loopinv(x,v))]x<=m End.
+        |End.""".stripMargin).head
+
+    proveBy(Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula])), autoClose, entry.defs) shouldBe 'proved
+  }
+
   "useLemma" should "use unification to bridge between function symbols and terms" in withTactics {
     val lemmaName = "tests/useLemma/tautology1"
     val lemma = proveBy("f()>0 -> f()>0".asFormula, prop)

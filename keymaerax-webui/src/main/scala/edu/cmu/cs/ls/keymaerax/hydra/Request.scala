@@ -1752,7 +1752,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           RequestHelper.listenerFactory(db, session(proofId).asInstanceOf[ProofSession]),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
-        innerInterpreter(parentTactic, BelleProvable(conjecture))
+        innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
@@ -2333,7 +2333,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                   val localProvable = ProvableSig.startProof(sequent)
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
-                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
+                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil), tree.info.defs(db)), interpreter(localProofId, -1))
                   RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
@@ -2441,7 +2441,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     executor.synchronized {
       val response = executor.wait(taskId) match {
-        case Some(Left(BelleProvable(_, _))) =>
+        case Some(Left(_: BelleProvable)) =>
           val tree = DbProofTree(db, proofId)
           tree.locate(nodeId) match {
             case None => new ErrorResponse("Unknown node " + nodeId)
@@ -2872,7 +2872,7 @@ object ProofValidationRunner extends Logging {
   }
 
   /** Schedules a proof validation request and returns the UUID. */
-  def scheduleValidationRequest(db: DBAbstraction, model: Formula, proof: BelleExpr): String = {
+  def scheduleValidationRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration): String = {
     val taskId = java.util.UUID.randomUUID().toString
     results update (taskId, (model, proof, None))
 
@@ -2882,9 +2882,9 @@ object ProofValidationRunner extends Logging {
         val provable = ElidingProvable( Provable.startProof(model) )
 
         try {
-          BelleInterpreter(proof, BelleProvable(provable)) match {
-            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-            case _                                 => results update (taskId, (model, proof, Some(false)))
+          BelleInterpreter(proof, BelleProvable(provable, None, defs)) match {
+            case BelleProvable(p, _, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                    => results update (taskId, (model, proof, Some(false)))
           }
         } catch {
           //Catch everything and indicate a failed proof attempt.
@@ -2901,10 +2901,10 @@ object ProofValidationRunner extends Logging {
 
 /** Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
   * @see CheckValidationRequest - calling this with the returned UUID should give the status of proof checking. */
-class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr) extends Request with ReadRequest {
+class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration) extends Request with ReadRequest {
   override def resultingResponses() : List[Response] =
-    //Spawn an async validation request and return the reesulting UUID.
-    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof), None) :: Nil
+    //Spawn an async validation request and return the resulting UUID.
+    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof, defs), None) :: Nil
 }
 
 /** An idempotent request for the status of a validation request; i.e., validation requests aren't removed until the server is resst. */

@@ -500,7 +500,7 @@ trait SequentCalculus {
     conclusion = "Γ, P |- P, Δ", codeName = "id")
   val id: DependentTactic = new DependentTactic("id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
+      case BelleProvable(provable, _, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         s.ante.intersect(s.succ).headOption match {
@@ -514,7 +514,7 @@ trait SequentCalculus {
     conclusion = "Γ, x=y, P(x) |- P(y), Δ")
   val idx: DependentTactic = new DependentTactic("idx") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
+      case BelleProvable(provable, _, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         s.ante.intersect(s.succ).headOption match {

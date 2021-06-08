@@ -30,7 +30,7 @@ object IOListeners {
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
       else s.toFormula.universalClosure
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
-      case BelleProvable(p, _) if logCondition(p, expr) && !StaticSemantics.freeVars(p.subgoals.head).isInfinite =>
+      case BelleProvable(p, _, _) if logCondition(p, expr) && !StaticSemantics.freeVars(p.subgoals.head).isInfinite =>
         val logSeq = Sequent(IndexedSeq(), IndexedSeq(qeFml(p.subgoals.head)))
         if (!logged.contains(logSeq)) {
           logger(p.conclusion, logSeq, s"QE ${logged.size}")
@@ -58,13 +58,13 @@ object IOListeners {
     def reset(): Unit = recordedDuration = 0
 
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
-      case BelleProvable(p, _) if logCondition(p, expr) && start.isEmpty =>
+      case BelleProvable(p, _, _) if logCondition(p, expr) && start.isEmpty =>
         start = Some((p, expr), System.currentTimeMillis())
       case _ => // do nothing
     }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = (input, start) match {
       // do not record time in nested calls
-      case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
+      case (BelleProvable(p, _, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
         recordedDuration += System.currentTimeMillis() - startTime
         start = None
       case _ => // do nothing
@@ -153,11 +153,11 @@ object IOListeners {
         }
 
         val status = output match {
-          case Left(BelleProvable(p, _)) =>
+          case Left(BelleProvable(p, _, _)) =>
             if (p.isProved) "proved"
             else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
             else input match {
-              case BelleProvable(q, _) =>
+              case BelleProvable(q, _, _) =>
                 if (p.subgoals == q.subgoals) "no progress"
                 else {
                   val change = p.subgoals.diff(q.subgoals).size - q.subgoals.diff(p.subgoals).size
