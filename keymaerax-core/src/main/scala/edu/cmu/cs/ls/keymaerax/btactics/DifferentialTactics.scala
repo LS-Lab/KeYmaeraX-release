@@ -361,9 +361,9 @@ private object DifferentialTactics extends Logging {
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
       if (R.size == 1) {
-        TactixLibrary.dC(R.head)(pos) <(skip, DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & QE & done)
+        TactixLibrary.dC(R.head)(pos) <(skip, DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done)
       } else {
-        val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & QE & done)
+        val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size - 1, pos.inExpr)) & OnAll(QE & done) & done)
         TactixLibrary.dC(R)(pos) <(diffIndAllButFirst: _*)
       }
     }

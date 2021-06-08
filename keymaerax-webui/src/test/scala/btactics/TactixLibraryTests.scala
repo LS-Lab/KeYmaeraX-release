@@ -81,17 +81,14 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
-    proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
-      implyR(1) &
+    proveBy("x>=5 ==> [{x'=x^2}]x>=5".asSequent,
       ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & QE & done)
     ) shouldBe 'proved
   }
 
   it should "generate and master prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { _ =>
-    proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
-      implyR(1) &
-        //@note master() together with ChooseSome leaves goals open, if first alternative doesn't QE --> demand QE after master
-        ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & (master() & QE & done))
+    proveBy("x>=5 ==> [{x'=x^2}]x>=5".asSequent,
+      ChooseSome(someList, (inv:Formula) => diffInvariant(inv)(1) & dW(1) & autoClose)
     ) shouldBe 'proved
   }
 
@@ -123,10 +120,8 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   it should "generate and master prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { _ =>
-    proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
-      implyR(1) &
-        //@note master() together with ChooseSome leaves goals open, if first alternative doesn't QE --> demand QE after master
-        ChooseSome(someList, (inv:Formula) => loop(inv)(1) & (master() & QE & done))
+    proveBy("x>=5 ==> [{{x'=2}}*]x>=5".asSequent,
+      ChooseSome(someList, (inv:Formula) => loop(inv)(1) & autoClose)
     ) shouldBe 'proved
   }
 
@@ -517,7 +512,7 @@ class TactixLibraryTests extends TacticTestBase {
       result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent
     }
 
-    i shouldBe 3 /* decomposeToODE calls ODE, and so does master twice after decomposeToODE is done */
+    i shouldBe 2 /* decomposeToODE calls ODE, and so does master after decomposeToODE is done */
   }
 
   it should "not apply stutter axioms infinitely" in withQE { _ =>
@@ -550,7 +545,7 @@ class TactixLibraryTests extends TacticTestBase {
       SaturateTactic(chaseAtX('R))).subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
-  it should "chase multiple tactic options" in withMathematica { _ =>
+  it should "FEATURE_REQUEST: chase multiple tactic options" in withMathematica { _ =>
     proveBy("x>0 -> y>0 ==>".asSequent,
       chaseAt((isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
         case (_: Imply, true) => Some(TacticInfo("autoMP")) // @todo List with autoMP,implyL
@@ -684,7 +679,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
     val problem = ArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kyx")).mkString).get.model.asInstanceOf[Formula]
-    proveBy(problem, master()) shouldBe 'proved
+    proveBy(problem, autoClose) shouldBe 'proved
   }
 
   it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
