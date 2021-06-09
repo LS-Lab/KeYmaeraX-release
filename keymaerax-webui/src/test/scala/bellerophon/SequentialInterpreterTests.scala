@@ -476,13 +476,6 @@ class SequentialInterpreterTests extends TacticTestBase {
     a [BelleThrowable] shouldBe thrownBy (proveBy("1=1->1=1".asFormula, e))
   }
 
-  "AtSubgoal" should "work" in withMathematica { _ =>
-    val t = andR(1) &
-      Idioms.atSubgoal(0, implyR(1) & close) &
-      Idioms.atSubgoal(0, implyR(1) & close)
-    proveBy("(1=1->1=1) & (2=2->2=2)".asFormula, t) shouldBe 'proved
-  }
-
   //@todo would need DerivationInfo entry
   //@note: DifferentialTests."ODE" should "prove FM tutorial 4" acts as a smoke test for this
   "ChooseSome" should "record in the database" ignore withDatabase { db => withMathematica { _ =>

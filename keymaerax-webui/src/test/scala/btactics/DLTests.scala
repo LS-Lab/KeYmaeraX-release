@@ -407,27 +407,43 @@ class DLTests extends TacticTestBase {
   }
 
   it should "keep constants around" in withTactics {
-    val result = proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, loop("x>1".asFormula)(1))
+    proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, loop("x>1".asFormula)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x>2, y>0 ==> x>1".asSequent,
+      /* use case */ "x>1, y>0 ==> x>0".asSequent,
+      /* step */     "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+    )
+  }
 
-    result.subgoals should have size 3
-    // init
-    result.subgoals(0) shouldBe "x>2, y>0 ==> x>1".asSequent
-    // use case
-    result.subgoals(1) shouldBe "x>1, y>0 ==> x>0".asSequent
-    // step
-    result.subgoals(2) shouldBe "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+  it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" in withTactics {
+    val defs = Declaration(Map(
+      Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
+      Name("post") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>0".asFormula), UnknownLocation),
+      Name("loopinv") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>1".asFormula), UnknownLocation),
+      Name("a") -> Signature(Some(Unit), Trafo, None, Some("x:=x+y;".asProgram), UnknownLocation)
+    ))
+    val result = proveBy("initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent, loop("loopinv(x)".asFormula)(1), defs)
+    // sequential interpreter does not yet support keeping abbreviations when combining provables in branchtactic
+    result.subgoals should contain theSameElementsInOrderAs List(
+      /* init */     "x>2&y>0 ==> x>1".asSequent,
+      /* use case */ "x>1, y>0 ==> x>0".asSequent,
+      /* step */     "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+    )
+    // want instead
+    result.subgoals should contain theSameElementsInOrderAs List(
+      /* init */     "initial(x,y) ==> loopinv(x)".asSequent,
+      /* use case */ "loopinv(x), y>0 ==> post(x)".asSequent,
+      /* step */     "loopinv(x), y>0 ==> [a{|^@|};]loopinv(x)".asSequent
+    )
   }
 
   it should "wipe all formulas mentioning bound variables from the context" in withTactics {
-    val result = proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1))
-
-    result.subgoals should have size 3
-    // init
-    result.subgoals(0) shouldBe "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent
-    // use case
-    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent
-    // step
-    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
+    proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent,
+      /* use case */ "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent,
+      /* step */     "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
+    )
   }
 
   it should "do the same with a slightly more complicated formula" in withTactics {

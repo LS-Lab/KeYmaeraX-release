@@ -336,17 +336,9 @@ object Idioms {
     after
   }}}
 
-  def atSubgoal(subgoalIdx: Int, t: BelleExpr): DependentTactic = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _, _) =>
-        BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw new IllFormedTacticApplicationException("Cannot perform AtSubgoal on a non-Provable value.")
-    }
-  }
-
   /** Gives a name to a tactic to a definable tactic. */
   def NamedTactic(name: String, tactic: => BelleExpr): DependentTactic = new DependentTactic(name) {
-    override def computeExpr(v: BelleValue): BelleExpr = tactic
+    override def computeExpr(provable: ProvableSig): BelleExpr = tactic
   }
 
   /**
@@ -543,9 +535,7 @@ object TacticFactory {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
     def bys(t: ProvableSig => BelleExpr): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v : BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _, _) => t(provable)
-      }
+      override def computeExpr(provable: ProvableSig): BelleExpr = t(provable)
     }
     def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInputs(input, new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)

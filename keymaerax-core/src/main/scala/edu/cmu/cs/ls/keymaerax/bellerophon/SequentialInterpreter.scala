@@ -267,7 +267,12 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case Expand(n, s) => v match {
       case BelleProvable(_, _, defs) =>
-        val subst = defs.substs.find(_.what == n) match {
+        val subst = defs.substs.find(_.what match {
+          case FuncOf(fn, _) => fn == n
+          case PredOf(fn, _) => fn == n
+          case PredicationalOf(fn, _) => fn == n
+          case fn => fn == n
+        }) match {
           case Some(pd) => s match {
             case None => USubst(List(pd))
             case Some(sd) =>
@@ -279,7 +284,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             case None => throw new IllFormedTacticApplicationException("Unknown symbol " + n.prettyString + ": neither file definitions nor proof definitions provide information how to expand")
           }
         }
-        TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, subst :: Nil)
+        TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, List(subst))
         apply(TactixLibrary.US(subst), v) match {
           case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ subst)
           case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, subst)
@@ -822,6 +827,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                 case _ => csubsts
               }
               val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              //@todo want to keep names of cp abbreviated instead of substituted
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
