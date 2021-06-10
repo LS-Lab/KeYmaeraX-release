@@ -325,12 +325,39 @@ private object ToolTactics {
       case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
       case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
-    val Equiv(_, result) = qeFact.conclusion.succ.head
 
-    cutLR(result)(1) & Idioms.<(
-      /*use*/ closeT | skip,
-      /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
-    )
+    def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {
+      case Forall(v, p) => v ++ leadingQuantOrder(p)
+      case Exists(v, p) => v ++ leadingQuantOrder(p)
+      case _ => Nil
+    }
+
+    def applyFact(fact: Formula): BelleExpr = {
+      val subs = FormulaTools.conjuncts(fact)
+      BranchTactic(subs.map({ case Equiv(f, result) =>
+        toSingleFormula & FOQuantifierTactics.universalClosure(leadingQuantOrder(f).toList)(1) & cutLR(result)(1) <(
+          closeT | nil
+          ,
+          equivifyR(1) & commuteEquivR(1) & cut(qeFact.conclusion.succ.head) <(
+            SaturateTactic(andL('L)) & close,
+            cohideR('Rlast) & by(qeFact)
+          )
+      )}))
+    }
+
+    qeFact.conclusion.succ.head match {
+      case Equiv(_, result) =>
+        cutLR(result)(1) <(
+          /*use*/ closeT | skip,
+          /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
+        )
+      case result: And =>
+        val facts = FormulaTools.conjuncts(result)
+        SaturateTactic(allR('R)) & (prop & Idioms.doIfElse(_.subgoals.size == facts.size)(
+          applyFact(result),
+          fail
+        ) | expandAll & prop & OnAll(applyEqualities) & applyFact(result))
+    }
   })
 
   /** @see [[TactixLibrary.transform()]] */

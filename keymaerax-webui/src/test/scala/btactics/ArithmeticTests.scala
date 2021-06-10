@@ -43,6 +43,8 @@ class ArithmeticTests extends TacticTestBase {
       Lemma(p, Lemma.requiredEvidence(p))
     }
 
+    override def qe(g: Goal): (Goal, Formula) = ???
+
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected
       None

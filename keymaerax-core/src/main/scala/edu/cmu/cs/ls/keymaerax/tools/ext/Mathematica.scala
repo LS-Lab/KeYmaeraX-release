@@ -8,16 +8,22 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
+import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
+import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaToKeYmaera
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
+import scala.collection.mutable.ListBuffer
 
 /**
  * Mathematica/Wolfram Engine tool for quantifier elimination and solving differential equations.
@@ -133,13 +139,105 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         cex match {
           case None =>
             mQE.timeout = qeMaxTimeout
-            mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
+            if (Configuration.getBoolean(Configuration.Keys.MATHEMATICA_PARALLEL_QE).getOrElse(false) && StaticSemantics.freeVars(formula).isEmpty) {
+              // ask parallel QE to find out how to prove, then follow that recipe to get lemmas and return combined
+              // result; double the work but prefers soundness over splitting soundness-critically inside QETool and
+              // directly believing that result
+              val lemmas = qe(splitFormula(formula)) match {
+                case (Atom(fml), _) => List(mQE.run(ProvableSig.proveArithmeticLemma(_, fml)))
+                case (AllOf(fmls), _) => fmls.map({
+                  case Atom(fml) => mQE.run(ProvableSig.proveArithmeticLemma(_, fml))
+                  case g => throw ToolExecutionException("Unable to split goal " + g + " into separate QE calls")
+                })
+              }
+              val combined = ProvableSig.startProof(lemmas.map(_.fact.conclusion.succ.head).reduceRight(And))
+              val result = lemmas.init.foldLeft(combined)({ case (c, l) => c(AndRight(SuccPos(0)), 0)(l.fact, 0) })(lemmas.last.fact, 0)
+              Lemma(result, Nil)
+            } else mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
           case Some(cexFml) => Lemma(
             ProvableSig.startProof(Equiv(formula, False)),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
         }
       case ex: MathematicaComputationUserAbortException => throw ex
     }
+  }
+
+  override def qe(goal: Goal): (Goal, Formula) = firstResultQE(goal)
+
+  private val INDEX = Variable("i")
+  private val RESULT = PredOf(Function("result", None, Unit, Bool, interpreted=false), Nothing)
+
+  /** Returns the result of the first QE call to succeed among the formulas in `fmls`. */
+  private def firstResultQE(goal: Goal): (Goal, Formula) = {
+    val ids = ListBuffer.empty[Goal]
+    // {res, id, eids} = WaitNext[...]; AbortKernels[]; res
+    val input = goal match {
+      case g@Atom(fml) =>
+        ids.append(g)
+        list(int(ids.size-1), mQE.qeTool.qe(fml))
+      case OneOf(oneOfGoals) => module(
+        list(),
+        compoundExpr(
+          set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(list(oneOfGoals.map({
+            case g@Atom(fml) =>
+              ids.append(g)
+              parallelSubmit(list(int(ids.size-1), mQE.qeTool.qe(fml)))
+            case g@AllOf(allOfGoals) =>
+              ids.append(g)
+              parallelSubmit(list(int(ids.size-1), and(allOfGoals.map({
+                case Atom(g) => mQE.qeTool.qe(g)
+                case _ => throw new IllegalArgumentException("Unsupported parallel QE feature: nested non-atom in AllOf")
+              }):_*)))
+            case OneOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: nested OneOf in OneOf")
+          }):_*))),
+          abortKernels(),
+          symbol("res")
+        )
+      )
+      case AllOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: top-level AllOf")
+    }
+    try {
+      val (_, result) = mQE.qeTool.link.run(input, new UncheckedBaseM2KConverter {
+        override def convert(e: MExpr): KExpr = {
+          if (e.listQ()) {
+            val (i, fml) = e.args.toList match {
+              case i :: fml :: Nil => convert(i).asInstanceOf[Term] -> convert(fml).asInstanceOf[Formula]
+              case e => throw ConversionException("Expected QE result list of length 2 {i,fml}, but got " + e.mkString(","))
+            }
+            And(Equal(INDEX, i), Equiv(RESULT, fml))
+          }
+          else super.convert(e)
+        }
+      })
+      result match {
+        case And(Equal(INDEX, Number(i)), Equiv(RESULT, fml)) => ids(i.toIntExact) -> fml
+        case _ => throw ConversionException("Expected a formula result but got a non-formula expression: " + result.prettyString)
+      }
+    } finally { input.dispose() }
+  }
+
+
+  /** Transforms the leaves in goal `g` according to transformation `trafo`. */
+  private def applyTo(g: Goal, trafo: Formula => Formula): Goal = g match {
+    case Atom(goal) => Atom(trafo(goal))
+    case OneOf(goals) => OneOf(goals.map(applyTo(_, trafo)))
+    case AllOf(goals) => AllOf(goals.map(applyTo(_, trafo)))
+  }
+
+  /** Splits formula `fml` into QE goals that can potentially be executed concurrently. */
+  private def splitFormula(fml: Formula): Goal = fml match {
+    case Forall(x, p) => applyTo(splitFormula(p), Forall(x, _))
+    case _: Imply =>
+      val propSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.prop).subgoals
+      val expandedSubgoals = TactixLibrary.proveBy(fml, TactixLibrary.expandAll & TactixLibrary.prop &
+        OnAll(TactixLibrary.applyEqualities)).subgoals
+      if (propSubgoals.size > 1) {
+        if (expandedSubgoals.size > 1) OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula))), AllOf(expandedSubgoals.map(p => Atom(p.toFormula)))))
+        else OneOf(List(Atom(fml), AllOf(propSubgoals.map(p => Atom(p.toFormula)))))
+      } else if (expandedSubgoals.size > 1) {
+        OneOf(List(Atom(fml), AllOf(expandedSubgoals.map(p => Atom(p.toFormula)))))
+      } else Atom(fml)
+    case _ => Atom(fml)
   }
 
   /** Strips the universal quantifiers from a formula. Assumes shape \forall x (p(x) -> q(x)) */
