@@ -81,8 +81,8 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   */
 case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
                                    listenerFactory: Int => (String, Int, Int) => scala.collection.immutable.Seq[IOListener],
-                                   inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int = 0,
-                                   strict: Boolean = true, convertPending: Boolean = true) extends Interpreter with Logging {
+                                   inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int,
+                                   strict: Boolean, convertPending: Boolean) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
   private var runningInner: Interpreter = _
@@ -328,7 +328,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           if (descend > 0) {
             val innerId = idProvider(in)
             innerProofId = Some(innerId)
-            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listenerFactory, inner, descend, strict = strict)
+            val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listenerFactory, inner, descend, strict, convertPending)
             val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1),
               strict, convertPending, executePending) match {
               case (BelleProvable(derivation, _), _) =>
