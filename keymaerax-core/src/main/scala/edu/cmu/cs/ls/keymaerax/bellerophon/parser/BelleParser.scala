@@ -40,6 +40,13 @@ object BelleParser extends TacticParser with Logging {
   /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
+  /** Parses `t` backwards-compatible with definitions `defs` expanded in tactic arguments depending on
+    * whether `t` expands symbols or uses substitutions explicitly or not. */
+  def parseBackwardsCompatible(t: String, defs: Declaration): BelleExpr =
+    if (tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
+    else if (tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
+    else parseWithInvGen(t, None, defs, expandAll=true) // backwards compatibility
+
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
     * expand function and predicate symbols. */
   def parseWithInvGen(s: String, g: Option[Generator.Generator[GenProduct]] = None,
