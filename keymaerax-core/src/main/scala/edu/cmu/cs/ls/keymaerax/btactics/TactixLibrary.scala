@@ -7,17 +7,21 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.ext.{AllOf, Atom, OneOf}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.{List, _}
@@ -150,7 +154,7 @@ object TactixLibrary extends HilbertCalculus
       case (f: Not, true) if f.isPredicateFreeFOL => None
       case (f: Not, false) if f.isPredicateFreeFOL => None
       case (f: And, false) if f.isPredicateFreeFOL => None
-      case (_: Imply, true) => Some(TacticInfo("autoMP"))
+      case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("autoMP"))
       case (_: Or, true) => None
       case (_: Equiv, _) => None
       case _ => sequentStepIndex(isAnte)(expr)
@@ -218,8 +222,8 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, false) if f.isPredicateFreeFOL => None
-      case (_: Forall, true) => Some(TacticInfo("chase"))
-      case (_: Exists, false) => Some(TacticInfo("chase"))
+      case (f: Forall, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
+      case (f: Exists, false) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -242,7 +246,7 @@ object TactixLibrary extends HilbertCalculus
             if (q.isFOL) Some(odeR(pp))
             //@note chase may make progress on some but not all postconditions (e.g. not on loops)
             else Some(chase(pp ++ PosInExpr(1::Nil)) & SimplifierV3.simplify(pp ++ PosInExpr(1::Nil)) & odeR(pp))
-          } else Some(solve(pp))
+          } else Some(solve(pp)) //@note doesn't work in context of equivalence
         case _ => None
       })
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
@@ -260,10 +264,6 @@ object TactixLibrary extends HilbertCalculus
       }
     })
 
-    val autoQE = QE /* @todo  Idioms.must(ArithmeticSpeculativeSimplification.autoMonotonicityTransform) & DebuggingTactics.print("autoQE") &
-      (QE(timeout = Some(5)) | DebuggingTactics.print("smartQE") & ArithmeticSpeculativeSimplification.speculativeQE) |
-      (QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE)*/
-
     val hpExpand = anon ((seq: Sequent) => {
       val fml = seq.toFormula
       StaticSemantics.symbols(seq).
@@ -274,16 +274,29 @@ object TactixLibrary extends HilbertCalculus
         }
     })
 
-    val autoStep = doStep(index)('R) | loop('R) | expandAll & odeR('R) | solve('R) | doStep(index)('L) | solve('L) |
-      id | DLBySubst.safeabstractionb('R) | PropositionalTactics.autoMP('L) | hpExpand | nil
+    val autoStep =
+      id |
+      SaturateTactic(onAll(doStep(index)('R))) | SaturateTactic(onAll(doStep(index)('L))) |
+      Idioms.doIf(_.subgoals.exists(!_.isFOL))(
+        loop('R) |
+        ExpandAll(Nil) & odeR('R) | solve('R) | solve('L) |
+        DLBySubst.safeabstractionb('R) |
+        odeInContext(odeR)('R) | odeInContext(odeR)('L) |
+        hpExpand
+      ) |
+      PropositionalTactics.autoMP('L) |
+      nil
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(autoStep)) &
         Idioms.doIf(!_.isProved)(onAll(
+          propClose |
           //@note apply equalities inside | to undo in case branches do not close
-          (ExpandAll(Nil) & EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done)
-            | ?(ExpandAll(Nil) & EqualityTactics.applyEqualities & autoQE & (if (keepQEFalse) nil else done))))))
+          ExpandAll(Nil) & EqualityTactics.applyEqualities & Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done |
+          ?(ExpandAll(Nil) & EqualityTactics.applyEqualities & QE & (if (keepQEFalse) nil else done)))
+        )
+    ))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -500,22 +513,67 @@ object TactixLibrary extends HilbertCalculus
     val invs = invSupplier(seq, pos).toList
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
-      //@todo how to handle multiple archive entries with same dynamics but conflicting annotations?
+      //@todo pass invariant supplier to tactics via interpreter (as part of BelleProvable)
       (if (pos.isTopLevel) SaturateTactic(DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) | ODEInvariance.dRI(pos))
        else DifferentialTactics.diffInd()(pos)) &
         Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
           "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
     ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
-      (if (pos.isTopLevel && invs.nonEmpty) dW(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify & QE & done | DifferentialTactics.mathematicaSplittingODE(pos)
-       else if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos) |
-        (seq.sub(pos) match {
-          // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
-          case Some(Box(ODESystem(_, q), p)) if q != True && !p.isFOL => dWPlus(pos)
-          case _ => skip
-        })
-       else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
+      ODEfinish(invs.nonEmpty)(pos)
   }, Some("ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.")))
+
+  private def ODEfinish(preferDw: Boolean) = anon ((pos: Position, seq: Sequent) => {
+    if (pos.isTopLevel && preferDw) {
+      lazy val defaultFinish = DifferentialTactics.diffInd()(pos) |
+        dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify &
+          (autoMonotonicityTransform & smartHide & QE & done | QE & done) |
+        DifferentialTactics.mathematicaSplittingODE(pos)
+
+      ToolProvider.qeTool() match {
+        case Some(t) => try {
+          val di = proveBy(seq, DifferentialTactics.diffInd(auto = 'diffInd)(pos) < (
+            ToolTactics.prepareQE(Nil, nil),
+            SaturateTactic(Dassignb(pos)) & ToolTactics.prepareQE(Nil, nil)
+          ))
+          val dwBase = proveBy(seq, dWPlus(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify)
+          val dwPlain = proveBy(dwBase, ToolTactics.prepareQE(Nil, nil))
+          val dwSmartBase = proveBy(dwBase, autoMonotonicityTransform)
+          val dwSmart = proveBy(dwSmartBase, smartHide & ToolTactics.prepareQE(Nil, nil))
+          val dwPropBase = proveBy(dwSmartBase, SaturateTactic(orL('L) | andR('R)) & OnAll(smartHide & ToolTactics.prepareQE(Nil, nil)))
+
+          val diAttempt = AllOf(di.subgoals.map(s => Atom(s.succ.head)))
+          val dwSmartAttempt = Atom(dwSmart.subgoals.head.succ.head)
+          val dwPlainAttempt = Atom(dwPlain.subgoals.head.succ.head)
+          val dwPropAttempts =
+            if (dwPropBase.subgoals.size <= 8) List(AllOf(dwPropBase.subgoals.map(g => Atom(g.succ.head))))
+            else List.empty
+
+
+          t.qe(OneOf(List(diAttempt, dwSmartAttempt, dwPlainAttempt) ++ dwPropAttempts)) match {
+            case (_, False) => fail
+            case (g, True) =>
+              if (g == diAttempt) DifferentialTactics.Dconstify(by(di) & OnAll(RCF))(pos)
+              else if (g == dwSmartAttempt) by(dwSmart) & RCF
+              else if (g == dwPlainAttempt) by(dwPlain) & RCF
+              else if (g == dwPropAttempts.head) by(dwPropBase) & OnAll(RCF)
+              else fail
+          }
+        } catch {
+          case e: TacticInapplicableFailure => throw e
+          case _: Throwable => defaultFinish
+        }
+        case None => defaultFinish
+      }
+    }
+    else if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos) |
+      (seq.sub(pos) match {
+        // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
+        case Some(Box(ODESystem(_, q), p)) if q != True && !p.isFOL => dWPlus(pos)
+        case _ => skip
+      })
+    else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
+  })
 
   /**
     * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
