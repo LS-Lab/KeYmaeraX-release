@@ -7,21 +7,21 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
+/** Goals for parallel QE execution. */
+trait Goal
+/** A single formula. */
+case class Atom(goal: Formula) extends Goal
+/** One of the goals must be proved. */
+case class OneOf(goals: Seq[Goal]) extends Goal
+/** All of the goals must be proved. */
+case class AllOf(goals: Seq[Goal]) extends Goal
+
 /**
   * Quantifier elimination tool that combines trusted [[edu.cmu.cs.ls.keymaerax.core.QETool]] with other untrusted tools
   * (so that tools implementing [[QETacticTool]] can forward to a trusted [[edu.cmu.cs.ls.keymaerax.core.QETool]]
   * without being trusted themselves).
   */
 trait QETacticTool {
-  /** Goals for parallel QE execution. */
-  trait Goal
-  /** A single formula. */
-  case class Atom(goal: Formula) extends Goal
-  /** One of the goals must be proved. */
-  case class OneOf(goals: Seq[Goal]) extends Goal
-  /** All of the goals must be proved. */
-  case class AllOf(goals: Seq[Goal]) extends Goal
-
   /**
     * Returns a lemma witnessing equivalence between a quantifier-free formula and the specified formula.
     * @param formula The formula whose quantifier-free equivalent is sought.

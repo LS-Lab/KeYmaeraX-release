@@ -10,9 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.{CounterExampleTool, Goal, QETacticTool}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool}
-import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
 
 import scala.collection.immutable._

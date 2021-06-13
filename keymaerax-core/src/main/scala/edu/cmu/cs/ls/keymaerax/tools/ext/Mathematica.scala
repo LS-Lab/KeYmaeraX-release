@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{mwhile, part}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
@@ -176,9 +177,9 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         ids.append(g)
         list(int(ids.size-1), mQE.qeTool.qe(fml))
       case OneOf(oneOfGoals) => module(
-        list(),
-        compoundExpr(
-          set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(list(oneOfGoals.map({
+        list(
+          set(symbol("res"),list(int(-1), bool(false))),
+          set(symbol("eids"), list(oneOfGoals.map({
             case g@Atom(fml) =>
               ids.append(g)
               parallelSubmit(list(int(ids.size-1), mQE.qeTool.qe(fml)))
@@ -189,7 +190,11 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
                 case _ => throw new IllegalArgumentException("Unsupported parallel QE feature: nested non-atom in AllOf")
               }):_*)))
             case OneOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: nested OneOf in OneOf")
-          }):_*))),
+          }):_*))
+        ),
+        compoundExpr(
+          mwhile(and(equal(part(symbol("res"), int(2)), bool(false)), greater(ExtMathematicaOpSpec.length(symbol("res")), int(0))),
+            set(list(symbol("res"), symbol("id"), symbol("eids")), waitNext(symbol("eids")))),
           abortKernels(),
           symbol("res")
         )
@@ -197,6 +202,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
       case AllOf(_) => throw new IllegalArgumentException("Unsupported parallel QE feature: top-level AllOf")
     }
     try {
+      mQE.timeout = qeMaxTimeout
       val (_, result) = mQE.qeTool.link.run(input, new UncheckedBaseM2KConverter {
         override def convert(e: MExpr): KExpr = {
           if (e.listQ()) {

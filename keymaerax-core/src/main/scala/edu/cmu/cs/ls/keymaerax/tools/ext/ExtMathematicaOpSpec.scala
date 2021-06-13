@@ -65,6 +65,12 @@ object ExtMathematicaOpSpec {
 
   def placeholder: Expr = slot(int(1))
 
+  def mwhile: BinaryMathOpSpec = BinaryMathOpSpec(symbol("While"))
+
+  def part: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Part"))
+
+  def length: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Length"))
+
   //</editor-fold>
 
   //<editor-fold desc="Arithmetic">
