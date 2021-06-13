@@ -62,11 +62,9 @@ private object ToolTactics {
     }
   })
 
-  /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
-    if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
-      seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
-
+  /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
+    * remaining subgoals using `doQE`. */
+  def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
     val expand =
@@ -75,25 +73,35 @@ private object ToolTactics {
         assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }),
           "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
 
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & rcf(qeTool)
+    Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
+      assertT(_.isFOL, "QE on FOL only") &
+        SaturateTactic(alphaRule | allR('R)) &
+        Idioms.doIf(!_.isProved)(
+          close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+            // if
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & doQE
+            ,
+            // else
+            hidePredicates & hideQuantifiedFuncArgsFmls &
+              assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
+              EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
+              Idioms.doIf(_ => doQE != nil)(
+                doQE & done
+                  | anon {(_: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
+              )
+          )
+        )
+    )
+  }
+
+  /** Performs QE and fails if the goal isn't closed. */
+  def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
+    if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
+      seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
     AnonymousLemmas.cacheTacticResult(
-      Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
-        assertT(_.isFOL, "QE on FOL only") &
-          SaturateTactic(alphaRule | allR('R)) &
-          Idioms.doIf(!_.isProved)(
-            close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
-              // if
-              doQE
-              ,
-              // else
-              hidePredicates & hideQuantifiedFuncArgsFmls &
-                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                doQE & done
-                | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
-            )
-          )
-        ),
+      prepareQE(order, rcf(qeTool))
+      ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
