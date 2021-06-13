@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchivePrinter.printDomain
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -131,8 +131,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       case Some(node) => node.maker match {
         case Some(tactic) =>
           val localProofId = db.createProof(node.localProvable)
-          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, DBTools.listener(db),
-            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false)
+          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
+            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true)
           interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion), None, node.proof.info.defs(db)))
           extractTactic(localProofId)
       }
@@ -151,8 +151,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         val modelContent = PrettyPrinter.printer(fml)
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
-        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, DBTools.listener(db),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false))
+        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty), DBTools.listener(db),
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true)
         def interpreter(listeners: Seq[IOListener]): Interpreter = {
           //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
           theInterpreter

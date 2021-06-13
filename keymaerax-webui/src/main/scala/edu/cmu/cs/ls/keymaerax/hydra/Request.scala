@@ -1748,8 +1748,9 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         assert(node.maker.isDefined, "Unable to expand node without tactics")
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
-        val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db, session(proofId).asInstanceOf[ProofSession]),
+        val proofSession = session(proofId).asInstanceOf[ProofSession]
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
+          RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
@@ -2293,9 +2294,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
-                  RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
-                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
+                private val proofSession = session(proofId.toString).asInstanceOf[ProofSession]
+                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, proofSession.defs,
+                  RequestHelper.listenerFactory(db, proofSession),
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -2367,10 +2369,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
-        val tactic =
-          if (BelleParser.tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
-          else if (BelleParser.tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
-          else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
+        val tactic = BelleParser.parseBackwardsCompatible(t, proofSession.defs)
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
@@ -2384,7 +2383,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
               //@note replace listener created by proof tree (we want a different tactic name for each component of the
               // executed tactic and we want to see progress)
               val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt,
-                CollectProgressListener() :: Nil)
+                proofSession.defs, CollectProgressListener() :: Nil)
               val tree: ProofTree = DbProofTree(db, proofId)
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = tree.root.runTactic(userId, interpreter, tactic, "", executor)
@@ -2409,7 +2408,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
-            case SpoonFeedingInterpreter(_, _, _, _, interpreterFactory, _, _, _) =>
+            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
               interpreterFactory(Nil).listeners.flatMap({
                 case l@CollectProgressListener(p) => Some(

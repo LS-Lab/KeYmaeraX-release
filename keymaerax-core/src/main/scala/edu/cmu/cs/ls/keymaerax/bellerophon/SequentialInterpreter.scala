@@ -46,8 +46,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       // preserve delayed substitutions
       val result = v match {
         case p: BelleDelayedSubstProvable => exprResult match {
-          case fp: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst)
-          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst)
+          case fp: BelleDelayedSubstProvable =>
+            assert(p.parent.isEmpty || p.parent == fp.parent)
+            new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst, p.parent)
+          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst, p.parent)
           case _ => exprResult
         }
         case _ => exprResult
@@ -215,8 +217,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case subst: InputTactic if subst.name == "US" =>
       val substs = collection.immutable.Seq(subst.inputs.head.asInstanceOf[List[SubstitutionPair]].map(sp => sp.what -> sp.repl):_*)
       apply(subst.computeExpr(), v) match {
-        case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ RenUSubst(substs).usubst)
-        case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, RenUSubst(substs).usubst)
+        case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ RenUSubst(substs).usubst, p.parent)
+        case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, RenUSubst(substs).usubst, None)
         case v => v
       }
 
@@ -286,8 +288,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         }
         TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, List(subst))
         apply(TactixLibrary.US(subst), v) match {
-          case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ subst)
-          case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, subst)
+          case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ subst, p.parent)
+          case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, subst, None)
           case v => v
         }
       case _ => throw new IllFormedTacticApplicationException("Attempted to expand a definition on a Non-Provable")
@@ -305,8 +307,8 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
           val result = apply(substs.map(TactixLibrary.US).reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
           result match {
-            case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ substs.reduceRight(_ ++ _))
-            case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, substs.reduceRight(_ ++ _))
+            case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ substs.reduceRight(_ ++ _), p.parent)
+            case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, p.defs, substs.reduceRight(_ ++ _), None)
             case v => v
           }
         } else v
@@ -343,14 +345,21 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
       //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
       apply(inner, BelleProvable(in, lbl, defs)) match {
-        case BelleProvable(derivation, resultLbl, resultDefs) =>
+        case p: BelleDelayedSubstProvable =>
           try {
-            val backsubst: ProvableSig = derivation(us)
-            BelleProvable(provable(backsubst, 0), resultLbl, resultDefs)
+            new BelleDelayedSubstProvable(provable(p.p(us), 0), p.label, p.defs, p.subst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
-              // proof will not close, but keep without backsubstitution to allow users step into the failed derivation
-              BelleProvable(derivation, resultLbl, resultDefs)
+              // happens on Let(v()=v, t) if t did not (yet) finish the proof, e.g., dIRule. postpone until subgoals are proved
+              new BelleDelayedSubstProvable(p.p, p.label, p.defs, p.subst ++ us, p.parent)
+          }
+        case BelleProvable(derivation, resultLbl, resultDefs) =>
+          try {
+            BelleProvable(provable(derivation(us), 0), resultLbl, resultDefs)
+          } catch {
+            case _: SubstitutionClashException =>
+              // happens on Let(v()=v, t) if t did not (yet) finish the proof, e.g., dIRule. postpone until subgoals are proved
+              new BelleDelayedSubstProvable(derivation, resultLbl, resultDefs, us, Some(provable, 0))
           }
         case e => throw new IllFormedTacticApplicationException("Let expected a successful sub-derivation producing a BelleProvable, but got " + e)
       }
@@ -621,11 +630,11 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
       val interpreters = exprs.map(e => e -> ConcurrentInterpreter())
       val cancellables = interpreters.map({ case (e, i) => Cancellable(i(e, v)) })
       println("Waiting for first one to succeed: " + expr.prettyString)
-      val foo = Await.result(firstToSucceed(cancellables.map(_.future)), Duration.Inf)
+      val result = Await.result(firstToSucceed(cancellables.map(_.future)), Duration.Inf)
       cancellables.foreach(_.cancel())
       interpreters.foreach(_._2.kill())
-      println("Parallel done: " + expr.prettyString + "\n  with result: " + foo.prettyString)
-      foo
+      println("Parallel done: " + expr.prettyString + "\n  with result: " + result.prettyString)
+      result
 
     case ChooseSome(options, e) =>
       val opts = options()
@@ -665,7 +674,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -677,8 +686,9 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
               }
               (combinedProvable, nextIdx, combinedLabels, substs)
           })
+        //@todo delayed parent?
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
     }
 
@@ -768,7 +778,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -780,8 +790,9 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
               }
               (combinedProvable, nextIdx, combinedLabels, substs)
           })
+        //@todo delayed parent?
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
     }
     case _ => super.runExpr(expr, v)
@@ -826,7 +837,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               //@todo want to keep names of cp abbreviated instead of substituted
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
@@ -839,8 +850,9 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
               }
               (combinedProvable, nextIdx, combinedLabels, substs)
             })
+        //@todo delayed parent?
         if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
     }
     case _ => super.runExpr(expr, v)

@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
@@ -178,8 +178,8 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))"),
       BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(
@@ -197,8 +197,8 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
       BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(
@@ -220,8 +220,8 @@ class QETests extends TacticTestBase {
   "QE with timeout" should "reset timeout when done" in withDatabase{ db => withQE { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(QE(Nil, None, Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
   }}
@@ -229,8 +229,8 @@ class QETests extends TacticTestBase {
   it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(QE, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
@@ -238,8 +238,8 @@ class QETests extends TacticTestBase {
   it should "use the right tool" in withDatabase{ db => withQE { tool: Tool =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
   }}

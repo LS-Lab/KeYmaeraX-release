@@ -895,8 +895,12 @@ case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]], defs: 
 }
 
 /** A Provable that was produced with a delayed substitution `subst`. */
-class BelleDelayedSubstProvable(override val p: ProvableSig, override val label: Option[List[BelleLabel]], override val defs: Declaration, val subst: USubst)
-  extends BelleProvable(p, label, defs) {
+class BelleDelayedSubstProvable(override val p: ProvableSig,
+                                override val label: Option[List[BelleLabel]],
+                                override val defs: Declaration,
+                                val subst: USubst,
+                                val parent: Option[(ProvableSig, Int)]) extends BelleProvable(p, label, defs) {
+  assert(parent.isEmpty || parent.get._2 < parent.get._1.subgoals.size, "Subgoal index points outside provable: " + parent.get._1.subgoals)
   override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
   override def prettyString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
 }

@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -143,7 +143,7 @@ object DatabasePopulator extends Logging {
   }
 
   /** Prepares an interpreter for executing tactics. */
-  def prepareInterpreter(db: DBAbstraction, proofId: Int, listeners: Seq[IOListener] = Nil): Interpreter = {
+  def prepareInterpreter(db: DBAbstraction, proofId: Int, defs: Declaration, listeners: Seq[IOListener] = Nil): Interpreter = {
     def listener(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int) = {
       val trace = db.getExecutionTrace(proofId, withProvables=false)
       assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Unable to record " + tacticName +
@@ -159,13 +159,14 @@ object DatabasePopulator extends Logging {
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
     def interpreter(orig: Seq[IOListener]) = LazySequentialInterpreter(orig ++ listeners, throwWithDebugInfo = false)
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, interpreter)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
-    val interpreter = prepareInterpreter(db, proofId)
-    val parsedTactic = BelleParser(tactic)
+    val entry = ArchiveParser(model).head
+    val interpreter = prepareInterpreter(db, proofId, entry.defs)
+    val parsedTactic = BelleParser.parseBackwardsCompatible(tactic, entry.defs)
     interpreter(parsedTactic, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(model))))
     interpreter.kill()
   }

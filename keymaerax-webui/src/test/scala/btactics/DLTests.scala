@@ -658,8 +658,8 @@ class DLTests extends TacticTestBase {
     val tactic = implyR('R) & loop("x>0".asFormula)('R)
 
     val proofId = db.createProof(model)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
 
     val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3
