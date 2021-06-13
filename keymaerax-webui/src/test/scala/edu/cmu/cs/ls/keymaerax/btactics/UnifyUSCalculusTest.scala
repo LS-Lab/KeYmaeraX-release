@@ -192,14 +192,19 @@ class UnifyUSCalculusTest extends TacticTestBase {
   }
 
   it should "chase games" in {
-    proveBy("==> <a;--b;>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> <a;>P() & <b;>P()".asSequent
-    proveBy("==> <a;b;--c;>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> <a;><b;>P() & <c;>P()".asSequent
-    proveBy("==> <{{a;^@}*}^@>P()".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> [{a;^@}*]P()".asSequent
+    proveBy("==> <a;--b;>P()".asSequent, chase(1)).subgoals.loneElement shouldBe "==> <a;>P() & <b;>P()".asSequent
+    proveBy("==> <a;b;--c;>P()".asSequent, chase(1)).subgoals.loneElement shouldBe "==> <a;><b;>P() & <c;>P()".asSequent
+    proveBy("==> <{{a;^@}*}^@>P()".asSequent, chase(1)).subgoals.loneElement shouldBe "==> [{a;^@}*]P()".asSequent
   }
 
   it should "chase inside quantifiers" in {
-    proveBy("==> \\exists x [x:=x+1;]\\exists y [y:=y-1;]x>=y".asSequent, chase(3, 3)(1)).subgoals.loneElement shouldBe "==> \\exists x \\exists y x+1>=y-1".asSequent
-    proveBy("\\forall x \\forall y [x:=x+y;]x>=0 ==>".asSequent, chase(3, 3)(-1)).subgoals.loneElement shouldBe "\\forall x \\forall y x+y>=0 ==>".asSequent
+    proveBy("==> \\exists x [x:=x+1;]\\exists y [y:=y-1;]x>=y".asSequent, deepChase(1)).subgoals.loneElement shouldBe "==> \\exists x \\exists y x+1>=y-1".asSequent
+    proveBy("\\forall x \\forall y [x:=x+y;]x>=0 ==>".asSequent, deepChase(-1)).subgoals.loneElement shouldBe "\\forall x \\forall y x+y>=0 ==>".asSequent
+  }
+
+  it should "chase more inside quantifiers" in {
+    proveBy("\\forall m \\forall z (b()>0->[a:=A();][t:=0;{z'=v,v'=a,t'=1}]z>=0) ==>".asSequent, deepChase(-1)).subgoals.
+      loneElement shouldBe "\\forall m \\forall z (b()>0->\\forall t (t=0->[{z'=v,v'=A(),t'=1}]z>=0)) ==>".asSequent
   }
 
   "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {

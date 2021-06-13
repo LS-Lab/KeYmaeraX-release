@@ -1272,7 +1272,7 @@ trait UnifyUSCalculus {
             case _ => ident
           })
       }
-      val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
+      val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other)
       cutLR(ctxOther)(pos.top) < (
         /* use */ ident,
         /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute & by(fact)
@@ -2154,7 +2154,7 @@ trait UnifyUSCalculus {
   /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
     * exhaustively. */
   @Tactic(longDisplayName = "Deep Decompose")
-  lazy val deepChase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos)}
+  lazy val deepChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
 
   /** Chase with bounded breadth and giveUp to stop.
     *
