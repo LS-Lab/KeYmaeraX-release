@@ -867,7 +867,8 @@ case class Expand(name: NamedSymbol, s: Option[SubstitutionPair]) extends BelleE
   //@note serialize `s` for database since required in the proof tree when assembling provables
   override def prettyString: String = s"""expand "${name.prettyString}""""
 }
-/** Expands all definitions from the model provided in topologically sorted `defs`.
+/** Expands all definitions from the model provided in topologically sorted `defs`. Expands all definitions known
+  * to the interpreter when `defs` is empty.
   * @see [[USubstOne]] */
 case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
   //@note serialize `defs` for database since required in the proof tree when assembling provables
