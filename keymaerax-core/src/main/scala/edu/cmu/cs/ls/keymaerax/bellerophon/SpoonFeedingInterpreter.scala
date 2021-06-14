@@ -518,7 +518,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                         val (wasMerged, mergedProvable, _) = applySubDerivation(provable, 0, p.p, p.subst)
                         val parent = p.parent match {
                           case None => if (!wasMerged) Some(provable -> 0) else None
-                          case Some(pparent) => throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent._1.prettyString + " with " + provable.prettyString)
+                          case Some((pparent, pidx)) =>
+                            if (pparent == provable) p.parent
+                            else if (pparent.conclusion == provable.subgoals(pidx)) Some(provable(pparent, pidx), pidx)
+                            else throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent.prettyString + " with " + provable.prettyString)
                         }
                         val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.subst, parent), ctx.store(tactic))
                         runningInner = null
@@ -580,7 +583,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           case fp: BelleDelayedSubstProvable =>
             assert(p.parent.isEmpty || exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
               "Delayed substitution parents disagree")
-            new BelleDelayedSubstProvable(fp.p, fp.label, p.subst ++ fp.subst, p.parent)
+            new BelleDelayedSubstProvable(fp.p, fp.label, p.subst ++ fp.subst, fp.parent)
           case BelleProvable(fp, label) => new BelleDelayedSubstProvable(fp, label, p.subst, p.parent)
           case _ => result
         }
