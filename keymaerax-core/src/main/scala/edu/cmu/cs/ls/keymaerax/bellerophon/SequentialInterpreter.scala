@@ -637,7 +637,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -740,7 +740,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -798,7 +798,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
                 case _ => csubsts
               }
-              val (combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))

@@ -259,7 +259,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
             val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
-                (applySubDerivation(provable, i, p.p, p.subst)._1, updateLabels(labels, i, p.label))
+                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, p.label))
               case ((BelleProvable(cp, cl), i), (provable, labels)) =>
                 // provables may have expanded or not expanded definitions arbitrarily
                 if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
@@ -375,8 +375,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
             runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
               case p: BelleDelayedSubstProvable =>
-                val merged = applySubDerivation(provable, 0, p.p, p.subst)._1
-                val r = (new BelleDelayedSubstProvable(merged, lbl, p.subst, p.parent), ctx.store(tactic))
+                val r = applySubDerivation(provable, 0, p.p, p.subst) match {
+                  case (true, mergedProvable, _) => (new BelleDelayedSubstProvable(mergedProvable, lbl, p.subst, p.parent), ctx.store(tactic))
+                }
                 runningInner = null
                 r
               case BelleProvable(innerProvable, _) =>
@@ -514,9 +515,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
                       case p: BelleDelayedSubstProvable =>
                         val resultLabels = updateLabels(labels, 0, p.label)
-                        val merged = applySubDerivation(provable, 0, p.p, p.subst)._1
-                        val parent = if (merged.conclusion != provable.subgoals(0)) Some(provable -> 0) else None
-                        val result = (new BelleDelayedSubstProvable(merged, resultLabels, p.subst, parent), ctx.store(tactic))
+                        val (wasMerged, mergedProvable, _) = applySubDerivation(provable, 0, p.p, p.subst)
+                        val parent = p.parent match {
+                          case None => if (!wasMerged) Some(provable -> 0) else None
+                          case Some(pparent) => throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent._1.prettyString + " with " + provable.prettyString)
+                        }
+                        val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.subst, parent), ctx.store(tactic))
                         runningInner = null
                         result
                       case BelleProvable(innerProvable, innerLabels) =>
