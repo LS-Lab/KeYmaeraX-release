@@ -86,11 +86,13 @@ trait ProofTreeNode {
     * @ensures \result == None  <->  parent == None */
   def maker: Option[String]
 
-
   // meta info
 
   /** The tactic short name. */
   def makerShortName: Option[String]
+
+  /** Uniform substitutions applied at this node. */
+  def substs: List[SubstitutionPair] = makerSubst(maker)
 
   /** The node label. */
   def label: Option[BelleLabel]
@@ -321,6 +323,9 @@ trait ProofTree {
 
   /** Substitutions known from the input model. */
   def substs: List[SubstitutionPair]
+
+  /** Substitutions from proof steps. */
+  def proofSubsts: List[SubstitutionPair]
 
   override def toString: String = printBelow(root, "")
 
@@ -693,6 +698,9 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 
   /** The known substitutions. */
   override def substs: List[SubstitutionPair] = dbSubsts
+
+  /** @inheritdoc */
+  override def proofSubsts: List[SubstitutionPair] = this.nodes.flatMap(_.substs)
 
   /** Converts a string representation to a node ID. */
   override def nodeIdFromString(id: String): Option[ProofTreeNodeId] =
