@@ -2571,7 +2571,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
 
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     // find expanded definitions (including delayed model assumptions)
-    val substs = (entry.defs.substs ++ proofSession.defs.substs).distinct.filter(_.what match {
+    val substs = (entry.defs.substs ++ proofSession.defs.substs ++ tree.proofSubsts).distinct.filter(_.what match {
       case FuncOf(n, _) => !conclusionSignature.contains(n)
       case PredOf(n, _) => !conclusionSignature.contains(n)
       case n: NamedSymbol => !conclusionSignature.contains(n)
