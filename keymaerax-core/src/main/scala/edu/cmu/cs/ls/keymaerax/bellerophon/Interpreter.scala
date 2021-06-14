@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -41,13 +41,14 @@ trait Interpreter {
     * @param original A Provable whose nth subgoal is equal to the conclusion of `subderivation` (modulo substitution).
     * @param n The numerical index of the subgoal of original to rewrite (Seqs are zero-indexed)
     * @param subderivation The provable to replace the original subgoal.
-    * @return A pair of:
+    * @return A tuple of:
+    *         * Indicator whether `original` and `subderivation` were merged.
     *         * A new provable that is identical to `original`, except that the nth subgoal is replaced with the
     *           remaining subgoals of `subderivation`; and
     *         * The next index for the interpreter to continue, n if `subderivation` is proved (i.e., all later
     *           subgoals move up by 1), or (n+1) if subderivation is not proved.
     */
-  protected def applySubDerivation(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: USubst): (ProvableSig, Int) = {
+  protected def applySubDerivation(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: USubst): (Boolean, ProvableSig, Int) = {
     assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
@@ -71,13 +72,26 @@ trait Interpreter {
     if (substParent.subgoals(n) == substChild.conclusion) {
       val merged = substParent(substChild, n)
       val nextIdx = if (substChild.isProved) n else n + 1
-      (merged, nextIdx)
+      (true, merged, nextIdx)
     } else {
       assertSubMatchesModuloConstification(substParent, subderivation, n, subst)
       //@todo substParent may have more subgoals than subderivation
-      (subderivation, if (substChild.isProved) n else n + 1)
+      (false, subderivation, if (substChild.isProved) n else n + 1)
     }
-  }
+  } ensures(r => r match {
+    case (rmerged: Boolean, rp: ProvableSig, rn: Int) =>
+      (rn == n || rn == n+1) &&
+      ((!rmerged && rp==subderivation) ||
+       ( rmerged && rp.conclusion == original(subst).conclusion &&
+         (if (subderivation.isProved) {
+           rp.subgoals.size == original.subgoals.size - 1
+         } else {
+           rp.subgoals(n) == subderivation.subgoals(0) &&
+             rp.subgoals.takeRight(subderivation.subgoals.size - 1) == subderivation.subgoals.tail
+         })
+       )
+      )
+  })
 
   /** Assert that the conclusion of provable `sub` matches the subgoal `n` of provable `parent` either verbatim or
     * modulo constification renaming that is assumed to be applied in the future. Constification renaming requires

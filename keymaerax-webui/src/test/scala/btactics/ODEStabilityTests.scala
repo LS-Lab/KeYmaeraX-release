@@ -1,17 +1,14 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics.ODEStability._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
-
+@SlowTest
 class ODEStabilityTests extends TacticTestBase {
 
   "stability" should "prove stability for pendulum" in withMathematica { _ =>
@@ -176,7 +173,7 @@ class ODEStabilityTests extends TacticTestBase {
     pr1 shouldBe 'proved
   }
 
-  it should "prove stability for inverted pendulum" in withMathematica { _ =>
+  it should "prove stability for inverted pendulum" taggedAs testHelper.KeYmaeraXTestTags.SlowTest in withMathematica { _ =>
     val ode = "theta' = w, w'= a()*theta - b()*w - (k1() * theta + k2() * w)".asDifferentialProgram
     val stable = stabODE(ode)
     val attractive = attrODE(ode)
