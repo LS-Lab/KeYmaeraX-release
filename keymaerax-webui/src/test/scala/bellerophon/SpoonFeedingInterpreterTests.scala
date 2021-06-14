@@ -82,7 +82,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.loneElement.makerShortName shouldBe Some("""pending("andR(1)")""")
   }}
 
-  it should "FEATURE_REQUEST apply print to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: apply print to all subgoals" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
     val proofId = db.createProof(modelContent)
 
@@ -1799,7 +1799,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |)""".stripMargin)
   }}
 
-  it should "FEATURE_REQUEST: work for prop on a left-branching example with depth 2" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: work for prop on a left-branching example with depth 2" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof1")
