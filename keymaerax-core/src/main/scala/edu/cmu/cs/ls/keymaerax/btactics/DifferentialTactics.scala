@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
+import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels.{replaceTxWith, startTx}
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -610,11 +611,21 @@ private object DifferentialTactics extends Logging {
           } else skip
           val doGhost = r match {
             case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
-              DG(ghost)(pos) & (DW(pos ++ PosInExpr(0::Nil)) & transform(rr)(pos ++ PosInExpr(0::1::Nil)) | DebuggingTactics.error(
-                "Formula\n  " + rr.prettyString + "\ndoes not imply postcondition\n  " + p.prettyString +
-                  "\nor necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in\n",
-                new BelleUserCorrectableException(_) {}
-              ))
+              val trafo = anon ((pos: Position) =>
+                cutAt(rr)(pos ++ PosInExpr(1::Nil)) <(
+                  skip,
+                  cohideR('Rlast) & CMon(pos.inExpr) & implyR(1)*2 &
+                    SequentCalculus.modusPonens(AntePos(1), AntePos(0)) & (smartHide & timeoutQE & done | timeoutQE)
+                )
+              )
+              DG(ghost)(pos) & DW(pos ++ PosInExpr(0::Nil)) & trafo(pos ++ PosInExpr(0::1::Nil)) &
+                ifThenElse(_.subgoals.size == 1,
+                  useAt(Ax.DW, PosInExpr(1::Nil))(pos ++ PosInExpr(0::Nil)),
+                  DebuggingTactics.error(
+                    "Formula\n  " + rr.prettyString + "\ndoes not imply postcondition\n  " + p.prettyString +
+                      "\nor necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG\n",
+                    new BelleUserCorrectableException(_) {})
+                )
             case _ => DG(ghost)(pos) //@note no r or r==p
           }
           cutSingularities & doGhost
