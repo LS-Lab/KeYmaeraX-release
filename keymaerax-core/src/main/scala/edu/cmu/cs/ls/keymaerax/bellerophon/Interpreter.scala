@@ -82,7 +82,7 @@ trait Interpreter {
     case (rmerged: Boolean, rp: ProvableSig, rn: Int) =>
       (rn == n || rn == n+1) &&
       ((!rmerged && rp==subderivation) ||
-       ( rmerged && rp.conclusion == exhaustiveSubst(original, subst).conclusion &&
+       ( rmerged && exhaustiveSubst(rp, subst).conclusion == exhaustiveSubst(original, subst).conclusion &&
          (if (subderivation.isProved) {
            rp.subgoals.size == original.subgoals.size - 1
          } else {
