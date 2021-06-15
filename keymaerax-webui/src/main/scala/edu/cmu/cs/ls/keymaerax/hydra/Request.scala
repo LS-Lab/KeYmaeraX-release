@@ -1499,16 +1499,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             products += (p -> (products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
           //@note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification
-          val generator = new ConfigurableGenerator[GenProduct](
-            products.map({ case (k, v) =>
-              problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k)) ->
-                v.map({ case (f, h) => problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f)) -> h }).distinct
-            }) ++
-            products.map({ case (k, v) =>
-              problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k))) ->
-                v.map({ case (f, h) => problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f))) -> h }).distinct
-            })
-          )
+          val generator = ConfigurableGenerator.create(products, problem.defs)
           session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
           TactixInit.invSupplier = generator
           OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
