@@ -2411,6 +2411,35 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
+  it should "expand definitions exhaustively after applying backsubstitutions from constification" in withMathematica { _ => withDatabase { db =>
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |Definitions Real dosqsum(Real x, Real y) = x^2+y^2; Real sqsum(Real x, Real y) = dosqsum(x,y); End.
+        |ProgramVariables Real x, y, r; End.
+        |Problem sqsum(x,y)=r -> [{x'=r*y,y'=-r*x}]sqsum(x,y)=r End.
+        |End.""".stripMargin).head
+
+    val proofId = db.createProof(entry.problemContent)
+
+    val interpreter = registerInterpreter(
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs, listener(db.db),
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    val tactic = BelleParser.parseWithInvGen(
+      """implyR(1); cut("r>0"); <(
+        |  dC("sqsum(x, y)=r", 1); <(
+        |    nil,
+        |    edit("r>=-7", 'L=="r>0"); hideL('L=="r>=-7"); expand "sqsum"; expand "dosqsum"; dIRule(1); <(
+        |      QE,
+        |      unfold; QE
+        |    )
+        |  ),
+        |  expandAllDefs; ODE(1)
+        |)""".stripMargin, defs=entry.defs, expandAll=false)
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _, _) => p.subgoals.loneElement shouldBe "x^2+y^2=r, r>0 ==> [{x'=r*y,y'=-r*x&true&x^2+y^2=r}]x^2+y^2=r".asSequent
+    }
+  }}
+
   it should "FEATURE_REQUEST: return delayed substitution on unfinished dIRule when mixed with unconstified branches" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"
