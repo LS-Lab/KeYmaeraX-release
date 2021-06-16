@@ -4,10 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.launcher
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
+
 import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
-
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -18,17 +19,19 @@ import edu.cmu.cs.ls.keymaerax.cli.{CodeGen, EvidencePrinter, Usage}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBTools, DbProofTree, VerbatimTraceToTacticConverter, TempDBTools, VerboseTraceToTacticConverter}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{ENC, parse}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
+import org.apache.commons.lang3.StringUtils
 
-import scala.collection.immutable.{List, Nil}
+import scala.collection.immutable.{List, Nil, Seq}
 import scala.reflect.io.File
 import resource._
 
@@ -61,10 +64,10 @@ object KeYmaeraX {
     val MODELPLEX: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.MODELPLEX
     val PROVE: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.PROVE
     val REPL: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.REPL
-    val STRIPHINTS: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.STRIPHINTS
+    val CONVERT: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.CONVERT
     val SETUP: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.SETUP
     val UI: String = "ui"
-    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI, SETUP)
+    val modes: Set[String] = Set(CODEGEN, CONVERT, MODELPLEX, PROVE, REPL, UI, SETUP)
   }
 
   /** Usage -help information. */
@@ -108,6 +111,13 @@ object KeYmaeraX {
           initializeProver(combineConfigs(options, configFromFile("z3")), usage)
           repl(options)
         case Some(Modes.UI) => launchUI(args) //@note prover initialized in web UI launcher
+        case Some(Modes.CONVERT) => options.get('conversion) match {
+          case Some("verboseTactics") | Some("verbatimTactics") =>
+            initializeProver(combineConfigs(options, configFromFile("z3")), usage)
+            convertTactics(options, usage)
+          case _ => runCommand(options, usage)
+        }
+
         case _ => runCommand(options, usage)
       }
     } finally {
@@ -362,6 +372,60 @@ object KeYmaeraX {
     val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) ("-" + Modes.UI) +: args else args
     if (LAUNCH) Main.main("-launch" +: augmentedArgs)
     else Main.main(augmentedArgs)
+  }
+
+  /** Executes all entries in `options('in)` to convert their tactics into `options('conversion)` format.
+    * Prints the result to `options('out)`. */
+  def convertTactics(options: OptionMap, usage: String): Unit = {
+    require(options.contains('in) && options.contains('out) && options.contains('conversion), usage)
+
+    val kyxFile = options('in).toString
+    val how = options('conversion).toString
+
+    val src = scala.io.Source.fromFile(kyxFile.split("#")(0))
+    val fileContent = try { src.mkString } finally { src.close() }
+    val archiveContent = ArchiveParser.parseFromFile(kyxFile)
+
+    def convertTactic(e: ParsedArchiveEntry, how: String): ParsedArchiveEntry = e.copy(tactics = e.tactics.map({
+      case (name, tactic, t) =>
+        tactic.trim.stripPrefix("expandAllDefs").trim.stripPrefix(";").trim match {
+          case "auto" | "autoClose" | "master" =>
+            (name, tactic, t) //@todo record and export automated steps
+          case _ =>
+            println("==== Entry " + e.name + ": running tactic " + name + " for conversion")
+            val additionalListeners = new PrintProgressListener(t, Nil) :: Nil
+            val tempDB = new TempDBTools(additionalListeners)
+            val proofId = tempDB.createProof(e.fileContent, e.name, name)
+            val interpreter = SpoonFeedingInterpreter(proofId, -1, tempDB.db.createProof, e.defs,
+              DBTools.listener(tempDB.db, additionalListeners = additionalListeners),
+              ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 0, strict=false, convertPending=false)
+            BelleInterpreter.setInterpreter(interpreter)
+            BelleInterpreter(t, BelleProvable(ProvableSig.startProof(e.model.asInstanceOf[Formula])))
+            val tree = DbProofTree(tempDB.db, proofId.toString)
+            val converter = how match {
+              case "verboseTactics" => new VerboseTraceToTacticConverter(tree.info.defs(tempDB.db))
+              case "verbatimTactics" => new VerbatimTraceToTacticConverter()
+              case "succinctTactics" => ??? //@todo a succinct tactic converter that prints with index positions
+            }
+            val converted = tree.tacticString(converter)
+            println("==== Done tactic " + name)
+            (name, converted, t)
+        }
+    } ))
+
+    val convertedContent = archiveContent.map(e => e -> convertTactic(e, how)).foldLeft(fileContent)({
+      case (content, (orig, conv)) =>
+        val entryOnwards = content.substring(content.indexOf(orig.name))
+        val entryOnwardsConverted = orig.tactics.map(_._2).zip(conv.tactics.map(_._2)).foldLeft(entryOnwards)({
+          case (fc, (ot, ct)) => StringUtils.replaceOnce(fc, ot, ct)
+        })
+        content.replaceAllLiterally(entryOnwards, entryOnwardsConverted)
+    })
+
+    val outFile = options('out).toString
+    val pw = new PrintWriter(outFile)
+    pw.write(convertedContent)
+    pw.close()
   }
   
   // helpers
