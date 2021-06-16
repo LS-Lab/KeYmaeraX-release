@@ -2694,7 +2694,7 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
     val tree = DbProofTree(db, proofIdStr)
     val tactic = tree.tacticString(
       if (verbose) new VerboseTraceToTacticConverter(tree.info.defs(db))
-      else new SuccinctTraceToTacticConverter()
+      else new VerbatimTraceToTacticConverter()
     )
     // remember tactic string
     val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
