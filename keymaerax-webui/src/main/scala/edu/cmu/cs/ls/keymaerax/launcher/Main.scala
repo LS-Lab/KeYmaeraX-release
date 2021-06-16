@@ -66,7 +66,7 @@ object Main {
         if (javaVersionCompatibility._1.isEmpty) {
           println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
         }
-        val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+        val cmd = (java :: "-Xss20M" :: "-da" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
           (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
