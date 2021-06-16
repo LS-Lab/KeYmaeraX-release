@@ -5,10 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io._
-
 import javax.swing.JOptionPane
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, UpdateChecker, Version, core}
-import edu.cmu.cs.ls.keymaerax.core.Ensures
+import edu.cmu.cs.ls.keymaerax.core.{Ensures, assertion}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -66,7 +65,10 @@ object Main {
         if (javaVersionCompatibility._1.isEmpty) {
           println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
         }
-        val cmd = (java :: "-Xss20M" :: "-da" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+        var assertsEnabled = false;
+        assertion({assertsEnabled = true; assertsEnabled}) // intentional lazy side-effect of setting assertsEnabled to true if -ea
+        // now assertsEnabled is set to the correct value (true if -ea, false if -da)
+        val cmd = (java :: "-Xss20M" :: (if (assertsEnabled) "-ea" else "-da") :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
           (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
