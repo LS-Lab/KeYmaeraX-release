@@ -69,16 +69,16 @@ object ParserCommon {
 
 object ExpressionParser {
   // for parsing extended kaisar expression + pattern syntax
-  def wild[_: P]: P[FuncOf] = (Index ~ P("*")).
-    map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
+  def wild[_: P]: P[FuncOf] = (Index ~ P("*")). // TODO: what ???
+    map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interp = Some(True)), Nothing))
 
   private def nargs(args: Seq[Term]): Term = args match {case Nil => Nothing case _ => args.reduceRight[Term](Pair)}
   private def ntypes(args: Seq[Sort]): Sort = args match {case Nil => Unit case _ => args.reduceRight[Sort](Tuple)}
   def funcOf[_: P]: P[FuncOf] =
     // note: user-specified let definitions can have 0 args
     (ident ~ "(" ~ term.rep(min = 0, sep = ",") ~ ")").map({case (f, args) =>
-      val builtins = Set("min", "max", "abs")
-      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real, interpreted = builtins.contains(f.name))
+      // TODO: fix interpreted funcs
+      val fn = Function(f.name, domain = ntypes(args.map(_ => Real)), sort = Real)
       FuncOf(fn, nargs(args))
     })
 

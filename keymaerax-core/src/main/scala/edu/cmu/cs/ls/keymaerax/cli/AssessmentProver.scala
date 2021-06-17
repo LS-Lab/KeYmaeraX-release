@@ -735,12 +735,14 @@ object AssessmentProver {
         case Power(base, exp) =>
           if (StaticSemantics.freeVars(exp).isEmpty) Left(None)
           else Right(FuncOf(
-            Function("pow", None, Tuple(Real, Real), Real, interpreted=false),
+            //TODO: potential use case?
+            Function("pow", None, Tuple(Real, Real), Real, interp=None),
             Pair(encodeNonConstPolynomials(base), encodeNonConstPolynomials(exp))))
         case Divide(a, b) =>
           if (StaticSemantics.freeVars(b).isEmpty) Left(None)
           else Right(FuncOf(
-            Function("div", None, Tuple(Real, Real), Real, interpreted=false),
+            //TODO: as above
+            Function("div", None, Tuple(Real, Real), Real, interp=None),
             Pair(encodeNonConstPolynomials(a), encodeNonConstPolynomials(b))))
         case _ => Left(None)
       }

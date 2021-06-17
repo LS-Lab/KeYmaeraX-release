@@ -289,14 +289,6 @@ case class DerivedAxiomInfo(  override val canonicalName: String
   override val numPositionArgs = 1
 }
 
-case class DifferentialAxiomInfo(funcName: String, funcOf: Any, diff: Any, override val theRecursor: List[ExprPos]) extends AxiomInfo {
-  val unifier = 'surjlinear
-  val canonicalName = s"$funcName' implicitFn $funcName differential"
-  lazy val display = AxiomDisplayInfo(SimpleDisplayInfo(s"$funcName'",s"$funcName'"),"")
-  val codeName = s"$funcName' implicitFn $funcName differential"
-  val displayLevel = 'all
-}
-
 // axiomatic proof rules
 
 /** Information for an axiomatic proof rule

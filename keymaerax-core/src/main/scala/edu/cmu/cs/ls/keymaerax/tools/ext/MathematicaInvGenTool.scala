@@ -187,7 +187,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val fmlvars = (assumptions :+ postCond :+ ode.constraint).flatMap(StaticSemantics.symbols)
     val trmvars = rhs.flatMap(StaticSemantics.symbols)
 
-    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
+    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interp) => interp.isEmpty case _ => true}).sorted
       .map({
         case f@Function(_,_,Unit,_,_) => FuncOf(f, Nothing) //for k2m conversion to work reliably on constants
         case e => e

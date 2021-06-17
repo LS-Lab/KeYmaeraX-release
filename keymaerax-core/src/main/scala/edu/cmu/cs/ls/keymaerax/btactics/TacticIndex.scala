@@ -232,14 +232,15 @@ class DefaultTacticIndex extends TacticIndex {
       case "allL" | "allR" | "all stutter" => expr.isInstanceOf[Forall]
       case "existsL" | "existsR" | "exists stutter" => expr.isInstanceOf[Exists]
       case "allL2R" | "allR2L" | "equalCommute" => expr.isInstanceOf[Equal]
+        // TODO: Remove these
       case "abs" => expr match {
-        case Equal(FuncOf(Function("abs", None, Real, Real, true), _), _) => true
-        case FuncOf(Function("abs", None, Real, Real, true), _) => true
+        case Equal(FuncOf(Function("abs", None, Real, Real, Some(True)), _), _) => true
+        case FuncOf(Function("abs", None, Real, Real, Some(True)), _) => true
         case _ => false
       }
       case "minmax" => expr match {
-        case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _), _) => true
-        case FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _) => true
+        case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, Some(_)), _), _) => true
+        case FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, Some(_)), _) => true
         case _ => false
       }
 

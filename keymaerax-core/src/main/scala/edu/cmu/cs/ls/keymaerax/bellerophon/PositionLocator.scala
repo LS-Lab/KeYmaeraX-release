@@ -30,10 +30,10 @@ object PositionLocator {
   /** #-placeholder expression and regex for matching left/right placeholder; forces parentheses by non-default associativity. */
   def placeholder(e: Expression): (Expression, String, String) = e match {
     case f: Formula =>
-      val h = PredOf(Function("h_", None, Unit, Bool, interpreted=false), Nothing)
+      val h = PredOf(Function("h_", None, Unit, Bool), Nothing)
       (And(And(h, f), h), Regex.quote("(" + h.prettyString + "&"), Regex.quote(")&" + h.prettyString))
     case t: Term =>
-      val h = FuncOf(Function("h_", None, Unit, Real, interpreted=false), Nothing)
+      val h = FuncOf(Function("h_", None, Unit, Real), Nothing)
       (Plus(h, Plus(t, h)), Regex.quote(h.prettyString + "+("), Regex.quote("+" + h.prettyString + ")"))
     case p: Program =>
       val h = ProgramConst("h_")

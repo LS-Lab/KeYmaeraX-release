@@ -93,7 +93,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
       ExtMathematicaOpSpec.findInstance(
         k2m.convert(Left(fml)),
         MathematicaOpSpec.list(
-          StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).
+          StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interp) => interp.isEmpty case _ => true}).
             toList.sorted.map(s => CEXK2MConverter.convert(Right(s))):_*),
         MathematicaOpSpec.reals.op,
         k2m(Left(Number(amount)))

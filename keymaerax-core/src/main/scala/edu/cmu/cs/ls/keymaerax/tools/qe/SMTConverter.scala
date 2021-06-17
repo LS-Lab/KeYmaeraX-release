@@ -60,7 +60,7 @@ abstract class SMTConverter extends (Formula=>String) {
         case fn@InterpretedSymbols.minF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
         case fn@InterpretedSymbols.maxF => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
         case fn@InterpretedSymbols.absF => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
-        case fn@Function(_, _, _, _, false) =>
+        case fn@Function(_, _, _, _, None) =>
           require(fn.sort==Real, "Only support functions of type real, but not " + fn.sort)
           "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) +  ") " + fn.sort + ")"
       }
@@ -80,7 +80,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case InterpretedSymbols.minF => SMT_MIN
       case InterpretedSymbols.maxF => SMT_MAX
       case InterpretedSymbols.absF => SMT_ABS
-      case Function(name, index, _, _, false) => FUNC_PREFIX + nameOf(name, index)
+      case Function(name, index, _, _, None) => FUNC_PREFIX + nameOf(name, index)
       case BaseVariable(name, index, _) => VAR_PREFIX + nameOf(name, index)
       case DifferentialSymbol(BaseVariable(name, index, _)) => DIFFSYMBOL_PREFIX + nameOf(name, index)
       case _ => throw ConversionException("Name conversion of " + s.prettyString + " not supported")
@@ -160,8 +160,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) =>
         if (fn.interpreted) fn match {
-          case Function("min" | "max", None, Tuple(Real,Real), Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
-          case Function("abs", None, Real, Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+          // TODO: handle
           case _ => throw ConversionException("Interpreted function not supported presently by SMT: " + t)
         } else "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
       //@note: disassociates the arguments and no extra parentheses for pairs, since mapping from name to types is unique by assertion in [[generateSMT]]

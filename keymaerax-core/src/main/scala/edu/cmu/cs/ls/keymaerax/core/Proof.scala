@@ -837,16 +837,31 @@ object Provable {
     //@note soundness-critical
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(diffAdj)), immutable.IndexedSeq())
   }
-  /**
-    * Create a differential axiom for an arbitrary interpreted function symbol.
-    * Used by ImplicitDefinition stuff
-    */
-  def funcDiffAxiom(funcApp: FuncOf, diff: Term): Provable = {
+
+  def implicitFuncAxiom (f: Function): Provable = {
+    //TODO: continuousProof should check that
+    // \forall x. \exists unique y. f(x) = y
+    // and f continuous
+
+    assert(f.interp.isDefined)
+
+    def dotTermForSort (s: Sort, idx: Option[Int]): Term =
+      s match {
+        case Tuple(left, right) =>
+          val _idx = idx.getOrElse(0)
+          Pair(dotTermForSort(left, Some(_idx)), dotTermForSort(right, Some(_idx+1)))
+        case s => DotTerm(s, idx)
+      }
+
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
-      Equal(
-        Differential(funcApp),
-        diff
-      ))), immutable.IndexedSeq())
+      Equiv(
+        Equal(
+          DotTerm(f.domain, None),
+          FuncOf(f, dotTermForSort(f.sort, None))
+        ),
+        f.interp.get
+      )
+    )),immutable.IndexedSeq.empty[Sequent])
   }
 
   /**

@@ -69,6 +69,7 @@ object ArithmeticSpeculativeSimplification {
 
   /** Splits absolute value functions to create more, but hopefully simpler, goals. */
   // was "absSplit"
+  // TODO: remove
   def exhaustiveAbsSplit: BelleExpr = anon ((sequent: Sequent) => {
     val absTerms = scala.collection.mutable.Set[Term]() // remember which abs are expanded already (absExp tactic expands same term everywhere)
 
@@ -76,7 +77,7 @@ object ArithmeticSpeculativeSimplification {
       val result = ListBuffer[PosInExpr]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function("abs", _, _, _, true), _) =>
+          case FuncOf(Function("abs", _, _, _, Some(_)), _) =>
             if (!absTerms.contains(e)) {
               result += p
               absTerms.add(e)
@@ -89,10 +90,10 @@ object ArithmeticSpeculativeSimplification {
     }
 
     val anteAbs = sequent.ante.zipWithIndex.
-      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, interpreted=true))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, Some(True)))}.
       map{ case (f, i) => (f, AntePosition.base0(i)) }
     val succAbs = sequent.succ.zipWithIndex.
-      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, interpreted=true))}.
+      filter{ case (f,_) => StaticSemantics.symbols(f).contains(Function("abs", None, Real, Real, Some(True)))}.
       map{ case (f,i) => (f, SuccPosition.base0(i)) }
 
     val absTactic = (anteAbs++succAbs).

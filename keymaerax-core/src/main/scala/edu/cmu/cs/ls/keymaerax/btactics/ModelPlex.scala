@@ -966,7 +966,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
             if tool.isDefined && pp.isSucc && t == "t_".asVariable && s == "s_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
-            case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+            case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
           Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |
@@ -975,7 +975,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), _)), pp)
           if tool.isDefined && pp.isSucc && t == "t_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
-            case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+            case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
           Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |

@@ -151,7 +151,7 @@ object Augmentors {
     /** Indicates whether the formula is FOL without uninterpreted predicate symbols. */
     def isPredicateFreeFOL: Boolean = fml.isFOL &&
       StaticSemantics.signature(fml).forall({
-        case Function(_, _, _, Bool, false) => false
+        case Function(_, _, _, Bool, None) => false
         case _: PredicationalOf => false
         case _: UnitPredicational => false
         case _ => true })
@@ -168,7 +168,7 @@ object Augmentors {
           case _ => Left(None)
         }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function(_, _, _, _, true), _) => Left(None) // interpreted function symbols are allowed
+          case FuncOf(Function(_, _, _, _, Some(_)), _) => Left(None) // interpreted function symbols are allowed
           case FuncOf(_, args) if !bv.intersect(StaticSemantics.freeVars(args)).isEmpty => result = false; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }

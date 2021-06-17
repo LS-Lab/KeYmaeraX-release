@@ -214,7 +214,7 @@ object MonomialOrders {
   val variableConstantOrdering: Ordering[Term] = Ordering.by{
     case BaseVariable(n, i, Real) => (0, n, i)
     case DifferentialSymbol(BaseVariable(n, i, Real)) => (0, n, i)
-    case FuncOf(Function(n, i, Unit, Real, false), Nothing) => (1, n, i)
+    case FuncOf(Function(n, i, Unit, Real, None), Nothing) => (1, n, i)
     case t => throw new IllegalArgumentException("variableConstantOrdering expects BaseVariable or FuncOf(_, Nothing) of sort Real, but got " + t)
   }
 
@@ -300,7 +300,7 @@ object PolynomialArithV2Helpers {
   def anyArgify(prv: ProvableSig): ProvableSig = {
     require(prv.isProved)
     val us = USubst(StaticSemantics.signature(prv.conclusion).flatMap{
-      case f@Function(n, None, Unit, Real, false) => Some(SubstitutionPair(FuncOf(f, Nothing), UnitFunctional(n, AnyArg, Real)))
+      case f@Function(n, None, Unit, Real, None) => Some(SubstitutionPair(FuncOf(f, Nothing), UnitFunctional(n, AnyArg, Real)))
       case _ => None
     }.toIndexedSeq)
     prv(us)

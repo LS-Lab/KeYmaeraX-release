@@ -358,7 +358,7 @@ object FormulaTools extends Logging {
     var args = Set[Term]()
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => args += t; Left(None)
+        case FuncOf(Function(fnname, None, Real, Real, None), t: Term) if fnname == fn => args += t; Left(None)
         case _ => Left(None)
       }
     }, fml)

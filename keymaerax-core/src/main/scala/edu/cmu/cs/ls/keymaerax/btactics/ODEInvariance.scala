@@ -705,9 +705,9 @@ object ODEInvariance {
         case Equal(t, d) :: _ =>
           //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
           val left = freeAtoms.map(f =>
-            Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), Number(2)): Term).reduce(Plus)
+            Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, None), f.xp.x)), Number(2)): Term).reduce(Plus)
           val right = Times(freeAtoms.map(f => Times(Number(2),
-            Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)): Term).reduce(Plus), Minus(t, d))
+            Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, None), f.xp.x)), f.e)): Term).reduce(Plus), Minus(t, d))
 
           //dC with old(.) moves the formula to the last position
           dC(LessEqual(left, right))(pos) < (
@@ -1258,7 +1258,7 @@ object ODEInvariance {
     }
 
     val vs = atomicListify(sys.ode).map( p => p.xp.x )
-    val olds = vs.map(v => Equal(v,FuncOf(Function("old", None, Real, Real, false),v)))
+    val olds = vs.map(v => Equal(v,FuncOf(Function("old", None, Real, Real, None),v)))
 
     dC(olds.reduce(And.apply))(pos) <(
       skip,

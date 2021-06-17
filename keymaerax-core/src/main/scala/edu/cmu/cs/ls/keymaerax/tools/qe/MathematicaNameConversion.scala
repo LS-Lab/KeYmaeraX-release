@@ -33,7 +33,7 @@ private[tools] object MathematicaNameConversion {
     */
   def toMathematica(ns: NamedSymbol): MExpr = {
     val name: String = ns match {
-      case Function(_, _, _, _, true) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case Function(_, _, _, _, Some(_)) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
       case DifferentialSymbol(_) => throw ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ => maskName(ns)
     }
@@ -59,7 +59,7 @@ private[tools] object MathematicaNameConversion {
     } else {
       val (name, index) = unmaskName(e.head.asString)
       val fnDomain = convertFunctionDomain(e.args)
-      Function(name, index, fnDomain, Real, interpreted = false)
+      Function(name, index, fnDomain, Real, interp = None)
     }
   }
 
@@ -101,7 +101,7 @@ private[tools] object MathematicaNameConversion {
 
     //@solution (name conflicts): symmetric name conversion in unmaskName, contract disjointNames in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
-      case Function(_, _, _, _, true) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case Function(_, _, _, _, Some(_)) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
       case DifferentialSymbol(_) => throw ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
         assert(ns.name.count(c => c == '_') <= 1, "At most one _ in names")

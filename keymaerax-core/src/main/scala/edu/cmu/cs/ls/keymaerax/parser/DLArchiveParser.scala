@@ -10,9 +10,6 @@ import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.AxIndex
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 
 import scala.collection.immutable._
 
@@ -164,7 +161,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
   def declOrDef[_: P]: P[List[(Name,Signature)]] = P(
-    NoCut(progDef).map(p => p::Nil)
+      NoCut(progDef).map(p => p::Nil)
     | NoCut(declPartList ~ ";")
     | NoCut(declPart ~ "=" ~ term ~ ";").map({case (id, sig, e) => (id, sig.copy(interpretation = Some(e)))::Nil})
     | NoCut(declPart ~ "<->" ~ formula ~ ";").map({case (id, sig, f) => (id, sig.copy(interpretation = Some(f)))::Nil})
@@ -226,23 +223,22 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       .rep.map(xs => Declaration(xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation)).toMap))
     ~ "End." )
 
-  /** ImplicitDefinitions Real cos(Real x) ':= sin(x) * (x)'; Real sin(Real x) ':= -cos(x) * (x)'; End. */
+  /** ImplicitDefinitions
+   *    Real abs(Real x) = y <-> x < 0 && y = -x || x >= 0 && y = x;
+   *    Real exp(Real x) = y <-> \forall t. \forall e. t=0 && e=1 &&
+   *                             ((<t'=1,e'=e> x=t && y=e) || (<t'=-1,e'=-e> x=t && y=e));
+   *  End.
+   */
   def implicitDefs[_: P]: P[Declaration] = {
     P("ImplicitDefinitions" ~~ blank ~/
-      (declPart ~ "':=" ~ term ~ ";")
-        .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), diff) =>
-          val func = Function(fnName, fnNameNum, argSort, Real, interpreted = true)
-          AxIndex.implFuncDiffs(func) =
-            DifferentialAxiomInfo(
-              funcName = fnName,
-              funcOf = FuncOf(func,
-                              vars.map({case (Name(vnam,vidx),s) => Variable(vnam,vidx,s)})
-                                  .reduceRightOption(Pair).getOrElse(Nothing)),
-              diff = diff,
-              theRecursor = FormulaTools.posOfTerm(diff, _.isInstanceOf[Differential]).map(_.pos)
-            )
+      (declPart ~ "=" ~ ident ~ "<->" ~ term ~ ";")
+        .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, diff) =>
+          //TODO: generate interp by substituting DotTerm() for res, and DotTerm(idx=...) for vars
+          val func = Function(fnName, fnNameNum, argSort, Real, interp = ???)
           Declaration(Map(
-            Name(fnName, fnNameNum) -> sig
+            Name(fnName, fnNameNum) -> sig.copy(interpretation = Some(FuncOf(func,
+              vars.map({case(name,sort)=> Variable(name.name, name.index, sort)})
+                  .reduceRightOption(Pair).getOrElse(Nothing))))
           ))
         }
       .rep.map(_.fold(Declaration(Map()))(_++_))

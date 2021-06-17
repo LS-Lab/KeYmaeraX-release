@@ -283,14 +283,22 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 /** Function symbol or predicate symbol or predicational symbol `name_index:domain->sort`
   * @param domain the sort of expected arguments.
   * @param sort the sort resulting when this function/predicate/predicational symbol has been applied to an argument.
-  * @param interpreted when `true` this function symbol has a fixed interpretation/definition, e.g. `abs`.
+  * @param interp if present, this function symbol `f` has a fixed interpretation defined by
+  *                   y = f x <-> P(y,x)
+  *               where P is the interp formula, substituting (y,x) for the dot terms.
   */
-case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
+case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interp: Option[Formula] = None)
     extends NamedSymbol {
   final val kind: Kind = FunctionKind
-  /** Full string with names and full types */
+  // TODO: check that interp has no free variables and that dot terms are correct sorts
+  // and that function is smooth and that it is unique ???
+
+  // TODO: Q for andre: what constraints are there on functions in dL?
+
   override def fullString: String = asString + ":" + domain + "->" + sort
   insistNamingConvention()
+
+  def interpreted = interp.nonEmpty
 }
 
 /** •: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbol
@@ -503,7 +511,7 @@ case class PredicationalOf(func: Function, child: Formula)
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   insist(func.sort == Bool, "expected argument sort Bool: " + this)
   insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
-  insist(!func.interpreted, "only uninterpreted predicationals are currently supported: " + this)
+  insist(func.interp.isEmpty, "only uninterpreted predicationals are currently supported: " + this)
 }
 
 /** Arity 0 predicational symbol `name:bool`, written `P(||)`, or limited to the given state space `P(|x|)`.

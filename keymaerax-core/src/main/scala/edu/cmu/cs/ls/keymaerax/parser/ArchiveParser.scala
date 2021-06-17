@@ -19,9 +19,9 @@ case class Signature(domain: Option[Sort], codomain: Sort, arguments: Option[Lis
 case class Declaration(decls: Map[Name, Signature]) {
   /** The declarations as topologically sorted substitution pairs. */
   lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2.interpretation.isDefined).map({
-    case (name, sig@Signature(_, _, _, interpretation, _)) =>
+    case (name, sig) =>
       // elaborate to functions for topSort (topSort uses signature)
-      (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_))))
+      (name, sig.copy(interpretation = sig.interpretation.map(elaborateToFunctions(_))))
   })).map((declAsSubstitutionPair _).tupled)
 
   /** Declared names and signatures as [[NamedSymbol]]. */

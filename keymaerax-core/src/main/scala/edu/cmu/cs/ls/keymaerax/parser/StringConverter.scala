@@ -37,7 +37,7 @@ class StringConverter(val s: String) {
 
   /** Converts to a function symbol (elaborates variables). */
   def asFunction: Function = Parser.parser.termParser(s) match {
-    case v: Variable  => Function(v.name, v.index, Unit, Real, interpreted=false)
+    case v: Variable  => Function(v.name, v.index, Unit, Real, interp=None)
     case FuncOf(f, _) => f
     case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
   }

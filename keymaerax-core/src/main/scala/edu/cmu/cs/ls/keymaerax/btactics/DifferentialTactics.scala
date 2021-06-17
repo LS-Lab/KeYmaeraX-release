@@ -141,8 +141,9 @@ private object DifferentialTactics extends Logging {
 
       val expand: BelleExpr = diFml match {
         case Box(_, post) if StaticSemantics.symbols(post).exists(
-          { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
+          { case Function(_, _, _, _, interp) => interp.nonEmpty case _ => false }) =>
           // expand all interpreted function symbols below pos.1
+          // TODO: don't think this will work anymore
           EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
         case _ => skip
       }

@@ -89,7 +89,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
     else throw ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
-  } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, true) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
+  } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, Some(_)) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
   /** Converts an unary expression. */
   private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {

@@ -49,7 +49,7 @@ object SubstitutionHelper {
   def replaceFn(fn: String, fml: Formula, subst: Map[Term, Variable]): Formula = {
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => Right(subst(t))
+        case FuncOf(Function(fnname, None, Real, Real, None), t: Term) if fnname == fn => Right(subst(t))
         case _ => Left(None)
       }
     }, fml) match {
