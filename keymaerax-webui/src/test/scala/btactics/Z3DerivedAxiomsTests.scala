@@ -240,6 +240,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   it should "tactically prove abs" in withZ3 { qeTool => check(abs)}
   it should "tactically prove min" in withZ3 { qeTool => check(min)}
   it should "tactically prove max" in withZ3 { qeTool => check(max)}
+  it should "tactically prove openInvariantClosure" in withZ3 { _ => check(openInvariantClosure)}
 
   "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
