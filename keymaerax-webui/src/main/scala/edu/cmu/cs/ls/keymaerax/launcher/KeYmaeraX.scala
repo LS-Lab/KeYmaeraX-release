@@ -67,7 +67,8 @@ object KeYmaeraX {
     val CONVERT: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.CONVERT
     val SETUP: String = edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.Modes.SETUP
     val UI: String = "ui"
-    val modes: Set[String] = Set(CODEGEN, CONVERT, MODELPLEX, PROVE, REPL, UI, SETUP)
+    val TAYLORIZE: String = "taylorize"
+    val modes: Set[String] = Set(CODEGEN, CONVERT, MODELPLEX, PROVE, REPL, UI, SETUP, TAYLORIZE)
   }
 
   /** Usage -help information. */
@@ -95,6 +96,13 @@ object KeYmaeraX {
     try {
       //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
       options.get('mode) match {
+        case Some(Modes.TAYLORIZE) => {
+          val filename = options.get('file)
+          filename match {
+            case Some(s) => println(TaylorizeMain(s.asInstanceOf[String]))
+            case None => println("FAILED.")
+          }
+        }
         case Some(Modes.CODEGEN) =>
           val toolConfig =
             if (options.contains('quantitative)) {
@@ -161,6 +169,8 @@ object KeYmaeraX {
       case Nil => map
       case "-help" :: _ => println(usage); exit(1)
       // actions
+      case "-taylorize" :: value :: tail =>
+        nextOption(map ++ Map('mode -> Modes.TAYLORIZE, 'file -> value), tail)
       case "-sandbox" :: tail =>
         nextOption(map ++ Map('sandbox -> true), tail)
       case "-modelplex" :: value :: tail =>
