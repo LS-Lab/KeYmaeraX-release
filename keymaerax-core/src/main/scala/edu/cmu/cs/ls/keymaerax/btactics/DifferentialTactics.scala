@@ -2096,6 +2096,18 @@ private object DifferentialTactics extends Logging {
     displayLevel="browse", revealInternalSteps = true)
   val dCClosure : DependentPositionTactic = anon ((pos:Position) => dCClosure(true)(pos))
 
+  @Tactic(names="dI Closure",
+    premises="Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
+    conclusion="Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
+    displayLevel="browse", revealInternalSteps = true)
+  val dIClosure : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,_)) =>
+        ODESpecific(sys.ode).dIClosed(pos)
+      case _ => throw new TacticRequirementError("Did not match form for dC closure.")
+    }
+  })
+
   /** Lemmas that can be proved only for specific instances of ODEs. */
   case class ODESpecific(ode: DifferentialProgram, variant: String => String = _ + "_") {
     private val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -2212,11 +2224,11 @@ private object DifferentialTactics extends Logging {
           toc("== dIClosed")
           val postD = DifferentialHelper.lieDerivative(ode, post)
           toc("== lieDerivative")
-          val post_semi = SimplifierV3.semiAlgNormalize(post)
+          val post_semi = SimplifierV3.semiAlgNormalizeUnchecked(post)
           toc("== semiAlgNormalize post")
-          val postD_semi = SimplifierV3.semiAlgNormalize(postD)
+          val postD_semi = SimplifierV3.semiAlgNormalizeUnchecked(postD)
           toc("== semiAlgNormalize postD")
-          (SimplifierV3.maxMinGeqNormalize(post_semi._1), SimplifierV3.maxMinGeqNormalize(postD_semi._1)) match {
+          (SimplifierV3.maxMinGeqNormalizeUnchecked(post_semi._1), SimplifierV3.maxMinGeqNormalizeUnchecked(postD_semi._1)) match {
             case ((GreaterEqual(p, Number(np)), Some(p_prv)),
             (GreaterEqual(q, Number(nq)), Some(_))) if np == 0 && nq == 0 =>
               toc("== maxMinGeqNormalize")
@@ -2240,6 +2252,25 @@ private object DifferentialTactics extends Logging {
                   tocTac("== done") &
                   done
               )
+            case ((GreaterEqual(p, Number(np)), _),
+            (GreaterEqual(q, Number(nq)), _)) if np == 0 && nq == 0 =>
+              toc("== maxMinGeqNormalize")
+              val usubst = (UnificationMatch(p_pat, p) ++ UnificationMatch(q_pat, q) ++ UnificationMatch(P_pat, post)).usubst
+              useAt(dIopenClosedProvable(usubst), PosInExpr(1::Nil))(pos) &
+                andR(pos) & Idioms.<( skip, andR(pos) & Idioms.<(skip, andR(pos))) &
+                Idioms.<(
+                  skip /* initial condition */,
+                  tocTac("== Tactic start") &
+                    dW(pos) & implyRi /* (open) differential invariant */,
+                  tocTac("== dW") &
+                    cohideR(pos) & allR(pos)*vars.length & derive(pos++PosInExpr(1::Nil)) &
+                    DE(pos) & Dassignb(pos ++ PosInExpr(1::Nil))*vars.length & dW(pos) &
+                    tocTac("== DE") &
+                    QE & done,
+                  tocTac("== QE") &
+                    cohideR(pos) & allR(pos)*vars.length
+                    // & byUS(Ax.equivReflexive) & done
+                )
             case unexpected =>
               throw new TacticAssertionError("dIClosed: maxMinGeqNormalize produced something unexpected: " + unexpected)
           }
