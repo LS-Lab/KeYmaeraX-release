@@ -2096,15 +2096,15 @@ private object DifferentialTactics extends Logging {
     displayLevel="browse", revealInternalSteps = true)
   val dCClosure : DependentPositionTactic = anon ((pos:Position) => dCClosure(true)(pos))
 
-  @Tactic(names="dI Closure",
+  @Tactic(names="dI Closed",
     premises="Γ |- [x'=f(x)&Q∧P]q'(x)>0, Δ ;; Γ |- q(x)>=0",
     conclusion="Γ |- [x'=f(x)&Q]q(x)>=0, Δ",
     displayLevel="browse", revealInternalSteps = true)
-  val dIClosure : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
+  val dIClosed : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
     seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) =>
         ODESpecific(sys.ode).dIClosed(pos)
-      case _ => throw new TacticRequirementError("Did not match form for dC closure.")
+      case _ => throw new TacticRequirementError("Did not match form for dI closed.")
     }
   })
 
@@ -2252,7 +2252,7 @@ private object DifferentialTactics extends Logging {
                   tocTac("== done") &
                   done
               )
-            case ((GreaterEqual(p, Number(np)), _),
+            case ((GreaterEqual(p, Number(np)), post_prv),
             (GreaterEqual(q, Number(nq)), _)) if np == 0 && nq == 0 =>
               toc("== maxMinGeqNormalize")
               val usubst = (UnificationMatch(p_pat, p) ++ UnificationMatch(q_pat, q) ++ UnificationMatch(P_pat, post)).usubst
@@ -2268,8 +2268,11 @@ private object DifferentialTactics extends Logging {
                     tocTac("== DE") &
                     QE & done,
                   tocTac("== QE") &
-                    cohideR(pos) & allR(pos)*vars.length
-                    // & byUS(Ax.equivReflexive) & done
+                    cohideR(pos) & allR(pos)*vars.length &
+                    (if (post_semi._2.isEmpty) skip else useAt(post_semi._2.get, PosInExpr(0::Nil))(1, 0::Nil)) &
+                    (if (post_prv.isEmpty) skip else useAt(post_prv.get, PosInExpr(0::Nil))(1, 0::Nil)) &
+                    byUS(Ax.equivReflexive) &
+                    done
                 )
             case unexpected =>
               throw new TacticAssertionError("dIClosed: maxMinGeqNormalize produced something unexpected: " + unexpected)
