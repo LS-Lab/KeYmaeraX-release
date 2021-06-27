@@ -196,6 +196,8 @@ object TactixLibrary extends HilbertCalculus
       case (_: Exists, _) => None
       case (_: Diamond, _) => None
       case (_: Box, _) => None
+      case (_: Not, true) => Some(TacticInfo("notL"))
+      case (_: Not, false) => Some(TacticInfo("notR"))
       case _ => sequentStepIndex(isAnte)(expr)
     }
 

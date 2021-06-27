@@ -302,7 +302,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "support higher derivatives" in withQE { _ =>
+  it should "support higher derivatives" in withMathematica { _ =>
     // note: postcondition x > j fails because of a renaming bug
     val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
       // Should be old(x), etc.
@@ -598,7 +598,7 @@ class ODELivenessTests extends TacticTestBase {
       // "Assume" for contradiction that goal is not reached, then solution is trapped in compact set
       cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
         skip,
-        useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) & propClose
       ) &
       // Manual dV
       cut("\\exists t t=0".asFormula) <( existsL(-3) , cohideR(2) & QE) &
