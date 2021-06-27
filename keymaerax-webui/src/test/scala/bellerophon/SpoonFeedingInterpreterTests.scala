@@ -1719,7 +1719,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < 0->x>=0");
         |orL('L=="x>=0|!x < 0"); <(
-        |  "x>=0": closeId(-1,1),
+        |  "x>=0": id,
         |  "!x < 0": notL('L=="!x < 0")
         |)""".stripMargin)
   }}
@@ -1734,14 +1734,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     //@todo tactic extraction must be strict too (now removes nil)
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false, convertPending=true))(
       prop, BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
 
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
   }}
 
   it should "work with onAll without branches" in withDatabase { db => withMathematica { _ =>
@@ -1764,7 +1764,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(master(), BelleProvable.plain(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); closeId(-1,1)")
+    tree.tactic shouldBe BelleParser("implyR('R==\"x>=0->x>=0\"); id")
   }}
 
   it should "work for prop on a left-branching example" in withDatabase { db => withMathematica { _ =>
@@ -1783,7 +1783,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orL('L=="x>=0|!x < y"); <(
-        |  "x>=0": closeId(-1,1),
+        |  "x>=0": id,
         |  "!x < y": notL('L=="!x < y")
         |)""".stripMargin)
 
@@ -1794,12 +1794,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orL('L=="x>=0|!x < y"); <(
-        |  "x>=0": closeId(-1,1),
+        |  "x>=0": id,
         |  "!x < y": notL('L=="!x < y")
         |)""".stripMargin)
   }}
 
-  it should "FEATURE_REQUEST: work for prop on a left-branching example with depth 2" taggedAs TodoTest in withDatabase { db => withMathematica { _ =>
+  it should "work for prop on a left-branching example with depth 2" in withDatabase { db => withMathematica { _ =>
     val problem = "x>=0|!x<y -> x>=0"
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof1")
@@ -1812,12 +1812,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
 
     val tree = DbProofTree(db.db, proofId.toString)
-    //@todo step notL seems to have an incorrect parent (none) instead of label("!x<y")
-    //@todo want <(label("x>=0"), label("!x<y"); <("x>=0": closeId(-1,1), "!x<y":notL...)
     tree.tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orLRule('L=="x>=0|!x < y"); <(
-        |  label("x>=0"); closeId(-1,1),
+        |  label("x>=0"); id,
         |  label("!x < y"); notL('L=="!x < y")
         |)""".stripMargin)
 
@@ -1828,7 +1826,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|!x < y->x>=0");
         |orLRule('L=="x>=0|!x < y"); <(
-        |  label("x>=0"); closeId(-1,1),
+        |  label("x>=0"); id,
         |  label("!x < y"); notL('L=="!x < y")
         |)""".stripMargin)
   }}
@@ -1843,16 +1841,16 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     DbProofTree(db.db, proofId.toString).tactic shouldBe BelleParser(
       """implyR('R=="x>=0|x < y->x>=0&x < y");
-        |orL('L=="x>=0|x < y"); <(
+        |andR('R=="x>=0&x < y"); <(
         |  "x>=0":
-        |    andR('R=="x>=0&x < y"); <(
-        |      "x>=0": closeId(-1,1),
+        |    orL('L=="x>=0|x < y"); <(
+        |      "x>=0": id,
         |      "x < y": nil
         |    ),
         |  "x < y":
-        |    andR('R=="x>=0&x < y"); <(
+        |    orL('L=="x>=0|x < y"); <(
         |      "x>=0": nil,
-        |      "x < y": closeId(-1,1)
+        |      "x < y": id
         |    )
         |)""".stripMargin)
   }}
@@ -1897,13 +1895,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """andR('R=="x>=0&x < y"); <(
             |  "x>=0":
             |    orL('L=="x>=0|x < y"); <(
-            |      "x>=0": closeId(-1,1),
+            |      "x>=0": id,
             |      "x < y": nil
             |    ),
             |  "x < y":
             |    orL('L=="x>=0|x < y"); <(
             |      "x>=0": nil,
-            |      "x < y": closeId(-1,1)
+            |      "x < y": id
             |    )
             |)""".stripMargin)
     }
@@ -1925,13 +1923,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """andR('R=="x>=0&x < y"); <(
             |  "x>=0":
             |    orL('L=="x>=0|x < y"); <(
-            |      "x>=0": closeId(-1,1),
+            |      "x>=0": id,
             |      "x < y": nil
             |    ),
             |  "x < y":
             |    orL('L=="x>=0|x < y"); <(
             |      "x>=0": nil,
-            |      "x < y": closeId(-1,1)
+            |      "x < y": id
             |    )
             |)""".stripMargin)
     }
@@ -1953,7 +1951,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         val (_, tactic) = stepInto(node, "prop", 1)(db)
         tactic shouldBe BelleParser(
           """andR('R=="x>=0&x < y"); <(
-            |  "x>=0": closeId(-1,1),
+            |  "x>=0": id,
             |  "x < y": nil
             |)""".stripMargin)
     }
@@ -1964,7 +1962,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """andR('R=="x>=0&x < y"); <(
             |  "x>=0": nil,
-            |  "x < y": closeId(-1,1)
+            |  "x < y": id
             |)""".stripMargin)
     }
   }
