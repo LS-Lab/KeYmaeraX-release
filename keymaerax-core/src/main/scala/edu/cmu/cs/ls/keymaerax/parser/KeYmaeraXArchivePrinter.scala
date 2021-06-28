@@ -107,7 +107,8 @@ object KeYmaeraXArchivePrinter {
     case Real => "Real"
     case Bool => "Bool"
     case Trafo => "HP"
-    case Unit => throw new IllegalArgumentException("Sort " + sort + " not supported as sort of declaration; please use one of [Real, Bool, HP].")
+    case Tuple(l, r) => "(" + printSort(l) + "," + printSort(r) + ")"
+    case _ => throw new IllegalArgumentException("Sort " + sort + " not supported as sort of declaration; please use one of [Real, Bool, HP].")
   }
 
   /** Prints the sort of term `arg` as a function domain with named arguments (argument names from variables in term `arg`).
@@ -154,8 +155,10 @@ object KeYmaeraXArchivePrinter {
     val defs = decl.decls.filter(_._2.domain.isDefined)
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
-      case Function(name, idx, domain, sort, _) if !decl.decls.contains(Name(name, idx)) =>
-        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+      case Function(name, idx, domain, sort, _) =>
+        if (!decl.decls.contains(Name(name, idx)) && !InterpretedSymbols.byName.contains((name, idx))) {
+          s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+        } else ""
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 

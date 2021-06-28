@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
-import edu.cmu.cs.ls.keymaerax.core.PrettyPrinter
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, ParsedArchiveEntry, PrettierPrintFormatProvider}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, Name, ParsedArchiveEntry, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 
@@ -321,8 +321,16 @@ object KeYmaeraX {
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note fully expand model and remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(model = e.defs.exhaustiveSubst(e.model),
-      defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = {
+      val expandedModel = e.defs.exhaustiveSubst(e.model)
+      val expandedModelNames = StaticSemantics.symbols(expandedModel)
+      e.copy(model = expandedModel,
+        defs = Declaration(e.defs.decls.flatMap({
+          case (name@Name(n, i), sig) =>
+            if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = None))
+            else None
+        })), tactics = Nil, annotations = Nil)
+    }
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
