@@ -520,7 +520,7 @@ object TactixLibrary extends HilbertCalculus
         Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
           "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
-    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DebuggingTactics.print("Invariants added") &
+    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
       ODEfinish(invs.nonEmpty)(pos)
   }, Some("ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.")))
 

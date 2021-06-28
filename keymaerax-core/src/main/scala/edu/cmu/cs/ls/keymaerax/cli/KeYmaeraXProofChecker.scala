@@ -33,6 +33,11 @@ import scala.reflect.io.File
 
 /** Proof checker command-line interface implementation. */
 object KeYmaeraXProofChecker {
+  /** Common proof statistics utilities. */
+  object ProofStatistics {
+    /** Prints the CSV header. */
+    def csvHeader: String = "Name,Tactic,Status,Timeout,Duration,QE duration,Proof steps,Tactic size"
+  }
   /** Collects proof statistics. */
   case class ProofStatistics(name: String, tacticName: String, status: String, witness: Option[ProvableSig],
                              timeout: Long, duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
@@ -228,7 +233,7 @@ object KeYmaeraXProofChecker {
 
     statistics.foreach(println)
 
-    val csvStatistics = statistics.map(_.toCsv).mkString("\n")
+    val csvStatistics = ProofStatistics.csvHeader + "\n" + statistics.map(_.toCsv).mkString("\n")
     val statisticsLogger = LoggerFactory.getLogger(getClass)
     statisticsLogger.info(MarkerFactory.getMarker("PROOF_STATISTICS"), csvStatistics)
 
