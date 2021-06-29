@@ -277,9 +277,10 @@ object KeYmaeraXProofChecker {
     val proofEvidence = File(sanitize(outputFileName))
     if (proofEvidence.exists) proofEvidence.delete()
 
-    val t = tacticString match {
-      case Some(tac) => ("user", "user", tac) :: Nil
-      case None =>
+    val t = (tacticString, reqTacticName) match {
+      case (Some(tac), None) => ("user", "user", tac) :: Nil
+      case (Some(tac), Some(req)) => (entry.tactics.filter(_._1 == req) :+ ("user", "user", tac)).head :: Nil
+      case (None, _) =>
         if (reqTacticName.isDefined) entry.tactics.filter(_._1 == reqTacticName.get)
         else if (entry.tactics.isEmpty) ("auto", "auto", TactixLibrary.autoClose) :: Nil
         else entry.tactics
