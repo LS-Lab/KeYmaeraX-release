@@ -10,12 +10,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{DifferentialProgramToMathematica, BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 import scala.collection.immutable
 import scala.math.BigDecimal
@@ -752,6 +753,76 @@ class MathematicaEquationSolverTool(override val link: MathematicaLink) extends 
       case f: Formula => Some(f)
       case _ => None
     }
+  }
+}
+
+/**
+  * Uses Mathematica's AsymptoticDSolveValue function to construct power series expansions of the solution to a system of ODEs.
+  *
+  * @author Nathan Fulton
+  */
+class MathematicaDifferentialSolutionSeriesApproximationTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter, PegasusM2KConverter) with DifferentialSolutionSeriesApproximationTool {
+
+  private def pairToList(t: Term): List[Term] = t match {
+    case Pair(left, right) => {
+      assert(!left.isInstanceOf[Pair], "Expected canonical ordering so that tail recursion is possible.")
+      left :: pairToList(right)
+    }
+    case _ => t :: Nil
+  }
+
+  private def convertResult(odes: ODESystem, result: Expression) = {
+    result match {
+      case t: Term => {
+        // Convert nested pairs into a list of terms.
+        val approximations = pairToList(t)
+
+        // Replace all constant symbols in the terms with old(x_i) where x_i is the i^th primed variable in the ODEs.
+        val primedVariables = DifferentialHelper.getPrimedVariables(odes)
+        val approximationsWithInitialConditions = approximations.map(approximation => {
+          Range(1, primedVariables.length + 1).foldLeft(approximation)((approximation, i) => {
+            val constantSymbol = FuncOf(Function("C", None, Real, Real, true), Number(i)) // C[i]
+            val x_i = primedVariables(i - 1) //the i^th primed variable in the system.
+            val old_x_i = FuncOf(Function("old", None, Real, Real), x_i) // old(x_i)
+            approximation.replaceAll(constantSymbol, old_x_i)
+          })
+        })
+
+        Some(
+          DifferentialHelper.getPrimedVariables(odes)
+            .zip(approximationsWithInitialConditions)
+            .toMap
+        )
+      }
+      case _ => throw new ConversionException(s"Expected AsymptoticDSolveValue to give a term or a list of terms, but found ${result}")
+    }
+  }
+
+  /** @inheritdoc */
+  override def seriesApproximation(odes: ODESystem, ctx: Map[Term, Term]): Option[Map[Variable, Term]] = {
+    //See https://reference.wolfram.com/language/ref/AsymptoticDSolveValue.html for the command we're going to use.
+
+    // Apply the context to the ODEs.
+    val odesInCtx = ctx.foldLeft(odes)((currExpr, x) => {
+      SubstitutionHelper.replaceFree(currExpr)(x._1, x._2).asInstanceOf[ODESystem]
+    })
+
+    // Identify a unique time variable.
+    val TIME_VAR = Variable("t") //@todo do something here that's less stupid.
+
+    // Convert the ODEs into Mathematica expressions.
+    // @todo move this out into a utility class independent of the k2m converter interface.
+    val (mODEs, ivs, _, _) = DifferentialProgramToMathematica(k2m).apply(odesInCtx.ode, TIME_VAR, Map())
+
+    //construct the Mathematica expression that will execute AsymptoticDSolveValue.
+    val input = ExtMathematicaOpSpec.dsolveAsymptoticApproximation(
+      MathematicaOpSpec.list(mODEs:_*),
+      MathematicaOpSpec.list(DifferentialHelper.getPrimedVariables(odesInCtx).map(k2m):_*),
+      MathematicaOpSpec.list(k2m(TIME_VAR), k2m(Number(0)), k2m(Number(10))) //@todo I have no clue what these bounds should be. Make these arguments at least.
+    )
+
+    val (_, result) = run(input)
+    convertResult(odes, result)
   }
 }
 

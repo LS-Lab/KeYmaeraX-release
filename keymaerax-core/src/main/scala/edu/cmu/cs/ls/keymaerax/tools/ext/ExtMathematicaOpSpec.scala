@@ -101,6 +101,8 @@ object ExtMathematicaOpSpec {
 
   def d: BinaryMathOpSpec = BinaryMathOpSpec(symbol("D"))
 
+  def dsolveAsymptoticApproximation: NaryMathOpSpec = NaryMathOpSpec(symbol("AsymptoticDSolveValue"))
+
   //</editor-fold>
 
 }
