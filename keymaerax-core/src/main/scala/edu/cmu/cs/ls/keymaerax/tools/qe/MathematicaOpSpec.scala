@@ -129,6 +129,8 @@ object MathematicaOpSpec {
 
   def power: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Power"))
 
+  def C: UnaryMathOpSpec = UnaryMathOpSpec(symbol("C")) //@todo document the meaning of this symbol.
+
   // implicit function application name[args]
   def func: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {

@@ -41,6 +41,12 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
     else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
 
+    // Constant symbols, typically as constants of integration.
+    // Should NOT be leaked out of tooling code. Marking as "interpreted" because that should prevent its unsound use in
+    // at least the most important soundness-critical contexts.
+    // @todo either enforce this invariant or give the function an obviously obnoxious name as a warning to the user.
+    else if (MathematicaOpSpec.C.applies(e))     convertUnary (e, (t: Term) => FuncOf(Function("C", None, Real, Real, true), t))
+
     // Arith expressions
     else if (MathematicaOpSpec.plus.applies(e))   convertNary  (e, Plus.apply)
     else if (MathematicaOpSpec.minus.applies(e))  convertBinary(e, Minus.apply)
