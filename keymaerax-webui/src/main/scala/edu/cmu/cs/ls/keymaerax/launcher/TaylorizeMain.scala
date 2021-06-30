@@ -4,6 +4,8 @@
 
 package edu.cmu.cs.ls.keymaerax.launcher
 
+import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{DifferentialProgram, ODESystem, PrettyPrinter, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -48,13 +50,15 @@ object TaylorizeMain {
   def taylorize(dp: DifferentialProgram): Option[List[(Variable, Term, Term)]] = {
     val vars = DifferentialHelper.atomicOdes(dp).map(atomic => atomic.xp.x)
 
-    //@todo Grab the taylor approximations from KeYmaera X backend FOR EACH PRIMED VARIABLE.
-    //@todo This whole section is complete nonsesnse filler.
+    val result = ToolProvider.differentialSeriesApproxmationnTool().get.seriesApproximation(
+      ODESystem(dp, "true".asFormula),
+      Map()
+    )
 
-    Some(vars.map((v: Variable) => {
-      val name = v.name
-      (v, s"t^2/2".asTerm, s"t^3/3".asTerm)
-    }))
+    result match {
+      case Some(mapping) => Some(mapping.map(vt => (vt._1,vt._2,vt._2)).toList) //@todo get upper and lower bounds.
+      case None => None
+    }
   }
 
   def output(v: Variable, lowerBound: Term, upperBound: Term) = {
