@@ -143,10 +143,10 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case a: ProgramConst => a->nextP(vars,size)
       case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=false, duals=false)
       case a: DifferentialProgramConst => a->nextDP(odevars(i),size)
-      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
-      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
-      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
-      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false,duals=isGame)
+      case f@Function(_,_,Unit,Real,None) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
+      case p@Function(_,_,Unit,Bool,None) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
+      case f@Function(_,_,Real,Real,None) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
+      case p@Function(_,_,Real,Bool,None) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false,duals=isGame)
       //@todo replace also as PredicationalOf
       case ow => ow->ow
     })}).toSet.flatten
@@ -219,11 +219,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case a: ProgramConst => a->nextP(vars,size)
       case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=replacedFuncs, duals=false)
       case a: DifferentialProgramConst => a->nextDP(vars,size)
-      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=replacedFuncs)
-      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
-      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=replacedFuncs)
-      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
-      case p@Function(_,_,Bool,Bool,false) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case f@Function(_,_,Unit,Real,None) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Unit,Bool,None) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case f@Function(_,_,Real,Real,None) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Real,Bool,None) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case p@Function(_,_,Bool,Bool,None) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=replacedFuncs,duals=isGame)
       case ow => ow->ow
     })
     USubst(repls.filter(pair=>pair._1!=pair._2).map(pair=>SubstitutionPair(pair._1,pair._2)).to)

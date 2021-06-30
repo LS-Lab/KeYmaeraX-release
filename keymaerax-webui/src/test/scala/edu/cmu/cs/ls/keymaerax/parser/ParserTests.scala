@@ -693,7 +693,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   "String converter" should "parse substitution pair with 0-based dots" in  {
     //@note conversion to all 1-based indices also acceptable
     "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair shouldBe SubstitutionPair(
-      PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+      PredOf(Function("gt", None, Tuple(Real, Real), Bool, None), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
       Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))
     )
   }

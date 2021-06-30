@@ -113,9 +113,9 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   }
 
   "Abs" should "parse" in {
-    "abs(x)".asTerm shouldBe FuncOf(Function("abs", None, Real, Real, interpreted=true), Variable("x"))
+    "abs(x)".asTerm shouldBe FuncOf(InterpretedSymbols.absF, Variable("x"))
     "abs_0".asTerm shouldBe Variable("abs", Some(0))
-    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, interpreted=false), Nothing)
+    "abs_0()".asTerm shouldBe FuncOf(Function("abs", Some(0), Unit, Real, None), Nothing)
   }
 
   ///

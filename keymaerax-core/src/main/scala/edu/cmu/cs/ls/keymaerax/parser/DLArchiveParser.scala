@@ -10,6 +10,7 @@ import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 
 import scala.collection.immutable._
 
@@ -231,10 +232,22 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    */
   def implicitDefs[_: P]: P[Declaration] = {
     P("ImplicitDefinitions" ~~ blank ~/
-      (declPart ~ "=" ~ ident ~ "<->" ~ term ~ ";")
-        .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, diff) =>
-          //TODO: generate interp by substituting DotTerm() for res, and DotTerm(idx=...) for vars
-          val func = Function(fnName, fnNameNum, argSort, Real, interp = ???)
+      (declPart ~ "=" ~ ident ~ "<->" ~ formula ~ ";")
+        .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
+          val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
+            // Replace res with DotTerm()
+            form.replaceFree(
+              BaseVariable(res._1,res._2,Real),
+              DotTerm()
+            )) { case (acc,(x,i)) =>
+            // Replace x with DotTerm(i)
+            acc.replaceFree(
+              BaseVariable(x._1.name,x._1.index,x._2),
+              DotTerm(idx = Some(i))
+            )
+          }
+
+          val func = Function(fnName, fnNameNum, argSort, Real, interp = Some(formAfterSubstitutions))
           Declaration(Map(
             Name(fnName, fnNameNum) -> sig.copy(interpretation = Some(FuncOf(func,
               vars.map({case(name,sort)=> Variable(name.name, name.index, sort)})

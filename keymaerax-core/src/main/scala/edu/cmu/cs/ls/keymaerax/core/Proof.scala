@@ -19,8 +19,8 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
-
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 
 // require favoring immutable Seqs for soundness
 
@@ -839,25 +839,23 @@ object Provable {
   }
 
   def implicitFuncAxiom (f: Function): Provable = {
-    //TODO: continuousProof should check that
-    // \forall x. \exists unique y. f(x) = y
-    // and f continuous
+    //TODO: should check that
+    // f well defined and continuous
 
     assert(f.interp.isDefined)
 
-    def dotTermForSort (s: Sort, idx: Option[Int]): Term =
+    def dotTermForSort (s: Sort, idx: Int): Term =
       s match {
         case Tuple(left, right) =>
-          val _idx = idx.getOrElse(0)
-          Pair(dotTermForSort(left, Some(_idx)), dotTermForSort(right, Some(_idx+1)))
-        case s => DotTerm(s, idx)
+          Pair(DotTerm(left, Some(idx)), dotTermForSort(right, idx+1))
+        case s => DotTerm(s, Some(idx))
       }
 
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
       Equiv(
         Equal(
-          DotTerm(f.domain, None),
-          FuncOf(f, dotTermForSort(f.sort, None))
+          DotTerm(f.sort, None),
+          FuncOf(f, dotTermForSort(f.domain, 0))
         ),
         f.interp.get
       )

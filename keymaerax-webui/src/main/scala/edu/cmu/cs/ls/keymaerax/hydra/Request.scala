@@ -259,7 +259,8 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
 
   def findCounterExample(fml: Formula, cexTool: CounterExampleTool): Option[Map[NamedSymbol, Expression]] = {
     val signature = StaticSemantics.signature(fml).filter({
-      case Function(_, _, _, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+      //TODO: check if should be changed
+      case Function(_, _, _, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
     val lmf = signature.foldLeft[Formula](fml)((f, t) => allFnToVar(f, t))
     cexTool.findCounterExample(lmf) match {
       case Some(cex) => Some(cex.map({case (k, v) => signature.find(s => s.name == k.name && s.index == k.index).getOrElse(k) -> v }))
@@ -505,7 +506,8 @@ class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, node
   override protected def doResultingResponses(): List[Response] = {
     def replaceFuncs(fml: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case FuncOf(Function(name, idx, Unit, Real, false), _) => Right(BaseVariable(name, idx))
+          //TODO: check if still correct
+        case FuncOf(Function(name, idx, Unit, Real, None), _) => Right(BaseVariable(name, idx))
         case _ => Left(None)
       }
     }, fml)

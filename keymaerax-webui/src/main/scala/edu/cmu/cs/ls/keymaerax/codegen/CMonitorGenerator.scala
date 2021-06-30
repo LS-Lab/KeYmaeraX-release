@@ -108,9 +108,9 @@ class CMonitorGenerator extends CodeGenerator {
     * expression `expr`. */
   private def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
     StaticSemantics.symbols(expr)
-      .filter({
-        case Function("abs", None, Real, Real, true) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
+      .filter({ //TODO:
+        case Function("abs", None, Real, Real, Some(_)) => false
+        case Function("min" | "max", None, Tuple(Real, Real), Real, Some(_)) => false
         case Function(name, _, Unit, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
         case _: Function => false
         case BaseVariable(name, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))

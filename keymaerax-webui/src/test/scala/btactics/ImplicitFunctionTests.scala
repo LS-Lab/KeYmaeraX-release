@@ -9,14 +9,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.ReflectiveExpressionBuilder
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BellePrettyPrinter, DLBelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.dbx
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.macros.DifferentialAxiomInfo
 import edu.cmu.cs.ls.keymaerax.btactics.{AxIndex, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.DLArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{DLArchiveParser, InterpretedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -30,22 +30,52 @@ class ImplicitFunctionTests extends TacticTestBase {
 
   private def parse (input: String) = parser.parse(input).loneElement
 
-  private def markInterpreted(fn: Function, expr: Formula): Formula =
-    // change to substitution
-    expr.exhaustiveSubst(
-      USubst(Seq(
-        SubstitutionPair(
-          FuncOf(Function(fn.name, fn.index, fn.domain, fn.sort, interpreted = false),
-            DotTerm(s = fn.sort)),
-          FuncOf(Function(fn.name, fn.index, fn.domain, fn.sort, interpreted = true),
-            DotTerm(s = fn.sort))
-        )
-      ))
-    ).asInstanceOf[Formula]
+  "implicit fn oracle" should "return correct axiom for abs" in {
+    val absAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.absF)
+    absAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
+      Equal(DotTerm(),FuncOf(InterpretedSymbols.absF, DotTerm(idx=Some(0)))),
+      "._0 >= 0 & . = ._0 | ._0 < 0 & . = -._0".asFormula
+    )))
+  }
 
-  "throwaway" should "fail" in withMathematica { _ => }
+  "implicit fn oracle" should "return correct axiom for max" in {
+    val maxAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.maxF)
+    maxAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
+      Equal(DotTerm(),FuncOf(InterpretedSymbols.maxF, Pair(DotTerm(idx=Some(0)),DotTerm(idx=Some(1))))),
+      "._0 < ._1 & . = ._1 | ._0 >= ._1 & . = ._0".asFormula
+    )))
+  }
 
-  "chase" should "use registered implicit differentials" in withMathematica { _ =>
+  "implicit fn axioms" should "substitute against an equality" in {
+    val pvble = proveBy(
+      GreaterEqual(FuncOf(InterpretedSymbols.absF,Variable("x")),Number(0)),
+      cut(Equal(FuncOf(InterpretedSymbols.absF, Variable("x")),Variable("y")))
+        & useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(1,0::Nil)
+    )
+
+    val x = pvble.isProved && (Math.exp(10) > 0)
+
+    x shouldBe true
+
+    pvble shouldBe 'proved
+  }
+
+  "DLArchiveParser" should "parse implicit functions correctly" in {
+    val input =
+      """ArchiveEntry "entry1"
+        | ProgramVariables Real y; End.
+        | ImplicitDefinitions
+        |  Real abs(Real x) = y <-> x >= 0 & y = x | x < 0 & y = -x;
+        | End.
+        | Problem abs(-1) = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+  }
+
+  /*
+  "chase" should "use registered implicit differentials" in {
     val fn = Function("e", None, Real, Real, interpreted = true)
     /* (e(x))' = e(x) * (x)' */
     AxIndex.implFuncDiffs(fn) =
@@ -57,13 +87,13 @@ class ImplicitFunctionTests extends TacticTestBase {
       )
     val fml = markInterpreted(fn, "[y':=1;](e(y))' = e(y)*y'".asFormula)
     println(fml)
-    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
+    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
 
 
-  "DLparser" should "parse & register implicit function definitions" in withMathematica { _ =>
+  "DLparser" should "parse & register implicit function definitions" in {
     val input =
       """ArchiveEntry "entry1"
         | ProgramVariables Real y; End.
@@ -78,7 +108,7 @@ class ImplicitFunctionTests extends TacticTestBase {
       Function("exp", None, Real, Real, interpreted = true),
       prog.model.asInstanceOf[Formula])
 
-    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & QE)
+    val proof = proveBy(fml, chase(1,1::0::Nil) & chase(1) & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
   }
@@ -88,8 +118,8 @@ class ImplicitFunctionTests extends TacticTestBase {
       """ArchiveEntry "entry1"
         | ProgramVariables Real y; End.
         | ImplicitDefinitions
-        |  Real sin(Real x) ':= cos(x) * (x)';
-        |  Real cos(Real x) ':= -sin(x) * (x)';
+        |   Real sin(Real x) ':= cos(x) * (x)';
+        |   Real cos(Real x) ':= -sin(x) * (x)';
         | End.
         | Problem sin(y)^2 + cos(y)^2 = 1 -> [{y'=1}] sin(y)^2 + cos(y)^2 = 1 End.
         |End.
@@ -191,5 +221,5 @@ class ImplicitFunctionTests extends TacticTestBase {
 
     //println(pr)
   }
-
+*/
 }

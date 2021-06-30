@@ -1817,7 +1817,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
       Expand("gt".asNamedSymbol, SubstitutionPair(
-        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        PredOf(Function("gt", None, Tuple(Real, Real), Bool, None), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
         Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1))))
       ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty
@@ -1897,7 +1897,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", """US("gt(x,y) ~> x>y") ; useLemma("Entry 1")""",
       TactixLibrary.USX(SubstitutionPair(
-        PredOf(Function("gt", None, Tuple(Real, Real), Bool, interpreted=false), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
+        PredOf(Function("gt", None, Tuple(Real, Real), Bool, None), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
         Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))) :: Nil
       ) & TactixLibrary.useLemmaX("Entry 1", None))::Nil
     entry2.info shouldBe empty

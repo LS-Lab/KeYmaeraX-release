@@ -290,12 +290,18 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interp: Option[Formula] = None)
     extends NamedSymbol {
   final val kind: Kind = FunctionKind
-  // TODO: check that interp has no free variables and that dot terms are correct sorts
+  //TODO: check that interp has no free variables and that dot terms are correct sorts
   // and that function is smooth and that it is unique ???
 
   // TODO: Q for andre: what constraints are there on functions in dL?
 
-  override def fullString: String = asString + ":" + domain + "->" + sort
+  override def fullString: String = {
+    val typeAnnotated = asString + ":" + domain + "->" + sort
+    interp match {
+      case Some(itp) => typeAnnotated + " = DotTerm() <-> " + itp.prettyString
+      case None => typeAnnotated
+    }
+  }
   insistNamingConvention()
 
   def interpreted = interp.nonEmpty

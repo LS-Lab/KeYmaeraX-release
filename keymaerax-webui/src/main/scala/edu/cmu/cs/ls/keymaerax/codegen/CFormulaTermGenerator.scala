@@ -26,7 +26,7 @@ object CFormulaTermGenerator {
 
   /** Indicates whether the name `f` is an interpreted function symbol. */
   def isInterpreted(f: NamedSymbol) : Boolean = f match {
-    case Function(_, _, _, _, interpreted) => interpreted
+    case Function(_, _, _, _, interp) => interp.nonEmpty
     case _ => false
   }
 
