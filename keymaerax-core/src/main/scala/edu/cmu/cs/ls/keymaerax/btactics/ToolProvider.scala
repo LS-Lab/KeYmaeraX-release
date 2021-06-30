@@ -68,6 +68,8 @@ object ToolProvider extends ToolProvider with Logging {
 
   def sosSolveTool(): Option[SOSsolveTool] = f.sosSolveTool()
 
+  def differentialSeriesApproxmationnTool() = f.differentialSeriesApproxmationnTool()
+
   def init(): Boolean = f.init()
 
   def shutdown(): Unit = f.shutdown()
@@ -147,6 +149,9 @@ trait ToolProvider {
   /** Returns a SOSsolve tool. */
   def sosSolveTool(): Option[SOSsolveTool]
 
+  /** Returns a series expansion tool. */
+  def differentialSeriesApproxmationnTool(): Option[DifferentialSolutionSeriesApproximationTool]
+
   /** Initializes the tools. */
   def init(): Boolean
 
@@ -174,6 +179,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   private[this] lazy val solver: Option[Tool with EquationSolverTool] = toolPreferences.find(_.isInstanceOf[EquationSolverTool]).map(_.asInstanceOf[Tool with EquationSolverTool])
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
   private[this] lazy val sossolve: Option[Tool with SOSsolveTool] = toolPreferences.find(_.isInstanceOf[SOSsolveTool]).map(_.asInstanceOf[Tool with SOSsolveTool])
+  private[this] lazy val diffSeriesApproximation: Option[Tool with DifferentialSolutionSeriesApproximationTool] = toolPreferences.find(_.isInstanceOf[DifferentialSolutionSeriesApproximationTool]).map(_.asInstanceOf[Tool with DifferentialSolutionSeriesApproximationTool])
 
   override def tools(): List[Tool] = toolPreferences
   override def defaultTool(): Option[Tool] = toolPreferences.headOption
@@ -193,6 +199,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def solverTool(): Option[EquationSolverTool] = ensureInitialized(solver)
   override def algebraTool(): Option[AlgebraTool] = ensureInitialized(algebra)
   override def sosSolveTool(): Option[SOSsolveTool] = ensureInitialized(sossolve)
+  override def differentialSeriesApproxmationnTool(): Option[DifferentialSolutionSeriesApproximationTool] = ensureInitialized(diffSeriesApproximation)
   override def init(): Boolean = false /* override to initialize tools in more specialized providers */
   override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
   override def isInitialized: Boolean = toolPreferences.forall(_.isInitialized)
@@ -221,6 +228,7 @@ class NoneToolProvider extends ToolProvider {
   override def solverTool(): Option[EquationSolverTool] = None
   override def algebraTool(): Option[AlgebraTool] = None
   override def sosSolveTool(): Option[SOSsolveTool] = None
+  override def differentialSeriesApproxmationnTool() = None
   override def init(): Boolean = true
   override def shutdown(): Unit = {}
   override def isInitialized: Boolean = true
