@@ -313,6 +313,14 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     */
   override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
+    if (executor == null) throw new IllegalStateException(
+      """
+        |No Executor was set.
+        |
+        |Likely explanation: a tool was used before initialization. Remember to call .init() on all tools or subtools
+        |before use. E.g., in edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica, a call to .init() should be added for
+        |every new subtool.
+      """.stripMargin)
     val taskId = executor.schedule(_ => { ml.synchronized { cmd() } })
 
     executor.wait(taskId) match {
