@@ -97,6 +97,14 @@ object KeYmaeraX {
       //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
       options.get('mode) match {
         case Some(Modes.TAYLORIZE) => {
+          val toolConfig =
+            if (options.contains('quantitative)) {
+              configFromFile(Tools.MATHEMATICA) //@note quantitative ModelPlex uses Mathematica to simplify formulas
+            } else {
+              configFromFile("z3")
+            }
+          initializeProver(combineConfigs(options, toolConfig), usage)
+
           val filename = options.get('file)
           filename match {
             case Some(s) => println(TaylorizeMain(s.asInstanceOf[String]))
