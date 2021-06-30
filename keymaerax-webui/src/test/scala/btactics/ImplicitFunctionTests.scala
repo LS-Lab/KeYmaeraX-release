@@ -46,16 +46,31 @@ class ImplicitFunctionTests extends TacticTestBase {
     )))
   }
 
-  "implicit fn axioms" should "substitute against an equality" in {
+  "implicit fn axioms" should "substitute against an equality" in withMathematica { _ =>
     val pvble = proveBy(
-      GreaterEqual(FuncOf(InterpretedSymbols.absF,Variable("x")),Number(0)),
-      cut(Equal(FuncOf(InterpretedSymbols.absF, Variable("x")),Variable("y")))
-        & useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(1,0::Nil)
+      Sequent(Vector(Equal(Variable("y"),FuncOf(InterpretedSymbols.absF,Variable("x")))),
+              Vector(GreaterEqual(Variable("y"),Number(0)))),
+      useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(-1)
+      & QE
     )
 
-    val x = pvble.isProved && (Math.exp(10) > 0)
+    pvble shouldBe 'proved
+  }
 
-    x shouldBe true
+  val sin = Function(name="sin",domain=Real, sort=Real,
+    interp = Some(/* . = sin(._0) <-> */ "t=0 & s=0 & c=1 & <{t'=1,s'=c,c'=-s}> (t=._0 & s=.) | t=0 & s=0 & c=1 & <{t'=-1,s'=-c,c'=s}> (t=._0 & s=.)".asFormula))
+  val cos = Function(name="cos",domain=Real, sort=Real,
+    interp = Some(/* . = cos(._0) <-> */ "t=0 & s=0 & c=1 & <{t'=1,s'=c,c'=-s}> (t=._0 & c=.) | t=0 & s=0 & c=1 & <{t'=-1,s'=-c,c'=s}> (t=._0 & c=.)".asFormula))
+
+  "trig defs" should "prove simple trig lemmas" in withMathematica { _ =>
+    val pvble = proveBy(
+      Sequent(Vector( Equal(Variable("ss"),FuncOf(sin,Variable("x"))),
+                      Equal(Variable("cc"),FuncOf(cos,Variable("x")))),
+              Vector("ss*ss + cc*cc = 1".asFormula)),
+      useAt(ElidingProvable(Provable.implicitFuncAxiom(sin)))(-1)
+      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cos)))(-2)
+      & skip //TODO
+    )
 
     pvble shouldBe 'proved
   }
@@ -71,6 +86,9 @@ class ImplicitFunctionTests extends TacticTestBase {
         |End.
         |""".stripMargin
     val prog = parse(input)
+
+    // Note this is only equal to InterpretedSymbols.absF because the
+    // program's (implicit) definition is syntactically equivalent
     prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
   }
 
