@@ -11,9 +11,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 
 /**
-  * The main class of Taylorizing sutff from the outside.
+  * The main class for the CLI interface to Taylor approximating solutions to ODEs.
   *
-  * @autor Nathan Fulton
+  * @author Nathan Fulton
   */
 object TaylorizeMain {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
