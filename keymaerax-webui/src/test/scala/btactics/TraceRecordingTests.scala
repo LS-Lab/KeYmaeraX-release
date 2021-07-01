@@ -31,9 +31,9 @@ class TraceRecordingTests extends TacticTestBase   {
   }
 
   override def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s))
+    val v = BelleProvable.plain(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }

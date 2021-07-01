@@ -524,7 +524,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x_0>0, x>0 ==> ".asSequent
   }
 
-  it should "FEATURE_REQUEST: keep positions stable" in withTactics {
+  it should "FEATURE_REQUEST: keep positions stable" taggedAs TodoTest in withTactics {
     proveBy("\\exists x (x=y&x>=0), y=2 ==>".asSequent, existsSkolemize(-1)).subgoals.loneElement shouldBe "x=y&x>=0, y=2 ==>".asSequent
   }
 

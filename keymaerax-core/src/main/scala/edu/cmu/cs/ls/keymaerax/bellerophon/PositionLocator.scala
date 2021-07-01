@@ -6,10 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
 
+import scala.annotation.tailrec
 import scala.util.matching.Regex
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -20,9 +21,12 @@ import scala.util.matching.Regex
  * @see [[AtPosition.apply()]]
  */
 sealed trait PositionLocator {
+  /** String representation of this locator. */
   def prettyString: String
-
+  /** Returns the position that this locator points to in the provable `p`. */
   def toPosition(p: ProvableSig): Option[Position]
+  /** Returns the position that this locator points to in the sequent `s`. */
+  def toPosition(s: Sequent): Option[Position]
 }
 
 object PositionLocator {
@@ -80,7 +84,10 @@ case class Fixed private[keymaerax] (pos: Position, shape: Option[Expression] = 
     case (Some(fml), false) => pos.topLevel.prettyString + "~=\"" + PositionLocator.withMarkers(fml, pos.inExpr) + "\""
     case (None, _) => pos.prettyString
   }
+  /** @inheritdoc */
   override def toPosition(p: ProvableSig): Option[Position] = Some(pos)
+  /** @inheritdoc */
+  override def toPosition(s: Sequent): Option[Position] = Some(pos)
 }
 object Fixed {
   def apply(seqPos: Int, inExpr: List[Int], shape: Option[Expression], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
@@ -91,7 +98,9 @@ object Fixed {
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
+  /** Prints the string representation of the sub-position (`inExpr`) of position `p`. */
   private def sub(p: Position): String = if (p.isTopLevel) "" else p.inExpr.prettyString
+  /** @inheritdoc */
   override def prettyString: String = (start, shape, exact) match {
     case (l: AntePosition, None, _) => "'L" + sub(l)
     case (l: AntePosition, Some(s), true) => "'L==\"" + PositionLocator.withMarkers(s, l.inExpr) + "\""
@@ -104,25 +113,32 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
     case (p, Some(s), false) => "'_~=\"" + PositionLocator.withMarkers(s, p.inExpr)  + "\""
   }
 
+  /** @inheritdoc */
   override def toPosition(p: ProvableSig): Option[Position] = findPosition(p, start)
+  /** @inheritdoc */
+  override def toPosition(s: Sequent): Option[Position] = findPosition(s, start)
 
-  /** Finds a position in the provable `p` at or after `pos` that matches the `shape`. */
-  def findPosition(p: ProvableSig, pos: Position): Option[Position] = {
-    require(start.isIndexDefined(p.subgoals(goal)), "Find must point to a valid position in the sequent, but " + start.prettyString + " is undefined in " + p.subgoals(goal).prettyString)
+  /** Finds a position in the provable `p` at or after `pos` that matches the shape of this locator. */
+  def findPosition(p: ProvableSig, pos: Position): Option[Position] = findPosition(p.subgoals(goal), pos)
+
+  /** Finds a position in the sequent `s` at or after `pos` that matches the `shape` of this locator. */
+  @tailrec
+  final def findPosition(s: Sequent, pos: Position): Option[Position] = {
+    require(start.isIndexDefined(s), "Find must point to a valid position in the sequent, but " + start.prettyString + " is undefined in " + s.prettyString)
     shape match {
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isDefined => Some(pos)
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isEmpty =>
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, s(pos.top)).isDefined => Some(pos)
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, s(pos.top)).isEmpty =>
         val nextPos = pos.advanceIndex(1)
-        if (nextPos.isIndexDefined(p.subgoals(goal))) findPosition(p, nextPos)
+        if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
         else None
-      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) == f => Some(pos)
-      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) != f =>
+      case Some(f: Formula) if exact && s(pos.top) == f => Some(pos)
+      case Some(f: Formula) if exact && s(pos.top) != f =>
         val nextPos = pos.advanceIndex(1)
-        if (nextPos.isIndexDefined(p.subgoals(goal))) findPosition(p, nextPos)
+        if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
         else None
       case Some(t: Term) =>
-        val tPos = FormulaTools.posOf(p.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
-        if (tPos.isEmpty) findPosition(p, pos.advanceIndex(1))
+        val tPos = FormulaTools.posOf(s(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
+        if (tPos.isEmpty) findPosition(s, pos.advanceIndex(1))
         else Some(pos.topLevel ++ tPos.head)
       case None => Some(pos)
     }
@@ -138,20 +154,28 @@ object Find {
 
 /** 'Llast Locates the last position in the antecedent. */
 case class LastAnte(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
+  /** @inheritdoc */
   override def prettyString: String = "'Llast" + (if (inExpr != PosInExpr.HereP) inExpr.prettyString else "")
-  override def toPosition(p: ProvableSig): Option[Position] = {
-    val pos = AntePosition.base0(p.subgoals(goal).ante.length - 1, inExpr)
-    if (pos.isIndexDefined(p.subgoals(goal))) Some(pos)
+  /** @inheritdoc */
+  override def toPosition(p: ProvableSig): Option[Position] = toPosition(p.subgoals(goal))
+  /** @inheritdoc */
+  override def toPosition(s: Sequent): Option[Position] = {
+    val pos = AntePosition.base0(s.ante.length - 1, inExpr)
+    if (pos.isIndexDefined(s)) Some(pos)
     else None
   }
 }
 
 /** 'Rlast Locates the last position in the succedent. */
 case class LastSucc(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
+  /** @inheritdoc */
   override def prettyString: String = "'Rlast" + (if (inExpr != PosInExpr.HereP) inExpr.prettyString else "")
-  override def toPosition(p: ProvableSig): Option[Position] = {
-    val pos = SuccPosition.base0(p.subgoals(goal).succ.length - 1, inExpr)
-    if (pos.isIndexDefined(p.subgoals(goal))) Some(pos)
+  /** @inheritdoc */
+  override def toPosition(p: ProvableSig): Option[Position] = toPosition(p.subgoals(goal))
+  /** @inheritdoc */
+  override def toPosition(s: Sequent): Option[Position] = {
+    val pos = SuccPosition.base0(s.succ.length - 1, inExpr)
+    if (pos.isIndexDefined(s)) Some(pos)
     else None
   }
 }

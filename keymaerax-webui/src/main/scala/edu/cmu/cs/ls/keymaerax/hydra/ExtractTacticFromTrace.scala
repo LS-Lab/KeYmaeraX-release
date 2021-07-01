@@ -34,12 +34,12 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
 
     //@note expensive: labels are temporary, need to rerun tactic to create labels
     val labels = if (node.children.size > 1) {
-      node.goal.map(s => BelleProvable(ProvableSig.startProof(s))) match {
+      node.goal.map(s => BelleProvable(ProvableSig.startProof(s), None, defs)) match {
         case Some(p) =>
           node.children.headOption.flatMap(_.maker.map(m => tacticDefs.getOrElse(m, BelleParser.parseWithInvGen(m, None, defs)))) match {
             case Some(t) =>
               LazySequentialInterpreter()(t, p) match {
-                case BelleProvable(_, Some(labels)) => labels
+                case BelleProvable(_, Some(labels), _) => labels
                 case _ => Nil
               }
             case None =>
@@ -115,21 +115,28 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       case Some(m) =>
         if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
         else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
-          case Some(t@AppliedPositionTactic(_, l)) =>
-            (BellePrettyPrinter(t.copy(locator = convertLocator(l, node))), Some(t))
-          case Some(t: AppliedDependentPositionTactic) =>
-            (BellePrettyPrinter(new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))), Some(t))
-          case Some(t: AppliedDependentPositionTacticWithAppliedInput) =>
-            (BellePrettyPrinter(new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node))), Some(t))
-          case Some(t) => (BellePrettyPrinter(t), Some(t))
+          case Some(t: AppliedPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(t: AppliedDependentPositionTactic) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(t: AppliedDependentPositionTacticWithAppliedInput) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
+          case Some(using@Using(es, t)) => (BellePrettyPrinter(Using(es, convertLocator(t, node))), Some(using))
+          case Some(t) => (BellePrettyPrinter(convertLocator(t, node)), Some(t))
           case _ => (m, None)
         }
     }
   }
+
+  /** Converts fixed positions into searchy locators. */
+  private def convertLocator(tactic: BelleExpr, node: ProofTreeNode): BelleExpr = tactic match {
+    case t@AppliedPositionTactic(_, l) => t.copy(locator = convertLocator(l, node))
+    case t: AppliedDependentPositionTactic => new AppliedDependentPositionTactic(t.pt, convertLocator(t.locator, node))
+    case t: AppliedDependentPositionTacticWithAppliedInput =>
+      new AppliedDependentPositionTacticWithAppliedInput(t.pt, convertLocator(t.locator, node))
+    case t => t
+  }
 }
 
-/** A succinct trace to tactic converter whose tactics are not verbose but unfortunately not robust either. */
-class SuccinctTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
+/** A verbatim trace to tactic converter whose tactics are as recorded in the database. */
+class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
 
   def getTacticString(node: ProofTreeNode, indent: String): String = {
     assert(!node.children.contains(node), "A node should not be its own child.")

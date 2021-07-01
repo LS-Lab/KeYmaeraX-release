@@ -286,7 +286,7 @@ class Compbased extends TacticTestBase {
     val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
       /* base case */ print("Base case...") & simpQE & print("Base case done"),
       /* use case */ print("Use case...") & simpQE & print("Use case done"),
-      /* induction step */ print("Induction step") & chase(1) & normalize(andR) & printIndexed("After normalize") <(
+      /* induction step */ print("Induction step") & chase(1) & unfoldProgramNormalize & printIndexed("After normalize") <(
       print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
       print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
       print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),

@@ -1387,11 +1387,11 @@ object Ax extends Logging {
       useAt(diamond, PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt(diamond, PosInExpr(1::Nil))(1, 1::Nil) &
         cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
-          /* use */ prop,
+          /* use */ SaturateTactic(alphaRule) & andLi(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
-            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & prop,
-            /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
+            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & propClose,
+            /* show */ implyR(1) & TactixLibrary.boxAnd(1) & propClose
             )
           )
     )
@@ -2067,7 +2067,7 @@ object Ax extends Logging {
       useAt(choiceb)(1, 0::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
-      prop
+      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi() & id, orL(-1) & OnAll(notL(-1) & id))
   )
 
   /**
@@ -3372,14 +3372,14 @@ object Ax extends Logging {
         useAt(box, PosInExpr(1::Nil))(1,0::Nil) &
         useAt(box, PosInExpr(1::Nil))(1,1::Nil) &
         useAt(notGreater)(1,0::0::1::Nil) &
-        prop & Idioms.<(
-        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) & Idioms.<(
-          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) & Idioms.<(id, useAt(greaterEqual)(1, 0::1::Nil) & prop & done),
+        equivR(1) & OnAll(SaturateTactic(alphaRule)) <(
+          useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) <(
+          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & SaturateTactic(alphaRule) &
+          HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) <(id, useAt(greaterEqual)(1, 0::1::Nil) & propClose),
           id),
-        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) & Idioms.<(
-          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            generalize("!!p_(|t_|)>0".asFormula)(1) & Idioms.<(id, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & id),
+          useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) <(
+          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & SaturateTactic(alphaRule) &
+            generalize("!!p_(|t_|)>0".asFormula)(1) <(id, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & id),
           id)
       )
     )
@@ -4789,7 +4789,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("all stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("all stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4810,7 +4810,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("exists stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
     byUS(equivReflexive)
@@ -4819,6 +4819,81 @@ object Ax extends Logging {
   @Axiom("exists stutter'", key = "0", recursor = "", displayLevel = "internal")
   lazy val existsStutterPrime: DerivedAxiomInfo = derivedAxiom("exists stutter prime",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_' p_(||) <-> \\exists x_' p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "and stutter".
+    *    P&Q <-> P&Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("and stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val andStutter: DerivedAxiomInfo = derivedAxiom("and stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) & q_(||) <-> p_(||) & q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "or stutter".
+    *    P|Q <-> P|Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("or stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val orStutter: DerivedAxiomInfo = derivedAxiom("or stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) | q_(||) <-> p_(||) | q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "imply stutter".
+    *    (P->Q) <-> (P->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("imply stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val implyStutter: DerivedAxiomInfo = derivedAxiom("imply stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) -> q_(||)) <-> (p_(||) -> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "equiv stutter".
+    *    (P<->Q) <-> (P<->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("equiv stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val equivStutter: DerivedAxiomInfo = derivedAxiom("equiv stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) <-> q_(||)) <-> (p_(||) <-> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "not stutter".
+    *    !P <-> !P
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("not stutter", key = "0", recursor = "0", displayLevel = "internal")
+  lazy val notStutter: DerivedAxiomInfo = derivedAxiom("not stutter",
+    Sequent(IndexedSeq(), IndexedSeq("!p_(||) <-> !p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 

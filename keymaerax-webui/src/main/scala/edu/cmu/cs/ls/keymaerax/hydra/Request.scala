@@ -1499,16 +1499,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             products += (p -> (products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = ArchiveParser.parseProblem(db.getModel(mId).keyFile)
           //@note add unexpanded (but elaborated) form, and fully expanded form to generator; generator itself also uses unification
-          val generator = new ConfigurableGenerator[GenProduct](
-            products.map({ case (k, v) =>
-              problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k)) ->
-                v.map({ case (f, h) => problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f)) -> h }).distinct
-            }) ++
-            products.map({ case (k, v) =>
-              problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(k))) ->
-                v.map({ case (f, h) => problem.defs.exhaustiveSubst(problem.defs.elaborateToSystemConsts(problem.defs.elaborateToFunctions(f))) -> h }).distinct
-            })
-          )
+          val generator = ConfigurableGenerator.create(products, problem.defs)
           session += proofId -> ProofSession(proofId, TactixLibrary.invGenerator, generator, problem.defs)
           TactixInit.invSupplier = generator
           OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -1748,11 +1739,12 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         assert(node.maker.isDefined, "Unable to expand node without tactics")
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
-        val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db, session(proofId).asInstanceOf[ProofSession]),
+        val proofSession = session(proofId).asInstanceOf[ProofSession]
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
+          RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
-        innerInterpreter(parentTactic, BelleProvable(conjecture))
+        innerInterpreter(parentTactic, BelleProvable(conjecture, None, tree.info.defs(db)))
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
@@ -1765,7 +1757,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           }
         } else {
           val innerTree = DbProofTree(db, localProofId.toString).load()
-          val stepDetails = innerTree.tacticString(new VerboseTraceToTacticConverter(_))
+          val stepDetails = innerTree.tacticString(new VerboseTraceToTacticConverter(innerTree.info.defs(db)))
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
@@ -1794,7 +1786,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(_)), innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db))), innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -2293,9 +2285,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 else "custom"
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof,
-                  RequestHelper.listenerFactory(db, session(proofId.toString).asInstanceOf[ProofSession]),
-                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
+                private val proofSession = session(proofId.toString).asInstanceOf[ProofSession]
+                private val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, proofSession.defs,
+                  RequestHelper.listenerFactory(db, proofSession),
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=false, convertPending=true)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -2333,7 +2326,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                   val localProvable = ProvableSig.startProof(sequent)
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
-                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil)), interpreter(localProofId, -1))
+                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable, node.label.map(_ :: Nil), tree.info.defs(db)), interpreter(localProofId, -1))
                   RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
@@ -2367,10 +2360,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
-        val tactic =
-          if (BelleParser.tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
-          else if (BelleParser.tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, proofSession.defs)
-          else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
+        val tactic = BelleParser.parseBackwardsCompatible(t, proofSession.defs)
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
@@ -2384,7 +2374,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
               //@note replace listener created by proof tree (we want a different tactic name for each component of the
               // executed tactic and we want to see progress)
               val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt,
-                CollectProgressListener() :: Nil)
+                proofSession.defs, CollectProgressListener() :: Nil)
               val tree: ProofTree = DbProofTree(db, proofId)
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = tree.root.runTactic(userId, interpreter, tactic, "", executor)
@@ -2409,7 +2399,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
-            case SpoonFeedingInterpreter(_, _, _, _, interpreterFactory, _, _, _) =>
+            case SpoonFeedingInterpreter(_, _, _, _, _, interpreterFactory, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
               interpreterFactory(Nil).listeners.flatMap({
                 case l@CollectProgressListener(p) => Some(
@@ -2441,7 +2431,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     executor.synchronized {
       val response = executor.wait(taskId) match {
-        case Some(Left(BelleProvable(_, _))) =>
+        case Some(Left(_: BelleProvable)) =>
           val tree = DbProofTree(db, proofId)
           tree.locate(nodeId) match {
             case None => new ErrorResponse("Unknown node " + nodeId)
@@ -2572,7 +2562,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
 
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     // find expanded definitions (including delayed model assumptions)
-    val substs = (entry.defs.substs ++ proofSession.defs.substs).distinct.filter(_.what match {
+    val substs = (entry.defs.substs ++ proofSession.defs.substs ++ tree.proofSubsts).distinct.filter(_.what match {
       case FuncOf(n, _) => !conclusionSignature.contains(n)
       case PredOf(n, _) => !conclusionSignature.contains(n)
       case n: NamedSymbol => !conclusionSignature.contains(n)
@@ -2587,7 +2577,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-      val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
+      val tactic = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
       // remember tactic string
       val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
         tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
@@ -2694,8 +2684,8 @@ class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String
   override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
     val tactic = tree.tacticString(
-      if (verbose) new VerboseTraceToTacticConverter(_)
-      else new SuccinctTraceToTacticConverter(_)
+      if (verbose) new VerboseTraceToTacticConverter(tree.info.defs(db))
+      else new VerbatimTraceToTacticConverter()
     )
     // remember tactic string
     val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
@@ -2731,7 +2721,7 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
+    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
     val provable = tree.root.provable
     val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
       "tool" -> "KeYmaera X",
@@ -2743,13 +2733,31 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 }
 
 object ArchiveEntryPrinter {
-  def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
+  def archiveEntry(modelInfo: ModelPOJO, tactics: List[(String, String)], withComments: Boolean): String = try {
     ArchiveParser.parser(modelInfo.keyFile) match {
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
         new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, modelInfo.name, tactics))
       case (entry@ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
         new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80), withComments)(replaceInfo(entry, entry.name, tactics))
     }
+  } catch {
+    case _: ParseException =>
+      val printedTactics = tactics.map({
+        case (name, steps) =>
+        s"""Tactic "$name"
+          |$steps
+          |End.""".stripMargin
+      }).mkString("\n")
+      s"""/* Model or tactics did not reparse, printed verbatim, needs manual editing */
+        |
+        |/* Input content */
+        |${modelInfo.keyFile}
+        |/* End input content */
+        |
+        |/* Printed tactics */
+        |$printedTactics
+        |/* End printed tactics */
+        |""".stripMargin
   }
 
   private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
@@ -2762,10 +2770,16 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     val proofName = tree.info.name
-    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(_))
+    val tactic = try {
+      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
+    } catch {
+      case _: ParseException =>
+        // fallback if for whatever reason model or tactic is not parseable: print verbatim without beautification
+        tree.info.tactic.getOrElse("/* no tactic recorded */")
+    }
     val model = db.getModel(tree.info.modelId.get)
 
-    def getLemmas(model: ModelPOJO, tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
+    def getLemmas(tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
       val lemmaFinder = """useLemma\(\"([^\"]*)\"""".r
       val lemmaNames = lemmaFinder.findAllMatchIn(tactic).map(m => m.group(1))
       val lemmaModels = lemmaNames.map(n => n -> db.getModelList(userId).find(n == _.name))
@@ -2778,7 +2792,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
       })).toList
       val parentLemmas: List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = lemmas.flatMap({ case (_, (mp, pp)) => (mp, pp) match {
         case (Some(m), Some(p)) => p.tactic match {
-          case Some(t) => getLemmas(m, t)
+          case Some(t) => getLemmas(t)
           case _ => Nil
         }
         case _ => Nil
@@ -2787,7 +2801,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
       parentLemmas ++ lemmas
     }
 
-    val lemmas = getLemmas(model, tactic)
+    val lemmas = getLemmas(tactic)
     val printedLemmas = lemmas.map({
       case (_, (Some(modelPOJO), proofPOJO)) =>
         ArchiveEntryPrinter.archiveEntry(modelPOJO,
@@ -2808,11 +2822,20 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
                                    withProofs: Boolean, exportEmptyProof: Boolean)
   extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    def modelProofs(modelId: Int): List[(String, String)] = {
-      if (withProofs) db.getProofsForModel(modelId).map(p => p.name -> DbProofTree(db, p.proofId.toString).tacticString(new VerboseTraceToTacticConverter(_)))
+    def printProof(tree: ProofTree, model: ModelPOJO): String = try {
+      tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
+    } catch {
+      case _: ParseException => tree.info.tactic.getOrElse("/* no tactic steps recorded */")
+    }
+
+    def modelProofs(model: ModelPOJO): List[(String, String)] = {
+      if (withProofs) db.getProofsForModel(model.modelId).map(p => p.name -> printProof(DbProofTree(db, p.proofId.toString), model))
       else Nil
     }
-    val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
+    val models = modelIds.map(mid => {
+      val model = db.getModel(mid)
+      model -> modelProofs(model)
+    }).filter(exportEmptyProof || _._2.nonEmpty)
     val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs, withComments=true)}).mkString("\n\n")
     new ExtractProblemSolutionResponse(archiveContent + "\n") :: Nil
   }
@@ -2839,7 +2862,7 @@ object ProofValidationRunner extends Logging {
   }
 
   /** Schedules a proof validation request and returns the UUID. */
-  def scheduleValidationRequest(db: DBAbstraction, model: Formula, proof: BelleExpr): String = {
+  def scheduleValidationRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration): String = {
     val taskId = java.util.UUID.randomUUID().toString
     results update (taskId, (model, proof, None))
 
@@ -2849,9 +2872,9 @@ object ProofValidationRunner extends Logging {
         val provable = ElidingProvable( Provable.startProof(model) )
 
         try {
-          BelleInterpreter(proof, BelleProvable(provable)) match {
-            case BelleProvable(p, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
-            case _                                 => results update (taskId, (model, proof, Some(false)))
+          BelleInterpreter(proof, BelleProvable(provable, None, defs)) match {
+            case BelleProvable(p, _, _) if p.isProved => results update (taskId, (model, proof, Some(true )))
+            case _                                    => results update (taskId, (model, proof, Some(false)))
           }
         } catch {
           //Catch everything and indicate a failed proof attempt.
@@ -2868,10 +2891,10 @@ object ProofValidationRunner extends Logging {
 
 /** Returns a UUID whose status can be queried at a later time ({complete: true/false[, proves: true/false]}.
   * @see CheckValidationRequest - calling this with the returned UUID should give the status of proof checking. */
-class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr) extends Request with ReadRequest {
+class ValidateProofRequest(db: DBAbstraction, model: Formula, proof: BelleExpr, defs: Declaration) extends Request with ReadRequest {
   override def resultingResponses() : List[Response] =
-    //Spawn an async validation request and return the reesulting UUID.
-    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof), None) :: Nil
+    //Spawn an async validation request and return the resulting UUID.
+    new ValidateProofResponse(ProofValidationRunner.scheduleValidationRequest(db, model, proof, defs), None) :: Nil
 }
 
 /** An idempotent request for the status of a validation request; i.e., validation requests aren't removed until the server is resst. */

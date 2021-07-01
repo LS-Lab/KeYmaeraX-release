@@ -10,9 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.{CounterExampleTool, Goal, QETacticTool}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool}
-import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
 
 import scala.collection.immutable._
@@ -42,6 +41,8 @@ class ArithmeticTests extends TacticTestBase {
       val p = ElidingProvable(Provable.proveArithmetic(new MockQETool(), formula))
       Lemma(p, Lemma.requiredEvidence(p))
     }
+
+    override def qe(g: Goal): (Goal, Formula) = ???
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected

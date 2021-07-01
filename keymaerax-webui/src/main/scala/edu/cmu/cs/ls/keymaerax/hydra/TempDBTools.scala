@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, PrettyPrinter, Real, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchivePrinter.printDomain
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -68,7 +68,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
 
   /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
     * tactic is the provided tactic. Returns the proof ID and resulting provable. */
-  def proveByWithProofId(modelContent: String, t: BelleExpr,
+  def proveByWithProofId(modelContent: String,
+                         t: BelleExpr,
                          interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false),
                          proofId: Option[Int] = None,
                          modelName: String = ""): (Int, ProvableSig) = {
@@ -90,8 +91,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       globalProvable, 0 /* start from single provable */, recursive = false, "custom")
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
-      case BelleProvable(provable, _) =>
+    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]), None, entry.defs)) match {
+      case BelleProvable(provable, _, _) =>
         assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
@@ -130,9 +131,9 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       case Some(node) => node.maker match {
         case Some(tactic) =>
           val localProofId = db.createProof(node.localProvable)
-          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, DBTools.listener(db),
-            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false)
-          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
+          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, node.proof.info.defs(db), DBTools.listener(db),
+            ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), level, strict=false, convertPending=true)
+          interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion), None, node.proof.info.defs(db)))
           extractTactic(localProofId)
       }
     }
@@ -150,8 +151,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         val modelContent = PrettyPrinter.printer(fml)
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
-        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, DBTools.listener(db),
-          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false))
+        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, Declaration(Map.empty), DBTools.listener(db),
+          ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true)
         def interpreter(listeners: Seq[IOListener]): Interpreter = {
           //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
           theInterpreter

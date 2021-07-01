@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import org.slf4j.LoggerFactory
 
@@ -825,30 +825,32 @@ object ODEInvariance {
   * @return the (conjunctive) rank, the Groebner basis closed under Lie derivation, and its cofactors (in that order)
   */
   def rank(ode:ODESystem, polys:List[Term]) : (Int, List[Term], List[List[Term]]) = {
-    if (ToolProvider.algebraTool().isEmpty)
-      throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
-
-    val algTool = ToolProvider.algebraTool().get
-
-    var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
-    var rank = 1
-    //remainder after each round of polynomial reduction
-    var remaining = polys
-
-    while(true) {
-      val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-      val quos = lies.map(p => algTool.polynomialReduce(p, gb))
-      remaining = quos.map(_._2).filterNot(_ == Number(0))
-      if(remaining.isEmpty) {
-        //println(gb,rank)
-        val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-        val cofactors = gblies.map(p => algTool.polynomialReduce(p, gb))
-        return (rank,gb,cofactors.map(_._1))
-      }
-      gb = algTool.groebnerBasis(remaining ++ gb)
-      rank+=1
+    val algTool = ToolProvider.algebraTool() match {
+      case None => throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
+      case Some(t) => t
     }
-    (0,List(),List())
+    try {
+      var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
+      var rank = 1
+      //remainder after each round of polynomial reduction
+      var remaining = polys
+
+      while (true) {
+        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+        val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+        remaining = quos.map(_._2).filterNot(_ == Number(0))
+        if (remaining.isEmpty) {
+          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+          val cofactors = gblies.map(p => algTool.polynomialReduce(p, gb))
+          return (rank, gb, cofactors.map(_._1))
+        }
+        gb = algTool.groebnerBasis(remaining ++ gb)
+        rank += 1
+      }
+      (0, List(), List())
+    } catch {
+      case ex: ToolException => throw new TacticInapplicableFailure("rank: error computing Groebner basis", ex)
+    }
   }
 
   /**

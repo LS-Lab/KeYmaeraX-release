@@ -677,7 +677,11 @@ class ScriptedRequestTests extends TacticTestBase {
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
     modelInfos should have size 85  // change when ListExamplesRequest is updated
-    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
+
+    // STTT16/Tutorial Example 10
+    // FM16/Tutorial Example 5
+
+    val modelInfosTable = Table(("name", "id"), modelInfos.filter(_._1=="FM16/Tutorial Example 5"):_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
         val start = System.currentTimeMillis()
@@ -706,14 +710,14 @@ class ScriptedRequestTests extends TacticTestBase {
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
         BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs) match {
           case _: PartialTactic =>
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue("closed")
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue "closed"
           case _ =>
             r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue("closed")
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue "closed"
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
             r6 shouldBe a [ProofVerificationResponse] withClue r6.getJson.prettyPrint
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
-            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
+            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue "isProved"
             val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")

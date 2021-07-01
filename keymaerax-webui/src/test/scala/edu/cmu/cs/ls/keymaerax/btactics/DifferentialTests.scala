@@ -492,6 +492,13 @@ class DifferentialTests extends TacticTestBase {
     )
   }
 
+  "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
+    val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
+    proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = false)(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = true)(1)) shouldBe 'proved
+  }
+
   "Derive" should "derive quantifiers" in withTactics {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\forall x x'>=0".asSequent
   }
@@ -1217,12 +1224,14 @@ class DifferentialTests extends TacticTestBase {
         |  z>=0
         |does not imply postcondition
         |  x>0
-        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG
         |
         |Provable{
         |==> 1:  [{x'=v}]x>0	Box
         |  from
-        |==> 1:  \exists z [{x'=v,z'=v}]x>0	Exists}""".stripMargin
+        |==> 1:  \exists z [{x'=v,z'=v}](true->z>=0)	Exists
+        |  with
+        |==> 1:  false	False$}""".stripMargin
   }
 
   it should "give a useful error message when facts cannot be preserved for postcondition transformation" in withMathematica { _ =>
@@ -1232,12 +1241,14 @@ class DifferentialTests extends TacticTestBase {
         |  x/b>1
         |does not imply postcondition
         |  x>b
-        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG
         |
         |Provable{
         |==> 1:  [b:=1;][{x'=v}]x>b	Box
         |  from
-        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v}]x>b	Box}""".stripMargin
+        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v}](true->x/b>1)	Box
+        |  with
+        |==> 1:  false	False$}""".stripMargin
   }
 
   it should "use facts preserved by dC when transforming postcondition" in withMathematica { _ =>
@@ -1782,12 +1793,12 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
+  it should "prove a strict barrier certificate 1 (Z3)" in withZ3 { _ =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
+  it should "prove a strict barrier certificate 2 (Z3)" in withZ3 { _ =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }

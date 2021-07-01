@@ -43,8 +43,6 @@ object ExtMathematicaOpSpec {
 
   def replaceAll: NaryMathOpSpec = NaryMathOpSpec(symbol("ReplaceAll"))
 
-  def module: NaryMathOpSpec = NaryMathOpSpec(symbol("Module"))
-
   def nestList: NaryMathOpSpec = NaryMathOpSpec(symbol("NestList"))
 
   def compoundExpression: NaryMathOpSpec = NaryMathOpSpec(symbol("CompoundExpression"))
@@ -66,6 +64,12 @@ object ExtMathematicaOpSpec {
   def slot: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Slot"))
 
   def placeholder: Expr = slot(int(1))
+
+  def mwhile: BinaryMathOpSpec = BinaryMathOpSpec(symbol("While"))
+
+  def part: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Part"))
+
+  def length: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Length"))
 
   //</editor-fold>
 

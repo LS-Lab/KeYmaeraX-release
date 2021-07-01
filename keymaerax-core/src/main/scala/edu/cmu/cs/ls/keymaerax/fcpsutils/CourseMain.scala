@@ -1,13 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.fcpsutils
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, ParseException, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 
@@ -131,9 +130,9 @@ object CourseMain {
         /*val f = parseProblemFileOrFail(problem)*/
         /*val expr = parseTacticFileOrFail(solution)*/
 
-        val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f)))
+        val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
         result match {
-          case BelleProvable(p, _) => {
+          case BelleProvable(p, _, _) => {
             if(!p.isProved) {
               println(s"ERROR: ${archiveFileStr} proof did not close on grading machine:")
               println(p.prettyString)
@@ -160,9 +159,9 @@ object CourseMain {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
 
-    val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f)))
+    val result = BelleInterpreter(expr, BelleProvable(ProvableSig.startProof(f), None, Declaration(Map.empty)))
     result match {
-      case BelleProvable(p, _) => {
+      case BelleProvable(p, _, _) => {
         if(!p.isProved) {
           println(s"Proof of ${fileExistsOrFail(problem)} using ${fileExistsOrFail(solution)} did not close. Remaining open goals follow:")
           println(p.prettyString)

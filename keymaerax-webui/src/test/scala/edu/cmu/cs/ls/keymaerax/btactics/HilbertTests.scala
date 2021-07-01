@@ -248,6 +248,14 @@ class HilbertTests extends TacticTestBase {
     proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe 'proved
   }
 
+  it should "step fallback assignb/d only when index is defined" in withMathematica { _ =>
+    //@note AxIndex.axiomsFor hands out substitution assignment axioms, which fail on some assignments and assignb fallback workaround recovers
+    proveBy("x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent, step(1)).subgoals.loneElement shouldBe "x_0>=0, x=x_0+1 ==> [{x'=-x}]x>0".asSequent
+    proveBy("x>=0 ==> <x:=x+1;>[{x'=-x}]x>0".asSequent, step(1)).subgoals.loneElement shouldBe "x_0>=0, x=x_0+1 ==> [{x'=-x}]x>0".asSequent
+    //@note prop triggers same "no axioms applicable" error as above, but for different reasons, so shouldn't fallback to assignb
+    proveBy("x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent, prop).subgoals.loneElement shouldBe "x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent
+  }
+
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in withTactics {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, useAt(Ax.composeb)(1)).subgoals should contain only
       Sequent(IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))

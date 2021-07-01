@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct.{NonSubstUnificationMatch, Position, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.util.Try
 
@@ -27,6 +28,26 @@ object Generator {
 /** Generator always providing a fixed list as output. */
 case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
   def apply(s: Sequent, p: Position): Stream[A] = list.toStream
+}
+
+object ConfigurableGenerator {
+  /** Creates a generator that has `products` in verbatim form and fully expanded according to defs`. */
+  def create[A](products: Map[Expression, Seq[A]], defs: Declaration): ConfigurableGenerator[A] = new ConfigurableGenerator[A](
+    products.map({ case (k, v) =>
+      defs.elaborateToSystemConsts(defs.elaborateToFunctions(k)) ->
+        v.map({
+          case (f: Expression, h) => defs.elaborateToSystemConsts(defs.elaborateToFunctions(f)) -> h
+          case v => v
+        }).distinct
+    }).asInstanceOf[Map[Expression, Seq[A]]] ++
+    products.map({ case (k, v) =>
+      defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(k))) ->
+        v.map({
+          case (f: Expression, h) => defs.exhaustiveSubst(defs.elaborateToSystemConsts(defs.elaborateToFunctions(f))) -> h
+          case v => v
+        }).distinct
+    }).asInstanceOf[Map[Expression, Seq[A]]]
+  )
 }
 
 /** Map-based generator providing output according to the fixed map `products` according to its program or whole formula.

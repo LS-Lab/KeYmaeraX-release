@@ -43,8 +43,8 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   private def useToClose(pi: ProvableInfo): Unit = {
     ProvableSig.startProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(pi), BelleProvable(ProvableSig.startProof(pi.provable.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
+    theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startProof(pi.provable.conclusion))) match {
+      case BelleProvable(provable, _, _) => provable shouldBe 'proved
       case _ => fail()
     }
   }
@@ -240,6 +240,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   it should "tactically prove abs" in withZ3 { qeTool => check(abs)}
   it should "tactically prove min" in withZ3 { qeTool => check(min)}
   it should "tactically prove max" in withZ3 { qeTool => check(max)}
+  it should "tactically prove openInvariantClosure" in withZ3 { _ => check(openInvariantClosure)}
 
   "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))

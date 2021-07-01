@@ -513,7 +513,10 @@ Problem
            ?5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2;
         ++ ?true;
         };
-        { x' = v, v' = -Kp*(x-xr) - Kd*v & v >= 0 }
+        { x' = v, v' = -Kp*(x-xr) - Kd*v & v >= 0 }@invariant(
+          xm<=x,
+          5/4*(x-(xm+S)/2)^2 + (x-(xm+S)/2)*v/2 + v^2/4 < ((S-xm)/2)^2
+        )
       }*@invariant(v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2)
     ] x <= S
 End.
@@ -581,11 +584,19 @@ Problem
             a :=*; ?-B <= a & a <= A;
             w :=*; r :=*; ?r != 0 & w*r = v;
          ++ ?v=0; a := 0; w := 0;
-         ++ a :=*; ?-B <=a & a <= -b;
+         ++ a :=*; ?-B <= a & a <= -b;
         }
 
         c := 0;
         { x' = v*dx, y' = v*dy, v' = a, dx' = -dy*w, dy' = dx*w, w'=a/r, c' = 1 & v >= 0 & c <= ep }
+        @invariant(
+          c>=0,
+          dx^2+dy^2=1,
+          (v'=0 -> v=old(v)),
+          (v'=0 -> -c*v <= y - old(y) & y - old(y) <= c*v),
+          (v'=a -> v=old(v)+a*c),
+          (v'=a -> -c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c))
+        )
       }*@invariant(v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw)
     ] abs(y-ly) < lw
 End.

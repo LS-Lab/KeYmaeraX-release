@@ -86,11 +86,13 @@ trait ProofTreeNode {
     * @ensures \result == None  <->  parent == None */
   def maker: Option[String]
 
-
   // meta info
 
   /** The tactic short name. */
   def makerShortName: Option[String]
+
+  /** Uniform substitutions applied at this node. */
+  def substs: List[SubstitutionPair] = makerSubst(maker)
 
   /** The node label. */
   def label: Option[BelleLabel]
@@ -128,12 +130,17 @@ trait ProofTreeNode {
   /** Runs a tactic on this node. */
   //@todo shortName should be derived from tactic
   //@todo interpreter/listener interface needs revision
-  def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String,
+  def runTactic(userId: String,
+                interpreter: List[IOListener]=>Interpreter,
+                tactic: BelleExpr,
+                shortName: String,
                 executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                 wait: Boolean = false): String
 
   /** Runs a tactic step-by-step, starting on this node. */
-  def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr,
+  def stepTactic(userId: String,
+                 interpreter: Interpreter,
+                 tactic: BelleExpr,
                  executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                  wait: Boolean = false): String
 
@@ -311,16 +318,19 @@ trait ProofTree {
   /** Locates the tree root, which contains the original conjecture that this proof tries to prove. */
   /** String representation of the global tactic that reproduces this whole proof tree from the
     * conjecture at the root (very expensive). Uses `converter` to turn the recorded steps into a tactic. */
-  def tacticString(converter: Declaration=>TraceToTacticConverter): String
+  def tacticString(converter: TraceToTacticConverter): String
 
   /** The global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
-  def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(_)))
+  def tactic: BelleExpr
 
   /** The proof info with meta information about this proof, e.g., its name. */
   def info: ProofPOJO
 
   /** Substitutions known from the input model. */
   def substs: List[SubstitutionPair]
+
+  /** Substitutions from proof steps. */
+  def proofSubsts: List[SubstitutionPair]
 
   override def toString: String = printBelow(root, "")
 
@@ -352,13 +362,16 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
   */
 abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends ProofTreeNode {
   /** Runs a tactic on this node. */
-  override def runTactic(userId: String, interpreter: List[IOListener] => Interpreter, tactic: BelleExpr,
-                         shortName: String, executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
+  override def runTactic(userId: String,
+                         interpreter: List[IOListener] => Interpreter,
+                         tactic: BelleExpr,
+                         shortName: String,
+                         executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
       goalIdx, recursive = false, shortName)
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)),
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)),
       interpreter(listener::Nil))
     if (wait) {
       executor.wait(taskId)
@@ -371,11 +384,13 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
   }
 
   /** Runs a tactic step-by-step, starting on this node. */
-  override def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr,
+  override def stepTactic(userId: String,
+                          interpreter: Interpreter,
+                          tactic: BelleExpr,
                           executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                           wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)), interpreter)
     if (wait) {
       executor.wait(taskId)
       // report tactic execution problems upon completion
@@ -648,10 +663,13 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
 
   /** The tactic to produce this tree from its root conclusion. */
-  override def tacticString(converter: Declaration=>TraceToTacticConverter): String = {
+  override def tacticString(converter: TraceToTacticConverter): String = {
     load()
-    converter(dbDefs).getTacticString(this)
+    converter.getTacticString(this)
   }
+
+  /** @inheritdoc */
+  override def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(dbDefs)))
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed
@@ -691,6 +709,9 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   /** The known substitutions. */
   override def substs: List[SubstitutionPair] = dbSubsts
 
+  /** @inheritdoc */
+  override def proofSubsts: List[SubstitutionPair] = this.nodes.flatMap(_.substs)
+
   /** Converts a string representation to a node ID. */
   override def nodeIdFromString(id: String): Option[ProofTreeNodeId] =
     if (id == "()") Some(DbStepPathNodeId(None, None))
@@ -706,12 +727,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   // cached db query results
   private lazy val dbProofInfo = db.getProofInfo(proofId)
 
-  private lazy val dbDefs = {
-    info.modelId.map(db.getModel).map(m => ArchiveParser.parser(m.keyFile)) match {
-      case Some(e :: Nil) => e.defs
-      case _ => Declaration(Map.empty)
-    }
-  }
+  private lazy val dbDefs = info.defs(db)
 
   private lazy val dbSubsts = dbDefs.substs
 

@@ -39,6 +39,8 @@ object FormulaTools extends Logging {
     case Or(p,q) => disjuncts(p) ++ disjuncts(q)
     case f => List(f)
   }
+  /** @see disjuncts(formula: Formula) */
+  def disjuncts(formulas: List[Formula]): List[Formula] = formulas.flatMap(disjuncts)
 
   /** Split a formula into `length` left-hand side conjuncts (-1 for exhaustive splitting),
     * keep right-hand side conjunctions (inverse reduce). */

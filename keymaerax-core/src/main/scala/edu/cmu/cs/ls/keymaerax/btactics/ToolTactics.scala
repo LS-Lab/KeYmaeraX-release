@@ -62,47 +62,46 @@ private object ToolTactics {
     }
   })
 
+  /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
+    * remaining subgoals using `doQE`. */
+  def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
+    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
+
+    val expand =
+      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
+      else EqualityTactics.expandAll &
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }),
+          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
+
+    Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
+      assertT(_.isFOL, "QE on FOL only") &
+        SaturateTactic(alphaRule | allR('R)) &
+        Idioms.doIf(!_.isProved)(
+          close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+            // if
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & doQE
+            ,
+            // else
+            hidePredicates & hideQuantifiedFuncArgsFmls &
+              assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
+              EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
+              Idioms.doIf(_ => doQE != nil)(
+                doQE & done
+                  | anon {(_: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
+              )
+          )
+        )
+    )
+  }
+
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
     if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
       seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
-    val doRcf = rcf(qeTool)
-
-    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
-
-    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
-    val expand =
-      if (convertInterpretedSymbols) skip
-      else EqualityTactics.expandAll &
-        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }),
-          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
-
-    val plainQESteps =
-      if (convertInterpretedSymbols) (closure & doRcf) :: (EqualityTactics.expandAll & closure & doRcf) :: Nil
-      else (closure & doRcf) :: Nil // expanded already
-
-    val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
-
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & plainQE
-
     AnonymousLemmas.cacheTacticResult(
-      Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
-        assertT(_.isFOL, "QE on FOL only") &
-        allTacticChase()(notL, andL, notR, implyR, orR, allR) &
-          Idioms.doIf(!_.isProved)(
-            close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
-              // if
-              doQE
-              ,
-              // else
-              hidePredicates & hideQuantifiedFuncArgsFmls &
-                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                doQE & done
-                | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
-            )
-          )
-        ),
+      prepareQE(order, rcf(qeTool))
+      ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
@@ -334,12 +333,39 @@ private object ToolTactics {
       case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
       case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
-    val Equiv(_, result) = qeFact.conclusion.succ.head
 
-    cutLR(result)(1) & Idioms.<(
-      /*use*/ closeT | skip,
-      /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
-    )
+    def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {
+      case Forall(v, p) => v ++ leadingQuantOrder(p)
+      case Exists(v, p) => v ++ leadingQuantOrder(p)
+      case _ => Nil
+    }
+
+    def applyFact(fact: Formula): BelleExpr = {
+      val subs = FormulaTools.conjuncts(fact)
+      BranchTactic(subs.map({ case Equiv(f, result) =>
+        toSingleFormula & FOQuantifierTactics.universalClosure(leadingQuantOrder(f).toList)(1) & cutLR(result)(1) <(
+          closeT | nil
+          ,
+          equivifyR(1) & commuteEquivR(1) & cut(qeFact.conclusion.succ.head) <(
+            SaturateTactic(andL('L)) & close,
+            cohideR('Rlast) & by(qeFact)
+          )
+      )}))
+    }
+
+    qeFact.conclusion.succ.head match {
+      case Equiv(_, result) =>
+        cutLR(result)(1) <(
+          /*use*/ closeT | skip,
+          /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
+        )
+      case result: And =>
+        val facts = FormulaTools.conjuncts(result)
+        SaturateTactic(allR('R)) & (prop & Idioms.doIfElse(_.subgoals.size == facts.size)(
+          applyFact(result),
+          fail
+        ) | expandAll & prop & OnAll(applyEqualities) & applyFact(result))
+    }
   })
 
   /** @see [[TactixLibrary.transform()]] */

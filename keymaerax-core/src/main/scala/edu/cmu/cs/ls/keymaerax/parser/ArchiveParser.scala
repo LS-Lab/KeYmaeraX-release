@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import scala.collection.immutable.List
 
 /** Name is alphanumeric name and index. */
-case class Name(name: String, index: Option[Int]) {
+case class Name(name: String, index: Option[Int] = None) {
   def prettyString: String = name + index.map("_" + _).getOrElse("")
 }
 /** Signature is a domain sort, codomain sort, argument names, expression used as interpretation, location that starts the declaration. */
@@ -433,6 +433,7 @@ object ArchiveParser extends ArchiveParser {
       case Pair(l, r) => makeArgsList(l) ++ makeArgsList(r)
       case FuncOf(n, _) => List(Name(n.name, n.index) -> n.sort)
       case n: NamedSymbol => List(Name(n.name, n.index) -> n.sort)
+      case _ => List() //@note unable to guess argument name from general terms x+y
     }
 
     val collectedArgs = scala.collection.mutable.Map.empty[NamedSymbol, List[(Name, Sort)]]

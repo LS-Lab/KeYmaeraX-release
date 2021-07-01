@@ -4,7 +4,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Cancellable, LazySequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -16,7 +16,10 @@ import org.scalatest.Inside._
 import org.scalatest.OptionValues._
 import org.scalamock.scalatest.MockFactory
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable._
+import scala.concurrent.{Await, TimeoutException}
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with MockFactory {
   override def beforeAll(): Unit = {
@@ -50,6 +53,44 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """.stripMargin
     ArchiveParser.parser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
     a [Exception] shouldBe thrownBy(ArchiveParser.parser("\\u03C0"))
+  }
+
+  it should "wtf" in {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val foo = new AtomicReference[List[String]](List.empty)
+    val c = Cancellable(
+      foo.synchronized(
+      try {
+        try {
+          println("Sleeping")
+          Thread.sleep(5000)
+          println("Done sleeping")
+        } catch {
+          case _: InterruptedException =>
+            foo.set(foo.get :+ "Starting cleanup")
+            throw new IllegalArgumentException("WTF")
+        }
+      } catch {
+        case _: Throwable => {
+          for (i <- 0 to 1000000) {
+            var j = i + 1
+          }
+          foo.set(foo.get :+ "Cleanup done")
+        }
+      }))
+    try {
+      Await.result(c.future, Duration(1000, MILLISECONDS))
+    } catch {
+      case _: TimeoutException =>
+        c.cancel()
+        foo.synchronized({
+          foo.set(foo.get :+ "Yay")
+        })
+    }
+
+    Thread.sleep(1000)
+
+    println(foo.get.mkString(","))
   }
 
   it should "parse nullary predicate definitions" in {

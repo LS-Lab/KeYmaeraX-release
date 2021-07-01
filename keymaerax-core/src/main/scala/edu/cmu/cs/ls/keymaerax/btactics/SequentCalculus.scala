@@ -499,30 +499,26 @@ trait SequentCalculus {
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ", codeName = "id")
   val id: DependentTactic = new DependentTactic("id") {
-    override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        s.ante.intersect(s.succ).headOption match {
-          case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
-          case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
-        }
+    override def computeExpr(provable: ProvableSig): BelleExpr = {
+      require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+      val s = provable.subgoals.head
+      s.ante.intersect(s.succ).headOption match {
+        case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+        case None => throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
+      }
     }
   }
 
   @Tactic(premises = "*",
     conclusion = "Γ, x=y, P(x) |- P(y), Δ")
-  val idx: DependentTactic = new DependentTactic("idx") {
-    override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        s.ante.intersect(s.succ).headOption match {
-          case Some(fml) => closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
-          case None =>
-            if (s.ante.exists({ case _: Equal => true case _ => false })) SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id
-            else throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
-        }
+  val idx: DependentTactic = new SingleGoalDependentTactic("idx") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      sequent.ante.intersect(sequent.succ).headOption match {
+        case Some(fml) => closeId(AntePos(sequent.ante.indexOf(fml)), SuccPos(sequent.succ.indexOf(fml)))
+        case None =>
+          if (sequent.ante.exists({ case _: Equal => true case _ => false })) SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id
+          else throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + sequent.prettyString)
+      }
     }
   }
 
@@ -666,6 +662,13 @@ trait SequentCalculus {
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
+  // Equality rewriting tactics
+
+  /** Expands all special functions (abs/min/max). */
+  def expandAll: BelleExpr = EqualityTactics.expandAll
+
+  /** Rewrites all atom equalities in the assumptions. */
+  def applyEqualities: BelleExpr = EqualityTactics.applyEqualities
 
   //  meta-tactics for proof structuring information but no effect
 

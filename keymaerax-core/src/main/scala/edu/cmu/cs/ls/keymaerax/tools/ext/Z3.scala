@@ -6,10 +6,10 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{Parser, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, Parser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3QETool, Z3Solver}
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException, ToolInternalException, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
@@ -55,6 +55,14 @@ final class Z3 extends Tool with QETacticTool with SimplificationTool with ToolO
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "Z3 needs to be initialized before use")
     ProvableSig.proveArithmeticLemma(z3qe, formula)
+  }
+
+  /** @inheritdoc */
+  override def qe(g: Goal): (Goal, Formula) = g match {
+    case Atom(fml) =>
+      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion
+      g -> result
+    case _ => throw ToolExecutionException("Z3 supports only atom goals")
   }
 
   /** @inheritdoc */
