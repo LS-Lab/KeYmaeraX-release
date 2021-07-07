@@ -46,35 +46,6 @@ class ImplicitFunctionTests extends TacticTestBase {
     )))
   }
 
-  "implicit fn axioms" should "substitute against an equality" in withMathematica { _ =>
-    val pvble = proveBy(
-      Sequent(Vector(Equal(Variable("y"),FuncOf(InterpretedSymbols.absF,Variable("x")))),
-              Vector(GreaterEqual(Variable("y"),Number(0)))),
-      useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(-1)
-      & QE
-    )
-
-    pvble shouldBe 'proved
-  }
-
-  val sin = Function(name="sin",domain=Real, sort=Real,
-    interp = Some(/* . = sin(._0) <-> */ "t=0 & s=0 & c=1 & <{t'=1,s'=c,c'=-s}> (t=._0 & s=.) | t=0 & s=0 & c=1 & <{t'=-1,s'=-c,c'=s}> (t=._0 & s=.)".asFormula))
-  val cos = Function(name="cos",domain=Real, sort=Real,
-    interp = Some(/* . = cos(._0) <-> */ "t=0 & s=0 & c=1 & <{t'=1,s'=c,c'=-s}> (t=._0 & c=.) | t=0 & s=0 & c=1 & <{t'=-1,s'=-c,c'=s}> (t=._0 & c=.)".asFormula))
-
-  "trig defs" should "prove simple trig lemmas" in withMathematica { _ =>
-    val pvble = proveBy(
-      Sequent(Vector( Equal(Variable("ss"),FuncOf(sin,Variable("x"))),
-                      Equal(Variable("cc"),FuncOf(cos,Variable("x")))),
-              Vector("ss*ss + cc*cc = 1".asFormula)),
-      useAt(ElidingProvable(Provable.implicitFuncAxiom(sin)))(-1)
-      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cos)))(-2)
-      & skip //TODO
-    )
-
-    pvble shouldBe 'proved
-  }
-
   "DLArchiveParser" should "parse implicit functions correctly" in {
     val input =
       """ArchiveEntry "entry1"
@@ -90,6 +61,52 @@ class ImplicitFunctionTests extends TacticTestBase {
     // Note this is only equal to InterpretedSymbols.absF because the
     // program's (implicit) definition is syntactically equivalent
     prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+  }
+
+  "implicit fn axioms" should "substitute against an abbreviation" in withMathematica { _ =>
+    val prob = GreaterEqual(FuncOf(InterpretedSymbols.absF,"x".asVariable),Number(0))
+
+    val pvble = proveBy(prob,
+      abbrvAll(FuncOf(InterpretedSymbols.absF,Variable("x")),None)
+        & useAt(ElidingProvable(Provable.implicitFuncAxiom(InterpretedSymbols.absF)))(-1)
+        & QE
+    )
+
+    pvble shouldBe 'proved
+  }
+
+  val exp = Function(name="exp",domain=Real, sort=Real,
+    interp = Some(/* . = exp(._0) <-> */ "t=0 & e=1 & ((<{t'=1,e'=e}> (t=._0 & e=.)) | (<{t'=-1,e'=-e}> (t=._0 & e=.)))".asFormula))
+
+  "implicit defs" should "prove differential axioms" ignore {
+    val prob = Equal(Differential(FuncOf(exp,"x".asVariable)),
+                      FuncOf(exp,"x".asVariable))
+    val pvble = proveBy(prob,
+      abbrvAll(FuncOf(exp,Variable("x")),None)
+      //TODO
+    )
+
+    pvble shouldBe 'proved
+  }
+
+  val sin = Function(name="sin",domain=Real, sort=Real,
+    interp = Some(/* . = sin(._0) <-> */ "t=0 & s=0 & c=1 & ((<{t'=1,s'=c,c'=-s}> (t=._0 & s=.)) | (<{t'=-1,s'=-c,c'=s}> (t=._0 & s=.)))".asFormula))
+  val cos = Function(name="cos",domain=Real, sort=Real,
+    interp = Some(/* . = cos(._0) <-> */ "t=0 & s=0 & c=1 & ((<{t'=1,s'=c,c'=-s}> (t=._0 & c=.)) | (<{t'=-1,s'=-c,c'=s}> (t=._0 & c=.)))".asFormula))
+
+  "trig defs" should "prove simple trig lemmas" in withMathematica { _ =>
+    val prob = Equal(Plus(Power(FuncOf(sin,"x".asVariable),Number(2)),
+                          Power(FuncOf(cos,"x".asVariable),Number(2))),
+                      Number(1))
+    val pvble = proveBy(prob,
+      abbrvAll(FuncOf(sin,"x".asVariable),None)
+      & abbrvAll(FuncOf(cos,"x".asVariable),None)
+      & useAt(ElidingProvable(Provable.implicitFuncAxiom(sin)))(-1)
+      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cos)))(-2)
+      //TODO
+    )
+
+    pvble shouldBe 'proved
   }
 
   /*
