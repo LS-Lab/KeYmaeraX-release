@@ -234,13 +234,9 @@ object HyDRAServerConfig {
   // we need an ActorSystem to host our application in
   val system: ActorSystem = ActorSystem("on-spray-can")
   val database: DBAbstraction = DBAbstractionObj.defaultDatabase
-//  var service = system.actorOf(Props[RestApiActor], "hydra")
 
   val (isHosted: Boolean, host: String, port: Int) =
     (Configuration(Configuration.Keys.IS_HOSTED) == "true",
       Configuration(Configuration.Keys.HOST),
       Integer.parseInt(Configuration(Configuration.Keys.PORT)))
-
-  assert(isHosted || host == "127.0.0.1" || host == "localhost",
-    "Either isHosted should be set or else the host should be localhost. This is crucial -- isHosted is used in security-critical ways.")
 }
