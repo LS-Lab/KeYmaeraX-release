@@ -2108,6 +2108,58 @@ private object DifferentialTactics extends Logging {
     }
   })
 
+  // TODO how to write description in a general way for nth order polynomial.
+  @Tactic(names="Taylor Polynomial is Bound",
+    premises="Q |- q''(x)>=0",
+    conclusion="Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
+    displayLevel="browse", revealInternalSteps = true)
+  val taylorB: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), post)) => {
+        taylorStep(pos) &
+          // For a Taylor polynomial of order n if this is iteration i and i<=n, recurse.
+          (if (DifferentialHelper.lieDerivative(ode, post) match {
+            case f: ComparisonFormula => f.left == Number(0) || f.right == Number(0)
+            case _ => false
+          }) skip else taylorB(pos))
+      }
+      case Some(e) => throw new TacticInapplicableFailure("taylorB only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+  }
+
+  // TODO how to write description in a general way for nth order polynomial.
+  @Tactic(names="Taylor Polynomial is Bound: step",
+    premises="Q |- q'(x)>=q'(x_0)",
+    conclusion="Γ |- x=x_0 -> [x'=f(x), t'=1 & Q]q(x)>=q(x_0)+q'(x_0).t",
+    displayLevel="browse", revealInternalSteps = true)
+  val taylorStep: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, _), post)) => {
+        // Take Lie derivative.
+        val postDerivative: Formula = DifferentialHelper.lieDerivative(ode, post)
+        // Base case: when one of the sides is 0,
+        // which means this is the (n+1)th derivative of an n-order polynomial.
+        if (postDerivative match {
+          case f:ComparisonFormula => f.left==Number(0) || f.right==Number(0)
+          case _ => false
+        }) {
+          dIRule(pos)<(QE, SaturateTactic(Dassignb(pos)) & QE)
+        }
+        // General case: cut next order derivative. For use branch apply dI. For show, recurse.
+        else Dconstify(
+          diffCut(postDerivative)(pos) <(
+            dIRule(pos)<(QE, SaturateTactic(Dassignb(pos)) & QE),
+            fullSimplify
+          ))(pos)
+      }
+      case Some(e) => throw new TacticInapplicableFailure("taylorStep only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+  }
+
   /** Lemmas that can be proved only for specific instances of ODEs. */
   case class ODESpecific(ode: DifferentialProgram, variant: String => String = _ + "_") {
     private val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -2229,29 +2281,6 @@ private object DifferentialTactics extends Logging {
           val postD_semi = SimplifierV3.semiAlgNormalizeUnchecked(postD)
           toc("== semiAlgNormalize postD")
           (SimplifierV3.maxMinGeqNormalizeUnchecked(post_semi._1), SimplifierV3.maxMinGeqNormalizeUnchecked(postD_semi._1)) match {
-            case ((GreaterEqual(p, Number(np)), Some(p_prv)),
-            (GreaterEqual(q, Number(nq)), Some(_))) if np == 0 && nq == 0 =>
-              toc("== maxMinGeqNormalize")
-              val usubst = (UnificationMatch(p_pat, p) ++ UnificationMatch(q_pat, q) ++ UnificationMatch(P_pat, post)).usubst
-              useAt(dIopenClosedProvable(usubst), PosInExpr(1::Nil))(pos) &
-              andR(pos) & Idioms.<( skip, andR(pos) & Idioms.<(skip, andR(pos))) &
-              Idioms.<(
-                  skip /* initial condition */,
-                tocTac("== Tactic start") &
-                dW(pos) & implyRi /* (open) differential invariant */,
-                tocTac("== dW") &
-                cohideR(pos) & allR(pos)*vars.length & derive(pos++PosInExpr(1::Nil)) &
-                  DE(pos) & Dassignb(pos ++ PosInExpr(1::Nil))*vars.length & dW(pos) &
-                  tocTac("== DE") &
-                  QE & done,
-                tocTac("== QE") &
-                cohideR(pos) & allR(pos)*vars.length &
-                  useAt(post_semi._2.get, PosInExpr(0::Nil))(1, 0::Nil) &
-                  useAt(p_prv, PosInExpr(0::Nil))(1, 0::Nil) &
-                  byUS(Ax.equivReflexive) &
-                  tocTac("== done") &
-                  done
-              )
             case ((GreaterEqual(p, Number(np)), post_prv),
             (GreaterEqual(q, Number(nq)), _)) if np == 0 && nq == 0 =>
               toc("== maxMinGeqNormalize")

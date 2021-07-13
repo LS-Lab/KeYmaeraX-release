@@ -1907,6 +1907,17 @@ class DifferentialTests extends TacticTestBase {
     proveBy(prv, Idioms.<(QE, QE)) shouldBe 'proved
   }
 
+  "taylorB" should "prove second order Taylor bound for exponential function" in withMathematica { _ =>
+    val prv = proveBy("x0=x & t=0 ==> [{x'=x,t'=1&x>=0}]x0+x0*t+x0/2*t^2<=x".asSequent, DifferentialTactics.taylorB(1))
+    prv shouldBe 'proved
+  }
+
+  "taylorStep" should "correctly execute a step on the exponential function" in withMathematica { _ =>
+    val prv = proveBy("x0=x & t=0 ==> [{x'=-x,t'=1&x>=0}]x0-x0*t<=x".asSequent, DifferentialTactics.taylorStep(1))
+    prv.subgoals should have size 1
+    prv.subgoals.head shouldBe "x0()=x&t=0 ==>  [{x'=-x,t'=1&x>=0}]-x0()<=-x".asSequent
+  }
+
   "DCC" should "correctly apply in succ" in withTactics {
     val seq = "G(x) ==> S(x), [{x'=f(x)&r(x)}](p(x)->q(x)), T(x)".asSequent
     val res = proveBy(seq, dCC(2))
