@@ -98,9 +98,10 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
 
     override def convert(e: KExpr): MExpr = {
       //insist on less strict input: interpreted function symbols allowed here
-      //TODO: fix this??
+      //TODO: interpretedSymbols must keep a map of all interpreted function symbols that
+      // we know how to convert to Mathematica
       insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
-        "Interpreted functions must have expected domain and sort")
+        "Interpreted functions must have known conversion to Mathematica")
       insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
       e match {
         case t: Term => convertTerm(t)

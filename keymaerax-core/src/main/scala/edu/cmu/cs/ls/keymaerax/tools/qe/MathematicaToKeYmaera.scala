@@ -83,6 +83,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.variable.applies(e)) convertAtomicTerm(e)
     else if (MathematicaOpSpec.func.applies(e)) convertAtomicTerm(e)
     else if (MathematicaOpSpec.mapply.applies(e)) convertAtomicTerm(e)
+
+    //todo: more cases for converting interpreted symbols, possibly make this more generic
     else if (MathematicaOpSpec.abs.applies(e)) convertAtomicTerm(e)
     else if (MathematicaOpSpec.min.applies(e)) convertAtomicTerm(e)
     else if (MathematicaOpSpec.max.applies(e)) convertAtomicTerm(e)
