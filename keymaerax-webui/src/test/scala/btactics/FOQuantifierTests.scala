@@ -256,6 +256,13 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "a=2 -> !z>0 ==> ".asSequent
   }
 
+  it should "instantiate in context when stuttering is needed" in withTactics {
+    proveBy(
+      "==> x>=0 -> \\exists y [{y'=x}]y>=37".asSequent,
+      existsInstantiate(Some("y".asVariable), Some("37".asTerm))(1, 1::Nil)
+    ).subgoals.loneElement shouldBe "==> x>=0 -> \\forall y (y=37 -> [{y'=x}]y>=37)".asSequent
+  }
+
   it should "instantiate variables bound in an ODE" in withTactics {
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),

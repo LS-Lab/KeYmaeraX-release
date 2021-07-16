@@ -147,7 +147,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-                cohide(pos) & CMon(pos.inExpr) & byUS(rename, subst) & done
+                cohide(pos.topLevel) & CMon(pos.inExpr) & byUS(rename, subst) & done
               )
         case (_, f@Exists(v, _)) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
