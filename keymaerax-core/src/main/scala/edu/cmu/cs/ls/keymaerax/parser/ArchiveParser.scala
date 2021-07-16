@@ -310,13 +310,12 @@ object ArchiveParser extends ArchiveParser {
     }
     val locallyConsistentUses = uses.map({ case (k, (v, loc)) => k -> (v.map(_._2.head).toSet, loc) })
 
-    //@note except program/system constants, which don't have arguments yet
     val undeclaredUses = locallyConsistentUses.
-      filter({ case (_: ProgramConst | _: SystemConst, _) => false case _ => true }).
       map({ case (n, (symbols, loc)) => n ->
         (symbols.
           filter(s => !elaboratedDefs.decls.contains(Name(s.name, s.index))).
-          filterNot(InterpretedSymbols.symbols.contains), loc) }).
+          filterNot(InterpretedSymbols.symbols.contains).
+          filterNot(TacticReservedSymbols.symbols.contains), loc) }).
       filter({ case (_, (s, _)) => s.nonEmpty })
     if (undeclaredUses.nonEmpty) {
       val (name, (symbols, loc)) = undeclaredUses.head

@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Program, Real, SubstitutionPair, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
@@ -265,6 +265,48 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
       """3:5 Definition p uses undefined symbol(s) a;,f,q. Please add arguments or define as functions/predicates/programs
         |Found:    <unknown> at 3:5 to 3:43
         |Expected: <unknown>""".stripMargin
+  }
+
+  it should "report undeclared program constants" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p(Real x) <-> x>1 -> [a;]x>3;
+        |  End.
+        |  Problem p(2) End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy parse(input) should have message
+      """3:5 Definition p uses undefined symbol(s) a;. Please add arguments or define as functions/predicates/programs
+        |Found:    <unknown> at 3:5 to 3:38
+        |Expected: <unknown>""".stripMargin
+  }
+
+  it should "not report 'undeclared' symbols in program constants" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions
+        |    Bool p(Real x) <-> x>1 -> [a;]x>3;
+        |    HP a;
+        |  End.
+        |  Problem p(2) End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.model shouldBe "p(2)".asFormula
+    entry.expandedModel shouldBe "2>1 -> [a;]x>3".asFormula
+  }
+
+  it should "accept tactic-interpreted special functions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        |  Definitions Bool p(Real x) <-> x>=old(x); End.
+        |  ProgramVariables Real x; End.
+        |  Problem x>=0 -> [{x:=x+1;}*@invariant(p(x))]x>=0 End.
+        |End.""".stripMargin
+    val entry = parse(input).loneElement
+    entry.defs should beDecl(Declaration(Map(
+      Name("p") -> Signature(Some(Real), Bool, Some(List((Name("x"), Real))), Some(".>=old(.)".asFormula), UnknownLocation),
+      Name("x") -> Signature(None,Real,None,None, UnknownLocation)
+    )))
   }
 
   it should "not report builtin interpreted symbols as undeclared" in {

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
@@ -401,7 +401,8 @@ private object ToolTactics {
           //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
           val diff = UnificationMatch(to, e)
           if (diff.usubst.subsDefsInput.nonEmpty && diff.usubst.subsDefsInput.forall(_.what match {
-            case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
+            case FuncOf(Function(name, None, _, _, _), _) =>
+              name == TacticReservedSymbols.abbrv.name || name == TacticReservedSymbols.expand.name
             case _ => false
           })) skip
           else TactixLibrary.transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
@@ -442,15 +443,15 @@ private object ToolTactics {
   /** Parses `to` for occurrences of `abbrv` to create a tactic. Returns `to` with `abbrv(...)` replaced by the
     * abbreviations and the tactic to turn `to` into the returned expression by proof. */
   private def createAbbrvTactic(to: Expression, sequent: Sequent): (Expression, BelleExpr) = {
-    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
+    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable(TacticReservedSymbols.abbrv.name), sequent)
     val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
 
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+        case FuncOf(Function(TacticReservedSymbols.abbrv.name, TacticReservedSymbols.abbrv.index, _, _, _), abbrv@Pair(_, v: Variable)) =>
           abbrvs(p) = abbrv
           Right(v)
-        case FuncOf(Function("abbrv", None, _, _, _), t) =>
+        case FuncOf(Function(TacticReservedSymbols.abbrv.name, TacticReservedSymbols.abbrv.index, _, _, _), t) =>
           val abbrv = nextAbbrvName
           nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
           abbrvs(p) = Pair(t, abbrv)
@@ -490,7 +491,7 @@ private object ToolTactics {
 
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case FuncOf(Function("expand", None, _, _, _), t) => t match {
+        case FuncOf(Function(TacticReservedSymbols.expand.name, TacticReservedSymbols.expand.index, _, _, _), t) => t match {
           case FuncOf(InterpretedSymbols.absF, _) => Right(getNextName(InterpretedSymbols.absF.name, p))
           case FuncOf(InterpretedSymbols.minF, _) => Right(getNextName(InterpretedSymbols.minF.name, p))
           case FuncOf(InterpretedSymbols.maxF, _) => Right(getNextName(InterpretedSymbols.maxF.name, p))
