@@ -994,7 +994,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     def recurseOnFormula(p: Position) = sequent.sub(p) match {
       case Some(_: Formula) => locateT(tactics)(p)
-      case _ => DebuggingTactics.error("Stop recursion")
+      case _ => DebuggingTactics.error("Stop recursion", new TacticInapplicableFailure(_))
     }
 
     val left: BelleExpr = recurseOnFormula(pos ++ PosInExpr(0::Nil))
@@ -1155,20 +1155,22 @@ object ModelPlex extends ModelPlexTrait with Logging {
   private def optimizationOneAt(unobservable: List[Variable], inst: Option[(Variable, Term)] = None): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1"
     sequent.sub(pos) match {
-      case Some(Exists(vars, phi)) if pos.isSucc => inst match {
-          case Some(i) => existsR(i._1, i._2)(pos)
-          case None if unobservable.intersect(vars).isEmpty =>
-            require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
-            existsR(v, post)(pos)
-        }
-        case Some(Forall(vars, phi)) if pos.isAnte => inst match {
-          case Some(i) => allL(i._1, i._2)(pos)
-          case None if unobservable.intersect(vars).isEmpty =>
-            require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
-            allL(v, post)(pos)
-        }
+      case Some(Exists(vars, _)) if pos.isSucc => inst match {
+        case Some(i) => existsR(i._1, i._2)(pos)
+        case None if unobservable.intersect(vars).isEmpty =>
+          require(vars.size == 1)
+          val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
+          existsR(v, post)(pos)
+        case None => nil
+      }
+      case Some(Forall(vars, _)) if pos.isAnte => inst match {
+        case Some(i) => allL(i._1, i._2)(pos)
+        case None if unobservable.intersect(vars).isEmpty =>
+          require(vars.size == 1)
+          val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
+          allL(v, post)(pos)
+        case None => nil
+      }
       case Some(e) => throw new TacticInapplicableFailure("Optimization 1 only applicable to quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
