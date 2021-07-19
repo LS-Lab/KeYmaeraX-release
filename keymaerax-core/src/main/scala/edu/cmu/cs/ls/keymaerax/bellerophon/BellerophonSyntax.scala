@@ -885,6 +885,8 @@ trait BelleValue {
 object BelleProvable {
   def plain(p: ProvableSig): BelleProvable = BelleProvable(p, None, Declaration(Map.empty))
   def labeled(p: ProvableSig, label: Option[List[BelleLabel]]): BelleProvable = BelleProvable(p, label, Declaration(Map.empty))
+  def withDefs(p: ProvableSig, defs: Declaration): BelleProvable = BelleProvable(p, None, defs)
+  def full(p: ProvableSig, label: Option[List[BelleLabel]], defs: Declaration): BelleProvable = BelleProvable(p, label, defs)
 }
 
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
