@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
@@ -311,7 +311,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Creates a model with the ODE approximated by the evolution domain and diff. invariants from the `tactic`.
     * Returns the adapted model and a tactic to proof safety from the original proof. */
   def createNonlinearModelApprox(name: String, tactic: BelleExpr, defs: Declaration): Expression => (Formula, BelleExpr) =
-      defs.exhaustiveSubst(_) match {
+      (model: Expression) => defs.exhaustiveSubst(model) match {
     case fml@Imply(init, Box(Loop(prg), safe)) =>
       val (ctrl, plant, evolDomain, measure) = prg match {
         case Compose(c, p@ODESystem(_, q)) => (c, p, q, None)
@@ -325,20 +325,20 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val nondetPlant = plantVars.map(AssignAny).sortBy[NamedSymbol](_.x).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, /*q, */x0)
-      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(fml), defs)) match {
+      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(model.asInstanceOf[Formula]), defs)) match {
         case BelleProvable(proof, _, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
       }
 
       def pushOld(fml: Formula): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function("old", None, Real, Real, _), _: BaseVariable) => Left(None)
-          case FuncOf(Function("old", None, Real, Real, _), arg: Term) => Right(replace(arg, x0))
+          case FuncOf(TacticReservedSymbols.old, _: BaseVariable) => Left(None)
+          case FuncOf(TacticReservedSymbols.old, arg: Term) => Right(replace(arg, x0))
           case _ => Left(None)
         }
       }, fml).get
 
-      val olds = x0.map({ case (v, v0) => FuncOf(Function("old", None, Real, Real), v) -> v0 })
+      val olds = x0.map({ case (v, v0) => FuncOf(TacticReservedSymbols.old, v) -> v0 })
       val diffInvariants = replace(pushOld(combineDiffInvariants(pl.diffInvariants.toList, plant, Map())), olds)
 
       val odeGuard = if (evolDomain == True) diffInvariants else And(evolDomain, diffInvariants)
