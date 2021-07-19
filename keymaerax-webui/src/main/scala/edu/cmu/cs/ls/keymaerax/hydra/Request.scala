@@ -1195,7 +1195,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
     case Imply(_, Box(prg, _)) =>
-      createMonitorCondition(modelFml, stateVars) match {
+      createMonitorCondition(modelFml, stateVars, Map.empty) match {
         case Left((monitorConjecture, monitorCond, _)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
 
@@ -1248,11 +1248,12 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`.
     * Returns the monitor conjecture together with the synthesized monitor, or an error. */
-  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
+  private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable],
+                                     unobservable: Map[Variable, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
-    val mx = ModelPlex.mxSynthesize(monitorKind) & ModelPlex.mxAutoInstantiate(assumptions) &
-      ModelPlex.mxSimplify & ModelPlex.mxFormatShape(monitorShape)
+    val mx = ModelPlex.mxSynthesize(monitorKind) & ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList) &
+      ModelPlex.mxSimplify(1) & ModelPlex.mxFormatShape(monitorShape)
 
     val monitorCond = try {
       TactixLibrary.proveBy(modelplexInput, mx)
@@ -1268,7 +1269,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val Imply(_, Box(prg, _)) = modelFml
-    createMonitorCondition(modelFml, vars) match {
+    createMonitorCondition(modelFml, vars, Map.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) =>
         conditionKind match {
           case "dL" =>
@@ -1317,20 +1318,21 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val model = db.getModel(modelId)
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val unobservable = Map.empty[Variable, Option[Formula]]
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
-            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
+            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList)(1)))
         } catch {
           case _: Throwable => foResult
         }
       case ("model", tool) => TactixLibrary.proveBy(modelplexInput,
         ModelPlex.modelMonitorByChase(1) &
         SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
-        ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
+        ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList)(1)
       )
     }
 

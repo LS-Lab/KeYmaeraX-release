@@ -19,10 +19,10 @@ class TestSynthesisTests extends TacticTestBase {
 
   "Test synthesis" should "generate test cases without safety margin" in withMathematica { tool =>
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -41,10 +41,10 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "generate test cases with safety margin in some range" in withMathematica { tool =>
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -64,10 +64,10 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "generate no tests when safety margin range is invalid" in withMathematica { tool =>
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=2;]x>=2".asFormula, Variable("x"))
+      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -82,10 +82,10 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "find the maximum safety margin range" in withMathematica { tool =>
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -99,10 +99,10 @@ class TestSynthesisTests extends TacticTestBase {
   //@todo cannot reparse number 1.5E-14
   it should "find the maximum even when safety margin range is a point" ignore withMathematica { tool =>
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=2;]x>=2".asFormula, Variable("x"))
+      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 

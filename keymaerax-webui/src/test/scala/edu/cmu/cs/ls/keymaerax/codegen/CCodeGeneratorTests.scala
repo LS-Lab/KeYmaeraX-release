@@ -472,14 +472,13 @@ class CCodeGeneratorTests extends TacticTestBase {
     //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
     val baseDir = System.getProperty("TEST_BASE_DIR")
     val model = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Theorem 1: Safety").head.model.asInstanceOf[Formula]
-    val Imply(_, Box(prg, _)) = model
 
-    val stateVars = ("xg"::"yg"::"v"::"a"::"t"::"vl"::"vh"::"k"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars:_*)
+    val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
     val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
       SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
     val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
       DebuggingTactics.print("Quantifiers instantiated") &
       simplifier(1) & DebuggingTactics.print("Simplified")
     val result = proveBy(modelplexInput, tactic)
@@ -632,13 +631,13 @@ class CCodeGeneratorTests extends TacticTestBase {
     approx._1 shouldBe "T()>0&eps()>0&A()>0&B()>0&v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10))->[{{{xg:=*;yg:=*;vl:=*;vh:=*;k:=*;a:=*;?xg>=0&k>=0|xg<=0&k<=0;?yg>0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl);?(-B()<=a&a<=A())&10*v+a*T()>=0&(v<=vh&10*v+a*T()<=10*vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10))&(vl<=v&10*v+a*T()>=10*vl|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(yg-10*eps())*(100*100)*(10*10));}t:=0;}{t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));{t:=*;v:=*;xg:=*;yg:=*;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));}*](v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))".asFormula
 
     // modelplex
-    val stateVars = ("xg"::"yg"::"v"::"a"::"t"::"vl"::"vh"::"k"::"t_0"::"xg_0"::"v_0"::"yg_0"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars:_*)
+    val stateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","xg_0","v_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, Map.empty)
     val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
       SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
 
     val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
       DebuggingTactics.print("Quantifiers instantiated") &
       simplifier(1) & DebuggingTactics.print("Simplified")
 
@@ -659,8 +658,8 @@ class CCodeGeneratorTests extends TacticTestBase {
   "Compiled controller monitor" should "evaluate boolean correctly" taggedAs TodoTest in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
-    val vars =
-      ("a"::"dx"::"dy"::"r"::"v"::"w"::"x"::"y"::"xo"::"yo"::"dxo"::"dyo"::"t"::"a_0"::"dxo_0"::"dyo_0"::"r_0"::"w_0"::"xo_0"::"yo_0"::Nil).map(_.asVariable.asInstanceOf[BaseVariable]).toSet
+    val vars = List("a","dx","dy","r","v","w","x","y","xo","yo","dxo","dyo","t","a_0","dxo_0","dyo_0","r_0","w_0",
+      "xo_0","yo_0").map(_.asVariable.asInstanceOf[BaseVariable]).toSet
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)
     val monitorCode = genCode._1 + "\n\n" + genCode._2
 
