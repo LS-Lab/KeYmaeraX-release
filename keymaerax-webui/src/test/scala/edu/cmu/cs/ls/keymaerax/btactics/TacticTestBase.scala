@@ -342,8 +342,9 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, subst: USubst): ProvableSig = {
-    val v = BelleProvable.plain(ProvableSig.startProof(s))
+  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, defs: Declaration): ProvableSig = {
+    val v = BelleProvable.withDefs(ProvableSig.startProof(s), defs)
+    val subst = USubst(defs.substs)
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
         dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ subst) shouldBe s.exhaustiveSubst(dsp.subst ++ subst)
@@ -357,14 +358,14 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     }
   }
   def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit): ProvableSig = {
-    proveByS(s, tactic, labelCheck, USubst(Nil))
+    proveByS(s, tactic, labelCheck, Declaration(Map.empty))
   }
-  def proveByS(s: Sequent, tactic: BelleExpr, subst: USubst): ProvableSig = {
-    proveByS(s, tactic, _ => {}, subst)
+  def proveByS(s: Sequent, tactic: BelleExpr, defs: Declaration): ProvableSig = {
+    proveByS(s, tactic, _ => {}, defs)
   }
 
-  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, subst: USubst = USubst(Nil)): ProvableSig = {
-    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, subst)
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
+    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, defs)
   }
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
@@ -484,7 +485,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
       qeDurationListener.reset()
       val start = System.currentTimeMillis()
-      val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
+      val proof = proveBy(entry.model.asInstanceOf[Formula], tactic, defs = entry.defs)
       val end = System.currentTimeMillis()
       val qeDuration = qeDurationListener.duration
 

@@ -722,7 +722,7 @@ class ScriptedRequestTests extends TacticTestBase {
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs)
-            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, subst = USubst(entry.defs.substs)) shouldBe 'proved
+            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
             println("Done reproving")
         }
         println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")

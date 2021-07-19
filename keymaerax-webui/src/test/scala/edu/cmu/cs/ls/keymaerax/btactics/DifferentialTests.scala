@@ -289,7 +289,7 @@ class DifferentialTests extends TacticTestBase {
   it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
     proveByS("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1), _.value should contain theSameElementsAs List(
       BelleLabels.dIInit, BelleLabels.dIStep
-    ), USubst("a()~>a".asSubstitutionPair :: Nil)).subgoals should contain theSameElementsInOrderAs
+    ), "a()~>a".asDeclaration).subgoals should contain theSameElementsInOrderAs
       "x>=a()&a()>=0, true ==> x>=a()".asSequent ::
       "x>=a()&a()>=0, true ==> [x':=a();]x'>=0".asSequent :: Nil
   }

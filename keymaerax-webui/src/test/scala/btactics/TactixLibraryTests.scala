@@ -763,8 +763,8 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "use recorded substitutions" in withTactics {
     val lemmaName = "tests/useLemma/tautology2"
-    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
-    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    val defs = "f(x) ~> x^2".asDeclaration
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(USubst(defs.substs)) & prop, defs = defs)
     lemma shouldBe 'proved
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("tactic" -> """US("f(x)~>x^2"); prop"""))::Nil),
@@ -784,8 +784,8 @@ class TactixLibraryTests extends TacticTestBase {
         |Problem f(x)>0->f(x)>0 End.
         |End.""".stripMargin).head
     val subst = USubst(entry.defs.substs)
-    val SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
-    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, Expand(f, entry.defs.substs.head) & prop, subst=subst)
+    val s@SubstitutionPair(FuncOf(f, _), _) = subst.subsDefsInput.head
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, Expand(f, s) & prop, defs = entry.defs)
     lemma shouldBe 'proved
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
       Lemma.requiredEvidence(lemma, ToolEvidence(List("model" -> entry.fileContent, "tactic" -> """expand "f"; prop"""))::Nil),
@@ -798,8 +798,8 @@ class TactixLibraryTests extends TacticTestBase {
 
   it should "cut in lemma conclusion as assumption when lemma doesn't close" in withTactics {
     val lemmaName = "tests/useLemma/tautology2"
-    val subst = USubst("f(x) ~> x^2".asSubstitutionPair :: Nil)
-    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(subst) & prop, subst=subst)
+    val defs = "f(x) ~> x^2".asDeclaration
+    val lemma = proveBy("f(x)>0 -> f(x)>0".asFormula, US(USubst(defs.substs)) & prop, defs = defs)
     lemma shouldBe 'proved
     lemma.conclusion shouldBe "==> x^2>0 -> x^2>0".asSequent
     LemmaDBFactory.lemmaDB.add(Lemma(lemma,
