@@ -983,7 +983,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val diffCuts = "(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))".asFormula
     val expectedEvolutionDomain = And("v>=0&t<=T()".asFormula, diffCuts)
 
-    val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox("Waypoint", entry.tactics.head._3)(model)
+    val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox("Waypoint", entry.tactics.head._3, entry.defs)(model)
     val Imply(init, Box(Loop(Compose(
     ctrl,
     plant@Compose(x0Ghosts, Compose(Test(x0EvolDomain), Compose(nondetPlant, Test(evolDomain)))))), safe)) = nonlinearModelApprox._1

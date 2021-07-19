@@ -21,6 +21,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
@@ -309,7 +310,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Creates a model with the ODE approximated by the evolution domain and diff. invariants from the `tactic`.
     * Returns the adapted model and a tactic to proof safety from the original proof. */
-  def createNonlinearModelApprox(name: String, tactic: BelleExpr): (Expression => (Formula, BelleExpr)) = {
+  def createNonlinearModelApprox(name: String, tactic: BelleExpr, defs: Declaration): Expression => (Formula, BelleExpr) =
+      defs.exhaustiveSubst(_) match {
     case fml@Imply(init, Box(Loop(prg), safe)) =>
       val (ctrl, plant, evolDomain, measure) = prg match {
         case Compose(c, p@ODESystem(_, q)) => (c, p, q, None)
@@ -323,7 +325,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val nondetPlant = plantVars.map(AssignAny).sortBy[NamedSymbol](_.x).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, /*q, */x0)
-      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.plain(ProvableSig.startProof(fml))) match {
+      LazySequentialInterpreter(pl::/*qeDurationListener::*/Nil)(tactic, BelleProvable.withDefs(ProvableSig.startProof(fml), defs)) match {
         case BelleProvable(proof, _, _) => assert(proof.isProved, "Cannot derive a nonlinear model from unfinished proof")
         case _ => assert(assertion = false, "Cannot derive a nonlinear model from unfinished proof")
       }
