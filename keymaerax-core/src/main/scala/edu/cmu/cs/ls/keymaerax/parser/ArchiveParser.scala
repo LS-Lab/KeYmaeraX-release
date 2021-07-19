@@ -228,7 +228,8 @@ trait ArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def parseAsFormula(in: InputStream): Formula = parseAsFormula(io.Source.fromInputStream(in).mkString)
 
   /** Reads a specific entry from the archive. */
-  def getEntry(name: String, content: String): Option[ParsedArchiveEntry] = parse(content).find(_.name == name)
+  def getEntry(name: String, content: String, parseTactics: Boolean = true): Option[ParsedArchiveEntry] =
+    parse(content, parseTactics).find(_.name == name)
 
   /** Parses a single entry. */
   def parseProblem(input: String, parseTactics: Boolean = true): ParsedArchiveEntry = {
