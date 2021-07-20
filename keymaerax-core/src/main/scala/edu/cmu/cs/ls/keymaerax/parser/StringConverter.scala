@@ -70,7 +70,8 @@ class StringConverter(val s: String) {
       Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, Some(args), Some(repl), UnknownLocation)
     }
 
-    Declaration(s.split("::").map(new StringConverter(_).asSubstitutionPair).map({
+    Declaration(s.trim.stripSuffix("nil").trim.stripSuffix("::").split("::").
+        map(new StringConverter(_).asSubstitutionPair).map({
       case SubstitutionPair(FuncOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
       case SubstitutionPair(PredOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
     }).toMap)
