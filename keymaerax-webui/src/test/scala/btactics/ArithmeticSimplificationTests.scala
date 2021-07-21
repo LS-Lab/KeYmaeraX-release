@@ -334,4 +334,9 @@ class ArithmeticSimplificationTests extends TacticTestBase {
     smartHidden.subgoals.loneElement shouldBe "v>=0, -B<0, v^2<=2*B*(m-x), v<0 ==> x<=m".asSequent
     proveBy(smartHidden.subgoals.loneElement, QE) shouldBe 'proved
   }
+
+  "smartQE" should "support using notation" in withMathematica { _ =>
+    proveBy("a^2<=1, abs(x)<=a, b=2 ==> abs(x)^2<=1".asSequent,
+      """ smartQE using "a^2<=1 :: abs(x)<=a :: abs(x)^2<=1 :: nil" """.asTactic) shouldBe 'proved
+  }
 }

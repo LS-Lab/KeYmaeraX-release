@@ -54,7 +54,7 @@ private object ToolTactics {
   // was  "assertNoCEX"
   lazy val assertNoCex: BelleExpr = anon ((sequent: Sequent) => {
     val removeUscorePred: Formula => Boolean = {
-      case PredOf(Function(name, _, _, _, _), Nothing) => name.last != '_'
+      case PredOf(Function(name, _, _, _, _), _) => name.last != '_'
       case _ => true
     }
     Try(findCounterExample(sequent.copy(ante = sequent.ante.filter(removeUscorePred),
