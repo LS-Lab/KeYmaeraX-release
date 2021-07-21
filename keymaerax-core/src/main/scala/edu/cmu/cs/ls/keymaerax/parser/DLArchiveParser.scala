@@ -229,6 +229,12 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    *    Real exp(Real x) = y <-> \forall t. \forall e. t=0 && e=1 &&
    *                             ((<t'=1,e'=e> x=t && y=e) || (<t'=-1,e'=-e> x=t && y=e));
    *  End.
+   *
+   *  Note that implicitly defined functions can be given directly
+   *  via the f<<interp>>(...) syntax, but the syntax here avoids
+   *  the need for dot terms and introduces a substitution of the
+   *  uninterpreted function for the interpreted function (at
+   *  elaboration).
    */
   def implicitDefs[_: P]: P[Declaration] = {
     P("ImplicitDefinitions" ~~ blank ~/

@@ -256,7 +256,7 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def func[_: P]: P[FuncOf] = P(ident ~~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
+  def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) => FuncOf(Function(s,idx,ts.sort,Real,interp), ts)})
   def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
@@ -298,8 +298,8 @@ class DLParser extends Parser {
   // formula parser
   //*****************
 
-  def pred[_: P]: P[PredOf] = P(ident ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
-    map({case (s,idx,ts) => PredOf(Function(s,idx,ts.sort,Bool), ts)})
+  def pred[_: P]: P[PredOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
+    map({case (s,idx,interp,ts) => PredOf(Function(s,idx,ts.sort,Bool,interp), ts)})
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
   def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
