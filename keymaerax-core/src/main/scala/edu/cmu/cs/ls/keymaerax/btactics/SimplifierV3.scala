@@ -581,7 +581,7 @@ object SimplifierV3 {
   private lazy val andSplit : DependentTactic = anon {(sequent: Sequent) => {
       val anteLen = sequent.ante.length
       assert(anteLen > 0)
-      val finder = new Find(0, None, AntePosition(anteLen))
+      val finder = Find.FindLAfter(None, AntePosition(anteLen))
       SaturateTactic(andL(finder))
     }
   }

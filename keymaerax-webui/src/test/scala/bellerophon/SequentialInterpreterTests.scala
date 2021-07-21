@@ -32,7 +32,7 @@ import org.scalatest.OptionValues._
 class SequentialInterpreterTests extends TacticTestBase {
 
   "Locators" should "apply searchy with sub-positions" in withTactics {
-    inside(theInterpreter(composeb(Find.FindR(0, Some("[x:=2;][y:=*;?y>=x;]y>=2".asFormula), PosInExpr(1::Nil), exact=true)),
+    inside(theInterpreter(composeb(Find.FindRPlain("[x:=2;][y:=*;?y>=x;]y>=2".asFormula, PosInExpr(1::Nil))),
       BelleProvable.plain(ProvableSig.startProof("==> [x:=2;][y:=*;?y>=x;]y>=2".asSequent)))) {
       case BelleProvable(p, _, _) =>
         p.subgoals.loneElement shouldBe "==> [x:=2;][y:=*;][?y>=x;]y>=2".asSequent

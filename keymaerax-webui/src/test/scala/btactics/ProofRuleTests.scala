@@ -1,11 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.Find
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
+import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import org.scalatest.LoneElement._
 
-import scala.collection.immutable
+import scala.collection.immutable._
 import org.scalatest.OptionValues._
 
 /**
@@ -16,9 +18,7 @@ class ProofRuleTests extends TacticTestBase {
   "Axiomatic" should "support axiomatic rules" in withQE { _ =>
     val result = proveBy("[a_;]p_(||) ==> [a_;]q_(||)".asSequent,
       TactixLibrary.by(ProvableInfo("[] monotone"), USubst(Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "p_(||)".asFormula
-    result.subgoals.head.succ should contain only "q_(||)".asFormula
+    result.subgoals.loneElement shouldBe "p_(||) ==> q_(||)".asSequent
   }
 
   it should "use the provided substitution for axiomatic rules" in withQE { _ =>
@@ -28,9 +28,7 @@ class ProofRuleTests extends TacticTestBase {
           SubstitutionPair(ProgramConst("a_"), Test("x>5".asFormula))::
           SubstitutionPair("p_(||)".asFormula, "x>2".asFormula)::
           SubstitutionPair("q_(||)".asFormula, "x>0".asFormula)::Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>2".asFormula
-    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.loneElement shouldBe "x>2 ==> x>0".asSequent
   }
 
   it should "support axioms" in withTactics {
@@ -55,25 +53,27 @@ class ProofRuleTests extends TacticTestBase {
   import SequentCalculus._
   "hideR" should "hide sole formula in succedent" in withTactics {
     val result = proveBy("a=2".asFormula, hideR(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq())
   }
 
   it should "hide first formula in succedent" in withTactics {
-    val result = proveBy(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "b=3".asFormula)),
-      hideR(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "b=3".asFormula
+    proveBy("==> a=2, b=3".asSequent, hideR(1)).subgoals.loneElement shouldBe "==> b=3".asSequent
   }
 
   it should "hide last formula in succedent" in withTactics {
-    val result = proveBy(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "b=3".asFormula)),
-      hideR(2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "a=2".asFormula
+    proveBy("==> a=2, b=3".asSequent, hideR(2)).subgoals.loneElement shouldBe "==> a=2".asSequent
+  }
+
+  it should "hide verbatim occurrences of definitions" in withTactics {
+    proveBy("==> p(), q()".asSequent, hideR(Find(0, Some("p()".asFormula), SuccPosition.base0(0), exact=true,
+      "p() ~> 0>1 :: q() ~> 1>0 :: nil".asDeclaration))
+    ).subgoals.loneElement shouldBe "==> q()".asSequent
+  }
+
+  it should "try to expand definitions" in withTactics {
+    proveBy("==> 0>1, 1>0".asSequent, hideR(Find(0, Some("p()".asFormula), SuccPosition.base0(0), exact=true,
+      "p() ~> 0>1 :: q() ~> 1>0 :: nil".asDeclaration))
+    ).subgoals.loneElement shouldBe "==> 1>0".asSequent
   }
 
   "Automatic core tactics labelling" should "provide labels for andR" in withTactics {

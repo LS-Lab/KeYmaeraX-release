@@ -648,7 +648,7 @@ object BelleParser extends TacticParser with Logging {
           val expectedInputs = DerivationInfo(codeName).persistentInputs
           if (nonPosArgCount >= expectedInputs.length) throw ParseException(
             s"Too many expr arguments were passed to $codeName (expected ${expectedInputs.map(_.name)} but found at least ${nonPosArgCount + 1} arguments)", loc)
-          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)))(tok, loc) match {
+          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)), defs)(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case Left(v: List[Any]) => Left(v.map({
               case e: Expression => expand(e)
@@ -665,12 +665,12 @@ object BelleParser extends TacticParser with Logging {
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, l2)
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, l2)
           }
-          Right(parsePositionLocator(posString, l1.spanTo(l2), Some(what), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(parsePositionLocator(posString, l1.spanTo(l2), Some(what), exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
         case BelleToken(p: BASE_POSITION, l1)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, l2)::tail =>
-          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression)), exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
         case BelleToken(p: BASE_POSITION, l1)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION_SUB, l2)::tail =>
-          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression._1)), expr.expression._2, exact=matchKind==EXACT_MATCH)) +: arguments(tail)
-        case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
+          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression._1)), expr.expression._2, exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
+        case tok::tail => parseArgumentToken(None, defs)(tok, UnknownLocation) +: arguments(tail)
       }
 
       (arguments(removeCommas(argList, commaExpected=false)), remainder)
@@ -699,14 +699,14 @@ object BelleParser extends TacticParser with Logging {
     * @param tok The argument token that's currently being processed.
     * @return The argument corresponding to the current token.
     */
-  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok: BelleToken, loc: Location): TacticArg = tok.terminal match {
+  private def parseArgumentToken(expectedType: Option[ArgInfo], defs: Declaration)(tok: BelleToken, loc: Location): TacticArg = tok.terminal match {
     case terminal: TACTIC_ARGUMENT => terminal match {
-      case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_ANTECEDENT(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_SUCCEDENT(posString)  => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_EVERYWHERE(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
+      case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_ANTECEDENT(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_SUCCEDENT(posString)  => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_EVERYWHERE(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
       case tok: BELLE_EXPRESSION =>
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
         parseArg(expectedType.get, tok.undelimitedExprString, loc)
@@ -764,22 +764,23 @@ object BelleParser extends TacticParser with Logging {
     * Public because this is a useful utility function.
     *
     * @see [[parseArgumentToken]] */
-  def parsePositionLocator(s: String, location: Location, shape: Option[Expression], exact: Boolean): PositionLocator = {
+  def parsePositionLocator(s: String, location: Location, shape: Option[Expression], exact: Boolean,
+                           defs: Declaration): PositionLocator = {
     val subPositionStrings = s.split('.')
     val subPositions = subPositionStrings.tail.map(parseInt(_, location, nonZero=false))
-    parsePositionLocator(subPositionStrings.head, location, shape, PosInExpr(subPositions.toList), exact)
+    parsePositionLocator(subPositionStrings.head, location, shape, PosInExpr(subPositions.toList), exact, defs)
   }
 
   /** Parses a position locator string. */
   def parsePositionLocator(s: String, location: Location, shape: Option[Expression], sub: PosInExpr,
-                           exact: Boolean): PositionLocator = s match {
+                           exact: Boolean, defs: Declaration): PositionLocator = s match {
     //@note goal index is always 0 because we operate on single-subgoal provables
     //      could extend notation to 'L@1 or 'L@label
     case "'Llast" => LastAnte(0, sub)
     case "'Rlast" => LastSucc(0, sub)
-    case "'L" => Find.FindL(0, shape, sub, exact)
-    case "'R" => Find.FindR(0, shape, sub, exact)
-    case "'_" => new Find(0, shape, AntePosition.base0(0, sub), exact)
+    case "'L" => Find.FindL(0, shape, sub, exact, defs)
+    case "'R" => Find.FindR(0, shape, sub, exact, defs)
+    case "'_" => new Find(0, shape, AntePosition.base0(0, sub), exact, defs)
     case i => Fixed(parseInt(i, location), sub.pos, shape, exact)
   }
 

@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent, Term}
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -97,7 +98,10 @@ object Fixed {
 }
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
-case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
+case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean,
+                defs: Declaration) extends PositionLocator {
+  private lazy val substShape = shape.map(defs.exhaustiveSubst[Expression])
+
   /** Prints the string representation of the sub-position (`inExpr`) of position `p`. */
   private def sub(p: Position): String = if (p.isTopLevel) "" else p.inExpr.prettyString
   /** @inheritdoc */
@@ -126,16 +130,22 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
   final def findPosition(s: Sequent, pos: Position): Option[Position] = {
     require(start.isIndexDefined(s), "Find must point to a valid position in the sequent, but " + start.prettyString + " is undefined in " + s.prettyString)
     shape match {
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, s(pos.top)).isDefined => Some(pos)
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, s(pos.top)).isEmpty =>
-        val nextPos = pos.advanceIndex(1)
-        if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
-        else None
-      case Some(f: Formula) if exact && s(pos.top) == f => Some(pos)
-      case Some(f: Formula) if exact && s(pos.top) != f =>
-        val nextPos = pos.advanceIndex(1)
-        if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
-        else None
+      case Some(f: Formula) =>
+        if (!exact) {
+          if (UnificationMatch.unifiable(f, s(pos.top)).isDefined) {
+            Some(pos)
+          } else {
+            val nextPos = pos.advanceIndex(1)
+            if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
+            else None
+          }
+        } else if (s(pos.top) == f || defs.exhaustiveSubst(s(pos.top)) == substShape.get) {
+          Some(pos)
+        } else  {
+          val nextPos = pos.advanceIndex(1)
+          if (nextPos.isIndexDefined(s)) findPosition(s, nextPos)
+          else None
+        }
       case Some(t: Term) =>
         val tPos = FormulaTools.posOf(s(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
         if (tPos.isEmpty) findPosition(s, pos.advanceIndex(1))
@@ -147,9 +157,29 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
 
 object Find {
   /** 'L Find somewhere on the left meaning in the antecedent */
-  def FindL(goal: Int, shape: Option[Expression], sub: PosInExpr = HereP, exact: Boolean = true): Find = new Find(goal, shape, AntePosition.base0(0, sub), exact)
+  def FindL(goal: Int, shape: Option[Expression], sub: PosInExpr, exact: Boolean, defs: Declaration): Find =
+    new Find(goal, shape, AntePosition.base0(0, sub), exact, defs)
+  def FindLDef(shape: Expression, sub: PosInExpr, defs: Declaration): Find =
+    new Find(0, Some(shape), AntePosition.base0(0, sub), exact=true, defs)
+  def FindLPlain(shape: Expression, sub: PosInExpr): Find = FindLDef(shape, sub, Declaration(Map.empty))
+  def FindLPlain(shape: Expression): Find = FindLPlain(shape, HereP)
+  val FindLFirst: Find = new Find(0, None, AntePosition.base0(0), exact=true, Declaration(Map.empty))
+  def FindLMatch(shape: Expression): Find =
+    new Find(0, Some(shape), AntePosition.base0(0), exact=false, Declaration(Map.empty))
+  def FindLAfter(shape: Option[Expression], start: AntePosition): Find =
+    new Find(0, shape, start, exact=true, Declaration(Map.empty))
   /** 'R Find somewhere on the right meaning in the succedent */
-  def FindR(goal: Int, shape: Option[Expression], sub: PosInExpr = HereP, exact: Boolean = true): Find = new Find(goal, shape, SuccPosition.base0(0, sub), exact)
+  def FindR(goal: Int, shape: Option[Expression], sub: PosInExpr, exact: Boolean, defs: Declaration): Find =
+    new Find(goal, shape, SuccPosition.base0(0, sub), exact, defs)
+  def FindRDef(shape: Expression, sub: PosInExpr, defs: Declaration): Find =
+    new Find(0, Some(shape), SuccPosition.base0(0, sub), exact=true, defs)
+  def FindRPlain(shape: Expression, sub: PosInExpr): Find = FindRDef(shape, sub, Declaration(Map.empty))
+  def FindRPlain(shape: Expression): Find = FindRPlain(shape, HereP)
+  val FindRFirst: Find = new Find(0, None, SuccPosition.base0(0), exact=true, Declaration(Map.empty))
+  def FindRMatch(shape: Expression): Find =
+    new Find(0, Some(shape), SuccPosition.base0(0), exact=false, Declaration(Map.empty))
+  def FindRAfter(shape: Option[Expression], start: SuccPosition): Find =
+    new Find(0, shape, start, exact=true, Declaration(Map.empty))
 }
 
 /** 'Llast Locates the last position in the antecedent. */

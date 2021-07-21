@@ -572,7 +572,7 @@ object TaylorModelTactics extends Logging {
             implyL('L) &
             Idioms.<(
               cohideOnlyR(2) & prop & done,
-              cohideOnlyL(Find(0, Some("P_() & Q_()".asFormula), AntePosition(1), false)) &
+              cohideOnlyL(Find.FindLMatch("P_() & Q_()".asFormula)) &
                 implyRi()(AntePosition(1), SuccPosition(1)) &
                 debugTac("refine it!") &
                 tocTac("to refine") &

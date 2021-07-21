@@ -766,8 +766,8 @@ object RestApi extends Logging {
     val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
       get { parameters('stepwise.as[Boolean]) { stepwise =>
         val pos = where match {
-          case "R" => Find.FindR(0, None)
-          case "L" => Find.FindL(0, None)
+          case "R" => Find.FindRFirst
+          case "L" => Find.FindLFirst
           case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
         }
         val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
@@ -788,8 +788,8 @@ object RestApi extends Logging {
               BelleTermInput(paramValue, paramInfo)
             })
           val pos = where match {
-            case "R" => Find.FindR(0, None)
-            case "L" => Find.FindL(0, None)
+            case "R" => Find.FindRFirst
+            case "L" => Find.FindLFirst
             case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
           }
           val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)

@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -329,17 +330,18 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     */
   //@todo turn into properly type-checkable locator arguments without going crazy long.
   final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
-    case 'L => apply(FindL(0, None))
-    case 'R => apply(FindR(0, None))
+    case 'L => apply(FindL(0, None, HereP, exact=true, Declaration(Map.empty)))
+    case 'R => apply(FindR(0, None, HereP, exact=true, Declaration(Map.empty)))
     case '_ => this match {
-      case _: LeftTactic => apply(FindL(0, None))
-      case _: RightTactic => apply(FindR(0, None))
+      case _: LeftTactic => apply(FindL(0, None, HereP, exact=true, Declaration(Map.empty)))
+      case _: RightTactic => apply(FindR(0, None, HereP, exact=true, Declaration(Map.empty)))
       case _ => throw new IllFormedTacticApplicationException("Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     case 'Llast => apply(LastAnte(0, inExpr))
     case 'Rlast => apply(LastSucc(0, inExpr))
   }
-  final def apply(locator: Symbol): T = apply(locator, PosInExpr.HereP)
+  final def apply(locator: Symbol): T = apply(locator, HereP)
+
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
     *
@@ -354,20 +356,21 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply()]]
     */
-  final def apply(locator: Symbol, expected: Expression): T = locator match {
-    case 'L => apply(FindL(0, Some(expected)))
-    case 'Llike => apply(FindL(0, Some(expected), exact=false))
-    case 'R => apply(FindR(0, Some(expected)))
-    case 'Rlike => apply(FindR(0, Some(expected), exact=false))
+  final def apply(locator: Symbol, expected: Expression, defs: Declaration): T = locator match {
+    case 'L => apply(FindL(0, Some(expected), HereP, exact=true, defs))
+    case 'Llike => apply(FindL(0, Some(expected), HereP, exact=false, defs))
+    case 'R => apply(FindR(0, Some(expected), HereP, exact=true, defs))
+    case 'Rlike => apply(FindR(0, Some(expected), HereP, exact=false, defs))
     case '_ => this match {
-      case _: LeftTactic => apply(FindL(0, Some(expected)))
-      case _: RightTactic => apply(FindR(0, Some(expected)))
+      case _: LeftTactic => apply(FindL(0, Some(expected), HereP, exact=true, defs))
+      case _: RightTactic => apply(FindR(0, Some(expected), HereP, exact=true, defs))
       case _ => throw new IllFormedTacticApplicationException("Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
     case 'Llast => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
     case 'Rlast => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
   }
+  final def apply(locator: Symbol, expected: Expression): T = apply(locator, expected, Declaration(Map.empty))
 
 }
 
@@ -494,7 +497,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           }
         case None => positionTactic.computeResult(provable, pos)
       }
-      case l@Find(_, _, start, _) =>
+      case l@Find(_, _, start, _, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(provable, l, new TacticInapplicableFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
@@ -520,7 +523,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
             case Some(pos) =>
               provable.subgoals(locator.goal).sub(pos) match {
                 case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-                case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact))
+                case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
               }
             case None => None
           }
@@ -675,7 +678,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           }
         case None => pt.factory(pos).computeExpr(BelleProvable(provable, labels, defs))
       }
-      case l@Find(_, _, start, _) =>
+      case l@Find(_, _, start, _, _) =>
         tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => pt.factory(AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub))
@@ -731,7 +734,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               case Some(pos) =>
                 provable.subgoals(locator.goal).sub(pos) match {
                   case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-                  case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact))
+                  case _ => toPos(locator.copy(start = pos.topLevel.advanceIndex(1)))
                 }
               case None => None
             }

@@ -26,13 +26,13 @@ class LocateTests extends TacticTestBase {
   }
 
   it should "locate the first applicable formula after start in antecedent" in withTactics {
-    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Find(0, None, AntePosition(3)))).subgoals.
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Find.FindLAfter(None, AntePosition(3)))).subgoals.
       loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
   it should "locate the first applicable formula of a specific shape" in withTactics {
     proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent,
-      TactixLibrary.andL(Find(0, Some("b=3 & c=4".asFormula), AntePosition(1)))).subgoals.
+      TactixLibrary.andL(Find.FindLPlain("b=3 & c=4".asFormula))).subgoals.
       loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 

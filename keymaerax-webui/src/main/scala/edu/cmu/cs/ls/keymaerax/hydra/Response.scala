@@ -1031,8 +1031,8 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
 
   private def posJson(pos: Option[PositionLocator]): JsValue = pos match {
     case Some(Fixed(p, _, _)) => new JsString(p.toString)
-    case Some(Find(_, _, _: AntePosition, _)) => new JsString("L")
-    case Some(Find(_, _, _: SuccPosition, _)) => new JsString("R")
+    case Some(Find(_, _, _: AntePosition, _, _)) => new JsString("L")
+    case Some(Find(_, _, _: SuccPosition, _, _)) => new JsString("R")
     case _ => JsNull
   }
 
