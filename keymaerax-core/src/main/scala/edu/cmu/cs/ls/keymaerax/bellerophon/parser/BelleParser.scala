@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
@@ -83,6 +83,7 @@ object BelleParser extends TacticParser with Logging {
 
   private val TACTIC_EXPANDS: Regex = "(expand\\s*\"[^\"]*\")|(expandAllDefs)".r
   private val TACTICS_SUBSTS: Regex = """US\([^)]*\)""".r
+  private val TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY = Configuration.getBoolean(Configuration.Keys.TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY).getOrElse(false)
 
   /** Detects whether a tactic string uses `expand "..."` or `expandAllDefs`.  */
   def tacticExpandsDefsExplicitly(s: String): Boolean = TACTIC_EXPANDS.findFirstIn(s).isDefined
@@ -593,7 +594,7 @@ object BelleParser extends TacticParser with Logging {
       try {
         val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
         // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
-        if (expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
+        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
           t.prettyString match {
             case "QE" | "smartQE" | "master" => ExpandAll(defs.substs) & t
             case text =>
