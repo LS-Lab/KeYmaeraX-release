@@ -53,7 +53,12 @@ private object ToolTactics {
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
   lazy val assertNoCex: BelleExpr = anon ((sequent: Sequent) => {
-    Try(findCounterExample(sequent.toFormula)) match {
+    val removeUscorePred: Formula => Boolean = {
+      case PredOf(Function(name, _, _, _, _), Nothing) => name.last != '_'
+      case _ => true
+    }
+    Try(findCounterExample(sequent.copy(ante = sequent.ante.filter(removeUscorePred),
+                                        succ = sequent.succ.filter(removeUscorePred)).toFormula)) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => skip
       case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
