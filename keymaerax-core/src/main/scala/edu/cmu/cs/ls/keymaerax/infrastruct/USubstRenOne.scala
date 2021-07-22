@@ -299,7 +299,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case ODESystem(ode, h) =>
         //@todo improve: could make smaller for substituted DifferentialProgramConst
         //@todo rename boundVars
-        val v = u++boundVars(ode)
+        val v = u++substBoundVars(ode)
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
