@@ -1598,6 +1598,27 @@ object ODELiveness {
     useAt(useFor(curry,PosInExpr(0::Nil),((us:Subst) => us))(Position(1))(vdg),PosInExpr(1::Nil))(pos) & andR(pos)
   })
 
+  /** Wrapper around bDG for display.
+    */
+  @Tactic(names="bDG",
+    longDisplayName="Bounded Differential Ghost",
+    premises="Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- [{x'=f(x) & Q}]P, Δ",
+    displayLevel="browse",
+    inputs = "ghost:expression ;; p:term")
+  def bDG(ghost: Expression, p:Term) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
+    ghost match {
+      case Equal(l: DifferentialSymbol, r) =>
+        ODELiveness.bDG(AtomicODE(l, r), p)(pos)
+      case dp: DifferentialProgram =>
+        ODELiveness.bDG(dp, p)(pos)
+      case ODESystem(dp, _) =>
+        ODELiveness.bDG(dp, p)(pos)
+      case _ =>
+        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
+    }
+  }
+
   /** dDDG rule
     *
     * G |- [ghosts, ODE] (||ghosts||)' <= L ||ghosts|| + M
