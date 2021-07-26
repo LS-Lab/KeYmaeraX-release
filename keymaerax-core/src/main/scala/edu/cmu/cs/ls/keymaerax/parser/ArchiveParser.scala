@@ -148,6 +148,8 @@ case class Declaration(decls: Map[Name, Signature]) {
       case t: Term => ExpressionTraversal.traverse(traverseFn, t)
       case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
       case p: Program => ExpressionTraversal.traverse(traverseFn, p)
+      case _ => throw ParseException("Unknown expression " + e.prettyString + " of kind " + e.kind +
+        " encountered when dotifying", UnknownLocation)
     }
     dots.toSet
   }
@@ -175,6 +177,7 @@ case class Declaration(decls: Map[Name, Signature]) {
             else ProgramConst(name.name)
           case e => throw ParseException("Definition of " + name.name + " is not a program, but a " + e.kind, loc)
         }
+      case _ => throw ParseException("Unknown sort " + sort + " encountered when converting definition to substitution pair", loc)
     }
     val repl = elaborateToFunctions(interpretation) match {
       case r@FuncOf(fn: Function, c) =>
@@ -206,6 +209,10 @@ case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, p
   def isExercise: Boolean = kind=="exercise"
   /** The model with all definitions expanded. */
   def expandedModel: Expression = defs.exhaustiveSubst(model)
+  /** The model as sequent. */
+  def sequent: Sequent = Sequent(
+    scala.collection.immutable.IndexedSeq(),
+    scala.collection.immutable.IndexedSeq(model.asInstanceOf[Formula]))
   /** Return an archive with modified problem contents, otherwise identical./ */
   def withProblemContent(newProblemContent: String): ParsedArchiveEntry =
     ParsedArchiveEntry(name, kind, fileContent, newProblemContent, defs, model, tactics, annotations, info)
@@ -281,6 +288,7 @@ object ArchiveParser extends ArchiveParser {
         val s = StaticSemantics(f)
         (s.bv--s.fv).toSet
       case p: Program => StaticSemantics(p).mbv.toSet
+      case _ => throw ParseException("Unknown expression " + e.prettyString + " of kind " + e.kind + " encountered when computing free base symbols", UnknownLocation)
     })).filterNot(_.isInstanceOf[DifferentialSymbol])
 
 
@@ -368,6 +376,10 @@ object ArchiveParser extends ArchiveParser {
         if (elaboratedDefs.decls.nonEmpty) typeAnalysis(entry.name, elaboratedDefs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         else typeAnalysis(entry.name, declarationsOf(entry.model) ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
+      case (_: Program, a) => throw ParseException("Unsupported annotation " + a.prettyString + " of kind " + a.kind +
+        " encountered, please provide a formula", UnknownLocation)
+      case (e, a) => throw ParseException("Annotation " + a.prettyString + " on " + e.prettyString + " of kind " +
+        e.kind + " not supported, please annotate programs only", UnknownLocation)
     })
 
     entry.copy(
