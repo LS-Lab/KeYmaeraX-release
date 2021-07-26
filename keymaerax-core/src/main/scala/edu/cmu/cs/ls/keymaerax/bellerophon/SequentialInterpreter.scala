@@ -328,11 +328,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
       val subst = (abbr, value) match {
         case (FuncOf(name, arg), t: Term) =>
-          val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-          SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()))
+          val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+          SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
         case (PredOf(name, arg), f: Formula) =>
-          val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-          SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, DotTerm()))
+          val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+          SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
       }
 
       //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
@@ -347,6 +347,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       apply(inner, BelleProvable(in, lbl, defs)) match {
         case p: BelleDelayedSubstProvable =>
           try {
+            val foo = p.p(us)
             new BelleDelayedSubstProvable(provable(p.p(us), 0), p.label, p.defs, p.subst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
