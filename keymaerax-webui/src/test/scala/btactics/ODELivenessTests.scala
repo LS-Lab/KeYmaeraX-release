@@ -40,21 +40,19 @@ class ODELivenessTests extends TacticTestBase {
     val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
     println(vdginst)
 
-    //todo: parsing support
-    // vdginst._1 shouldBe 'proved
-    // vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]v*v+z*z<=f_(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+    vdginst._1 shouldBe 'proved
+    vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]v*v+z*z<=f_(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
 
-    // vdginst._2 shouldBe 'proved
-    // vdginst._2.conclusion shouldBe "==> [{c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+    vdginst._2 shouldBe 'proved
+    vdginst._2.conclusion shouldBe "==> [{c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
   }
 
   it should "get instantiated ddg" in withQE { _ =>
     val ddginst = getDDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
     println(ddginst)
 
-    //todo: parsing support
-    // ddginst shouldBe 'proved
-    // ddginst.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|y_,z_,v,z|)*(v*v+z*z)+b_(|y_,z_,v,z|)->[{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)->[{c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)".asSequent
+    ddginst shouldBe 'proved
+    ddginst.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|y_,z_,v,z|)*(v*v+z*z)+b_(|y_,z_,v,z|)->[{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)->[{c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)".asSequent
   }
 
   it should "vDG on left and right of sequent" in withQE { _ =>
@@ -72,6 +70,25 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe
     "[{a'=a^2+b^3+x+y+100,z'=100&true}]z=1, <{b'=a*b+b*a+1,c'=b+c,a'=x+y+z&true}>a=1 ==> <{z'=z^100*y,y'=z*y^2,x'=1&true}>1+1=3, [{z'=y*a*z+a+b+w,w'=w+z,y'=2&true}]1+1=0".asSequent
+  }
+
+  it should "dDG and bDG nonlinear ghosts on right of sequent" in withQE { _ =>
+
+    val seq = " ==> < {x'=1} > 1+1 = 3 , [{y'=2}] 1+1=0".asSequent
+    val pr = proveBy(seq,
+      dDG("z'=z^2,w'=w*z".asDifferentialProgram,"x^2".asTerm,"y^2".asTerm)(2) <(
+        skip,
+        bDG("u'=u^3".asDifferentialProgram,"x".asTerm)(2)
+      )
+    )
+
+    pr.subgoals.length shouldBe 3
+    pr.subgoals(0) shouldBe
+    " ==>  <{x'=1}>1+1=3, [{z'=z^2,w'=w*z,y'=2}]2*(z*z^2+w*(w*z))<=x^2*(z*z+w*w)+y^2".asSequent
+    pr.subgoals(1) shouldBe
+    " ==>  <{x'=1}>1+1=3, [{u'=u^3,z'=z^2,w'=w*z,y'=2}]u*u<=x".asSequent
+    pr.subgoals(2) shouldBe
+    " ==>  <{x'=1}>1+1=3, [{u'=u^3,z'=z^2,w'=w*z,y'=2}]1+1=0".asSequent
   }
 
   "GEx" should "identity affine form for an ODE" in withQE { _ =>
@@ -964,7 +981,5 @@ class ODELivenessTests extends TacticTestBase {
     println("Tactic size:",TacticStatistics.size(tac))
     pr shouldBe 'proved
   }
-
-
 
 }

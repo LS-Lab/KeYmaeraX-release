@@ -453,7 +453,7 @@ Axiom "/' derive quotient"
 End.
 
 Axiom "chain rule"
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_))' * (g(x_))' )
+	[y_:=g(|y_|);][y_':=1;]( (f(g(|y_|)))' = (f(y_))' * (g(|y_|))' )
 End.
 
 Axiom "^' derive power"
