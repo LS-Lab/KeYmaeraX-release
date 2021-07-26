@@ -28,6 +28,9 @@ case class Declaration(decls: Map[Name, Signature]) {
       (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_, taboo))))
   })).map((declAsSubstitutionPair _).tupled)
 
+  /** Substitution applying all definitions non-recursively (i.e., one level of substitution). */
+  lazy val subst: USubst = USubst(substs)
+
   /** Declared names and signatures as [[NamedSymbol]]. */
   lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case (Name(name, idx), Signature(domain, sort, _, rhs, _)) => sort match {
     case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
@@ -49,6 +52,9 @@ case class Declaration(decls: Map[Name, Signature]) {
 
   /** Joins two declarations. */
   def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
+
+  /** Definitions projected to names. */
+  def project(names: Set[Name]): Declaration = Declaration(decls.filter({ case (n, _) => names.contains(n) }))
 
   /** Finds the definition with `name` and index `idx`. */
   def find(name: String, idx: Option[Int] = None): Option[Signature] = decls.get(Name(name, idx))
