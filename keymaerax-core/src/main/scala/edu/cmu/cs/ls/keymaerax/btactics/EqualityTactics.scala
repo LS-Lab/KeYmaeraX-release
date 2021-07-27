@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -352,16 +352,22 @@ private object EqualityTactics {
    */
   @Tactic(names = "Expand min/max")
   val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
+    case (_, _: Formula) => mapSubpositions(pos, sequent, {
+      case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), _), pp) =>
+        if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp)))
+        else None
+      case _ => None
+    }).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t: Pair))
+        if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
         val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
           useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
-        //@todo IDE check if this key is working correctly?
           (fn match {
-            case "min" => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
-            case "max" => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
+            case InterpretedSymbols.minF.name => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
+            case InterpretedSymbols.maxF.name => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
             case _ => throw new AssertionError("Cannot happen")
           })
       } else {

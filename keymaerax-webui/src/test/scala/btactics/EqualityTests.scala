@@ -383,6 +383,22 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "min_=min__0, x<=y&min__0=x|x>y&min__0=y ==> (min_>=2|y=7)&min_<=10".asSequent
   }
 
+  it should "expand exhaustively when applied to a formula" in withQE { _ =>
+    proveBy("min(x,max(y,y^2)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
+      """y>=y^2&max_=y | y < y^2&max_=y^2,
+        |x<=y^2&min_=x | x>y^2&min_=y^2,
+        |x<=max_&min__0=x | x>max_&min__0=max_
+        |==>
+        |min__0+min_<=2*max_""".stripMargin.asSequent
+    proveBy("min(x,max(y,z)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
+      """y>=y^2&max_=y | y < y^2&max_=y^2,
+        |x<=y^2&min_=x | x>y^2&min_=y^2,
+        |y>=z&max__0=y | y < z&max__0=z,
+        |x<=max__0&min__0=x | x>max__0&min__0=max__0
+        |==>
+        |min__0+min_<=2*max_""".stripMargin.asSequent
+  }
+
   "max" should "expand max(x,y) in succedent" in withQE { _ =>
     val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x>=y&max_=x | x<y&max_=y ==> max_>=5".asSequent
