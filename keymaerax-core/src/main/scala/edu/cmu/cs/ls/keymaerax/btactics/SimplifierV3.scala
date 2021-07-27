@@ -868,10 +868,10 @@ object SimplifierV3 {
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
     ctx.collectFirst(
       {
-        case Equal(tt, n: Number) if tt.equals(t) =>
+        case Equal(tt, n: Number) if !tt.isInstanceOf[Number] && tt == t =>
           impReflexive(
             USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t, n: Number)) :: Nil))
-        case Equal(n: Number, tt) if tt.equals(t) =>
+        case Equal(n: Number, tt) if !tt.isInstanceOf[Number] && tt == t =>
           eqSymmetricImp(
             USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
               SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
