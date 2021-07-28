@@ -65,9 +65,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     //@note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
     val tactic = (kind, ToolProvider.simplifierTool()) match {
-      case ('ctrl, tool) => controllerMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions, Nil)(1)) &
+      case ('ctrl, tool) => controllerMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)) &
         (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
-      case ('model, tool) => modelMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions, Nil)(1)) &
+      case ('model, tool) => modelMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions, Nil, Some(mxSimplify))(1)) &
         (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model; both require a simplification tool")
     }
@@ -102,9 +102,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
   }
 
-  @Tactic(longDisplayName = "ModelPlex Auto Quantifier Instantiation")
-  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[Variable]): InputTactic = inputanon {
-    TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable)(1)),
+  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[Variable], simplifier: Option[DependentPositionTactic]): InputTactic = inputanon {
+    TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable, simplifier)(1)),
       classOf[Throwable], (_: Throwable) => TactixLibrary.skip)
   }
 
@@ -1022,12 +1021,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see[[optimizationOneWithSearchAt]]
     */
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservableVars: List[Variable]): DependentPositionTactic = anon ((pos: Position) => {
-    SaturateTactic(DebuggingTactics.print("Opt. 1 Step") & optimizationOneWithSearchImpl(tool, assumptions, unobservableVars)(pos) & DebuggingTactics.print("Opt. 1 Step Done")) & mxSimplify(pos)
+                                unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic = anon ((pos: Position) => {
+    SaturateTactic(optimizationOneWithSearchImpl(tool, assumptions, unobservableVars, simplifier)(pos)) &
+      simplifier.map(_(pos)).getOrElse(skip)
   })
 
   private def optimizationOneWithSearchImpl(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                            unobservableVars: List[Variable]): DependentPositionTactic =
+                                            unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
     anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1 with instance search"
     def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = anon ((pp: Position, seq: Sequent) => {
@@ -1046,11 +1046,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Forall(xs, Imply(Equal(x, y), q)), pp) =>
           if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
-            Some(useAt(simplForall1, PosInExpr(1::Nil))(pp) & mxSimplify(pp))
+            Some(useAt(simplForall1, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
           } else None
         case (Forall(xs, Imply(Equal(y, x: Variable), q)), pp) =>
           if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
-            Some(useAt(simplForall2, PosInExpr(1::Nil))(pp) & mxSimplify(pp))
+            Some(useAt(simplForall2, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
           } else None
         // @note shapes of ode solution
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
@@ -1059,20 +1059,20 @@ object ModelPlex extends ModelPlexTrait with Logging {
             case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & mxSimplify(pp) |
-               solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & mxSimplify(pp) |
-               mxSimplify(pp ++ PosInExpr(0::Nil)))
+          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
+               solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
+               simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), _)), pp)
           if tool.isDefined && pp.isSucc && t == "t_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
             case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & mxSimplify(pp) |
-            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & mxSimplify(pp) |
-            mxSimplify(pp ++ PosInExpr(0::Nil)))
-        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(unobservableVars)(pp))
-        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(unobservableVars)(pp))
+          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
+            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
+            simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
+        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
+        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
         case _ => None
       })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -1080,17 +1080,19 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
     * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt(unobservableVars: List[Variable]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  private def optimizationOneWithSearchAt(unobservableVars: List[Variable],
+                                          simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
+    anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1 with instance search at"
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
-        useAt(Ax.existsV)(pos) & mxSimplify(pos)
+        useAt(Ax.existsV)(pos) & simplifier.map(_(pos)).getOrElse(skip)
       case Some(Exists(vars, And(Equal(l, r), _))) if pos.isSucc && vars.contains(l) &&
         unobservableVars.intersect(vars).isEmpty =>
         // case from deterministic assignments
         val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
         debug("Running optimization 1 at " + pos + " using equality " + equality) &
-          optimizationOneAt(unobservableVars, equality)(pos) & mxSimplify(pos)
+          optimizationOneAt(unobservableVars, equality)(pos) & simplifier.map(_(pos)).getOrElse(skip)
       case Some(Exists(vars, phi)) if pos.isSucc =>
         // case from nondeterministic assignments
 
@@ -1141,7 +1143,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           case _ if unobservableVars.intersect(vars).isEmpty =>
             synonyms.find(s => StaticSemantics.freeVars(s).intersect(unobservableVars.toSet).isEmpty)
         }
-        optimizationOneAt(unobservableVars, equality.map(v -> _))(pos) & mxSimplify(pos)
+        optimizationOneAt(unobservableVars, equality.map(v -> _))(pos) & simplifier.map(_(pos)).getOrElse(skip)
       case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }

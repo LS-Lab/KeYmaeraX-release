@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
 
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
   * Tests the test synthesis tactics.
   * @author Stefan Mitsch
@@ -21,10 +23,10 @@ class TestSynthesisTests extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
-    val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      DebuggingTactics.print("After Opt. 1")
-      & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("After chase") &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
     val amount = 100
@@ -43,10 +45,10 @@ class TestSynthesisTests extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
-    val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      DebuggingTactics.print("After Opt. 1")
-      & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("After chase") &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
     val amount = 100
@@ -66,10 +68,10 @@ class TestSynthesisTests extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
 
-    val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      DebuggingTactics.print("After Opt. 1")
-      & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("After chase") &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
     val amount = 5
@@ -84,10 +86,10 @@ class TestSynthesisTests extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
 
-    val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      DebuggingTactics.print("After Opt. 1")
-      & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("After chase") &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
     val (Number(lower), Number(upper)) = ts.getSafetyRange(monitor)
@@ -101,10 +103,10 @@ class TestSynthesisTests extends TacticTestBase {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
       "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
 
-    val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      DebuggingTactics.print("After Opt. 1")
-      & SimplifierV2.simpTac(1)).subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      DebuggingTactics.print("After chase") &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    ).subgoals.loneElement
 
     val ts = new TestSynthesis(tool)
     val (Number(lower), Number(upper)) = ts.getSafetyRange(monitor)
