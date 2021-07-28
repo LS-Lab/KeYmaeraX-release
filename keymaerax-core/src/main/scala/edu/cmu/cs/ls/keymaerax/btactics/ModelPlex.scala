@@ -7,8 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.StopTraversal
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, stop}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.mapSubpositions
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -21,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 
 import scala.collection.{immutable, mutable}
@@ -37,6 +37,11 @@ import scala.compat.Platform
  *      In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
 object ModelPlex extends ModelPlexTrait with Logging {
+  private val NAMESPACE = "modelplex"
+
+  // supporting-lemmas
+  lazy val simplForall1: Lemma = AnonymousLemmas.remember("p(f()) -> \\forall x_ (x_=f() -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close, NAMESPACE)
+  lazy val simplForall2: Lemma = AnonymousLemmas.remember("p(f()) -> \\forall x_ (f()=x_ -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close, NAMESPACE)
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
@@ -115,6 +120,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
   def mxFormatShape(shape: String): InputTactic = inputanon ((seq: Sequent) => shape match {
+    //@ performance bottleneck: prop
     case "boolean" => reassociate(seq, nil)
     case "metricprg" => reassociate(seq, ModelPlex.chaseToTests(combineTests = false)(1)*2)
     case "metricfml" => toMetricT(seq.succ.head)
@@ -1016,11 +1022,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see[[optimizationOneWithSearchAt]]
     */
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservableVars: List[Variable]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
-    // was "Optimization 1 with instance search"
-    val simplForall1 = proveBy("p(f()) -> \\forall x_ (x_=f() -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqL2R(-2)(1) & close)
-    val simplForall2 = proveBy("p(f()) -> \\forall x_ (f()=x_ -> p(x_))".asFormula, implyR(1) & allR(1) & implyR(1) & eqR2L(-2)(1) & close)
+                                unobservableVars: List[Variable]): DependentPositionTactic = anon ((pos: Position) => {
+    SaturateTactic(DebuggingTactics.print("Opt. 1 Step") & optimizationOneWithSearchImpl(tool, assumptions, unobservableVars)(pos) & DebuggingTactics.print("Opt. 1 Step Done")) & mxSimplify(pos)
+  })
 
+  private def optimizationOneWithSearchImpl(tool: Option[SimplificationTool], assumptions: List[Formula],
+                                            unobservableVars: List[Variable]): DependentPositionTactic =
+    anon ((pos: Position, sequent: Sequent) => {
+    // was "Optimization 1 with instance search"
     def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = anon ((pp: Position, seq: Sequent) => {
       tool match {
         case None => skip
@@ -1035,8 +1044,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     })
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-        case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))
-        case (Forall(xs, Imply(Equal(_, x), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall2, PosInExpr(1::Nil))(pp))
+        case (Forall(xs, Imply(Equal(x, y), q)), pp) =>
+          if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
+            Some(useAt(simplForall1, PosInExpr(1::Nil))(pp) & mxSimplify(pp))
+          } else None
+        case (Forall(xs, Imply(Equal(y, x: Variable), q)), pp) =>
+          if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
+            Some(useAt(simplForall2, PosInExpr(1::Nil))(pp) & mxSimplify(pp))
+          } else None
         // @note shapes of ode solution
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
             if tool.isDefined && pp.isSucc && t == "t_".asVariable && s == "s_".asVariable =>
@@ -1044,23 +1059,23 @@ object ModelPlex extends ModelPlexTrait with Logging {
             case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |
-               solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) |
-               skip)
+          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & mxSimplify(pp) |
+               solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & mxSimplify(pp) |
+               mxSimplify(pp ++ PosInExpr(0::Nil)))
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), _)), pp)
           if tool.isDefined && pp.isSucc && t == "t_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
             case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
           val transformed = proveBy(edo, partialQE)
-          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |
-            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) |
-            skip)
+          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & mxSimplify(pp) |
+            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & mxSimplify(pp) |
+            mxSimplify(pp ++ PosInExpr(0::Nil)))
         case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(unobservableVars)(pp))
         case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(unobservableVars)(pp))
         case _ => None
       })
-    positions.reduceRightOption[BelleExpr]((a, b) => a & b).getOrElse(skip)
+    positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
@@ -1069,12 +1084,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
     // was "Optimization 1 with instance search at"
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if pos.isSucc && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
-        useAt(Ax.existsV)(pos)
+        useAt(Ax.existsV)(pos) & mxSimplify(pos)
       case Some(Exists(vars, And(Equal(l, r), _))) if pos.isSucc && vars.contains(l) &&
         unobservableVars.intersect(vars).isEmpty =>
         // case from deterministic assignments
         val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
-        debug("Running optimization 1 at " + pos + " using equality " + equality) & optimizationOneAt(unobservableVars, equality)(pos)
+        debug("Running optimization 1 at " + pos + " using equality " + equality) &
+          optimizationOneAt(unobservableVars, equality)(pos) & mxSimplify(pos)
       case Some(Exists(vars, phi)) if pos.isSucc =>
         // case from nondeterministic assignments
 
@@ -1117,14 +1133,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
         //@note prefer x=xpost over first synonym, if no synonyms found instantiate with "xpost"
         val synonyms = vFinder.flattenSynonyms(v)
-        val postEquality = synonyms.find({ case r: BaseVariable => v.name + "post" == r.name case _ => false })
+        val postEquality = synonyms.find({ case r: BaseVariable => postVar(v) == r || postVar(r) == v case _ => false })
         val equality: Option[Term] = postEquality match {
           case Some(_) if unobservableVars.intersect(vars).isEmpty => postEquality
           case _ if unobservableVars.intersect(vars).nonEmpty =>
-            synonyms.find(StaticSemantics.vars(_).intersect(Set(v, postVar(v))).isEmpty)
-          case _ if unobservableVars.intersect(vars).isEmpty => synonyms.headOption
+            synonyms.find(StaticSemantics.freeVars(_).intersect(unobservableVars.toSet ++ Set(v, postVar(v))).isEmpty)
+          case _ if unobservableVars.intersect(vars).isEmpty =>
+            synonyms.find(s => StaticSemantics.freeVars(s).intersect(unobservableVars.toSet).isEmpty)
         }
-        optimizationOneAt(unobservableVars, equality.map(v -> _))(pos)
+        optimizationOneAt(unobservableVars, equality.map(v -> _))(pos) & mxSimplify(pos)
       case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
