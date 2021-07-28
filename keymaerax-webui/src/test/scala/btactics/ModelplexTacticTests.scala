@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{proveBy, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -16,11 +16,10 @@ import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 import testHelper.ParserFactory._
 
 import scala.collection.immutable.IndexedSeq
-
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import java.io.File
 
+import java.io.File
 import edu.cmu.cs.ls.keymaerax.codegen._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
 
@@ -110,16 +109,11 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.loneElement shouldBe "==> \\exists f ((-1<=f&f<=(m()-l)/ep())&(0<=l&0<=ep())&fpost=f&lpost=l&cpost=0)".asSequent
 
     // Opt. 1
-    val opt1Result = TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
-    opt1Result.subgoals.loneElement shouldBe "==> (-1<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&fpost=fpost&lpost=l&cpost=0".asSequent
+    val opt1Result = TactixLibrary.proveBy(foResult.subgoals.head,
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asSequent
 
     report(opt1Result.subgoals.head.succ.head, opt1Result, "Water tank controller monitor (forward chase)")
-
-    // Cleanup
-//    val finalResult = proveBy(opt1Result.subgoals.head.succ.head, chase(3,3)(1))
-//    finalResult.subgoals should have size 1
-//    finalResult.subgoals.head.ante shouldBe empty
-//    finalResult.subgoals.head.succ should contain only "(-1<=fpost&fpost<=(m-l)/ep)&(0<=l&0<=ep) & lpost=l & cpost=0".asFormula
   }
 
   it should "find correct model monitor condition" in withMathematica { tool =>
@@ -130,13 +124,12 @@ class ModelplexTacticTests extends TacticTestBase {
 
     //@todo can steer result depending on where and when we use partial QE
     val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.modelMonitorT)(1) &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) & ModelPlex.mxSimplify(1) &
-      ModelPlex.mxFormatShape("boolean")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val start = System.currentTimeMillis()
     val result = proveBy(modelplexInput, tactic)
     println("Duration: " + (System.currentTimeMillis() - start))
 
-    result.subgoals.loneElement shouldBe "==> (-1)<=fpost&fpost<=(m()-l)/ep()&(0=cpost&(lpost=l&(fpost < 0&(0=ep()&l>=0|ep()>0&l>=0)|ep()>=0&l>=0&fpost>0)|fpost=0&l=lpost&ep()>=0&l>=0)|cpost>0&ep()>=cpost&(l>=0&(fpost=0&l=lpost|lpost=cpost*fpost+l&fpost>0)|lpost=cpost*fpost+l&fpost < 0&cpost*fpost+l>=0))".asSequent
+    result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0=cpost&(lpost=l&(fpost < 0&(0=ep()&l>=0|ep()>0&l>=0)|(ep()>=0&l>=0)&fpost>0)|((fpost=0&l=lpost)&ep()>=0)&l>=0)|(cpost>0&ep()>=cpost)&(l>=0&(fpost=0&l=lpost|lpost=cpost*fpost+l&fpost>0)|(lpost=cpost*fpost+l&fpost < 0)&cpost*fpost+l>=0))".asSequent
   }
 
   it should "find euler model monitor condition" ignore withMathematica { tool =>
@@ -167,7 +160,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
     flipped shouldBe "\\forall x (x=2->\\exists t_ (t_>=0&\\exists e_ (e_>0&\\exists h0_ (h0_>0&\\exists h_ (0 < h_&h_ < h0_&((t_>=0&\\exists y_ (abs(x-y_) < e_&xpost()=y_))|(t_>=0&\\exists y_ (abs(x+h_*(-3*x)+h_*(-3*(x+h_*(-3*x)))-y_) < e_&xpost()=y_))))))))".asFormula
 
-    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) & ModelPlex.mxSimplify(1))
+    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     //@todo auto-generated post names are somewhat weird here for parameters t, e, h0, h
     simplified.subgoals.loneElement shouldBe "==> tpost_0>=0&epost_0>0&h0post_0>0&0 < hpost_0&hpost_0 < h0post_0&(abs(2-xpost()) < epost_0|abs(2+hpost_0*-6+hpost_0*(-3*(2+hpost_0*-6))-xpost()) < epost_0)".asSequent
   }
@@ -192,8 +185,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     //@note unsound approximation step
     val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
-    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      ModelPlex.mxSimplify(1))
+    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     //@todo auto-generated post names are somewhat weird here for parameters t, e, h0, h
     simplified.subgoals.loneElement shouldBe "==> tpost_0>=0&epost_0>0&h0post_0>0&0 < hpost_0&hpost_0 < h0post_0&(2+hpost_0*-6-xpost)^2+(y+hpost_0*(2-y)-ypost)^2 < epost_0^2".asSequent
   }
@@ -204,10 +196,9 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), Map.empty)
 
-    val tactic = ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) &
-      ModelPlex.mxSimplify(1) & ModelPlex.mxFormatShape("boolean")
+    val tactic = ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
-    result.subgoals.loneElement shouldBe "==> (-1)<=fpost&fpost<=(m()-l)/ep()&(cpost=0&(fpost=0|fpost!=0)&(l=0|l=lpost)&l>=0&(lpost=0|l=lpost)&(lpost=0|l>0)&ep()>=0|cpost>0&ep()>=cpost&(fpost=0&(l=0&lpost=0|l=lpost&l>0)|cpost*fpost+l=lpost&(cpost*fpost+l>=0&fpost < 0|fpost>0&l>=0)))".asSequent
+    result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&((((((cpost=0&(fpost=0|fpost!=0))&(l=0|l=lpost))&l>=0)&(lpost=0|l=lpost))&(lpost=0|l>0))&ep()>=0|(cpost>0&ep()>=cpost)&(fpost=0&(l=0&lpost=0|l=lpost&l>0)|cpost*fpost+l=lpost&(cpost*fpost+l>=0&fpost < 0|fpost>0&l>=0)))".asSequent
   }
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in withTactics {
@@ -230,14 +221,11 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), Map.empty)
-    val tactic = ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      ModelPlex.mxSimplify(1)  &
-      ModelPlex.mxFormatShape("boolean")
+    val tactic = ModelPlex.controllerMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     // with ordinary diamond test
-    val expected = "(-1)<=fpost&fpost<=(m()-l)/ep()&0<=l&0<=ep()&lpost=l&cpost=0".asFormula
+    val expected = "((-1)<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asFormula
 
     result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
 
@@ -253,8 +241,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val stateVars = List("f","l","c").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, stateVars, Map.empty)
     val tactic = ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      ModelPlex.mxSimplify(1)
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     val testProg = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(combineTests=false)(1))
@@ -403,15 +390,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists al ((-B()<=al&al<=A())&(xf+vf^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vf) < xl+vl^2/(2*B())&\\exists af ((-B()<=af&af<=A())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=af&tpost=0)|vf=0&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=0&tpost=0|\\exists af ((-B()<=af&af<=-b())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=af&tpost=0)))".asSequent
 
-    // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
-    opt1Result.subgoals.loneElement shouldBe "==> (-B()<=alpost&alpost<=A())&(xf+vf^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vf) < xl+vl^2/(2*B())&(-B()<=afpost&afpost<=A())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=alpost&xfpost=xf&vfpost=vf&afpost=afpost&tpost=0|vf=0&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=alpost&xfpost=xf&vfpost=vf&afpost=0&tpost=0|(-B()<=afpost&afpost<=-b())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=alpost&xfpost=xf&vfpost=vf&afpost=afpost&tpost=0)".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> (-B()<=alpost&alpost<=A())&(xf+vf^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vf) < xl+vl^2/(2*B())&(-B()<=afpost&afpost<=A())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=vf&tpost=0|vf=0&(vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=0&afpost=0&tpost=0|(-B()<=afpost&afpost<=-b())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=vf&tpost=0)".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> (-B()<=alpost&alpost<=A())&(xf+vf^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vf) < xl+vl^2/(2*B())&(-B()<=afpost&afpost<=A())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=vf&tpost=0|vf=0&(vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=0&afpost=0&tpost=0|(-B()<=afpost&afpost<=-b())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&xfpost=xf&vfpost=vf&tpost=0)".asSequent
-
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "LLC controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "LLC controller monitor (forward chase)")
   }
 
   "Fixedwing" should "find correct controller monitor" in withMathematica { implicit tool =>
@@ -423,30 +405,13 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> (v=Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy)|v>Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy))|\\exists a ((-B()<=a&a<=A())&\\exists w ((-W()<=w&w<=W())&\\exists v (v>=Vmin()&\\exists theta ((-Theta()<=theta&theta<=Theta())&\\exists xo \\exists yo ((abs(x-xo)>(v^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)&abs(x-xo)>(v^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(theta))/W()-(v-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)+Vmin()*ep()|abs(y-yo)>(v^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)&abs(y-yo)>(v^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(theta))/W()-(v-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)+Vmin()*ep())&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=a&wpost=w&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=w&yopost=yo&dzpost=dz&xpost=x&dypost=dy)))))".asSequent
 
-    // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
-    opt1Result.subgoals.loneElement shouldBe "==> (v=Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy)|v>Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy))|(-B()<=apost&apost<=A())&(-W()<=wpost&wpost<=W())&vpost>=Vmin()&(-Theta()<=thetapost&thetapost<=Theta())&(abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep()|abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep())&(0<=ep()&vpost>=Vmin()&-Theta()<=thetapost&thetapost<=Theta())&apost=apost&wpost=wpost&xopost=xopost&thetapost=thetapost&dxypost=dxy&ypost=y&tpost=0&vpost=vpost&dxpost=dx&wpost=wpost&yopost=yopost&dzpost=dz&xpost=x&dypost=dy".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> (v=Vmin()&(theta=Theta()&((dxy=dXY()&dz=dZ())&(theta!=-Theta()|dxy=-dXY()))&(0<=ep()&-Theta()<=theta)&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((theta!=Theta()|dxy=dXY()&dz=dZ())&dxy=-dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&(theta!=-Theta()|dxy=-dXY()&dz=dZ())&(0<=ep()&-Theta()<=theta)&apost=0&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&(theta!=Theta()|dxy=dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=0&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy)|v>Vmin()&(theta=Theta()&((dxy=dXY()&dz=dZ())&(theta!=-Theta()|dxy=-dXY()))&(0<=ep()&-Theta()<=theta)&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((theta!=Theta()|dxy=dXY()&dz=dZ())&dxy=-dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&(theta!=-Theta()|dxy=-dXY()&dz=dZ())&(0<=ep()&-Theta()<=theta)&apost=-B()&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&(theta!=Theta()|dxy=dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=-B()&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy))|(-B()<=apost&apost<=A())&(-W()<=wpost&wpost<=W())&vpost>=Vmin()&(-Theta()<=thetapost&thetapost<=Theta())&(abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep()|abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep())&0<=ep()&dxypost=dxy&ypost=y&tpost=0&dxpost=dx&dzpost=dz&xpost=x&dypost=dy".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> (v=Vmin()&(theta=Theta()&((dxy=dXY()&dz=dZ())&(theta!=-Theta()|dxy=-dXY()))&(0<=ep()&-Theta()<=theta)&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((theta!=Theta()|dxy=dXY()&dz=dZ())&dxy=-dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&(theta!=-Theta()|dxy=-dXY()&dz=dZ())&(0<=ep()&-Theta()<=theta)&apost=0&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&(theta!=Theta()|dxy=dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=0&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy)|v>Vmin()&(theta=Theta()&((dxy=dXY()&dz=dZ())&(theta!=-Theta()|dxy=-dXY()))&(0<=ep()&-Theta()<=theta)&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((theta!=Theta()|dxy=dXY()&dz=dZ())&dxy=-dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&(theta!=-Theta()|dxy=-dXY()&dz=dZ())&(0<=ep()&-Theta()<=theta)&apost=-B()&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&(theta!=Theta()|dxy=dXY()&dz=dZ())&(0<=ep()&theta<=Theta())&apost=-B()&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&yopost=yo&dzpost=dz&xpost=x&dypost=dy))|(-B()<=apost&apost<=A())&(-W()<=wpost&wpost<=W())&vpost>=Vmin()&(-Theta()<=thetapost&thetapost<=Theta())&(abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(x-xopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep()|abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)&abs(y-yopost)>(vpost^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(thetapost))/W()-(vpost-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*vpost)+Vmin()*ep())&0<=ep()&dxypost=dxy&ypost=y&tpost=0&dxpost=dx&dzpost=dz&xpost=x&dypost=dy".asSequent
-
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Fixedwing controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "Fixedwing controller monitor (forward chase)")
   }
 
-  // works but is super-slow (46min vs. 2s next with chase)
-  "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" ignore withTactics {
-    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key")
-    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1)
-    val result = proveBy(model, tactic)
-    result.subgoals should have size 1
-    result.subgoals.head.succ should have size 1
-
-    report(result.subgoals.head.succ.head, result, "ETCS controller")
-  }
-
-  it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
+  "ETCS safety lemma modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
@@ -455,15 +420,11 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> (\\forall do (do=d->\\forall mo (mo=m->\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b()*(m-mo)&vdes>=0)&vdespost=vdes&SBpost=SB&vpost=v&statepost=state&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)))|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&\\exists a ((a>=-b()&a<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))|v>=vdes&\\exists a ((a < 0&a>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))".asSequent
 
-    // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
-    opt1Result.subgoals.loneElement shouldBe "==> ((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&vdespost=vdespost&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&mpost=mpost&dpost=dpost&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=apost)".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    StaticSemantics.boundVars(opt1Result.subgoals.loneElement) shouldBe 'empty
+    opt1Result.subgoals.loneElement shouldBe "==> ((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> ((dpost>=0&d^2-dpost^2<=2*b()*(mpost-m)&vdespost>=0)&SBpost=SB&vpost=v&statepost=state&dopost=d&zpost=z&tpost=t&mopost=m&apost=a|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&(apost>=-b()&apost<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)|v>=vdes&(apost < 0&apost>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d)".asSequent
-
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "ETCS controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "ETCS controller monitor (forward chase)")
   }
 
   "RSS passive safety modelplex in place" should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
@@ -476,15 +437,11 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists w ((-W()<=w&w<=W())&\\exists r \\exists xo \\exists yo ((r!=0&r*w=v)&(abs(x-xo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=A()&rpost=r&tpost=0))))".asSequent
-    // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)))
-    opt1Result.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=A()&rpost=rpost&tpost=0)".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asSequent
 
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS controller monitor (forward chase)")
   }
 
   it should "find correct controller monitor by updateCalculus implicationally without simplification tool" in withQE { _ =>
@@ -497,15 +454,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists w ((-W()<=w&w<=W())&\\exists r \\exists xo \\exists yo ((r!=0&r*w=v)&(abs(x-xo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=A()&rpost=r&tpost=0))))".asSequent
 
-    // Opt. 1 with less simplification
-    val opt1AltResult = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(None, assumptions, Nil)(1)))
-    opt1AltResult.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&vxopost=vxopost&vyopost=vyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=A()&rpost=rpost&tpost=0)".asSequent
+    val opt1AltResult = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(None, assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1AltResult.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1AltResult.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asSequent
-
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
+    report(opt1AltResult.subgoals.head.succ.head, opt1AltResult, "RSS controller monitor (forward chase)")
   }
 
   it should "find the correct controller monitor condition from the input model" in withTactics {
@@ -535,18 +487,14 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&(\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=beta&visDegpost=visDeg)|v=0&\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=0&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=beta&visDegpost=visDeg)|\\exists r (r!=0&\\exists xo \\exists yo \\exists visDeg ((visDeg>0->abs(x-xo)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yo)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V()))&v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(r)&\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=0&visDegpost=visDeg)))))".asSequent
 
     // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)))
-    opt1Result.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&(wpost*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=wpost&rpost=r&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&tpost=0&betapost=beta&visDegpost=visDeg|v=0&wpost*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=0&dxpost=dx&dypost=dy&wpost=wpost&rpost=r&xopost=xo&yopost=yo&vxopost=vxopost&vyopost=vyopost&tpost=0&betapost=beta&visDegpost=visDeg|rpost!=0&(visDegpost>0->abs(x-xopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V()))&v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(rpost)&wpost*rpost=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&wpost=wpost&rpost=rpost&xopost=xopost&yopost=yopost&vxopost=vxopost&vyopost=vyopost&tpost=0&betapost=0&visDegpost=visDegpost)".asSequent
-
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&(wpost*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&rpost=r&xopost=xo&yopost=yo&tpost=0&betapost=beta&visDegpost=visDeg|v=0&wpost*r=0&0<=ep()&xpost=x&ypost=y&vpost=0&apost=0&dxpost=dx&dypost=dy&rpost=r&xopost=xo&yopost=yo&tpost=0&betapost=beta&visDegpost=visDeg|rpost!=0&(visDegpost>0->abs(x-xopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V()))&v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(rpost)&wpost*rpost=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&tpost=0&betapost=0)".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> vxopost^2+vyopost^2<=V()^2&(wpost*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&rpost=r&xopost=xo&yopost=yo&tpost=0&betapost=beta&visDegpost=visDeg|v=0&wpost*r=0&0<=ep()&xpost=x&ypost=y&vpost=0&apost=0&dxpost=dx&dypost=dy&rpost=r&xopost=xo&yopost=yo&tpost=0&betapost=beta&visDegpost=visDeg|rpost!=0&(visDegpost>0->abs(x-xopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V()))&v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(rpost)&wpost*rpost=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&tpost=0&betapost=0)".asSequent
 
     // transform to test program
-    val testResult = proveBy(simplifiedResult.subgoals.head, ModelPlex.chaseToTests(combineTests=false)(1))
+    val testResult = proveBy(opt1Result.subgoals.head, ModelPlex.chaseToTests(combineTests=false)(1))
     testResult.subgoals.loneElement shouldBe "==> <?vxopost^2+vyopost^2<=V()^2;>(<?wpost*r=v;><?0<=ep()&v>=0;><?xpost=x;><?ypost=y;><?vpost=v;><?apost=-b();><?dxpost=dx;><?dypost=dy;><?rpost=r;><?xopost=xo;><?yopost=yo;><?tpost=0;><?betapost=beta;><?visDegpost=visDeg;>true|<?v=0;><?wpost*r=0;><?0<=ep();><?xpost=x;><?ypost=y;><?vpost=0;><?apost=0;><?dxpost=dx;><?dypost=dy;><?rpost=r;><?xopost=xo;><?yopost=yo;><?tpost=0;><?betapost=beta;><?visDegpost=visDeg;>true|<?rpost!=0;><?visDegpost>0->abs(x-xopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yopost)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V());><?v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(rpost);><?wpost*rpost=v;><?0<=ep()&v>=0;><?xpost=x;><?ypost=y;><?vpost=v;><?apost=A();><?dxpost=dx;><?dypost=dy;><?tpost=0;><?betapost=0;>true)".asSequent
 
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS passive orientation controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "RSS passive orientation controller monitor (forward chase)")
   }
 
   "Hybrid quadcopter" should "extract the correct controller monitor" ignore withTactics {
@@ -571,15 +519,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists href ((h>=href&href>0&((kp < 0&v=0&href>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*href*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&href=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*href*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*href*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>href)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*href*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*href*kp)|kp>0&v=0&(h!=href&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>href|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*href*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*href*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*href*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*href*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*href*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*href*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2=0))&hrefpost=href&vpost=v&hpost=h)".asSequent
 
-    // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
-    opt1Result.subgoals.loneElement shouldBe "==> (h>=hrefpost&hrefpost>0&((kp < 0&v=0&hrefpost>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost*kp)|kp>0&v=0&(h!=hrefpost&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2=0))&hrefpost=hrefpost&vpost=v&hpost=h".asSequent
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    opt1Result.subgoals.loneElement shouldBe "==> (h>=hrefpost&hrefpost>0&((kp < 0&v=0&hrefpost>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost*kp)|kp>0&v=0&(h!=hrefpost&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2=0))&vpost=v&hpost=h".asSequent
 
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> (h>=hrefpost&hrefpost>0&((kp < 0&v=0&hrefpost>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost*kp)|kp>0&v=0&(h!=hrefpost&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2=0))&vpost=v&hpost=h".asSequent
-
-    report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Hybrid quadcopter controller monitor (forward chase)")
+    report(opt1Result.subgoals.head.succ.head, opt1Result, "Hybrid quadcopter controller monitor (forward chase)")
   }
 
   "VSL modelplex in place" should "find correct controller monitor condition" ignore withTactics {
@@ -620,14 +563,9 @@ class ModelplexTacticTests extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=-B()&tpost=t|xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1)&\\exists a1 ((-B()<=a1&a1<=A())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=t)|x1>=xsl&\\exists a1 ((-B()<=a1&a1<=A()&a1<=(v1-vsl)/ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=t)|\\exists xsl \\exists vsl ((vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1))&(v1>=0&0<=ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=0)".asSequent
 
-    // Opt. 1
-    val expected = "xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=-B()&tpost=t|xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1)&(-B()<=a1post&a1post<=A())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1post&tpost=t|x1>=xsl&(-B()<=a1post&a1post<=A()&a1post<=(v1-vsl)/ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1post&tpost=t|(vslpost>=0&xslpost>=x1+(v1^2-vslpost^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1))&(v1>=0&0<=ep())&xslpost=xslpost&vslpost=vslpost&x1post=x1&v1post=v1&a1post=a1&tpost=0".asFormula
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1))
+    val expected = "xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=-B()&tpost=t|xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1)&(-B()<=a1post&a1post<=A())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&tpost=t|x1>=xsl&(-B()<=a1post&a1post<=A()&a1post<=(v1-vsl)/ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&tpost=t|(vslpost>=0&xslpost>=x1+(v1^2-vslpost^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1))&(v1>=0&0<=ep())&x1post=x1&v1post=v1&a1post=a1&tpost=0".asFormula
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     opt1Result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
-
-    // simplify
-    val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.mxSimplify(1))
-    simplifiedResult.subgoals.loneElement shouldBe "==> xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=-B()&tpost=t|xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1)&(-B()<=a1post&a1post<=A())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&tpost=t|x1>=xsl&(-B()<=a1post&a1post<=A()&a1post<=(v1-vsl)/ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&tpost=t|(vslpost>=0&xslpost>=x1+(v1^2-vslpost^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1))&(v1>=0&0<=ep())&x1post=x1&v1post=v1&a1post=a1&tpost=0".asSequent
 
     report(expected, foResult, "VSL controller monitor (forward chase without Opt. 1)")
     report(expected, opt1Result, "VSL controller monitor (forward chase with Opt. 1)")
@@ -658,7 +596,7 @@ class ModelplexTacticTests extends TacticTestBase {
       List("x","v","a","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) & ModelPlex.mxSimplify(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     result.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&xpost=x&vpost=v&apost=A&tpost=0|v=0&0<=ep&xpost=x&vpost=0&apost=0&tpost=0|(v>=0&0<=ep)&xpost=x&vpost=v&apost=-b&tpost=0".asSequent
 
     val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
@@ -674,7 +612,7 @@ class ModelplexTacticTests extends TacticTestBase {
       List("x","v","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) & ModelPlex.mxSimplify(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     result.subgoals.loneElement shouldBe "==> S-x>=ep*vpost&0<=ep&xpost=x&tpost=0|0<=ep&xpost=x&vpost=0&tpost=0".asSequent
 
     val Or(acc,stop) = result.subgoals.head.succ.head
@@ -689,7 +627,7 @@ class ModelplexTacticTests extends TacticTestBase {
       List("x","v","d","c","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) & ModelPlex.mxSimplify(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     result.subgoals.loneElement shouldBe "==> S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&0<=ep&xpost=x&vpost=v&tpost=0|0<=ep&xpost=x&vpost=0&dpost=0&cpost=0&tpost=0".asSequent
 
     val Or(acc,stop) = result.subgoals.head.succ.head
@@ -705,10 +643,8 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val mxResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1))
     mxResult.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)&xpost=A*(t_^2/2)+v*t_+x&vpost=A*t_+v&apost=A&tpost=t_+0)|v=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+v>=0&s_+0<=ep)&xpost=0*(t_^2/2)+v*t_+x&vpost=0*t_+v&apost=0&tpost=t_+0)|\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)&xpost=(-b)*(t_^2/2)+v*t_+x&vpost=(-b)*t_+v&apost=-b&tpost=t_+0)".asSequent
-    val result = proveBy(mxResult, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      ModelPlex.mxSimplify(1) /*& ModelPlex.mxFormatShape("boolean")*/)
-    result.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((((((((ep=0&tpost=0)&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|ep>0&((((((((tpost=0&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|(tpost>0&tpost < ep)&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-tpost^(-1))*v<=A|A>0))))|ep=tpost&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-ep^(-1))*v<=A|A>0)))))|v=0&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0|v=0&((vpost=0&x=xpost)&((apost=0&b=0)&(tpost=0&ep>=0|tpost>0&ep>=tpost)|((apost+b=0&tpost=0)&ep>=0)&b!=0)|((((vpost>0&b < 0)&tpost+b^(-1)*vpost=0)&1/2*b*tpost^2+xpost=x)&ep>=tpost)&apost+b=0)|v>0&(v=vpost&((apost=0&b=0)&((tpost=0&x=xpost)&ep>=0|(tpost*v+x=xpost&tpost>0)&ep>=tpost)|(((apost+b=0&tpost=0)&x=xpost)&ep>=0)&b!=0)|((apost+b=0&1/2*b*tpost^2+xpost=tpost*v+x)&ep>=tpost)&(b>0&(tpost=b^(-1)*v&vpost=0|(tpost=b^(-1)*(v+-vpost)&vpost>0)&vpost < v)|(tpost=b^(-1)*(v+-vpost)&vpost>v)&b < 0))".asSequent
-    val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
+    val result = proveBy(mxResult, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc,Or(coast,brake)))) = result.subgoals.loneElement
     acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((((((((ep=0&tpost=0)&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|ep>0&((((((((tpost=0&(A!=0|apost=0))&(A=0|A=apost))&(v=0|v=vpost))&(v=vpost|vpost=0))&(vpost=0|v>0))&x=xpost)&v>=0|(tpost>0&tpost < ep)&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-tpost^(-1))*v<=A|A>0))))|ep=tpost&(v=0&(((A=0&vpost=0)&x=xpost)&apost=0|((A>0&A*tpost=vpost)&xpost=1/2*A*tpost^2+x)&A=apost)|v>0&(((A=0&apost=0)&v=vpost)&tpost*v+x=xpost|((A=apost&A*tpost+v=vpost)&xpost=1/2*A*tpost^2+tpost*v+x)&(A < 0&(-ep^(-1))*v<=A|A>0)))))".asFormula
     coast shouldBe "v=0&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0".asFormula
     brake shouldBe "v=0&((vpost=0&x=xpost)&((apost=0&b=0)&(tpost=0&ep>=0|tpost>0&ep>=tpost)|((apost+b=0&tpost=0)&ep>=0)&b!=0)|((((vpost>0&b < 0)&tpost+b^(-1)*vpost=0)&1/2*b*tpost^2+xpost=x)&ep>=tpost)&apost+b=0)|v>0&(v=vpost&((apost=0&b=0)&((tpost=0&x=xpost)&ep>=0|(tpost*v+x=xpost&tpost>0)&ep>=tpost)|(((apost+b=0&tpost=0)&x=xpost)&ep>=0)&b!=0)|((apost+b=0&1/2*b*tpost^2+xpost=tpost*v+x)&ep>=tpost)&(b>0&(tpost=b^(-1)*v&vpost=0|(tpost=b^(-1)*(v+-vpost)&vpost>0)&vpost < v)|(tpost=b^(-1)*(v+-vpost)&vpost>v)&b < 0))".asFormula
@@ -721,13 +657,11 @@ class ModelplexTacticTests extends TacticTestBase {
       List("x","v","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      ModelPlex.mxSimplify(1) & ModelPlex.mxFormatShape("boolean"))
-    result.subgoals.loneElement shouldBe "==> S-x>=ep*vpost&tpost>=0&ep>=tpost&tpost*vpost+x=xpost|tpost>=0&ep>=tpost&x=xpost&vpost=0".asSequent
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
-    val Or(acc,stop) = result.subgoals.head.succ.head
-    acc shouldBe "S-x>=ep*vpost&tpost>=0&ep>=tpost&tpost*vpost+x=xpost".asFormula
-    stop shouldBe "tpost>=0&ep>=tpost&x=xpost&vpost=0".asFormula
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc,stop))) = result.subgoals.loneElement
+    acc shouldBe "S-x>=ep*vpost&(tpost>=0&ep>=tpost)&tpost*vpost+x=xpost".asFormula
+    stop shouldBe "((tpost>=0&ep>=tpost)&x=xpost)&vpost=0".asFormula
   }
 
   it should "find correct model monitor for stopsign with direct v change and disturbance" in withMathematica { tool =>
@@ -737,13 +671,11 @@ class ModelplexTacticTests extends TacticTestBase {
       List("x","v","d","c","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      ModelPlex.mxSimplify(1) & ModelPlex.mxFormatShape("boolean"))
-    result.subgoals.loneElement shouldBe "==> S-x>=ep*(v+cpost+D)&-D<=dpost&dpost<=D&tpost>=0&ep>=tpost&tpost*(cpost+dpost+v)+x=xpost&v=vpost|tpost>=0&ep>=tpost&x=xpost&vpost=0&dpost=0&cpost=0".asSequent
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
-    val Or(acc,stop) = result.subgoals.head.succ.head
-    acc shouldBe "S-x>=ep*(v+cpost+D)&-D<=dpost&dpost<=D&tpost>=0&ep>=tpost&tpost*(cpost+dpost+v)+x=xpost&v=vpost".asFormula
-    stop shouldBe "tpost>=0&ep>=tpost&x=xpost&vpost=0&dpost=0&cpost=0".asFormula
+    val Sequent(IndexedSeq(), IndexedSeq(Or(acc,stop))) = result.subgoals.loneElement
+    acc shouldBe "S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&((tpost>=0&ep>=tpost)&tpost*(cpost+dpost+v)+x=xpost)&v=vpost".asFormula
+    stop shouldBe "((((tpost>=0&ep>=tpost)&x=xpost)&vpost=0)&dpost=0)&cpost=0".asFormula
   }
 
   "ModelPlex for Veriphy" should "prove velocity car safety" in withMathematica { _ =>
@@ -760,7 +692,7 @@ class ModelplexTacticTests extends TacticTestBase {
       List("d","v","t").map(_.asVariable), Map.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) & ModelPlex.mxSimplify(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     result.subgoals.loneElement shouldBe "==> d>=V()*ep()&(0<=vpost&vpost<=V())&0<=ep()&dpost=d&tpost=0|0<=ep()&dpost=d&vpost=0&tpost=0".asSequent
   }
 
@@ -841,9 +773,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, ctrlMonitorStateVars, Map.empty)
 
     val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      ModelPlex.mxSimplify(1) & DebuggingTactics.print("Monitor Result")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Monitor Result")
     val ctrlMonitorResult = proveBy(modelplexInput, monitorTactic)
     val ctrlMonitorFml = ctrlMonitorResult.subgoals.head.succ.head
     ctrlMonitorFml shouldBe "d>=V()*ep()&(0<=vpost&vpost<=V())&0<=ep()&dpost=d&tpost=0|0<=ep()&dpost=d&vpost=0&tpost=0".asFormula
@@ -964,9 +894,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
     val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      ModelPlex.mxSimplify(1) & DebuggingTactics.print("Ctrl Monitor Result")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
     val ctrlMonitorFml = ctrlResult.subgoals.head.succ.head
     ctrlMonitorFml shouldBe "(ygpost>0&abs(kpost)*eps()<=100&((kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (kpost*(eps()*eps())+200*eps())*100)&0<=vlpost&vlpost < vhpost&A()*T()<=10*(vhpost-vlpost)&B()*T()<=10*(vhpost-vlpost))&((-B()<=apost&apost<=A())&10*v+apost*T()>=0&(v<=vhpost&10*v+apost*T()<=10*vhpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(ygpost-10*eps())*10000*100)&(vlpost<=v&10*v+apost*T()>=10*vlpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(ygpost-10*eps())*10000*100))&(v>=0&0<=T())&vpost=v&tpost=0".asFormula
@@ -996,9 +924,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val modelMonitorStateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","v_0","xg_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelMonitorInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, modelMonitorStateVars, Map.empty)
     val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      ModelPlex.mxSimplify(1) & DebuggingTactics.print("Monitor Result")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Monitor Result")
 
     /* Derive a model monitor (monitor controller + plant, use after plant/before controller) */
     val modelMonitorResult = proveBy(modelMonitorInput, monitorTactic)
@@ -1049,9 +975,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val stateVars = List("acc","d","jpb","m","st","t","v","z").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
     val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      ModelPlex.mxSimplify(1) & DebuggingTactics.print("Ctrl Monitor Result")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
     val ctrlMonitorFml = ctrlResult.subgoals.head.succ.head
     ctrlMonitorFml shouldBe "(dpost>=0&v^2-dpost^2<=2*Fsb()/mt()*(mpost-z))&accpost=acc&jpbpost=jpb&stpost=st&tpost=t&vpost=v&zpost=z|(-Fsb()<=accpost&accpost<=Amax())&(d>=0&m-z>=(v^2-d^2)/(2*Fsb()/mt())+(Amax()/Fsb()+1)*(Amax()/(2*mt())*ep()^2+v*ep())|d<=0&(accpost<=0&v-d>=Fpb()^2/(2*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))&m-z>=v*ep()+(mt()*v^2/(2*Fpb())+Fpb()*v/(2*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))-Fpb()^3/(24*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2))^2))|accpost>=0&v-d>=Fpb()^2/(2*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))&m-z>=v*ep()+accpost/(2*mt())*ep()^2+(mt()*(v+accpost/mt()*ep())^2/(2*Fpb())+Fpb()*(v+accpost/mt()*ep())/(2*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))-Fpb()^3/(24*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2))^2))|accpost<=0&v-d<=Fpb()^2/(2*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))&m-z>=v*ep()+2/3*v*(2*mt()*v/(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))^(1/2)|accpost>=0&v+accpost/mt()*ep()-d<=Fpb()^2/(2*mt()*(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))&m-z>=v*ep()+accpost/(2*mt())*ep()^2+2/3*(v+accpost/mt()*ep())*(2*mt()*(v+accpost/mt()*ep())/(Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)))^(1/2)))&(v>=0&0<=ep()&-Fpb()<=accpost)&dpost=d&jpbpost=0&mpost=m&stpost=0&tpost=0&vpost=v&zpost=z|m-z>=(v^2-d^2)/(2*Fsb()/mt())&(v>=0&0<=ep()&-Fpb()<=-Fsb())&accpost=-Fsb()&dpost=d&jpbpost=jpb&mpost=m&stpost=0&tpost=0&vpost=v&zpost=z|m-z < (v^2-d^2)/(2*Fsb()/mt())&(v<=d&(-Fsb()<=accpost&accpost<=0)&(v>=0&0<=ep()&-Fpb()<=accpost)&dpost=d&jpbpost=0&mpost=m&stpost=0&tpost=0&vpost=v&zpost=z|v>d&(acc<=-Fpb()&(v>=0&0<=ep()&-Fpb()<=acc)&accpost=acc&dpost=d&jpbpost=0&mpost=m&stpost=0&tpost=0&vpost=v&zpost=z|acc>-Fpb()&(v>=0&0<=ep()&-Fpb()<=min(acc,0))&accpost=min(acc,0)&dpost=d&jpbpost=-Fpb()/(cappl1()+cappl2()*L()-cappl3()*L()^2)&mpost=m&stpost=0&tpost=0&vpost=v&zpost=z))".asFormula
@@ -1115,5 +1039,11 @@ class ModelplexTacticTests extends TacticTestBase {
     val fml = "x<=5 | x>=y & a<b".asFormula
     //@todo metric evaluates to false at the boundary, when x=5 and y>5
     ModelPlex.toMetric(fml) shouldBe "min(x-5,max(y-x,a-b)) < 0".asFormula
+  }
+
+  "Opt. 1" should "refuse to apply forall simplification when right-hand side is bound" in withMathematica { tool =>
+    proveBy("""==> \forall x1_0 (x1_0=x1 -> x1_0>=0 & \exists x1 (x1>=2 & x1=x1 & x1_0=x1_0))""".asSequent,
+      ModelPlex.optimizationOneWithSearch(Some(tool), Nil, "x1".asVariable :: Nil, Some(ModelPlex.mxSimplify))(1)).subgoals.
+      loneElement shouldBe """==> \forall x1_0 (x1_0=x1->x1_0>=0&\exists x1 x1>=2)""".asSequent
   }
 }

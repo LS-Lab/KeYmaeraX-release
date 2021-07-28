@@ -6,15 +6,14 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import java.io.File
-
-import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Equiv, Formula, Imply, NamedSymbol, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Parser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import org.scalatest.LoneElement._
 
 /**
  * Tests the C++ ModelPlex code generator.
@@ -475,12 +474,8 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
-    val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
-      SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
     val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      simplifier(1) & DebuggingTactics.print("Simplified")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
     val monitorFml = result.subgoals.head.succ.head
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
@@ -633,16 +628,12 @@ class CCodeGeneratorTests extends TacticTestBase {
     // modelplex
     val stateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","xg_0","v_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, Map.empty)
-    val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
-      SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
 
     val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
-      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1)) &
-      DebuggingTactics.print("Quantifiers instantiated") &
-      simplifier(1) & DebuggingTactics.print("Simplified")
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
 
     val result = proveBy(modelplexInput, mxtactic)
-    val monitorFml = result.subgoals.head.succ.head
+    val Sequent(IndexedSeq(), IndexedSeq(monitorFml)) = result.subgoals.loneElement
     val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
     println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
     proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe 'proved

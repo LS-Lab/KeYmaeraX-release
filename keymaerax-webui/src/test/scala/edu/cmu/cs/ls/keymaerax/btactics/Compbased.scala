@@ -165,7 +165,8 @@ class Compbased extends TacticTestBase {
 
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
       List("po","po0","so","t","t0").map(Variable(_)), Map.empty)
-    val monitor = proveBy(modelplexInput, ExpandAll(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1), defs = entry.defs)
+    val monitor = proveBy(modelplexInput, ExpandAll(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1), defs = entry.defs)
     monitor.subgoals.loneElement shouldBe "==> (0<=sopost&sopost<=S())&true&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post".asSequent
 
     val (equalities, inequalities) = FormulaTools.conjuncts(monitor.subgoals.loneElement.succ.loneElement).partition(_.isInstanceOf[Equal])

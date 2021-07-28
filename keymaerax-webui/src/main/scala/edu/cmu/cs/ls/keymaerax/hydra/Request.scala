@@ -1263,8 +1263,9 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                                      unobservable: Map[Variable, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
-    val mx = ModelPlex.mxSynthesize(monitorKind) & ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList) &
-      ModelPlex.mxSimplify(1) & ModelPlex.mxFormatShape(monitorShape)
+    val mx = ModelPlex.mxSynthesize(monitorKind) &
+      ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify)) &
+      ModelPlex.mxFormatShape(monitorShape)
 
     val monitorCond = try {
       TactixLibrary.proveBy(modelplexInput, mx)
@@ -1336,14 +1337,14 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
-            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList)(1)))
+            ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1))
         } catch {
           case _: Throwable => foResult
         }
       case ("model", tool) => TactixLibrary.proveBy(modelplexInput,
         ModelPlex.modelMonitorByChase(1) &
         SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
-        ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList)(1)
+        ModelPlex.optimizationOneWithSearch(tool, assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify))(1)
       )
     }
 

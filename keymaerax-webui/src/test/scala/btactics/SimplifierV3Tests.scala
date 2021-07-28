@@ -273,6 +273,13 @@ class SimplifierV3Tests extends TacticTestBase {
       loneElement shouldBe "x>=0 ==> [{x:==1;}*]x>=0".asSequent
   }
 
+  it should "not rewrite numbers" in withMathematica { _ =>
+    proveBy("0=1 -> f(0,1)>=0".asFormula, SimplifierV3.simpTac(
+      taxs = SimplifierV3.composeIndex(SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs),
+      faxs = SimplifierV3.defaultFaxs
+    )(1)).subgoals.loneElement shouldBe "==> 0=1 -> f(0,1)>=0".asSequent
+  }
+
   "Normalizer" should "do some normalization" in withMathematica { _ =>
     val fml = "x*y=0 & (! x>=5 & y < 0 -> !(x>0 | 1+z>f+g+1.0))".asFormula
 

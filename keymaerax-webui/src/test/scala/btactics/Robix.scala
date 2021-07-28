@@ -107,7 +107,7 @@ class Robix extends TacticTestBase {
       Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w")), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
     foResult.subgoals.loneElement shouldBe "==> v>=0&xpost=x&ypost=y&vpost=v&apost=-B()&dxpost=dx&dypost=dy&wpost=w".asSequent
   }
@@ -120,7 +120,7 @@ class Robix extends TacticTestBase {
       List("x","y","v","a","dx","dy","w","xo","yo","r","t").map(Variable(_)), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
     foResult.subgoals.loneElement shouldBe "==> (0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=w&xopost=xo&yopost=yo&rpost=r&tpost=0|v=0&0<=ep()&xpost=x&ypost=y&vpost=0&apost=0&dxpost=dx&dypost=dy&wpost=0&xopost=xo&yopost=yo&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yopost)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v))&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&tpost=0".asSequent
   }
