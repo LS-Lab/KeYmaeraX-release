@@ -415,7 +415,7 @@ class DLTests extends TacticTestBase {
     )
   }
 
-  it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" in withTactics {
+  it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" taggedAs TodoTest in withTactics {
     val defs = Declaration(Map(
       Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
       Name("post") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>0".asFormula), UnknownLocation),

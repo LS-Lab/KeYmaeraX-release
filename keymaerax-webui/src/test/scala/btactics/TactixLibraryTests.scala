@@ -545,7 +545,7 @@ class TactixLibraryTests extends TacticTestBase {
       SaturateTactic(chaseAtX('R))).subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
-  it should "FEATURE_REQUEST: chase multiple tactic options" in withMathematica { _ =>
+  it should "FEATURE_REQUEST: chase multiple tactic options" taggedAs TodoTest in withMathematica { _ =>
     proveBy("x>0 -> y>0 ==>".asSequent,
       chaseAt((isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
         case (_: Imply, true) => Some(TacticInfo("autoMP")) // @todo List with autoMP,implyL
