@@ -785,4 +785,28 @@ class ODEInvarianceTests extends TacticTestBase {
     println("Proof steps:",pr.steps)
     pr shouldBe 'proved
   }
+
+  "ode rewrite" should "prove an ODE rewrite" in withMathematica { _ =>
+
+    val pr = proveBy("[{x'=-(z+5)+10,y'=y*y+y-y&z=2}]x+y>=1000 -> [{x'=3,y'=y^2&z=2}]x+y>=1000 ".asFormula,
+      implyR(1) & rewriteODEAt("x'=-(z+5)+10,y'=y*y+y-y".asDifferentialProgram)(1) & id
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "rewrite at any top position" in withMathematica { _ =>
+
+    val pr = proveBy("[{x'=1+1}]x>0,<{x'=1+1}>x>0  ==> <{x'=1+1}>x>0,[{x'=1+1}]x>0  ".asSequent,
+      rewriteODEAt("x'=2".asDifferentialProgram)(2) &
+      rewriteODEAt("x'=2".asDifferentialProgram)(-2) &
+      rewriteODEAt("x'=2".asDifferentialProgram)(-1) &
+      rewriteODEAt("x'=2".asDifferentialProgram)(1)
+    )
+
+    println(pr)
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "[{x'=2}]x>0, <{x'=2}>x>0  ==>  <{x'=2}>x>0, [{x'=2}]x>0".asSequent
+  }
 }
