@@ -423,6 +423,8 @@ object Ax extends Logging {
   @Axiom("DX",
     key = "0", recursor = "1", unifier = "surjlinear")
   val DX: CoreAxiomInfo = coreAxiom("DX differential skip")
+  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", unifier = "linear")
+  val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
   @Axiom("DIo >", unifier = "linear", conclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
