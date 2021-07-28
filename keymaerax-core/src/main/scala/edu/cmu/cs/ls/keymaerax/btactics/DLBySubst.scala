@@ -386,59 +386,57 @@ private object DLBySubst {
   }) & SaturateTactic(alphaRule)) & DebuggingTactics.print("Loop expanded")
 
   /** @see [[TactixLibrary.loop]] */
-  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = inputanon { (pos: Position) => new SingleGoalDependentTactic(ANON) {
+  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = inputanon { (pos: Position, sequent: Sequent, defs: Declaration) =>
     //@Tactic see [[HybridProgramCalculus.loop]]
-    final override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = {
-      require(pos.isTopLevel && pos.isSucc, "Tactic loop applicable only at top-level in succedent, but got position " +
-        pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
+    require(pos.isTopLevel && pos.isSucc, "Tactic loop applicable only at top-level in succedent, but got position " +
+      pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
 
-      val ov = FormulaTools.argsOf("old", invariant)
-      val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
-        val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
-        val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
-        val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
-        ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
-          case Some(Box(Loop(a), _)) =>
-            if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
-            else {
-              val abv = {
-                val verbatimabv = StaticSemantics(a).bv
-                if (verbatimabv.isInfinite) StaticSemantics(defs.exhaustiveSubst(a)).bv
-                else verbatimabv
-              }
-              val constSuccs = (constConditions(sequent.succ, abv, defs) :+ False).map(Not)
-              val constAntes = constConditions(sequent.ante, abv, defs)
-              val consts = constAntes ++ constSuccs
-              val q =
-                if (consts.size > 1) And(oldified, consts.reduceRight(And))
-                else if (consts.size == 1) And(oldified, consts.head)
-                else And(oldified, True)
-              label(startTx) &
-              cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
-                /* c */ useAt(Ax.I)(pos) & andR(pos) <(
-                  andR(pos) <(
-                    label(replaceTxWith(initCase)),
-                    (andR(pos) <(ExpandAll(Nil) & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
-                      (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
-                      (if (constSuccs.nonEmpty) notR(pos) else skip) &
-                      ExpandAll(Nil) & SaturateTactic(andL('L)) & close & done),
-                  cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
-                    (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                     else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
-                    andL(-1) & hideL(-1, oldified) & ExpandAll(Nil) & V(1) & close(-1, 1) & done)
-                ),
-                /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                  (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                   else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
-              )
+    val ov = FormulaTools.argsOf("old", invariant)
+    val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
+      val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
+      val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
+      val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
+      ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
+        case Some(Box(Loop(a), _)) =>
+          if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
+          else {
+            val abv = {
+              val verbatimabv = StaticSemantics(a).bv
+              if (verbatimabv.isInfinite) StaticSemantics(defs.exhaustiveSubst(a)).bv
+              else verbatimabv
             }
-          case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }}(afterGhostsPos)
-      }
-      pre & discreteGhosts(ov, sequent, doloop)(pos)
+            val constSuccs = (constConditions(sequent.succ, abv, defs) :+ False).map(Not)
+            val constAntes = constConditions(sequent.ante, abv, defs)
+            val consts = constAntes ++ constSuccs
+            val q =
+              if (consts.size > 1) And(oldified, consts.reduceRight(And))
+              else if (consts.size == 1) And(oldified, consts.head)
+              else And(oldified, True)
+            label(startTx) &
+            cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
+              /* c */ useAt(Ax.I)(pos) & andR(pos) <(
+                andR(pos) <(
+                  label(replaceTxWith(initCase)),
+                  (andR(pos) <(ExpandAll(Nil) & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                    (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
+                    (if (constSuccs.nonEmpty) notR(pos) else skip) &
+                    ExpandAll(Nil) & SaturateTactic(andL('L)) & close & done),
+                cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
+                  (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
+                   else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
+                  andL(-1) & hideL(-1, oldified) & ExpandAll(Nil) & V(1) & close(-1, 1) & done)
+              ),
+              /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
+                (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
+                 else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
+            )
+          }
+        case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      }}(afterGhostsPos)
     }
-  }}
+    pre & discreteGhosts(ov, sequent, doloop)(pos)
+  }
 
   /** Analyzes a loop for counterexamples. */
   def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {

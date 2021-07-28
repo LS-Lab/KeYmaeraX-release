@@ -21,6 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
@@ -130,7 +131,7 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dI]] */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = {
     if (!(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex)) throw new TacticRequirementError("Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
-    anon { (pos: Position, sequent: Sequent) => {
+    anon { (pos: Position, sequent: Sequent, defs: Declaration) => {
       if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)
       val diFml: Formula = sequent.sub(pos) match {
         case Some(b@Box(_: ODESystem, p)) =>
@@ -140,12 +141,18 @@ private object DifferentialTactics extends Logging {
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
 
-      val expand: BelleExpr = diFml match {
-        case Box(_, post) if StaticSemantics.symbols(post).exists(
-          { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
-          // expand all interpreted function symbols below pos.1
-          EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
-        case _ => skip
+      val expand: Option[BelleExpr] = diFml match {
+        case Box(_, post) =>
+          StaticSemantics.symbols(post).toList.filter({
+            case Function(n, i, _, _, interpreted) =>
+              interpreted || defs.decls.get(Name(n, i)).exists(_.interpretation.isDefined)
+            case _ => false
+          }).map({
+            case fn@Function(_, _, _, _, interpreted) =>
+              if (interpreted) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
+              else Expand(fn, None)
+          }).reduceRightOption[BelleExpr](_ & _)
+        case _ => None
       }
 
       val abbrvPrimes = anon { (pos: Position, seq: Sequent) => seq.sub(pos) match {
@@ -162,7 +169,7 @@ private object DifferentialTactics extends Logging {
       }}
 
       if (pos.isTopLevel) {
-        val t = expand & DI(pos) &
+        val t = expand.getOrElse(skip) & DI(pos) &
           //@note implyR moves RHS to end of succedent
           implyR(pos) & andR('Rlast) & Idioms.<(
             if (auto == 'full) ToolTactics.hideNonFOL & (abbrvPrimes('Rlast) & QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
@@ -188,9 +195,10 @@ private object DifferentialTactics extends Logging {
                 abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) & label(replaceTxWith(BelleLabels.dIStep)) })
             } else label(replaceTxWith(BelleLabels.dIStep))
             )
-        (if (auto != 'full) label(startTx) else skip) & Dconstify(t)(pos)
+        if (auto == 'full) Dconstify(t)(pos)
+        else label(startTx) & Dconstify(t)(pos)
       } else {
-        val t = expand & DI(pos) &
+        val t = expand.getOrElse(skip) & DI(pos) &
           (if (auto != 'none) {
             shift(PosInExpr(1 :: 1 :: Nil), anon ((pos: Position, sequent: Sequent) =>
               //@note derive before DE to keep positions easier

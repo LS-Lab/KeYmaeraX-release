@@ -492,6 +492,16 @@ class DifferentialTests extends TacticTestBase {
     )
   }
 
+  it should "expand definitions" in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
+  }
+
   "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
     val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
     proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
@@ -792,6 +802,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1) shouldBe "y=3, x=0 ==> !y<0, [{x'=y}]x>=0".asSequent
   }
 
+  it should "not expand definitions" in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    proveByS(entry.sequent, implyR(1) & dC("unitCircle(x,y)".asFormula)(1), entry.defs).
+      subgoals should contain theSameElementsAs List(
+      "unitCircle(x,y) ==> [{x'=y, y'=-x & true & unitCircle(x,y)}]unitCircle(x,y)".asSequent,
+      "unitCircle(x,y) ==> [{x'=y, y'=-x}]unitCircle(x,y)".asSequent
+    )
+  }
+
   "Diamond differential cut" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> <{x'=2}>x>=0".asSequent, dC("x>0".asFormula)(1))
     result.subgoals should have size 2
@@ -1047,6 +1071,18 @@ class DifferentialTests extends TacticTestBase {
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 despite silly names" in withQE { _ =>
     proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), dI('full)(1))) shouldBe 'proved
+  }
+
+  it should "FEATURE_REQUEST: expand definitions only temporarily in dI but not in result" taggedAs TodoTest in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    //@todo want unitCircle unexpanded in result, but that requires internal delayed merging of provables
+    proveByS(entry.sequent, implyR(1) & diffInvariant("unitCircle(x, y)".asFormula)(1), entry.defs).subgoals.
+      loneElement shouldBe "unitCircle(x,y) ==> [{x'=y, y'=-x & unitCircle(x,y)}]unitCircle(x,y)".asSequent
   }
 
   private val dconstifyTests = Table(("Name", "Sequent", "Expected"),

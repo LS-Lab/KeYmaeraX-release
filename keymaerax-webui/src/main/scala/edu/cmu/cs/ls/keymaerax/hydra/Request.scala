@@ -246,7 +246,8 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, assumptions: String)
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
+                            assumptions: String, fmlIndices: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
@@ -270,13 +271,15 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 
   override protected def doResultingResponses(): List[Response] = {
-    val json = assumptions.parseJson.asJsObject.fields.get("additional")
+    val assumptionsJson = assumptions.parseJson.asJsObject.fields.get("additional")
     val additionalAssumptions: Option[Formula] = try {
-      json.map(_.convertTo[String].asFormula)
+      assumptionsJson.map(_.convertTo[String].asFormula)
     } catch {
-      case ex: ParseException => return ParseErrorResponse("Expected assumptions as a formula, but got " + json.getOrElse("<empty>"),
+      case ex: ParseException => return ParseErrorResponse("Expected assumptions as a formula, but got " + assumptionsJson.getOrElse("<empty>"),
         ex.expect, ex.found, ex.getDetails, ex.loc, ex) :: Nil
     }
+
+    val useFmlIndices = fmlIndices.parseJson.convertTo[List[String]].map(_.toInt)
 
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
@@ -289,9 +292,15 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
         }
 
+        def filterSequent(s: Sequent): Sequent = s.copy(
+          ante = s.ante.zipWithIndex.filter({ case (_, i) => useFmlIndices.contains(-(i+1)) }).map(_._1),
+          succ = s.succ.zipWithIndex.filter({ case (_, i) => useFmlIndices.contains(  i+1 ) }).map(_._1)
+        )
+
         @tailrec
         def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[Response] = {
-          val sequent = node.goal.get
+          val nodeGoal = node.goal.get
+          val sequent = filterSequent(nodeGoal)
           if (sequent.isFOL) {
             if (StaticSemantics.symbols(sequent).isEmpty) {
               //@note counterexample on false (e.g., after QE on invalid formula)
@@ -347,27 +356,29 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           }
         }
 
-        try {
+        if (useFmlIndices.nonEmpty) try {
           node.goal match {
-            case Some(sequent) if sequent.isFOL => ToolProvider.cexTool() match {
+            case Some(unfiltered) if filterSequent(unfiltered).isFOL => ToolProvider.cexTool() match {
                 case Some(cexTool) => getCex(node, cexTool)
                 case None => new CounterExampleResponse("cex.notool") :: Nil
               }
-            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
-              case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
-                case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
-                  case None => new CounterExampleResponse("cex.none") :: Nil
-                  case Some(cex) => new CounterExampleResponse("cex.found", sequent.toFormula, cex) :: Nil
+            case Some(unfiltered) =>
+              val sequent = filterSequent(unfiltered)
+              sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+                case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
+                  case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
+                    case None => new CounterExampleResponse("cex.none") :: Nil
+                    case Some(cex) => new CounterExampleResponse("cex.found", sequent.toFormula, cex) :: Nil
+                  }
+                  case None => new CounterExampleResponse("cex.notool") :: Nil
                 }
-                case None => new CounterExampleResponse("cex.notool") :: Nil
+                case None => nonfoError(sequent)
               }
-              case None => nonfoError(sequent)
-            }
             case None => new CounterExampleResponse("cex.none") :: Nil
           }
         } catch {
           case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
-        }
+        } else new CounterExampleResponse("cex.emptysequent") :: Nil
     }
   }
 }

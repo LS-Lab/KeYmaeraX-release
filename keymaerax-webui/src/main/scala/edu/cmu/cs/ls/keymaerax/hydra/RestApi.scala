@@ -22,7 +22,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
 import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
-import StatusCodes._
+import akka.http.scaladsl.model.StatusCodes._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 import scala.annotation.tailrec
@@ -850,8 +850,8 @@ object RestApi extends Logging {
 
     val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
       pathEnd {
-        get { parameters('assumptions.as[String]) { assumptions =>
-          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions)
+        get { parameters(('assumptions.as[String], 'fmlIndices.as[String])) { (assumptions: String, fmlIndices: String) =>
+          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions, fmlIndices)
           completeRequest(request, t)
         }}
       }}

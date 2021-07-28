@@ -232,6 +232,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
     formulas: {
       highlighted: undefined,
+      selectedIn: function(sequent) {
+        return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }).
+        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }));
+      },
+      selectedIndicesIn: function(sequent) {
+        return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.id; }).
+        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.id; }));
+      },
       mode: 'prove',
       stickyEdit: false
     },

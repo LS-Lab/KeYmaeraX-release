@@ -4,20 +4,20 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.{CancellationException, ExecutionException}
+import java.util.concurrent.CancellationException
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, Promise, TimeoutException}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
+import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 
@@ -328,11 +328,11 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
       val subst = (abbr, value) match {
         case (FuncOf(name, arg), t: Term) =>
-          val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-          SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()))
+          val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+          SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
         case (PredOf(name, arg), f: Formula) =>
-          val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-          SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, DotTerm()))
+          val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+          SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
       }
 
       //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
@@ -347,6 +347,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       apply(inner, BelleProvable(in, lbl, defs)) match {
         case p: BelleDelayedSubstProvable =>
           try {
+            val foo = p.p(us)
             new BelleDelayedSubstProvable(provable(p.p(us), 0), p.label, p.defs, p.subst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
@@ -514,30 +515,29 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           case _ => false
         })
 
-        val filteredGoals = p.subgoals.
-          map(s => {
-            def abbrv(f: Formula, i: Int, name: String): (PredOf, Option[SubstitutionPair]) = {
-              val fv = StaticSemantics.freeVars(f).toSet.toList
-              val dots = fv.zipWithIndex.map({ case (v, i) => (v, DotTerm(Real, Some(i))) })
-              val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
-              val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
-              val fDots = dots.foldRight(f)({ case ((what, repl), f) => Box(Assign(what, repl), f) })
-              val fn = Function(name, Some(i), arg.sort, Bool, interpreted=false)
-              (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
-            }
+        def abbrv(f: Formula, i: Int, name: String): (PredOf, Option[SubstitutionPair]) = {
+          val fv = StaticSemantics.freeVars(f).toSet.toList
+          val dots = fv.zipWithIndex.map({ case (v, i) => (v, DotTerm(Real, Some(i))) })
+          val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
+          val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
+          val fDots = dots.foldRight(f)({ case ((what, repl), f) => Box(Assign(what, repl), f) })
+          val fn = Function(name, Some(i), arg.sort, Bool, interpreted=false)
+          (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
+        }
 
-            val antes = s.ante.zipWithIndex.map({ case (f, i) =>
-              if (keepPos(s, AntePos(i))) (f, None)
-              else abbrv(f, i, "p_")
-            })
-            val succs = s.succ.zipWithIndex.map({ case (f, i) =>
-              if (keepPos(s, SuccPos(i))) (f, None)
-              else abbrv(f, i, "q_")
-            })
-
-            (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),
-              USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
+        val filteredGoals = p.subgoals.map(s => {
+          val antes = s.ante.zipWithIndex.map({ case (f, i) =>
+            if (keepPos(s, AntePos(i))) (f, None)
+            else abbrv(f, i, "p_")
           })
+          val succs = s.succ.zipWithIndex.map({ case (f, i) =>
+            if (keepPos(s, SuccPos(i))) (f, None)
+            else abbrv(f, i, "q_")
+          })
+
+          (ProvableSig.startProof(Sequent(antes.map(_._1), succs.map(_._1))),
+            USubst(antes.flatMap(_._2) ++ succs.flatMap(_._2)))
+        })
 
         def backAssign(substs: Seq[SubstitutionPair]): BelleExpr = substs.map(s => s.what match {
           case PredOf(Function(fn, Some(_), _, _, _), arg) =>

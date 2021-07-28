@@ -1426,6 +1426,9 @@ del {
 .k4-formula-container {
   max-width: 100%;
 }
+.k4-formula-hidden {
+  text-decoration: line-through;
+}
 
 .k4-help-content {
   text-align: left;

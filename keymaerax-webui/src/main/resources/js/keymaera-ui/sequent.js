@@ -30,9 +30,12 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.getCounterExample = function(additionalAssumptions) {
                 //@todo timeout request canceller
                 spinnerService.show('counterExampleSpinner');
+                var nodeId = sequentProofData.agenda.selectedId();
+                var node = sequentProofData.proofTree.node(nodeId);
+                var selected = sequentProofData.formulas.selectedIndicesIn(node.getSequent());
                 var additional = additionalAssumptions ? additionalAssumptions : {};
                 var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample'
-                $http.get(url, { params: { assumptions: additional } })
+                $http.get(url, { params: { assumptions: additional, fmlIndices: JSON.stringify(selected) } })
                     .then(function(response) {
                       var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
                       var modalInstance = $uibModal.open({
