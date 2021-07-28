@@ -927,12 +927,12 @@ object ODELiveness {
   // Flips a proved [a]p(||) -> [b]p(||) into <b>p(||) -> <a>p(||) or vice versa, possibly with bananas for p(||)
   // Also works under 1 level of nesting and curries the result so that it is easy to apply backwards e.g.
   // foo -> [a]p(||) -> [b]p(||) into foo & <b>p(||) -> <a>p(||)
-  private def flipModality(pr:ProvableSig) : ProvableSig = {
+  private[btactics] def flipModality(pr:ProvableSig) : ProvableSig = {
 
     val fml = pr.conclusion.succ(0)
 
     fml match {
-      case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(Box(proga,post),Box(progb,post2)) if post==post2 => {
         proveBy(Imply(Diamond(progb,post),Diamond(proga,post)),
           implyR(1) &
             useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -940,7 +940,7 @@ object ODELiveness {
           implyRi & byUS(pr)
         )
       }
-      case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 => {
         proveBy(Imply(Box(progb,post),Box(proga,post)),
           implyR(1) &
             useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -948,7 +948,7 @@ object ODELiveness {
             implyRi & byUS(pr)
         )
       }
-      case Imply(outer,Imply(Box(proga,post),Box(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(outer,Imply(Box(proga,post),Box(progb,post2))) if post==post2 => {
         proveBy(Imply(And(outer,Diamond(progb,post)),Diamond(proga,post)),
           implyR(1) & andL(-1) &
             useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -956,7 +956,7 @@ object ODELiveness {
             implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS(pr)
         )
       }
-      case Imply(outer,Imply(Diamond(proga,post),Diamond(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(outer,Imply(Diamond(proga,post),Diamond(progb,post2))) if post==post2 => {
         proveBy(Imply(And(outer,Box(progb,post)),Box(proga,post)),
           implyR(1) & andL(-1) &
             useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
