@@ -373,6 +373,10 @@ Axiom "DX differential skip"
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
+Axiom "D[;] differential self compose"
+  [{c&q(||)}]p(||) <-> [{c&q(||)}][{c&q(||)}]p(||)
+End.
+
 Axiom "DIo open differential invariance >"
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
