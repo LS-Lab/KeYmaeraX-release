@@ -90,6 +90,16 @@ object KeYmaeraX {
     case _ => "Parsed OK, but not a FOL formula"
   })
 
+  @JSExportTopLevel("parsesAsFormulaList")
+  def parsesAsFormulaList(answer: String, solution: String): Dictionary[Any] =
+    parseCheck(answer, SequentParser.parseFormulaList(_), (_: List[Formula]) => "Parsed OK")
+
+  @JSExportTopLevel("parsesAsFOLFormulaList")
+  def parsesAsFOLFormulaList(answer: String, solution: String): Dictionary[Any] =
+    parseCheck(answer, SequentParser.parseFormulaList(_), (l: List[Formula]) =>
+      if (l.forall(_.isFOL)) "Parsed OK"
+      else "Parsed OK, but at least one formula is not FOL")
+
   @JSExportTopLevel("parsesAsHP")
   def parsesAsHP(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
     case hp: Program if FormulaTools.dualFree(hp) => "Parsed OK"
@@ -98,9 +108,16 @@ object KeYmaeraX {
 
   @JSExportTopLevel("parsesAsHG")
   def parsesAsHG(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
-    case hp: Program => "Parsed OK"
+    case _: Program => "Parsed OK"
     case _ => "Parsed OK, but not a hybrid game/program"
   })
+
+  @JSExportTopLevel("parsesAsODE")
+  def parsesAsODE(answer: String, solution: String): Dictionary[Any] =
+    parseCheck(answer, (s: String) => Parser("{" + s + "}"), (_: Expression) match {
+      case _: DifferentialProgram | _: ODESystem => "Parsed OK"
+      case _ => "Parsed OK, but not an ODE"
+    })
 
   @JSExportTopLevel("parsesAsSubstitution")
   def parsesAsSubstitution(answer: String, solution: String): Dictionary[Any] =

@@ -342,8 +342,15 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   }
 
   it should "parse (demonic) ODEs" in {
+    Parser("x'=v") shouldBe Equal(DifferentialSymbol(Variable("x")), Variable("v"))
+    Parser("x'=v & x>=0") shouldBe And(Equal(DifferentialSymbol(Variable("x")), Variable("v")), GreaterEqual(Variable("x"), Number(0)))
     Parser("{x'=v}") shouldBe ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")))
+    Parser("{x'=v & x>=0}") shouldBe ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")), GreaterEqual(Variable("x"), Number(0)))
     Parser("{x'=v}^@") shouldBe Dual(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v"))))
+    Parser("{{x'=v}}") shouldBe Parser("{x'=v}")
+    Parser("{{x'=v & x>=0}}") shouldBe Parser("{x'=v & x>=0}")
+    Parser("{{x'=v}^@}") shouldBe Parser("{x'=v}^@")
+    Parser("{{x'=v}}^@") shouldBe Parser("{x'=v}^@")
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
