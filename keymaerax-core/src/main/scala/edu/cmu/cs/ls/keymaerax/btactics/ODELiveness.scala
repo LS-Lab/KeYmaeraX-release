@@ -1373,7 +1373,7 @@ object ODELiveness {
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('Llast, "q_(||)".asFormula) & byUS(proveBy("p()+e()*t>=0, f_()>=p()+e()*t ==> f_()>=0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0 ==> f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1385,7 +1385,7 @@ object ODELiveness {
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL('Llast, "q_(||)".asFormula) & byUS(proveBy("p()+e()*t>0, f_()>=p()+e()*t ==> f_()>0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0 ==> f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & id

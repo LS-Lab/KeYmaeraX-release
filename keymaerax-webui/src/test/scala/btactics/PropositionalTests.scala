@@ -45,7 +45,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "automatically cut and use hidden assumptions" in withQE { _ =>
     val s = "Y>y, X>y, y<x&x<=Y->P(x) ==>  y<x&x<=min(X,Y)->P(x)".asSequent
-    proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x), y<x&x<=Y ==> y<x&x<=min(X,Y)->P(x)".asSequent
+    proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x) ==> y<x&x<=min(X,Y)->P(x)".asSequent
   }
 
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {

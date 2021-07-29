@@ -163,10 +163,10 @@ class ScriptedRequestTests extends TacticTestBase {
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
         """andR(1); <(nil, prop); <(
           |"x=3": nil,
-          |"x>2//x^2>=4": nil,
-          |"x<(-2)//x^2>=4": nil,
-          |"x<(-2)//x^4>=16": nil,
-          |"x>2//x^4>=16": nil
+          |"x^2>=4//x>2": nil,
+          |"x^4>=16//x>2": nil,
+          |"x^4>=16//x < (-2)": nil,
+          |"x^2>=4//x < (-2)": nil
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
   }}
@@ -187,10 +187,10 @@ class ScriptedRequestTests extends TacticTestBase {
           |"x=3": nil,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":
           |  prop; <(
-          |  "x>2//x^2>=4": nil,
-          |  "x<(-2)//x^2>=4": nil,
-          |  "x<(-2)//x^4>=16": nil,
-          |  "x>2//x^4>=16": nil
+          |    "x^2>=4//x>2": nil,
+          |    "x^4>=16//x>2": nil,
+          |    "x^4>=16//x < (-2)": nil,
+          |    "x^2>=4//x < (-2)": nil
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
@@ -464,7 +464,8 @@ class ScriptedRequestTests extends TacticTestBase {
           """implyR('R=="x>=0&y>0&z=0->[x:=x+y;]x>=z");
             |andL('L=="x>=0&y>0&z=0");
             |andL('L=="y>0&z=0");
-            |step('R=="[x:=x+y;]x>=z");
+            |assignbAxiom('R=="[x:=x+y;]x>=z");
+            |expandAllDefs;
             |applyEqualities;
             |QE""".stripMargin)
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
