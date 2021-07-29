@@ -46,6 +46,9 @@ class StringConverter(val s: String) {
   /** Converts to a formula. */
   def asFormula: Formula = Parser.parser.formulaParser(s)
 
+  /** Converts to a list of formulas (formulas comma-separated in input). */
+  def asFormulaList: List[Formula] = SequentParser.parseFormulaList(s)
+
   /** Converts to a program or game. */
   def asProgram: Program = Parser.parser.programParser(s)
 
