@@ -93,23 +93,125 @@ object ImplicitDefinitions {
           ),
           cohideR(2) & K(1) & G(1) & K(1) & G(1) & implyR(1) & Dassignb(1) & id
         ),
-      namespace
+
     )
+  }
+
+  // First derivative
+  lazy val firstDer : Lemma = {
+    val ss1 = USubst(List(SubstitutionPair("b(|y_|)".asTerm, "1".asTerm)))
+    val pr1 = Ax.DGCa.provable(ss1)(URename("y_".asVariable,"t_".asVariable,semantic=true))
+    val pr2 = Ax.alle.provable(URename("x_".asVariable,"t_".asVariable,semantic=true))
+
+    val pr3 = Ax.DGC.provable(ss1)(URename("y_".asVariable,"t_".asVariable,semantic=true))
+    val pr4 = proveBy("p_(||) -> (\\exists t_ p_(||))".asFormula, byUS(Ax.existse))
+
+    val g = proveBy("[{c{|t_|}}]p(|t_|) <-> [{t_'=1,c{|t_|}}]p(|t_|)".asFormula,
+      equivR(1) <(
+        useAt(pr1)(-1) & useAt(pr2)(-1) & useAt(Ax.commaCommute)(-1) & id,
+        useAt(pr3)(1) & useAt(pr4,PosInExpr(1::Nil))(1) & useAt(Ax.commaCommute)(1) & id
+      )
+    )
+
+    val arith = proveBy("!f()=0 ==> f() > 0 | -f()>0".asSequent, QE)
+    val negprop = proveBy("!(p()&q()) <-> (p() -> !q())".asFormula, prop)
+    val arith2 = proveBy("f()-2*(t_-g())>=0->f()-2*(t_-g())^(2-1)*(1-0)>=0".asFormula,QE)
+    val arith3 = proveBy("f()>0, t_=g()  ==>  f()-2*(t_-g())>0".asSequent, QE)
+
+    // c{|t0|} annoying so that we can do g() ~> t0 later
+    val tt = proveBy("f(||)=0, t_=g()  ==>  [{t_'=1,c{|t0|}&(f(||))'-2*(t_-g())>=0}]f(||)-(t_-g())^2>=0".asSequent,
+      useAt(Ax.DI)(1) & implyR(1) & andR(1) <(
+        hideL(-3) & hideL(-3) & exhaustiveEqL2R(-1) & hideL(-1) & QE,
+        hideL(-1) & hideL(-1) & chase(1,1::Nil) & DW(1) &
+          DE(1) & G(1) & useAt(Ax.Dassignbeq)(1) & allR(1) & implyR(1) &
+          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2)
+      )
+    )
+
+    val tt2 = proveBy("f(||)=0, t_=g()  ==>  [{t_'=1,c{|t0|}&-(f(||))'-2*(t_-g())>=0}]-f(||)-(t_-g())^2>=0".asSequent,
+      useAt(Ax.DI)(1) & implyR(1) & andR(1) <(
+        hideL(-3) & hideL(-3) & exhaustiveEqL2R(-1) & hideL(-1) & QE,
+        hideL(-1) & hideL(-1) & chase(1,1::Nil) & DW(1) &
+          DE(1) & G(1) & useAt(Ax.Dassignbeq)(1) & allR(1) & implyR(1) &
+          exhaustiveEqL2R(-1) & hideL(-1) & byUS(arith2)
+      )
+    )
+
+    remember("[{c{|t_,t0|}}]f(|t_,t0|)=0 -> [{c{|t_,t0|}}]f(|t_,t0|)'=0".asFormula,
+      implyR(1) &
+        useAt(g,PosInExpr(0::Nil))(1) &
+        useAt(g,PosInExpr(0::Nil))(-1) &
+        boxd(1) & notR(1) &
+        cutL("<{t_'=1,c{|t_,t0|}}>(((f(|t_,t0|)'>0 | -f(|t_,t0|)' > 0) & f(|t_,t0|)=0) & [{t_'=1,c{|t_,t0|}}]f(|t_,t0|)=0)".asFormula)(-2) <(
+          //this part must be done more carefully in context when cont is changed
+          diamondd(-2) & notL(-2) & G(1) & useAt(negprop)(1) & implyR(1) & useAt(Ax.notBox)(1) & andL(-1) &
+            cut("\\exists t0 ( t_ = t0)".asFormula) <(
+              existsL(-3) & orL(-1) <(
+                cut("(f(|t_,t0|))' - 2*(t_-t0) > 0".asFormula) <(
+                  cutR("<{t_'=1,c{|t_,t0|}& f(|t_,t0|)-(t_-t0)^2>=0}>t_!=t0".asFormula)(1) <(
+                    ODELiveness.dDR("(f(|t_,t0|))'-2*(t_-t0)>=0".asFormula)(1)  <(
+                      useAt(ODEInvariance.contAx,PosInExpr(1::Nil))(1) & id,
+                      hideL(-1) & hideL(-3) & byUS(tt)
+                    ) ,
+                    cohideR(1) & implyR(1) &
+                      DWd(-1) & ODELiveness.kDomainDiamond("f(|t_,t0|)-(t_-t0)^2>=0 & t_!=t0".asFormula)(1)<(
+                      ODELiveness.dDR("f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) <(
+                        id,
+                        G(1) & closeT
+                      ),
+                      DW(1) & G(1) & implyR(1) & andL(-1) & notL(-2) & notR(2) & exhaustiveEqL2R()(-2) & hideL(-2) & QE
+                    )
+                  ),
+                  hideR(1) & hideL(-2) & byUS(arith3)
+                ),
+                // reverse direction
+                cut("-(f(|t_,t0|))' - 2*(t_-t0) > 0".asFormula) <(
+                  cutR("<{t_'=1,c{|t_,t0|}& -f(|t_,t0|)-(t_-t0)^2>=0}>t_!=t0".asFormula)(1) <(
+                    ODELiveness.dDR("-(f(|t_,t0|))'-2*(t_-t0)>=0".asFormula)(1)  <(
+                      useAt(ODEInvariance.contAx,PosInExpr(1::Nil))(1) & id,
+                      hideL(-1) & hideL(-3) & byUS(tt2)
+                    ) ,
+                    cohideR(1) & implyR(1) &
+                      DWd(-1) & ODELiveness.kDomainDiamond("-f(|t_,t0|)-(t_-t0)^2>=0 & t_!=t0".asFormula)(1)<(
+                      ODELiveness.dDR("-f(|t_,t0|)-(t_-t0)^2>=0".asFormula)(1) <(
+                        id,
+                        G(1) & closeT
+                      ),
+                      DW(1) & G(1) & implyR(1) & andL(-1) & notL(-2) & notR(2) & exhaustiveEqL2R()(-2) & hideL(-2) & QE
+                    )
+                  ),
+                  hideR(1) & hideL(-2) & byUS(arith3)
+                )),
+              cohideR(2) & QE
+            ),
+          useAt(Ax.Kd,PosInExpr(1::Nil))(1) & useAt(Ax.Dcomp)(-1) & monb &
+            implyR(1) & andR(1) <(
+            andR(1) <(
+              hideL(-1) & byUS(arith),
+              useAt(Ax.DX)(-1) & prop),
+            id
+          )
+        ),
+    namespace)
   }
 
   lazy val contBox : Lemma = {
 
-    val tt = proveBy("!t_<f() -> [{t_'=1,c}]!t_ < f()".asFormula,
+    val tt = proveBy("!f()-t_>0 -> [{t_'=1,c}]!f()-t_>0".asFormula,
       implyR(1) & dI('full)(1)
     )
 
-    val arith = proveBy("f()>=0&true&t_ < x_ ->  !(t_=x_|!f()>=0)".asFormula,QE)
+    val tt2 = proveBy("t_=g() ==> [{t_'=1,c}]t_>=g()".asSequent,
+      dI('full)(1)
+    )
 
-    val pr = proveBy("\\exists x_ (t_=x_ & x_!=g()) <-> t_!=g()".asFormula, QE)
+    val arith = proveBy("f()>=0&true&x_-t_>0->!(t_=x_|!f()>=0)".asFormula,QE)
 
-    remember("f(|x_|) > 0 -> \\exists x_ ( x_!=g() & [{t_'=1,c{|x_|}}](t_<x_ -> f(|x_|)>=0) )".asFormula,
+    val pr = proveBy("\\exists x_ (t_=x_ &x_-g()>0) <-> t_>g()".asFormula, QE)
+
+    remember("f(|x_|) > 0 & t_ = g() -> \\exists x_ ( x_ - g() > 0 & [{t_'=1,c{|x_|}}](x_-t_>0 -> f(|x_|)>=0) )".asFormula,
       implyR(1) &
-      cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>\\exists x_ (t_=x_ & x_!=g())".asFormula)(-1) <(
+        cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>\\exists x_ (t_=x_ & x_ - g() > 0)".asFormula)(-1) <(
           useAt(ODEInvariance.dBarcan,PosInExpr(1::Nil))(-1) &
             existsL(-1) & existsR(1) &  useAt(Ax.pVd, PosInExpr(1::Nil))(-1) & andL(-1) &
             andR(1) <(
@@ -117,16 +219,26 @@ object ImplicitDefinitions {
               hideL(-2) &
                 useAt(Ax.DCC)(1) & andR(1) <(
                 boxd(1) & notR(1) &
-                cutL("<{t_'=1,c{|x_|}&true&t_ < x_}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-2) <( skip , cohideR(1) & implyR(1) & mond & prop) &
-                cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-1) <( skip , cohideR(1) & implyR(1) & mond & prop) & andLi &
-                useAt(Ax.UniqIff,PosInExpr(0 :: Nil))(-1) & diamondd(-1) & notL(-1) & DW(1) & G(1) & byUS(arith)
+                  cutL("<{t_'=1,c{|x_|}&true&x_-t_>0}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-2) <( skip , cohideR(1) & implyR(1) & mond & prop) &
+                  cutL("<{t_'=1,c{|x_|}&f(|x_|)>=0}>(t_=x_ | !f(|x_|)>=0)".asFormula)(-1) <( skip , cohideR(1) & implyR(1) & mond & prop) & andLi &
+                  useAt(Ax.UniqIff,PosInExpr(0 :: Nil))(-1) & diamondd(-1) & notL(-1) & DW(1) & G(1) &
+                  byUS(arith)
                 ,
                 G(1) & byUS(tt)
+              )
+            ),
+          cohideR(2) & implyR(1) & useAt(pr)(1,1::Nil) &
+            andL(-1) & ODELiveness.kDomainDiamond("t_!=g()".asFormula)(1) <(
+            useAt(ODEInvariance.contAx,PosInExpr(1::Nil))(1) & id,
+            hideL(-1) & dC("t_>=g()".asFormula)(1) <(
+              DW(1) & G(1) & implyR(1) & andL(-1) & andL(-1) & hideL(-2) & QE,
+              dR("true".asFormula)(1) <(
+                byUS(tt2),
+                cohideR(1) & boxTrue(1)
+              )
             )
-          ),
-        cohideR(2) & implyR(1) & useAt(pr)(1,1::Nil) &
-        useAt(ODEInvariance.contAx,PosInExpr(1::Nil))(1) & id
-      ),
+          )
+        ),
       namespace
     )
   }
