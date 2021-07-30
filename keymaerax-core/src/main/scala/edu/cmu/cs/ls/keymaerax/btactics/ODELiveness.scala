@@ -669,6 +669,7 @@ object ODELiveness {
     val ode1ls = DifferentialProduct.listify(ode1)
     val ode2ls = DifferentialProduct.listify(ode2)
 
+
     //Common case: both ODEs are the same
     if(ode1ls==ode2ls) {
       Some(skip)
@@ -745,7 +746,7 @@ object ODELiveness {
             compatODE(asmsys.ode,tarsys.ode, curdom, asmpost) match {
               case None => ()
               case Some(tac) => {
-                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(QE)) //todo: timeout?
+                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(prop) & Idioms.?(QE)) //todo: timeout?
 
                 if (pr.isProved) {
                   ls += ((asmsys.constraint, pr, asmpost, i, tac))

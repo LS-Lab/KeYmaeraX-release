@@ -809,4 +809,14 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "[{x'=2}]x>0, <{x'=2}>x>0  ==>  <{x'=2}>x>0, [{x'=2}]x>0".asSequent
   }
+
+  it should "rewrite with predicates" in withMathematica { _ =>
+    val pr = proveBy("==> [{x'=x&x>0&q(x)}]x>0".asSequent,
+      rewriteODEAt("x'=--x+x-x".asDifferentialProgram)(1)
+    )
+
+    println(pr)
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "==>  [{x'=--x+x-x&x>0&q(x)}]x>0".asSequent
+  }
 }

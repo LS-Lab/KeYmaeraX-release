@@ -2290,20 +2290,34 @@ object ODEInvariance {
     val normbound = xLHS.map(e => Times(e, e)).reduceLeft(Plus)
     val renode = (odeLHS zip xLHS).foldLeft(ode2)((ode,v) => ode.replaceAll(v._1,v._2))
     val eq = (odeLHS zip xLHS).map(v => Equal(v._1,v._2)).reduceLeft(And)
-    val boxeq = Box(ODESystem(DifferentialProduct(sys.ode,renode),sys.constraint),eq)
+    val rendom = (odeLHS zip xLHS).foldLeft(sys.constraint)((dom,v) => dom.replaceAll(v._1,v._2))
 
-    proveBy(fml,
+    val boxeq = Box(ODESystem(DifferentialProduct(sys.ode,renode),rendom),eq)
+
+    val pr = proveBy(fml,
       implyR(1) & sttac &
         cutR(boxeq)(1) <(
           hideL(-1) & ODEInvariance.dRI(1),
           cohideOnlyL(-1) & implyR(1) & ODELiveness.bDG(sys.ode,normbound)(1) <(
-            ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) &
-              andL(-1) & hideL(-1) & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & QE,
-            ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & hideL(-2) &
-              SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & id
+            dC(eq)(1)<(
+              DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & hideL(-1) &
+              SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & QE,
+              id),
+            dC(eq)(1)<(
+              hideL(-2) & dC(px)(1) <(
+                DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(1),SuccPos(0)) &
+                andL(-1) & hideL(-1) & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id,
+                dR(sys.constraint)(1)<(
+                  ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & id,
+                  DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(0),SuccPos(0)) &
+                  SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id
+                )
+              ),
+              id)
           )
         )
     )
+    pr
   }
 
   //todo: @tactic for DifferentialPrograms?
