@@ -195,6 +195,13 @@ object ImplicitDefinitions {
     namespace)
   }
 
+  private lazy val firstDerVar = remember("[{c{|y_,z_|}}]x_=g(t_) -> [{c{|y_,z_|}}]x_'=(g(t_))'".asFormula,
+    implyR(1) & useAt(Ax.eqNormalize)(-1,1::Nil) &
+      useAt(firstDer.fact(URename("t_".asVariable,"y_".asVariable,semantic=true))(URename("t0".asVariable,"z_".asVariable,semantic=true)))(-1) & monb &
+      chase(-1,0::Nil) & useAt(Ax.eqNormalize)(1) & id,
+    namespace
+  )
+
   lazy val contBox : Lemma = {
 
     val tt = proveBy("!f()-t_>0 -> [{t_'=1,c}]!f()-t_>0".asFormula,
@@ -240,6 +247,72 @@ object ImplicitDefinitions {
           )
         ),
       namespace
+    )
+  }
+
+  private lazy val impSplit = remember(
+    "([a_{|^@|};]p(||) -> [a_{|^@|};]r(||)) & ([a_{|^@|};]q(||) -> [a_{|^@|};]s(||)) -> ([a_{|^@|};](p(||)&q(||)) -> [a_{|^@|};](r(||)&s(||)))".asFormula,
+    implyR(1) & implyR(1) & boxAnd(-2) & boxAnd(1) & prop,
+    namespace
+  )
+
+  // Prove the n-dimensional partial derivative axiom
+  // [x'=f(x),t'=h()]x=g(t) -> [t':=h()](g(t))'=f(g(t))
+  def partialDer(dim : Int) : ProvableSig = {
+
+    if(dim < 1)
+      throw new IllegalArgumentException("Axiom derivable for dimension >= 1 but got: "+dim)
+    //Indices 1,2,...dim
+    val indices = 1 to dim
+    // The list of LHS variables x__1, x__2, ..., x__dim
+    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
+    val sort = indices.map(_ => Real).reduceRight(Tuple)
+    val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
+    // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
+    val RHSxarg = xLHS.reduceRight(Pair)
+    val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
+
+    val tvar = "t_".asVariable
+    val trhs = FuncOf(Function("h_", None, Unit, Real), Nothing)
+
+    val gFunc = indices.map(i => Function("g_", Some(i), Real, Real))
+    val gApp = gFunc.map { f => FuncOf(f, tvar) }
+    val garg = gApp.reduceRight(Pair)
+    val gRHS = RHSfunc.map {f => FuncOf(f,garg)}
+
+    val tode = AtomicODE(DifferentialSymbol(tvar),trhs)
+    val tassign = Assign(DifferentialSymbol(tvar),trhs)
+
+    val xODE = DifferentialProduct((xLHS zip xRHS).map { case (x, rhs) => AtomicODE(DifferentialSymbol(x), rhs) }
+      .reduceRight(DifferentialProduct.apply),tode)
+
+    val eqs = (xLHS zip gApp).map(c => Equal(c._1,c._2)).reduceRight(And)
+    val deqs = (xLHS zip gApp).map(c => Equal(DifferentialSymbol(c._1),Differential(c._2))).reduceRight(And)
+
+    val gdeqs = (gApp zip gRHS).map(c => Equal(Differential(c._1),c._2)).reduceRight(And)
+
+    val fml = Imply(Box(ODESystem(xODE, True),eqs),Box(tassign,gdeqs))
+
+
+    proveBy(fml,
+      implyR(1) &
+      cutL(Box(ODESystem(xODE, True),And(eqs,deqs)))(-1)<(
+        DE(-1) & useAt(Ax.DX)(-1) & implyL(-1) <( closeT,
+          monb & (Dassignb(-1) * dim) &
+            andL(-1) &
+            // Get rid of f(x)=(g(t))' equalities
+            (andL(-2) & exhaustiveEqR2L()(-2) & hideL(-2))* (dim-1) & exhaustiveEqR2L()(-2) & hideL(-2) &
+            // Get rid of x=g(t) equalities
+            (andL(-1) & exhaustiveEqL2R()(-1) & hideL(-1))* (dim-1) & exhaustiveEqL2R()(-1) & hideL(-1) &
+            // Prove all remaining equalities
+            (andR(1) <(byUS(Ax.equalReflexive), skip))* (dim-1) & byUS(Ax.equalReflexive)
+        ),
+        cohideR(2) & implyR(1) & boxAnd(1) & andR(1) <(
+          id,
+          implyRi &
+          (useAt(impSplit,PosInExpr(1::Nil))(1) & andR(1) <(byUS(firstDerVar), skip))* (dim-1) & byUS(firstDerVar)
+        )
+      )
     )
   }
 
