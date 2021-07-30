@@ -39,6 +39,15 @@ class ImplicitDefinitionsTests extends TacticTestBase {
     pr.conclusion shouldBe "==>  <{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e)->[{e'=e&q_(e)}](<{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e))|[{e'=-e&q_(e)}](<{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e))".asSequent
   }
 
+  it should "prove sin/cos box expansion" in withMathematica { _ =>
+
+    val pr = defExpandToBox("s'=c,c'=-s".asDifferentialProgram)
+
+    println(pr)
+    pr shouldBe 'proved
+    pr.conclusion shouldBe "==>  <{s'=-c,c'=--s&q_(s,c)}>p_(s,c)|<{s'=c,c'=-s&q_(s,c)}>p_(s,c)->[{s'=c,c'=-s&q_(s,c)}](<{s'=-c,c'=--s&q_(s,c)}>p_(s,c)|<{s'=c,c'=-s&q_(s,c)}>p_(s,c))|[{s'=-c,c'=--s&q_(s,c)}](<{s'=-c,c'=--s&q_(s,c)}>p_(s,c)|<{s'=c,c'=-s&q_(s,c)}>p_(s,c))".asSequent
+  }
+
   "first deriv" should "prove first derivative axiom" in withMathematica { _ =>
 
     val ax = firstDer

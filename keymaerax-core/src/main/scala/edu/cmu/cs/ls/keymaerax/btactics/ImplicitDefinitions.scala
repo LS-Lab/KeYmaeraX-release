@@ -438,11 +438,13 @@ object ImplicitDefinitions {
 
     // Fresh names
     val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
+    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
 
     // Expected expanded shape of a definition
     val expdef = Or(Diamond(ODESystem(oder,odeDom),px),Diamond(ODESystem(ode,odeDom),px))
 
-    val tab = thereAndBack(dim)
+    val tab = (xLHS zip odeLHS).foldLeft(thereAndBack(dim))((t,v) => t(URename(v._1,v._2)))
+
     val fwdSub = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(1::0::0::Nil)).get,ode)
     val fwd = fwdSub.toForward(tab)
     val bwdSub = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(1::0::0::Nil)).get,oder)
