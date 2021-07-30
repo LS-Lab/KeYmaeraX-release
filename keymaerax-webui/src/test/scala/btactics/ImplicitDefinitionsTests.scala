@@ -1,10 +1,9 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ImplicitDefinitions._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
 class ImplicitDefinitionsTests extends TacticTestBase {
 
   "compose" should "lift partial to diff axiom" in withMathematica { _ =>
@@ -29,6 +28,15 @@ class ImplicitDefinitionsTests extends TacticTestBase {
 
     pr shouldBe 'proved
     pr.conclusion shouldBe "==> p_(x__1,x__2)->[{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2)&q_(x__1,x__2)}]<{x__1'=-f__1(x__1,x__2),x__2'=-f__2(x__1,x__2)&q_(x__1,x__2)}>p_(x__1,x__2)".asSequent
+  }
+
+  it should "prove definition box expansion" in withMathematica { _ =>
+
+    val pr = defExpandToBox("e'=e".asDifferentialProgram)
+
+    println(pr)
+    pr shouldBe 'proved
+    pr.conclusion shouldBe "==>  <{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e)->[{e'=e&q_(e)}](<{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e))|[{e'=-e&q_(e)}](<{e'=-e&q_(e)}>p_(e)|<{e'=e&q_(e)}>p_(e))".asSequent
   }
 
   "first deriv" should "prove first derivative axiom" in withMathematica { _ =>

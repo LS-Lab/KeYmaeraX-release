@@ -293,7 +293,6 @@ object ImplicitDefinitions {
 
     val fml = Imply(Box(ODESystem(xODE, True),eqs),Box(tassign,gdeqs))
 
-
     proveBy(fml,
       implyR(1) &
       cutL(Box(ODESystem(xODE, True),And(eqs,deqs)))(-1)<(
@@ -317,7 +316,7 @@ object ImplicitDefinitions {
   }
 
   // Prove the n-dimensional there-and-back-like axiom
-  // P(x) -> [{x'=f(x)}]<{x'=-f(x)}>P(x)
+  // P(x) -> [{x'=f(x)&q(x)}]<{x'=-f(x)&q(x)}>P(x)
   def thereAndBack(dim : Int) : ProvableSig = {
 
     if(dim < 1)
@@ -387,5 +386,79 @@ object ImplicitDefinitions {
             cohideR(2) & QE
           )
     ))
+  }
+
+  // todo: move to Ax.scala
+  private lazy val dDcomp = {
+    val pr0 = proveBy("(p() <-> q()) <-> (!p() <-> !q())".asFormula, prop)
+
+    remember("==> <{c&q(||)}>p(||) <-> <{c&q(||)}><{c&q(||)}>p(||)".asSequent,
+      useAt(pr0)(1) &
+        useAt(Ax.notDiamond)(1, 0::Nil) &
+        useAt(Ax.notDiamond)(1, 1::Nil) &
+        useAt(Ax.notDiamond)(1, 1::1::Nil) &
+        byUS(Ax.Dcomp),
+      namespace
+    )
+  }
+
+  private lazy val boxOrLeft = remember("[a;]p(||) -> [a;](p(||) | q(||))".asFormula,
+    implyR(1) & monb & prop,
+    namespace
+  )
+
+  private lazy val boxOrRight = remember("[a;]q(||) -> [a;](p(||) | q(||))".asFormula,
+    implyR(1) & monb & prop,
+    namespace
+  )
+
+  // Prove the def-expansion to box axiom
+  // This currently requires a concrete ODE to do the rewrite --f(x) = f(x) in the context of an ODE
+  // <x'=-f(x)>P(x)|<x'=f(x)>P(x) ->
+  // [{x'=f(x)}] (<x'=-f(x)>P(x)|<x'=f(x)>P(x)) |
+  // [{x'=-f(x)}] (<x'=-f(x)>P(x)|<x'=f(x)>P(x))
+  def defExpandToBox(ode: DifferentialProgram) : ProvableSig = {
+
+    val odels = DifferentialProduct.listify(ode).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new TacticInapplicableFailure("ODE def expansion only applicable to concrete ODEs")
+    }
+
+    val odeLHS = odels.map( _._1.x)
+
+    val dim = odels.length
+    val indices = 1 to dim
+    val sort = indices.map(_ => Real).reduceRight(Tuple)
+
+    val RHSodearg = odeLHS.reduceRight(Pair)
+    val px = PredOf(Function("p_", None, sort, Bool), RHSodearg)
+    val odeDom = PredOf(Function("q_", None, sort, Bool), RHSodearg)
+    val oder = odels.map{ case (x, rhs) => AtomicODE(x, Neg(rhs)) }
+          .reduceRight(DifferentialProduct.apply)
+
+    // Fresh names
+    val yLHS = indices.map(i => BaseVariable("y_", Some(i)))
+
+    // Expected expanded shape of a definition
+    val expdef = Or(Diamond(ODESystem(oder,odeDom),px),Diamond(ODESystem(ode,odeDom),px))
+
+    val tab = thereAndBack(dim)
+    val fwdSub = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(1::0::0::Nil)).get,ode)
+    val fwd = fwdSub.toForward(tab)
+    val bwdSub = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(1::0::0::Nil)).get,oder)
+    val bwd = bwdSub.toForward(tab)
+
+    val fml = Imply(expdef, Or(Box(ODESystem(ode,odeDom),expdef),Box(ODESystem(oder,odeDom),expdef)))
+
+    val stt = (pos:Int) => (odeLHS zip yLHS).foldLeft(skip:BelleExpr)((t,v) => DLBySubst.stutter(v._1)(pos) & boundRename(v._1,v._2)(pos) & t)
+
+    proveBy(fml,
+      implyR(1) & orR(1) & orL(-1) <(
+        hideR(2) & useAt(boxOrLeft,PosInExpr(1::Nil))(1) & stt(-1) &
+        useAt(fwd)(-1) & monb & useAt(dDcomp)(1) & mond & stt(1) & id,
+        hideR(1) & useAt(boxOrRight,PosInExpr(1::Nil))(1) & stt(-1) &
+        useAt(bwd)(-1) & monb & ODEInvariance.rewriteODEAt(ode)(-1) & useAt(dDcomp)(1) & mond & stt(1) & id
+      )
+     )
   }
 }
