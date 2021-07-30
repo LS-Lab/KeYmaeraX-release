@@ -88,7 +88,12 @@ private object EqualityTactics {
                 filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
               case _ => false
             }))
-            val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
+            val lhsPos = (f match {
+              //@note do not rewrite lhs at ante-pos if it is verbatim lhs of eq,
+              // otherwise x=y, x=y ==> rewrites slightly surprising to y=y ==>
+              case Equal(l, _) if pos.isAnte && l == lhs => FormulaTools.posOf(f, _ == lhs).filterNot(_ == PosInExpr(0 :: Nil))
+              case _ => FormulaTools.posOf(f, _ == lhs)
+            }).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })
@@ -154,8 +159,10 @@ private object EqualityTactics {
       case (Equal(v: Variable, t), _) => v != t
       case (Equal(fn@FuncOf(Function(_, _, _, _, false), _), t), _) => fn != t
       case _ => false }).
-      reverse.
-      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
+      reverseMap({ case (_, pos) => Idioms.doIf(p => {
+        val Equal(l, r) = p.subgoals.head(pos.checkTop)
+        l != r })(EqualityTactics.atomExhaustiveEqL2R(pos))
+      }).
       reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 

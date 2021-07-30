@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, SaturateTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -227,6 +227,23 @@ class EqualityTests extends TacticTestBase {
 
   it should "not endless rewrite equalities when LHS and RHS are the same" in withTactics {
     proveBy("x=x, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x, x+3>=4 ==> 3-x<=1, x=2".asSequent
+  }
+
+  it should "chain-rewrite" in withTactics {
+    proveBy("y=z, z=0 ==> y=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0=0".asSequent
+    proveBy("x=y, y=z, z=0 ==> x=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0=0".asSequent
+    proveBy("x=y*z, y=z, z=0 ==> x=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0*0=0".asSequent
+  }
+
+  it should "not rewrite verbatim occurrences on the left-hand side of equalities in the antecedent" in withTactics {
+    proveBy("x=y, x=y ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
+    proveBy("x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
+    proveBy("x'=y, x'=x' ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x'=y, x'=y ==>".asSequent
+  }
+
+  it should "not fail when rewriting creates self-rewrites" in withTactics {
+    //@note rewriting x=y creates y=y which exhaustiveEqL2R rejects with IllegalArgumentException
+    proveBy("y=x, x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y, x=y, x=y ==>".asSequent
   }
 
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
