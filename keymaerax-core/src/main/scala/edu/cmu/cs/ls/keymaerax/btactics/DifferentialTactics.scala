@@ -144,12 +144,12 @@ private object DifferentialTactics extends Logging {
       val expand: Option[BelleExpr] = diFml match {
         case Box(_, post) =>
           StaticSemantics.symbols(post).toList.filter({
-            case Function(n, i, _, _, interpreted) =>
-              interpreted || defs.decls.get(Name(n, i)).exists(_.interpretation.isDefined)
+            case Function(n, i, _, _, interp) =>
+              interp.nonEmpty || defs.decls.get(Name(n, i)).exists(_.interpretation.isDefined)
             case _ => false
           }).map({
-            case fn@Function(_, _, _, _, interpreted) =>
-              if (interpreted) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
+            case fn@Function(_, _, _, _, interp) =>
+              if (interp.nonEmpty) EqualityTactics.expandAllAt(pos ++ PosInExpr(1 :: Nil))
               else Expand(fn, None)
           }).reduceRightOption[BelleExpr](_ & _)
         case _ => None

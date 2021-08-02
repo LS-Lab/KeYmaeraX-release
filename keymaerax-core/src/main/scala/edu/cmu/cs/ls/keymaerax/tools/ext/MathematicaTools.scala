@@ -80,7 +80,7 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
   override def apply(e: KExpr): MExpr = convert(e)
 
   override protected def convertFormula(f: Formula): MExpr = f match {
-    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+    case PredOf(Function(name, index, Unit, Bool, None), Nothing) =>
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertFormula(f)
   }
@@ -122,8 +122,8 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
   private[tools] def convert(e: Either[KExpr, NamedSymbol]): MExpr = e match {
     case Left(expr) => baseConverter.convert(expr)
     case Right(v: Variable) => baseConverter.convert(v)
-    case Right(fn@Function(_, _, Unit, Real, false)) => baseConverter.convert(FuncOf(fn, Nothing))
-    case Right(fn@Function(_, _, Unit, Bool, false)) => baseConverter.convert(PredOf(fn, Nothing))
+    case Right(fn@Function(_, _, Unit, Real, None)) => baseConverter.convert(FuncOf(fn, Nothing))
+    case Right(fn@Function(_, _, Unit, Bool, None)) => baseConverter.convert(PredOf(fn, Nothing))
     case Right(e) => throw new IllegalArgumentException("Cannot convert " + e.prettyString)
   }
 
@@ -189,14 +189,15 @@ object IdentityConverter extends M2KConverter[MExpr] {
 
 object PegasusK2MConverter extends UncheckedBaseK2MConverter {
   override protected def convertFormula(f: Formula): MExpr = f match {
-    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+    case PredOf(Function(name, index, Unit, Bool, None), Nothing) =>
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertFormula(f)
   }
 
   override def convert(e: KExpr): MExpr = {
     //insist on less strict input: interpreted function symbols allowed here
-    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true }),
+    //todo: interpreted
+    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
       "Interpreted functions must have expected domain and sort")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
     e match {
@@ -537,7 +538,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
 class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[Either[KExpr,NamedSymbol]](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool with Logging {
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
-    val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true})
+    val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interp) => interp.isEmpty case _ => true})
 
     if (cexVars.nonEmpty) {
       val input = ExtMathematicaOpSpec.findInstance(

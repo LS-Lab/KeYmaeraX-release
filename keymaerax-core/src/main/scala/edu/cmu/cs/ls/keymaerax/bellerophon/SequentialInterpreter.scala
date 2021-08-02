@@ -521,7 +521,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           val arg = dots.map(_._1).reduceRightOption(Pair).getOrElse(Nothing)
           val dotsArg = dots.map(_._2).reduceRightOption(Pair).getOrElse(Nothing)
           val fDots = dots.foldRight(f)({ case ((what, repl), f) => Box(Assign(what, repl), f) })
-          val fn = Function(name, Some(i), arg.sort, Bool, interpreted=false)
+          val fn = Function(name, Some(i), arg.sort, Bool, None)
           (PredOf(fn, arg), Some(SubstitutionPair(PredOf(fn, dotsArg), fDots)))
         }
 

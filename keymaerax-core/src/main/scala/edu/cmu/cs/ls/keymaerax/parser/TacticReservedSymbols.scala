@@ -8,9 +8,9 @@ import edu.cmu.cs.ls.keymaerax.core.{Function, Real}
 
 /** Lists function symbols that have special meaning in tactics. */
 object TacticReservedSymbols {
-  val old: Function = Function("old", None, Real, Real, interpreted = false)
-  val abbrv: Function = Function("abbrv", None, Real, Real, interpreted = false)
-  val expand: Function = Function("expand", None, Real, Real, interpreted = false)
+  val old: Function = Function("old", None, Real, Real, None)
+  val abbrv: Function = Function("abbrv", None, Real, Real, None)
+  val expand: Function = Function("expand", None, Real, Real, None)
 
   /** The reserved function symbols. */
   val symbols: List[Function] = List(

@@ -166,7 +166,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def qe(goal: Goal): (Goal, Formula) = firstResultQE(goal)
 
   private val INDEX = Variable("i")
-  private val RESULT = PredOf(Function("result", None, Unit, Bool, interpreted=false), Nothing)
+  private val RESULT = PredOf(Function("result", None, Unit, Bool, None), Nothing)
 
   /** Returns the result of the first QE call to succeed among the formulas in `fmls`. */
   private def firstResultQE(goal: Goal): (Goal, Formula) = {

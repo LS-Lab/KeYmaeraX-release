@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{And, DotTerm, Equal, Function, GreaterEqual, Less, Neg, Number, Or, Real, Tuple}
 
-/** Lists interpreted function symbols. */
+/** List of built-in interpreted function symbols. */
 object InterpretedSymbols {
   val maxF: Function = Function("max", None, Tuple(Real, Real), Real,
     interp = Some(Or(
