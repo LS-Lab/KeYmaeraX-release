@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLParser, Declaration, ParseException, Parser}
 import fastparse._
 import MultiLineWhitespace._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 
@@ -58,9 +59,9 @@ class DLBelleParser(override val printer: BelleExpr => String,
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def searchLocator[_: P]: P[PositionLocator] = P(
     "'Llast".!.map(_ => LastAnte(0))
-      | "'L".!.map(_ => Find.FindL(0, None))
+      | "'L".!.map(_ => Find.FindL(0, None, HereP, exact=true, defs))
       | "'Rlast".!.map(_ => LastSucc(0))
-      | "'R".!.map(_ => Find.FindR(0, None))
+      | "'R".!.map(_ => Find.FindR(0, None, HereP, exact=true, defs))
   )
   def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
   def argument[_: P]: P[Expression] = P("\"" ~~ expression ~~ "\"")

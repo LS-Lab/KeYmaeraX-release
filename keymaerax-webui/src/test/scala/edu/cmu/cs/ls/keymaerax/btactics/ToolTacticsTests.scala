@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, BelleThrowable}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.LoneElement._
-import testHelper.KeYmaeraXTestTags.TodoTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 /**
  * Tests automatic
@@ -117,7 +117,8 @@ class ToolTacticsTests extends TacticTestBase {
       subgoals.loneElement shouldBe "==> \\forall x \\forall y (x>0 & y>0)".asSequent
   }
 
-  it should "work on a Robix example" in withQE { _ =>
+  it should "work on a Robix example" in withMathematica { _ =>
+    //@todo proves fast in Z3 4.8.4, does not complete within 20min in Z3 4.8.10
     val s = "A()>=0, b()>0, ep()>0, V()>=0, vxo^2+vyo^2<=V()^2, r!=0, abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V())), v_0>=0, -t*(v-A()/2*t)<=y-y_0, y-y_0<=t*(v-A()/2*t), -t*(v-A()/2*t)<=x-x_0, x-x_0<=t*(v-A()/2*t), v=v_0+A()*t, -t*V()<=yo-yo_1, yo-yo_1<=t*V(), -t*V()<=xo-xo_1, xo-xo_1<=t*V(), dx^2+dy^2=1, t>=0, t<=ep(), v>=0, v>0\n  ==>  abs(x-xo)>v^2/(2*b())+V()*v/b(), abs(y-yo)>v^2/(2*b())+V()*v/b()".asSequent
     proveBy(s, TactixLibrary.transform("abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))".asFormula)(-7)).subgoals.
       loneElement shouldBe "A()>=0, b()>0, ep()>0, V()>=0, vxo^2+vyo^2<=V()^2, r!=0, abs(x_0-xo_1)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V())), v_0>=0, -t*(v-A()/2*t)<=y-y_0, y-y_0<=t*(v-A()/2*t), -t*(v-A()/2*t)<=x-x_0, x-x_0<=t*(v-A()/2*t), v=v_0+A()*t, -t*V()<=yo-yo_1, yo-yo_1<=t*V(), -t*V()<=xo-xo_1, xo-xo_1<=t*V(), dx^2+dy^2=1, t>=0, t<=ep(), v>=0, v>0\n  ==>  abs(x-xo)>v^2/(2*b())+V()*v/b(), abs(y-yo)>v^2/(2*b())+V()*v/b()".asSequent
@@ -225,42 +226,42 @@ class ToolTacticsTests extends TacticTestBase {
   it should "only abbreviate if no transformations are present" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
     provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("x>=abbrv(2+3,y)",1)""")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("x>=abbrv(2+3,y)",'R=="x>=2+3")""")
     db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2+3","y")""")
   }}
 
   it should "abbreviate and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
     provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*x=41",1)""")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv"); transform("41",1.1); assert("abbrv*x=41", "Unexpected edit result", 1)""")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*x=41", 'R=="2*g()*x=37+4")""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv"); transform("41", 'R=="abbrv*x=#37+4#"); assert("abbrv*x=41", "Unexpected edit result", 'R=="abbrv*x=41")""")
   }}
 
   it should "expand abs" in withQE { _ =>
     proveBy("abs(x)>=0".asFormula, edit("expand(abs(x))>=1".asFormula)(1)).subgoals.loneElement shouldBe
-      "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=1".asSequent
+      "x>=0&abs_=x | x<0&abs_=-x ==> abs_>=1".asSequent
   }
 
   it should "expand min" in withQE { _ =>
     proveBy("min(x,y)>=0".asFormula, edit("expand(min(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
-      "x<=y&min_0=x | x>y&min_0=y ==> min_0>=1".asSequent
+      "x<=y&min_=x | x>y&min_=y ==> min_>=1".asSequent
   }
 
   it should "expand max" in withQE { _ =>
     proveBy("max(x,y)>=0".asFormula, edit("expand(max(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
-      "x>=y&max_0=x | x<y&max_0=y ==> max_0>=1".asSequent
+      "x>=y&max_=x | x<y&max_=y ==> max_>=1".asSequent
   }
 
   it should "abbreviate and expand" in withQE { _ =>
     proveBy("max(x+5*2,y)>=0".asFormula, edit("expand(max(abbrv(x+5*2,z),y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
-      "z=x+5*2, z>=y&max_0=z | z<y&max_0=y ==> max_0>=1".asSequent
+      "z=x+5*2, z>=y&max_=z | z<y&max_=y ==> max_>=1".asSequent
   }
 
   it should "abbreviate and expand and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*abs(x)=37+4", edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
-    provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_0=x | x<0&abs_0=-x ==> abbrv*abs_0=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*expand(abs(x))=41",1)""")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv") & absExp(1.0.1) & transform("41",1.1); assert("abbrv*abs_0=41","Unexpected edit result",1)""")
+    provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_=x | x<0&abs_=-x ==> abbrv*abs_=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*expand(abs(x))=41", 'R=="2*g()*abs(x)=37+4")""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv") & absExp('R=="abbrv*#abs(x)#=37+4") & transform("41", 'R=="abbrv*abs_=#37+4#"); assert("abbrv*abs_=41", "Unexpected edit result", 'R=="abbrv*abs_=41")""")
   }}
 
   it should "abbreviate in programs" in withQE { _ =>
@@ -272,7 +273,7 @@ class ToolTacticsTests extends TacticTestBase {
     proveBy("abs(a)>0, abs(c)>3 ==> abs(a)>0 | abs(b)>1 | abs(c)>2".asSequent,
       edit("expand(abs(a))>0 | expand(abs(b))>1 | expand(abs(c))>2".asFormula)(1)).
       subgoals.loneElement shouldBe
-      "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
+      "abs_>0, abs__1>3, a>=0 & abs_=a | a<0 & abs_=-a, b>=0 & abs__0=b | b<0 & abs__0=-b, c>=0 & abs__1=c | c<0 & abs__1=-c ==> abs_>0 | abs__0>1 | abs__1>2".asSequent
   }
 
   it should "transform in programs" in withQE { _ =>
@@ -297,4 +298,9 @@ class ToolTacticsTests extends TacticTestBase {
       master()) shouldBe 'proved
   }
 
+  "Check for counterexample" should "not fail on uninterpreted predicates with _-suffixed names" in withMathematica { tool =>
+    val s = "p__1(), x=2 ==> x>=1, q__0()".asSequent // as generated by 'using' notation
+    proveBy(s, ToolTactics.assertNoCex).subgoals.loneElement shouldBe s
+    a [BelleCEX] should be thrownBy proveBy("p__1(), x=2 ==> x=3, q__0()".asSequent, ToolTactics.assertNoCex)
+  }
 }

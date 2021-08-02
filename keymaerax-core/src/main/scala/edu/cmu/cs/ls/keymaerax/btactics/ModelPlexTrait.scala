@@ -19,10 +19,12 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
  *      In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
 trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) {
-  def apply(formula: Formula, kind: Symbol, checkProvable: Option[(ProvableSig => Unit)] = Some({case _ => ()})): Formula
-  def apply(vars: List[Variable], kind: Symbol): (Formula => Formula)
-  def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[(ProvableSig => Unit)]): (Formula => Formula)
-  def createMonitorSpecificationConjecture(fml: Formula, vars: Variable*): (Formula, List[Formula])
+  def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
+            unobservable: Map[Variable, Option[Formula]] = Map.empty): Formula
+  def apply(vars: List[Variable], kind: Symbol): Formula => Formula = apply(vars, kind, checkProvable=Some(_ => ()))
+  def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
+  def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
+                                           unobservable: Map[Variable, Option[Formula]]): (Formula, List[Formula])
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(useOptOne: Boolean)(unprog: Boolean => DependentPositionTactic): DependentPositionTactic
@@ -31,6 +33,7 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondDiffSolve2DT: DependentPositionTactic
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
-  def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula]): DependentPositionTactic
-  def optimizationOne(inst: Option[(Variable, Term)] = None): DependentPositionTactic
+  def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
+                                unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic
+  def optimizationOne(unobservable: List[Variable] = Nil, inst: Option[(Variable, Term)] = None): DependentPositionTactic
 }

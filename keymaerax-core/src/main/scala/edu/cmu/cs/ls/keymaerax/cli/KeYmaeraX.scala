@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, PrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, KeYmaeraXPrettierPrinter, ParsedArchiveEntry, PrettierPrintFormatProvider}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, Name, ParsedArchiveEntry, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 
@@ -34,8 +34,8 @@ object KeYmaeraX {
     val PROVE: String = "prove"
     val REPL: String = "repl"
     val SETUP: String = "setup"
-    val STRIPHINTS: String = "striphints"
-    val modes: Set[String] = Set(CODEGEN, GRADE, MODELPLEX, PROVE, REPL, SETUP, STRIPHINTS)
+    val CONVERT: String = "convert"
+    val modes: Set[String] = Set(CODEGEN, CONVERT, GRADE, MODELPLEX, PROVE, REPL, SETUP)
   }
 
   /** Backend tools. */
@@ -74,7 +74,7 @@ object KeYmaeraX {
         initializeBackend(options, usage)
         KeYmaeraXStartup.initLemmaCache()
         println("...done")
-      case Some(Modes.STRIPHINTS) =>
+      case Some(Modes.CONVERT) =>
         initializeProver(combineConfigs(options, configFromFile("z3")), usage)
         stripHints(options, usage)
       case command => println("WARNING: Unknown command " + command)
@@ -132,7 +132,7 @@ object KeYmaeraX {
         initializeProver(options, usage) //@note parsing a tactic requires prover (AxiomInfo)
         if (parseBelleTactic(value)) exit(0) else exit(-1)
       case "-conjecture" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('conjecture -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('conjecture -> value), tail, usage)
         else { Usage.optionErrorReporter("-conjecture", usage); exit(1) }
       case "-parse" :: value :: _ =>
         //@note parsing an archive with tactics requires initialized axiom info (some of which derive with QE)
@@ -142,7 +142,7 @@ object KeYmaeraX {
         Configuration.set(Configuration.Keys.PARSER, value, saveToFile = false)
         nextOption(options, tail, usage)
       case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('mode -> Modes.PROVE, 'in -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.PROVE, 'in -> value), tail, usage)
         else { Usage.optionErrorReporter("-prove", usage); exit(1) }
       case "-grade" :: value :: tail =>
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mode -> Modes.GRADE, 'in -> value), tail, usage)
@@ -153,28 +153,29 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('out -> value), tail, usage)
         else { Usage.optionErrorReporter("-grade", usage); exit(1) }
       case "-savept" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('ptOut -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('ptOut -> value), tail, usage)
         else { Usage.optionErrorReporter("-savept", usage); exit(1) }
       case "-setup" :: tail => nextOption(options ++ Map('mode -> Modes.SETUP), tail, usage)
-      case "-striphints" :: kyx :: tail =>
-        if (kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(options ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail, usage)
-        else { Usage.optionErrorReporter("-striphints", usage); exit(1) }
+      case "-convert" :: conversion :: kyx :: tail =>
+        if (conversion.nonEmpty && !conversion.startsWith("-") && kyx.nonEmpty && !kyx.startsWith("-"))
+          nextOption(options ++ Map('mode -> Modes.CONVERT, 'conversion -> conversion, 'in -> kyx), tail, usage)
+        else { Usage.optionErrorReporter("-convert", usage); exit(1) }
       case "-tactic" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('tactic -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tactic -> value), tail, usage)
         else { Usage.optionErrorReporter("-tactic", usage); exit(1) }
       case "-tacticName" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('tacticName -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tacticName -> value), tail, usage)
         else { Usage.optionErrorReporter("-tacticName", usage); exit(1) }
       case "-tool" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('tool -> value.toLowerCase), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('tool -> value.toLowerCase), tail, usage)
         else { Usage.optionErrorReporter("-tool", usage); exit(1) }
       case "-verbose" :: tail => nextOption(options ++ Map('verbose -> true), tail, usage)
       // aditional options
       case "-mathkernel" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('mathkernel -> value), tail, usage)
+        if(value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('mathkernel -> value), tail, usage)
         else { Usage.optionErrorReporter("-mathkernel", usage); exit(1) }
       case "-jlink" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('jlink -> value), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('jlink -> value), tail, usage)
         else { Usage.optionErrorReporter("-jlink", usage); exit(1) }
       // global options
       case "-lax" :: tail => Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(options, tail, usage)
@@ -182,7 +183,7 @@ object KeYmaeraX {
       case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(options, tail, usage)
       case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(options, tail, usage)
       case "-timeout" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(options ++ Map('timeout -> value.toLong), tail, usage)
+        if (value.nonEmpty && !value.startsWith("-")) nextOption(options ++ Map('timeout -> value.toLong), tail, usage)
         else { Usage.optionErrorReporter("-timeout", usage); exit(1) }
       case _ => (options, args)
     }
@@ -302,8 +303,17 @@ object KeYmaeraX {
     }
   }
 
+  /** Converts input files. */
+  def convert(options: OptionMap, usage: String): Unit = {
+    require(options.contains('in) && options.contains('out) && options.contains('conversion), usage)
+    options('conversion) match {
+      case "stripHints" => stripHints(options, usage)
+      case _ => Usage.optionErrorReporter("-convert", usage); exit(1)
+    }
+  }
+
   /** Strips proof hints from the model. */
-  def stripHints(options: OptionMap, usage: String): Unit = {
+  private def stripHints(options: OptionMap, usage: String): Unit = {
     require(options.contains('in) && options.contains('out), usage)
 
     val kyxFile = options('in).toString
@@ -311,8 +321,16 @@ object KeYmaeraX {
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note fully expand model and remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(model = e.defs.exhaustiveSubst(e.model),
-      defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = {
+      val expandedModel = e.defs.exhaustiveSubst(e.model)
+      val expandedModelNames = StaticSemantics.symbols(expandedModel)
+      e.copy(model = expandedModel,
+        defs = Declaration(e.defs.decls.flatMap({
+          case (name@Name(n, i), sig) =>
+            if (expandedModelNames.exists(ns => ns.name == n && ns.index == i)) Some(name, sig.copy(interpretation = None))
+            else None
+        })), tactics = Nil, annotations = Nil)
+    }
 
     val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")

@@ -45,7 +45,7 @@ class PropositionalTests extends TacticTestBase {
 
   it should "automatically cut and use hidden assumptions" in withQE { _ =>
     val s = "Y>y, X>y, y<x&x<=Y->P(x) ==>  y<x&x<=min(X,Y)->P(x)".asSequent
-    proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x), y<x&x<=Y ==> y<x&x<=min(X,Y)->P(x)".asSequent
+    proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x) ==> y<x&x<=min(X,Y)->P(x)".asSequent
   }
 
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {
@@ -200,7 +200,7 @@ class PropositionalTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), prop)
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "x>1, y>1 ==> ".asSequent
-    result.subgoals(1) shouldBe "==> y>1, x>1".asSequent
+    result.subgoals(1) shouldBe "==> x>1, y>1".asSequent
   }
   it should "handle equivalence in succedent" in withTactics { succEquivalence(prop) }
   it should "handle nested branching" in withTactics { proveBy("(p_()<->q_())&q_()->p_()<->true".asFormula, prop) shouldBe 'proved }
@@ -214,7 +214,7 @@ class PropositionalTests extends TacticTestBase {
   it should "not FOL negate in succedent" in withTactics { succNegation(normalize, Some(_.subgoals.loneElement shouldBe "==> !y>1".asSequent)) }
   it should "handle conjunction in antecedent" in withTactics { anteConjunction(normalize) }
   it should "not FOL negate in antecedent" in withTactics { anteNegation(normalize, Some(_.subgoals.loneElement shouldBe "!x>1 ==> ".asSequent)) }
-  it should "not split FOL implication in antecedent" in withTactics { anteImplication(normalize, Some(_.subgoals.loneElement shouldBe "x>1 -> y>1 ==> ".asSequent)) }
+  it should "not split FOL implication in antecedent" in withQE { _ => anteImplication(normalize, Some(_.subgoals.loneElement shouldBe "x>1 -> y>1 ==> ".asSequent)) }
   it should "not split FOL disjunction in antecedent" in withTactics { anteDisjunction(normalize, Some(_.subgoals.loneElement shouldBe "x>1 | y>1 ==> ".asSequent)) }
   it should "not split FOL conjunction in succedent" in withTactics { succConjunction(normalize, Some(_.subgoals.loneElement shouldBe "==> x>1 & y>1".asSequent)) }
   it should "not split FOL equivalence in antecedent" in withTactics {

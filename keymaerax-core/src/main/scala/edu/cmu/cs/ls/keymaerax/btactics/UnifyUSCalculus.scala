@@ -286,17 +286,27 @@ trait UnifyUSCalculus {
   @deprecated("Exclusively use for tactic interpreters")
   @Tactic("useAt", codeName = "useAt")
   private[btactics]
-  def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
-    key match {
-      case None => TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
-      case Some(k) =>
-        val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
-        val defaultKey = AxiomInfo(axiom).key
-        if (key != defaultKey) {
-            val ax = ProvableInfo(axiom)
-            TactixLibrary.useAt(ax.provable, key)(pos)
-        } else TactixLibrary.useAt(AxiomInfo(axiom))(pos) //@note serializes as codeName
-    }
+  def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
+    val keyPos = key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
+    val info = AxiomInfo(axiom)
+    TryCatch(
+      keyPos match {
+        case None => TactixLibrary.useAt(info)(pos) //@note serializes as codeName
+        case Some(k) =>
+          if (k != info.key) TactixLibrary.useAt(info.provable, k)(pos)
+          else TactixLibrary.useAt(info)(pos) //@note serializes as codeName
+      },
+      classOf[InapplicableUnificationKeyFailure],
+      (ex: InapplicableUnificationKeyFailure) => {
+        val keyExpr = keyPos match {
+          case None => info.provable.conclusion.sub(SuccPosition.base0(0, info.key))
+          case Some(k) => info.provable.conclusion.sub(SuccPosition.base0(0, k))
+        }
+        throw new InapplicableUnificationKeyFailure("Axiom " + axiom + " is not applicable at " +
+          seq.sub(pos).map(_.prettyString).getOrElse("<unknown>") +
+          "; cannot match with axiom key " + keyExpr.map(_.prettyString).getOrElse("<unknown>"), ex)
+      }
+    )
   }
 
   /**
@@ -1262,7 +1272,7 @@ trait UnifyUSCalculus {
             case _ => ident
           })
       }
-      val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
+      val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other)
       cutLR(ctxOther)(pos.top) < (
         /* use */ ident,
         /* show */ cohideR(cutPos) & equivify & tactic(pos.inExpr) & commute & by(fact)
@@ -1619,7 +1629,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (Ax.monb.provable(USubst(
+            (Ax.monbaxiom.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))
@@ -1657,19 +1667,53 @@ trait UnifyUSCalculus {
                 //@note transpose substitution since subsequent renaming does the same
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
-                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+                  sp.repl match {
+                    case t: Term => vars.head match {
+                      case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                    case f: Formula => vars.head match {
+                      case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                  })))
               case usB4URen: FastUSubstAboveURen =>
                 //@note transpose substitution since subsequent renaming does the same
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
-                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+                  sp.repl match {
+                    case t: Term => vars.head match {
+                      case _: BaseVariable => t.replaceFree(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => t.replaceFree(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                    case f: Formula => vars.head match {
+                      case _: BaseVariable => f.replaceAll(vars.head, Variable("x_"))
+                      case _: DifferentialSymbol => f.replaceAll(vars.head, DifferentialSymbol(Variable("x_")))
+                      case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+                    }
+                  })))
               case _ => us
-            }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
-            // NB: all eliminate axiom not implemented
-            useFor(Ax.alle, PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
-              Sequent(ante, succ),
-              Skolemize(SuccPos(0))
+            }) ++ RenUSubst(vars.head match {
+                case _: BaseVariable => Seq((Variable("x_"), vars.head))
+                case DifferentialSymbol(v) => Seq((Variable("x_"), v))
+                case _ => throw new ProverException("Only variables/differential symbols in block quantifier")
+              }
             )
+            // NB: all eliminate axiom not implemented
+            if (vars.forall({ case _: DifferentialSymbol => false case _ => true })) {
+              useFor(Ax.alle, PosInExpr(1 :: Nil), rename)(AntePosition.base0(1 - 1))(monStep(Context(c), mon))(
+                Sequent(ante, succ),
+                Skolemize(SuccPos(0))
+              )
+            } else {
+              useFor(Ax.alleprime, PosInExpr(1 :: Nil), rename)(AntePosition.base0(1 - 1))(monStep(Context(c), mon))(
+                Sequent(ante, succ),
+                Skolemize(SuccPos(0))
+              )
+            }
 
           /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
             useFor(DerivedAxioms.allV)(SuccPosition(0))(
@@ -2103,9 +2147,14 @@ trait UnifyUSCalculus {
 
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
-    * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
+    * Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the chosen formula in place. */
   @Tactic(longDisplayName = "Decompose")
-  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3)(pos)}
+  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.axiomsFor(_: Expression))(pos)}
+
+  /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
+    * exhaustively. */
+  @Tactic(longDisplayName = "Deep Decompose")
+  lazy val deepChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
 
   /** Chase with bounded breadth and giveUp to stop.
     *

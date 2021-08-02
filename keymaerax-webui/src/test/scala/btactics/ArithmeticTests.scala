@@ -10,9 +10,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import edu.cmu.cs.ls.keymaerax.tools.Tool
-import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.{CounterExampleTool, Goal, QETacticTool}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, Tool}
+import edu.cmu.cs.ls.keymaerax.tools.qe.KeYmaeraToMathematica
 
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
@@ -42,6 +42,8 @@ class ArithmeticTests extends TacticTestBase {
       Lemma(p, Lemma.requiredEvidence(p))
     }
 
+    override def qe(g: Goal): (Goal, Formula) = ???
+
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected
       None
@@ -58,7 +60,7 @@ class ArithmeticTests extends TacticTestBase {
 
   "fullQE" should "apply equalities, transform to implication, and compute universal closure" in withTactics {
     val tool = new MockTool(
-      "\\forall x_0 \\forall v_0 \\forall t \\forall s (-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0&v_0>0&x_0 < s->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
+      "\\forall x_0 \\forall v_0 \\forall t \\forall s (v_0>0&x_0 < s&(-1)*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0->1/2*((-1)*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+((-1)*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
     val result = proveBy(
@@ -85,23 +87,25 @@ class ArithmeticTests extends TacticTestBase {
     proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not support differential symbols" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("5=5 | x' = 1".asFormula,
-      TactixLibrary.QE) should have message "Name conversion of differential symbols not allowed: x'"
-  }
-
-  it should "support differential symbols with Z3" in withZ3 { _ =>
+  it should "abbreviate differential symbols" in withQE { _ =>
     proveBy("5=5 | x' = 1".asFormula, TactixLibrary.QE) shouldBe 'proved
   }
 
+  it should "not support differential symbols in conversion" in {
+    the [ConversionException] thrownBy KeYmaeraToMathematica("5=5 | x' = 1".asFormula) should
+      have message "Name conversion of differential symbols not allowed: x'"
+  }
+
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "Name conversion of differential symbols not allowed: x'"
+    proveBy("x>=y -> x' >= y'".asFormula, TactixLibrary.QE).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
   it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
+      TactixLibrary.QE) should have message
+      """QE with Z3 gives SAT. Cannot reduce the following formula to True:
+        |\forall y \forall x_1 \forall x_0 \forall x (x>=y->x_0>=x_1)
+        |""".stripMargin
   }
 
   it should "avoid name clashes with Mathematica" in withMathematica { _ =>

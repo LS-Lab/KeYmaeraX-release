@@ -29,7 +29,7 @@ import scala.reflect.runtime.{universe => ru}
 @SummaryTest
 @UsualTest
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
-class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathematica")) {
+class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
 
   private def check(pi: => ProvableInfo): Sequent = {
     DerivationInfoRegistry.init(initLibrary = false)
@@ -42,8 +42,8 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
   private def useToClose(pi: ProvableInfo): Unit = {
     ProvableSig.startProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(pi), BelleProvable(ProvableSig.startProof(pi.provable.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
+    theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startProof(pi.provable.conclusion))) match {
+      case BelleProvable(provable, _, _) => provable shouldBe 'proved
       case _ => fail()
     }
   }
@@ -64,10 +64,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
             fm.bind(c.newInstance())()
             println("...done")
           } catch {
-            case ex: InvocationTargetException =>
-              val missingDependency = "Lemma ([^\\s]*) should".r.findFirstMatchIn(ex.getCause.getMessage).
-                map(_.group(1)).getOrElse("<unknown>")
-              fail("Missing dependency to '" + missingDependency + "'", ex.getCause)
+            case ex: InvocationTargetException => throw ex.getTargetException
           }
         }
       })
@@ -86,7 +83,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) })
 
-  it should "prove [] monotone" in withMathematica(initLibrary =  false, testcode =  { _ => monb.provable.subgoals shouldBe List(
+  it should "prove [] monotone" in withMathematica(initLibrary =  false, testcode =  { _ => monbaxiom.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) })
 
@@ -122,6 +119,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDist)}
   it should "prove all instantiate" in {check(allInst)}
+  it should "prove all instantiate prime" in {check(allInstPrime)}
   it should "prove all then exists" in {check(allThenExists)}
   it should "prove all distribute elim" in {check(allDistElim)}
   it should "prove equiv expand" in {check(equivExpand)}
@@ -206,7 +204,7 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("mathemat
   it should "prove DGd differential ghost" in {check(DGd)}
   it should "prove DGCd diamond differential ghost const" in {check(DGCd)}
   it should "prove DGCd diamond differential ghost const exists" in {check(DGCde)}
-  it should "prove DCd diamond differential cut" in {check(DCd)}
+  it should "prove DCd diamond differential cut" in {check(DCdaxiom)}
   it should "prove DWd diamond differential weakening" in {check(DWd)}
   it should "prove DWd2 diamond differential weakening" in {check(DWd2)}
   it should "prove comma commute diamond" in {check(commaCommuted)}

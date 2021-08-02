@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
 
@@ -79,11 +79,15 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
   override def m2k: M2KConverter[KExpr] = null
   override def apply(e: KExpr): MExpr = convert(e)
 
+  override protected def convertFormula(f: Formula): MExpr = f match {
+    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case _ => super.convertFormula(f)
+  }
+
   override protected[tools] def convertTerm(t: Term): MExpr = t match {
     case FuncOf(Function(name, index, Unit, Real, None), Nothing) =>
       MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
-    case FuncOf(Function(name, index, Unit, Bool, None), Nothing) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
     case _ => super.convertTerm(t)
   }
 }
@@ -91,11 +95,6 @@ class UncheckedBaseK2MConverter extends KeYmaeraToMathematica {
 object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
 
   private val baseConverter = new UncheckedBaseK2MConverter {
-    override protected def convertFormula(f: Formula): MExpr = f match {
-      case PredOf(fn@Function(_, _, Unit, Bool, None), Nothing) => CEXK2MConverter.this.convert(Right(fn))
-      case _ => super.convertFormula(f)
-    }
-
     override def convert(e: KExpr): MExpr = {
       //insist on less strict input: interpreted function symbols allowed here
       //TODO: interpretedSymbols must keep a map of all interpreted function symbols that
@@ -123,10 +122,9 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
   private[tools] def convert(e: Either[KExpr, NamedSymbol]): MExpr = e match {
     case Left(expr) => baseConverter.convert(expr)
     case Right(v: Variable) => baseConverter.convert(v)
-    case Right(Function(name, index, Unit, Real, None)) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_FN_SUFFIX, index))
-    case Right(Function(name, index, Unit, Bool, None)) =>
-      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case Right(fn@Function(_, _, Unit, Real, false)) => baseConverter.convert(FuncOf(fn, Nothing))
+    case Right(fn@Function(_, _, Unit, Bool, false)) => baseConverter.convert(PredOf(fn, Nothing))
+    case Right(e) => throw new IllegalArgumentException("Cannot convert " + e.prettyString)
   }
 
   override def m2k: M2KConverter[Either[KExpr, NamedSymbol]] = null
@@ -187,6 +185,34 @@ object IdentityConverter extends M2KConverter[MExpr] {
 
   /** @inheritdoc */
   override private[tools] def convert(e: MExpr): MExpr = e
+}
+
+object PegasusK2MConverter extends UncheckedBaseK2MConverter {
+  override protected def convertFormula(f: Formula): MExpr = f match {
+    case PredOf(Function(name, index, Unit, Bool, false), Nothing) =>
+      MathematicaNameConversion.toMathematica(Variable(name + UncheckedBaseConverter.CONST_PRED_SUFFIX, index))
+    case _ => super.convertFormula(f)
+  }
+
+  override def convert(e: KExpr): MExpr = {
+    //insist on less strict input: interpreted function symbols allowed here
+    insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true }),
+      "Interpreted functions must have expected domain and sort")
+    insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
+    e match {
+      case t: Term => convertTerm(t)
+      case f: Formula => convertFormula(f)
+      case _: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
+      case _: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
+    }
+  }
+
+  override protected[tools] def convertTerm(t: Term): MExpr = t match {
+    //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
+    case Differential(c) => ExtMathematicaOpSpec.primed(convert(c))
+    case DifferentialSymbol(c) => ExtMathematicaOpSpec.primed(convert(c))
+    case _ => super.convertTerm(t)
+  }
 }
 
 object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
@@ -511,7 +537,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
 class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[Either[KExpr,NamedSymbol]](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool with Logging {
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
-    val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interp) => interp.isEmpty case _ => true})
+    val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true})
 
     if (cexVars.nonEmpty) {
       val input = ExtMathematicaOpSpec.findInstance(
@@ -666,7 +692,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
     val f = MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "f")
-    val fall = new MExpr(f, vars)
+    val fall = ExprFactory.makeExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
       case AtomicODE(DifferentialSymbol(x),t) =>
         MathematicaOpSpec.times(k2m(t), ExtMathematicaOpSpec.d(fall, k2m(x)))
@@ -924,7 +950,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
     val step = ExtMathematicaOpSpec.setDelayed(
         MathematicaOpSpec.symbol("kyx`step"),
         ExtMathematicaOpSpec.function(
-          ExtMathematicaOpSpec.module(
+          MathematicaOpSpec.module(
             MathematicaOpSpec.list(stepModuleInit:_*),
             ExtMathematicaOpSpec.findInstance(
               basek2m(stateRelation),

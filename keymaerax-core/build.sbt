@@ -29,6 +29,8 @@ libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
 libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
 
+libraryDependencies += "com.regblanc" %% "scala-smtlib" % "0.2.2"
+
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 

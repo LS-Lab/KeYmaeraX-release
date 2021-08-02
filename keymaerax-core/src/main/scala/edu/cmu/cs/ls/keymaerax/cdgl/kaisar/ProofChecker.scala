@@ -552,7 +552,7 @@ object ProofChecker {
     val odeCon = ODEContext(con)
     initializeTimeVar(odeCon, inODE)
     checkODEContext(odeCon, inODE)
-    val DiffCollection(cores, ghosts, invGhost) = inODE.ds.collect
+    val DiffCollection(cores, ghosts, invGhost) = inODE.ds.doCollect(con)
     val dcCollect@DomCollection(assume, assert, weak, modify) = inODE.dc.collect
     val core = cores.foldLeft[Option[DiffStatement]](None)(accum)
     val ghosted = applyGhosts(odeCon, core, ghosts)
@@ -785,6 +785,9 @@ object ProofChecker {
           case e: ProverException => throw ProofCheckException(s"Pattern match $pat = $e fails to unify", node = mtch)
         }
       case ghost@Ghost(s) =>
+        if(con.isInverseGhost) {
+          throw ProofCheckException("Forward ghost not allowed inside inverse ghost")
+        }
         val (ss, f) = apply(con.withGhost, s)
         val taboo = VariableSets(ss).boundVars
         val fv = StaticSemantics(f).fv
@@ -793,6 +796,9 @@ object ProofChecker {
         }
         (Context(Ghost(ss.s)), True)
       case InverseGhost(s: Statement) =>
+        if(con.isGhost) {
+          throw ProofCheckException("Inverse ghost not allowed inside forward ghost")
+        }
         val (ss, f) = apply(con.withInverseGhost, s)
         (Context(InverseGhost(ss.s)), f)
       case PrintGoal(msg) => println(s"[DEBUG] $msg: \n$con\n"); (Context.empty, True)

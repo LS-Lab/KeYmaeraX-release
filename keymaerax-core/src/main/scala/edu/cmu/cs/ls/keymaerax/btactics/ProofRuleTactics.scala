@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -101,7 +101,10 @@ private object ProofRuleTactics extends Logging {
     conclusion = "Γ |- ∀x Q(x), Δ", inputs = "y:variable", displayLevel = "browse")
   def boundRenameAt(repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
     sequent.sub(pos) match {
-      case Some(Forall(v :: Nil, _)) => boundRename(v, repl)(pos)
+      case Some(Forall(DifferentialSymbol(v) :: Nil, p)) => DLBySubst.stutter(v)(pos) & boundRename(v, repl)(pos) & assignb(pos)
+      case Some(Forall((v: BaseVariable) :: Nil, _)) => boundRename(v, repl)(pos)
+      case Some(Exists(DifferentialSymbol(v) :: Nil, p)) => DLBySubst.stutter(v)(pos) & boundRename(v, repl)(pos) & assignb(pos)
+      case Some(Exists((v: BaseVariable) :: Nil, _)) => boundRename(v, repl)(pos)
       case Some(Box(Assign(v, _), _)) => boundRename(v, repl)(pos)
       case Some(Box(AssignAny(v), _)) => boundRename(v, repl)(pos)
       case Some(Diamond(Assign(v, _), _)) => boundRename(v, repl)(pos)

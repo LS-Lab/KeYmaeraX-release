@@ -139,9 +139,9 @@ object IsabelleSyntax {
 
     (ff,proveBy(Imply(ff,f),
       SaturateTactic(OnAll(?
-      (implyR(1) & andL('Llast) & lastImplyRi & SaturateTactic(andL('_)) &
-        ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))) & onAll(prop)))
+      (implyR(1) & andL('Llast) & lastImplyRi & SaturateTactic(andL('L)) &
+        ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('R)) |
+          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('R)))))) & onAll(prop)))
   }
 
 

@@ -220,6 +220,21 @@ class FOQuantifierTests extends TacticTestBase {
       loneElement shouldBe "(f(x))'=g(y) ==>".asSequent
   }
 
+  it should "instantiate differential symbols" in withTactics {
+    proveBy("\\forall x' x'>=0 ==> y'>=0".asSequent, allL("y'".asTerm)(-1)).subgoals.
+      loneElement shouldBe "y'>=0 ==> y'>=0".asSequent
+  }
+
+  it should "instantiate differential symbol assignments" in withTactics {
+    proveBy("\\forall y' [y':=y'+1;]y'>0 ==>".asSequent, allInstantiate(Some("y'".asVariable), Some("z+1".asTerm))(-1)).
+      subgoals.loneElement shouldBe "y'=z+1, [y':=y'+1;]y'>0 ==> ".asSequent
+  }
+
+  it should "FEATURE_REQUEST: instantiate differential symbol assignments when renaming is required" taggedAs TodoTest in withTactics {
+    proveBy("y'=4, \\forall y' [y':=y'+1;]y'>0 ==>".asSequent, allInstantiate(Some("y'".asVariable), Some("z+1".asTerm))(-2)).
+      subgoals.loneElement shouldBe "y_0'=4, y'=z+1, [y':=y'+1;]y'>0 ==> ".asSequent
+  }
+
   "existsR" should "instantiate simple formula" in withTactics {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
@@ -239,6 +254,13 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(IndexedSeq("a=2 -> !\\exists x x>0".asFormula), IndexedSeq()),
       existsInstantiate(Some("x".asVariable), Some("z".asTerm))(-1, 1::0::Nil))
     result.subgoals.loneElement shouldBe "a=2 -> !z>0 ==> ".asSequent
+  }
+
+  it should "instantiate in context when stuttering is needed" in withTactics {
+    proveBy(
+      "==> x>=0 -> \\exists y [{y'=x}]y>=37".asSequent,
+      existsInstantiate(Some("y".asVariable), Some("37".asTerm))(1, 1::Nil)
+    ).subgoals.loneElement shouldBe "==> x>=0 -> \\forall y (y=37 -> [{y'=x}]y>=37)".asSequent
   }
 
   it should "instantiate variables bound in an ODE" in withTactics {
@@ -509,7 +531,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x_0>0, x>0 ==> ".asSequent
   }
 
-  it should "FEATURE_REQUEST: keep positions stable" in withTactics {
+  it should "FEATURE_REQUEST: keep positions stable" taggedAs TodoTest in withTactics {
     proveBy("\\exists x (x=y&x>=0), y=2 ==>".asSequent, existsSkolemize(-1)).subgoals.loneElement shouldBe "x=y&x>=0, y=2 ==>".asSequent
   }
 

@@ -758,21 +758,26 @@ sealed trait DiffStatement extends ASTNode {
   def allAtoms: Set[AtomicODEStatement] = collect.atoms ++ collect.ghosts ++ collect.inverseGhosts
 
   /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
-  lazy val collect: DiffCollection = {
+  def doCollect(kc: Context): DiffCollection = {
     this match {
       case st: AtomicODEStatement => DiffCollection(Set(st), Set(), Set())
       case DiffProductStatement(l, r) =>
-        val DiffCollection(a1, b1, c1) = l.collect
-        val DiffCollection(a2, b2, c2) = r.collect
+        val DiffCollection(a1, b1, c1) = l.doCollect(kc)
+        val DiffCollection(a2, b2, c2) = r.doCollect(kc)
         DiffCollection(a1.++(a2), b1.++(b2), c1.++(c2))
       case DiffGhostStatement(ds) =>
-        val DiffCollection(a, b, c) = ds.collect
+        if(kc.isInverseGhost) throw ProofCheckException("Forward ODE ghost not allowed inside inverse ghost")
+        val DiffCollection(a, b, c) = ds.doCollect(kc.withGhost)
         DiffCollection(Set(), a.++(b).++(c), Set())
       case InverseDiffGhostStatement(ds) =>
-        val DiffCollection(a, b, c) = ds.collect
+        if(kc.isGhost) throw ProofCheckException("Inverse ODE ghost not allowed inside forward ghost")
+        val DiffCollection(a, b, c) = ds.doCollect(kc.withInverseGhost)
         DiffCollection(Set(), Set(), a.++(b).++(c))
     }
   }
+
+  /** @return collection (nonGhosts, forwardGhosts, inverseGhosts) of statements in [[statement]]*/
+  lazy val collect: DiffCollection = { doCollect(Context.empty)}
 }
 
 // Specifies a single ODE being proved

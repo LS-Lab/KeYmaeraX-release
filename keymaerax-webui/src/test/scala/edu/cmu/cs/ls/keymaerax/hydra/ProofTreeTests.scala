@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, Let, TacticInapplicableFailure}
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTopLevelLabel, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, Let, TacticInapplicableFailure}
+import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
@@ -207,7 +207,7 @@ class ProofTreeTests extends TacticTestBase {
     p.subgoals(0) shouldBe g2.goal.get
     p.subgoals(1) shouldBe g1.goal.get
 
-    tree.tactic shouldBe cut("y=37".asFormula) <(implyR('R, "x>0->x>0".asFormula), nil)
+    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> implyR('R, "x>0->x>0".asFormula), BelleLabels.cutShow -> nil)
   }
 
   "Tactic suggestion" should "return single-pos tactics" in withTactics { withDatabase { db =>
@@ -368,7 +368,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.openGoals should have size 2
     tree.openGoals(0).goal shouldBe Some(Sequent(IndexedSeq("y=37".asFormula), IndexedSeq("x>0->x>0".asFormula)))
     tree.openGoals(1).goal shouldBe g1.goal
-    tree.tactic shouldBe cut("y=37".asFormula) <(nil, nil)
+    tree.tactic shouldBe cut("y=37".asFormula) & Idioms.<(BelleLabels.cutUse -> nil, BelleLabels.cutShow -> nil)
   }
 
   private def checkTree(db: DBAbstraction, proofId: Int, tactic: BelleExpr, expected: Sequent,
@@ -709,7 +709,8 @@ class ProofTreeTests extends TacticTestBase {
       durations(i) = end-start
     }
 
-    DbProofTree(db.db, proofId.toString).tacticString
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
     val medianDuration = median(durations.toList)
     val averageDuration = durations.sum/numStepsPerProof
@@ -730,7 +731,7 @@ class ProofTreeTests extends TacticTestBase {
       val start = System.currentTimeMillis()
       val tree = DbProofTree(db.db, proofId.toString)
 
-      tree.tacticString
+      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
       val goals = tree.openGoals
       goals should have size 1
@@ -750,7 +751,8 @@ class ProofTreeTests extends TacticTestBase {
       durations(i) = end-start
     }
 
-    DbProofTree(db.db, proofId.toString).tacticString
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db.db)))
 
     val medianDuration = median(durations.toList)
     val averageDuration = durations.sum/numStepsPerProof

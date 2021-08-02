@@ -27,9 +27,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -71,7 +73,7 @@ case class HtmlResponse(html: Elem) extends Response {
 }
 
 case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
-  override val schema = Some("BooleanResponse.js")
+  override val schema: Option[String] = Some("BooleanResponse.js")
 
   def getJson: JsObject = errorText match {
     case Some(s) =>
@@ -89,7 +91,7 @@ case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) ext
 }
 
 class PlainResponse(data: (String, JsValue)*) extends Response {
-  override def getJson = JsObject(data:_*)
+  override def getJson: JsValue = JsObject(data:_*)
 }
 
 class ModelListResponse(models: List[ModelPOJO]) extends Response {
@@ -107,18 +109,18 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     "folder" -> (if (modelpojo.name.contains("/")) JsString(modelpojo.name.substring(0, modelpojo.name.indexOf('/'))) else JsNull)
   ))
 
-  def getJson = JsArray(objects:_*)
+  def getJson: JsValue = JsArray(objects:_*)
 }
 
 case class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "success" -> JsBoolean(modelId.isDefined),
     "errorText"->JsString(errorText.getOrElse("")),
     "modelId"->JsString(modelId.getOrElse("")))
 }
 
 class UpdateProofNameResponse(proofId: String, newName: String) extends Response {
-  def getJson = JsArray()
+  def getJson: JsValue = JsArray()
 }
 
 /**
@@ -126,7 +128,7 @@ class UpdateProofNameResponse(proofId: String, newName: String) extends Response
  * @param proofs The list of proofs with their status in KeYmaera (proof, loadStatus).
  */
 class ProofListResponse(proofs: List[(ProofPOJO, String)]) extends Response {
-  override val schema = Some("prooflist.js")
+  override val schema: Option[String] = Some("prooflist.js")
 
   val objects : List[JsObject] = proofs.map({case (proof, loadStatus) => JsObject(
     "id" -> JsString(proof.proofId.toString),
@@ -139,21 +141,17 @@ class ProofListResponse(proofs: List[(ProofPOJO, String)]) extends Response {
     "loadStatus" -> JsString(loadStatus)
   )})
 
-  def getJson = JsArray(objects:_*)
+  def getJson: JsValue = JsArray(objects:_*)
 }
 
-class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends Response {
-  def problemContent(s: String): String = {
-    val i = s.indexOf("Problem")
-    val j = s.indexOf("End.", i)
-    if (i >= 0) s.substring(i + "Problem".length, j).trim()
-    else s.trim()
-  }
-
-  lazy val objects : List[JsObject] = proofs.map({case (proof, model) => JsObject(
+class UserLemmasResponse(proofs: List[(ProofPOJO, Option[(String, Lemma)])]) extends Response {
+  lazy val objects : List[JsObject] = proofs.map({case (proof, lemma) => JsObject(
     "id" -> JsString(proof.proofId.toString),
-    "name" -> (if (model.isDefined) JsString(model.get.name) else JsNull),
-    "conclusion" -> (if (model.isDefined) JsString(problemContent(model.get.keyFile)) else JsNull)
+    "name" -> (lemma match { case Some((n, _)) => JsString(n) case None => JsNull }),
+    "conclusion" -> (lemma match {
+      case Some((_, l)) => JsString(l.fact.conclusion.prettyString)
+      case None => JsNull
+    })
   )})
 
   override def getJson: JsValue = JsArray(objects:_*)
@@ -161,11 +159,13 @@ class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends R
 
 class GetModelResponse(model: ModelPOJO) extends Response {
 
-  private def illustrationLinks(): List[String] = {
+  private def illustrationLinks(): List[String] = try {
     ArchiveParser.parser(model.keyFile).flatMap(_.info.get("Illustration"))
+  } catch {
+    case _: ParseException => Nil
   }
 
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
@@ -182,7 +182,7 @@ class GetModelResponse(model: ModelPOJO) extends Response {
 }
 
 class GetModelTacticResponse(model: ModelPOJO) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "modelId" -> JsString(model.modelId.toString),
     "modelName" -> JsString(model.name),
     "tacticBody" -> JsString(model.tactic.getOrElse(""))
@@ -190,7 +190,7 @@ class GetModelTacticResponse(model: ModelPOJO) extends Response {
 }
 
 class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "mandatoryVars" -> JsArray(vars.map(v => JsString(v.prettyString)).toVector)
   )
@@ -289,7 +289,7 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
       )
   }):_*)
 
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "metric" -> JsObject(
       "html" -> fmlHtml,
@@ -310,7 +310,7 @@ class ModelPlexCCodeResponse(model: ModelPOJO, code: String) extends ModelPlexRe
 }
 
 class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String]) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "success" -> (if (flag) JsTrue else JsFalse),
     "sessionToken" -> (if (flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
@@ -346,7 +346,7 @@ class ErrorResponse(val msg: String, val exn: Throwable = null, val severity: St
         .replaceAll("[\\t]at scala\\.runtime\\.AbstractPartialFunction.*", "")
         .replaceAll("\\s+$|\\s*(\n)\\s*|(\\s)\\s*", "$1$2") //@note collapse newlines
     } else ""
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "textStatus" -> (if (msg != null) JsString(msg.replaceAllLiterally("[Bellerophon Runtime]", "")) else JsString("")),
     "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replaceAllLiterally("[Bellerophon Runtime", "")) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
@@ -360,7 +360,7 @@ class KvpResponse(val key: String, val value: String) extends Response {
 
 case class ParseErrorResponse(override val msg: String, expect: String, found: String, detailedMsg: String,
                          loc: Location, override val exn: Throwable = null) extends ErrorResponse(msg, exn) {
-  override def getJson = JsObject(super.getJson.fields ++ Map(
+  override def getJson: JsValue = JsObject(super.getJson.asJsObject.fields ++ Map(
     "details" -> JsObject(
       "expect" -> JsString(expect),
       "found" -> JsString(found),
@@ -381,9 +381,9 @@ case class DefaultLoginResponse(triggerRegistration: Boolean) extends Response {
 
 class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
     extends ErrorResponse(msg, exn) {
-  override def getJson: JsObject = exn match {
-    case ex: BelleUnexpectedProofStateError =>
-      JsObject(super.getJson.fields ++ Map(
+  override def getJson: JsValue = exn match {
+    case _: BelleUnexpectedProofStateError =>
+      JsObject(super.getJson.asJsObject.fields ++ Map(
         "tacticMsg" -> JsString(tacticMsg)
       ))
     case ex: CompoundCriticalException =>
@@ -394,12 +394,12 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
             ":\n" + x.proofState.subgoals.map(_.toString).mkString(",")
         case (x, i) => (i+1) + ". " + x.getMessage
       }).mkString("\n") + "\n"
-      JsObject(super.getJson.fields.filter(_._1 != "textStatus") ++ Map(
+      JsObject(super.getJson.asJsObject.fields.filter(_._1 != "textStatus") ++ Map(
         "textStatus" -> JsString(messages),
         "tacticMsg" -> JsString(tacticMsg)
       ))
     case _ =>
-      JsObject(super.getJson.fields ++ Map(
+      JsObject(super.getJson.asJsObject.fields ++ Map(
         "tacticMsg" -> JsString(tacticMsg)
       ))
   }
@@ -411,11 +411,11 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
 }
 
 class ToolConfigErrorResponse(tool: String, msg: String) extends ErrorResponse(msg, null) {
-  override def getJson: JsObject = JsObject(super.getJson.fields ++ Map("tool" -> JsString(tool)))
+  override def getJson: JsObject = JsObject(super.getJson.asJsObject.fields ++ Map("tool" -> JsString(tool)))
 }
 
 class GenericOKResponse() extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "success" -> JsTrue
   )
 }
@@ -423,8 +423,8 @@ class GenericOKResponse() extends Response {
 class UnimplementedResponse(callUrl: String) extends ErrorResponse("Call unimplemented: " + callUrl) {}
 
 class ProofStatusResponse(proofId: String, status: String, error: Option[String] = None) extends Response {
-  override val schema = Some("proofstatus.js")
-  def getJson = JsObject(
+  override val schema: Option[String] = Some("proofstatus.js")
+  def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "type" -> JsString("ProofLoadStatus"),
     "status" -> JsString(status),
@@ -441,7 +441,7 @@ class ProofProgressResponse(proofId: String, isClosed: Boolean)
   extends ProofStatusResponse(proofId, if (isClosed) "closed" else "open")
 
 class ProofVerificationResponse(proofId: String, provable: ProvableSig, tactic: String) extends Response {
-  override def getJson = JsObject(
+  override def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "isProved" -> JsBoolean(provable.isProved),
     "provable" -> JsString(provable.underlyingProvable.toString),
@@ -449,14 +449,14 @@ class ProofVerificationResponse(proofId: String, provable: ProvableSig, tactic: 
 }
 
 class GetProblemResponse(proofid: String, tree: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "proofid" -> JsString(proofid),
     "proofTree" -> JsonParser(tree)
   )
 }
 
 case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String, info: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
@@ -490,7 +490,7 @@ case class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, s
 case class TaskResultResponse(proofId: String, parent: ProofTreeNode, marginLeft: Int, marginRight: Int, progress: Boolean = true) extends Response {
   private lazy val openChildren = parent.children.filter(_.numSubgoals > 0)
 
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
@@ -503,7 +503,7 @@ case class TaskResultResponse(proofId: String, parent: ProofTreeNode, marginLeft
 }
 
 case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
@@ -515,7 +515,7 @@ case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode, marginLe
 }
 
 case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(node.id.toString),
     "sequent" -> (node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, marginLeft, marginRight) })
@@ -523,14 +523,14 @@ case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode, margin
 }
 
 class UpdateResponse(update: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "type" -> JsString("update"),
     "events" -> JsonParser(update)
   )
 }
 
 class ProofTreeResponse(tree: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "type" -> JsString("proof"),
     "tree" -> JsonParser(tree)
   )
@@ -561,14 +561,14 @@ case class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Respo
 }
 
 class ProofAgendaResponse(tasks: List[(ProofPOJO, List[Int], String)]) extends Response {
-  override val schema = Some("proofagenda.js")
+  override val schema: Option[String] = Some("proofagenda.js")
   val objects: List[JsObject] = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
     "proofId" -> JsString(proofPojo.proofId.toString),
     "nodeId" -> Helpers.nodeIdJson(nodeId),
     "proofNode" -> JsonParser(nodeJson)
   )})
 
-  def getJson = JsArray(objects:_*)
+  def getJson: JsValue = JsArray(objects:_*)
 }
 
 /** JSON conversions for frequently-used response formats */
@@ -619,7 +619,7 @@ object Helpers {
     JsObject("id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "text"->JsString(fp.print(text)), "kind" -> JsString(kind))
   private def print(q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean, plainText: => String,
-                    children: JsValue*)(implicit top: Position): JsValue = {
+                    children: Seq[JsValue])(implicit top: Position): JsValue = {
     JsObject(
       "id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "kind" -> JsString(kind),
@@ -656,7 +656,9 @@ object Helpers {
 
   private def skipParens(expr: Modal): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParens(expr: Quantified): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
-  private def skipParens(expr: UnaryComposite): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
+  private def skipParens(expr: UnaryComposite): Boolean =
+    if (expr.isInstanceOf[Term]) OpSpec.op(expr.child) <= OpSpec.op(expr) && !leftMostLeaf(expr.child).exists(_.isInstanceOf[Number])
+    else OpSpec.op(expr.child) <= OpSpec.op(expr)
   private def skipParensLeft(expr: BinaryComposite): Boolean =
     OpSpec.op(expr.left) < OpSpec.op(expr) || OpSpec.op(expr.left) <= OpSpec.op(expr) &&
       OpSpec.op(expr).assoc == LeftAssociative && OpSpec.op(expr.left).assoc == LeftAssociative
@@ -679,6 +681,13 @@ object Helpers {
   private def pwrapRight(expr: BinaryCompositeProgram, right: => List[JsValue], fp: FormatProvider): List[JsValue] =
     if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
 
+  @tailrec
+  private def leftMostLeaf(t: Expression): Option[Expression] = t match {
+    case _: UnaryComposite => None
+    case b: BinaryComposite => leftMostLeaf(b.left)
+    case x => Some(x)
+  }
+
   private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
     val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None, Nil).nonEmpty
     val parent = if (q.pos.isEmpty) None else topExpr match {
@@ -694,18 +703,27 @@ object Helpers {
     }
 
     expr match {
-      //case t: UnaryCompositeTerm => print("", q, "term", hasStep, isEditable, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
-      //case t: BinaryCompositeTerm => print("", q, "term", hasStep, isEditable, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
       case f: ComparisonFormula =>
-        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
-      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString, print("(", fp), print(g.prettyString, fp), print(")", fp), op(expr, fp))
-      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f, fp)::print(f.vars.map(_.prettyString).mkString(","), fp)::Nil ++ wrapChild(f, printJson(q ++ 0, f.child, fp), fp):_*)
-      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", fp, "mod-open")::printJson(q ++ 0, f.program, fp)::print("]", fp, "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp):_*)
-      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", fp, "mod-open")::printJson(q ++ 0, f.program, fp)::print(">", fp, "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp):_*)
-      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f, fp)+:wrapChild(f, printJson(q ++ 0, f.child, fp), fp):_*)
-      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString, fp))
-      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
-      case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p, fp):_*)
+        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
+      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        print("(", fp) :: print(g.prettyString, fp) :: print(")", fp) :: op(expr, fp) :: Nil)
+      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        op(f, fp) :: print(f.vars.map(_.prettyString).mkString(","), fp) :: Nil ++ wrapChild(f, printJson(q ++ 0, f.child, fp), fp))
+      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        print("[", fp, "mod-open")::printJson(q ++ 0, f.program, fp) :: print("]", fp, "mod-close") :: Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp))
+      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        print("<", fp, "mod-open") :: printJson(q ++ 0, f.program, fp) :: print(">", fp, "mod-close") :: Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp))
+      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        op(f, fp) +: wrapChild(f, printJson(q ++ 0, f.child, fp), fp))
+      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString, fp) :: Nil)
+      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString,
+        wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp))
+      case p: Program => print(q, "program", hasStep=false, isEditable=false, expr.prettyString, printPrgJson(q, p, fp))
+      case d: Differential => print(q, expr.prettyString, "term", fp)
+      case t@Neg(Number(_)) => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: (print("(", fp)::printJson(q ++ 0, t.child, fp)::print(")", fp)::Nil))
+      case t: UnaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString, op(t, fp) +: wrapChild(t, printJson(q ++ 0, t.child, fp), fp))
+      case t: BinaryCompositeTerm => print(q, "term", hasStep, isEditable, expr.prettyString,
+        wrapLeft(t, printJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right, fp), fp))
       case _ => print(q, expr.prettyString, "term", fp)
     }
   }
@@ -783,11 +801,11 @@ object Helpers {
 
   def itemJson(item: AgendaItem): (String, JsValue) = {
     val value = JsObject(
-      "id" -> JsString(item.id.toString),
+      "id" -> JsString(item.id),
       "name" -> JsString(item.name),
       "proofId" -> JsString(item.proofId),
       "deduction" -> deductionJson(List(item.path)))
-    (item.id.toString, value)
+    (item.id, value)
   }
 
   def nodeIdJson(n: List[Int]): JsValue = JsNull
@@ -827,7 +845,7 @@ object Helpers {
 
 case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
                                  agenda: List[AgendaItem], closed: Boolean, marginLeft: Int, marginRight: Int) extends Response {
-  override val schema = Some("agendaawesome.js")
+  override val schema: Option[String] = Some("agendaawesome.js")
 
   private lazy val proofTree = {
     val theNodes: List[(String, JsValue)] = nodeJson(root, withSequent=false, marginLeft, marginRight) +: nodesJson(leaves, marginLeft, marginRight)
@@ -841,13 +859,12 @@ case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTr
 
   private lazy val agendaItems = JsObject(agenda.map(itemJson):_*)
 
-  def getJson =
-    JsObject (
-      "modelId" -> JsString(modelId),
-      "proofTree" -> proofTree,
-      "agendaItems" -> agendaItems,
-      "closed" -> JsBoolean(closed)
-    )
+  def getJson: JsValue = JsObject (
+    "modelId" -> JsString(modelId),
+    "proofTree" -> proofTree,
+    "agendaItems" -> agendaItems,
+    "closed" -> JsBoolean(closed)
+  )
 }
 
 class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
@@ -998,7 +1015,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
         case (_, TacticDisplayInfo(_, conclusion, premises, ctxConc, ctxPrem)) =>
           if (topLevel) ruleJson(info, conclusion, premises)
           else ruleJson(info, ctxConc, ctxPrem)
-        case (_, (_: AxiomDisplayInfo) | (_: InputAxiomDisplayInfo)) =>
+        case (_, _: AxiomDisplayInfo | _: InputAxiomDisplayInfo) =>
           throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }
     }
@@ -1014,8 +1031,8 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
 
   private def posJson(pos: Option[PositionLocator]): JsValue = pos match {
     case Some(Fixed(p, _, _)) => new JsString(p.toString)
-    case Some(Find(_, _, _: AntePosition, _)) => new JsString("L")
-    case Some(Find(_, _, _: SuccPosition, _)) => new JsString("R")
+    case Some(Find(_, _, _: AntePosition, _, _)) => new JsString("L")
+    case Some(Find(_, _, _: SuccPosition, _, _)) => new JsString("R")
     case _ => JsNull
   }
 
@@ -1172,7 +1189,7 @@ class PegasusCandidatesResponse(candidates: Seq[Either[Seq[(Formula, String)],Se
 }
 
 class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "initial" -> JsString(initial.prettyString),
     "stateRelation" -> JsString(stateRelation.prettyString)
   )
@@ -1204,7 +1221,7 @@ class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], stepD
 }
 
 class KyxConfigResponse(kyxConfig: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "kyxConfig" -> JsString(kyxConfig)
   )
 }
@@ -1219,7 +1236,7 @@ class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolea
 }
 
 class ConfigureMathematicaResponse(linkNamePrefix: String, jlinkLibDirPrefix: String, success: Boolean) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "linkNamePrefix" -> JsString(linkNamePrefix),
     "jlinkLibDirPrefix" -> JsString(jlinkLibDirPrefix),
     "success" -> {if(success) JsTrue else JsFalse}
@@ -1326,9 +1343,9 @@ class ListExamplesResponse(examples: List[ExamplePOJO]) extends Response {
  * @return JSON that is directly usable by angular.treeview
  */
 class AngularTreeViewResponse(tree: String) extends Response {
-  override val schema = Some("angular.treeview.js")
+  override val schema: Option[String] = Some("angular.treeview.js")
 
-  def getJson = JsArray( convert(JsonParser(tree).asJsObject) )
+  def getJson: JsValue = JsArray( convert(JsonParser(tree).asJsObject) )
 
   private def convert(node: JsObject) : JsValue = {
     //TODO switch to Jolt (https://github.com/bazaarvoice/jolt) once they can handle trees
@@ -1378,8 +1395,8 @@ class AngularTreeViewResponse(tree: String) extends Response {
 
 
 class DashInfoResponse(openProofs: Int, allModels: Int, provedModels: Int) extends Response {
-  override val schema = Some("DashInfoResponse.js")
-  def getJson = JsObject(
+  override val schema: Option[String] = Some("DashInfoResponse.js")
+  def getJson: JsValue = JsObject(
     "open_proof_count" -> JsNumber(openProofs),
     "all_models_count" -> JsNumber(allModels),
     "proved_models_count" -> JsNumber(provedModels)
@@ -1387,7 +1404,7 @@ class DashInfoResponse(openProofs: Int, allModels: Int, provedModels: Int) exten
 }
 
 class ExtractDatabaseResponse(path: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "path" -> JsString(path)
   )
 }
@@ -1400,7 +1417,7 @@ class NodeResponse(tree: String) extends Response {
 
 
 case class GetTacticResponse(tacticText: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "tacticText" -> JsString(tacticText)
   )
 }
@@ -1416,7 +1433,7 @@ case class ExpandTacticResponse(detailsProofId: Int, goalSequents: List[Sequent]
       "root" -> JsString(tree.head.id.toString))
   }
 
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "tactic" -> JsObject(
       "stepsTactic" -> JsString(stepsTactic.trim()),
       "parent" -> JsString(tacticParent)
@@ -1433,7 +1450,7 @@ case class ExpandTacticResponse(detailsProofId: Int, goalSequents: List[Sequent]
 }
 
 class TacticDiffResponse(diff: TacticDiff.Diff) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "context" -> JsString(BellePrettyPrinter(diff._1.t)),
     "replOld" -> JsArray(diff._2.map({ case (dot, repl) => JsObject("dot" -> JsString(BellePrettyPrinter(dot)), "repl" -> JsString(BellePrettyPrinter(repl))) }).toVector),
     "replNew" -> JsArray(diff._3.map({ case (dot, repl) => JsObject("dot" -> JsString(BellePrettyPrinter(dot)), "repl" -> JsString(BellePrettyPrinter(repl))) }).toVector)
@@ -1441,7 +1458,7 @@ class TacticDiffResponse(diff: TacticDiff.Diff) extends Response {
 }
 
 class ExtractProblemSolutionResponse(tacticText: String) extends Response {
-  def getJson = JsObject(
+  def getJson: JsValue = JsObject(
     "fileContents" -> JsString(tacticText)
   )
 }

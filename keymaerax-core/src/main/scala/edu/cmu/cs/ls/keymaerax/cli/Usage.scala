@@ -15,6 +15,7 @@ object Usage {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage)
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage)
+      case "-convert" => println(noValueMessage + "Please use: -convert [stripHints|verboseTactics|verbatimTactics] FILENAME.kyx\n\n" + usage)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage)
       case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage)
@@ -38,7 +39,7 @@ object Usage {
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kym [-vars var1,var2,..,varn] [-out file.c]
       |     [-quantitative] |
-      |  -striphints file.kyx -out fileout.kyx
+      |  -convert stripHints file.kyx -out fileout.kyx
       |  -setup
       |
       |Actions:
@@ -46,7 +47,7 @@ object Usage {
       |  -prove     run prover on given archive of models or proofs
       |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
       |  -codegen   generate executable C code from given model file
-      |  -striphints remove all proof annotations from the model
+      |  -convert   model and tactic conversions
       |  -parse     return error code 0 if the given model file parses
       |  -bparse    return error code 0 if given bellerophon tactic file parses
       |  -repl      prove given model interactively from REPL command line

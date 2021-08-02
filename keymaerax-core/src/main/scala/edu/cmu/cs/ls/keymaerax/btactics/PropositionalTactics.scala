@@ -140,15 +140,18 @@ private object PropositionalTactics extends Logging {
         val pi = seq.ante.indexWhere(_ == p)
         if (pi >= 0) modusPonens(AntePos(pi), pos.checkAnte.checkTop)
         else {
+          //@todo usually includes too many assumptions
           val notsuccs = seq.succ.map(Not).map(SimplifierV3.formulaSimp(_, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1)
           val antes = seq.ante.patch(pos.index0, List.empty, 1)
           val assms = (notsuccs ++ antes).reduceRightOption(And).getOrElse(True)
           val mpShow = Sequent(scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(Imply(assms, p)))
-          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & prop & OnAll(QE))
+          //@todo tactic with timeouts results in proof repeatability issues
+          val mpLemma = proveBy(mpShow, SaturateTactic(implyR('R) | andL('L)) & EqualityTactics.expandAll & prop &
+            Idioms.doIf(_.subgoals.size <= 4)(OnAll(QEX(None, Some(Number(2))))))
 
           if (mpLemma.isProved) {
             cut(p) < (
-              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop),
+              modusPonens(AntePos(seq.ante.size), pos.checkAnte.checkTop) & SaturateTactic(hideL('L, p)),
               useAt(mpLemma, PosInExpr(1 :: Nil))('Rlast) & prop & done)
           } else throw new TacticInapplicableFailure("Failed to prove assumptions")
         }

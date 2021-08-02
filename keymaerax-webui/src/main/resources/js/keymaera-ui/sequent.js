@@ -30,9 +30,12 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.getCounterExample = function(additionalAssumptions) {
                 //@todo timeout request canceller
                 spinnerService.show('counterExampleSpinner');
+                var nodeId = sequentProofData.agenda.selectedId();
+                var node = sequentProofData.proofTree.node(nodeId);
+                var selected = sequentProofData.formulas.selectedIndicesIn(node.getSequent());
                 var additional = additionalAssumptions ? additionalAssumptions : {};
                 var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample'
-                $http.get(url, { params: { assumptions: additional } })
+                $http.get(url, { params: { assumptions: additional, fmlIndices: JSON.stringify(selected) } })
                     .then(function(response) {
                       var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
                       var modalInstance = $uibModal.open({
@@ -126,6 +129,21 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               }
             }
 
+            scope.areAllFmlsUsed = function() {
+              var anteUsed = $.grep(scope.sequent.ante, function(e, i) { return e.use; });
+              var succUsed = scope.sequent.succ;
+              if (anteUsed.length == scope.sequent.ante.length) {
+                succUsed = $.grep(scope.sequent.succ, function(e, i) { return e.use; });
+              }
+              return anteUsed.length == scope.sequent.ante.length && succUsed.length == scope.sequent.succ.length;
+            }
+
+            scope.toggleAllFmls = function() {
+              var use = !scope.areAllFmlsUsed();
+              $.map(scope.sequent.ante, function(e, i) { e.use = use; return e; });
+              $.map(scope.sequent.succ, function(e, i) { e.use = use; return e; });
+            }
+
             scope.isFOL = function(formula) {
               //@todo implement
               return true;
@@ -134,7 +152,13 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.formulaAxiomsMap = {};
             scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) { return scope.tacticPopover.openFormulaId && scope.tacticPopover.openFormulaId.startsWith(formulaId); },
+              isOpen: function(formulaId) {
+                // open if formulaId is prefix of openFormulaId (prefix elements separated by ,)
+                return scope.tacticPopover.openFormulaId &&
+                  (scope.tacticPopover.openFormulaId.length == formulaId.length ||
+                   scope.tacticPopover.openFormulaId.charAt(formulaId.length) == ',') &&
+                  scope.tacticPopover.openFormulaId.startsWith(formulaId);
+              },
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() { scope.derivationInfos.infos = []; scope.tacticPopover.openFormulaId = undefined; }

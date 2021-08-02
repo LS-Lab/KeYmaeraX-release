@@ -53,7 +53,7 @@ object KeYmaeraXTool extends Tool {
     val LOG_QE_STDOUT = Configuration.getBoolean(Configuration.Keys.LOG_QE_STDOUT).getOrElse(false)
 
     val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
-    lazy val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+    lazy val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isPredicateFreeFOL })
     lazy val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("_rcf") => true case _ => false })
     lazy val qeStdOutListener: QELogListener = new QELogListener((_: Sequent, g: Sequent, s: String) => print(s"$s: ${g.prettyString}..."), (_, t) => t match { case DependentTactic("_rcf") => true case _ => false }) {
       private val stopwatchListener = new StopwatchListener(logCondition)
@@ -67,7 +67,7 @@ object KeYmaeraXTool extends Tool {
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
         stopwatchListener.end(input, expr, output)
         input match {
-          case BelleProvable(p, _) if logCondition(p, expr) =>
+          case BelleProvable(p, _, _) if logCondition(p, expr) =>
             println(stopwatchListener.duration + "ms")
           case _ => // nothing to do
         }

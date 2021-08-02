@@ -1,11 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.PrintWriter
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ElidingProvable$, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.util.control.Breaks._
 import scala.util.Try
@@ -67,8 +65,8 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
   private class REPLParseException(err:String) extends Exception
 
   def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
-    BelleInterpreter(e, BelleProvable(ElidingProvable(pr))) match {
-      case BelleProvable(result,_) => result
+    BelleInterpreter(e, BelleProvable.plain(ElidingProvable(pr))) match {
+      case BelleProvable(result,_ , _) => result
     }
   }
 

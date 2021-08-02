@@ -55,7 +55,51 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       ArchiveEntry(name, kind, loc, inheritedDefinitions ++ defs, definitions, vars, problem, annotations, tactics, info)
     }
 
-    lazy val allDefs: List[Definition] = inheritedDefinitions ++ definitions ++ vars
+    lazy val allDefs: List[Definition] = (problem match {
+      case Left(fml) =>
+        @tailrec
+        def transitiveNames(from: List[Definition], visited: Set[String], unvisited: Set[String]): Set[String] = {
+          val nextToVisit = (unvisited -- visited).flatMap(s => from.filter(_.indexedName == s)).map(_.symbols)
+          if (nextToVisit.isEmpty) visited
+          else if (nextToVisit.exists(_.isEmpty)) from.map(_.indexedName).toSet //@note entry is an exercise
+          else transitiveNames(from, visited ++ unvisited, nextToVisit.flatMap(_.get).map(_.toString))
+        }
+
+        val defSymbols = definitions.map(_.symbols)
+        if (defSymbols.exists(_.isEmpty)) {
+          //@note one of the entry definitions is an exercise: we don't know yet which of the shared definitions might be used, so return all
+          inheritedDefinitions
+        } else {
+          val used = StaticSemantics.symbols(fml) ++ defSymbols.flatMap(_.get).toSet
+          val transitiveUsedNames = transitiveNames(inheritedDefinitions, Set.empty, used.map(_.toString))
+          val transitiveUsed = inheritedDefinitions.filter(d => transitiveUsedNames.contains(d.indexedName))
+          if (transitiveUsed.exists(_.symbols.isEmpty)) {
+            //@note at least one exercise definition is used in entry, return all definitions
+            inheritedDefinitions
+          } else {
+            //@note none of the exercise definitions is used, filter out the ones that do not fit program variables
+            // nor the must-bound variables of the problem, e.g., could have formula \forall x [inc;]x>=old(x)
+            val problemVars = problem match {
+              case Left(fml) =>
+                val mbv = StaticSemantics.boundVars(fml) -- StaticSemantics.freeVars(fml)
+                if (mbv.isInfinite) Set.empty
+                else mbv.toSet
+              case Right(_) => Set.empty
+            }
+            val varNames = vars.map(_.indexedName) ++ problemVars.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString)
+            val definedNames = inheritedDefinitions.map(_.indexedName) //@note are still variables here but will be elaborated later
+            val (useOnlyDefSymbols, useUndefSymbols) = inheritedDefinitions.filterNot(_.symbols.isEmpty).partition({
+              case d: FuncPredDef => (d.freeVars.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).isEmpty
+              case d: ProgramDef => (d.symbols.get.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).isEmpty
+            })
+            val report = useUndefSymbols.filter(transitiveUsed.contains)
+            if (report.nonEmpty) throw ParseException("Definition " + report.head.indexedName + " uses undefined symbols " +
+              (report.head.symbols.get.filter(_.isInstanceOf[BaseVariable]).map(_.prettyString) -- varNames -- definedNames).mkString(","), report.head.loc)
+            useOnlyDefSymbols
+          }
+        }
+      case _ => inheritedDefinitions //@note entry formula is an exercise
+    }) ++ definitions ++ vars
 
     def allAnnotations: List[Annotation] = annotations ++ definitions.flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
   }
@@ -67,12 +111,30 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
                                             val definition: Either[Option[Expression], List[Token]],
                                             val loc: Location) extends ArchiveItem {
     def extendLocation(end: Location): Definition
+
+    /** Prints the indexed name. */
+    def indexedName: String = name + index.map("_" + _).getOrElse("")
+
+    /** Returns the symbols used in the definition; None for exercises since not yet fully known. */
+    def symbols: Option[Set[NamedSymbol]] = definition match {
+      case Left(Some(e)) => Some(StaticSemantics.symbols(e))
+      case Left(None) => Some(Set.empty)
+      case Right(_) => None
+    }
+
+    /** Returns the free variables of the definition. */
+    def freeVars: SetLattice[Variable] = definition match {
+      case Left(Some(e)) => StaticSemantics.freeVars(e)
+      case Left(None) => SetLattice.bottom
+      case Right(_) => SetLattice.allVars //@note definition is an exercise, do not yet know which variables may occur
+    }
   }
   private[parser] case class FuncPredDef(override val name: String, override val index: Option[Int], sort: Sort,
                                          signature: List[NamedSymbol],
                                          override val definition: Either[Option[Expression], List[Token]],
                                          override val loc: Location) extends Definition(name, index, definition, loc) {
     override def extendLocation(end: Location): Definition = FuncPredDef(name, index, sort, signature, definition, loc.spanTo(end))
+    override def freeVars: SetLattice[Variable] = super.freeVars -- signature.filterNot(_.isInstanceOf[DotTerm]).map(_.asInstanceOf[Variable])
   }
 
   private[parser] case class ProgramDef(override val name: String, override val index: Option[Int],
@@ -281,12 +343,20 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
       }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isBool(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isProgram(sort) =>
-        reduce(st, 2, Bottom :+ ProgramDef(name, index, Left(None), Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
-
+        (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+          case Some(d) => throw ParseException.duplicateSymbolError(name, index, endLoc, d.loc)
+          case None => reduce(st, 2, Bottom :+ ProgramDef(name, index, Left(None), Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) if la == LPAREN => shift(st)
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) :+ Token(LPAREN, _) if isReal(la) => shift(st)
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) :+ Token(LPAREN, _) :+ Token(sort, _) if isReal(sort) && la.isInstanceOf[IDENT] => shift(st)
@@ -396,12 +466,18 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
         case _: IDENT => shift(st)
         case _ => throw ParseException("Missing identifier", st, Expected.ExpectTerminal(IDENT("<string>")) :: Nil)
       }
-      case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), _) if isReal(sort) => la match {
+      case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), identLoc) if isReal(sort) => la match {
         case SEMI | PERIOD =>
-          reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock, r)
+          (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+            case Some(d) => throw ParseException.duplicateSymbolError(name, index, identLoc, d.loc)
+            case None => reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock, r)
+          }
         case COMMA if isReal(rest.head.tok) => throw ParseException("Unexpected declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
         case COMMA =>
-          reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ Token(sort, startLoc), r)
+          (defs.defs ++ defs.vars).find(d => d.name == name && d.index == index) match {
+            case Some(d) => throw ParseException.duplicateSymbolError(name, index, identLoc, d.loc)
+            case None => reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ Token(sort, startLoc), r)
+          }
         case LPAREN => throw ParseException("Function definition only allowed in Definitions block", st, Expected.ExpectTerminal(SEMI) :: Expected.ExpectTerminal(COMMA) :: Nil)
         case _ if isReal(la) || isBool(la) || isProgram(la) =>
           throw ParseException("Missing variable declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
@@ -700,9 +776,10 @@ abstract class KeYmaeraXArchiveParserBase extends ArchiveParser {
   }
 
   private def createStandaloneEntryText(entry: ArchiveEntry, text: String): (String, String) = {
-    val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
+    val usedSharedDefs = entry.inheritedDefinitions.filter(entry.allDefs.contains)
+    val sharedDefsText = if (usedSharedDefs.nonEmpty) {
       "SharedDefinitions\n" +
-        entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
+        usedSharedDefs.map(d => "  " + slice(text, d.loc)).mkString("\n") +
         "\nEnd.\n"
     } else ""
 

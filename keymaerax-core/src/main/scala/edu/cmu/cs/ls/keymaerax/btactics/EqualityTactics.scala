@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, mapSubpositions}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -82,13 +82,18 @@ private object EqualityTactics {
 
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
           case Some(f: Formula) =>
-            val diffPos = FormulaTools.posOf(f, (e: Expression) => e match {
+            val diffPos = FormulaTools.posOf(f, (e: Expression) => e != lhs && (e match {
               case DifferentialSymbol(x) => lhsFv.contains(x)
               case x: Differential => !lhsFv.intersect(StaticSemantics.symbols(x).
                 filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
               case _ => false
-            })
-            val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
+            }))
+            val lhsPos = (f match {
+              //@note do not rewrite lhs at ante-pos if it is verbatim lhs of eq,
+              // otherwise x=y, x=y ==> rewrites slightly surprising to y=y ==>
+              case Equal(l, _) if pos.isAnte && l == lhs => FormulaTools.posOf(f, _ == lhs).filterNot(_ == PosInExpr(0 :: Nil))
+              case _ => FormulaTools.posOf(f, _ == lhs)
+            }).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })
@@ -142,7 +147,7 @@ private object EqualityTactics {
   )
   val atomExhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
-    case Some(fml@Equal(FuncOf(Function(_, _, _, _, None), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
+    case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
     case Some(e) => throw new TacticInapplicableFailure("Equality rewriting only applicable to equalities l=r, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -152,10 +157,12 @@ private object EqualityTactics {
   val applyEqualities: DependentTactic = anon ((seq: Sequent) => {
     seq.zipAnteWithPositions.filter({
       case (Equal(v: Variable, t), _) => v != t
-      case (Equal(fn@FuncOf(Function(_, _, _, _, None), _), t), _) => fn != t
+      case (Equal(fn@FuncOf(Function(_, _, _, _, false), _), t), _) => fn != t
       case _ => false }).
-      reverse.
-      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
+      reverseMap({ case (_, pos) => Idioms.doIf(p => {
+        val Equal(l, r) = p.subgoals.head(pos.checkTop)
+        l != r })(EqualityTactics.atomExhaustiveEqL2R(pos))
+      }).
       reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
@@ -207,8 +214,7 @@ private object EqualityTactics {
     val v = abbrvV match {
       case Some(vv) => vv
       case None => t match {
-          // TODO: unsure if correct
-        case FuncOf(Function(n, _, _, sort, Some(_)), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
+        case FuncOf(Function(n, _, _, sort, true), _) => Variable(n + "_", TacticHelper.freshIndexInSequent(n + "_", sequent), sort)
         case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
         case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
@@ -239,7 +245,7 @@ private object EqualityTactics {
         case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to an expression")
       }
       require(x.isEmpty ||
-        !sequent.sub(pos).map(StaticSemantics.signature).contains(x.get),
+        !sequent.sub(pos).forall(StaticSemantics.signature(_).contains(x.get)),
         "Abbreviation must be fresh at position")
       val v = x match {
         case Some(vv) => vv
@@ -267,7 +273,6 @@ private object EqualityTactics {
       )
   })
 
-  // TODO: delete these tactics
   /**
    * Expands an absolute value function.
    * @example {{{
@@ -279,7 +284,7 @@ private object EqualityTactics {
    */
   @Tactic(names = "Expand absolute value", codeName = "absExp")
   val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, abs@FuncOf(Function(fn, None, Real, Real, Some(_)), t)) if fn == "abs" =>
+    case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
         val absVar = Variable(fn + "_", freshAbsIdx)
@@ -299,7 +304,7 @@ private object EqualityTactics {
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   @Tactic(displayLevel = "internal")
   val absAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(absTerm@FuncOf(Function(fn, None, Real, Real, Some(_)), x)) if fn == "abs" =>
+    case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
@@ -354,16 +359,22 @@ private object EqualityTactics {
    */
   @Tactic(names = "Expand min/max")
   val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), t@Pair(f, g))) if fn == "min" || fn == "max" =>
+    case (_, _: Formula) => mapSubpositions(pos, sequent, {
+      case (FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), _), pp) =>
+        if (fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name) Some(?(minmax(pp)))
+        else None
+      case _ => None
+    }).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t: Pair))
+        if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
         val minmaxVar = Variable(fn + "_", freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
           useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
-        //@todo IDE check if this key is working correctly?
           (fn match {
-            case "min" => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
-            case "max" => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
+            case InterpretedSymbols.minF.name => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
+            case InterpretedSymbols.maxF.name => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
             case _ => throw new AssertionError("Cannot happen")
           })
       } else {
@@ -374,7 +385,7 @@ private object EqualityTactics {
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   @Tactic(displayLevel = "internal")
   val minmaxAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, Some(_)), Pair(f, g))) if fn == "min" || fn == "max" =>
+    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
@@ -445,10 +456,7 @@ private object EqualityTactics {
       })
     )
     tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip) &
-      Idioms.doIf(_.subgoals.exists(StaticSemantics.symbols(_).exists({
-        case InterpretedSymbols.absF | InterpretedSymbols.minF | InterpretedSymbols.maxF => true
-        case _ => false
-      })))(onAll(expandAll))
+      Idioms.doIf(_.subgoals.exists(StaticSemantics.symbols(_).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false })))(onAll(expandAll))
   })
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
   @Tactic(displayLevel = "internal")

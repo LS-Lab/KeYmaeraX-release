@@ -22,7 +22,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
 import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
-import StatusCodes._
+import akka.http.scaladsl.model.StatusCodes._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 import scala.annotation.tailrec
@@ -350,9 +350,9 @@ object RestApi extends Logging {
   }}
 
   /** Extracts and stores a tactic from the recorded proof steps. */
-  val extractTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (userName, proofId) => { pathEnd {
+  val extractTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract" / Map("verbose" -> true, "succinct" -> false)) { (userName, proofId, verbose) => { pathEnd {
     get {
-      val request = new ExtractTacticRequest(database, userName, proofId)
+      val request = new ExtractTacticRequest(database, userName, proofId, verbose)
       completeRequest(request, t)
     }
   }}}
@@ -431,13 +431,8 @@ object RestApi extends Logging {
         entity(as[String]) { x => {
           val obj = x.parseJson
           val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
-          val proofName = if (submittedProofName == "") {
-            val model = database.getModel(modelId)
-            model.name + ": Proof"
-          } else submittedProofName
           val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
-
-          val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
+          val request = new CreateProofRequest(database, userId, modelId, submittedProofName, proofDescription)
           completeRequest(request, t)
         }}
       }
@@ -771,8 +766,8 @@ object RestApi extends Logging {
     val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
       get { parameters('stepwise.as[Boolean]) { stepwise =>
         val pos = where match {
-          case "R" => Find.FindR(0, None)
-          case "L" => Find.FindL(0, None)
+          case "R" => Find.FindRFirst
+          case "L" => Find.FindLFirst
           case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
         }
         val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
@@ -793,8 +788,8 @@ object RestApi extends Logging {
               BelleTermInput(paramValue, paramInfo)
             })
           val pos = where match {
-            case "R" => Find.FindR(0, None)
-            case "L" => Find.FindL(0, None)
+            case "R" => Find.FindRFirst
+            case "L" => Find.FindLFirst
             case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
           }
           val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
@@ -855,8 +850,8 @@ object RestApi extends Logging {
 
     val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
       pathEnd {
-        get { parameters('assumptions.as[String]) { assumptions =>
-          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions)
+        get { parameters(('assumptions.as[String], 'fmlIndices.as[String])) { (assumptions: String, fmlIndices: String) =>
+          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions, fmlIndices)
           completeRequest(request, t)
         }}
       }}
@@ -1192,9 +1187,10 @@ object RestApi extends Logging {
         else if(entries.head.tactics.length != 1)
           complete(completeResponse(new ErrorResponse(s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page.") :: Nil))
         else {
-          val model = entries.head.model.asInstanceOf[Formula]
-          val tactic = entries.head.tactics.head._3
-          complete(standardCompletion(new ValidateProofRequest(database, model, tactic), EmptyToken()))
+          val entry = entries.head
+          val model = entry.model.asInstanceOf[Formula]
+          val tactic = entry.tactics.head._3
+          complete(standardCompletion(new ValidateProofRequest(database, model, tactic, entry.defs), EmptyToken()))
         }
       }}
     }

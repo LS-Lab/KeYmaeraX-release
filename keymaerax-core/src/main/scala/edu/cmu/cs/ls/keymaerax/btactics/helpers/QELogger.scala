@@ -6,8 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import java.io.FileWriter
-
-import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
+import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -65,7 +64,7 @@ object QELogger extends Logging {
   def measure(s:Sequent): Int = s.succ.map(measure).sum + s.ante.map(measure).sum
 
   /** Default path from the configuration. */
-  private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
+  private lazy val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
   /** Returns a default 'qe.txt' file if path points to a directory, the path file otherwise. */
   private def file(filename: String): java.io.File =
@@ -184,22 +183,29 @@ object QELogger extends Logging {
       }
     }
 
-  private var logTactic = nil
+  private var logTactic: Option[BelleExpr] = None
 
-  def getLogTactic: BelleExpr = logTactic
+  def getLogTactic: BelleExpr = {
+    if (logTactic.isEmpty) logTactic = Some(nil)
+    logTactic.get
+  }
 
   //This bakes the recorder into the QE tactic, so it will record every single QE call, including internal ones made by
   //e.g. the ODE solver
   def enableLogging(loglevel: LogConfig = defaultConf ): Unit = {
-    logTactic = measureRecordQE(loglevel)
+    logTactic = Some(measureRecordQE(loglevel))
   }
 
   def disableLogging(): Unit = {
-    logTactic = nil
+    logTactic = Some(nil)
   }
 
-  /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath` */
-  def exportSmtLibFormat(logPath: String, exportPath: String): Unit = {
+  /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath`, filtering out duplicate
+    * entries if `filterDuplicates` is true (note: keeps all content in memory, avoid for large log files).  */
+  def exportSmtLibFormat(logPath: String, exportPath: String,
+                         printPrefix: Formula => String = _ => "",
+                         printSuffix: Formula => String = _ => "",
+                         filterDuplicates: Boolean = false): Unit = {
     val uniqueIndex: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map.empty
 
     def uniqueName(n: String): String = {
@@ -215,34 +221,40 @@ object QELogger extends Logging {
     }
 
     val filePath = if (exportPath.contains("${entryname}")) exportPath else exportPath + "${entryname}"
+
+    val exporter = (f: Formula) => printPrefix(f) + DefaultSMTConverter(f) + printSuffix(f)
+    val seqs = scala.collection.mutable.Set.empty[Sequent]
     def export(e: (String, Sequent)): Unit = {
-      print("Exporting " + e._1 + "...")
-      try {
-        exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)))
-        println("done")
-      } catch {
-        case ex: Throwable => println("failed: " + ex.getMessage)
-      }
+      if (!filterDuplicates || !seqs.contains(e._2)) {
+        print("Exporting " + e._1 + "...")
+        try {
+          exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)), exporter)
+          println("done")
+        } catch {
+          case ex: Throwable => println("failed: " + ex.getMessage)
+        }
+      } else if (filterDuplicates) seqs += e._2
     }
     processLog(parseStr2, export, logPath)
   }
 
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
-  def exportSmtLibFormat(fml: Formula, exportFile: String): Unit = {
+  def exportSmtLibFormat(fml: Formula, exportFile: String, exporter: Formula => String): Unit = {
     val f = file(exportFile)
     val fw = new FileWriter(f)
-    fw.append(DefaultSMTConverter(fml))
+    fw.append(exporter(fml))
     fw.close()
   }
 
   def main(args: Array[String]): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val options = parseOptions(Map(), args.toList)
     options.get("convert") match {
       case Some(format) => format match {
         case "smtlib" =>
           val logPath = options.getOrElse("logpath", throw new Exception("Missing log file path, use argument -logpath path/to/logfile"))
-          val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt")
-          PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+          val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt2")
           exportSmtLibFormat(logPath, outputPath)
         case _ => throw new Exception("Unknown output format " + format + ", use one of [smtlib]")
       }

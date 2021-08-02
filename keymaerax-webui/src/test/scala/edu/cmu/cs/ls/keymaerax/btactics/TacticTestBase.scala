@@ -1,9 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration}
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{InterpreterConsistencyListener, PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -91,7 +90,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   private val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
 
   protected val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
-  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.forall(_.isPredicateFreeFOL) })
   private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   private val qeStdOutListener = new QELogListener((_: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   protected val qeDurationListener = new StopwatchListener((_, t) => t match {
@@ -144,7 +143,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     val common = Map(
       Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
       Configuration.Keys.QE_TOOL -> WOLFRAM)
-    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    val uninterp = common + (Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> Configuration.getString(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false"))
     withTemporaryConfig(common) {
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
@@ -152,10 +151,13 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
+      //@note KeYmaeraXTool.init overwrites the interpreter that we set up in beforeEach!
+      val i = theInterpreter
       KeYmaeraXTool.init(Map(
         KeYmaeraXTool.INIT_DERIVATION_INFO_REGISTRY -> initLibrary.toString,
         KeYmaeraXTool.INTERPRETER -> LazySequentialInterpreter.getClass.getSimpleName
       ))
+      BelleInterpreter.setInterpreter(i)
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
         implicit val signaler: Signaler = (_: Thread) => {
@@ -215,8 +217,10 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
   /** Tests with both Mathematica and Z3 as QE tools. */
   def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = {
+    println("=====With Mathematica=====")
     withClue("Mathematica") { withMathematica(testcode, timeout, initLibrary) }
     afterEach()
+    println("=====With Z3=====")
     beforeEach()
     withClue("Z3") { withZ3(testcode, timeout, initLibrary) }
   }
@@ -249,17 +253,19 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any): Unit =
+  def withTemporaryConfig[T](tempConfig: Map[String, String])(testcode: => T): T =
     Configuration.withTemporaryConfig(tempConfig)(testcode)
 
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    val listeners =
+    val listeners = {
+      (new InterpreterConsistencyListener() :: Nil) ++
       (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
+    }
     dbTester = new Lazy(new TempDBTools(listeners))
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
@@ -336,14 +342,15 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, subst: USubst): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s))
+  def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit, defs: Declaration): ProvableSig = {
+    val v = BelleProvable.withDefs(ProvableSig.startProof(s), defs)
+    val subst = USubst(defs.substs)
     theInterpreter(tactic, v) match {
       case dsp: BelleDelayedSubstProvable =>
         dsp.p.conclusion.exhaustiveSubst(dsp.subst ++ subst) shouldBe s.exhaustiveSubst(dsp.subst ++ subst)
         labelCheck(dsp.label)
         dsp.p
-      case BelleProvable(provable, labels) =>
+      case BelleProvable(provable, labels, _) =>
         provable.conclusion.exhaustiveSubst(subst) shouldBe s.exhaustiveSubst(subst)
         labelCheck(labels)
         provable
@@ -351,39 +358,40 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
     }
   }
   def proveByS(s: Sequent, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit): ProvableSig = {
-    proveByS(s, tactic, labelCheck, USubst(Nil))
+    proveByS(s, tactic, labelCheck, Declaration(Map.empty))
   }
-  def proveByS(s: Sequent, tactic: BelleExpr, subst: USubst): ProvableSig = {
-    proveByS(s, tactic, _ => {}, subst)
+  def proveByS(s: Sequent, tactic: BelleExpr, defs: Declaration): ProvableSig = {
+    proveByS(s, tactic, _ => {}, defs)
   }
 
-  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, subst: USubst = USubst(Nil)): ProvableSig = {
-    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, subst)
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
+    proveByS(Sequent(IndexedSeq(), IndexedSeq(fml)), tactic, labelCheck, defs)
   }
 
   /** Proves a sequent using the specified tactic. Fails the test when tactic fails. */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(ProvableSig.startProof(s))
+  def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = proveBy(s, tactic, Declaration(Map.empty))
+  def proveBy(s: Sequent, tactic: BelleExpr, defs: Declaration): ProvableSig = {
+    val v = BelleProvable(ProvableSig.startProof(s), None, defs)
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
 
   def proveBy(p: Provable, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(ElidingProvable(p))
+    val v = BelleProvable.plain(ElidingProvable(p))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
 
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(p: ProvableSig, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(p)
+    val v = BelleProvable.plain(p)
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable, _) => provable
+      case BelleProvable(provable, _, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
@@ -477,7 +485,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
 
       qeDurationListener.reset()
       val start = System.currentTimeMillis()
-      val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
+      val proof = proveBy(entry.model.asInstanceOf[Formula], tactic, defs = entry.defs)
       val end = System.currentTimeMillis()
       val qeDuration = qeDurationListener.duration
 

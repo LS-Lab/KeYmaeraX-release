@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolExecutionException, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
@@ -39,6 +39,14 @@ final class BigDecimalTool extends Tool with QETacticTool with ToolOperationMana
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "BigDecimalTool needs to be initialized before use")
     ProvableSig.proveArithmeticLemma(BigDecimalQETool, formula)
+  }
+
+  /** @inheritdoc */
+  override def qe(g: Goal): (Goal, Formula) = g match {
+    case Atom(fml) =>
+      val Sequent(IndexedSeq(), IndexedSeq(Equiv(_, result))) = qe(fml).fact.conclusion
+      g -> result
+    case _ => throw ToolExecutionException("BigDecimalQETool supports only atom goals")
   }
 
   /** @inheritdoc */

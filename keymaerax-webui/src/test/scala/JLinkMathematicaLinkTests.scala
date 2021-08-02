@@ -4,6 +4,7 @@
 */
 import com.wolfram.jlink.{Expr, KernelLink}
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleLabel
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -137,7 +138,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   "QE" should "label branch on invalid formula" taggedAs SlowTest in withMathematica { link =>
     link.qe("5<3".asFormula).fact.conclusion shouldBe "==> 5<3 <-> false".asSequent
-    val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
+    val result = proveBy("5<3".asFormula, TactixLibrary.QE, (s: Option[List[BelleLabel]]) => s match {
       case Some(labels) => labels.loneElement shouldBe BelleLabels.QECEX
       case None => fail("Expected QE CEX label")
     })

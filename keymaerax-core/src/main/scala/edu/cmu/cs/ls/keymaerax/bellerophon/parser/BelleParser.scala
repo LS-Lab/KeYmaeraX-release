@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.Logging
+import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
@@ -39,6 +39,13 @@ object BelleParser extends TacticParser with Logging {
 
   /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
+
+  /** Parses `t` backwards-compatible with definitions `defs` expanded in tactic arguments depending on
+    * whether `t` expands symbols or uses substitutions explicitly or not. */
+  def parseBackwardsCompatible(t: String, defs: Declaration): BelleExpr =
+    if (tacticExpandsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
+    else if (tacticSubstsDefsExplicitly(t)) BelleParser.parseWithInvGen(t, None, defs)
+    else parseWithInvGen(t, None, defs, expandAll=true) // backwards compatibility
 
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
     * expand function and predicate symbols. */
@@ -76,6 +83,7 @@ object BelleParser extends TacticParser with Logging {
 
   private val TACTIC_EXPANDS: Regex = "(expand\\s*\"[^\"]*\")|(expandAllDefs)".r
   private val TACTICS_SUBSTS: Regex = """US\([^)]*\)""".r
+  private val TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY = Configuration.getBoolean(Configuration.Keys.TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY).getOrElse(false)
 
   /** Detects whether a tactic string uses `expand "..."` or `expandAllDefs`.  */
   def tacticExpandsDefsExplicitly(s: String): Boolean = TACTIC_EXPANDS.findFirstIn(s).isDefined
@@ -356,7 +364,7 @@ object BelleParser extends TacticParser with Logging {
       case r :+ BelleToken(EXPAND, loc) => st.input match {
         case BelleToken(all@IDENT("All"), allLoc) :: tail =>
           // resolve clash with builtin tactic expandAll
-          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs)
+          val parsedExpr = constructTactic(EXPAND.img+all.name, None, loc.spanTo(allLoc), tacticDefs, g, defs, expandAll)
           ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(allLoc), None), tail)
         case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
           val x: NamedSymbol = expr.undelimitedExprString.asExpr match {
@@ -466,7 +474,7 @@ object BelleParser extends TacticParser with Logging {
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
           if (!isOpenParen(st.input)) {
-            val parsedExpr = constructTactic(name, None, identLoc, tacticDefs, g, defs)
+            val parsedExpr = constructTactic(name, None, identLoc, tacticDefs, g, defs, expandAll)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc, None), st.input)
           } else {
             val (args, remainder) = parseArgumentList(name, st.input, defs, expandAll)
@@ -478,7 +486,7 @@ object BelleParser extends TacticParser with Logging {
             }
             val spanLoc = if(endLoc.end.column != -1) identLoc.spanTo(endLoc) else identLoc
 
-            val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs, g, defs)
+            val parsedExpr = constructTactic(name, Some(args), identLoc, tacticDefs, g, defs, expandAll)
             parsedExpr.setLocation(identLoc)
             ParserState(r :+ ParsedBelleExpr(parsedExpr, spanLoc, None), remainder)
           }
@@ -566,7 +574,7 @@ object BelleParser extends TacticParser with Logging {
   /** Constructs a tactic using the reflective expression builder. */
   private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location,
                               tacticDefs: DefScope[String, DefTactic], g: Option[Generator.Generator[GenProduct]],
-                              defs: Declaration) : BelleExpr = {
+                              defs: Declaration, expandAll: Boolean) : BelleExpr = {
     // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by making a bunch of one-tuples.
     val newArgs = args match {
       case None => Nil
@@ -584,7 +592,19 @@ object BelleParser extends TacticParser with Logging {
       ApplyDefTactic(tacticDef.get)
     } else {
       try {
-        ReflectiveExpressionBuilder(name, newArgs, g, defs)
+        val t = ReflectiveExpressionBuilder(name, newArgs, g, defs)
+        // backwards-compatibility with tactics that used definitions when they were auto-expanded immediately
+        if (TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY && expandAll && defs.decls.exists(_._2.interpretation.nonEmpty)) {
+          t.prettyString match {
+            case "QE" | "smartQE" | "master" => ExpandAll(defs.substs) & t
+            case text =>
+              if (text.startsWith("ODE") ||
+                text.startsWith("diffInvariant") ||
+                text.startsWith("dI")
+              ) ExpandAll(defs.substs) & t
+              else t
+          }
+        } else t
       } catch {
         case e: ReflectiveExpressionBuilderExn =>
           throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
@@ -629,7 +649,7 @@ object BelleParser extends TacticParser with Logging {
           val expectedInputs = DerivationInfo(codeName).persistentInputs
           if (nonPosArgCount >= expectedInputs.length) throw ParseException(
             s"Too many expr arguments were passed to $codeName (expected ${expectedInputs.map(_.name)} but found at least ${nonPosArgCount + 1} arguments)", loc)
-          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)))(tok, loc) match {
+          val theArg = parseArgumentToken(Some(expectedInputs(nonPosArgCount)), defs)(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case Left(v: List[Any]) => Left(v.map({
               case e: Expression => expand(e)
@@ -646,12 +666,12 @@ object BelleParser extends TacticParser with Logging {
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, l2)
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, l2)
           }
-          Right(parsePositionLocator(posString, l1.spanTo(l2), Some(what), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(parsePositionLocator(posString, l1.spanTo(l2), Some(what), exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
         case BelleToken(p: BASE_POSITION, l1)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, l2)::tail =>
-          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression)), exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
         case BelleToken(p: BASE_POSITION, l1)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION_SUB, l2)::tail =>
-          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression._1)), expr.expression._2, exact=matchKind==EXACT_MATCH)) +: arguments(tail)
-        case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
+          Right(parsePositionLocator(p.positionString, l1.spanTo(l2), Some(expand(expr.expression._1)), expr.expression._2, exact=matchKind==EXACT_MATCH, defs)) +: arguments(tail)
+        case tok::tail => parseArgumentToken(None, defs)(tok, UnknownLocation) +: arguments(tail)
       }
 
       (arguments(removeCommas(argList, commaExpected=false)), remainder)
@@ -680,14 +700,14 @@ object BelleParser extends TacticParser with Logging {
     * @param tok The argument token that's currently being processed.
     * @return The argument corresponding to the current token.
     */
-  private def parseArgumentToken(expectedType: Option[ArgInfo])(tok: BelleToken, loc: Location): TacticArg = tok.terminal match {
+  private def parseArgumentToken(expectedType: Option[ArgInfo], defs: Declaration)(tok: BelleToken, loc: Location): TacticArg = tok.terminal match {
     case terminal: TACTIC_ARGUMENT => terminal match {
-      case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_ANTECEDENT(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_SUCCEDENT(posString)  => Right(parsePositionLocator(posString, tok.location, None, exact=true))
-      case SEARCH_EVERYWHERE(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true))
+      case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_ANTECEDENT(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_SUCCEDENT(posString)  => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
+      case SEARCH_EVERYWHERE(posString) => Right(parsePositionLocator(posString, tok.location, None, exact=true, defs))
       case tok: BELLE_EXPRESSION =>
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
         parseArg(expectedType.get, tok.undelimitedExprString, loc)
@@ -720,6 +740,14 @@ object BelleParser extends TacticParser with Logging {
     } catch {
       case exn: ParseException => throw ParseException(s"Could not parse $undelim as a variable when a variable was expected. Error: $exn", loc, exn)
     }
+    case _: NumberArg => try {
+      undelim.asExpr match {
+        case n: Number => Left(n)
+        case _ => throw ParseException(s"Could not parse $undelim as a number when a number was expected.", loc)
+      }
+    } catch {
+      case exn: ParseException => throw ParseException(s"Could not parse $undelim as an expression when an expression was expected. Error: $exn", loc, exn)
+    }
     case _: ExpressionArg => try {
       Left(undelim.asExpr)
     } catch {
@@ -737,22 +765,23 @@ object BelleParser extends TacticParser with Logging {
     * Public because this is a useful utility function.
     *
     * @see [[parseArgumentToken]] */
-  def parsePositionLocator(s: String, location: Location, shape: Option[Expression], exact: Boolean): PositionLocator = {
+  def parsePositionLocator(s: String, location: Location, shape: Option[Expression], exact: Boolean,
+                           defs: Declaration): PositionLocator = {
     val subPositionStrings = s.split('.')
     val subPositions = subPositionStrings.tail.map(parseInt(_, location, nonZero=false))
-    parsePositionLocator(subPositionStrings.head, location, shape, PosInExpr(subPositions.toList), exact)
+    parsePositionLocator(subPositionStrings.head, location, shape, PosInExpr(subPositions.toList), exact, defs)
   }
 
   /** Parses a position locator string. */
   def parsePositionLocator(s: String, location: Location, shape: Option[Expression], sub: PosInExpr,
-                           exact: Boolean): PositionLocator = s match {
+                           exact: Boolean, defs: Declaration): PositionLocator = s match {
     //@note goal index is always 0 because we operate on single-subgoal provables
     //      could extend notation to 'L@1 or 'L@label
     case "'Llast" => LastAnte(0, sub)
     case "'Rlast" => LastSucc(0, sub)
-    case "'L" => Find.FindL(0, shape, sub, exact)
-    case "'R" => Find.FindR(0, shape, sub, exact)
-    case "'_" => new Find(0, shape, AntePosition.base0(0, sub), exact)
+    case "'L" => Find.FindL(0, shape, sub, exact, defs)
+    case "'R" => Find.FindR(0, shape, sub, exact, defs)
+    case "'_" => new Find(0, shape, AntePosition.base0(0, sub), exact, defs)
     case i => Fixed(parseInt(i, location), sub.pos, shape, exact)
   }
 

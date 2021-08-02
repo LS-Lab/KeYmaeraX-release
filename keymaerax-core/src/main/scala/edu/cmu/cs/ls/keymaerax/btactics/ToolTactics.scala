@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
+import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
@@ -53,7 +53,12 @@ private object ToolTactics {
   /** Assert that there is no counter example. skip if none, error if there is. */
   // was  "assertNoCEX"
   lazy val assertNoCex: BelleExpr = anon ((sequent: Sequent) => {
-    Try(findCounterExample(sequent.toFormula)) match {
+    val removeUscorePred: Formula => Boolean = {
+      case PredOf(Function(name, _, _, _, _), _) => name.last != '_'
+      case _ => true
+    }
+    Try(findCounterExample(sequent.copy(ante = sequent.ante.filter(removeUscorePred),
+                                        succ = sequent.succ.filter(removeUscorePred)).toFormula)) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => skip
       case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
@@ -62,51 +67,46 @@ private object ToolTactics {
     }
   })
 
+  /** Prepares a QE call with all pre-processing steps, uses `order` to form the universal closure and finishes the
+    * remaining subgoals using `doQE`. */
+  def prepareQE(order: List[Variable], doQE: BelleExpr): BelleExpr = {
+    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
+
+    val expand =
+      if (Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)) skip
+      else EqualityTactics.expandAll &
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, Some(_)) => true case _ => false }),
+          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
+
+    Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
+      assertT(_.isFOL, "QE on FOL only") &
+        SaturateTactic(alphaRule | allR('R)) &
+        Idioms.doIf(!_.isProved)(
+          close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
+            // if
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & doQE
+            ,
+            // else
+            hidePredicates & hideQuantifiedFuncArgsFmls &
+              assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
+              EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
+              Idioms.doIf(_ => doQE != nil)(
+                doQE & done
+                  | anon {(_: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
+              )
+          )
+        )
+    )
+  }
+
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
     if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
       seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
-    val doRcf = rcf(qeTool)
-
-    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
-
-    val convertInterpretedSymbols = Configuration.getBoolean(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse(false)
-    val expand =
-      if (convertInterpretedSymbols) skip
-      else EqualityTactics.expandAll &
-        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, Some(_)) => true case _ => false }),
-          "Aborting QE since not all interpreted functions are expanded; please click 'Edit' and enclose interpreted functions with 'expand(.)', e.g. x!=0 -> expand(abs(x))>0.")
-
-    val plainQESteps =
-      if (convertInterpretedSymbols) (closure & doRcf) :: (EqualityTactics.expandAll & closure & doRcf) :: Nil
-      else (closure & doRcf) :: Nil // expanded already
-
-    val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
-
-    //@note don't split exhaustively (may explode), but *3 is only a guess
-    val splittingQE =
-      ArithmeticSimplification.smartHide & onAll(Idioms.?(orL('L) | andR('R)))*3 & onAll(plainQE & done)
-
-    val doQE = EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE)
-
     AnonymousLemmas.cacheTacticResult(
-      Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
-        assertT(_.isFOL, "QE on FOL only") &
-        allTacticChase()(notL, andL, notR, implyR, orR, allR) &
-          Idioms.doIf(!_.isProved)(
-            close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
-              // if
-              doQE
-              ,
-              // else
-              DebuggingTactics.print("Foo") & hidePredicates & hideQuantifiedFuncArgsFmls & DebuggingTactics.print("Bar") &
-                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                doQE & done
-                | anon {(s: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
-            )
-          )
-        ),
+      prepareQE(order, rcf(qeTool))
+      ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
@@ -171,6 +171,27 @@ private object ToolTactics {
     }).map(p => hide(p._2)).reverse
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
+
+  private def differentialsOf(fml: Formula): List[Term] = {
+    val differentials = scala.collection.mutable.ListBuffer.empty[Term]
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case d: Differential =>
+          differentials += d
+          Left(None)
+        case d: DifferentialSymbol =>
+          differentials += d
+          Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    differentials.toList
+  }
+
+  private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
+    flatMap(differentialsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
+    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  )
 
   def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE()(qeTool)
 
@@ -317,12 +338,39 @@ private object ToolTactics {
       case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
       case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
-    val Equiv(_, result) = qeFact.conclusion.succ.head
 
-    cutLR(result)(1) & Idioms.<(
-      /*use*/ closeT | skip,
-      /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
-    )
+    def leadingQuantOrder(fml: Formula): Seq[Variable] = fml match {
+      case Forall(v, p) => v ++ leadingQuantOrder(p)
+      case Exists(v, p) => v ++ leadingQuantOrder(p)
+      case _ => Nil
+    }
+
+    def applyFact(fact: Formula): BelleExpr = {
+      val subs = FormulaTools.conjuncts(fact)
+      BranchTactic(subs.map({ case Equiv(f, result) =>
+        toSingleFormula & FOQuantifierTactics.universalClosure(leadingQuantOrder(f).toList)(1) & cutLR(result)(1) <(
+          closeT | nil
+          ,
+          equivifyR(1) & commuteEquivR(1) & cut(qeFact.conclusion.succ.head) <(
+            SaturateTactic(andL('L)) & close,
+            cohideR('Rlast) & by(qeFact)
+          )
+      )}))
+    }
+
+    qeFact.conclusion.succ.head match {
+      case Equiv(_, result) =>
+        cutLR(result)(1) <(
+          /*use*/ closeT | skip,
+          /*show*/ equivifyR(1) & commuteEquivR(1) & by(qeFact) & done
+        )
+      case result: And =>
+        val facts = FormulaTools.conjuncts(result)
+        SaturateTactic(allR('R)) & (prop & Idioms.doIfElse(_.subgoals.size == facts.size)(
+          applyFact(result),
+          fail
+        ) | expandAll & prop & OnAll(applyEqualities) & applyFact(result))
+    }
   })
 
   /** @see [[TactixLibrary.transform()]] */
@@ -358,7 +406,8 @@ private object ToolTactics {
           //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
           val diff = UnificationMatch(to, e)
           if (diff.usubst.subsDefsInput.nonEmpty && diff.usubst.subsDefsInput.forall(_.what match {
-            case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
+            case FuncOf(Function(name, None, _, _, _), _) =>
+              name == TacticReservedSymbols.abbrv.name || name == TacticReservedSymbols.expand.name
             case _ => false
           })) skip
           else TactixLibrary.transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
@@ -399,15 +448,15 @@ private object ToolTactics {
   /** Parses `to` for occurrences of `abbrv` to create a tactic. Returns `to` with `abbrv(...)` replaced by the
     * abbreviations and the tactic to turn `to` into the returned expression by proof. */
   private def createAbbrvTactic(to: Expression, sequent: Sequent): (Expression, BelleExpr) = {
-    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
+    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable(TacticReservedSymbols.abbrv.name), sequent)
     val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
 
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+        case FuncOf(Function(TacticReservedSymbols.abbrv.name, TacticReservedSymbols.abbrv.index, _, _, _), abbrv@Pair(_, v: Variable)) =>
           abbrvs(p) = abbrv
           Right(v)
-        case FuncOf(Function("abbrv", None, _, _, _), t) =>
+        case FuncOf(Function(TacticReservedSymbols.abbrv.name, TacticReservedSymbols.abbrv.index, _, _, _), t) =>
           val abbrv = nextAbbrvName
           nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
           abbrvs(p) = Pair(t, abbrv)
@@ -432,9 +481,9 @@ private object ToolTactics {
     * expression by proof. */
   private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
     val nextName: scala.collection.mutable.Map[String, Variable] = scala.collection.mutable.Map(
-        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name), sequent),
-        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name), sequent),
-        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name), sequent))
+        InterpretedSymbols.absF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.absF.name + "_"), sequent),
+        InterpretedSymbols.minF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.minF.name + "_"), sequent),
+        InterpretedSymbols.maxF.name -> TacticHelper.freshNamedSymbol(Variable(InterpretedSymbols.maxF.name + "_"), sequent))
 
     val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
 
@@ -447,7 +496,7 @@ private object ToolTactics {
 
     val traverseFn = new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case FuncOf(Function("expand", None, _, _, _), t) => t match {
+        case FuncOf(Function(TacticReservedSymbols.expand.name, TacticReservedSymbols.expand.index, _, _, _), t) => t match {
           case FuncOf(InterpretedSymbols.absF, _) => Right(getNextName(InterpretedSymbols.absF.name, p))
           case FuncOf(InterpretedSymbols.minF, _) => Right(getNextName(InterpretedSymbols.minF.name, p))
           case FuncOf(InterpretedSymbols.maxF, _) => Right(getNextName(InterpretedSymbols.maxF.name, p))

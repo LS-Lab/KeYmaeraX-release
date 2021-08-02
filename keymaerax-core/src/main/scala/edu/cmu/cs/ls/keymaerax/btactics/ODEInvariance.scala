@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence, ToolException}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import org.slf4j.LoggerFactory
 
@@ -825,30 +825,32 @@ object ODEInvariance {
   * @return the (conjunctive) rank, the Groebner basis closed under Lie derivation, and its cofactors (in that order)
   */
   def rank(ode:ODESystem, polys:List[Term]) : (Int, List[Term], List[List[Term]]) = {
-    if (ToolProvider.algebraTool().isEmpty)
-      throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
-
-    val algTool = ToolProvider.algebraTool().get
-
-    var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
-    var rank = 1
-    //remainder after each round of polynomial reduction
-    var remaining = polys
-
-    while(true) {
-      val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-      val quos = lies.map(p => algTool.polynomialReduce(p, gb))
-      remaining = quos.map(_._2).filterNot(_ == Number(0))
-      if(remaining.isEmpty) {
-        //println(gb,rank)
-        val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-        val cofactors = gblies.map(p => algTool.polynomialReduce(p, gb))
-        return (rank,gb,cofactors.map(_._1))
-      }
-      gb = algTool.groebnerBasis(remaining ++ gb)
-      rank+=1
+    val algTool = ToolProvider.algebraTool() match {
+      case None => throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
+      case Some(t) => t
     }
-    (0,List(),List())
+    try {
+      var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
+      var rank = 1
+      //remainder after each round of polynomial reduction
+      var remaining = polys
+
+      while (true) {
+        val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+        val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+        remaining = quos.map(_._2).filterNot(_ == Number(0))
+        if (remaining.isEmpty) {
+          val gblies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+          val cofactors = gblies.map(p => algTool.polynomialReduce(p, gb))
+          return (rank, gb, cofactors.map(_._1))
+        }
+        gb = algTool.groebnerBasis(remaining ++ gb)
+        rank += 1
+      }
+      (0, List(), List())
+    } catch {
+      case ex: ToolException => throw new TacticInapplicableFailure("rank: error computing Groebner basis", ex)
+    }
   }
 
   /**
@@ -2231,7 +2233,7 @@ object ODEInvariance {
   private val not_imp = remember("!(p() -> q()) <-> (p() & !q())".asFormula,prop)
 
   //todo: move to Ax.scala
-  private lazy val dBarcan = proveBy("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
+  private [btactics] lazy val dBarcan = remember("\\exists x_ <a{|^@x_|};>p(||) <-> <a{|^@x_|};>\\exists x_ p(||)".asFormula,
     diamondd(1,1::Nil) &
     diamondd(1,0::0::Nil) &
     useAt(Ax.existsDual,PosInExpr(1::Nil))(1,0::Nil) &
@@ -2255,5 +2257,92 @@ object ODEInvariance {
     ElidingProvable(diffadjren)
   }
 
+  // Prove rewrite [ODE1&Q]P -> [ODE2&Q]P, where ODE1, ODE2 have the same LHS but possibly different RHS
+  // For example, where the domain Q could simplify some terms in the LHS of ODE1
+  // In principle, CT could do this generically although it wouldn't work with simplification due to the domains
+  private def rewriteODE(sys : ODESystem, ode2: DifferentialProgram) : ProvableSig = {
 
+    val ode1ls = DifferentialProduct.listify(sys.ode).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new TacticInapplicableFailure("ODE rewriting only applicable to concrete ODEs")
+    }
+
+    val ode2ls = DifferentialProduct.listify(ode2).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new TacticInapplicableFailure("ODE rewriting only applicable to concrete ODEs")
+    }
+
+    if(ode1ls.map(_._1) != ode2ls.map(_._1) )
+      throw new IllegalArgumentException("ODE rewriting must have same LHS but got: "+ode1ls.map(_._1) +" "+ode2ls.map(_._1))
+
+    val odeLHS = ode1ls.map(_._1.x)
+    val xLHS = (1 to odeLHS.length).map(i => BaseVariable("x_", Some(i)))
+
+    val RHSxarg = odeLHS.reduceRight(Pair)
+    val sort = odeLHS.map(_ => Real).reduceRight(Tuple)
+    val px = PredOf(Function("p_", None, sort, Bool), RHSxarg)
+
+    val fml = Imply(Box(sys,px),Box(ODESystem(ode2,sys.constraint),px))
+
+    //stutter and bound rename
+    val sttac = (odeLHS zip xLHS).foldLeft(skip:BelleExpr)((t,v) => DLBySubst.stutter(v._1)(1) & boundRename(v._1,v._2)(1) & assignb(1) & t)
+
+    val normbound = xLHS.map(e => Times(e, e)).reduceLeft(Plus)
+    val renode = (odeLHS zip xLHS).foldLeft(ode2)((ode,v) => ode.replaceAll(v._1,v._2))
+    val eq = (odeLHS zip xLHS).map(v => Equal(v._1,v._2)).reduceLeft(And)
+    val rendom = (odeLHS zip xLHS).foldLeft(sys.constraint)((dom,v) => dom.replaceAll(v._1,v._2))
+
+    val boxeq = Box(ODESystem(DifferentialProduct(sys.ode,renode),rendom),eq)
+
+    val pr = proveBy(fml,
+      implyR(1) & sttac &
+        cutR(boxeq)(1) <(
+          hideL(-1) & ODEInvariance.dRI(1),
+          cohideOnlyL(-1) & implyR(1) & ODELiveness.bDG(sys.ode,normbound)(1) <(
+            dC(eq)(1)<(
+              DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & hideL(-1) &
+              SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & QE,
+              id),
+            dC(eq)(1)<(
+              hideL(-2) & dC(px)(1) <(
+                DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(1),SuccPos(0)) &
+                andL(-1) & hideL(-1) & SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id,
+                dR(sys.constraint)(1)<(
+                  ODELiveness.odeUnify(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & id,
+                  DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & implyRi()(AntePos(0),SuccPos(0)) &
+                  SaturateTactic(andL('L)) & SaturateTactic(exhaustiveEqL2R(hide=true)('L)) & implyR(1) & id
+                )
+              ),
+              id)
+          )
+        )
+    )
+    pr
+  }
+
+  //todo: @tactic for DifferentialPrograms?
+  def rewriteODEAt(ode2: DifferentialProgram) : DependentPositionTactic = anon ((pos : Position, seq: Sequent) => {
+    require(pos.isTopLevel, "rewriteODE is only applicable at top-level positions")
+
+    val (sys,post,box) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post,true)
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
+      case Some(e) => throw new TacticInapplicableFailure("rewriteODE only applicable to box ODE in succedent, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    //box in succ
+    if(box ^ pos.isAnte) {
+      val rw = rewriteODE(ODESystem(ode2, sys.constraint), sys.ode)
+
+      if(box) useAt(rw, PosInExpr(1 :: Nil))(pos)
+      else useAt(ODELiveness.flipModality(rw))(pos)
+    }
+    else {
+      val rw = rewriteODE(sys, ode2)
+
+      if(box) useAt(rw, PosInExpr(0 :: Nil))(pos)
+      else useAt(ODELiveness.flipModality(rw), PosInExpr(1 :: Nil))(pos)
+    }
+  })
 }

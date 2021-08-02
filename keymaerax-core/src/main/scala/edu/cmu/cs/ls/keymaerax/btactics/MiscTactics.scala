@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.slf4j.LoggerFactory
@@ -256,7 +257,7 @@ object Idioms {
     * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
     * @see [[BelleLabels]]
     */
-  def <(s1: (BelleTopLevelLabel, BelleExpr), spec: (BelleTopLevelLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
+  def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = CaseTactic(s1 +: spec)
 
   /* branch by case distinction
   *  cases must be exhaustive (or easily proved to be exhaustive in context)
@@ -336,17 +337,9 @@ object Idioms {
     after
   }}}
 
-  def atSubgoal(subgoalIdx: Int, t: BelleExpr): DependentTactic = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
-        BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw new IllFormedTacticApplicationException("Cannot perform AtSubgoal on a non-Provable value.")
-    }
-  }
-
   /** Gives a name to a tactic to a definable tactic. */
   def NamedTactic(name: String, tactic: => BelleExpr): DependentTactic = new DependentTactic(name) {
-    override def computeExpr(v: BelleValue): BelleExpr = tactic
+    override def computeExpr(provable: ProvableSig): BelleExpr = tactic
   }
 
   /**
@@ -508,6 +501,15 @@ object TacticFactory {
       }
     }
 
+    def by(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = {
+          require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+          t(pos, sequent, defs)
+        }
+      }
+    }
+
     def by(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = byTactic(t)
 
     /** A position tactic with multiple inputs. */
@@ -516,6 +518,15 @@ object TacticFactory {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
           t(pos, sequent)
+        }
+      }
+    }
+
+    def byWithInputs(inputs: Seq[Any], t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = {
+          require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+          t(pos, sequent, defs)
         }
       }
     }
@@ -543,10 +554,7 @@ object TacticFactory {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
     def bys(t: ProvableSig => BelleExpr): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v : BelleValue): BelleExpr = {
-        v match {case BelleProvable(provable, _) =>
-          t(provable)}
-      }
+      override def computeExpr(provable: ProvableSig): BelleExpr = t(provable)
     }
     def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInputs(input, new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
@@ -740,6 +748,7 @@ object TacticFactory {
   def anon(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = ANON by t
   def anon(t: (ProvableSig, Position, Position) => BelleExpr): DependentTwoPositionTactic = ANON byTactic t
   def anon(t: (Position, Sequent) => BelleExpr): DependentPositionTactic = ANON by t
+  def anon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionTactic = ANON by t
   def anon(t: Position => BelleExpr): DependentPositionTactic = ANON by t
   def anonLR(t: (AntePosition, SuccPosition) => BelleExpr): DependentTwoPositionTactic = ANON byLR t
   def anonL(t: AntePosition => BelleExpr): DependentPositionTactic = ANON byL t
@@ -755,6 +764,7 @@ object TacticFactory {
   def inputanonP(t: ProvableSig => ProvableSig): InputTactic = ANON byWithInputsP(Nil, t)
   def inputanon(t: Position => BelleExpr): DependentPositionWithAppliedInputTactic = ANON byWithInputs(Nil, t)
   def inputanon(t: (Position, Sequent) => BelleExpr): DependentPositionWithAppliedInputTactic = ANON byWithInputs(Nil, t)
+  def inputanon(t: (Position, Sequent, Declaration) => BelleExpr): DependentPositionWithAppliedInputTactic = ANON byWithInputs(Nil, t)
   def inputanonP(t: (ProvableSig, Position) => ProvableSig): DependentPositionWithAppliedInputTactic = ANON byWithInputsP(Nil:Seq[Any], t)
   def inputanonR(t: (ProvableSig, SuccPosition) => ProvableSig): DependentPositionWithAppliedInputTactic = ANON corebyWithInputsR(Nil:Seq[Any], t)
   def inputanonL(t: (ProvableSig, AntePosition) => ProvableSig): DependentPositionWithAppliedInputTactic = ANON corebyWithInputsL(Nil:Seq[Any], t)

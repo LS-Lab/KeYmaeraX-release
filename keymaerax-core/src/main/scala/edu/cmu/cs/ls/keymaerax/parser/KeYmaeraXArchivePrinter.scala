@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 
 /**
@@ -102,12 +103,24 @@ object KeYmaeraXArchivePrinter {
     case None => ""
   })
 
-  def printSort(domain: Sort): String = domain match {
+  def printSort(sort: Sort): String = sort match {
     case Real => "Real"
     case Bool => "Bool"
     case Trafo => "HP"
-    case Unit => ""
-    case Tuple(l, r) => printSort(l) + "," + printSort(r)
+    case Tuple(l, r) => "(" + printSort(l) + "," + printSort(r) + ")"
+    case _ => throw new IllegalArgumentException("Sort " + sort + " not supported as sort of declaration; please use one of [Real, Bool, HP].")
+  }
+
+  /** Prints the sort of term `arg` as a function domain with named arguments (argument names from variables in term `arg`).
+    * Term must be one of [Nothing, BaseVariable, (nested) Pair of BaseVariable]. */
+  def printDomain(arg: Term): String = arg match {
+    case v: BaseVariable => v.sort match {
+      case Real =>  "Real " + v.prettyString
+      case _ => throw new IllegalArgumentException("Sort " + v.sort + " not supported for variables")
+    }
+    case Nothing => ""
+    case Pair(l, r) => printDomain(l) + "," + printDomain(r)
+    case _ => throw new IllegalArgumentException("Sort " + arg.prettyString + " not supported as domain of declaration; please use of of [Nothing, BaseVariable, Pair]")
   }
 
   def printDef(domain: Sort, interpretation: Option[Expression]): String = interpretation match {
@@ -121,23 +134,47 @@ object KeYmaeraXArchivePrinter {
     case None => ""
   }
 
+  /** Creates a term that fits `domain`, using `name` to name arguments with start index `i` (incremented). */
+  private def createArg(domain: Sort, name: String, i: Int = 0): (Term, Int) = domain match {
+    case Unit => (Nothing, i)
+    case Real => (BaseVariable(name, Some(i)), i+1)
+    case Tuple(l, r) =>
+      val (ls, li) = createArg(l, name, i)
+      val (rs, ri) = createArg(r, name, li)
+      (Pair(ls, rs), ri)
+    case _ => throw new IllegalArgumentException("Sort " + domain + " not supported as domain of declaration; please use one of [Unit, Real, Tuple]")
+  }
+
+  /** Prints the domain of `fn` with argument names created from base name `name`. */
+  def printDomain(fn: Function, name: String): String = printDomain(createArg(fn.domain, name)._1)
+  /** Prints the `domain` with argument names created from base name `name`. */
+  def printDomain(domain: Sort, name: String): String = printDomain(createArg(domain, name)._1)
+
   /** Prints a `Definitions` block, excluding base variables occurring in `symbols`. */
   def printDefsBlock(decl: Declaration, symbols: Set[NamedSymbol]): String = {
     val defs = decl.decls.filter(_._2.domain.isDefined)
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(Name(s.name, s.index))).map({
-      case Function(name, idx, domain, sort, _) if !decl.decls.contains(Name(name, idx)) =>
-        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+      case Function(name, idx, domain, sort, _) =>
+        if (!decl.decls.contains(Name(name, idx)) && !InterpretedSymbols.byName.contains((name, idx))) {
+          s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
+        } else ""
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
+    def nameDots(e: Expression, name: String): Expression = {
+      val dots = StaticSemantics.symbols(e).filter(_.isInstanceOf[DotTerm])
+      assert(dots.map(_.index).map(_.getOrElse(0)).size == dots.size, "Interpretation uses both . and ._0")
+      dots.foldLeft(e)({ case (e, d) => e.replaceAll(d, Variable(name, Some(d.index.getOrElse(0)))) })
+    }
+
     val printedDefs = defs.map({
       case (Name(name, idx), Signature(domain, codomain, _, interpretation, _)) =>
-        val printedSort = codomain match {
+        val printedDomain = codomain match {
           case Trafo => "" //@todo program arguments not yet supported
-          case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
+          case _ => "(" + printDomain(domain.getOrElse(Unit), "x") + ")"
         }
-        s"  ${printSort(codomain)} ${printName(name, idx)}$printedSort${printDef(codomain, interpretation)};"
+        s"  ${printSort(codomain)} ${printName(name, idx)}$printedDomain${printDef(codomain, interpretation.map(nameDots(_, "x")))};"
       case _ => ""
     }).filter(_.nonEmpty)
 

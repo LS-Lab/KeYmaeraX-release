@@ -343,6 +343,11 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         });
     }
   }
+
+  $scope.toggleTacticVerbosity = function() {
+    sequentProofData.tactic.verbose = !sequentProofData.tactic.verbose;
+    sequentProofData.tactic.fetch($scope.userId, $scope.proofId);
+  }
 });
 
 angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
@@ -654,15 +659,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       );
     }
 
-    $scope.selectedFormulas = function(sequent) {
-      return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }).
-        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }));
-    }
-
     $scope.doTactic = function(formulaId, tacticId) {
       var nodeId = sequentProofData.agenda.selectedId();
       var node = sequentProofData.proofTree.node(nodeId);
-      var selected = $scope.selectedFormulas(node.getSequent());
+      var selected = sequentProofData.formulas.selectedIn(node.getSequent());
       if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
       if (selected) {
@@ -684,7 +684,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.doInputTactic = function(formulaId, tacticId, input) {
       var nodeId = sequentProofData.agenda.selectedId();
       var node = sequentProofData.proofTree.node(nodeId);
-      var selected = $scope.selectedFormulas(node.getSequent());
+      var selected = sequentProofData.formulas.selectedIn(node.getSequent());
       if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       spinnerService.show('tacticExecutionSpinner');
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
@@ -733,7 +733,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.onTacticScript = function(tacticText, stepwise) {
       //@todo forward all to onMultiNodeTactic once it is robustified
-      var doallTactic = tacticText.replace(/doall\((.*)\)/g, function(match, inner, offset, string) {
+      var doallTactic = tacticText.replace(/^doall\((.*)\)/g, function(match, inner, offset, string) {
         return inner;
       });
       if (doallTactic !== tacticText) $scope.onMultiNodeTactic({text: doallTactic, stepwise: stepwise}, undefined);
@@ -879,9 +879,12 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var requestCanceller = $q.defer();
       $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('counterExampleSpinner');
+      var nodeId = sequentProofData.agenda.selectedId();
+      var node = sequentProofData.proofTree.node(nodeId);
+      var selected = sequentProofData.formulas.selectedIndicesIn(node.getSequent());
       var additional = additionalAssumptions ? additionalAssumptions : {};
       var url = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample'
-      $http.get(url, { params: { assumptions: additional }, timeout: requestCanceller.promise })
+      $http.get(url, { params: { assumptions: additional, fmlIndices: JSON.stringify(selected) }, timeout: requestCanceller.promise })
         .then(function(response) {
           var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
           var modalInstance = $uibModal.open({

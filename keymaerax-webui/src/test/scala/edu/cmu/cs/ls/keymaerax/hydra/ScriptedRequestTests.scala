@@ -118,7 +118,7 @@ class ScriptedRequestTests extends TacticTestBase {
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
     }
   }}
@@ -136,7 +136,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
     )
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal(
         """andR('R=="x^2>=0 & x^4>=0"); <(
           |"x^2>=0": nil,
@@ -158,15 +158,15 @@ class ScriptedRequestTests extends TacticTestBase {
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
     )
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal (
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
         """andR(1); <(nil, prop); <(
           |"x=3": nil,
-          |"x>2//x^2>=4": nil,
-          |"x<(-2)//x^2>=4": nil,
-          |"x<(-2)//x^4>=16": nil,
-          |"x>2//x^4>=16": nil
+          |"x^2>=4//x>2": nil,
+          |"x^4>=16//x>2": nil,
+          |"x^4>=16//x < (-2)": nil,
+          |"x^2>=4//x < (-2)": nil
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
   }}
@@ -181,16 +181,16 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", andR(1))
     tacticRunner("(1,1)", prop)
-    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText should equal (
         """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
           |"x=3": nil,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":
           |  prop; <(
-          |  "x>2//x^2>=4": nil,
-          |  "x<(-2)//x^2>=4": nil,
-          |  "x<(-2)//x^4>=16": nil,
-          |  "x>2//x^4>=16": nil
+          |    "x^2>=4//x>2": nil,
+          |    "x^4>=16//x>2": nil,
+          |    "x^4>=16//x < (-2)": nil,
+          |    "x^2>=4//x < (-2)": nil
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
@@ -464,7 +464,8 @@ class ScriptedRequestTests extends TacticTestBase {
           """implyR('R=="x>=0&y>0&z=0->[x:=x+y;]x>=z");
             |andL('L=="x>=0&y>0&z=0");
             |andL('L=="y>0&z=0");
-            |step('R=="[x:=x+y;]x>=z");
+            |assignbAxiom('R=="[x:=x+y;]x>=z");
+            |expandAllDefs;
             |applyEqualities;
             |QE""".stripMargin)
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
@@ -573,7 +574,7 @@ class ScriptedRequestTests extends TacticTestBase {
     )
   }
 
-  it should "fail fresh symbols" in withDatabase { db =>
+  it should "fail fresh symbols" in withTactics { withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -584,9 +585,9 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
-      'errorText (Some("Argument J uses new names that do not occur in the sequent: y, is it a typo?"))
+      'errorText (Some("argument J uses new names that do not occur in the sequent: y, is it a typo?"))
     )
-  }
+  }}
 
   it should "allow defined functions" in withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
@@ -677,7 +678,11 @@ class ScriptedRequestTests extends TacticTestBase {
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
     modelInfos should have size 85  // change when ListExamplesRequest is updated
-    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
+
+    // STTT16/Tutorial Example 10
+    // FM16/Tutorial Example 5
+
+    val modelInfosTable = Table(("name", "id"), modelInfos.filter(_._1=="FM16/Tutorial Example 5"):_*)
     forEvery(modelInfosTable) { (name, id) =>
       whenever(tool.isInitialized) {
         val start = System.currentTimeMillis()
@@ -706,19 +711,19 @@ class ScriptedRequestTests extends TacticTestBase {
         val entry = ArchiveParser.parse(db.db.getModel(id).keyFile).head
         BelleParser.parseWithInvGen(db.db.getModel(id).tactic.get, None, entry.defs) match {
           case _: PartialTactic =>
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue("closed")
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false withClue "closed"
           case _ =>
             r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
-            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue("closed")
+            r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true withClue "closed"
             val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
             r6 shouldBe a [ProofVerificationResponse] withClue r6.getJson.prettyPrint
             r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
-            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue("isProved")
+            r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true withClue "isProved"
             val extractedTacticString = r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value
             // double check extracted tactic
             println("Reproving extracted tactic...")
             val extractedTactic = BelleParser.parseWithInvGen(extractedTacticString, None, entry.defs)
-            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, subst = USubst(entry.defs.substs)) shouldBe 'proved
+            proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
             println("Done reproving")
         }
         println("Done (" + (System.currentTimeMillis()-start)/1000 + "s)")

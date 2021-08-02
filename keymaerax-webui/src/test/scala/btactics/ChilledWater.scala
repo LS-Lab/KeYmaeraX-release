@@ -42,7 +42,7 @@ class ChilledWater extends TacticTestBase {
     /* ?l=0;v:=0; */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done,
     /* ?v=1;l:=1; */ DAchilled(valve=true, load=Some(true), "Tl-Tw") & done,
     /* l:=0; split v=1|v=0 */
-    orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+    orL(FindLPlain("v=1|v=0".asFormula)) <(
       /* v=1 */ DAchilled(valve=true, load=Some(false), "Tl-Tw") & done,
       /* v=0 */ DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
       )
@@ -60,7 +60,7 @@ class ChilledWater extends TacticTestBase {
     /* ?v=1;l:=0; */
     diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=Some(false), "Tlu()-Tl") & done,
     /* l:=0; */
-    orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+    orL(FindLPlain("v=1|v=0".asFormula)) <(
       /* v=1 */
       diffInvariant("Tw=a()".asFormula)(1) & DAchilled(valve=true, load=Some(false), "Tlu()-Tl") & done,
       /* v=0 */
@@ -82,7 +82,7 @@ class ChilledWater extends TacticTestBase {
     /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1) & dW(1) & QE & done,
     /* l:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
     dW(1) & QE & done,
-    orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+    orL(FindLPlain("v=1|v=0".asFormula)) <(
       DAchilled(valve=true, load=Some(false), "Tl-Tw") & done,
       DAchilled(valve=false, load=Some(false), "Tl-Tw") & done
       ),
@@ -94,7 +94,7 @@ class ChilledWater extends TacticTestBase {
     diffInvariant("Tw=a()".asFormula)(1),
     skip, //@note evolution domain already strong enough without additional diff. cut
     diffInvariant("Tw=a()".asFormula)(1),
-    orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+    orL(FindLPlain("v=1|v=0".asFormula)) <(
       diffInvariant("Tw=a()".asFormula)(1),
       skip //@note evolution domain already strong enough without additional diff. cut
       )
@@ -153,7 +153,7 @@ class ChilledWater extends TacticTestBase {
       /* ?v=1;l:=0; */
       dC("Tw=a()".asFormula)(1),
       /* l:=0; */
-      orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+      orL(FindLPlain("v=1|v=0".asFormula)) <(
         /* v=1 */
         dC("Tw=a()".asFormula)(1),
         /* v=0 */
@@ -167,7 +167,7 @@ class ChilledWater extends TacticTestBase {
       /* ?v=1;l:=1; */ dC("Tw=a()".asFormula)(1),
       /* l:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
         skip,
-        orL(FindL(0, Some("v=1|v=0".asFormula))),
+        orL(FindLPlain("v=1|v=0".asFormula)),
         skip
         )
       ) & OnAll(ODE('R)) & done
@@ -177,7 +177,7 @@ class ChilledWater extends TacticTestBase {
       dC("Tw=a()".asFormula)(1),
       skip, //@note evolution domain already strong enough without additional diff. cut
       dC("Tw=a()".asFormula)(1),
-      orL(FindL(0, Some("v=1|v=0".asFormula))) <(
+      orL(FindLPlain("v=1|v=0".asFormula)) <(
         dC("Tw=a()".asFormula)(1),
         skip //@note evolution domain already strong enough without additional diff. cut
         )

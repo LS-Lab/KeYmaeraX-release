@@ -671,7 +671,10 @@ case class ProgramConst(name: String, space: Space = AnyArg) extends NamedSymbol
   * @since 4.7.4 also SpaceDependent with `space` parameter.
   */
 case class SystemConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
-  override def asString: String = super.asString + (if (space == AnyArg) "{|^@|}" else "{^@" + space + "}")
+  override def asString: String = super.asString + (space match {
+    case AnyArg => "{|^@|}"
+    case Except(taboos) => "{|^@" + taboos.mkString(",") + "|}"
+  })
   insistNamingConvention()
 }
 

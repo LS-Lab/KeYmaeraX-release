@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 
@@ -32,15 +31,8 @@ import scala.collection.immutable.Map
 @CheckinTest
 @SummaryTest
 @UsualTest
-class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) {
+class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
 
-  // @TODO: Change everything to ProvableInfo
-  private def check(lemma: Lemma): Sequent = {
-    println(lemma.name.get + "\n" + lemma.fact.conclusion)
-    lemma.fact shouldBe 'proved
-    useToClose(lemma)
-    lemma.fact.conclusion
-  }
   private def check(pi: ProvableInfo): Sequent = {
     println(pi.codeName + "\n" + pi.provable.conclusion)
     pi.provable shouldBe 'proved
@@ -48,20 +40,11 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) 
     pi.provable.conclusion
   }
 
-  private def useToClose(lemma: Lemma): Unit = {
-    ProvableSig.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
-    //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(ProvableSig.startProof(lemma.fact.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
-      case _ => fail()
-    }
-  }
-
   private def useToClose(pi: ProvableInfo): Unit = {
     ProvableSig.startProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
-    theInterpreter(TactixLibrary.byUS(pi), BelleProvable(ProvableSig.startProof(pi.provable.conclusion))) match {
-      case BelleProvable(provable, _) => provable shouldBe 'proved
+    theInterpreter(TactixLibrary.byUS(pi), BelleProvable.plain(ProvableSig.startProof(pi.provable.conclusion))) match {
+      case BelleProvable(provable, _, _) => provable shouldBe 'proved
       case _ => fail()
     }
   }
@@ -257,6 +240,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) 
   it should "tactically prove abs" in withZ3 { qeTool => check(abs)}
   it should "tactically prove min" in withZ3 { qeTool => check(min)}
   it should "tactically prove max" in withZ3 { qeTool => check(max)}
+  it should "tactically prove openInvariantClosure" in withZ3 { _ => check(openInvariantClosure)}
 
   "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
@@ -266,7 +250,7 @@ class Z3DerivedAxiomsTests extends TacticTestBase(registerAxTactics=Some("z3")) 
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withZ3 { qeTool => monb.provable.subgoals shouldBe List(
+  it should "prove [] monotone" in withZ3 { qeTool => monbaxiom.provable.subgoals shouldBe List(
       Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 

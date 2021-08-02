@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable
 
+import org.scalatest.LoneElement._
+
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator]]
  */
@@ -15,177 +17,89 @@ import scala.collection.immutable
 class LocateTests extends TacticTestBase {
 
   "'L" should "locate the sole applicable formula in antecedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("x>0 & y>0".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('L)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>0".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("x>0 & y>0 ==>".asSequent, TactixLibrary.andL('L)).subgoals.loneElement shouldBe "x>0, y>0 ==>".asSequent
   }
 
   it should "locate the first applicable formula in antecedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('L)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0".asFormula, "y>0".asFormula, "b=3 & c=4".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL('L)).subgoals.
+      loneElement shouldBe "a=2, b=3 & c=4, x>0, y>0 ==>".asSequent
   }
 
   it should "locate the first applicable formula after start in antecedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL(Find(0, None, AntePosition(3)))
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL(Find.FindLAfter(None, AntePosition(3)))).subgoals.
+      loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
   it should "locate the first applicable formula of a specific shape" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL(Find(0, Some("b=3 & c=4".asFormula), AntePosition(1)))
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent,
+      TactixLibrary.andL(Find.FindLPlain("b=3 & c=4".asFormula))).subgoals.
+      loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('L)
-    )}
+    val e = intercept[BelleThrowable] { proveBy("a=2, x>0 | y>0 ==>".asSequent, TactixLibrary.andL('L)) }
     e.getMessage should include ("Position tactic andL('L) is not applicable anywhere in antecedent")
   }
 
   it should "work with dependent position tactics" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("x>0 & y>0".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.step('L)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x>0".asFormula, "y>0".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("x>0 & y>0 ==>".asSequent, TactixLibrary.step('L)).subgoals.loneElement shouldBe "x>0, y>0 ==>".asSequent
   }
 
   it should "find formulas by shape" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2&b=3".asFormula, "x>0 & y>0".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('L, "x>0 & y>0".asFormula)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2&b=3".asFormula, "x>0".asFormula, "y>0".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2&b=3, x>0 & y>0 ==>".asSequent, TactixLibrary.andL('L, "x>0 & y>0".asFormula)).subgoals.
+      loneElement shouldBe "a=2&b=3, x>0, y>0 ==>".asSequent
   }
 
   it should "find terms by shape" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("abs(x)>0".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.abs('L, "abs(x)".asTerm)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("abs_0>0".asFormula, "x>=0&abs_0=x|x < 0&abs_0=-x".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("abs(x)>0 ==>".asSequent, TactixLibrary.abs('L, "abs(x)".asTerm)).subgoals.
+      loneElement shouldBe "abs_>0, x>=0&abs_=x|x<0&abs_=-x ==>".asSequent
   }
 
   "'R" should "locate the sole applicable formula in succedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("x>0 | y>0".asFormula)),
-      TactixLibrary.orR('R)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x>0".asFormula, "y>0".asFormula)
+    proveBy("==> x>0 | y>0".asSequent, TactixLibrary.orR('R)).subgoals.loneElement shouldBe "==> x>0, y>0".asSequent
   }
 
   it should "locate the first applicable formula in antecedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 | y>0".asFormula, "b=3 | c=4".asFormula)),
-      TactixLibrary.orR('R)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("a=2".asFormula, "x>0".asFormula, "y>0".asFormula, "b=3 | c=4".asFormula)
+    proveBy("==> a=2, x>0 | y>0, b=3 | c=4".asSequent, TactixLibrary.orR('R)).subgoals.
+      loneElement shouldBe "==> a=2, b=3 | c=4, x>0, y>0".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
-      TactixLibrary.orR('R)
-    )}
+    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR('R)) }
     e.getMessage should include ("Position tactic orR('R) is not applicable anywhere in succedent")
   }
 
   it should "work with dependent position tactics" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[?x>0;]x>0".asFormula)),
-      TactixLibrary.step('R)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+    proveBy("==> [?x>0;]x>0".asSequent, TactixLibrary.step('R)).subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
   }
 
   it should "find formulas by shape" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2|b=3".asFormula, "x>0 | y>0".asFormula)),
-      TactixLibrary.orR('R, "x>0 | y>0".asFormula)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("a=2|b=3".asFormula, "x>0".asFormula, "y>0".asFormula)
+    proveBy("==> a=2|b=3, x>0 | y>0".asSequent, TactixLibrary.orR('R, "x>0 | y>0".asFormula)).subgoals.
+      loneElement shouldBe "==> a=2|b=3, x>0, y>0".asSequent
   }
 
   it should "find terms by shape" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("abs(x)>0".asFormula)),
-      TactixLibrary.abs('R, "abs(x)".asTerm)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=0&abs_0=x|x < 0&abs_0=-x".asFormula
-    result.subgoals.head.succ should contain only "abs_0>0".asFormula
+    proveBy("==> abs(x)>0".asSequent, TactixLibrary.abs('R, "abs(x)".asTerm)).subgoals.
+      loneElement shouldBe "x>=0&abs_=x|x < 0&abs_=-x ==> abs_>0".asSequent
   }
 
   "'_" should "locate the sole applicable formula in sequent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("x>0 | y>0".asFormula)),
-      TactixLibrary.orR('_)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x>0".asFormula, "y>0".asFormula)
+    proveBy("==> x>0 | y>0".asSequent, TactixLibrary.orR('_)).subgoals.loneElement shouldBe "==> x>0, y>0".asSequent
   }
 
   it should "locate the first applicable formula" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('_)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0".asFormula, "y>0".asFormula, "b=3 & c=4".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL('_)).subgoals.
+      loneElement shouldBe "a=2, b=3 & c=4, x>0, y>0 ==>".asSequent
   }
 
   it should "throw an exception if no applicable position can be found" in withTactics {
-    val e = intercept[BelleThrowable] { proveBy(
-      Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula)),
-      TactixLibrary.orR('_)
-    )}
+    val e = intercept[BelleThrowable] { proveBy("==> a=2, x>0 & y>0".asSequent, TactixLibrary.orR('_)) }
     e.getMessage should include ("Position tactic orR('R) is not applicable anywhere in succedent")
   }
 
   "'Llast" should "apply on last formula in antecedent" in withTactics {
-    val result = proveBy(
-      Sequent(immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL('Llast)
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    proveBy("a=2, x>0 & y>0, b=3 & c=4 ==>".asSequent, TactixLibrary.andL('Llast)).subgoals.
+      loneElement shouldBe "a=2, x>0 & y>0, b=3, c=4 ==>".asSequent
   }
 
 }

@@ -283,6 +283,14 @@ Axiom "[':=] differential assign"
   [x_':=f();]p(x_') <-> p(f())
 End.
 
+Axiom "[':=] assign equality"
+  [x_':=f();]p(||) <-> \forall x_' (x_'=f() -> p(||))
+End.
+
+Axiom "[':=] self assign"
+  [x_':=x_';]p(||) <-> p(||)
+End.
+
 Axiom "[:*] assign nondet"
   [x_:=*;]p(||) <-> \forall x_ p(||)
 End.
@@ -365,6 +373,10 @@ Axiom "DX differential skip"
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
+Axiom "D[;] differential self compose"
+  [{c&q(||)}]p(||) <-> [{c&q(||)}][{c&q(||)}]p(||)
+End.
+
 Axiom "DIo open differential invariance >"
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
@@ -445,7 +457,7 @@ Axiom "/' derive quotient"
 End.
 
 Axiom "chain rule"
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_))' * (g(x_))' )
+	[y_:=g(|y_|);][y_':=1;]( (f(g(|y_|)))' = (f(y_))' * (g(|y_|))' )
 End.
 
 Axiom "^' derive power"
@@ -529,9 +541,16 @@ Axiom "all dual"
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
+Axiom "all prime dual"
+  (!\exists x_' !p(||)) <-> \forall x_' p(||)
+End.
+
 /* generalized "all instantiate" */
 Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
+End.
+Axiom "all eliminate prime"
+  (\forall x_' p(||)) -> p(||)
 End.
 """
 }

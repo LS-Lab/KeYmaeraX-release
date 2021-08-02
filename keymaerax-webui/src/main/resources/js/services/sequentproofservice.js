@@ -210,11 +210,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     tactic: {
       tacticText: "",
       snapshot: undefined,
+      verbose: true,
 
       fetch: function(userId, proofId) {
         var theTactic = this;
         theTactic.synced = false;
-        $http.get('proofs/user/' + userId + '/' + proofId + '/extract').then(function (response) {
+        $http.get('proofs/user/' + userId + '/' + proofId + '/extract/' + (theTactic.verbose ? "verbose" : "succinct")).then(function (response) {
           theTactic.snapshot = response.data.tacticText;
           theTactic.tacticText = response.data.tacticText;
         })
@@ -231,6 +232,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
     formulas: {
       highlighted: undefined,
+      selectedIn: function(sequent) {
+        return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }).
+        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.formula.json.plain; }));
+      },
+      selectedIndicesIn: function(sequent) {
+        return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.id; }).
+        concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.id; }));
+      },
       mode: 'prove',
       stickyEdit: false
     },

@@ -33,7 +33,7 @@ Problem
 End.
 
 Tactic "Proof Formal Methods Tutorial Example 1"
-  master
+  autoClose
 End.
 
 End.
@@ -74,14 +74,28 @@ End.
 
 Tactic "Steps Formal Methods Tutorial Example 2"
 useSolver("Mathematica");
-implyR(1); andL('L)*; loop("x<=m", 1); <(
-  prop; done,
-  prop; done,
-  unfold; <(
-    solve(1); pQE; transform("m-x>=A/2*ep^2+ep*v", 1),
-    solve(1); pQE; transform("m-x>=v^2/(2*b)", 1)
+implyR('R=="x<=m&A>=0&b>0&ep>0&v=0->[{{?m-x>=sb;a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}}*]x<=m");
+andL('L=="x<=m&A>=0&b>0&ep>0&v=0");
+andL('L=="A>=0&b>0&ep>0&v=0");
+andL('L=="b>0&ep>0&v=0");
+andL('L=="ep>0&v=0");
+loop("x<=m", 'R=="[{{?m-x>=sb;a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}}*]x<=m"); <(
+  "Init":
+    prop,
+  "Post":
+    prop,
+  "Step":
+    unfold; <(
+      "[?m-x>=sb;a:=A;][t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}]x<=m":
+        solve('R=="[{x'=v,v'=A,t'=1&v>=0&t<=ep}]x<=m");
+        pQE;
+        transform("m-x>=A/2*ep^2+ep*v", 'R=="(v < 0|v=0&(A<=0|A>0&(m < 1/2*(A*ep^2+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*x))))|v>0&(m < 1/2*(A*ep^2+2*ep*v+2*x)&sb>m+-x|m>=1/2*(A*ep^2+2*ep*v+2*x))"),
+      "[a:=-b;][t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}]x<=m":
+        solve('R=="[{x'=v,v'=-b,t'=1&v>=0&t<=ep}]x<=m");
+        pQE;
+        transform("m-x>=v^2/(2*b)", 'R=="v<=0|v>0&((b < ep^(-1)*v&m>=1/2*((-b)*ep^2+2*ep*v+2*x)|b=ep^(-1)*v&(m=1/2*((-b)*ep^2+2*ep*v+2*x)|m>1/2*b^(-1)*(v^2+2*b*x)))|b>ep^(-1)*v&m>=1/2*b^(-1)*(v^2+2*b*x))")
     )
-  ) partial
+) partial
 End.
 
 End.
@@ -121,12 +135,35 @@ Problem
 End.
 
 Tactic "Proof Formal Methods Tutorial Example 3"
-implyR(1) ; andL('L)* ; loop("v>=0&x+v^2/(2*b)<=m", 1) ; <(
-  QE; done,
-  QE; done,
-  composeb(1) ; composeb(1.1) ; solve(1.1.1) ; assignb(1.1) ; choiceb(1) ; composeb(1.0) ; assignb(1.0.1) ; testb(1.0) ;
-    assignb(1.1) ; andR('R) ; doall(prop ; QE("Mathematica") ; done)
-  )
+implyR('R=="x<=m&A>=0&b>0&ep>0&v=0->[{{?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}}*]x<=m");
+andL('L=="x<=m&A>=0&b>0&ep>0&v=0");
+andL('L=="A>=0&b>0&ep>0&v=0");
+andL('L=="b>0&ep>0&v=0");
+andL('L=="ep>0&v=0");
+loop("v>=0&x+v^2/(2*b)<=m", 'R=="[{{?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}}*]x<=m"); <(
+  "Init":
+    QE,
+  "Post":
+    QE,
+  "Step":
+    composeb('R=="[{?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;}t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}](v>=0&x+v^2/(2*b)<=m)");
+    composeb('R=="[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;]#[t:=0;{x'=v,v'=a,t'=1&v>=0&t<=ep}](v>=0&x+v^2/(2*b)<=m)#");
+    solve('R=="[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;][t:=0;]#[{x'=v,v'=a,t'=1&v>=0&t<=ep}](v>=0&x+v^2/(2*b)<=m)#");
+    assignb('R=="[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;]#[t:=0;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+t<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)#");
+    choiceb('R=="[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;++a:=-b;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)");
+    composeb('R=="#[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);a:=A;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)#&[a:=-b;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)");
+    assignb('R=="[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);]#[a:=A;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)#&[a:=-b;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)");
+    testb('R=="#[?m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v);]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)->A*t_+v>=0&A*(t_^2/2)+v*t_+x+(A*t_+v)^2/(2*b)<=m)#&[a:=-b;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)");
+    assignb('R=="(m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)->A*t_+v>=0&A*(t_^2/2)+v*t_+x+(A*t_+v)^2/(2*b)<=m))&#[a:=-b;]\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->a*s_+v>=0&s_+0<=ep)->a*t_+v>=0&a*(t_^2/2)+v*t_+x+(a*t_+v)^2/(2*b)<=m)#");
+    andR('R=="(m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)->A*t_+v>=0&A*(t_^2/2)+v*t_+x+(A*t_+v)^2/(2*b)<=m))&\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)->(-b)*t_+v>=0&(-b)*(t_^2/2)+v*t_+x+((-b)*t_+v)^2/(2*b)<=m)"); <(
+      "m-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)->A*t_+v>=0&A*(t_^2/2)+v*t_+x+(A*t_+v)^2/(2*b)<=m)":
+        prop;
+        QE("Mathematica"),
+      "\forall t_ (t_>=0->\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)->(-b)*t_+v>=0&(-b)*(t_^2/2)+v*t_+x+((-b)*t_+v)^2/(2*b)<=m)":
+        prop;
+        QE("Mathematica")
+    )
+)
 End.
 End.
 
@@ -154,7 +191,13 @@ Problem
 End.
 
 Tactic "Proof Formal Methods Tutorial Example 4"
-  implyR(1); dC("d>=0", 1); doall(dI(1); done)
+implyR('R=="w()^2*x^2+y^2<=c()^2&d>=0->[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2");
+dC("d>=0", 'R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]w()^2*x^2+y^2<=c()^2"); <(
+  "Use":
+    dI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0&d>=0}]w()^2*x^2+y^2<=c()^2"),
+  "Show":
+    dI('R=="[{x'=y,y'=-w()^2*x-2*d*w()*y,d'=7&w()>=0}]d>=0")
+)
 End.
 End.
 
@@ -237,40 +280,61 @@ Problem
 End.
 
 Tactic "Proof Formal Methods Tutorial Example 5"
-implyR(1); (andL('L)*); loop("v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))", 1); <(
-  prop; done,
-  QE; done,
-  unfold; <(
-    diffInvariant("t>=0", 1);
-    diffInvariant("dx^2+dy^2=1", 1);
-    diffInvariant("v=old(v)-B()*t", 1);
-    diffInvariant("-t*(v+B()/2*t)<=x-old(x)&x-old(x)<=t*(v+B()/2*t)", 1);
-    diffInvariant("-t*(v+B()/2*t)<=y-old(y)&y-old(y)<=t*(v+B()/2*t)", 1);
-    dW(1); QE; done
-    ,
-    diffInvariant("t>=0", 1);
-    diffInvariant("dx^2+dy^2=1", 1);
-    diffInvariant("v=old(v)", 1);
-    diffInvariant("x=old(x)", 1);
-    diffInvariant("y=old(y)", 1);
-    dW(1); QE; done
-    ,
-    hideL(-13=="abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())");
-    diffInvariant("t>=0", 1);
-    diffInvariant("dx^2+dy^2=1", 1);
-    diffInvariant("v=old(v)+a*t", 1);
-    diffInvariant("-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)", 1);
-    diffInvariant("-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)", 1);
-    dW(1); prop; <(
-      hideR(2=="abs(y-yo)>v^2/(2*B())");
-      transformEquality("ep()=t", 'L=="abs(x_0-xo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)");
-      smartQE; done
-      ,
-      hideR(1=="abs(x-xo)>v^2/(2*B())");
-      transformEquality("ep()=t", 'L=="abs(y_0-yo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)");
-      smartQE; done
+implyR('R=="v>=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0->[{{{a:=-B();++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=A();r:=*;?r!=0;w:=*;?v=w/r;xo:=*;yo:=*;?abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v);}t:=0;}{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}}*](x-xo)^2+(y-yo)^2>0");
+andL('L=="v>=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0");
+andL('L=="(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))&dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0");
+andL('L=="dx^2+dy^2=1&A()>=0&B()>0&ep()>0&r!=0");
+andL('L=="A()>=0&B()>0&ep()>0&r!=0");
+andL('L=="B()>0&ep()>0&r!=0");
+andL('L=="ep()>0&r!=0");
+loop("v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))", 'R=="[{{{a:=-B();++?v=0;a:=0;w:=0;++a:=*;?-B()<=a&a<=A();r:=*;?r!=0;w:=*;?v=w/r;xo:=*;yo:=*;?abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v);}t:=0;}{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}}*](x-xo)^2+(y-yo)^2>0"); <(
+  "Init":
+    print("Base");
+    prop,
+  "Post":
+    print("Use");
+    QE,
+  "Step":
+    print("Unfolding...");
+    unfold; <(
+      "[a:=-B();][t:=0;][{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))":
+        print("Case 1");
+        diffInvariant("t>=0", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&(t<=ep()&v>=0)&t>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("v=old(v)-B()*t", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("-t*(v+B()/2*t)<=x-old(x)&x-old(x)<=t*(v+B()/2*t)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&(((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0-B()*t}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("-t*(v+B()/2*t)<=y-old(y)&y-old(y)<=t*(v+B()/2*t)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0-B()*t)&-t*(v+B()/2*t)<=x-x_0&x-x_0<=t*(v+B()/2*t)}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        dW('R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=-B(),w'=(-B())/r,t'=1&(((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0-B()*t)&-t*(v+B()/2*t)<=x-x_0&x-x_0<=t*(v+B()/2*t))&-t*(v+B()/2*t)<=y-y_0&y-y_0<=t*(v+B()/2*t)}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        QE,
+      "[?v=0;a:=0;w:=0;][t:=0;][{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))":
+        print("Case 2");
+        diffInvariant("t>=0", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&(t<=ep()&v>=0)&t>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("v=old(v)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("x=old(x)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&(((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("y=old(y)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0)&x=x_0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        dW('R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=0,w'=0/r,t'=1&(((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0)&x=x_0)&y=y_0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        QE,
+      "[a:=*;?-B()<=a&a<=A();r:=*;?r!=0;w:=*;?v=w/r;xo:=*;yo:=*;?abs(x-xo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yo)>v^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v);][t:=0;][{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))":
+        print("Case 3");
+        hideL('L=="abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())");
+        diffInvariant("t>=0", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&t<=ep()&v>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("dx^2+dy^2=1", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&(t<=ep()&v>=0)&t>=0}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("v=old(v)+a*t", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&(((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0+a*t}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        diffInvariant("-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)", 'R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0+a*t)&-t*(v-a/2*t)<=x-x_0&x-x_0<=t*(v-a/2*t)}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        dW('R=="[{x'=v*dx,y'=v*dy,dx'=-w*dy,dy'=w*dx,v'=a,w'=a/r,t'=1&(((((t<=ep()&v>=0)&t>=0)&dx^2+dy^2=1)&v=v_0+a*t)&-t*(v-a/2*t)<=x-x_0&x-x_0<=t*(v-a/2*t))&-t*(v-a/2*t)<=y-y_0&y-y_0<=t*(v-a/2*t)}](v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B())))");
+        prop; <(
+          "abs(x_0-xo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)":
+            hideR('R=="abs(y-yo)>v^2/(2*B())");
+            transformEquality("ep()=t", 'L=="abs(x_0-xo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)");
+            smartQE,
+          "abs(y_0-yo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)":
+            hideR('R=="abs(x-xo)>v^2/(2*B())");
+            transformEquality("ep()=t", 'L=="abs(y_0-yo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)");
+            smartQE
+        )
     )
-  )
 )
 End.
 End.

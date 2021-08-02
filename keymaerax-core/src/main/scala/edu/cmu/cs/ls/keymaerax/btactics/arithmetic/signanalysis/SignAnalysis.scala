@@ -7,6 +7,8 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis
 
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.annotation.tailrec
+
 /**
   * Tactics for simplifying arithmetic by analysing the signs of variables in formulas.
   *
@@ -37,18 +39,20 @@ object SignAnalysis {
       case (GreaterEqual(l, Number(r)), i)       => assert(r==0); AntePos(i) -> Map(l -> Sign.Pos0)
       case (Greater(Neg(l), Number(r)), i)       => assert(r==0); AntePos(i) -> Map(l -> Sign.Neg0)
       case (Greater(l, Number(r)), i)            => assert(r==0); AntePos(i) -> Map(l -> Sign.Pos0)
+      case e => throw new IllegalArgumentException("Right-hand side of " + e._1.prettyString + " is not a number where a number is expected")
     }.toMap
 
     val formulaSigns: List[Signs] = signs.map(p => {
       val pushedSigns = p._2.map(q => p._1 -> Sign.pushDown(q._1, Set(q._2)))
       pushedSigns.flatMap(q => q._2.map(r => r._1 -> r._2.map(_ -> Set(q._1)).toMap))
     }).toList
-    val aggregate = formulaSigns.reduceLeft((acc,e) =>
-      acc ++ e.map{ case (k,v) => k -> (acc.getOrElse(k, Map()) ++ v.map{ case (l,u) => l -> (u ++ acc.getOrElse(k, Map()).getOrElse(l, Set())) }) })
+    val aggregate = formulaSigns.reduceLeftOption((acc,e) =>
+      acc ++ e.map{ case (k,v) => k -> (acc.getOrElse(k, Map()) ++ v.map{ case (l,u) => l -> (u ++ acc.getOrElse(k, Map()).getOrElse(l, Set())) }) }).getOrElse(Map.empty)
     aggregate.map(p => p._1 -> (if (p._2.size > 1 && p._2.contains(Sign.Unknown)) p._2.filterKeys(_ != Sign.Unknown) else p._2))
   } ensures(r => r.forall(p => p._2.keySet.size == 1 || !p._2.keySet.contains(Sign.Unknown))) // either unambiguous one of (+,-,?) or contradiction (+-)
 
   /** Aggregates sign bottom up in terms */
+  @tailrec
   def aggregateSigns(signs: Signs): Signs = {
     val (facts, unknown) = signs.partition(!_._2.keySet.contains(Sign.Unknown))
     assert(unknown.forall(_._2.keySet.size == 1), "Unknown signs are not known")
@@ -57,6 +61,7 @@ object SignAnalysis {
   }
 
   /** Pushes signs of terms down into subterms */
+  @tailrec
   def pushDownSigns(signs: Signs): Signs = {
     val (facts, unknown) = signs.partition(!_._2.keySet.contains(Sign.Unknown))
     assert(unknown.forall(_._2.keySet.size == 1), "Unknown signs are not known")
@@ -80,6 +85,7 @@ object SignAnalysis {
       case (GreaterEqual(l, Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
       case (Greater(Neg(l), Number(r)), i)       => assert(r==0); posFactory(i) -> Map(l -> Bound.Upper)
       case (Greater(l, Number(r)), i)            => assert(r==0); posFactory(i) -> Map(l -> Bound.Lower)
+      case e => throw new IllegalArgumentException("Right-hand side of " + e._1.prettyString + " is not a number where a number is expected")
     }.toMap
     bounds.map(p => (p._1, p._2.flatMap(p => Bound.pushDown(p._1, Map(p._2 -> Set()))(signs))))
   }
@@ -95,7 +101,7 @@ object SignAnalysis {
     val anteBounds = bounds(s.ante, Map(), AntePos)
     val succBounds = bounds(s.succ, signs, SuccPos)
     val protect = succBounds.values.flatMap(_.values.flatMap(_.values.flatten)).toSet
-    anteBounds.filter{ case (pos, _) => !protect.contains(pos) }.filter{ case (pos, ab) => !boundsAreConsistent(pos, ab, succBounds.values.toList) }.keys.toList
+    anteBounds.filter{ case (pos, _) => !protect.contains(pos) }.filter{ case (_, ab) => !boundsAreConsistent(ab, succBounds.values.toList) }.keys.toList
   }
 
   /** Computes a list of candidates for hiding, based on inconsistent signs
@@ -107,7 +113,7 @@ object SignAnalysis {
   }
 
   /** Computes whether the bounds that we have are consistent with what we want. */
-  private def boundsAreConsistent(pos: AntePos, have: Map[Term, Map[Bound.Bound, Set[AntePos]]], want: List[Map[Term, Map[Bound.Bound, Set[AntePos]]]]): Boolean = {
+  private def boundsAreConsistent(have: Map[Term, Map[Bound.Bound, Set[AntePos]]], want: List[Map[Term, Map[Bound.Bound, Set[AntePos]]]]): Boolean = {
     !have.exists{ case (k,v) =>
       want.forall(w =>
         w.get(k) match {

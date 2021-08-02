@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, BelleThrowable, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
+import edu.cmu.cs.ls.keymaerax.tools.ToolException
 
 import scala.collection.immutable.List
 
@@ -233,7 +234,7 @@ object InvariantGenerator extends Logging {
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode).toStream.distinct
     } catch {
-      case e: Throwable => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", e)
+      case ex: ToolException => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", ex)
     }
     if (solutions.isEmpty) throw new BelleNoProgress("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
@@ -242,12 +243,16 @@ object InvariantGenerator extends Logging {
       case LessEqual(p,q)    => Minus(q,p)
     }).distinct
     val algebra = ToolProvider.algebraTool().get
-    val GB = algebra.groebnerBasis(polynomials)
-    solutions.flatMap({case FuncOf(_, arg) => argumentList(arg)}).flatMap((inv:Term) => {
-      val initial = algebra.polynomialReduce(inv, GB)._2
-      //@todo could check that it's not a tautology using RCF
-      List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
-    }).map(_ -> None).distinct
+    try {
+      val GB = algebra.groebnerBasis(polynomials)
+      solutions.flatMap({ case FuncOf(_, arg) => argumentList(arg) }).flatMap((inv: Term) => {
+        val initial = algebra.polynomialReduce(inv, GB)._2
+        //@todo could check that it's not a tautology using RCF
+        List(Equal(inv, initial), GreaterEqual(inv, initial), LessEqual(inv, initial)).filter(cand => !evos.contains(cand))
+      }).map(_ -> None).distinct
+    } catch {
+      case ex: ToolException => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", ex)
+    }
   }
 
 

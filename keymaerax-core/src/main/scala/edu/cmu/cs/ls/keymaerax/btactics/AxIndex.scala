@@ -9,8 +9,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, AxiomaticRuleInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 
-import scala.annotation.switch
-
 /**
   * Central Axiom Indexing data structures for canonical proof strategies, including
   * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]]  and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
@@ -36,7 +34,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
     scala.collection.mutable.Map.empty
 
   /** lookup canonical axioms or tactics for an expression (index) */
-  def apply(expr: Expression) = axiomsFor(expr)
+  def apply(expr: Expression): List[DerivationInfo] = axiomsFor(expr)
 
   /**
     * AxiomIndex (key,recursor) where the key identifies the subformula used for matching and the recursors lists resulting siblings for subsequent chase.
@@ -57,7 +55,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
     case axiom: AxiomInfo => (axiom.key, axiom.recursor)
       //@todo improve if AxiomaticRuleInfo had recursor info we could keep chasing
-    case rule: AxiomaticRuleInfo => (PosInExpr.HereP, Nil)
+    case _: AxiomaticRuleInfo => (PosInExpr.HereP, Nil)
   }
 
 
@@ -70,7 +68,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
   def axiomsFor(expr: Expression): List[ProvableInfo] = expr match{
     case term: Term => term match {
       case Differential(t) => t match {
-        case _: Variable => Ax.Dvar :: Ax.equalReflexive :: Nil // skip when Dvar fails in context with bound x'; recover after chase with DvariableTactic follow up
+        case _: Variable => Ax.DvarAxiom :: Ax.equalReflexive :: Nil // skip when Dvar fails in context with bound x'; recover after chase with DvariableTactic follow up
         case _: Number => Ax.Dconst :: Nil
         // optimizations
         case t: Term if StaticSemantics.freeVars(t).isEmpty => Ax.Dconst :: Nil
@@ -193,6 +191,23 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
       case _ => Nil
     }
     case _ => Nil
+  }
+
+  /** Descend into formulas and terms with stuttering. */
+  def verboseAxiomsFor(expr: Expression): List[ProvableInfo] = axiomsFor(expr) match {
+    case Nil => expr match {
+      // chase inside formulas
+      case Not(_) => Ax.notStutter :: Nil
+      case And(_, _) => Ax.andStutter :: Nil
+      case Or(_, _) => Ax.orStutter :: Nil
+      case Imply(_, _) => Ax.implyStutter :: Nil
+      case Equiv(_, _) => Ax.equivStutter :: Nil
+      case Exists(_, _) => Ax.existsStutter :: Nil
+      case Forall(_, _) => Ax.allStutter :: Nil
+      //@todo chase into terms?
+      case _ => Nil
+    }
+    case l => l
   }
 
   //@todo optimizable add "ODE" or replace others with "ODE"

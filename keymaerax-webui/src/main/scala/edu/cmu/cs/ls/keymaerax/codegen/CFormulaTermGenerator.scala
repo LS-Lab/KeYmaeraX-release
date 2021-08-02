@@ -98,7 +98,7 @@ class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGen
           case "max" => val CPair(l, r) = compileTerm(child); CMax(l, r)
           case _ => CUnaryFunction(nameIdentifier(fn), compileTerm(child))
         }
-      case FuncOf(fn, _) if !fn.interpreted => throw new CodeGenerationException("Uninterpreted function symbols with arguments not supported")
+      case f@FuncOf(fn, _) if !fn.interpreted => throw new CodeGenerationException("Uninterpreted function symbols with arguments not supported: " + f.prettyString)
       case Pair(l, r)  => CPair(compileTerm(l), compileTerm(r))
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }

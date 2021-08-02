@@ -147,6 +147,8 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
           val txtMsg = importResult(ml.getExpr, _.toString)
           if (txtMsg.contains("nsmet")) throw MathematicaInapplicableMethodException("Input " + ctx + " is not solvable with the available methods, cause: " + txtMsg)
           else throw ToolExecutionException("Input " + ctx + " cannot be evaluated, cause: " + txtMsg)
+        } else if (res == MathematicaOpSpec.failed.op) {
+          throw ToolExecutionException("Command failed: " + ctx)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {
@@ -159,10 +161,10 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
                 converter(theResult)
               } catch {
                 case ex: ConversionException => throw ex
-                case ex: Throwable => throw ConversionException("Error converting from Mathematica, returned result expression is: " + theResult.toString, ex)
+                case ex: Throwable => throw ConversionException("Error converting from Mathematica\ncommand: " + ctx + "\nreturned result: " + theResult.toString, ex)
               })
           } else {
-            throw MathematicaUnknownCauseCriticalException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
+            throw MathematicaUnknownCauseCriticalException("Unexpected result: either result length != 2 or JLink returned a stale answer\ncommand: " + ctx + "\nreturned result: " + res.toString)
           }
         }
       })

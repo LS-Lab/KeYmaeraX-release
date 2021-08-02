@@ -289,7 +289,7 @@ class DifferentialTests extends TacticTestBase {
   it should "step into a constified ODE" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
     proveByS("x>=a & a>=0 ==> [{x'=a}]x>=a".asSequent, dI(auto='diffInd)(1), _.value should contain theSameElementsAs List(
       BelleLabels.dIInit, BelleLabels.dIStep
-    ), USubst("a()~>a".asSubstitutionPair :: Nil)).subgoals should contain theSameElementsInOrderAs
+    ), "a()~>a".asDeclaration).subgoals should contain theSameElementsInOrderAs
       "x>=a()&a()>=0, true ==> x>=a()".asSequent ::
       "x>=a()&a()>=0, true ==> [x':=a();]x'>=0".asSequent :: Nil
   }
@@ -490,6 +490,23 @@ class DifferentialTests extends TacticTestBase {
       "test(x)>=0, true ==> test(x)>=0".asSequent,
       "test(x_0)>=0, true ==> [x':=2;](test(x))'>=0".asSequent
     )
+  }
+
+  it should "expand definitions" in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    proveByS(entry.sequent, implyR(1) & dI(auto='full)(1), entry.defs) shouldBe 'proved
+  }
+
+  "odeInvariant" should "prove STTT Example 9b invariant" in withQE { _ =>
+    val seq = "Kp()=2, Kd()=3, v>=0, xm<=x, xr=(xm+S())/2, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm)/2)^2, true ==> [{x'=v,v'=-Kp()*(x-xr)-Kd()*v&v>=0&xm<=x}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent
+    proveBy(seq, DifferentialTactics.diffInd()(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = false)(1)) shouldBe 'proved
+    proveBy(seq, DifferentialTactics.odeInvariant(tryHard = true)(1)) shouldBe 'proved
   }
 
   "Derive" should "derive quantifiers" in withTactics {
@@ -785,6 +802,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1) shouldBe "y=3, x=0 ==> !y<0, [{x'=y}]x>=0".asSequent
   }
 
+  it should "not expand definitions" in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    proveByS(entry.sequent, implyR(1) & dC("unitCircle(x,y)".asFormula)(1), entry.defs).
+      subgoals should contain theSameElementsAs List(
+      "unitCircle(x,y) ==> [{x'=y, y'=-x & true & unitCircle(x,y)}]unitCircle(x,y)".asSequent,
+      "unitCircle(x,y) ==> [{x'=y, y'=-x}]unitCircle(x,y)".asSequent
+    )
+  }
+
   "Diamond differential cut" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> <{x'=2}>x>=0".asSequent, dC("x>0".asFormula)(1))
     result.subgoals should have size 2
@@ -1042,6 +1073,18 @@ class DifferentialTests extends TacticTestBase {
     proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), dI('full)(1))) shouldBe 'proved
   }
 
+  it should "FEATURE_REQUEST: expand definitions only temporarily in dI but not in result" taggedAs TodoTest in withMathematica { _ =>
+    val entry = ArchiveParser.parse(
+      """ArchiveEntry "DI"
+        |  Definitions Bool unitCircle(Real x, Real y) <-> x^2+y^2=1; End.
+        |  ProgramVariables Real x, y; End.
+        |  Problem unitCircle(x,y) -> [{x'=y, y'=-x}]unitCircle(x,y) End.
+        |End.""".stripMargin).head
+    //@todo want unitCircle unexpanded in result, but that requires internal delayed merging of provables
+    proveByS(entry.sequent, implyR(1) & diffInvariant("unitCircle(x, y)".asFormula)(1), entry.defs).subgoals.
+      loneElement shouldBe "unitCircle(x,y) ==> [{x'=y, y'=-x & unitCircle(x,y)}]unitCircle(x,y)".asSequent
+  }
+
   private val dconstifyTests = Table(("Name", "Sequent", "Expected"),
     ("replace a with a() in v'=a",
       "==> [{v'=a}]v=v0()+a*t()",
@@ -1217,12 +1260,14 @@ class DifferentialTests extends TacticTestBase {
         |  z>=0
         |does not imply postcondition
         |  x>0
-        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG
         |
         |Provable{
         |==> 1:  [{x'=v}]x>0	Box
         |  from
-        |==> 1:  \exists z [{x'=v,z'=v}]x>0	Exists}""".stripMargin
+        |==> 1:  \exists z [{x'=v,z'=v}](true->z>=0)	Exists
+        |  with
+        |==> 1:  false	False$}""".stripMargin
   }
 
   it should "give a useful error message when facts cannot be preserved for postcondition transformation" in withMathematica { _ =>
@@ -1232,12 +1277,14 @@ class DifferentialTests extends TacticTestBase {
         |  x/b>1
         |does not imply postcondition
         |  x>b
-        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG in
+        |or necessary facts might not be preserved automatically; try to preserve with differential cuts before using dG
         |
         |Provable{
         |==> 1:  [b:=1;][{x'=v}]x>b	Box
         |  from
-        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v}]x>b	Box}""".stripMargin
+        |==> 1:  [b:=1;]\exists z [{x'=v,z'=v}](true->x/b>1)	Box
+        |  with
+        |==> 1:  false	False$}""".stripMargin
   }
 
   it should "use facts preserved by dC when transforming postcondition" in withMathematica { _ =>
@@ -1782,12 +1829,12 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
+  it should "prove a strict barrier certificate 1 (Z3)" in withZ3 { _ =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
+  it should "prove a strict barrier certificate 2 (Z3)" in withZ3 { _ =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
@@ -1872,6 +1919,19 @@ class DifferentialTests extends TacticTestBase {
     "a=1, b()=2 ==> x>=0, y>=0, [{x'=a,y'=b()&true&0-x>=0&0-y>=0}](0-x>0&0-y>0)".asSequent
   }
 
+  it should "add work with function symbols" in withMathematica { _ =>
+    val result = proveBy("a=1,b()=2 ==> x>=0,y>=0,[{x'=a,y'=b()}](f(x,y)>1)".asSequent,
+      DifferentialTactics.dCClosure(true)(3)
+        <(
+        skip,
+        skip
+      ))
+
+    result.subgoals should have size 2
+    result.subgoals.head shouldBe "a=1, b()=2  ==>  x>=0, y>=0, f(x,y)-1>0".asSequent
+    result.subgoals(1) shouldBe "a=1, b()=2  ==>  x>=0, y>=0, [{x'=a,y'=b()&true&f(x,y)-1>=0}]f(x,y)-1>0".asSequent
+  }
+
   "dIClosed" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
     val ode = DifferentialTactics.ODESpecific("{t'=1, x'=x}".asDifferentialProgram)
     val prv = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1/2}](x>=1&x<=1+3*t)".asSequent, ode.dIClosed(1))
@@ -1881,6 +1941,17 @@ class DifferentialTests extends TacticTestBase {
     // differential invariant
     prv.subgoals(1).succ.loneElement shouldBe "t<=1/2&x>=1&x<=1+3*t->min((x,0+3*1-x))>0".asFormula
     proveBy(prv, Idioms.<(QE, QE)) shouldBe 'proved
+  }
+
+  "taylorB" should "prove second order Taylor bound for exponential function" in withMathematica { _ =>
+    val prv = proveBy("x0=x & t=0 ==> [{x'=x,t'=1&x>=0}]x0+x0*t+x0/2*t^2<=x".asSequent, DifferentialTactics.taylorB(1))
+    prv shouldBe 'proved
+  }
+
+  "taylorStep" should "correctly execute a step on the exponential function" in withMathematica { _ =>
+    val prv = proveBy("x0=x & t=0 ==> [{x'=-x,t'=1&x>=0}]x0-x0*t<=x".asSequent, DifferentialTactics.taylorStep(1))
+    prv.subgoals should have size 1
+    prv.subgoals.head shouldBe "x0()=x&t=0 ==>  [{x'=-x,t'=1&x>=0}]-x0()<=-x".asSequent
   }
 
   "DCC" should "correctly apply in succ" in withTactics {

@@ -186,7 +186,7 @@ object ODELiveness {
           useAt(Ax.Dminus)(1,1::0::Nil) &
           implyRi &
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
-          useAt(Ax.Dvar)(1,1::0::Nil) &
+          useAt(Ax.DvarAxiom)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
           useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
           G(1) & DassignbCustom(1) &
@@ -522,47 +522,6 @@ object ODELiveness {
     tac
   })
 
-  //Helper to remove a nonlinear ODE
-//  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
-//
-//    val vdgpre = getVDGinst(ode)._1
-//    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
-//    // the concrete vdg instance
-//    val vdg = vdgpre(vdgsubst)
-//    val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
-//
-//    val ddgpre = getDDGinst(ode)
-//    val ddgsubst = UnificationMatch(ddgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
-//    // the concrete ddg instance
-//    val ddg = ddgpre(ddgsubst)
-//    val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
-//
-//
-//    // check for an assumption in the context
-//    val ind = seq.ante.toStream.map( f =>
-//      UnificationMatch.unifiable(vdgasm,f) match {
-//        case None => (UnificationMatch.unifiable(ddgasm, f),false)
-//        case Some(res) => (Some(res),true)
-//      }
-//    ).collectFirst { case (Some(p),b) => (p,b) }
-//
-//    ind match {
-//      case None =>
-//        if (strict) throw new TacticInapplicableFailure(
-//          "odeReduce failed to autoremove: " + ode +
-//          ". Try to add an assumption to the antecedents of either this form: " + vdgasm +
-//          " or this form: " + ddgasm)
-//        else skip
-//      case Some((unif,b)) =>
-//        val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
-//        val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
-//
-//        cutL(concl)(pos) <( cont,
-//          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & id
-//        )
-//    }
-//  })
-
   // same as hideNonFOL but only does the antecedents
   private def hideNonFOLLeft: DependentTactic = anon ((sequent: Sequent) =>
     (sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })).reduceOption[BelleExpr](_ & _).getOrElse(skip)
@@ -710,6 +669,7 @@ object ODELiveness {
     val ode1ls = DifferentialProduct.listify(ode1)
     val ode2ls = DifferentialProduct.listify(ode2)
 
+
     //Common case: both ODEs are the same
     if(ode1ls==ode2ls) {
       Some(skip)
@@ -786,7 +746,7 @@ object ODELiveness {
             compatODE(asmsys.ode,tarsys.ode, curdom, asmpost) match {
               case None => ()
               case Some(tac) => {
-                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(QE)) //todo: timeout?
+                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(prop) & Idioms.?(QE)) //todo: timeout?
 
                 if (pr.isProved) {
                   ls += ((asmsys.constraint, pr, asmpost, i, tac))
@@ -916,7 +876,7 @@ object ODELiveness {
     )
   }}
 
-  /** Implements vDG rule that adds ghosts to an ODE on the left or right, in either modality
+  /** Implements linear vDG rule that adds ghosts to an ODE on the left or right, in either modality
     * For boxes on the right and diamonds on the left, the ODE must be affine
     *
     * {{{
@@ -940,8 +900,7 @@ object ODELiveness {
     val (sys,post,isBox) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
       case Some(Box(sys:ODESystem,post)) => (sys,post,true)
-      //@todo IllFormed if diamond in ante or box in succ?
-      case Some(e) => throw new TacticInapplicableFailure("vDG only applicable to box ODEs in antecedent or diamond ODE in succedents, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("vDG only applicable to box or diamond ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
@@ -954,22 +913,27 @@ object ODELiveness {
         useAt(flipModality(vdg),PosInExpr(1::Nil))(pos)
     }
     else {
-      val vdg = affineVDGprecond(ghost)
-      if(isBox) useAt(vdg,PosInExpr(1::Nil))(pos)
-      else //diamond in antecedent
-        useAt(flipModality(vdg),PosInExpr(0::Nil))(pos)
+      try {
+        val vdg = affineVDGprecond(ghost)
+        if(isBox) useAt(vdg,PosInExpr(1::Nil))(pos)
+        else //diamond in antecedent
+          useAt(flipModality(vdg),PosInExpr(0::Nil))(pos)
+      } catch {
+        case e: IllegalArgumentException =>
+          throw new TacticInapplicableFailure("vDG is unable to add non-affine ghost ODEs automatically. Use dDG or bDG for nonlinear ghosts.")
+      }
     }
   }}
 
   // Flips a proved [a]p(||) -> [b]p(||) into <b>p(||) -> <a>p(||) or vice versa, possibly with bananas for p(||)
   // Also works under 1 level of nesting and curries the result so that it is easy to apply backwards e.g.
   // foo -> [a]p(||) -> [b]p(||) into foo & <b>p(||) -> <a>p(||)
-  private def flipModality(pr:ProvableSig) : ProvableSig = {
+  private[btactics] def flipModality(pr:ProvableSig) : ProvableSig = {
 
     val fml = pr.conclusion.succ(0)
 
     fml match {
-      case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(Box(proga,post),Box(progb,post2)) if post==post2 => {
         proveBy(Imply(Diamond(progb,post),Diamond(proga,post)),
           implyR(1) &
             useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -977,7 +941,7 @@ object ODELiveness {
           implyRi & byUS(pr)
         )
       }
-      case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 => {
         proveBy(Imply(Box(progb,post),Box(proga,post)),
           implyR(1) &
             useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -985,7 +949,7 @@ object ODELiveness {
             implyRi & byUS(pr)
         )
       }
-      case Imply(outer,Imply(Box(proga,post),Box(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(outer,Imply(Box(proga,post),Box(progb,post2))) if post==post2 => {
         proveBy(Imply(And(outer,Diamond(progb,post)),Diamond(proga,post)),
           implyR(1) & andL(-1) &
             useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -993,7 +957,7 @@ object ODELiveness {
             implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS(pr)
         )
       }
-      case Imply(outer,Imply(Diamond(proga,post),Diamond(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+      case Imply(outer,Imply(Diamond(proga,post),Diamond(progb,post2))) if post==post2 => {
         proveBy(Imply(And(outer,Box(progb,post)),Box(proga,post)),
           implyR(1) & andL(-1) &
             useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
@@ -1410,7 +1374,7 @@ object ODELiveness {
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0 ==> f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1422,7 +1386,7 @@ object ODELiveness {
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
     useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
-      DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
+      DW(1) & G(1) & prop & hideL('L, "q_(||)".asFormula) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0 ==> f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
         useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
@@ -1474,7 +1438,7 @@ object ODELiveness {
     //todo: directly support old(.) in term list instead of baking it in
     //should coeff be baked in or not?
     val coeff = TacticHelper.freshNamedSymbol("coeff".asVariable, seq)
-    val coefflist = (0 to bnds.length-1).map( i => Variable(coeff.name+i))
+    val coefflist = bnds.indices.map( i => Variable(coeff.name+i))
     val coefftac = (bnds zip coefflist).map( bc => discreteGhost(bc._1,Some(bc._2))(pos) : BelleExpr).reduce(_ & _)
 
     val series = coefflist.tail.zipWithIndex.foldLeft(coefflist.head:Term) { (h,fe) => Plus(h,Times(fe._1, Power(timevar, Number(fe._2+1)))) }
@@ -1576,6 +1540,86 @@ object ODELiveness {
     )
   }}
 
+  private lazy val curry =
+    remember("(p() -> (q() -> r())) <-> (p()&q()->r())".asFormula, prop, namespace)
+
+  /** Implements dDG rule that adds ghosts to box ODEs on the right of the turnstile
+    *
+    * G |- [ghosts, ODE] (||ghosts||)' <= L ||ghosts|| + M
+    * G |- [ghosts, ODE]P
+    * ---- dDG
+    * G |- [ODE]P
+    *
+    * @param ghost the ghost ODEs, L, M as above
+    */
+  def dDG(ghost: DifferentialProgram, L:Term, M: Term) : DependentPositionTactic = anon ((pos : Position, seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dDG is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("dDG only applicable to box ODE in succedent, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val ddgpre = getDDGinst(ghost)
+
+    val lipsLsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::0::0::Nil)).get
+    val lipsMsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::1::Nil)).get
+
+    val lipsLunif = UnificationMatch.unifiable(lipsLsub,L).get.usubst
+    val lipsMunif = UnificationMatch.unifiable(lipsMsub,M).get.usubst
+    val ddg = (ddgpre(lipsLunif))(lipsMunif)
+
+    useAt(useFor(curry,PosInExpr(0::Nil),((us:Subst) => us))(Position(1))(ddg),PosInExpr(1::Nil))(pos) & andR(pos)
+  })
+
+  /** Implements bDG rule that adds ghosts to box ODEs on the right of the turnstile
+    *
+    * G |- [ghosts, ODE] (||ghosts||)^2 <= p
+    * G |- [ghosts, ODE]P
+    * ---- dDG
+    * G |- [ODE]P
+    *
+    * @param ghost the ghost ODEs, L, M as above
+    */
+  def bDG(ghost: DifferentialProgram, p:Term) : DependentPositionTactic = anon ((pos : Position, seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "bDG is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("bDG only applicable to box ODE in succedent, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val vdgpre = getVDGinst(ghost)._1
+    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::Nil)).get, p).usubst
+    // the concrete vdg instance
+    val vdg = vdgpre(vdgsubst)
+
+    useAt(useFor(curry,PosInExpr(0::Nil),((us:Subst) => us))(Position(1))(vdg),PosInExpr(1::Nil))(pos) & andR(pos)
+  })
+
+  /** Wrapper around bDG for display.
+    */
+  @Tactic(names="bDG",
+    longDisplayName="Bounded Differential Ghost",
+    premises="Γ |- [ghost, x'=f(x) & Q] (||ghost||)^2 <= p, Δ ;; [ghost, x'=f(x) & Q]P, Δ",
+    conclusion="Γ |- [{x'=f(x) & Q}]P, Δ",
+    displayLevel="browse",
+    inputs = "ghost:expression ;; p:term")
+  def bDG(ghost: Expression, p:Term) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) =>
+    ghost match {
+      case Equal(l: DifferentialSymbol, r) =>
+        ODELiveness.bDG(AtomicODE(l, r), p)(pos)
+      case dp: DifferentialProgram =>
+        ODELiveness.bDG(dp, p)(pos)
+      case ODESystem(dp, _) =>
+        ODELiveness.bDG(dp, p)(pos)
+      case _ =>
+        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + ghost.prettyString)
+    }
+  }
+
   /** dDDG rule
     *
     * G |- [ghosts, ODE] (||ghosts||)' <= L ||ghosts|| + M
@@ -1630,7 +1674,7 @@ object ODELiveness {
     * G |- [ghosts, ODE] (||ghosts||)^2 <= p
     * G |- <ODE & R> P
     * ---- (dBDG)
-    * G |- <ghosts , ODE & p>=0> P
+    * G |- <ghosts , ODE & R> P
     *
     * @param p as above
     * @param dim The first dim ODEs at the given position are treated as ghosts

@@ -52,6 +52,15 @@ object MapConfiguration extends Configuration {
 
   /** Returns the value of `key` as BigDecimal or None, if not present. */
   override def getBigDecimal(key: String): Option[BigDecimal] = config.get(key).map(BigDecimal.apply)
+  /** Returns the value of key as a `List`. */
+  override def getList(key: String): List[String] = getString(key).map(_.split(",").toList).getOrElse(Nil)
+  /** Returns the value of `key` as a Map. */
+  override def getMap(key: String): Map[String, String] = {
+    getList(key).map(entry => {
+      val k :: v :: Nil = entry.split("->").toList
+      k.trim -> v.trim.stripPrefix("->").trim
+    }).toMap
+  }
 
   /** Returns the configuration entry `key` as an absolute path with file separators. */
   override def path(key: String): String = config(key)

@@ -1,0 +1,24 @@
+<div>
+<p>
+    <kbd>odeInvC</kbd> tactic proves <code>[{x'=f(x) & Q}]P</code> using <code>P</code> as an invariant of the ODE.
+    The tactic is complete, i.e., it is guaranteed to succeed if <code>P</code> is indeed an invariant.
+    However, it may be slow and complicated cases may benefit from other more dedicated proof rules to obtain faster proofs.
+</p>
+<p>
+See also
+<ul>
+    <li><kbd>dI</kbd> Differential invariant to prove the formula <code>R</code> is an invariant of the
+        differential equation system.</li>
+    <li><kbd>dC</kbd> differential cuts: to first prove another property of the differential equation and then assume it during the dynamics.</li>
+    <li><kbd>dW</kbd> differential weakening: to prove a property that directly follows from the evolution domain constraint.</li>
+    <li><kbd>dG</kbd> differential ghosts: to add a fresh variable with a new differential equation into the dynamics.</li>
+</ul>
+</p>
+<p>
+Learning resources
+<ul>
+    <li><a target="_blank" href="https://doi.org/10.1007/978-3-319-63588-0_11">11: Differential Equations &amp; Proofs</a></li>
+    <li><a target="_blank" href="https://doi.org/10.1145/3380825">Differential Equation Invariance Axiomatization</a></li>
+</ul>
+</p>
+</div>

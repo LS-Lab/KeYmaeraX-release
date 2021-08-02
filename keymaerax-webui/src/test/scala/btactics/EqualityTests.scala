@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, SaturateTactic, Using}
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{ProverException, StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -131,6 +131,11 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "0=x ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
+  it should "rewrite differentials" in withTactics {
+    proveBy("x_0=(f(x))' ==> (f(x))'>0".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).subgoals.
+      loneElement shouldBe "==> x_0>0".asSequent
+  }
+
   "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in withTactics {
     val result = proveBy("x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2, z<0+1".asSequent
@@ -224,6 +229,23 @@ class EqualityTests extends TacticTestBase {
     proveBy("x=x, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x, x+3>=4 ==> 3-x<=1, x=2".asSequent
   }
 
+  it should "chain-rewrite" in withTactics {
+    proveBy("y=z, z=0 ==> y=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0=0".asSequent
+    proveBy("x=y, y=z, z=0 ==> x=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0=0".asSequent
+    proveBy("x=y*z, y=z, z=0 ==> x=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0*0=0".asSequent
+  }
+
+  it should "not rewrite verbatim occurrences on the left-hand side of equalities in the antecedent" in withTactics {
+    proveBy("x=y, x=y ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
+    proveBy("x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
+    proveBy("x'=y, x'=x' ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x'=y, x'=y ==>".asSequent
+  }
+
+  it should "not fail when rewriting creates self-rewrites" in withTactics {
+    //@note rewriting x=y creates y=y which exhaustiveEqL2R rejects with IllegalArgumentException
+    proveBy("y=x, x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y, x=y, x=y ==>".asSequent
+  }
+
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals.loneElement shouldBe "z = a+b ==> z < c".asSequent
@@ -269,6 +291,14 @@ class EqualityTests extends TacticTestBase {
   it should "not try to abbreviate inside programs when not free 2" in withQE { _ =>
     val result = proveBy("x+1>0 ==> [x:=x+1;x:=x+1;]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
     result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [x:=y;x:=x+1;]x>0".asSequent
+  }
+
+  it should "abbreviate differentials" in withQE { _ =>
+    proveBy("==> (f(x))'>0".asSequent, abbrv("(f(x))'".asTerm, None)).subgoals.loneElement shouldBe "x_0=(f(x))' ==> x_0>0".asSequent
+  }
+
+  it should "abbreviate differential symbols" in withQE { _ =>
+    proveBy("==> x'>0".asSequent, abbrv("x'".asTerm, None)).subgoals.loneElement shouldBe "x_0=x' ==> x_0>0".asSequent
   }
 
   "AbbrvAt tactic" should "abbreviate in places where at least one of the arguments is bound" in withQE { _ =>
@@ -370,6 +400,22 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "min_=min__0, x<=y&min__0=x|x>y&min__0=y ==> (min_>=2|y=7)&min_<=10".asSequent
   }
 
+  it should "expand exhaustively when applied to a formula" in withQE { _ =>
+    proveBy("min(x,max(y,y^2)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
+      """y>=y^2&max_=y | y < y^2&max_=y^2,
+        |x<=y^2&min_=x | x>y^2&min_=y^2,
+        |x<=max_&min__0=x | x>max_&min__0=max_
+        |==>
+        |min__0+min_<=2*max_""".stripMargin.asSequent
+    proveBy("min(x,max(y,z)) + min(x,y^2) <= 2*max(y,y^2)".asFormula, minmax(1)).subgoals.loneElement shouldBe
+      """y>=y^2&max_=y | y < y^2&max_=y^2,
+        |x<=y^2&min_=x | x>y^2&min_=y^2,
+        |y>=z&max__0=y | y < z&max__0=z,
+        |x<=max__0&min__0=x | x>max__0&min__0=max__0
+        |==>
+        |min__0+min_<=2*max_""".stripMargin.asSequent
+  }
+
   "max" should "expand max(x,y) in succedent" in withQE { _ =>
     val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x>=y&max_=x | x<y&max_=y ==> max_>=5".asSequent
@@ -449,6 +495,29 @@ class EqualityTests extends TacticTestBase {
     result.subgoals should contain theSameElementsInOrderAs List(
       "y=x, [{x'=x}]x>=0 ==> [{x'=x}]x>=0".asSequent,
       "y=x, [{y'=y}]y>=0 ==> [{x'=x}]x>=0, y=x".asSequent)
+  }
+
+  it should "rename quantified differential symbols" in withQE { _ =>
+    proveBy("\\forall x' x'>0 ==>".asSequent, SequentCalculus.alphaRen("x".asVariable, "y".asVariable)(-1)).
+      subgoals should contain theSameElementsInOrderAs List(
+        "\\forall y' y'>0 ==>".asSequent,
+        "\\forall x' x'>0 ==> x=y".asSequent
+    )
+  }
+
+  it should "rename quantified differential symbols inside differentials" in withQE { _ =>
+    proveBy("\\forall x' (f(x))'>0 ==>".asSequent, SequentCalculus.alphaRen("x".asVariable, "y".asVariable)(-1)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "\\forall y' (f(y))'>0 ==>".asSequent,
+      "\\forall x' (f(x))'>0 ==> x=y".asSequent
+    )
+    proveBy("\\forall x' (f(x))'>0 ==>".asSequent, SequentCalculus.alphaRenAll("x".asVariable, "y".asVariable)).
+      subgoals should contain theSameElementsInOrderAs List(
+      "\\forall y' (f(y))'>0 ==>".asSequent,
+      "\\forall x' (f(x))'>0 ==> x=y".asSequent
+    )
+    proveBy("x=y, \\forall x' (f(x))'>0 ==> ".asSequent, SequentCalculus.alphaRenAllBy(-1)).
+      subgoals.loneElement shouldBe "x=y, \\forall y' (f(y))'>0 ==>".asSequent
   }
 
   "Alpha renaming all" should "rename in ODEs in succedent" in withQE { _ =>

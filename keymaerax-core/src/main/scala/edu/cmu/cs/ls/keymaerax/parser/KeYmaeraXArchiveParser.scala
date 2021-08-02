@@ -31,17 +31,27 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefSc
   * @see [[DLArchiveParser]]
   */
 object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
+  /** The archive file encoding. */
+  private val ENC = "ISO-8859-1"
 
   /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
   override def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        parse(input)
+        val src = scala.io.Source.fromFile(fileName, ENC)
+        try {
+          parse(src.mkString)
+        } finally {
+          src.close()
+        }
       case fileName :: entryName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
-        getEntry(entryName, input).
-          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+        val src = scala.io.Source.fromFile(fileName, ENC)
+        try {
+          getEntry(entryName, src.mkString).
+            getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+        } finally {
+          src.close()
+        }
     }
   }
 
@@ -59,8 +69,10 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
   } catch {
     case ex: ParseException if ex.msg.startsWith("Lexer") =>
       val shiftedLoc = shiftLoc(ex.loc, t.belleExprLoc)
-      val msg = (ex.msg.substring(0, ex.msg.indexOf("in `")) +
-        ex.msg.substring(ex.msg.indexOf("beginning with character"))).
+      val omitStart = ex.msg.indexOf("in `")
+      val restStart = ex.msg.indexOf("beginning with character")
+      val msg =
+        (if (omitStart < 0 || restStart < 0) ex.msg else ex.msg.substring(0, omitStart) + ex.msg.substring(restStart)).
         replaceAllLiterally(ex.loc.line + ":" + ex.loc.column, shiftedLoc.line + ":" + shiftedLoc.column)
       throw ParseException(msg, shiftedLoc, ex.found, ex.expect, ex.after, ex.state, ex.cause, ex.hint)
   }

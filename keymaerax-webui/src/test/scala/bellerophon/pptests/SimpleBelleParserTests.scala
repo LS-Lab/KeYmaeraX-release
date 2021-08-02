@@ -78,44 +78,60 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
-    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation, None, exact=true)
+    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation, None, exact=true, Declaration(Map.empty))
     BelleParser("boxAnd(1.1)") shouldBe (round trip HilbertCalculus.boxAnd(pos))
   }
 
   it should "parse a built-in argument with a position locator" in {
-    BelleParser("boxAnd('L)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, None)))
+    BelleParser("boxAnd('L)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLFirst))
   }
 
   it should "parse a built-in argument with a searchy position locator" in {
-    BelleParser("boxAnd('L=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula))))
+    BelleParser("boxAnd('L=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLPlain("[x:=2;](x>0&x>1)".asFormula)))
   }
 
   it should "parse a built-in argument with a searchy sub-position locator" in {
-    BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+    BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1::Nil))))
     BellePrettyPrinter(BelleParser("boxAnd('L.1==\"[y:=3;][x:=2;](x>0&x>1)\")")) shouldBe "boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")"
   }
 
   it should "parse a built-in argument with a searchy formula sub-position locator in new notation" in {
-    BelleParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[y:=3;][x:=2;](x>0&x>1)".asFormula), PosInExpr(1::Nil))))
+    BelleParser("boxAnd('L==\"[y:=3;]#[x:=2;](x>0&x>1)#\")") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLPlain("[y:=3;][x:=2;](x>0&x>1)".asFormula, PosInExpr(1::Nil))))
   }
 
   it should "parse a built-in argument with a searchy term sub-position locator in new notation" in {
-    BelleParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2;](x>0+0&x>1)".asFormula), PosInExpr(1::0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=2;](x>#0+0#&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=2;](x>0+0&x>1)".asFormula, PosInExpr(1::0::1::Nil))))
   }
 
   it should "parse a built-in argument with a searchy program sub-position locator in new notation" in {
-    BelleParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil))))
-    BellePrettyPrinter(SimplifierV3.simplify(Find.FindL(0, Some("[x:=2+0;y:=3;](x>0&x>1)".asFormula), PosInExpr(0::0::Nil)))) shouldBe "simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")"
+    BelleParser("simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=2+0;y:=3;](x>0&x>1)".asFormula, PosInExpr(0::0::Nil))))
+    BellePrettyPrinter(SimplifierV3.simplify(Find.FindLPlain("[x:=2+0;y:=3;](x>0&x>1)".asFormula, PosInExpr(0::0::Nil)))) shouldBe "simplify('L==\"[#x:=2+0;#y:=3;](x>0&x>1)\")"
   }
 
   it should "parse a built-in argument with a searchy term sub-position locator in new notation (term occurs thrice)" in {
-    BelleParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(0::1::Nil))))
-    BelleParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::0::1::Nil))))
-    BelleParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindL(0, Some("[x:=1+0;](x>1+0&x>1+0)".asFormula), PosInExpr(1::1::1::Nil))))
+    BelleParser("simplify('L==\"[x:=#1+0#;](x>1+0&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>#1+0#&x>1+0)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1::0::1::Nil))))
+    BelleParser("simplify('L==\"[x:=1+0;](x>1+0&x>#1+0#)\")") shouldBe (round trip SimplifierV3.simplify(Find.FindLPlain("[x:=1+0;](x>1+0&x>1+0)".asFormula, PosInExpr(1::1::1::Nil))))
+  }
+
+  it should "correctly parenthesize postconditions with a searchy formula sub-position locator in new notation" in {
+    BelleParser("trueAnd('L==\"[x:=2;](#true&x>1#)\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1::Nil))))
+    BelleParser("trueAnd('L==\"[x:=2;]#(true&x>1)#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1::Nil))))
+    //@note allow more concise notation with # forming parentheses
+    BelleParser("trueAnd('L==\"[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindLPlain("[x:=2;](true&x>1)".asFormula, PosInExpr(1::Nil))))
+    BelleParser("trueAnd('L==\"(true&x>1)&[x:=2;]#true&x>1#\")") shouldBe (round trip TactixLibrary.useAt(Ax.trueAnd)(Find.FindLPlain("(true&x>1)&[x:=2;](true&x>1)".asFormula, PosInExpr(1::1::Nil))))
+  }
+
+  it should "correctly parenthesize programs with a searchy formula sub-position locator in new notation" in {
+    BelleParser("chase('L==\"[{#x:=1; ++ x:=2;#};ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0::0::Nil))))
+    BelleParser("chase('L==\"[#{x:=1; ++ x:=2;}#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0::0::Nil))))
+    //@note allow more concise notation with # forming braces
+    BelleParser("chase('L==\"[#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindLPlain("[{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0::0::Nil))))
+    BelleParser("chase('L==\"[{x:=1; ++ x:=2;};#x:=1; ++ x:=2;#;ode;]x>1\")") shouldBe (round trip TactixLibrary.chase(Find.FindLPlain("[{x:=1; ++ x:=2;};{x:=1; ++ x:=2;};ode;]x>1".asFormula, PosInExpr(0::1::0::Nil))))
   }
 
   it should "parse a built-in argument with a searchy unification position locator" in {
-    BelleParser("boxAnd('L~={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula), exact=false)))
+    BelleParser("boxAnd('L~={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLMatch("[x:=2;](x>0&x>1)".asFormula)))
   }
 
   it should "parse a built-in argument with a check position locator" in {
@@ -127,7 +143,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with a 'R position locator" in {
-    BelleParser("boxAnd('R)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindR(0, None)))
+    BelleParser("boxAnd('R)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindRFirst))
   }
 
   it should "parse a built-in argument with a 'Rlast position locator" in {
@@ -147,7 +163,7 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   }
 
   it should "parse a built-in argument with a '_ position locator" in {
-    BelleParser("boxAnd('_)") shouldBe (round trip HilbertCalculus.boxAnd(new Find(0, None, AntePosition(1), exact=true)))
+    BelleParser("boxAnd('_)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindLFirst))
   }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
@@ -729,9 +745,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
       (Name("g", None), Signature(Some(Unit), Real, None, Some("1*f".asExpr), UnknownLocation))
     ))
     BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=true) shouldBe
-      ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL('L, "f()=1*f()".asFormula)
+      ExpandAll("g() ~> 1*f()".asSubstitutionPair :: Nil) & TactixLibrary.hideL(
+        Find.FindLDef("f()=1*f()".asFormula, PosInExpr.HereP, defs))
     BelleParser.parseWithInvGen("hideL('L==\"f=g\")", None, defs, expandAll=false) shouldBe
-      TactixLibrary.hideL('L, "f()=g()".asFormula)
+      TactixLibrary.hideL(Find.FindLDef("f()=g()".asFormula, PosInExpr.HereP, defs))
   }
 
   it should "elaborate variables to functions per declarations" in {
@@ -937,19 +954,19 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "expand definitions when parsing locators only when asked to" in {
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, Declaration(Map()))) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
+      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindLPlain("s=safeDist()".asFormula)
     }
 
-    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-        Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))))) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
+    val defs = "safeDist() ~> y".asDeclaration
+    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, defs)) {
+      case apt: AppliedPositionTactic => apt.locator shouldBe
+        Find.FindLDef("s=safeDist()".asFormula, PosInExpr.HereP, defs)
     }
 
-    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
-      Declaration(Map(Name("safeDist", None) -> Signature(None, Real, None, Some("y".asTerm), null))), expandAll = true)) {
+    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, defs, expandAll = true)) {
       case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
         substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
-        apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
+        apt.locator shouldBe Find.FindLDef("s=y".asFormula, PosInExpr.HereP, defs)
     }
   }
 

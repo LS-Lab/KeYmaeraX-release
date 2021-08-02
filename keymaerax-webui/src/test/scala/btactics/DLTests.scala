@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DbProofTree
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -297,8 +297,11 @@ class DLTests extends TacticTestBase {
   }
 
   it should "give advice on program constant postcondition" in withTactics {
-    the [BelleUserCorrectableException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
-      DLBySubst.assignEquality(1)) should have message "Assignment not possible because postcondition [ode;]x>=0 contains unexpanded symbols ode;. Please expand first."
+    the [IllFormedTacticApplicationException] thrownBy proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent,
+      DLBySubst.assignEquality(1)) should have message "Unknown symbol ode;: neither file definitions nor proof definitions provide information how to expand"
+    proveBy("x=0 ==> [x:=x+1;][ode;]x>=0".asSequent, DLBySubst.assignEquality(1), Declaration(Map(
+      Name("ode", None) -> Signature(None, Trafo, None, Some("{{x'=1}}^@".asProgram), UnknownLocation)
+    ))).subgoals.loneElement shouldBe "x_0=0, x=x_0+1 ==> [{{x'=1}}^@]x>=0".asSequent
   }
 
   it should "assign with antecedent context present" in withTactics {
@@ -316,6 +319,14 @@ class DLTests extends TacticTestBase {
     proveBy("[x:=y;]x'=x ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y ==>".asSequent
     proveBy("[x:=y;]x'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x'=y, x=2 ==>".asSequent
     proveBy("[x:=y;](f(x))'=x, x=2 ==> ".asSequent, assignb(-1)).subgoals.loneElement shouldBe "x_0=2, (f(x))'=y ==>".asSequent
+  }
+
+  it should "assign differential symbols" in withTactics {
+    proveBy("==> [x':=y;]x'=y".asSequent, DLBySubst.assignEquality(1)).subgoals.loneElement shouldBe "x'=y ==> x'=y".asSequent
+  }
+
+  it should "FEATURE_REQUEST: rename when assigning differential symbols" taggedAs TodoTest in withTactics {
+    proveBy("x'=4 ==> [x':=y;]x'=y".asSequent, DLBySubst.assignEquality(1)).subgoals.loneElement shouldBe "x_0'=4, x'=y ==> x'=y".asSequent
   }
 
   "generalize" should "introduce intermediate condition" in withTactics {
@@ -396,27 +407,43 @@ class DLTests extends TacticTestBase {
   }
 
   it should "keep constants around" in withTactics {
-    val result = proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, loop("x>1".asFormula)(1))
+    proveBy("x>2, y>0 ==> [{x:=x+y;}*]x>0".asSequent, loop("x>1".asFormula)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x>2, y>0 ==> x>1".asSequent,
+      /* use case */ "x>1, y>0 ==> x>0".asSequent,
+      /* step */     "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+    )
+  }
 
-    result.subgoals should have size 3
-    // init
-    result.subgoals(0) shouldBe "x>2, y>0 ==> x>1".asSequent
-    // use case
-    result.subgoals(1) shouldBe "x>1, y>0 ==> x>0".asSequent
-    // step
-    result.subgoals(2) shouldBe "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+  it should "FEATURE_REQUEST: keep constants around when definitions are not expanded" taggedAs TodoTest in withTactics {
+    val defs = Declaration(Map(
+      Name("initial") -> Signature(Some(Tuple(Real, Real)), Bool, Some(List(Name("x")->Real, Name("y")->Real)), Some("x>2 & y>0".asFormula), UnknownLocation),
+      Name("post") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>0".asFormula), UnknownLocation),
+      Name("loopinv") -> Signature(Some(Real), Bool, Some(List(Name("x")->Real)), Some("x>1".asFormula), UnknownLocation),
+      Name("a") -> Signature(Some(Unit), Trafo, None, Some("x:=x+y;".asProgram), UnknownLocation)
+    ))
+    val result = proveBy("initial(x,y) ==> [{a{|^@|};}*]post(x)".asSequent, loop("loopinv(x)".asFormula)(1), defs)
+    // sequential interpreter does not yet support keeping abbreviations when combining provables in branchtactic
+    result.subgoals should contain theSameElementsInOrderAs List(
+      /* init */     "x>2&y>0 ==> x>1".asSequent,
+      /* use case */ "x>1, y>0 ==> x>0".asSequent,
+      /* step */     "x>1, y>0 ==> [x:=x+y;]x>1".asSequent
+    )
+    // want instead
+    result.subgoals should contain theSameElementsInOrderAs List(
+      /* init */     "initial(x,y) ==> loopinv(x)".asSequent,
+      /* use case */ "loopinv(x), y>0 ==> post(x)".asSequent,
+      /* step */     "loopinv(x), y>0 ==> [a{|^@|};]loopinv(x)".asSequent
+    )
   }
 
   it should "wipe all formulas mentioning bound variables from the context" in withTactics {
-    val result = proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1))
-
-    result.subgoals should have size 3
-    // init
-    result.subgoals(0) shouldBe "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent
-    // use case
-    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent
-    // step
-    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
+    proveBy("x>0, y>1, z>7 ==> [{x:=2;}*]x>2, x<3, y<4".asSequent, loop("x*y>5".asFormula)(1)).subgoals should
+      contain theSameElementsInOrderAs List(
+      /* init */     "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent,
+      /* use case */ "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent,
+      /* step */     "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
+    )
   }
 
   it should "do the same with a slightly more complicated formula" in withTactics {
@@ -631,10 +658,10 @@ class DLTests extends TacticTestBase {
     val tactic = implyR('R) & loop("x>0".asFormula)('R)
 
     val proofId = db.createProof(model)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
 
-    val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
+    val BelleProvable(result, _, _) = interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3
     val finalTree = DbProofTree(db.db, proofId.toString).load()
     finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals

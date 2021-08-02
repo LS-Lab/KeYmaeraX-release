@@ -98,16 +98,16 @@ object DerivationInfo {
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info/
   def registerR[T, R <: DerivationInfo](value: => T, p: R): R = {
     // Note: We don't require DerivationInfo initialization to be "in progress" for registerR because it used for axioms rather than tactics.
-    if (!_allInfo.contains(p.codeName))
-      addInfo(p)
+    if (!_allInfo.contains(p.codeName)) addInfo(p)
+    else if (_allInfo(p.codeName) != p) throw new IllegalArgumentException("Duplicate name registration attempt: axiom " + p.codeName + " already registered as " + _allInfo(p.codeName) + " of " + _allInfo(p.codeName).getClass.getSimpleName)
     val _ = value
     p
   }
 
   def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
     requireInitInProgress(p)
-    if (!_allInfo.contains(p.codeName))
-      addInfo(p)
+    if (!_allInfo.contains(p.codeName)) addInfo(p)
+    else if (_allInfo(p.codeName) != p) throw new IllegalArgumentException("Duplicate name registration attempt: tactic " + p.codeName + " already registered as " + _allInfo(p.codeName) + " of " + _allInfo(p.codeName).getClass.getSimpleName)
     val _ = value
     value
   }
@@ -347,7 +347,7 @@ class BuiltinInfo(  override val codeName: String
 }
 
 /** Meta-information on a tactic performing a proof step (or more) */
-class TacticInfo(  override val codeName: String
+abstract class TacticInfo(  override val codeName: String
                  , override val longDisplayName: String
                  , override val display: DisplayInfo
                  , val theExpr: Unit => Any
@@ -356,36 +356,45 @@ class TacticInfo(  override val codeName: String
                  , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  val canonicalName = codeName
+  val canonicalName: String = codeName
+}
+
+case class PlainTacticInfo(override val codeName: String, override val longDisplayName: String,
+                           override val display: DisplayInfo,
+                           override val displayLevel: Symbol = 'internal,
+                           override val needsGenerator: Boolean = false,
+                           override val revealInternalSteps: Boolean = false)(override val theExpr: Unit => Any)
+  extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
+
 }
 
 case class PositionTacticInfo(override val codeName: String, override val longDisplayName: String,
-                              override val display: DisplayInfo, override val theExpr: Unit => Any,
+                              override val display: DisplayInfo,
                               override val displayLevel: Symbol = 'internal,
                               override val needsGenerator: Boolean = false,
-                              override val revealInternalSteps: Boolean = false)
+                              override val revealInternalSteps: Boolean = false)(override val theExpr: Unit => Any)
   extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val theExpr: Unit => Any, override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
+case class TwoPositionTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)(override val theExpr: Unit => Any)
   extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _],
-                           override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
+case class InputTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo],
+                           override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)(override val theExpr: Unit => TypedFunc[_, _])
   extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps)
 
 case class InputPositionTacticInfo(override val codeName: String, override val longDisplayName: String, override val display: DisplayInfo,
-                                   override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_,_],
-                                   override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
+                                   override val inputs:List[ArgInfo],
+                                   override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)(override val theExpr: Unit => TypedFunc[_,_])
   extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
 case class InputTwoPositionTacticInfo(override val codeName: String, override val longDisplayName: String
-                                      , override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)
+                                      , override val display: DisplayInfo, override val inputs:List[ArgInfo], override val displayLevel: Symbol = 'internal, override val needsGenerator: Boolean = false)(override val theExpr: Unit => TypedFunc[_, _])
   extends TacticInfo(codeName, longDisplayName, display, theExpr, displayLevel, needsGenerator) {
   override val numPositionArgs = 2
 }

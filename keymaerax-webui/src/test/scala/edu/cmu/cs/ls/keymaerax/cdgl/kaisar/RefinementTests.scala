@@ -43,7 +43,7 @@ class RefinementTests extends TacticTestBase {
   val switchLiterals: RefinementTestCase = RefinementTestCase("switch statement", SharedModels.switchLiterals, SharedModels.switchLiteralsProgram)
   val annotatedAssign: RefinementTestCase = RefinementTestCase("annotated assignment", SharedModels.annotatedAssign, SharedModels.annotatedAssignProgram)
   val annotatedAssignGame: RefinementTestCase = RefinementTestCase("annotated assignment game", SharedModels.annotatedAssign, SharedModels.annotatedAssignGame)
-  val noteAnd: RefinementTestCase = RefinementTestCase("note example", SharedModels.noteAnd, SharedModels.noteAndProgram)
+  val noteAnd: RefinementTestCase = RefinementTestCase("note example", SharedModels.noteAndFull, SharedModels.noteAndProgram)
   val basicForNoConv: RefinementTestCase = RefinementTestCase("for loop no-conv", SharedModels.basicForNoConv, SharedModels.basicForNoConvProg)
   val pldiModelSafeSimpleLets: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeSimple, SharedModels.pldiModelSafeSimpleProgram)
   val pldiModelSafeFull: RefinementTestCase = RefinementTestCase("simple lets", SharedModels.pldiModelSafeFull, SharedModels.pldiModelSafeFullProgram)

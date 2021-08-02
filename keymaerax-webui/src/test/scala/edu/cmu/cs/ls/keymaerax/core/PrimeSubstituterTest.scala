@@ -37,7 +37,7 @@ class PrimeSubstituterTest extends TacticTestBase {
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<9".asFormula) ::
         Nil))} should have message
       """Substitution clash:
-        |USubstOne{(c()~>2), (q(•)~>x_'>=5), (p(||)~>x < 9)}
+        |USubstOne{(c()~>2), (q(.)~>x_'>=5), (p(||)~>x < 9)}
         |is not ({x_,x_'})-admissible
         |for x_'>=5
         |when substituting in q(x_)
@@ -47,7 +47,7 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   //@author Andre Platzer
-  it should "not put primes into DS's postcondition" in {
+  it should "not put primes into DS's postcondition" in withTactics {
     // [{x_'=c_()}]p_(x_) <-> \forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))
     val pr = AxiomInfo("DS differential equation solution").provable
 
@@ -57,7 +57,7 @@ class PrimeSubstituterTest extends TacticTestBase {
         SubstitutionPair(PredOf(Function("p_",None,Real,Bool),DotTerm()), Equal(DifferentialSymbol(x_),Number(5))) ::
         Nil))} should have message
       """Substitution clash:
-        |USubstOne{(c_()~>2), (p_(•)~>x_'=5)}
+        |USubstOne{(c_()~>2), (p_(.)~>x_'=5)}
         |is not ({x_,x_'})-admissible
         |for x_'=5
         |when substituting in p_(x_)

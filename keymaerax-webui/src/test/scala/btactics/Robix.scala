@@ -103,69 +103,26 @@ class Robix extends TacticTestBase {
   it should "synthesize a controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs_curvestraight_curvature_brakingonly.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
-      Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, List(Variable("x"),
+      Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w")), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
     foResult.subgoals.loneElement shouldBe "==> v>=0&xpost=x&ypost=y&vpost=v&apost=-B()&dxpost=dx&dypost=dy&wpost=w".asSequent
   }
 
   it should "synthesize a controller monitor for IJRR static safety" in withMathematica { tool =>
-    val entry = ArchiveParser.getEntry("Theorem 1: Static safety", io.Source.fromInputStream(
+    val entry = ArchiveParser.getEntry("IJRR17/Theorem 1: Static safety", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString).get
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
-      ("x" :: "y" :: "v" :: "a" :: "dx" :: "dy" :: "w" :: "xo" :: "yo" :: "r" :: "t" :: Nil).map(Variable(_)):_*)
+      List("x","y","v","a","dx","dy","w","xo","yo","r","t").map(Variable(_)), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
 
     foResult.subgoals.loneElement shouldBe "==> (0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=w&xopost=xo&yopost=yo&rpost=r&tpost=0|v=0&0<=ep()&xpost=x&ypost=y&vpost=0&apost=0&dxpost=dx&dypost=dy&wpost=0&xopost=xo&yopost=yo&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yopost)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v))&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&tpost=0".asSequent
-  }
-
-  "Passive Safety" should "be provable" in withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
-
-    val invariant = """v >= 0
-                      | & dx^2+dy^2 = 1
-                      | & r != 0
-                      | & (v = 0 | abs(x-xo) > v^2 / (2*B()) + V()*(v/B())
-                      |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
-
-    def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula ::
-      "dx^2 + dy^2 = 1".asFormula ::
-      s"v = old(v) + $a*t".asFormula ::
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
-
-    val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
-
-    def accArithTactic: BelleExpr = SaturateTactic(alphaRule) & printIndexed("Before replaceTransform") &
-      //@todo auto-transform and hide
-      replaceTransform("ep()".asTerm, "t".asTerm)('Llike, "abs(x-xo)>v^2/(2*B()) + V()*v/B() + (A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))".asFormula) &
-      ("-B()<=a" :: "ep()>0" :: "r!=0" :: "r_0!=0" :: "dx^2+dy^2=1" :: "t<=ep()" :: Nil).
-        map(_.asFormula).map(hideL('L, _)).reduce[BelleExpr](_ & _) &
-      speculativeQE & print("Proved acc arithmetic")
-
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop(invariant)('R) <(
-      /* base case */ print("Base case...") & speculativeQE & print("Base case done"),
-      /* use case */ print("Use case...") & speculativeQE & print("Use case done"),
-      /* induction step */ print("Induction step") & unfoldProgramNormalize & printIndexed("After normalize") <(
-        print("Braking branch") & di("-B()")(1) & dw & prop & onAll(speculativeQE) & print("Braking branch done"),
-        print("Stopped branch") & di("0")(1) & dw & prop & onAll(speculativeQE) & print("Stopped branch done"),
-        print("Acceleration branch") & hideL('L, "v=0|abs(x-xo_0)>v^2/(2*B())+V()*(v/B())|abs(y-yo_0)>v^2/(2*B())+V()*(v/B())".asFormula) &
-          di("a")(1) & dw & prop & onAll(hideFactsAbout("dxo", "dyo")) <(
-            hideFactsAbout("y", "yo") & DebuggingTactics.print("Acc X arithmetic") & accArithTactic,
-            hideFactsAbout("x", "xo") & DebuggingTactics.print("Acc Y arithmetic") & accArithTactic
-          ) & print("Acceleration branch done")
-        ) & print("Induction step done")
-      ) & print("Proof done")
-    proveBy(s, tactic) shouldBe 'proved
   }
 
   // todo: robix proof with let inv=bla in ...

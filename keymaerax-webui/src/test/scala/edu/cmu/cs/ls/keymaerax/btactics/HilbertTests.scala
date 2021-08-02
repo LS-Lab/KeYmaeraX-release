@@ -31,7 +31,7 @@ import org.scalatest.LoneElement._
 @UsualTest
 @CheckinTest
 class HilbertTests extends TacticTestBase {
-  import HilbertCalculus.Derive._
+  import Derive._
 
   object TestLib extends UnifyUSCalculus
 
@@ -116,7 +116,7 @@ class HilbertTests extends TacticTestBase {
 
   it should "derive (x^2)' >= 7 without crashing" in withMathematica{ _ =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
-      stepAt(1, 0::Nil)
+      HilbertCalculus.stepAt(1, 0::Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
   }
 
@@ -248,6 +248,14 @@ class HilbertTests extends TacticTestBase {
     proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe 'proved
   }
 
+  it should "step fallback assignb/d only when index is defined" in withMathematica { _ =>
+    //@note AxIndex.axiomsFor hands out substitution assignment axioms, which fail on some assignments and assignb fallback workaround recovers
+    proveBy("x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent, step(1)).subgoals.loneElement shouldBe "x_0>=0, x=x_0+1 ==> [{x'=-x}]x>0".asSequent
+    proveBy("x>=0 ==> <x:=x+1;>[{x'=-x}]x>0".asSequent, step(1)).subgoals.loneElement shouldBe "x_0>=0, x=x_0+1 ==> [{x'=-x}]x>0".asSequent
+    //@note prop triggers same "no axioms applicable" error as above, but for different reasons, so shouldn't fallback to assignb
+    proveBy("x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent, prop).subgoals.loneElement shouldBe "x>=0 ==> [x:=x+1;][{x'=-x}]x>0".asSequent
+  }
+
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in withTactics {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, useAt(Ax.composeb)(1)).subgoals should contain only
       Sequent(IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
@@ -304,7 +312,7 @@ class HilbertTests extends TacticTestBase {
   it should "use Barcan" in withTactics {
     proveBy("[x:=2;]\\forall y y<=x".asFormula, useAt(Ax.barcan)(1)).subgoals.loneElement shouldBe "==> \\forall y [x:=2;]y<=x".asSequent
     the [IllFormedTacticApplicationException] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
-      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{^@|x_|};~>x_:=2;)"
+      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{|^@x_|};~>x_:=2;)"
   }
 
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {

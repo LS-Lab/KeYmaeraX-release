@@ -6,16 +6,16 @@ Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we i
 KeYmaera X features a minimal core of just about 2000 lines of code that isolates all soundness-critical reasoning. Such a small and simple prover core makes it much easier to trust verification results. Pre-defined and custom tactics built on top of the core drive automated proof search. KeYmaera X comes with a web-based front-end that provides a clean interface for both interactive and automated proving, highlighting the most crucial parts of a verification activity. Besides hybrid systems, KeYmaera X also supports the verification of _hybrid games_ in _differential game logic_.
 
 **More information** and precompiled binaries are available at:
-  http://keymaeraX.org/
+  https://keymaeraX.org/
 
-* [KeYmaera X Tutorial](http://keymaeraX.org/Xtutorial.html)
+* [KeYmaera X Tutorial](https://keymaeraX.org/Xtutorial.html)
 * [KeYmaera X Releases](https://github.com/LS-Lab/KeYmaeraX-release/releases)
 * [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/) textbook
 
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
-[keymaerax.jar](http://keymaeraX.org/keymaerax.jar) and start from command line:
+[keymaerax.jar](https://keymaeraX.org/keymaerax.jar) and start from command line:
 
     java -jar keymaerax.jar
 
@@ -32,7 +32,7 @@ For this to succeed, ensure that the following software is installed:
   - [Z3 Solver](http://www.wolfram.com/engine)
     comes built-in without installation but still provides less functionality.
 
-See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
+See [more details on installation, usage, FAQ](https://keymaeraX.org/download.html)
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica and some features are only available when using Mathematica.
@@ -73,7 +73,7 @@ or the following to build the KeYmaera X core `keymaerax-core.jar` without UI:
 
     sbt "project core" clean assembly
 
-[ScalaDoc API documentation for KeYmaera X](http://keymaeraX.org/scaladoc) can be generated locally with:
+[ScalaDoc API documentation for KeYmaera X](https://keymaeraX.org/scaladoc) can be generated locally with:
 
     sbt unidoc
 

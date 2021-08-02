@@ -581,7 +581,7 @@ object SimplifierV3 {
   private lazy val andSplit : DependentTactic = anon {(sequent: Sequent) => {
       val anteLen = sequent.ante.length
       assert(anteLen > 0)
-      val finder = new Find(0, None, AntePosition(anteLen))
+      val finder = Find.FindLAfter(None, AntePosition(anteLen))
       SaturateTactic(andL(finder))
     }
   }
@@ -868,10 +868,10 @@ object SimplifierV3 {
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
     ctx.collectFirst(
       {
-        case Equal(tt, n: Number) if tt.equals(t) =>
+        case Equal(tt, n: Number) if !tt.isInstanceOf[Number] && tt == t =>
           impReflexive(
             USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t, n: Number)) :: Nil))
-        case Equal(n: Number, tt) if tt.equals(t) =>
+        case Equal(n: Number, tt) if !tt.isInstanceOf[Number] && tt == t =>
           eqSymmetricImp(
             USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
               SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
@@ -1275,5 +1275,7 @@ object SimplifierV3 {
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
   val semiAlgNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex, checkTerms= false)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
+  val maxMinGeqNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex, checkTerms= false)(_)
   val maxMinGtNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex)(_)
+  val maxMinGtNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex, checkTerms= false)(_)
 }

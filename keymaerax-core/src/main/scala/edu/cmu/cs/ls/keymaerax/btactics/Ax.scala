@@ -298,7 +298,7 @@ object Ax extends Logging {
       case _ => Set.empty
     }
 
-    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
+    val failures = mutable.Buffer.empty[(String,Throwable)]
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
@@ -355,6 +355,11 @@ object Ax extends Logging {
   @Axiom("[:=]", conclusion = "__[x':=c]p(x')__↔p(c)",
     key = "0", recursor = "*", unifier = "full")
   val Dassignb: CoreAxiomInfo = coreAxiom("[':=] differential assign")
+  @Axiom("[:=]=", conclusion = "__[x':=e]P__↔∀x'(x'=e→P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*", unifier = "surjlinearpretend")
+  val Dassignbeq: CoreAxiomInfo = coreAxiom("[':=] assign equality")
+  @Axiom("[':=]", conclusion = "__[x':=x']P__↔P")
+  val Dselfassignb: CoreAxiomInfo = coreAxiom("[':=] self assign")
   @Axiom("[:*]", conclusion = "__[x:=*]P__↔∀x P", displayLevel = "all",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val randomb: CoreAxiomInfo = coreAxiom("[:*] assign nondet")
@@ -418,6 +423,8 @@ object Ax extends Logging {
   @Axiom("DX",
     key = "0", recursor = "1", unifier = "surjlinear")
   val DX: CoreAxiomInfo = coreAxiom("DX differential skip")
+  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", unifier = "linear")
+  val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
   @Axiom("DIo >", unifier = "linear", conclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
@@ -453,7 +460,7 @@ object Ax extends Logging {
   val Dconst: CoreAxiomInfo = coreAxiom("c()' derive constant fn")
   @Axiom("x'", conclusion = "__(x)'__=x'", unifier = "linear",
     key = "0", recursor = "")
-  val Dvar: CoreAxiomInfo = coreAxiom("x' derive var")
+  val DvarAxiom: CoreAxiomInfo = coreAxiom("x' derive var")
   @Axiom("-'", conclusion = "__(-f(x))'__=-(f(x))'",
     key = "0", recursor = "0", unifier = "surjlinear")
   val Dneg: CoreAxiomInfo = coreAxiom("-' derive neg")
@@ -532,10 +539,16 @@ object Ax extends Logging {
   @Axiom(("∀d", "alld"), conclusion = "__¬∃x ¬P__ ↔ ∀x P", displayLevel = "all",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alld: CoreAxiomInfo = coreAxiom("all dual")
+  @Axiom(("∀'d", "allPd"), conclusion = "__¬∃x' ¬P__ ↔ ∀x' P", displayLevel = "all",
+    key = "0", recursor = "*", unifier = "surjlinear")
+  val allPd: CoreAxiomInfo = coreAxiom("all prime dual")
   /** all eliminate */
   @Axiom(("∀e", "alle"), conclusion = "__∀x P__ → P",
     key = "0", recursor = "*", unifier = "surjlinear")
   val alle: CoreAxiomInfo = coreAxiom("all eliminate")
+  @Axiom(("∀e'", "allep"), conclusion = "__∀x' P__ → P",
+    key = "0", recursor = "*", unifier = "surjlinear")
+  val alleprime: CoreAxiomInfo = coreAxiom("all eliminate prime")
 
 
   //***************
@@ -708,7 +721,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt(randomb, PosInExpr(1::Nil))(1) &
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
-        byUS(monb) & hide(-1)
+        byUS(monbaxiom) & hide(-1)
         ,
         hide(1) & HilbertCalculus.boxTrue(1)
         )
@@ -721,7 +734,7 @@ object Ax extends Logging {
     * End.
     */
   @ProofRule("M∀",  premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
-  lazy val monall: DerivedRuleInfo = derivedRuleSequent("all monotone",
+  lazy val monallrule: DerivedRuleInfo = derivedRuleSequent("all monotone",
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
     implyRi()(-1,1) &
       useAt(allDistElim)(1) &
@@ -746,7 +759,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
       // use
-      byUS(monb) & hide(-1)
+      byUS(monbaxiom) & hide(-1)
       ,
       // show
       hide(1) & HilbertCalculus.boxTrue(1)
@@ -795,6 +808,27 @@ object Ax extends Logging {
     //    \forall x (x=f -> p(x)) -> p(f)
     //   -------------------------------- CMon(p(x) -> (x=f->p(x)))
     //   \forall x p(x) -> p(f)
+  )
+
+  @Axiom(("∀inst'","allInstPrime"), conclusion = "__∀x' p(x')__ → p(f())", key = "0", recursor = "*")
+  lazy val allInstPrime: DerivedAxiomInfo = derivedFormula("all instantiate prime",
+    "(\\forall x_' p(x_')) -> p(f())".asFormula,
+    cutR("(\\forall x_' (x_'=f()->p(x_'))) -> p(f())".asFormula)(1) <(
+      useAt(Dassignbeq, PosInExpr(1::Nil))(1, 0::Nil) &
+        useAt(Dassignb)(1, 0::Nil) &
+        implyR(1) & close(-1,1)
+      ,
+      CMon(PosInExpr(0::0::Nil)) &
+        implyR(1) & implyR(1) & close(-1,1)
+    )
+    //      ------------refl
+    //      p(f) -> p(f)
+    //      ------------------ [':=]
+    //    [x':=f]p(x') -> p(f)
+    //   --------------------------------[':=]=
+    //    \forall x' (x'=f -> p(x')) -> p(f)
+    //   -------------------------------- CMon(p(x') -> (x'=f->p(x')))
+    //   \forall x' p(x') -> p(f)
   )
 
   /**
@@ -907,7 +941,7 @@ object Ax extends Logging {
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
   @ProofRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
-  lazy val monb: DerivedRuleInfo = derivedRuleSequent("[] monotone",
+  lazy val monbaxiom: DerivedRuleInfo = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
@@ -1141,6 +1175,15 @@ object Ax extends Logging {
       byUS(equivReflexive)
   )
 
+  @Axiom(("∃'d","existsprimed"), key = "0", recursor = "*")
+  lazy val existsPDual: DerivedAxiomInfo = derivedAxiom("exists prime dual",
+    Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_' (!p_(||))) <-> \\exists x_' p_(||)".asFormula)),
+    useAt(allPd, PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegation)(1, 0::Nil) &
+      useAt(doubleNegation)(1, 0::0::Nil) &
+      byUS(equivReflexive)
+  )
+
   @Axiom(("∃d","existsdy"), displayLevel = "internal")
   lazy val existsDualy: DerivedAxiomInfo = derivedAxiom("exists dual y",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
@@ -1346,11 +1389,11 @@ object Ax extends Logging {
       useAt(diamond, PosInExpr(1::Nil))(1, 0::1::Nil) &
         useAt(diamond, PosInExpr(1::Nil))(1, 1::Nil) &
         cut("[a_{|^@|};]p_(||) & [a_{|^@|};]!(p_(||)&q_(||)) -> [a_{|^@|};]!q_(||)".asFormula) <(
-          /* use */ prop,
+          /* use */ SaturateTactic(alphaRule) & andLi(AntePos(1), AntePos(2)) & modusPonens(AntePos(1), AntePos(0)) & id,
           /* show */ hideR(1) &
           cut("[a_{|^@|};](p_(||) & !(p_(||)&q_(||)))".asFormula) <(
-            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & prop,
-            /* show */ implyR(1) & TactixLibrary.boxAnd(1) & prop
+            /* use */ implyR(1) & hideL(-2) & /* monb fails renaming substitution */ implyRi & CMon(PosInExpr(1::Nil)) & propClose,
+            /* show */ implyR(1) & TactixLibrary.boxAnd(1) & propClose
             )
           )
     )
@@ -1581,7 +1624,7 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "boxSplitRight".
-    *    [a;](p(||)&q(||)) -> q(||)
+    *    [a;](p(||)&q(||)) -> [a;]q(||)
     * End.
     * }}}
     *
@@ -1620,6 +1663,14 @@ object Ax extends Logging {
     //      byUS(equivReflexiveAxiom)
   )
 
+  @Axiom("':=D")
+  lazy val DassignDual2: DerivedAxiomInfo = derivedFormula("':= assign dual 2",
+    "<x_':=f();>p(||) <-> [x_':=f();]p(||)".asFormula,
+    useAt(Dselfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &
+      useAt(DassigndAxiom)(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
   /**
     * {{{Axiom "<:=> assign equality".
     *    <x:=f();>p(||) <-> \exists x (x=f() & p(||))
@@ -1641,6 +1692,18 @@ object Ax extends Logging {
       byUS(assignbeq)
   )
 
+  @Axiom("<':=>", conclusion = "__<x':=e>P__↔∃x'(x'=e∧P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*")
+  lazy val DassigndEqualityAxiom: DerivedAxiomInfo = derivedAxiom("<':=> assign equality",
+    Sequent(IndexedSeq(), IndexedSeq("<x_':=f_();>p_(||) <-> \\exists x_' (x_'=f_() & p_(||))".asFormula)),
+    useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(existsPDual, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(notAnd)(1, 1::0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      CE(PosInExpr(0::Nil)) &
+      byUS(Dassignbeq)
+  )
+
   /**
     * {{{Axiom "[:=] assign equality exists".
     *   [x:=f();]p(||) <-> \exists x (x=f() & p(||))
@@ -1659,6 +1722,12 @@ object Ax extends Logging {
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
     //        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
+
+  @Axiom(("[':=]", "[':=] assign exists"))
+  lazy val Dassignbequalityexists: DerivedAxiomInfo = derivedFormula("[':=] assign equality exists",
+    "[x_':=f();]p(||) <-> \\exists x_' (x_'=f() & p(||))".asFormula,
+    useAt(DassignDual2, PosInExpr(1::Nil))(1, 0::Nil) & byUS(DassigndEqualityAxiom)
   )
 
   /**
@@ -1753,6 +1822,16 @@ object Ax extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(assignbAxiom)(1, 0::0::Nil) &
+      useAt(doubleNegation)(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
+  @Axiom("<':=>", conclusion ="__&langle;x':=e&rangle;p(x')__↔p(e)",
+    key = "0", recursor = "*", unifier = "full")
+  lazy val DassigndAxiom: DerivedAxiomInfo = derivedAxiom("<':=> assign",
+    Sequent(IndexedSeq(), IndexedSeq("<x_':=f();>p(x_') <-> p(f())".asFormula)),
+    useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(Dassignb)(1, 0::0::Nil) &
       useAt(doubleNegation)(1, 0::Nil) &
       byUS(equivReflexive)
   )
@@ -1990,7 +2069,7 @@ object Ax extends Logging {
       useAt(choiceb)(1, 0::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
-      prop
+      equivR(1) & OnAll(SaturateTactic(alphaRule)) <(andLi() & id, orL(-1) & OnAll(notL(-1) & id))
   )
 
   /**
@@ -2191,7 +2270,7 @@ object Ax extends Logging {
     andL(-1) & useAt(IIinduction, PosInExpr(1::1::Nil))(1) <(
       close(-1,1)
       ,
-      hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+      hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
       )
   )
 
@@ -2238,7 +2317,7 @@ object Ax extends Logging {
       andR(1) <(
         HilbertCalculus.iterateb(-1) & andL(-1) & close(-1,1)
         ,
-        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monb) & implyR(1) & close(-1,1)
+        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(monbaxiom) & implyR(1) & close(-1,1)
         ),
       useAt(IIinduction, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
       )
@@ -2958,7 +3037,7 @@ object Ax extends Logging {
       useAt(flipLess)(1, 1::0::1::Nil) &
         useAt(flipLess)(1, 1::1::1::Nil) &
         useAt(flipLess)(1, 0::1::1::0::Nil) &
-        HilbertCalculus.Derive.Dless(1, 0::1::1::1::Nil) &
+        Derive.Dless(1, 0::1::1::1::Nil) &
         useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
         useExpansionAt(Dgreater)(1, 0::1::1::1::Nil) &
         byUS(DIogreater)
@@ -3225,7 +3304,7 @@ object Ax extends Logging {
     */
   @Axiom("DCd", conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
     key = "1.0", recursor = "*")
-  lazy val DCd: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
+  lazy val DCdaxiom: DerivedAxiomInfo = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt(diamond, PosInExpr(1::Nil))(1, 1::1::Nil) &
@@ -3295,14 +3374,14 @@ object Ax extends Logging {
         useAt(box, PosInExpr(1::Nil))(1,0::Nil) &
         useAt(box, PosInExpr(1::Nil))(1,1::Nil) &
         useAt(notGreater)(1,0::0::1::Nil) &
-        prop & Idioms.<(
-        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) & Idioms.<(
-          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) & Idioms.<(id, useAt(greaterEqual)(1, 0::1::Nil) & prop & done),
+        equivR(1) & OnAll(SaturateTactic(alphaRule)) <(
+          useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) <(
+          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & SaturateTactic(alphaRule) &
+          HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) <(id, useAt(greaterEqual)(1, 0::1::Nil) & propClose),
           id),
-        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) & Idioms.<(
-          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            generalize("!!p_(|t_|)>0".asFormula)(1) & Idioms.<(id, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & id),
+          useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) <(
+          useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & SaturateTactic(alphaRule) &
+            generalize("!!p_(|t_|)>0".asFormula)(1) <(id, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & id),
           id)
       )
     )
@@ -3341,9 +3420,7 @@ object Ax extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
-      //@todo IDE why is the second argument necessary? It should be redundant?
-      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3356,7 +3433,7 @@ object Ax extends Logging {
           ProofRuleTactics.skolemizeR(1) & implyR(1),
           //3) finish up
           cohide(1) & CMon(PosInExpr(Nil)) &
-          byUS(existsGeneralizey,(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+          byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
@@ -3396,9 +3473,7 @@ object Ax extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        //@todo IDE why is the second argument not redundant and both lines equivalent?
-        //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
-        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3411,7 +3486,7 @@ object Ax extends Logging {
               ProofRuleTactics.skolemizeR(1) & implyR(1),
             //3) finish up
             cohide(1) & CMon(PosInExpr(Nil)) &
-              byUS(existsGeneralizey,(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+              byUS(existsGeneralizey,(_: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
           ,
           cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfassignby) & done
@@ -3579,7 +3654,7 @@ object Ax extends Logging {
   lazy val DvariableCommutedAxiom: DerivedAxiomInfo = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
     useAt(equalCommute)(1) &
-      byUS(Dvar)
+      byUS(DvarAxiom)
   )
 
   /**
@@ -4716,9 +4791,15 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("all stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("all stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val allStutter: DerivedAxiomInfo = derivedAxiom("all stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) <-> \\forall x_ p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  @Axiom("all stutter'", key = "0", recursor = "", displayLevel = "internal")
+  lazy val allStutterPrime: DerivedAxiomInfo = derivedAxiom("all stutter prime",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_' p_(||) <-> \\forall x_' p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 
@@ -4731,9 +4812,90 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("exists stutter", key = "0", recursor = "", displayLevel = "internal")
+  @Axiom("exists stutter", key = "0", recursor = "0", displayLevel = "internal")
   lazy val existsStutter: DerivedAxiomInfo = derivedAxiom("exists stutter",
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(||) <-> \\exists x_ p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  @Axiom("exists stutter'", key = "0", recursor = "", displayLevel = "internal")
+  lazy val existsStutterPrime: DerivedAxiomInfo = derivedAxiom("exists stutter prime",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_' p_(||) <-> \\exists x_' p_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "and stutter".
+    *    P&Q <-> P&Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("and stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val andStutter: DerivedAxiomInfo = derivedAxiom("and stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) & q_(||) <-> p_(||) & q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "or stutter".
+    *    P|Q <-> P|Q
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("or stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val orStutter: DerivedAxiomInfo = derivedAxiom("or stutter",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) | q_(||) <-> p_(||) | q_(||)".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "imply stutter".
+    *    (P->Q) <-> (P->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("imply stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val implyStutter: DerivedAxiomInfo = derivedAxiom("imply stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) -> q_(||)) <-> (p_(||) -> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "equiv stutter".
+    *    (P<->Q) <-> (P<->Q)
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("equiv stutter", key = "0", recursor = "0;1", displayLevel = "internal")
+  lazy val equivStutter: DerivedAxiomInfo = derivedAxiom("equiv stutter",
+    Sequent(IndexedSeq(), IndexedSeq("(p_(||) <-> q_(||)) <-> (p_(||) <-> q_(||))".asFormula)),
+    byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "not stutter".
+    *    !P <-> !P
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  @Axiom("not stutter", key = "0", recursor = "0", displayLevel = "internal")
+  lazy val notStutter: DerivedAxiomInfo = derivedAxiom("not stutter",
+    Sequent(IndexedSeq(), IndexedSeq("!p_(||) <-> !p_(||)".asFormula)),
     byUS(equivReflexive)
   )
 

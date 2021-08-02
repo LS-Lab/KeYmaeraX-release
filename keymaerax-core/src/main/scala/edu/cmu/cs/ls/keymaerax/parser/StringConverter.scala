@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleLabel, BelleTopLevelLabel}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -45,6 +46,9 @@ class StringConverter(val s: String) {
   /** Converts to a formula. */
   def asFormula: Formula = Parser.parser.formulaParser(s)
 
+  /** Converts to a list of formulas (formulas comma-separated in input). */
+  def asFormulaList: List[Formula] = SequentParser.parseFormulaList(s)
+
   /** Converts to a program or game. */
   def asProgram: Program = Parser.parser.programParser(s)
 
@@ -59,6 +63,22 @@ class StringConverter(val s: String) {
 
   /** Converts to a substitution pair. */
   def asSubstitutionPair: SubstitutionPair = UnificationSubstitutionParser.parseSubstitutionPair(s)
+
+  /** Converts a stringified list of substitution pairs to a declaration object. */
+  def asDeclaration: Declaration = {
+    def toNameSignature(fn: Function, arg: Term, repl: Expression): (Name, Signature) = {
+      val args =
+        if (fn.domain == Unit) Nil
+        else FormulaTools.argumentList(arg).map({ case n: NamedSymbol => Name(n.name, n.index) -> n.sort })
+      Name(fn.name, fn.index) -> Signature(Some(fn.domain), fn.sort, Some(args), Some(repl), UnknownLocation)
+    }
+
+    Declaration(s.trim.stripSuffix("nil").trim.stripSuffix("::").split("::").
+        map(new StringConverter(_).asSubstitutionPair).map({
+      case SubstitutionPair(FuncOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
+      case SubstitutionPair(PredOf(fn: Function, arg), repl) => toNameSignature(fn, arg, repl)
+    }).toMap)
+  }
 
   /** Converts to proof state labels. */
   def asLabel: BelleLabel = BelleLabel.fromString(s) match {

@@ -6,7 +6,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
@@ -14,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, To
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests [[ToolTactics.fullQE]] and [[ToolTactics.partialQE]].
@@ -86,23 +88,23 @@ class QETests extends TacticTestBase {
     proveBy("x=2, x=2, true, x=2 ==> x>=2, x>=2, x+1>=3".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
-  it should "not have soundness bug with decimal representations " in withMathematica { _ =>
+  it should "not have soundness bug with decimal representations " in withMathematica { tool =>
 
     val pr = proveBy("false".asFormula,
-      cut("1-3 * 0.33333333333333 = 0".asFormula) <( QE,
-      cut("3 * 0.33333333333333 = 1 ".asFormula)  <( eqL2R(-1)(2) & QE,
-         QE)))
+      cut("1-3 * 0.33333333333333 = 0".asFormula) <( ToolTactics.fullQE(tool),
+      cut("3 * 0.33333333333333 = 1 ".asFormula)  <( eqL2R(-1)(2) & ToolTactics.fullQE(tool),
+        ToolTactics.fullQE(tool))))
 
     pr.isProved shouldBe false
     pr.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "not hide equalities about interpreted function symbols" in withMathematica { _ =>
-    proveBy("abs(x) = y -> x=y | x=-y".asFormula, QE) shouldBe 'proved
+  it should "not hide equalities about interpreted function symbols" in withMathematica { tool =>
+    proveBy("abs(x) = y -> x=y | x=-y".asFormula, ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
-  it should "rewrite equalities about uninterpreted function symbols" in withMathematica { _ =>
-    proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, QE) shouldBe 'proved
+  it should "rewrite equalities about uninterpreted function symbols" in withMathematica { tool =>
+    proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
   it should "abort on test timeout" in { the [TestFailedDueToTimeoutException] thrownBy withMathematica ({ _ =>
@@ -127,6 +129,35 @@ class QETests extends TacticTestBase {
       BelleParser("applyEqualities; toSingleFormula; universalClosure(\"nil\", 1); rcf")) shouldBe 'proved
   }
 
+  it should "abbreviate differential symbols and differentials" in withMathematica { tool =>
+    proveBy("x'>0 ==> x'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("==> (x')^2>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+    proveBy("(f(x))'>0 ==> (f(x))'>=0".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
+  it should "prove the STTT example 10 acceleration subgoal" in withMathematica { tool =>
+    val s = "A()>0, B()>=b(), b()>0, lw()>0, v_0>=0, abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*c^2+c*v_0) < lw(), -B()<=a, a<=A(), r!=0, w_0*r=v_0, v=v_0+a*c, -c*(v-a/2*c)<=y-y_0, y-y_0<=c*(v-a/2*c), c>=0, v>=0 ==> abs(y-ly())+v^2/(2*b()) < lw()".asSequent
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
+      proveBy(s, ToolTactics.fullQE(tool)) shouldBe 'proved
+    }
+  }
+
+  it should "prove the Robix static safety acceleration subgoal" in withMathematica { tool =>
+    val s = "A>=0, B>0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo)>v_0^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v_0), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)".asSequent
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
+      proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
+        ToolTactics.fullQE(tool)) shouldBe 'proved
+    }
+  }
+
+  it should "FEATURE_REQUEST: prove the Robix passive safety acceleration subgoal" taggedAs TodoTest ignore withMathematica { tool =>
+    val s = "A>=0, B>0, V()>=0, ep>0, v_0>=0, -B<=a, a<=A, abs(x_0-xo_0)>v_0^2/(2*B)+V()*v_0/B+(A/B+1)*(A/2*ep^2+ep*(v_0+V())), abs(x_0-xo_0)>v_0^2/(2*B)+V()*(v_0/B), -t*V()<=xo-xo_0, xo-xo_0<=t*V(), v=v_0+a*t, -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), t>=0, t<=ep, v>=0 ==> abs(x-xo)>v^2/(2*B)+V()*(v/B)".asSequent
+    withTemporaryConfig(Map(Configuration.Keys.MATHEMATICA_PARALLEL_QE -> "true")) {
+      proveBy(s, ArithmeticSpeculativeSimplification.autoMonotonicityTransform & ArithmeticSimplification.smartHide &
+        DebuggingTactics.print("Hidden") & ToolTactics.fullQE(tool)) shouldBe 'proved
+    }
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
@@ -147,11 +178,16 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))"),
-      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE(\"Z3\"), QE(\"Mathematica\"))")
+      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->x>=0&\exists s x*s^2>0");
+        |andR('R=="x>=0&\exists s x*s^2>0"); <(
+        |  "x>=0": QE("Z3"),
+        |  "\exists s x*s^2>0": QE("Mathematica")
+        |)""".stripMargin)
     interpreter.kill()
   }
 
@@ -161,11 +197,16 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
-      BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
-    db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE, QE)")
+      BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    db.extractTactic(proofId) shouldBe BelleParser(
+      """implyR('R=="x>0->x>=0&x>=(-1)");
+        |andR('R=="x>=0&x>=(-1)"); <(
+        |  "x>=0": QE,
+        |  "x>=(-1)": QE
+        |)""".stripMargin)
   }
 
   it should "switch between tools from parsed tactic" in {
@@ -179,27 +220,27 @@ class QETests extends TacticTestBase {
   "QE with timeout" should "reset timeout when done" in withDatabase{ db => withQE { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    interpreter(QE(Nil, None, Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
   }}
 
   it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE, BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    interpreter(QE, BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
 
   it should "use the right tool" in withDatabase{ db => withQE { tool: Tool =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
   }}
 

@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core.VERSION
 import java.io.{File, IOException, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 
+import java.util.regex.Pattern
 import scala.reflect.io.Directory
 
 /**
@@ -30,6 +31,12 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   /** The configured cache path (@todo needs to by lazy? or could be made class val?) */
   private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
 
+  /** The file encoding used to read/write lemma files. */
+  private val ENC = "ISO-8859-1"
+
+  /** Matches special characters in lemma names that might be problematic in file names (typically: whitespace, :, .). */
+  private val SANITIZE_REGEX = "[^\\w\\-" + Pattern.quote(File.separator) + "]"
+
   /** File handle to lemma database (creates parent directories if non-existent). */
   private lazy val lemmadbpath: File = {
     val file = new File(cachePath + File.separator + "lemmadb")
@@ -37,14 +44,32 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     file
   }
 
-  /** Escapes Windows-style file separators for use in regular expressions. */
-  private def escapeSeparator(str: String): String = if (str == "\\") "\\\\" else str
   /** Replaces special file characters with _. */
-  private def sanitize(id: LemmaID): LemmaID = id.replaceAll(s"[^\\w\\-${escapeSeparator(File.separator)}]", "_")
+  private def sanitize(id: LemmaID): LemmaID = id.replaceAll(SANITIZE_REGEX, "_")
   /** Returns the File representing lemma `id`. */
   private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
   /** Returns the File representing the folder `id`. */
   private def folder(id: LemmaID): Directory = new Directory(new File(lemmadbpath, sanitize(id)))
+
+  /** Reads the file `f` into a string. */
+  private def read(f: File): String = {
+    val src = scala.io.Source.fromFile(f, ENC)
+    try {
+      src.mkString
+    } finally {
+      src.close()
+    }
+  }
+
+  /** Writes `text` to the file `f`. */
+  private def write(f: File, text: String): Unit = {
+    val w = new PrintWriter(f, ENC)
+    try {
+      w.write(text)
+    } finally {
+      w.close()
+    }
+  }
 
   /** @inheritdoc */
   final override def contains(lemmaID: LemmaID): Boolean = file(lemmaID).exists
@@ -58,7 +83,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   /** @inheritdoc */
   final override def readLemmas(ids: List[LemmaID]): Option[List[String]] = flatOpt(ids.map({ lemmaID =>
     val f = file(lemmaID)
-    if (f.exists()) Some(scala.io.Source.fromFile(f).mkString)
+    if (f.exists()) Some(read(f))
     else None
   }))
 
@@ -66,9 +91,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   final override def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
     val f = file(id)
     if (!f.getParentFile.exists() && !f.getParentFile.mkdirs()) throw new IllegalStateException("Unable to create lemma " + id)
-    val pw = new PrintWriter(f)
-    pw.write(lemma)
-    pw.close()
+    write(f, lemma)
   }
 
   /** @inheritdoc */
@@ -89,10 +112,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     lemmadbpath.delete()
     //@note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
-    new PrintWriter(cachePath + File.separator + "VERSION") {
-      write(VERSION)
-      close()
-    }
+    write(new File(cachePath + File.separator + "VERSION"), VERSION)
   }
 
   /** @inheritdoc */
@@ -102,7 +122,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
       "0.0"
     } else {
       assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
-      scala.io.Source.fromFile(file).mkString
+      read(file)
     }
   }
 }

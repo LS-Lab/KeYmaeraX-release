@@ -2,20 +2,14 @@ package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
-import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.interpret
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{And, _}
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, NoProof, ProvableSig, TermProvable}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -45,8 +39,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Evaluate a Bellerophon snippet, used to get reasonable IntelliJ debugging
   def interpret(e:BelleExpr, pr:ProvableSig):ProvableSig = {
-    LazySequentialInterpreter()(e, BelleProvable(pr)) match {
-      case BelleProvable(result,_) => result
+    LazySequentialInterpreter()(e, BelleProvable.plain(pr)) match {
+      case BelleProvable(result, _, _) => result
     }
   }
 

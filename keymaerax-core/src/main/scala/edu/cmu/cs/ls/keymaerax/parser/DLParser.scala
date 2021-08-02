@@ -47,6 +47,7 @@ object DLParser extends DLParser {
     }
     /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
     /*@note tr.longMsg can be useful for debugging the parser */
+    /*@note tr.longAggregateMsg */
     ParseException(tr.label /*tr.msg*/,
       location(f),
       found = Parsed.Failure.formatTrailing(f.extra.input, f.index),

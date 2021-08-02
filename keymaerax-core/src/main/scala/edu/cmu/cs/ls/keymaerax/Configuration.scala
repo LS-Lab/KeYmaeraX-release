@@ -26,6 +26,7 @@ trait Configuration {
     val MATHEMATICA_LINK_NAME = "MATHEMATICA_LINK_NAME"
     val MATHEMATICA_JLINK_LIB_DIR = "MATHEMATICA_JLINK_LIB_DIR"
     val MATH_LINK_TCPIP = "MATH_LINK_TCPIP"
+    val MATHEMATICA_PARALLEL_QE = "MATHEMATICA_PARALLEL_QE"
     val WOLFRAMENGINE_LINK_NAME = "WOLFRAMENGINE_LINK_NAME"
     val WOLFRAMENGINE_JLINK_LIB_DIR = "WOLFRAMENGINE_JLINK_LIB_DIR"
     val WOLFRAMENGINE_TCPIP = "WOLFRAMENGINE_TCPIP"
@@ -47,6 +48,7 @@ trait Configuration {
     val QE_TOOL = "QE_TOOL"
     val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
+    val MATHEMATICA_QE_OPTIONS = "QE_OPTIONS"
     val SMT_CACHE_PATH = "SMT_CACHE_PATH"
     val TEST_DB_PATH = "TEST_DB_PATH"
     val Z3_PATH = "Z3_PATH"
@@ -57,6 +59,7 @@ trait Configuration {
     val JLINK_USE_EXPR_INTERFACE = "JLINK_USE_EXPR_INTERFACE"
     val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINALQE"
     val ODE_USE_NILPOTENT_SOLVE = "ODE_USE_NILPOTENT_SOLVE"
+    val TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY = "TACTIC_AUTO_EXPAND_DEFS_COMPATIBILITY"
 
     object SOSsolve {
       val PATH = "SOSSOLVE_PATH"
@@ -165,6 +168,10 @@ trait Configuration {
   def getBigInteger(key: String): Option[BigInt]
   /** Returns the value of `key` as BigDecimal or None, if not present. */
   def getBigDecimal(key: String): Option[BigDecimal]
+  /** Returns the value of key as a `List`. */
+  def getList(key: String): List[String]
+  /** Returns the value of `key` as a Map. */
+  def getMap(key: String): Map[String, String]
 }
 
 object Configuration extends Configuration {
@@ -206,8 +213,12 @@ object Configuration extends Configuration {
 
   override def getBigDecimal(key: String): Option[BigDecimal] = conf.getBigDecimal(key)
 
+  override def getList(key: String): List[String] = conf.getList(key)
+
+  override def getMap(key: String): Map[String, String] = conf.getMap(key)
+
   /** Executes `code` with a temporary configuration that gets reset after execution. */
-  def withTemporaryConfig(tempConfig: Map[String, String])(code: => Any): Unit = {
+  def withTemporaryConfig[T](tempConfig: Map[String, String])(code: => T): T = {
     val origConfig = tempConfig.keys.map(k => k -> Configuration.getString(k))
     try {
       tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
