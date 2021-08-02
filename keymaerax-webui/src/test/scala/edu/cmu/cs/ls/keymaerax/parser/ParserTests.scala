@@ -745,4 +745,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))
     )
   }
+
+  "Sequent parser" should "split formula lists" in {
+    SequentParser.parseFormulaList("x=2, y=3, z=4") should
+      contain theSameElementsInOrderAs List("x=2".asFormula, "y=3".asFormula, "z=4".asFormula)
+    SequentParser.parseFormulaList("f(x,y)=2, g(y)=3, h(z,3*(2+4))=4") should
+      contain theSameElementsInOrderAs List("f(x,y)=2".asFormula, "g(y)=3".asFormula, "h(z,3*(2+4))=4".asFormula)
+  }
 }
