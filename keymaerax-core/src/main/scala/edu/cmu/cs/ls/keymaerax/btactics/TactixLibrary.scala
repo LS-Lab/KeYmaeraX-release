@@ -168,6 +168,10 @@ object TactixLibrary extends HilbertCalculus
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
       case (_: Forall, true) => Some(TacticInfo("chase"))
       case (_: Exists, false) => Some(TacticInfo("chase"))
+      case (_: And, false) => Some(TacticInfo("chase"))
+      case (_: Or, true) => Some(TacticInfo("chase"))
+      case (_: Imply, true) => Some(TacticInfo("chase"))
+      case (_: Equiv, _) => Some(TacticInfo("chase"))
       case _ => sequentStepIndex(isAnte)(expr)
     }
   )(pos) }
@@ -175,16 +179,20 @@ object TactixLibrary extends HilbertCalculus
   /** Chases program operators according to [[AxIndex]] or tactics according to `index`. */
   def chaseAt(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     if (pos.isTopLevel) seq.sub(pos) match {
-      case Some(_) =>
-        //@todo avoid recursion
-        def recurse: DependentTactic = anon { (result: Sequent) => {
-          //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
-          val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-          val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-          if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
-          else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
-        }}
-        doStep(index)(pos) & recurse
+      case Some(e) =>
+        if (AxIndex.axiomsFor(e).nonEmpty) {
+          chase(pos)
+        } else {
+          //@todo avoid recursion
+          def recurse: DependentTactic = anon { (result: Sequent) => {
+            //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
+            val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
+            else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
+          }}
+          doStep(index)(pos) & recurse
+        }
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
     } else chase(pos) //@todo forward index to chase
   })
