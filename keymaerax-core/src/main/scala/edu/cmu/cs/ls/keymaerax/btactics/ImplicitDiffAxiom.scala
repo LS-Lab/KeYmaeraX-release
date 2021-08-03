@@ -16,12 +16,12 @@ import scala.collection.immutable.List
 
 
 /**
-  * Implements tactics to handle implicit definitions
+  * Implements tactics to derive differential axioms from implicit definitions
   */
 
-object ImplicitDefinitions {
+object ImplicitDiffAxiom {
 
-  private val namespace = "implicitdef"
+  private val namespace = "implicitdiffax"
 
   // Prove the partial derivative -> compose axiom
   lazy val DcomposeFull : Lemma = {
@@ -55,7 +55,7 @@ object ImplicitDefinitions {
 
   // Flip the direction of partial derivative axiom
   lazy val flipPartial : Lemma = {
-    val ss1 = USubst(List(SubstitutionPair("f()".asTerm, "-1".asTerm)))
+    val ss1 = USubst(List(SubstitutionPair("f()".asTerm, "-(1)".asTerm)))
     val pr1 = ElidingProvable(Ax.Dassignby.provable.underlyingProvable(ss1))
 
     val assignby = proveBy("[y_:=t;]p(y_) <-> p(t)".asFormula,
@@ -65,17 +65,17 @@ object ImplicitDefinitions {
       implyR(1) & useAt(Ax.assignbeq)(-1) & allL(-1) & id
     )
 
-    val arith = proveBy("f() * -1 = -g() -> f()=g()".asFormula,QE)
+    val arith = proveBy("f() * -(1) = -g() -> f()=g()".asFormula,QE)
 
-    remember("[t':=-1;](f(t))'=-g(t) -> [t':=1;](f(t))'=g(t)".asFormula,
+    remember("[t':=-(1);](f(t))'=-g(t) -> [t':=1;](f(t))'=g(t)".asFormula,
       implyR(1) & DLBySubst.stutter("t".asVariable)(-1) & boundRename("t".asVariable,"y_".asVariable)(-1) &
         useAt(pr1, PosInExpr(1 :: Nil))(1) &
         useAt(assignby, PosInExpr(1 :: Nil))(1) &
-        cutL("[y_:=t;][y_':=(-1);][t':=1;](f(y_))'=-g(y_)".asFormula)(-1) <(
-          implyRi & K(1) & cutR("[y_:=t;][y_':=(-1);][t':=1;](f(y_))'=(f(t))'*(-1)".asFormula)(1) <(
+        cutL("[y_:=t;][y_':=-(1);][t':=1;](f(y_))'=-g(y_)".asFormula)(-1) <(
+          implyRi & K(1) & cutR("[y_:=t;][y_':=-(1);][t':=1;](f(y_))'=(f(t))'*-(1)".asFormula)(1) <(
             assignb(1) & assignb(1) &
-              cutR("[t:=y_;][t':=1;](f(y_))'=(f(t))'*(-1)".asFormula)(1) <(
-                cut("(y_)'=-1".asFormula) <(
+              cutR("[t:=y_;][t':=1;](f(y_))'=(f(t))'*-(1)".asFormula)(1) <(
+                cut("(y_)'=-(1)".asFormula) <(
                   cutR("[t:=y_;][t':=1;](f(y_))'=(f(t))'*(y_)'".asFormula)(1) <(
                     cohideR(1) & byUS(Ax.Dcompose),
                     exhaustiveEqL2R(-3) & cohideR(1) & implyR(1) & id
@@ -92,8 +92,7 @@ object ImplicitDefinitions {
               implyR(1) & exhaustiveEqL2R(hide=true)(-1) & cohideR(1) & byUS(arith)
           ),
           cohideR(2) & K(1) & G(1) & K(1) & G(1) & implyR(1) & Dassignb(1) & id
-        ),
-
+        )
     )
   }
 
@@ -251,7 +250,7 @@ object ImplicitDefinitions {
   }
 
   private lazy val impSplit = remember(
-    "([a_{|^@|};]p(||) -> [a_{|^@|};]r(||)) & ([a_{|^@|};]q(||) -> [a_{|^@|};]s(||)) -> ([a_{|^@|};](p(||)&q(||)) -> [a_{|^@|};](r(||)&s(||)))".asFormula,
+    "([b_{|^@|};]p(||) -> [a_{|^@|};]r(||)) & ([b_{|^@|};]q(||) -> [a_{|^@|};]s(||)) -> ([b_{|^@|};](p(||)&q(||)) -> [a_{|^@|};](r(||)&s(||)))".asFormula,
     implyR(1) & implyR(1) & boxAnd(-2) & boxAnd(1) & prop,
     namespace
   )
@@ -415,8 +414,7 @@ object ImplicitDefinitions {
   // Prove the def-expansion to box axiom
   // This currently requires a concrete ODE to do the rewrite --f(x) = f(x) in the context of an ODE
   // <x'=-f(x)>P(x)|<x'=f(x)>P(x) ->
-  // [{x'=f(x)}] (<x'=-f(x)>P(x)|<x'=f(x)>P(x)) |
-  // [{x'=-f(x)}] (<x'=-f(x)>P(x)|<x'=f(x)>P(x))
+  // [{x'=f(x)}] <x'=-f(x)>P(x) | [{x'=-f(x)}] <x'=f(x)>P(x)
   def defExpandToBox(ode: DifferentialProgram) : ProvableSig = {
 
     val odels = DifferentialProduct.listify(ode).map {
@@ -441,7 +439,9 @@ object ImplicitDefinitions {
     val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
 
     // Expected expanded shape of a definition
-    val expdef = Or(Diamond(ODESystem(oder,odeDom),px),Diamond(ODESystem(ode,odeDom),px))
+    val expLeft = Diamond(ODESystem(oder,odeDom),px)
+    val expRight = Diamond(ODESystem(ode,odeDom),px)
+    val expdef = Or(expLeft,expRight)
 
     val tab = (xLHS zip odeLHS).foldLeft(thereAndBack(dim))((t,v) => t(URename(v._1,v._2)))
 
@@ -450,17 +450,173 @@ object ImplicitDefinitions {
     val bwdSub = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(1::0::0::Nil)).get,oder)
     val bwd = bwdSub.toForward(tab)
 
-    val fml = Imply(expdef, Or(Box(ODESystem(ode,odeDom),expdef),Box(ODESystem(oder,odeDom),expdef)))
+    val fml = Imply(expdef, Or(Box(ODESystem(ode,odeDom),expLeft),Box(ODESystem(oder,odeDom),expRight)))
 
     val stt = (pos:Int) => (odeLHS zip yLHS).foldLeft(skip:BelleExpr)((t,v) => DLBySubst.stutter(v._1)(pos) & boundRename(v._1,v._2)(pos) & t)
 
     proveBy(fml,
       implyR(1) & orR(1) & orL(-1) <(
-        hideR(2) & useAt(boxOrLeft,PosInExpr(1::Nil))(1) & stt(-1) &
+        hideR(2) & stt(-1) &
         useAt(fwd)(-1) & monb & useAt(dDcomp)(1) & mond & stt(1) & id,
-        hideR(1) & useAt(boxOrRight,PosInExpr(1::Nil))(1) & stt(-1) &
+        hideR(1) & stt(-1) &
         useAt(bwd)(-1) & monb & ODEInvariance.rewriteODEAt(ode)(-1) & useAt(dDcomp)(1) & mond & stt(1) & id
       )
      )
   }
+
+  // Derive differential axioms for list of interpreted functions g
+  // The interpretation for each function must have the expected shape:
+  // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > Init
+  def deriveDiffAxiom(fs : List[Function]) : List[ProvableSig] = {
+
+    val dim = fs.length
+    if(dim < 1)
+      throw new IllegalArgumentException("Axiom derivable for dimension >= 1 but got: "+ fs.length)
+
+    require(fs.forall(f => f.interp.isDefined))
+
+    val ode = fs.head.interp.get match {
+      case Diamond(Compose(_,Choice(_,ODESystem(ode,True))),_) => ode
+      case _ => ???
+    }
+
+    // Canonicalize the shape of the implicit definition
+    val canonPr = canonicalize(ode,fs)
+    // println("Canonicalized: ", canonPr)
+
+    // Set up for partial derivatives
+
+    // Using the first equation, derive [x'=f(x),t'=1](x = g(t)) | [x'=-f(x),t'=-1](x = g(t))
+    val zers = (1 to dim-1).map(_ => 0).toList
+    val renfml = canonPr.head.conclusion.succ(0).sub(PosInExpr( 1 :: zers)).get.asInstanceOf[Formula]
+    val renode = renfml.sub(PosInExpr(1::0::Nil)).get.asInstanceOf[ODESystem]
+    val renodeR = renfml.sub(PosInExpr(0::0::Nil)).get.asInstanceOf[ODESystem]
+    val defExpPre = defExpandToBox(renode.ode)
+    val unif = UnificationMatch(defExpPre.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula],renfml)
+    val defExp = unif.toForward(defExpPre)
+    // println("Def expand: ",defExp)
+
+    val equations = canonPr.map( p => p.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Equal])
+    val parDerPre = partialDer(equations.length)
+    val equationsAnd = equations.reduceRight(And)
+    val xLHS = (1 to dim).map(i => BaseVariable("x_", Some(i)))
+    val zLHS = (1 to dim).map(i => BaseVariable("z_", Some(i)))
+    val tab = (xLHS zip zLHS).foldLeft(parDerPre)((t,v) => t(URename(v._1,v._2)))
+    val unif2 = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(0::Nil)).get,Box(renode,equationsAnd))
+    val unif3 = UnificationMatch(tab.conclusion.succ(0).sub(PosInExpr(0::Nil)).get,Box(renodeR,equationsAnd))
+    val parDer = unif2.toForward(tab)
+    val parDerR = unif3.toForward(tab)
+    // println("Partial der: ",parDer)
+    // println("Partial der R: ",parDerR)
+
+    val pdfml = parDer.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
+
+    val eq1 = equations.head
+    val pr1 = canonPr.head
+
+    val pd = proveBy(pdfml,
+      cut(Exists(eq1.left.asInstanceOf[Variable]::Nil,eq1)) <(
+        existsL(-1) & useAt(pr1)(-1) & (existsL(-1) * (dim-1)) & useAt(defExp)(-1) & orL(-1) <(
+          cutL(parDer.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula])(-1) <(
+            implyRi & byUS(parDer),
+            cohideR(2) & implyR(1) & monb &
+            canonPr.dropRight(1).foldRight(skip:BelleExpr)( (pr,t) =>
+              andR(1)<(useAt(pr)(1) & (existsR(1) * (dim-1)) & orR(1) & hideR(2) & id, t)) &
+            useAt(canonPr.last)(1) & (existsR(1) * (dim-1)) & orR(1) & hideR(2) & id
+          ),
+          cutL(parDerR.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula])(-1) <(
+            useAt(parDerR)(-1) &
+              implyRi &
+              (useAt(impSplit,PosInExpr(1::Nil))(1) & andR(1) <(byUS(flipPartial), skip))* (dim-1) &
+              byUS(flipPartial),
+              cohideR(2) & implyR(1) & monb &
+              canonPr.dropRight(1).foldRight(skip:BelleExpr)( (pr,t) =>
+                andR(1)<(useAt(pr)(1) & (existsR(1) * (dim-1)) & orR(1) & hideR(1) & id, t)) &
+              useAt(canonPr.last)(1) & (existsR(1) * (dim-1)) & orR(1) & hideR(1) & id
+          )
+        ),
+        cohideR(2) & existsR(eq1.right)(1) & byUS(Ax.equalReflexive)
+      )
+    )
+
+    val pdA = chaseFor(6,6,e=>
+      e match {
+        case Box(_,And(_,_)) => List(Ax.boxAnd)
+        case _ => List()
+      },(s,p)=>pr=>pr)(SuccPosition(1))(pd)
+
+    val ls = (1 to dim-1).foldLeft((pdA,List[ProvableSig]()))( (pr,d) => {
+      val (l, r) = splitConj(pr._1)
+      (r, l::pr._2)
+    }
+    )
+    val splits = (ls._1::ls._2).reverse
+
+    val pr = proveBy("(f(g(|t_|)))'=e(g(|t_|)) * g(|t_|)'".asFormula,
+      useAt(DcomposeFull.fact(URename("y_".asVariable,"t_".asVariable,semantic=true)),PosInExpr(1::Nil))(1) & allR(1))
+
+    val axs = splits.map( sp => {
+      val u = UnificationMatch(pr.subgoals(0), sp.conclusion)
+      sp(u.toForward(pr))
+    })
+    axs
+  }
+
+  // Split |- A & B into |- A, |- B
+  private def splitConj(pr : ProvableSig) : (ProvableSig, ProvableSig) = {
+    val concl = pr.conclusion.succ(0).asInstanceOf[And]
+
+    val left = proveBy(concl.left,
+      cut(concl)<(andL(-1) & id, cohideR(2) & byUS(pr))
+    )
+
+    val right = proveBy(concl.right,
+      cut(concl)<(andL(-1) & id, cohideR(2) & byUS(pr))
+    )
+
+    (left,right)
+  }
+
+  // Canonicalize and give fixed names for variables
+  // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > Init
+  // x_0 = g(t_) <-> \exists x_1 {t'=-(1),x'=-f(x) ++ t'=1, x'=f(x)} > Init
+  private def canonicalize(ode: DifferentialProgram, fs : List[Function]) : List[ProvableSig] = {
+
+    val odels = DifferentialProduct.listify(ode).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => ???
+    }
+
+    val odeLHS = odels.map( _._1.x)
+
+    val timevar = "t_".asVariable
+    val xLHS = (1 to fs.length).map(i => BaseVariable("z_", Some(i)))
+
+    val axs = fs.map( f => Provable.implicitFuncAxiom(f))
+
+    val vpairs = (xLHS.toList :+ timevar) zip odeLHS
+
+    val axsS = axs.map(a => vpairs.foldLeft(a)((t,v) => t(URename(v._1,v._2))))
+
+    val ss = ((1 to fs.length) zip axsS).map(ia =>
+      ia._2(USubst(List(
+        SubstitutionPair(DotTerm(), BaseVariable("z_", Some(ia._1))),
+        SubstitutionPair(DotTerm(Real,Some(0)), timevar)
+      )))
+    )
+
+    val sss = ss.map( s =>
+      chaseFor(6,6,e=>
+        e match {
+          case Diamond(AssignAny(_),_) => List(Ax.randomd)
+          case Diamond(Assign(_,_),_) => List(Ax.selfassignd)
+          case Diamond(Compose(_,_),_) => List(Ax.composed)
+          case Diamond(Choice(_,_),_) => List(Ax.choiced)
+          case _ => List()
+        },(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(ElidingProvable(s))
+    ).toList
+
+    sss
+  }
+
 }
