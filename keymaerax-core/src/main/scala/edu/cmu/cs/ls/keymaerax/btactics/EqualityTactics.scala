@@ -88,12 +88,9 @@ private object EqualityTactics {
                 filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
               case _ => false
             }))
-            val lhsPos = (f match {
-              //@note do not rewrite lhs at ante-pos if it is verbatim lhs of eq,
-              // otherwise x=y, x=y ==> rewrites slightly surprising to y=y ==>
-              case Equal(l, _) if pos.isAnte && l == lhs => FormulaTools.posOf(f, _ == lhs).filterNot(_ == PosInExpr(0 :: Nil))
-              case _ => FormulaTools.posOf(f, _ == lhs)
-            }).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
+            //@note rewrites lhs at ante-pos even if it is verbatim lhs of eq (dW and other tactics rely on it);
+            // as a result x=y, x=y ==> rewrites slightly surprising to y=y ==>
+            val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })

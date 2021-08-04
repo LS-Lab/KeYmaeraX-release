@@ -235,15 +235,15 @@ class EqualityTests extends TacticTestBase {
     proveBy("x=y*z, y=z, z=0 ==> x=0".asSequent, applyEqualities).subgoals.loneElement shouldBe "==> 0*0=0".asSequent
   }
 
-  it should "not rewrite verbatim occurrences on the left-hand side of equalities in the antecedent" in withTactics {
-    proveBy("x=y, x=y ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
-    proveBy("x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=y, x=y ==>".asSequent
-    proveBy("x'=y, x'=x' ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "x'=y, x'=y ==>".asSequent
+  it should "not rewrite verbatim occurrences even on the left-hand side of equalities in the antecedent" in withTactics {
+    proveBy("x=y, x=y ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y ==>".asSequent
+    proveBy("x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y ==>".asSequent
+    proveBy("x'=y, x'=x' ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y ==>".asSequent
   }
 
   it should "not fail when rewriting creates self-rewrites" in withTactics {
     //@note rewriting x=y creates y=y which exhaustiveEqL2R rejects with IllegalArgumentException
-    proveBy("y=x, x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y, x=y, x=y ==>".asSequent
+    proveBy("y=x, x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y, y=y ==>".asSequent
   }
 
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
