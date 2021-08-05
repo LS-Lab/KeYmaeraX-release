@@ -21,6 +21,7 @@ import org.scalatest.LoneElement._
 
 import java.io.File
 import edu.cmu.cs.ls.keymaerax.codegen._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
 
 /**
@@ -88,28 +89,17 @@ class ModelplexTacticTests extends TacticTestBase {
     proveBy(modelplexInput, modelPlex(1)).subgoals.loneElement shouldBe "==> xpost=2".asSequent
   }
 
-//  "Watertank modelplex" should "find correct controller monitor condition" in {
-//    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
-//    val tactic = locateSucc(modelplexSequentStyle)
-//    val result = helper.runTactic(tactic, new RootNode(s))
-//    result.openGoals() should have size 2
-//    result.openGoals()(0).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula)
-//    result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0 & fpost_0<=(m-x)/ep".asFormula
-//    result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0".asFormula, "fpost_0<=(m-x)/ep".asFormula)
-//    result.openGoals()(1).sequent.succ should contain only "tpost_0=0 & (fpost=fpost_0 & xpost=x & tpost=tpost_0)".asFormula
-//  }
-//
   it should "find correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), Map.empty)
 
-    val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+    val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists f ((-1<=f&f<=(m()-l)/ep())&(0<=l&0<=ep())&fpost=f&lpost=l&cpost=0)".asSequent
 
     // Opt. 1
-    val opt1Result = TactixLibrary.proveBy(foResult.subgoals.head,
+    val opt1Result = proveBy(foResult.subgoals.head,
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
     opt1Result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asSequent
 
@@ -121,15 +111,16 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), Map.empty)
+    val expected = "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0=cpost&(lpost=l&(fpost < 0&(0=ep()&l>=0|ep()>0&l>=0)|(ep()>=0&l>=0)&fpost>0)|((fpost=0&l=lpost)&ep()>=0)&l>=0)|(cpost>0&ep()>=cpost)&(l>=0&(fpost=0&l=lpost|lpost=cpost*fpost+l&fpost>0)|(lpost=cpost*fpost+l&fpost < 0)&cpost*fpost+l>=0))".asSequent
 
-    //@todo can steer result depending on where and when we use partial QE
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.modelMonitorT)(1) &
+    val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.modelMonitorT)(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
-    val start = System.currentTimeMillis()
-    val result = proveBy(modelplexInput, tactic)
-    println("Duration: " + (System.currentTimeMillis() - start))
+    proveBy(modelplexInput, axiomatic).subgoals.loneElement shouldBe expected
 
-    result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0=cpost&(lpost=l&(fpost < 0&(0=ep()&l>=0|ep()>0&l>=0)|(ep()>=0&l>=0)&fpost>0)|((fpost=0&l=lpost)&ep()>=0)&l>=0)|(cpost>0&ep()>=cpost)&(l>=0&(fpost=0&l=lpost|lpost=cpost*fpost+l&fpost>0)|(lpost=cpost*fpost+l&fpost < 0)&cpost*fpost+l>=0))".asSequent
+    val byChase = ModelPlex.modelMonitorByChase(1) &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
+    val byChaseResult = proveBy(modelplexInput, byChase).subgoals.loneElement
+    proveBy(Equiv(expected.toFormula, byChaseResult.toFormula), QE) shouldBe 'proved
   }
 
   it should "find euler model monitor condition" ignore withMathematica { tool =>
@@ -190,46 +181,24 @@ class ModelplexTacticTests extends TacticTestBase {
     simplified.subgoals.loneElement shouldBe "==> tpost_0>=0&epost_0>0&h0post_0>0&0 < hpost_0&hpost_0 < h0post_0&(2+hpost_0*-6-xpost)^2+(y+hpost_0*(2-y)-ypost)^2 < epost_0^2".asSequent
   }
 
-  it should "find correct model monitor condition by chase" in withMathematica { tool =>
-    val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
-    val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("f","l","c").map(_.asVariable), Map.empty)
-
-    val tactic = ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
-    val result = proveBy(modelplexInput, tactic)
-    result.subgoals.loneElement shouldBe "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&((((((cpost=0&(fpost=0|fpost!=0))&(l=0|l=lpost))&l>=0)&(lpost=0|l=lpost))&(lpost=0|l>0))&ep()>=0|(cpost>0&ep()>=cpost)&(fpost=0&(l=0&lpost=0|l=lpost&l>0)|cpost*fpost+l=lpost&(cpost*fpost+l>=0&fpost < 0|fpost>0&l>=0)))".asSequent
-  }
-
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in withTactics {
     val s = ArchiveParser.parseAsFormula(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
-    val result = proveBy(s, tactic)
+    val expected = "(-1<=fpost&fpost<=(m()-x)/ep())&xpost=x&tpost=0".asFormula
 
-    // with ordinary diamond test
-    val expected = "(-1<=fpost_0&fpost_0<=(m()-x)/ep())&fpost=fpost_0&xpost=x&tpost=0".asFormula
-    result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
-    report(expected, result, "Watertank controller monitor (backward tactic)")
-  }
+    val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val axiomaticResult = proveBy(s, axiomatic)
+    axiomaticResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
 
-  it should "find correct controller monitor condition by chase" in withMathematica { tool =>
-    val model = ArchiveParser.parseAsFormula(
-      io.Source.fromInputStream(
-        getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
+    val byChase = ModelPlex.controllerMonitorByChase(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val byChaseResult = proveBy(s, byChase)
+    byChaseResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
 
-    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("f","l","c").map(_.asVariable), Map.empty)
-    val tactic = ModelPlex.controllerMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
-    val result = proveBy(modelplexInput, tactic)
-
-    // with ordinary diamond test
-    val expected = "((-1)<=fpost&fpost<=(m()-l)/ep())&(0<=l&0<=ep())&lpost=l&cpost=0".asFormula
-
-    result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
-
-    report(expected, result, "Watertank controller monitor (chase)")
+    report(expected, axiomaticResult, "Watertank controller monitor (backward tactic)")
+    report(expected, byChaseResult, "Watertank controller monitor (chase)")
   }
 
   it should "chase controller monitor condition to tests" in withMathematica { tool =>
@@ -315,7 +284,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       List("f","l","c").map(_.asVariable), Map.empty)
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)('R) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     val expected = "(-1<=fpost_0&fpost_0<=(m-l)/ep)&(0<=l&0<=ep)&(fpost=fpost_0&lpost=l)&cpost=0".asFormula
@@ -326,13 +296,20 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "find correct controller monitor condition without intermediate Optimization 1" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank-ctrl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=false)(ModelPlex.controllerMonitorT)(1) & ModelPlex.optimizationOne()(1)
-    val result = proveBy(model, tactic)
+    val expected = "(-1<=fpost&fpost<=(m()-x)/ep())&xpost=x&tpost=0".asFormula
 
-    // with ordinary diamond test
-    val expected = "(-1<=fpost_0&fpost_0<=(m()-x)/ep())&fpost=fpost_0&xpost=x&tpost=0".asFormula
-    result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
-    report(expected, result, "Watertank controller monitor (backward tactic)")
+    val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1)  &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val axiomaticResult = proveBy(model, axiomatic)
+    axiomaticResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
+
+    val byChase = ModelPlex.controllerMonitorByChase(1)  &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val byChaseResult = proveBy(model, byChase)
+    byChaseResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
+
+    report(expected, axiomaticResult, "Watertank controller monitor (backward tactic)")
+    report(expected, byChaseResult, "Watertank controller monitor (chase)")
   }
 
   it should "work using the command line interface" taggedAs IgnoreInBuildTest in withTactics {
@@ -353,16 +330,16 @@ class ModelplexTacticTests extends TacticTestBase {
   "Local lane control modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc-ctrl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)('R)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)('R) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(model, tactic)
 
     // with ordinary diamond test
     val expected = "(-B<=alpost_0&alpost_0<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost_0&afpost_0<=A)&xfpost=xf&vfpost=vf&afpost=afpost_0&xlpost=xl&vlpost=vl&alpost=alpost_0&tpost=0|vf=0&xfpost=xf&vfpost=vf&afpost=0&xlpost=xl&vlpost=vl&alpost=alpost_0&tpost=0|(-B<=afpost_0&afpost_0<=-b)&xfpost=xf&vfpost=vf&afpost=afpost_0&xlpost=xl&vlpost=vl&alpost=alpost_0&tpost=0)".asFormula
 
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only
-      "xf < xl & xf + vf^2/(2*b) < xl + vl^2/(2*B) & B >= b & b > 0 & vf >= 0 & vl >= 0 & A >= 0 & ep > 0".asFormula
-    result.subgoals.head.succ should contain only expected
+    result.subgoals.loneElement shouldBe Sequent(
+      IndexedSeq("xf < xl & xf + vf^2/(2*b) < xl + vl^2/(2*B) & B >= b & b > 0 & vf >= 0 & vl >= 0 & A >= 0 & ep > 0".asFormula),
+      IndexedSeq(expected))
 
     report(expected, result, "Local lane controller (backward tactic)")
   }
@@ -373,7 +350,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       List("xl","vl","al","xf","vf","af","t").map(_.asVariable), Map.empty)
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     val expected = "(-B<=alpost_0&alpost_0<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost_0&afpost_0<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost=xl&vlpost=vl)&alpost=alpost_0)&xfpost=xf)&vfpost=vf)&afpost=afpost_0)&tpost=0|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost=xl&vlpost=vl)&alpost=alpost_0)&xfpost=xf)&vfpost=vf)&afpost=0)&tpost=0|(-B<=afpost_0&afpost_0<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost=xl&vlpost=vl)&alpost=alpost_0)&xfpost=xf)&vfpost=vf)&afpost=afpost_0)&tpost=0)".asFormula
@@ -466,13 +444,20 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), Map.empty)
+    val expected = "vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asFormula
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
-    val result = proveBy(modelplexInput, tactic)
+    val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val axiomaticResult = proveBy(modelplexInput, axiomatic)
+    axiomaticResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
 
-    val expected = "vxopost_0^2+vyopost_0^2<=V()^2&(tpost_0=0&(tpost_0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost_0&vyopost=vyopost_0&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=tpost_0|v=0&wpost_0=0&tpost_0=0&(tpost_0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxopost_0&vyopost=vyopost_0&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost_0&apost=0&rpost=r&tpost=tpost_0|(-W()<=wpost_0&wpost_0<=W())&(rpost_0!=0&rpost_0*wpost_0=v)&(abs(x-xopost_0)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost_0)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&tpost_0=0&(tpost_0<=ep()&v>=0)&xopost=xopost_0&yopost=yopost_0&vxopost=vxopost_0&vyopost=vyopost_0&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost_0&apost=A()&rpost=rpost_0&tpost=tpost_0)".asFormula
-    result.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
-    report(expected, result, "RSS controller monitor (backward tactic)")
+    val byChase = ModelPlex.controllerMonitorByChase(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
+    val byChaseResult = proveBy(modelplexInput, byChase)
+    byChaseResult.subgoals.loneElement shouldBe Sequent(IndexedSeq.empty, IndexedSeq(expected))
+
+    report(expected, axiomaticResult, "RSS controller monitor (backward tactic)")
+    report(expected, byChaseResult, "RSS controller monitor (chase)")
   }
 
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in withMathematica { tool =>
@@ -502,7 +487,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, List("href","v","h").map(_.asVariable), Map.empty)
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     val expected = "(h>=hrefpost_0&hrefpost_0>0&((kp < 0&v=0&hrefpost_0>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost_0*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost_0*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost_0=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost_0*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost_0*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost_0*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost_0*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost_0*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost_0*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost_0*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost_0*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost_0*kp^2+hrefpost_0^2*kp^2+h*kd()*kp*v-hrefpost_0*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost_0)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost_0*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost_0*kp)|kp>0&v=0&(h!=hrefpost_0&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost_0|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost_0*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost_0*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost_0*kp|2*hrefpost_0*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost_0*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost_0*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost_0*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost_0*kp|2*hrefpost_0*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost_0*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost_0*kp^2+hrefpost_0^2*kp^2+h*kd()*kp*v-hrefpost_0*kd()*kp*v+kp*v^2=0))&true&(hrefpost=hrefpost_0&vpost=v)&hpost=h".asFormula
@@ -528,7 +514,8 @@ class ModelplexTacticTests extends TacticTestBase {
   "VSL modelplex in place" should "find correct controller monitor condition" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl-ctrl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(model, tactic)
 
     // with ordinary diamond test
@@ -545,7 +532,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model,
       List("xsl","vsl","x1","v1","a1","t").map(_.asVariable), Map.empty)
 
-    val tactic = ModelPlex.modelplexAxiomaticStyle(useOptOne=true)(ModelPlex.controllerMonitorT)(1)
+    val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
+      ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
 
     // with ordinary diamond test
