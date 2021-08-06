@@ -494,7 +494,8 @@ class SmlQETests extends TacticTestBase {
       result match {
         case "True" => BenchmarkResultEntry(name, i, "aproved", l, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
         case "False" => BenchmarkResultEntry(name, i, "disproved", l, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
-        case r => BenchmarkResultEntry(name, i, "unknown", r, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
+        case "$Aborted" => BenchmarkResultEntry(name, i, "timeout", l, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
+        case r => BenchmarkResultEntry(name, i, "simplified", r, TIMEOUT * 1000, (duration.toDouble*1000).toLong)
       }
     })))
   }
