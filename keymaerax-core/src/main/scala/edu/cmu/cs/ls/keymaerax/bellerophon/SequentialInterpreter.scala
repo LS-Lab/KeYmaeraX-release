@@ -572,9 +572,17 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           apply(OnAll(backAssign(s.subsDefsInput)), tr)
         })
 
-        //@todo labels if parent didn't have any but some subgoals produced labels
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l, d), (BelleProvable(sp, sl, sd), i)) =>
-          BelleProvable(p(sp, i), l.map(_.patch(i, Nil, 1) ++ sl.getOrElse(Nil)), d++sd) })
+          BelleProvable(p(sp, i),
+            l match {
+              case Some(labels) => Some(labels.patch(i, Nil, 1) ++ sl.getOrElse(Nil))
+              case None => sl match {
+                case Some(labels) => Some(p.subgoals.indices.toList.map(i => BelleTopLevelLabel(i.toString)).patch(i, Nil, 1) ++ labels)
+                case None => None
+              }
+            },
+            d++sd)
+        })
     }
 
   }

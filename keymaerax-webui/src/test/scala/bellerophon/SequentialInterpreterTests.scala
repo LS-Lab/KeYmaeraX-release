@@ -2,20 +2,16 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification.smartHide
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.{AllOf, Atom, Goal, OneOf}
 import org.scalatest.time.SpanSugar._
-import testHelper.KeYmaeraXTestTags.SlowTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -222,6 +218,20 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "do nothing when change occurred" in withMathematica { _ =>
     val result = proveBy("x=2|x=3".asFormula, Idioms.must(orR(1)))
     result.subgoals.loneElement shouldBe " ==> x=2, x=3".asSequent
+  }
+
+  "Label simplification" should "retain necessary leading labels" in withTactics {
+    proveByS("==> 0<=x&x<=2, 3<=y&y<=4".asSequent, prop, (labels: Option[List[BelleLabel]]) => labels match {
+      case Some(l) => l should contain theSameElementsAs BelleLabel.fromString("0<=x//3<=y::0<=x//y<=4::x<=2//3<=y::x<=2//y<=4")
+      case None => fail("Labels expected, but got None")
+    })
+  }
+
+  it should "FEATURE_REQUEST: drop redundant leading labels" taggedAs TodoTest in withTactics {
+    proveByS("x<=0|0<=x&x<=2|2<=x ==>".asSequent, prop, (labels: Option[List[BelleLabel]]) => labels match {
+      case Some(l) => l should contain theSameElementsAs BelleLabel.fromString("x<=0::0<=x&x<=2::2<=x")
+      case None => fail("Labels expected, but got None")
+    })
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in withMathematica { _ =>
@@ -861,5 +871,19 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy("x=2, c()=3 ==> [x:=4;]x=4, [x:=c();]x=2".asSequent,
       Using(Nil, SequentCalculus.exchangeR(1, 2))).
       subgoals.loneElement shouldBe "x=2, c()=3 ==> [x:=c();]x=2, [x:=4;]x=4".asSequent
+  }
+
+  it should "retain labels" in withTactics {
+    proveByS("y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, y<=0 | 0<=y&y<=1 | 1<=y ==> 2<=x & x<=4".asSequent,
+      Using(List("y<=0 | 0<=y&y<=1 | 1<=y".asFormula), prop), (labels: Option[List[BelleLabel]]) => labels match {
+        case Some(l) => l should contain theSameElementsAs
+          //@todo simplify labels
+          BelleLabel.fromString("y<=0") ++ BelleLabel.fromString("0<=y&y<=1|1<=y//0<=y&y<=1") ++ BelleLabel.fromString("0<=y&y<=1|1<=y//1<=y")
+        case None => fail("Expected labels, but got None")
+      }).subgoals should contain theSameElementsAs List(
+      "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, y<=0 ==> 2<=x & x<=4".asSequent,
+      "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, 0<=y, y<=1 ==> 2<=x & x<=4".asSequent,
+      "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, 1<=y ==> 2<=x & x<=4".asSequent
+    )
   }
 }
