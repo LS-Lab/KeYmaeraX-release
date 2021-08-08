@@ -789,9 +789,18 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
               val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
-                  Some(origLabels.patch(cidx, newLabels, 0))
+                  if (newLabels.isEmpty) Some(origLabels)
+                  else {
+                    val l :: rest = newLabels
+                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+                  }
                 case (Some(origLabels), None) =>
-                  Some(origLabels.patch(cidx, createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
+                  val labels = createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length)
+                  if (labels.isEmpty) Some(origLabels)
+                  else {
+                    val l :: rest = labels
+                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+                  }
                 case (None, Some(newLabels)) =>
                   Some(createLabels(None, 0, cidx) ++ newLabels)
                 case (None, None) => None
@@ -849,9 +858,18 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
               //@todo want to keep names of cp abbreviated instead of substituted
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
-                  Some(origLabels.patch(cidx, newLabels, 0))
+                  if (newLabels.isEmpty) Some(origLabels)
+                  else {
+                    val l :: rest = newLabels
+                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+                  }
                 case (Some(origLabels), None) =>
-                  Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length), 0))
+                  val labels = createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length)
+                  if (labels.isEmpty) Some(origLabels)
+                  else {
+                    val l :: rest = labels
+                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+                  }
                 case (None, Some(newLabels)) =>
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None

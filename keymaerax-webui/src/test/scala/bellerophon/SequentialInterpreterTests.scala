@@ -886,4 +886,23 @@ class SequentialInterpreterTests extends TacticTestBase {
       "y<=0 -> x=2, 0<=y&y<=1 -> x=3, 1<=y -> x=4, 1<=y ==> 2<=x & x<=4".asSequent
     )
   }
+
+  it should "create useful labels" in withTactics {
+    val s = """init(rv)&(w=wUp()|w=wLo()), C(w,dhf,dhd,r,rv,h)
+              |  ==>  (w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h)))&(w*dhf < 0->(case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h))&(case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h)))
+              |""".stripMargin.asSequent
+    val t = "prop using \"(w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h)))&(w*dhf < 0->(case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h))&(case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h)))\"".asTactic
+    proveByS(s, t, (labels: Option[List[BelleLabel]]) => labels match {
+      case Some(l) =>
+        println(BelleLabel.toPrettyString(l))
+        l should contain theSameElementsAs
+          BelleLabel.fromString("w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h)") ++
+          BelleLabel.fromString("w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//case2(w,dhd,r,rv)->bounds2(w,dhd,h)") ++
+          BelleLabel.fromString("w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h)") ++
+          BelleLabel.fromString("w*dhf>=0->(case1(w,dhd,r,rv)->bounds1(w,dhd,r,rv,h))&(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//(case2(w,dhd,r,rv)->bounds2(w,dhd,h))&(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//(case3(w,dhf,dhd,r,rv)->bounds3(w,dhd,r,rv,h))&(case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h))//case4(w,dhf,dhd,r,rv)->bounds4(w,dhf,dhd,r,rv,h)") ++
+          BelleLabel.fromString("w*dhf < 0->(case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h))&(case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h))//case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h)") ++
+          BelleLabel.fromString("w*dhf < 0->(case5(w,dhf,dhd,r,rv)->bounds5(w,dhd,r,rv,h))&(case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h))//case6(w,dhf,dhd,r,rv)->bounds6(w,dhf,dhd,r,rv,h)")
+      case None => fail("Expected labels, but got None")
+    })
+  }
 }
