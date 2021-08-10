@@ -35,7 +35,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   // Explanations and help.
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   $scope.taskExplanation = {
-    selection: "Rule"
+    selection: "Rule",
+    proofStateNodeId: undefined,
+    proofStateNode: undefined
   };
   $scope.stepAxiom = function() {
     var selectedItem = sequentProofData.agenda.selectedItem()
@@ -760,6 +762,24 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         } else {
           console.error("Undefined selected node in agenda when trying to run the tactic script '" + tacticText + "'");
         }
+      }
+    }
+
+    $scope.onNodeInTacticSelected = function(nodeId) {
+      if (nodeId) {
+        if ($scope.agenda.contains(nodeId)) {
+          $scope.agenda.selectById(nodeId);
+          $scope.taskExplanation.proofStateNodeId = undefined;
+        } else {
+          $scope.taskExplanation.proofStateNodeId = nodeId;
+          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId).success(function(data) {
+            $scope.taskExplanation.proofStateNode = data;
+            //$scope.proofTree.addNode(data);
+          });
+        }
+      } else {
+        $scope.taskExplanation.proofStateNodeId = undefined;
+        $scope.taskExplanation.proofStateNode = undefined;
       }
     }
 

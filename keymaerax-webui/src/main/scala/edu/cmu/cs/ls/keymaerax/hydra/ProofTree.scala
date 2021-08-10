@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Location}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -315,10 +315,10 @@ trait ProofTree {
 
   // tactical information
 
-  /** Locates the tree root, which contains the original conjecture that this proof tries to prove. */
-  /** String representation of the global tactic that reproduces this whole proof tree from the
-    * conjecture at the root (very expensive). Uses `converter` to turn the recorded steps into a tactic. */
-  def tacticString(converter: TraceToTacticConverter): String
+  /** String representation (including location to node mapping) of the global tactic that reproduces this whole
+    * proof tree from the conjecture at the root (very expensive).
+    * Uses `converter` to turn the recorded steps into a tactic. */
+  def tacticString(converter: TraceToTacticConverter): (String, Map[Location, ProofTreeNode])
 
   /** The global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
   def tactic: BelleExpr
@@ -663,13 +663,13 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def nodes: List[ProofTreeNode] = { load(); loadedNodes }
 
   /** The tactic to produce this tree from its root conclusion. */
-  override def tacticString(converter: TraceToTacticConverter): String = {
+  override def tacticString(converter: TraceToTacticConverter): (String, Map[Location, ProofTreeNode]) = {
     load()
     converter.getTacticString(this)
   }
 
   /** @inheritdoc */
-  override def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(dbDefs)))
+  override def tactic: BelleExpr = BelleParser(tacticString(new VerboseTraceToTacticConverter(dbDefs))._1)
 
   /** Indicates whether or not the proof might be closed. */
   override def done: Boolean = dbProofInfo.closed

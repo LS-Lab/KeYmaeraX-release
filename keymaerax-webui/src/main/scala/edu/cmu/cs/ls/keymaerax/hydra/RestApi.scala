@@ -523,6 +523,13 @@ object RestApi extends Logging {
       }
     }}}
 
+    val proofTasksNode: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment) { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new ProofTaskNodeRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
     val proofTasksParent: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
@@ -1285,6 +1292,7 @@ object RestApi extends Logging {
     proofProgressStatus   ::
     proofCheckIsProved    ::
     proofTasksNew         ::
+    proofTasksNode        ::
     proofTasksParent      ::
     proofTasksPathAll     ::
     proofTasksBranchRoot  ::

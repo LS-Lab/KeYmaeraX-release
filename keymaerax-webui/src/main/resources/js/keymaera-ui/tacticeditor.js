@@ -7,7 +7,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             userId: '=',
             proofId: '=',
             nodeId: '=',
-            onTacticScript: '&'
+            onTacticScript: '&',
+            onNodeSelected: '&'
         },
         controller: ['$scope','sequentProofData', function($scope, sequentProofData) {
           $scope.aceEditor = undefined;
@@ -35,23 +36,39 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               }
             });
             editor.on("click", function(e) {
-              var clicked = $scope.tacticChanges.filter(function(v) {
-                var p = e.getDocumentPosition()
-                return v.range.contains(p.row, p.column);
-              });
-              if (clicked.length > 0 && e.domEvent.altKey) {
-                $scope.executeTactic(clicked[0], false);
-              } else if (clicked.length > 0 && e.domEvent.shiftKey) {
-                $scope.executeTactic(clicked[0], true);
+              if (e.domEvent.altKey || e.domEvent.shiftKey) {
+                var clicked = $scope.tacticChanges.filter(function(v) {
+                  var p = e.getDocumentPosition();
+                  return v.range.contains(p.row, p.column);
+                });
+                if (clicked.length > 0 && e.domEvent.altKey) {
+                  $scope.executeTactic(clicked[0], false);
+                } else if (clicked.length > 0 && e.domEvent.shiftKey) {
+                  $scope.executeTactic(clicked[0], true);
+                }
+              } else {
+                var p = e.getDocumentPosition();
+                var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
+                $scope.onNodeSelected({nodeId: nodeId});
               }
             });
             editor.on("mouseout", function(e) {
               $scope.tacticExecPopover.tactic = undefined;
             });
+            editor.on("focus", function(e) {
+              var nodeLoc = $scope.tactic.locOfNode($scope.nodeId);
+              if (nodeLoc) $scope.aceEditor.moveCursorTo(nodeLoc.endLine, nodeLoc.endColumn);
+            });
+            editor.getSelection().on("changeCursor", function(e) {
+              var p = editor.getSelection().getCursor();
+              var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
+              $scope.onNodeSelected({nodeId: nodeId});
+            });
             // fold markers are annotations
             editor.getSession().on("changeAnnotation", function(e) {
               $scope.aceEditor.getSession().foldAll(); // but foldAll only folds multiline folds
             });
+            editor.focus();
           }
 
           $scope.aceChanged = function(delta) {

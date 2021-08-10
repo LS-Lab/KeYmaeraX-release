@@ -5,15 +5,15 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParse
 import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Location, Region}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.util.Try
 
 trait TraceToTacticConverter {
-  def getTacticString(tree: ProofTree): String = getTacticString(tree.root, "")
-  def getTacticString(node: ProofTreeNode, indent: String): String
+  def getTacticString(tree: ProofTree): (String, Map[Location, ProofTreeNode]) = getTacticString(tree.root, "")
+  def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode])
 }
 
 class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
@@ -22,13 +22,20 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
   /** Tactic definitions from the tactic script (if any). */
   private val tacticDefs = scala.collection.mutable.Map.empty[String, BelleExpr]
 
-  def getTacticString(node: ProofTreeNode, indent: String): String = {
+  private def makeLocNodeMap(maker: String, node: ProofTreeNode): Map[Location, ProofTreeNode] = {
+    //nil: proof state before = proof state after
+    if (node.children.isEmpty) Map[Location, ProofTreeNode](Region(0, 0, 0, maker.length) -> node)
+    //any other tactic: proof state after maker
+    else Map[Location, ProofTreeNode](node.children.map(n => Region(0, 0, 0, maker.length) -> n):_*)
+  }
+
+  def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode]) = {
     assert(!node.children.contains(node), "A node should not be its own child.")
-    val nodeMaker = tacticStringAt(node) match {
+    val (nodeMaker, nodeMakerLoc) = tacticStringAt(node) match {
       case (nm, Some(DefTactic(name, t))) =>
         tacticDefs(name) = t
-        nm
-      case (nm, _) => nm
+        (nm, makeLocNodeMap(nm, node))
+      case (nm, _) => (nm, makeLocNodeMap(nm, node))
     }
     val subgoalTactics = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else INDENT_INCREMENT)))
 
@@ -48,14 +55,24 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       }
     } else Nil
 
-    if (subgoalTactics.isEmpty) indent + nodeMaker
-    else if (subgoalTactics.size == 1) sequentialTactic(nodeMaker, subgoalTactics.head, indent)
-    else if (subgoalTactics.size == labels.size) sequentialTactic(nodeMaker,
-      subgoalTactics.zip(minimize(labels)).map({ case (t, l) =>
-        indent + INDENT_INCREMENT + "\"" + l.prettyString + "\":\n" + t.linesWithSeparators.map(INDENT_INCREMENT + _).mkString("") }).
-        mkString(",\n") + "\n" + indent + ")",
+    if (subgoalTactics.isEmpty) (indent + nodeMaker, shift(nodeMakerLoc, 0, indent.length))
+    else if (subgoalTactics.size == 1) sequentialTactic((nodeMaker, nodeMakerLoc), subgoalTactics.head, indent)
+    else if (subgoalTactics.size == labels.size) sequentialTactic((nodeMaker, nodeMakerLoc), {
+        val (lines, locs) = subgoalTactics.zip(minimize(labels)).foldLeft[(List[String], Map[Location, ProofTreeNode])]((List.empty, Map.empty))({
+          case ((rtext, rloc), ((ttext, tloc), label)) =>
+            val indented = indent + INDENT_INCREMENT + "\"" + label.prettyString + "\":\n" + ttext.linesWithSeparators.map(INDENT_INCREMENT + _).mkString("")
+            (rtext :+ indented, rloc ++ shift(tloc, 2*rtext.length + 1, (indent + INDENT_INCREMENT).length))
+        })
+        (lines.mkString(",\n") + "\n" + indent + ")", locs)
+      },
       indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
-    else sequentialTactic(nodeMaker, subgoalTactics.mkString(",\n") + "\n" + indent + ")",
+    else sequentialTactic((nodeMaker, nodeMakerLoc), {
+        val (lines, locs) = subgoalTactics.foldLeft[(List[String], Map[Location, ProofTreeNode])](List.empty, Map.empty)({
+          case ((rtext, rloc), (ttext, tloc)) =>
+            (rtext :+ ttext, rloc ++ shift(tloc, rtext.length, 0))
+        })
+      (lines.mkString(",\n") + "\n" + indent + ")", locs)
+      },
       indent, SEQ_COMBINATOR.img + " " + BRANCH_COMBINATOR.img + "(")
   }
 
@@ -70,16 +87,24 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
     else minimize(l, depth + 1)
   }
 
+  /** Shifts the location by `lines` and `columns`. */
+  private def shift(loc: Map[Location, ProofTreeNode], lines: Int, columns: Int): Map[Location, ProofTreeNode] =
+    loc.map({ case (l: Region, n) => (Region(l.line+lines, l.column+columns, l.endLine+lines, l.endColumn+columns), n) })
+
   /** Composes `ts1` and `ts2` sequentially, trims `ts1` and single-line `ts2` before composing them. */
-  private def sequentialTactic(ts1: String, ts2: String, indent: String, sep: String = SEQ_COMBINATOR.img): String = {
-    val (ts1t, ts2t) = if (ts2.lines.length <= 1) (ts1.trim, ts2.trim) else (ts1.trim, ts2.stripPrefix(indent))
+  private def sequentialTactic(ts1: (String, Map[Location, ProofTreeNode]),
+                               ts2: (String, Map[Location, ProofTreeNode]),
+                               indent: String, sep: String = SEQ_COMBINATOR.img): (String, Map[Location, ProofTreeNode]) = {
+    val (ts1t, ts2t) = if (ts2._1.lines.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
     (ts1t, ts2t) match {
-      case ("nil", _) | ("skip", _)=> indent + ts2t
-      case (_, "nil") | (_, "skip") => indent + ts1t
-      case ("" | "()", "" | "()") => ""
-      case (_, "" | "()") => indent + ts1t
-      case ("" | "()", _) => indent + ts2t
-      case _ => indent + ts1t + sep + "\n" + indent + ts2t
+      /* todo adapt locations */
+      case ("nil", _) | ("skip", _)=> (indent + ts2t, shift(ts2._2, 0, indent.length))
+      case (_, "nil") | (_, "skip") => (indent + ts1t, shift(ts1._2, 0, indent.length))
+      case ("" | "()", "" | "()") => ("", Map.empty)
+      case (_, "" | "()") => (indent + ts1t, shift(ts1._2, 0, indent.length))
+      case ("" | "()", _) => (indent + ts2t, shift(ts2._2, 0, indent.length))
+      case _ => (indent + ts1t + sep + "\n" + indent + ts2t,
+        shift(ts1._2, 0, indent.length) ++ shift(ts2._2, ts1t.lines.length, indent.length))
     }
   }
 
@@ -138,15 +163,15 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
 /** A verbatim trace to tactic converter whose tactics are as recorded in the database. */
 class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
 
-  def getTacticString(node: ProofTreeNode, indent: String): String = {
+  def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode]) = {
     assert(!node.children.contains(node), "A node should not be its own child.")
     val thisTactic = tacticStringAt(node)
     val subgoals = node.children.map(getTacticString(_, indent + (if (node.children.size <= 1) "" else "  ")))
 
     //@todo does pretty-printing
-    if (subgoals.isEmpty) thisTactic
-    else if (subgoals.size == 1) sequentialTactic(thisTactic, subgoals.head)
-    else sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + indent + subgoals.mkString(",\n" + indent) + "\n" + indent + ")")
+    if (subgoals.isEmpty) (thisTactic, Map.empty)
+    else if (subgoals.size == 1) (sequentialTactic(thisTactic, subgoals.head._1), Map.empty)
+    else (sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + indent + subgoals.map(_._1).mkString(",\n" + indent) + "\n" + indent + ")"), Map.empty)
   }
   
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {

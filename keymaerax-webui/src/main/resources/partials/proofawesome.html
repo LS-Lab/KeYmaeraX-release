@@ -300,9 +300,6 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div ng-if="taskExplanation.selection=='Tactic'" ng-cloak>
-
-                                </div>
                                 </div>
                             </div>
                             <div class="panel-body k4-no-padding">
@@ -311,7 +308,11 @@
                                      ng-cloak data-intro="Clicks are recorded as tactic here. Append to program proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
                                     <k4-tactic-editor
                                             user-id="userId" proof-id="proofId" node-id="task.id"
-                                            on-tactic-script="onTacticScript(tacticText, stepwise)">
+                                            uib-popover-template="'proofStatePopover.html'"
+                                            popover-trigger="'none'"
+                                            popover-is-open="taskExplanation.proofStateNodeId !== undefined"
+                                            on-tactic-script="onTacticScript(tacticText, stepwise)"
+                                            on-node-selected="onNodeInTacticSelected(nodeId)">
                                     </k4-tactic-editor>
                                 </div>
                                 <div ng-if="taskExplanation.selection=='Rule'" ng-cloak>
@@ -334,3 +335,10 @@
 </div>
 </div>
 </div>
+
+<script type="text/ng-template" id="proofStatePopover.html">
+    <k4-sequent
+            user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{taskExplanation.proofStateNodeId}}"
+            sequent="taskExplanation.proofStateNode.sequent"
+            read-only="true" collapsed="false" abbreviate="false"></k4-sequent>
+</script>

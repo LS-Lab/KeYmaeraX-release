@@ -46,6 +46,7 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          else return undefined;
        },
        itemIds: function() { return Object.keys(this.itemsMap); },
+       contains: function(id) { return $.grep(this.itemIds(), function(v) { return v === id; }).length > 0; },
        items: function() {
          //@HACK set selectedTab here because angular bootstrap v2.5.0 screws up active=selectedTab when tabs are removed
          var selected = this.selectedItem();
@@ -209,6 +210,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     /** The tactic model */
     tactic: {
       tacticText: "",
+      nodesByLocation: undefined,
       snapshot: undefined,
       verbose: true,
 
@@ -218,10 +220,23 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract/' + (theTactic.verbose ? "verbose" : "succinct")).then(function (response) {
           theTactic.snapshot = response.data.tacticText;
           theTactic.tacticText = response.data.tacticText;
+          theTactic.nodesByLocation = response.data.nodesByLocation;
         })
         .catch(function(data) {
           $rootScope.$broadcast('tactic.extractError', userId, proofId);
         });
+      },
+
+      nodeIdAtLoc: function(line, column) {
+        var nodesAtLoc = $.grep(this.nodesByLocation, function(v) {
+          return v.loc.line <= line && line <= v.loc.endLine && v.loc.column <= column && column <= v.loc.endColumn;
+        });
+        return nodesAtLoc.length > 0 ? nodesAtLoc[0].node : undefined;
+      },
+
+      locOfNode: function(node) {
+        var nodeInfo = $.grep(this.nodesByLocation, function(v) { return v.node === node; });
+        return nodeInfo.length > 0 ? nodeInfo[0].loc : undefined;
       },
 
       reset: function() {
