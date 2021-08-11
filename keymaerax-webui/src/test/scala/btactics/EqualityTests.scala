@@ -246,6 +246,10 @@ class EqualityTests extends TacticTestBase {
     proveBy("y=x, x=y, x=x ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "y=y, y=y ==>".asSequent
   }
 
+  it should "not fail when rewriting creates non-trivial left-hand sides" in withTactics {
+    proveBy("x=y+1, x=z+5 ==>".asSequent, applyEqualities).subgoals.loneElement shouldBe "z+5=y+1 ==>".asSequent
+  }
+
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals.loneElement shouldBe "z = a+b ==> z < c".asSequent
