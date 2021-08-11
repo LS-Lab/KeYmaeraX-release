@@ -46,11 +46,11 @@ object SwitchedSystems {
 
   /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
     * @note for closed domains, this is automatically true
-    * @note returns false when QE times out
+    * @note returns an option with string and counterexample if it manages to find one
     * @param sys the ODE under consideration
     * @param dom the "global" domain of points to be considered
     */
-  def odeActive(sys : ODESystem, dom : Formula = True) : Boolean = {
+  def odeActive(sys : ODESystem, dom : Formula = True) : Option[(String, Map[NamedSymbol, Expression])] = {
 
     val odels = DifferentialProduct.listify(sys.ode).map {
       case AtomicODE(x,e) => (x,e)
@@ -70,19 +70,27 @@ object SwitchedSystems {
     //Points about to leave ODE domain under ODE dynamics
     val bwdfml = ODEInvariance.fStar(ODESystem(oder, True), normalized)._1
 
-    val check = And(Imply(And(dom,fwdfml),sys.constraint),Imply(And(dom,bwdfml),sys.constraint))
-    val pr = proveBy(check, DifferentialTactics.timeoutQE)
+    val checkfwd = Imply(And(dom,fwdfml),sys.constraint)
+    val prfwd = findCounterExample(checkfwd)
 
-    pr.isProved
+    if(prfwd.nonEmpty)
+      return Some("Unable to enter ODE "+sys,prfwd.get)
+
+    val checkbwd = Imply(And(dom,bwdfml),sys.constraint)
+    val prbwd = findCounterExample(checkbwd)
+
+    if(prbwd.nonEmpty)
+      return Some("Unable to leave ODE "+sys,prbwd.get)
+
+    None
   }
 
   /** Check that all states can locally evolve under at least one ODE
     *
     * @param odes ODEs in the family
     * @param dom the expected domain of the overall system (defaults: the entire state space)
-    * @return whether the ODEs meet the sanity criteria
     */
-  def stateSwitchActive(odes : List[ODESystem], dom : Formula = True) : Boolean = {
+  def stateSwitchActive(odes : List[ODESystem], dom : Formula = True) : Option[(String, Map[NamedSymbol, Expression])] = {
 
     val lp = odes.map(
       sys => {
@@ -95,10 +103,14 @@ object SwitchedSystems {
         ODEInvariance.fStar(ODESystem(sys.ode, True), normalized)._1
       }
     ).reduceRight(Or)
-    val check = Imply(dom,lp)
-    val pr = proveBy(check, DifferentialTactics.timeoutQE)
 
-    pr.isProved
+    val check = Imply(dom,lp)
+    val pr = findCounterExample(check)
+
+    if(pr.nonEmpty)
+      return Some("System cannot evolve forwards",pr.get)
+
+    None
   }
 
 }
