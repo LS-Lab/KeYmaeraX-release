@@ -513,6 +513,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\forall x x'>=0".asSequent
   }
 
+  it should "derive implications" in withTactics {
+    proveBy("(a=0->b=1)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> a'=0 & b'=0".asSequent
+    proveBy("(a=0->(b=1->c=2))'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> a'=0 & b'=0 & c'=0".asSequent
+    proveBy("((a=0->b=1)->c=2)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> (a'=0 & b'=0) & c'=0".asSequent
+  }
+
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>
     // Equal(Differential(Variable("x")), "1".asTerm)
     val result = proveBy("(x)'=1".asFormula, Derive.Dvar(1, 0::Nil))
