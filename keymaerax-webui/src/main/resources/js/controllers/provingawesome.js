@@ -772,9 +772,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           $scope.taskExplanation.proofStateNodeId = undefined;
         } else {
           $scope.taskExplanation.proofStateNodeId = nodeId;
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId).success(function(data) {
+          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/node').success(function(data) {
             $scope.taskExplanation.proofStateNode = data;
-            //$scope.proofTree.addNode(data);
           });
         }
       } else {

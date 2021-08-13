@@ -523,7 +523,7 @@ object RestApi extends Logging {
       }
     }}}
 
-    val proofTasksNode: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment) { (userId, proofId, nodeId) => { pathEnd {
+    val proofTasksNode: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "node") { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = new ProofTaskNodeRequest(database, userId, proofId, nodeId)
         completeRequest(request, t)
