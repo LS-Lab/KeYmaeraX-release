@@ -408,7 +408,7 @@ object KeYmaeraX {
               case "verbatimTactics" => new VerbatimTraceToTacticConverter()
               case "succinctTactics" => ??? //@todo a succinct tactic converter that prints with index positions
             }
-            val converted = tree.tacticString(converter)
+            val (converted, _) = tree.tacticString(converter)
             println("==== Done tactic " + name)
             (name, converted, t)
         }
