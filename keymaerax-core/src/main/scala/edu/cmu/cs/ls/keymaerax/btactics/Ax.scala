@@ -2724,7 +2724,7 @@ object Ax extends Logging {
     * @Derived by CE
     */
   @Axiom(("→'","->'"), conclusion = "__(P→Q)'__↔(¬P∨Q)'",
-    key = "0", recursor = "0", unifier = "surjlinear")
+    key = "0", recursor = "*", unifier = "surjlinear")
   lazy val Dimply: DerivedAxiomInfo = derivedAxiom("->' derive imply",
     Sequent(IndexedSeq(), IndexedSeq("(p_(||) -> q_(||))' <-> (!p_(||) | q_(||))'".asFormula)),
     useAt(implyExpand)(1, 0::0::Nil) &
