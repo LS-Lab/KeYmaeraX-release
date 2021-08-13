@@ -767,14 +767,12 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.onNodeInTacticSelected = function(nodeId) {
       if (nodeId) {
+        $scope.taskExplanation.proofStateNodeId = nodeId;
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/node').success(function(data) {
+          $scope.taskExplanation.proofStateNode = data;
+        });
         if ($scope.agenda.contains(nodeId)) {
           $scope.agenda.selectById(nodeId);
-          $scope.taskExplanation.proofStateNodeId = undefined;
-        } else {
-          $scope.taskExplanation.proofStateNodeId = nodeId;
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/node').success(function(data) {
-            $scope.taskExplanation.proofStateNode = data;
-          });
         }
       } else {
         $scope.taskExplanation.proofStateNodeId = undefined;
