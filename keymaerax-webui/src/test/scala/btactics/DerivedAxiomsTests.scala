@@ -189,6 +189,12 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
   it should "prove PC2" in {check(PC2)}
   it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
+  //@todo it should "prove -' neg" in {check(Dneg)}
+  //@todo it should "prove -' minus" in {check(Dminus)}
+  it should "prove <='" in {check(Dlessequal)}
+  it should "prove <'" in {check(Dless)}
+  it should "prove ='" in {check(Dequal)}
+  it should "prove !='" in {check(Dnotequal)}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExists)}
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
