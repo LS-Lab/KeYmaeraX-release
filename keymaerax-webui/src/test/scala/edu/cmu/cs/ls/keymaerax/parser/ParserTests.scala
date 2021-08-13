@@ -689,6 +689,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser(input)
   }
 
+  it should "parse @variant annotation" in {
+    val input = "x=0 -> <{x:=x+1;}*@variant(\\exists i i+x>=5)>x>=5"
+    val listener = mock[(Program, Formula) => Unit]
+    inSequence {
+      (listener.apply _).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once
+    }
+    Parser.parser.setAnnotationListener(listener)
+    Parser(input)
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////

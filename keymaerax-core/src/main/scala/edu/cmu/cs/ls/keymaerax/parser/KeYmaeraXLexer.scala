@@ -251,6 +251,10 @@ private object INVARIANT extends Terminal("@invariant") {
   override def regexp: Regex = """\@invariant""".r
 }
 
+private object VARIANT extends Terminal("@variant") {
+  override def regexp: Regex = """\@variant""".r
+}
+
 // axiom and problem file
 
 private object AXIOM_BEGIN extends Terminal("Axiom") {
@@ -640,6 +644,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     PSEUDO.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PSEUDO, loc))),
     //
     INVARIANT.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, INVARIANT, loc))),
+    VARIANT.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, VARIANT, loc))),
     //
     FORMULA_SEPARATOR.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
       case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, FORMULA_SEPARATOR, loc))

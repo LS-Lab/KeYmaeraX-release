@@ -372,19 +372,19 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         reduce(shift(st), 2, Bottom :+ Token(ASSIGNANY, loc1 -- laloc), r)
 
       // nonproductive: special notation for annotations
-      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ Token(LPAREN, _) :+ Expr(f1) :+ Token(RPAREN, _) if isAnnotable(p) =>
+      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT | VARIANT, _)) :+ Token(LPAREN, _) :+ Expr(f1) :+ Token(RPAREN, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
         reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
-      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ (lpar@Token(LPAREN, _)) :+ Expr(f1) :+ Token(COMMA, _) if isAnnotable(p) =>
+      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT | VARIANT, _)) :+ (lpar@Token(LPAREN, _)) :+ Expr(f1) :+ Token(COMMA, _) if isAnnotable(p) =>
         //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
         reportAnnotation(annotatedProgram(elaborate(st, tok, OpSpec.sNone, ProgramKind, p, lax).asInstanceOf[Program]),
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1, lax).asInstanceOf[Formula])
         reduce(st, 2, Bottom, r :+ Expr(p) :+ tok :+ lpar)
-      case _ :+ Expr(p: Program) :+ Token(INVARIANT, _) :+ Token(LPAREN, _) :+ Expr(_: Formula) if isAnnotable(p) =>
+      case _ :+ Expr(p: Program) :+ Token(INVARIANT | VARIANT, _) :+ Token(LPAREN, _) :+ Expr(_: Formula) if isAnnotable(p) =>
         if (la == RPAREN || la == COMMA || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, COMMA, BINARYFORMULAOP))
-      case _ :+ Expr(p: Program) :+ Token(INVARIANT, _) =>
+      case _ :+ Expr(p: Program) :+ Token(INVARIANT | VARIANT, _) =>
         if (isAnnotable(p)) if (la == LPAREN) shift(st) else error(st, List(LPAREN))
         else errormsg(st, "requires an operator that supports annotation")
 
@@ -576,11 +576,11 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case r :+ Token(LBRACE, _) :+ Expr(t1: DifferentialProgram) :+ Token(RBRACE, _) :+ (tok@Token(STAR, _)) =>
         // special elaboration for not-yet-ODESystem Programs
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
-        if (la == INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1, lax).asInstanceOf[Program]), r))
+        if (la == INVARIANT || la == VARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1, lax).asInstanceOf[Program]), r))
         else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1, lax).asInstanceOf[Program]), r)
       case r :+ Token(LBRACE, _) :+ Expr(t1: Program) :+ Token(RBRACE, _) :+ (tok@Token(STAR, _)) =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
-        if (la == INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))
+        if (la == INVARIANT || la == VARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))
         else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r)
       // Leave parentheses around for IF to find later
       case _ :+ Token(IF, _) :+ Token(LPAREN, _) :+ Expr(_) :+ Token(RPAREN, _) =>
@@ -1098,6 +1098,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     la==EOF ||
     la==DUAL ||              // from P in hybrid games
     la==INVARIANT ||         // extra: additional @annotations
+    la==VARIANT ||
     la==ELSE
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
@@ -1289,6 +1290,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       case sDLoop.op => sDLoop
 
       case INVARIANT => sNone
+      case VARIANT => sNone
       //case
       case sEOF.op => sEOF
       case o => throw ParseException("Unknown operator " + o, st)
