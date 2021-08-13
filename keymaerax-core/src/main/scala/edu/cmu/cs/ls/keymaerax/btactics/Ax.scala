@@ -461,12 +461,14 @@ object Ax extends Logging {
   @Axiom("x'", conclusion = "__(x)'__=x'", unifier = "linear",
     key = "0", recursor = "")
   val DvarAxiom: CoreAxiomInfo = coreAxiom("x' derive var")
+  //@todo derivable by CET
   @Axiom("-'", conclusion = "__(-f(x))'__=-(f(x))'",
     key = "0", recursor = "0", unifier = "surjlinear")
   val Dneg: CoreAxiomInfo = coreAxiom("-' derive neg")
   @Axiom("+'", conclusion = "__(f(x)+g(x))'__=f(x)'+g(x)'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dplus: CoreAxiomInfo = coreAxiom("+' derive sum")
+  //@todo derivable by CET
   @Axiom("-'", conclusion = "__(f(x)-g(x))'__=f(x)'-g(x)'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dminus: CoreAxiomInfo = coreAxiom("-' derive minus")
@@ -482,24 +484,12 @@ object Ax extends Logging {
   @Axiom("^'", conclusion = "__(f(g)^n)'__=n·f(g)^(n-1)·(f(g))'←n≠0", unifier = "linear",
     key = "1.0", recursor = "1")
   val Dpower: CoreAxiomInfo = coreAxiom("^' derive power")
-  @Axiom("='", conclusion = "__(f(x)=g(x))'__↔f(x)'=g(x)'",
-    key = "0", recursor = "0;1", unifier = "surjlinear")
-  val Dequal: CoreAxiomInfo = coreAxiom("=' derive =")
   @Axiom(("≥'", ">='"), conclusion = "__(f(x)≥g(x))'__↔f(x)'≥g(x)'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dgreaterequal: CoreAxiomInfo = coreAxiom(">=' derive >=")
   @Axiom(">'", conclusion = "__(f(x)>g(x))'__↔f(x)'≥g(x)'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dgreater: CoreAxiomInfo = coreAxiom(">' derive >")
-  @Axiom(("≤'", "<='"), conclusion = "__(f(x)≤g(x))'__↔f(x)'≤g(x)'",
-    key = "0", recursor = "0;1", unifier = "surjlinear")
-  val Dlessequal: CoreAxiomInfo = coreAxiom("<=' derive <=")
-  @Axiom("<'", conclusion = "__(f(x)<g(m))'__↔f(x)'≤g(x)'",
-    key = "0", recursor = "0;1", unifier = "surjlinear")
-  val Dless: CoreAxiomInfo = coreAxiom("<' derive <")
-  @Axiom(("≠'", "!='"), conclusion = "__(f(x)≠g(x))'__↔f(x)'=g(x)'",
-    key = "0", recursor = "0;1", unifier = "surjlinear")
-  val Dnotequal: CoreAxiomInfo = coreAxiom("!=' derive !=")
   @Axiom(("∧'", "&'"), conclusion = "__(P&Q)'__↔P'∧Q'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dand: CoreAxiomInfo = coreAxiom("&' derive and")
@@ -2715,6 +2705,110 @@ object Ax extends Logging {
   @Axiom(("→taut","->taut"), unifier = "full")
   lazy val implyTautology: DerivedAxiomInfo = derivedAxiom("-> tautology", Sequent(IndexedSeq(), IndexedSeq("(p_() -> (q_() -> p_()&q_())) <-> true".asFormula)), prop)
 
+
+//  /**
+//    * {{{Axiom "-' derive minus"
+//    *    (f(||) - g(||))' = (f(||))' - (g(||))'
+//    * End.
+//    * }}}
+//    * @todo needs CET so CE for terms
+//    */
+//  @Axiom("-'", conclusion = "__(f(x)-g(x))'__=f(x)'-g(x)'",
+//    key = "0", recursor = "0;1", unifier = "surjlinear")
+//  val Dminus: DerivedAxiomInfo = derivedAxiom("-' derive minus",
+//    Sequent(IndexedSeq(), IndexedSeq("(f(||) - g(||))' = (f(||))' - (g(||))'".asFormula)),
+//    useAt(minus2Plus)(1, 1::Nil) &
+//      useAt(minus2Plus)(1, 0::0::Nil) &
+//      useAt(Dlinear)(1, 0::Nil) &
+//      byUS(equivReflexive)
+//  )
+//
+//  /**
+//    * {{{Axiom "-' derive neg"
+//    *    (-f(||))' = -((f(||))')
+//    * End.
+//    * }}}
+//    * @todo needs CET so CE for terms
+//    */
+//  @Axiom("-'", conclusion = "__(-f(x))'__=-(f(x))'",
+//    key = "0", recursor = "0", unifier = "surjlinear")
+//  val Dneg: DerivedAxiomInfo = derivedAxiom("-' derive neg",
+//    Sequent(IndexedSeq(), IndexedSeq("(-f(||))' = -((f(||))')".asFormula)),
+//    useAt(neg2Minus)(1, 0::0::Nil) &
+//      useAt(neg2Minus)(1, 1::Nil) &
+//      useAt(Dminus)(1, 0::Nil) &
+//      useAt(Dconst)(1, 0::0::Nil) &
+//      byUS(equivReflexive)
+//  )
+//
+  /**
+    * {{{Axiom "<=' derive <=".
+    *    (f(||) <= g(||))' <-> ((f(||))' <= (g(||))')
+    * End.
+    * }}}
+    *
+    * @Derivable by CE
+    */
+  @Axiom(("≤'", "<='"), conclusion = "__(f(x)≤g(x))'__↔f(x)'≤g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
+  val Dlessequal: DerivedAxiomInfo = derivedAxiom("<=' derive <=",
+    Sequent(IndexedSeq(), IndexedSeq("(f(||) <= g(||))' <-> ((f(||))' <= (g(||))')".asFormula)),
+    useAt(flipLessEqual)(1, 1::Nil) &
+      useAt(flipLessEqual)(1, 0::0::Nil) &
+      byUS(Dgreaterequal)
+  )
+
+  /**
+    * {{{Axiom "<' derive <"
+    *    (f(||) < g(||))' <-> ((f(||))' <= (g(||))')
+    *    // sic(!) easier
+    * End.
+    * }}}
+    *
+    * @Derived by CE
+    */
+  @Axiom("<'", conclusion = "__(f(x)<g(m))'__↔f(x)'≤g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
+  val Dless: DerivedAxiomInfo = derivedAxiom("<' derive <",
+    Sequent(IndexedSeq(), IndexedSeq("(f(||) < g(||))' <-> ((f(||))' <= (g(||))')".asFormula)),
+    useAt(flipLessEqual)(1, 1::Nil) &
+      useAt(flipLess)(1, 0::0::Nil) &
+      byUS(Dgreater)
+  )
+
+  @Axiom("='", conclusion = "__(f(x)=g(x))'__↔f(x)'=g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
+  val Dequal: DerivedAxiomInfo = derivedAxiom("=' derive =",
+    Sequent(IndexedSeq(), IndexedSeq("(f(||) = g(||))' <-> ((f(||))' = (g(||))')".asFormula)),
+    useAt(equal2And)(1, 0::0::Nil) &
+      useAt(Dand)(1, 0::Nil) &
+      useAt(Dlessequal)(1, 0::0::Nil) &
+      useAt(Dgreaterequal)(1, 0::1::Nil) &
+      useAt(equal2And, PosInExpr(1::Nil))(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
+  /**
+    * {{{Axiom "!=' derive !="
+    *    (f(||) != g(||))' <-> ((f(||))' = (g(||))')
+    *    // sic!
+    * End.
+    * }}}
+    *
+    * @Derived by CE
+    */
+  @Axiom(("≠'", "!='"), conclusion = "__(f(x)≠g(x))'__↔f(x)'=g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
+  val Dnotequal: DerivedAxiomInfo = derivedAxiom("!=' derive !=",
+    Sequent(IndexedSeq(), IndexedSeq("(f(||) != g(||))' <-> ((f(||))' = (g(||))')".asFormula)),
+    useAt(notEqual2Or)(1, 0::0::Nil) &
+      useAt(Dor)(1, 0::Nil) &
+      useAt(Dless)(1, 0::0::Nil) &
+      useAt(Dgreater)(1, 0::1::Nil) &
+      useAt(equal2And, PosInExpr(1::Nil))(1, 0::Nil) &
+      byUS(equivReflexive)
+  )
+
   /**
     * {{{Axiom "->' derive imply".
     *    (p(||) -> q(||))' <-> (!p(||) | q(||))'
@@ -2730,6 +2824,7 @@ object Ax extends Logging {
     useAt(implyExpand)(1, 0::0::Nil) &
       byUS(equivReflexive)
   )
+
 
   /**
     * {{{Axiom "\forall->\exists".
@@ -3789,6 +3884,31 @@ object Ax extends Logging {
   @Axiom(">=R", unifier = "full", key = "", recursor = "")
   lazy val greaterEqualReflexive: DerivedAxiomInfo = derivedAxiom(">= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() >= s_()".asFormula)), QE & done)
 
+//  /**
+//    * {{{Axiom "-2- neg to minus".
+//    *   (-f()) = (0 - f())
+//    * End.
+//    * }}}
+//    * @see zeroMinus
+//    */
+//  @Axiom("-2-", unifier = "linear")
+//  lazy val neg2Minus: DerivedAxiomInfo = derivedAxiom("-2- neg to minus", Sequent(IndexedSeq(), IndexedSeq("(-f_()) = (0 - f_())".asFormula)),
+//    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
+//      byUS(proveBy("\\forall y \\forall x ((-x) = (0-x))".asFormula, TactixLibrary.RCF))
+//  )
+//
+//  /**
+//    * {{{Axiom "-2+ minus to plus".
+//    *   (f()-g()) = (f() + (-1)*g())
+//    * End.
+//    * }}}
+//    */
+//  @Axiom("-2+", unifier = "linear")
+//  lazy val minus2Plus: DerivedAxiomInfo = derivedAxiom("-2+ minus to plus", Sequent(IndexedSeq(), IndexedSeq("(f_()-g_()) = (f_() + (-1)*g_())".asFormula)),
+//    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+//      byUS(proveBy("\\forall y \\forall x ((x-y) = (x+(-1)*y))".asFormula, TactixLibrary.RCF))
+//  )
+//
   /**
     * {{{Axiom "<=".
     *   (f()<=g()) <-> ((f()<g()) | (f()=g()))
@@ -3835,6 +3955,30 @@ object Ax extends Logging {
   lazy val notEqual: DerivedAxiomInfo = derivedAxiom("! =", Sequent(IndexedSeq(), IndexedSeq("(!(f_() = g_())) <-> (f_() != g_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x ((!(x = y)) <-> (x != y))".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
+    * {{{Axiom "!= to or".
+    *   (f() != g()) <-> f() < g() | f() > g()
+    * End.
+    * }}}
+    */
+  @Axiom(("≠2∨","!=2|"),  conclusion = "__(f≠g)__ ↔ f<g ∨ f>g", unifier = "linear", displayLevel= "browse")
+  lazy val notEqual2Or: DerivedAxiomInfo = derivedAxiom("!=2|", Sequent(IndexedSeq(), IndexedSeq("(f_() != g_()) <-> f_() < g_() | f_() > g_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+      byUS(proveBy("\\forall y \\forall x (x != y <-> x<y | x>y)".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
+    * {{{Axiom "!= to or".
+    *   (f() = g()) <-> f() <= g() & f() >= g()
+    * End.
+    * }}}
+    */
+  @Axiom(("=2∧","=2&"),  conclusion = "__(f≠g)__ ↔ f<g ∨ f>g", unifier = "linear", displayLevel= "browse")
+  lazy val equal2And: DerivedAxiomInfo = derivedAxiom("=2&", Sequent(IndexedSeq(), IndexedSeq("(f_() = g_()) <-> f_() <= g_() & f_() >= g_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+      byUS(proveBy("\\forall y \\forall x (x = y <-> x<=y & x>=y)".asFormula, TactixLibrary.RCF))
   )
 
   /**

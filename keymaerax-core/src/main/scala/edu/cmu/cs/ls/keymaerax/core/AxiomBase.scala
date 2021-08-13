@@ -230,10 +230,10 @@ private[core] object AxiomBase extends Logging {
 
     insist(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     insist(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
-    insist(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
     insist(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
     /** DIFFERENTIAL FOR FORMULAS */
-    insist(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
+    insist(axs(">=' derive >=") == Equiv(DifferentialFormula(GreaterEqual(fany, gany)), GreaterEqual(Differential(fany), Differential(gany))), ">=' derive >=")
+    insist(axs(">' derive >") == Equiv(DifferentialFormula(Greater(fany, gany)), GreaterEqual(Differential(fany), Differential(gany))), ">' derive >")
     insist(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
     insist(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
     insist(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
@@ -464,10 +464,6 @@ Axiom "^' derive power"
 	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- c()!=0
 End.
 
-Axiom "=' derive ="
-  (f(||) = g(||))' <-> ((f(||))' = (g(||))')
-End.
-
 Axiom ">=' derive >="
   (f(||) >= g(||))' <-> ((f(||))' >= (g(||))')
 End.
@@ -475,20 +471,6 @@ End.
 Axiom ">' derive >"
   (f(||) > g(||))' <-> ((f(||))' >= (g(||))')
   /* sic! easier */
-End.
-
-Axiom "<=' derive <="
-  (f(||) <= g(||))' <-> ((f(||))' <= (g(||))')
-End.
-
-Axiom "<' derive <"
-  (f(||) < g(||))' <-> ((f(||))' <= (g(||))')
-  /* sic! easier */
-End.
-
-Axiom "!=' derive !="
-  (f(||) != g(||))' <-> ((f(||))' = (g(||))')
-  /* sic! */
 End.
 
 Axiom "&' derive and"

@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 class SwitchedSystemsTests extends TacticTestBase {
 
@@ -117,5 +118,120 @@ class SwitchedSystemsTests extends TacticTestBase {
     odeActive(ode2E) shouldBe None
     stateSwitchActive(List(ode1E, ode2E),"eps > 0".asFormula) shouldBe None
   }
+
+  "stability" should "specify stability for ODEs" in withMathematica { _ =>
+    val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram
+
+    val stab1 = stableOrigin(ode)
+    val stab2 = stableOrigin(ode, varsopt=Some(List("x","y","z").map(_.asVariable)))
+    val stab3 = stableOrigin(ode, varsopt=None, restr=Some("a > 0".asFormula))
+    println(stab1)
+    println(stab2)
+    println(stab3)
+
+    stab1 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))".asFormula
+    stab2 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z (x^2+y^2+z^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]x^2+y^2+z^2 < eps^2)))".asFormula
+    stab3 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (a>0&z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))".asFormula
+  }
+
+  it should "be reusable for switched systems" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+
+    val ss = stateSwitch(List(ode1,ode2,ode3))
+
+    val stab = stableOrigin(ss)
+    println(stab)
+
+    stab shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x (x^2 < del^2->[{{{x'=-x}++{x'=-x^3}}++{x'=-x^5}}*]x^2 < eps^2)))".asFormula
+  }
+
+  it should "prove ODE stable" in withMathematica { _ =>
+    val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram
+    val stab1 = stableOrigin(ode)
+
+    val pr = proveBy(Imply("a > 0".asFormula,stab1),
+      implyR(1) &
+        proveStable("x^2 + y^2 + z^2".asTerm,ode)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove system stable" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+
+    val ss = stateSwitch(List(ode1,ode2,ode3))
+    val stab = stableOrigin(ss)
+
+    val pr = proveBy(stab,
+      proveStable("x^4+x^2".asTerm,ss)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove system stable 2" in withMathematica { _ =>
+    val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
+    val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
+
+    val ss = stateSwitch(List(ode1,ode2))
+    val stab = stableOrigin(ss)
+
+    val pr = proveBy(stab,
+      proveStable("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm,ss)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove system stable 3" in withMathematica { _ =>
+    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8 & x1*x2 <= 0}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8 & x1*x2 >= 0}".asProgram.asInstanceOf[ODESystem]
+
+    val ss = stateSwitch(List(ode1,ode2))
+    val stab = stableOrigin(ss)
+
+    val pr = proveBy(stab,
+      proveStable("x1 ^ 2 + x2 ^2".asTerm,ss)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  // todo: need to handle arithmetic much better here (very slow)
+  it should "prove ODE example stable" taggedAs TodoTest ignore withMathematica { _ =>
+    val ode = "{x1' = -x1 + x2^3 - 3*x3*x4,x2' = -x1 - x2^3,x3' = x1*x4 - x3,x4' = x1*x3 - x4^3}".asProgram
+    val stab1 = stableOrigin(ode)
+
+    val pr = proveBy(stab1,
+      proveStable("2*x1^2 + x2^4 + 3201/1024*x3^2 + 2943/1024*x4^2".asTerm,ode)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  // todo: need to handle arithmetic much better here (too slow / doesn't prove)
+  it should "prove large ODE stable" taggedAs TodoTest ignore withMathematica { _ =>
+    val ode = "{x1' = -x1^3+4*x2^3-6*x3*x4,x2' = -x1-x2+x5^3,x3' = x1*x4-x3+x4*x6,x4' = x1*x3+x3*x6-x4^3,x5' = -2*x2^3-x5+x6,x6' = -3*x3*x4-x5^3-x6}".asProgram
+    val stab1 = stableOrigin(ode)
+
+    val pr = proveBy(stab1,
+        proveStable("2*x1^2 + 4*x2^4 + x3^2 + 11*x4^2 + 2*x5^4 + 4*x6^2".asTerm,ode)(1)
+    )
+
+    println(pr)
+  }
+
+
+
 
 }
