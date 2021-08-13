@@ -1,7 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, IllFormedTacticApplicationException, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas.remember
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 /**
@@ -113,4 +119,158 @@ object SwitchedSystems {
     None
   }
 
+  /** Stability of the origin for a given hybrid program
+    * \forall eps > 0 \exists del > 0
+    *   \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
+    *
+    * @param prog the hybrid program a to specify stability
+    * @param varsopt Optional list of variables to quantify and perturb.
+    *                By default None will pick non-differential boundVars(a)
+    * @param restr an optional additional restriction on the initial perturbation
+    *
+    * With the additional options, we can write down slightly more nuanced specifications
+    *
+    * \forall eps > 0 \exists del > 0
+    *   \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
+    */
+  def stableOrigin(prog : Program, varsopt: Option[List[Variable]] = None, restr: Option[Formula] = None) : Formula = {
+
+    val bv = StaticSemantics.boundVars(prog).toSet.filterNot( StaticSemantics.isDifferential(_)).map(_.asInstanceOf[Variable])
+
+    val av = StaticSemantics.symbols(prog)
+
+    // Fixed names for now
+    val eps = Variable("eps")
+    val del = Variable("del")
+    if (av.contains(eps) || av.contains(del))
+      throw new IllegalArgumentException("Hybrid program must not mention variables eps or del for stability specification")
+
+    val vars: List[Variable] = varsopt.getOrElse(bv.toList)
+    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = restr match {
+      case None => Less(normsq,Power(del,Number(2)))
+      case Some(f) => And(f,Less(normsq,Power(del,Number(2)))) // Apply a restriction if needed
+    }
+
+    val body = Imply(init,
+      Box(prog,Less(normsq,Power(eps,Number(2))))
+    )
+    val qbody = vars.foldRight(body : Formula)( (v,f) => Forall(v::Nil,f))
+
+    Forall(eps::Nil, Imply(Greater(eps, Number(0)), // \forall eps > 0
+    Exists(del::Nil, And(Greater(del, Number(0)),   // \exists del > 0
+      qbody
+    ))))
+  }
+
+  private lazy val edswap = remember(" f_() < del^2 -> del < eps -> del > 0 -> f_() < eps^2".asFormula, QE, namespace)
+
+  /** Prove stability specification at the given top-level position using the given Lyapunov function V
+    * V must satisfy the "basic" properties:
+    * V(0) = 0, V > 0 away from the origin
+    *
+    * Additionally, V must be a "throughout" invariant of the hybrid program
+    *
+    * @param lyap    the (common) Lyapunov function
+    * @param prog    ?
+    * @param varsopt ?
+    * @param restr   ?
+    * @return stability tactic
+    */
+  def proveStable(lyap : Term,prog : Program, varsopt: Option[List[Variable]] = None, restr: Option[Formula] = None) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
+    if(!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("proveStable: position " + pos + " must point to a top-level succedent position")
+
+    //Note: we might attempt to decipher a stability specification instead
+//    val fml = seq.sub(pos) match {
+//      case Some(f) if f.isInstanceOf[Formula] => f.asInstanceOf[Formula]
+//      case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+//    }
+
+    val bv = StaticSemantics.boundVars(prog).toSet.filterNot( StaticSemantics.isDifferential(_))
+
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val epssq = Power(eps,Number(2))
+    val delsq = Power(del,Number(2))
+
+    val w = Variable("w_")
+
+    val vars: List[Variable] = varsopt.getOrElse(bv.toList)
+    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = restr match {
+      case None => Less(normsq,Power(del,Number(2)))
+      case Some(f) => And(f,Less(normsq,Power(del,Number(2)))) // Apply a restriction if needed
+    }
+
+    // w serves as an lower bound on V for ||x||=eps
+    val epsbound =
+      vars.foldRight(Imply(Equal(normsq,epssq),GreaterEqual(lyap,w)):Formula)( (v,f) => Forall(v::Nil,f))
+    val epsw = Exists(w::Nil,
+      And(Greater(w,Number(0)),
+      epsbound
+    ))
+    // w serves as an upper bound on V for ||x||<del
+    val delw =And(And(Greater(del,Number(0)),Less(del,eps)),
+        vars.foldRight(Imply(Less(normsq,delsq),Less(lyap,w)):Formula)( (v,f) => Forall(v::Nil,f))
+    )
+
+    val apos = seq.ante.length
+
+    // The relevant tactic for a single ODE
+    // Assumes antecedent has the form:
+    // assums, \forall x ( |x|=eps -> lyap >= w), lyap < w, |x| < eps
+    val odetac =
+      dC(Less(lyap,w))(pos) <(
+        DifferentialTactics.dCClosure(pos) <(
+          hideL(-(apos+1)) & QE,
+          cohideOnlyL(-(apos+1)) &
+          DifferentialTactics.DconstV(pos) &
+          DifferentialTactics.diffWeakenG(pos) & implyR(1) &
+          andL(-1) & (allL(-1)*vars.length) & QE // can be done by subst
+        ),
+        hideL(-(apos+1)) & hideL(-(apos+2)) & dI('full)(pos)
+      )
+
+    // The relevant tactic for a switched system
+    val inv = And(Less(lyap,w),Less(normsq,epssq))
+    val looptac = loop(inv)(pos) <(
+      prop,
+      prop,
+      implyRi & implyR(pos) & andL('Llast) & chase(pos) &
+        SaturateTactic(andR(pos) <(skip,odetac)) & odetac
+    )
+
+    val conttac = prog match {
+      case ODESystem(_,_) => odetac
+      case Loop(_) => looptac
+      case _ => skip
+    }
+
+    allR(pos) & implyR(pos) &
+    cutR(epsw)(pos) <(
+      QE,
+      implyR(pos) & existsL('Llast) & andL('Llast) &
+      existsRmon(delw)(pos) <(
+        hideL('Llast) & QE,
+        // Get rid of some unused assumptions now
+        hideL(-(apos+1)) & hideL(-(apos+1)) & andL(-(apos+2)) & andL(-(apos+2)) &
+        andR(pos) <(
+          id,
+          (allR(pos)*vars.length) & implyR(pos) &
+          (allL(-(apos+2)) * vars.length) & implyL(-(apos+2)) <(
+            id,
+            cutR(Less(normsq,epssq))(pos) <(
+              (implyRi()(AntePos(apos+2),pos.checkSucc) * 3) & cohideR(pos) & byUS(edswap),
+              (hideL(-(apos+3)) * 3) & implyR(pos) &
+              conttac
+            )
+          )
+        )
+      )
+    )
+
+  })
 }
