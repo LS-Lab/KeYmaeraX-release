@@ -55,44 +55,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     a [Exception] shouldBe thrownBy(ArchiveParser.parser("\\u03C0"))
   }
 
-  it should "wtf" in {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val foo = new AtomicReference[List[String]](List.empty)
-    val c = Cancellable(
-      foo.synchronized(
-      try {
-        try {
-          println("Sleeping")
-          Thread.sleep(5000)
-          println("Done sleeping")
-        } catch {
-          case _: InterruptedException =>
-            foo.set(foo.get :+ "Starting cleanup")
-            throw new IllegalArgumentException("WTF")
-        }
-      } catch {
-        case _: Throwable => {
-          for (i <- 0 to 1000000) {
-            var j = i + 1
-          }
-          foo.set(foo.get :+ "Cleanup done")
-        }
-      }))
-    try {
-      Await.result(c.future, Duration(1000, MILLISECONDS))
-    } catch {
-      case _: TimeoutException =>
-        c.cancel()
-        foo.synchronized({
-          foo.set(foo.get :+ "Yay")
-        })
-    }
-
-    Thread.sleep(1000)
-
-    println(foo.get.mkString(","))
-  }
-
   it should "parse nullary predicate definitions" in {
     val input = """
       |Definitions.
