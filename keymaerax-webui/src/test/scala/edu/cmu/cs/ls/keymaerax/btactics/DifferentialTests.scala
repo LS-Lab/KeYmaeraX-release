@@ -745,6 +745,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x_0>0, x_0=x ==> [{x'=5&true&x>=x_0}]x>=2*x_0-x_0".asSequent
   }
 
+  it should "auto-generate old when const() is used" in withQE { _ =>
+    proveBy("x^2+y^2=1 ==> [{x'=y,y'=-w}]x^2+y^2=1".asSequent, dC("x^2+y^2=const()".asFormula)(1)).
+      subgoals should contain theSameElementsAs List(
+      "old=1, old=x^2+y^2 ==> [{x'=y,y'=-w&true&x^2+y^2=old}]x^2+y^2=1".asSequent,
+      "old=1, old=x^2+y^2 ==> [{x'=y,y'=-w}]x^2+y^2=old".asSequent
+    )
+  }
+
   it should "work when not sole formula in succedent" in withMathematica { _ =>
     //@todo fix unstable positions in discreteGhost/assign/stutter
     proveBy("t=0  ==> x!=1, [{t'=1,x'=-x&t=0}]x=1, x!=3".asSequent, dC("(x-old(x))^2<=2*((x-old(x))*(-x))*(t-0)".asFormula)(2)).

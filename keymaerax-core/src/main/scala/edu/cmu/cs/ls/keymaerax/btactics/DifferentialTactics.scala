@@ -308,9 +308,17 @@ private object DifferentialTactics extends Logging {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val ov = FormulaTools.argsOf("old", f)
+    val cutF = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+        case Equal(p, FuncOf(Function("const", None, Unit, Real, false), Nothing)) =>
+          Right(Equal(p, FuncOf(Function("old", None, Real, Real, interpreted=false), p)))
+        case _ => Left(None)
+      }
+    }, f).getOrElse(f)
+
+    val ov = FormulaTools.argsOf("old", cutF)
     if (ov.isEmpty) {
-      if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
+      if (FormulaTools.conjuncts(cutF).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(cutF)(pos)
     } else {
       DLBySubst.discreteGhosts(ov, origSeq,
         (ghosts: List[((Term, Variable), BelleExpr)]) => {
@@ -318,7 +326,7 @@ private object DifferentialTactics extends Logging {
           val afterGhostsPos =
             if (pos.isTopLevel) LastSucc(0, pos.inExpr ++ posIncrements)
             else Fixed(pos ++ posIncrements)
-          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          val oldified = SubstitutionHelper.replaceFn("old", cutF, ghosts.map(_._1).toMap)
           if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
           else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(afterGhostsPos)
         }
