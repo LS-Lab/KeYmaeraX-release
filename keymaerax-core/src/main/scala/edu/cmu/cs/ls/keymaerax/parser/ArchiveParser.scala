@@ -532,7 +532,7 @@ object ArchiveParser extends ArchiveParser {
     * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
     */
   def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
-    StaticSemantics.symbols(expr).forall({
+    StaticSemantics.symbols(expr).filter(!TacticReservedSymbols.symbols.contains(_)).forall({
       case f: Function =>
         val Signature(declaredDomain, declaredSort, _, _, loc: Location) = d.decls.get(Name(f.name,f.index)) match {
           case Some(decl) => decl
