@@ -368,11 +368,11 @@ object FormulaTools extends Logging {
   }
 
   /** Returns a set of variables that are arguments to any application of function 'fn' in the formula `fml`. */
-  def argsOf(fn: String, fml: Formula): Set[Term] = {
+  def argsOf(fn: Function, fml: Formula): Set[Term] = {
     var args = Set[Term]()
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => args += t; Left(None)
+        case FuncOf(mf: Function, t: Term) if mf == fn => args += t; Left(None)
         case _ => Left(None)
       }
     }, fml)

@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
@@ -312,9 +312,9 @@ private object DLBySubst {
   def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     //@Tactic in [[HybridProgramCalculus.generalize]]
     case (ctx, Box(a, _)) =>
-      val ov = FormulaTools.argsOf("old", c)
+      val ov = FormulaTools.argsOf(TacticReservedSymbols.old, c)
 
-      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable(TacticReservedSymbols.old.name), sequent)
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, sequent)
         freshOld = nextCandidate
@@ -327,7 +327,7 @@ private object DLBySubst {
       val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
       val afterGhostsPos = pos ++ PosInExpr(List.fill(posIncrements)(1))
 
-      val oldifiedC = SubstitutionHelper.replaceFn("old", c, ghosts.map(_._1).toMap)
+      val oldifiedC = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, c, ghosts.map(_._1).toMap)
       val oldifiedA = ghosts.foldLeft(a)({case (prg, ((w, r), _)) => SubstitutionHelper.replaceFree(prg)(w, r) })
       val introduceGhosts = ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip)
 
@@ -391,10 +391,10 @@ private object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "Tactic loop applicable only at top-level in succedent, but got position " +
       pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
 
-    val ov = FormulaTools.argsOf("old", invariant)
+    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, invariant)
     val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
       val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
-      val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
+      val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, invariant, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
         case Some(Box(Loop(a), _)) =>
