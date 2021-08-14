@@ -158,6 +158,12 @@ class QETests extends TacticTestBase {
     }
   }
 
+  it should "give a legible error message on failure when temporary hiding symbols are present" in withQE { tool =>
+    the [TacticInapplicableFailure] thrownBy proveBy("x=0 ==> x>=0".asSequent,
+      Using(List("x>=0".asFormula), ToolTactics.fullQE(tool))) should
+      have message "Sequent cannot be proved. Please try to unhide some formulas."
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved

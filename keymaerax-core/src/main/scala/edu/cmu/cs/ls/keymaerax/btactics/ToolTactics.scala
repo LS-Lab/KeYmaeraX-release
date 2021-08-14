@@ -87,13 +87,21 @@ private object ToolTactics {
             EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & doQE
             ,
             // else
-            hidePredicates & hideQuantifiedFuncArgsFmls &
-              assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-              EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
-              Idioms.doIf(_ => doQE != nil)(
-                doQE & done
-                  | anon {(_: Sequent) => throw new TacticInapplicableFailure("The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments.")}
-              )
+            anon { (s: Sequent) =>
+              val msg =
+                if (StaticSemantics.symbols(s).exists(n => n.name.startsWith("p_") || n.name.startsWith("q_"))) {
+                  "Sequent cannot be proved. Please try to unhide some formulas."
+                } else {
+                  "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
+                }
+              hidePredicates & hideQuantifiedFuncArgsFmls &
+                assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
+                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
+                Idioms.doIf(_ => doQE != nil)(
+                  doQE & done
+                    | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg)}
+                )
+            }
           )
         )
     )
@@ -636,15 +644,15 @@ private object ToolTactics {
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
   private def hidePredicates: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isPredicateFreeFOL}).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
   private def hideQuantifiedFuncArgsFmls: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+    (  sequent.ante.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (f, _) => !f.isFuncFreeArgsFOL}).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
 
