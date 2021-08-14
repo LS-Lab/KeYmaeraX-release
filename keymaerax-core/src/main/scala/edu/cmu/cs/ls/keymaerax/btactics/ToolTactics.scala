@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolOperationManagement}
@@ -98,8 +98,7 @@ private object ToolTactics {
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
                 EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
                 Idioms.doIf(_ => doQE != nil)(
-                  doQE & done
-                    | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg)}
+                  doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
                 )
             }
           )
@@ -108,15 +107,22 @@ private object ToolTactics {
   }
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
+  def fullQE(defs: Declaration, order: List[Variable] = Nil)(qeTool: => QETacticTool): BelleExpr = anon { seq: Sequent =>
     if (!seq.isFOL) throw new TacticInapplicableFailure("QE is applicable only on arithmetic questions, but got\n" +
       seq.prettyString + "\nPlease apply additional proof steps to hybrid programs first.")
 
     AnonymousLemmas.cacheTacticResult(
-      prepareQE(order, rcf(qeTool))
+      //@note TryCatch instead of | to preserve original exception
+      TryCatch(prepareQE(order, rcf(qeTool)), classOf[TacticInapplicableFailure],
+        (ex: TacticInapplicableFailure) =>
+          if (StaticSemantics.symbols(seq).exists(defs.contains)) {
+            ExpandAll(defs.substs) & prepareQE(order, rcf(qeTool))
+          } else throw ex
+      )
       ,
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
-      "qecache/" + qeTool.getClass.getSimpleName
+      "qecache/" + qeTool.getClass.getSimpleName,
+      defs
     ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
       if (s.succ.head == False) label(BelleLabels.QECEX)
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
@@ -124,7 +130,8 @@ private object ToolTactics {
   }
 
   /** @see[[TactixLibrary.QE]] */
-  def timeoutQE(order: List[Variable] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def timeoutQE(defs: Declaration, order: List[Variable] = Nil, requiresTool: Option[String] = None,
+                timeout: Option[Int] = None): BelleExpr = {
     lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
       throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
     lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
@@ -153,7 +160,7 @@ private object ToolTactics {
       }
       case None => tool
     }
-    resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+    resetTimeout(ToolTactics.fullQE(defs, order)(timeoutTool))
   }
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
@@ -201,7 +208,7 @@ private object ToolTactics {
     reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
   )
 
-  def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE()(qeTool)
+  def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE(Declaration(Map.empty), List.empty)(qeTool)
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
   // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
@@ -658,8 +665,8 @@ private object ToolTactics {
 
   /** Hides all non-FOL formulas from the sequent. */
   def hideNonFOL: DependentTactic = anon ((sequent: Sequent) =>
-    (  sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
-    ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+    (  sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverseMap({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
 }

@@ -388,7 +388,7 @@ object Kaisar {
       method match {
         case Simp() => SimplifierV3.fullSimpTac()
         case Auto() => TactixLibrary.master()
-        case RCF() => TactixLibrary.QE()
+        case RCF() => TactixLibrary.QE
         case SmartQE() => ArithmeticSpeculativeSimplification.speculativeQE
         case CloseId() => TactixLibrary.id
       }

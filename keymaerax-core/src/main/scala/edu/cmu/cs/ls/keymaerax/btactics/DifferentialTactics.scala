@@ -41,11 +41,11 @@ private object DifferentialTactics extends Logging {
 
   // QE with default timeout for use in ODE tactics (timeout in seconds)
   private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
-  private[btactics] def timeoutQE = ToolTactics.hideNonFOL & QE(Nil, None, Some(ODE_QE_TIMEOUT))
+  private[btactics] def timeoutQE = ToolTactics.hideNonFOL & QEX(None, Some(Number(ODE_QE_TIMEOUT)))
   // QE with default timeout for use in counterexample tactics (timeout in seconds)
   private[btactics] val ODE_CEX_TIMEOUT =
       Try(Integer.parseInt(Configuration(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT))).getOrElse(-1)
-  private[btactics] def timeoutCEXQE = QE(Nil, None, Some(ODE_CEX_TIMEOUT))
+  private[btactics] def timeoutCEXQE = QEX(None, Some(Number(ODE_CEX_TIMEOUT)))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -1057,7 +1057,7 @@ private object DifferentialTactics extends Logging {
 
         //@note diffWeaken will already include all cases where V works, without much additional effort.
         (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-          diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
+          diffWeaken(pos) & QEX(None, Some(Number(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))) & done else fail
           ) | (if (useOdeInvariant) proveInvariant(pos) else compatibilityFallback(pos, isOpen))
       })(pos))
   })

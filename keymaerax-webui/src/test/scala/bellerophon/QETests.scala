@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
@@ -109,16 +109,16 @@ class QETests extends TacticTestBase {
 
   it should "abort on test timeout" in { the [TestFailedDueToTimeoutException] thrownBy withMathematica ({ _ =>
     val s = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, w_0*r=v_0, abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V())), t_0=0, v_0>=0, dx_0^2+dy_0^2=1, r_0!=0, -t*V()<=xo-xo_0, xo-xo_0<=t*V(), -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(x-xo)>v^2/(2*B())+V()*(v/B())".asSequent
-    proveBy(s, QE()) shouldBe 'proved
+    proveBy(s, QE) shouldBe 'proved
   }, 2) should have message "The code passed to failAfter did not complete within 2 seconds." }
 
   it should "not translate quantified predicates verbatim" in withMathematica { _ =>
-    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x p(x) ==> p(y)".asSequent, QE()) should
+    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x p(x) ==> p(y)".asSequent, QE) should
       have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
   }
 
   it should "not translate quantified functions verbatim" in withMathematica { _ =>
-    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x f(x)=0 ==> f(y)=0".asSequent, QE()) should
+    the [TacticInapplicableFailure] thrownBy proveBy("\\forall x f(x)=0 ==> f(y)=0".asSequent, QE) should
       have message "The sequent mentions uninterpreted functions or predicates; attempted to prove without but failed. Please apply further manual steps to expand definitions and/or instantiate arguments."
   }
 
@@ -164,18 +164,26 @@ class QETests extends TacticTestBase {
       have message "Sequent cannot be proved. Please try to unhide some formulas."
   }
 
+  it should "expand definitions if not provable without" in withQE { tool =>
+    val defs = "p(x) ~> x=2 :: f(x) ~> x^2 :: g(x) ~> x+1 :: nil".asDeclaration
+    val result = proveByS("p(x) ==> f(x) > g(x)".asSequent, ToolTactics.fullQE(defs, List.empty)(tool), defs)
+    result shouldBe 'proved
+    result.conclusion shouldBe "x=2 ==> x^2 > x+1".asSequent
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
-    val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
+    val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
   }
 
   it should "succeed with Z3" in withZ3 { _ =>
-    val tactic = TactixLibrary.QE(Nil, Some("Z3"))
+    val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Z3"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
   }
 
   it should "fail on tool mismatch" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Nil, Some("Z3"))) should have message "QE requires Z3, but got None"
+    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Z3"))) should
+      have message "QE requires Z3, but got None"
   }
 
   it should "switch between tools" in withDatabase { db =>
@@ -228,7 +236,7 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
-    interpreter(QE(Nil, None, Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(QEX(None, Some(Number(7))), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"7\")")
   }}
 
@@ -246,12 +254,12 @@ class QETests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, Declaration(Map.empty), listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
-    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
+    interpreter(QEX(Some(tool.name), Some(Number(7))), BelleProvable.plain(ProvableSig.startProof(ArchiveParser.parseAsFormula(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE(\"" + tool.name + "\", \"7\")")
   }}
 
   it should "complain about the wrong tool" in withZ3 { _ =>
-    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "QE requires Mathematica, but got None"
+    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QEX(Some("Mathematica"), Some(Number(7)))) should have message "QE requires Mathematica, but got None"
   }
 
   "CEX in QE" should "not fail QE when FindInstance fails" in withMathematica { tool =>

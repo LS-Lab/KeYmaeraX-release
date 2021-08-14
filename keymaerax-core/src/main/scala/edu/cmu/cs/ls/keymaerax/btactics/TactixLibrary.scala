@@ -655,19 +655,21 @@ object TactixLibrary extends HilbertCalculus
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[Variable] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def QE(defs: Declaration, order: List[Variable] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     if (order.isEmpty) QEX(tool, timeout.map(Number(_)))
-    else ToolTactics.timeoutQE(order, tool, timeout) // non-serializable for now
+    else ToolTactics.timeoutQE(defs, order, tool, timeout) // non-serializable for now
   }
 
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
-    (tool, timeout) match {
-      case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(Nil, Some(toolName), Some(time.value.toInt))
-      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(Nil, None, Some(Integer.parseInt(toolName)))
-      case (Some(toolName), _) =>  ToolTactics.timeoutQE(Nil, Some(toolName))
-      case (_, Some(time)) => ToolTactics.timeoutQE(Nil, None, Some(time.value.toInt))
-      case (_, _) => ToolTactics.timeoutQE(Nil, None, None)
+    new SingleGoalDependentTactic(TacticFactory.ANON) {
+      override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = (tool, timeout) match {
+        case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(defs, Nil, Some(toolName), Some(time.value.toInt))
+        case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(defs, Nil, None, Some(Integer.parseInt(toolName)))
+        case (Some(toolName), _) =>  ToolTactics.timeoutQE(defs, Nil, Some(toolName))
+        case (_, Some(time)) => ToolTactics.timeoutQE(defs, Nil, None, Some(time.value.toInt))
+        case (_, _) => ToolTactics.timeoutQE(defs, Nil, None, None)
+      }
     }
   }
   lazy val QE: BelleExpr = QEX(None, None)

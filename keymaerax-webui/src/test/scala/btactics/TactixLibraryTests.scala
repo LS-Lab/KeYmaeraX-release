@@ -469,7 +469,7 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & anon ((provable: ProvableSig) => {
+      proveBy("x>1 -> x>0".asFormula, QEX(None, Some(Number(7))) & anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
@@ -481,7 +481,7 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | anon ((provable: ProvableSig) => {
+      proveBy("x>0 -> x>1".asFormula, QEX(None, Some(Number(7))) | anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
@@ -494,7 +494,7 @@ class TactixLibraryTests extends TacticTestBase {
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Skip QE", new TacticInapplicableFailure(_))
-          & QE(Nil, None, Some(7))) | anon ((provable: ProvableSig) => {
+          & QEX(None, Some(Number(7)))) | anon ((provable: ProvableSig) => {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
           provable
         })
@@ -571,9 +571,9 @@ class TactixLibraryTests extends TacticTestBase {
       Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
     )
     proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
-      debug("init") & QE(),
-      debug("use") & QE(),
-      debug("step") & assignd(1) & QE()
+      debug("init") & QE,
+      debug("use") & QE,
+      debug("step") & assignd(1) & QE
       ))
   }
 
@@ -586,9 +586,9 @@ class TactixLibraryTests extends TacticTestBase {
       "v>0, x<v+1 ==> <x:=x-1;>x<(v-1)+1".asSequent
     )
     proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
-      debug("init") & QE(),
-      debug("use") & QE(),
-      debug("step") & assignd(1) & QE()
+      debug("init") & QE,
+      debug("use") & QE,
+      debug("step") & assignd(1) & QE
       ))
   }
 
@@ -601,9 +601,9 @@ class TactixLibraryTests extends TacticTestBase {
       "z>0, x<z+1, c=1 ==> <x:=x-c;>x<(z-1)+1".asSequent
     )
     proveBy(fml, implyR(1) & con("z".asVariable, vari)(1) <(
-      debug("init") & QE(),
-      debug("use") & QE(),
-      debug("step") & assignd(1) & QE()
+      debug("init") & QE,
+      debug("use") & QE,
+      debug("step") & assignd(1) & QE
       ))
   }
 

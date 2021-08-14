@@ -114,7 +114,7 @@ class Compbased extends TacticTestBase {
 
     val notTrue = proveBy("false <-> !true".asFormula, prop & done)
 
-    val oneIsNotZero = proveBy("false <-> 1=0".asFormula, QE() & done)
+    val oneIsNotZero = proveBy("false <-> 1=0".asFormula, QE & done)
 
     proveBy(implementChoice("x:=2;".asProgram, "x:=3;".asProgram, "x>=2".asFormula),
       implyR(1) & choiceb(-1) & andL(-1) & composeb(1) & choiceb(1) & andR(1) <(

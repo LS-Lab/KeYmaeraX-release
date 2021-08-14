@@ -59,6 +59,11 @@ case class Declaration(decls: Map[Name, Signature]) {
   /** Finds the definition with `name` and index `idx`. */
   def find(name: String, idx: Option[Int] = None): Option[Signature] = decls.get(Name(name, idx))
 
+  /** True if a definition with `name` and `idx` is contained in this set. */
+  def contains(name: String, idx: Option[Int]): Boolean = decls.contains(Name(name, idx))
+  /** True if a definition with name and index per named symbol `n` is contained in this set. */
+  def contains(n: NamedSymbol): Boolean = contains(n.name, n.index)
+
   /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
   def exhaustiveSubst[T <: Expression](arg: T): T = try {
     elaborateToFunctions(arg.exhaustiveSubst(USubst(substs))).asInstanceOf[T]
