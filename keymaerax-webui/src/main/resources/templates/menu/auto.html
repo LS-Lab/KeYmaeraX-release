@@ -139,6 +139,14 @@
         </li>
     </ul>
 </li>
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a ng-click="agenda.items().length <= 0 || getCounterExample()"
+       data-intro="<center>Arithmetic Counterexample</center>" data-position="top"
+       uib-popover-template="fetchRuleHelp('findCounterExample')"
+       popover-class="k4-rulemenu-helppopover"
+       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+        <span class="fa fa-bolt"><span class="k4-btn-optional-text"> CEX</span></span></a>
+</li>
 <li class="nav-item dropdown k4-tactics-navitem-dropdown" ng-class="{'disabled': agenda.items().length <= 0 }">
     <a class="dropdown-toggle" ng-class="{'disabled': agenda.items().length <= 0 }" data-toggle="dropdown">
         <span ng-click="$event.stopPropagation();openProofstepBrowser('axioms')"
