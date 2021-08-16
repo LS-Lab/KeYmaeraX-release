@@ -231,7 +231,183 @@ class SwitchedSystemsTests extends TacticTestBase {
     println(pr)
   }
 
+  "time dependent" should "model time dependency" in withMathematica { _ =>
+    val ode1 = "{x'=x}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x'=-x}".asProgram.asInstanceOf[ODESystem]
 
+    val tt = timeSwitch(List( (ode1,Some(Number(5))), (ode2, None)),
+      List(List((1,Number(5))),List((0,Number(5)))), topt = Some(Variable("t_")))
+
+    println(tt)
+    tt shouldBe (
+      "{s_:=0;{u_:=0;++u_:=1;}}" +
+      "{" +
+      " {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
+      "  ?u_=1;{{?s_>=5;u_:=0;}s_:=0;++u_:=1;}" +
+      " }" +
+      " {?u_=0;{t_'=1,s_'=1,x'=x&true&s_<=5}++" +
+      "  ?u_=1;{t_'=1,s_'=1,x'=-x}" +
+      " }" +
+      "}*").asProgram
+  }
+
+  it should "model slow switching" in withMathematica { _ =>
+    val ode1 = "{x'=x}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x'=-x}".asProgram.asInstanceOf[ODESystem]
+
+    val tt = slowSwitch( List(ode1,ode2), Number(5))
+
+    println(tt)
+
+    tt shouldBe (
+      ("{s_:=0;{u_:=0;++u_:=1;}}" +
+        "{" +
+        "   {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
+        "    ?u_=1;{{?s_>=5;u_:=0;}s_:=0;++u_:=1;}}" +
+        "   {?u_=0;{s_'=1,x'=x}++" +
+        "    ?u_=1;{s_'=1,x'=-x}}" +
+        "}*").asProgram
+    )
+  }
+
+  it should "do a manual slow stability proof" in withMathematica { _ =>
+    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8}".asProgram.asInstanceOf[ODESystem]
+
+    val lyap1 = "2*x1^2+x2^2".asTerm
+    val lyap2 = "x1^2+2*x2^2".asTerm
+    val lyaps = List(lyap1,lyap2)
+
+    val tt = slowSwitch (List(ode1,ode2), Number(3))
+    val stab = stableOrigin(tt)
+
+    val vars = List("x1","x2").map(_.asVariable)
+    val normsq = vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val epssq = Power(eps, Number(2))
+    val delsq = Power(del, Number(2))
+
+    val w = Variable("w_")
+
+    val epsgeq = lyaps.map( t => GreaterEqual(t,w)).reduceLeft(And)
+
+    val epsbound =
+      vars.foldRight(Imply(Equal(normsq, epssq), epsgeq): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsw = Exists(w :: Nil,
+      And(Greater(w, Number(0)),
+        epsbound
+      ))
+
+    val delless = lyaps.map( t => Less(t,w)).reduceLeft(And)
+    val delw = And(And(Greater(del, Number(0)), Less(del, eps)),
+      vars.foldRight(Imply(Less(normsq, delsq), delless): Formula)((v, f) => Forall(v :: Nil, f))
+    )
+
+    val exp = "1 + (s_*1/4) + (s_*1/4)^2/2 + (s_*1/4)^3/6".asTerm
+
+    val u = Variable("u_")
+
+    val lexp = lyaps.zipWithIndex.map( fi =>
+      And(Equal(u,Number(fi._2)), Less(Times(fi._1,exp), w))
+    ).reduceLeft(Or)
+
+    val invariant = And(And("s_>=0".asFormula, Less(normsq,epssq)),lexp)
+
+    val pr = proveBy(stab,
+      allR(1) & implyR(1) &
+      cutR(epsw)(1) <(
+        //Automation should prove these bounds separately and then pick the smallest
+        QE,
+        implyR(1) & existsL(-2) & andL(-2) &
+        existsRmon(delw)(1) <(
+          hideL(-3) & QE,
+          andL(-4) & andL(-4) & andR(1) <(
+            id,
+            (allR(1)*2) & implyR(1) &
+            (allL(-4)*2) & implyL(-4) <(
+              id,
+              composeb(1) &
+              hideL(-1) &
+              hideL(-1) &
+              generalize(invariant)(1) <(
+                chase(1) & hideL(-3) & QE ,
+                andL(-1) & hideL('Llast) &
+                throughout(invariant)(1) <(
+                  prop,
+                  prop,
+                  cohideOnlyL(-1) & andL(-1) & chase(1) & orL(-2) <(
+                    andR(1) <(
+                      QE, // can do more simplification
+                      implyR(1) & hideR(1) & QE
+                    ),
+                    andR(1) <(
+                      implyR(1) & hideR(1) & QE,
+                      QE // can do more simplification
+                    )
+                  ),
+                  andL(-1) & hideL(-2) &
+                  andL(-1) & chase(1) & orL(-3) <(
+                    andR(1) <(
+                      implyR(1) &
+                      exhaustiveEqL2R('Llast) &
+                      // this sequence of cuts sets things up in the right order
+                      dC("s_>=0".asFormula)(1) <(
+                        dC(Less(Times(lyap1,exp), w))(1) <(
+                          dC(Less(normsq,epssq))(1) <(
+                            DW(1) & G(1) & QE, // can be simplified
+                            ODEInvariance.dCClosure(1) <(
+                              hideL(-1) & QE,
+                              dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
+                                DW(1) & G(1) & QE,
+                                dW(1) & andL(-1) & andL(-2) &
+                                allL(-2) & allL(-2) & id
+                              )
+                            )
+                          ),
+                          hideL(-1) & ODE(1)
+                        ),
+                        hideL(-1) & ODE(1)
+                      )
+                      ,
+                      implyR(1) & hideR(1) & QE
+                    ),
+                    andR(1) <(
+                      implyR(1) & hideR(1) & QE,
+                      implyR(1) &
+                        exhaustiveEqL2R('Llast) &
+                        dC("s_>=0".asFormula)(1) <(
+                          dC(Less(Times(lyap2,exp), w))(1) <(
+                            dC(Less(normsq,epssq))(1) <(
+                              DW(1) & G(1) & QE, // can be simplified
+                              ODEInvariance.dCClosure(1) <(
+                                hideL(-1) & QE,
+                                dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
+                                  DW(1) & G(1) & QE,
+                                  dW(1) & andL(-1) & andL(-2) &
+                                    allL(-2) & allL(-2) & id
+                                )
+                              )
+                            ),
+                            hideL(-1) & ODE(1)
+                          ),
+                          hideL(-1) & ODE(1)
+                        )
+                    )
+                  )
+                )
+              )
+
+            )
+          )
+        )
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
 
 
 }
