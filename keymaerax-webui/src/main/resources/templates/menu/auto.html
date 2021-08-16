@@ -38,6 +38,14 @@
         <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
 </li>
 <li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
+    <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'QE')"
+       data-intro="<center>Real Arithmetic</center>" data-position="top"
+       uib-popover-template="fetchRuleHelp('QE')"
+       popover-class="k4-rulemenu-helppopover"
+       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+        <span class="fa fa-calculator"><span class="k4-btn-optional-text"> QE</span></span></a>
+</li>
+<li class="nav-item" ng-class="{'disabled': agenda.items().length <= 0 }">
     <a ng-click="agenda.items().length <= 0 || doTactic(undefined, 'unfold')"
        data-intro="<center>Unfold all operators</center>" data-position="top"
        uib-popover-template="fetchRuleHelp('unfold')"
