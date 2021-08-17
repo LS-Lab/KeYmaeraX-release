@@ -90,6 +90,12 @@ object KeYmaeraX {
     case _ => "Parsed OK, but not a FOL formula"
   })
 
+  @JSExportTopLevel("parsesAsQFFOLFormula")
+  def parsesAsQFFOLFormula(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
+    case fml: Formula if fml.isFOL && StaticSemantics.boundVars(fml).isEmpty => "Parsed OK"
+    case _ => "Parsed OK, but not a Quantifier-free FOL formula"
+  })
+
   @JSExportTopLevel("parsesAsFormulaList")
   def parsesAsFormulaList(answer: String, solution: String): Dictionary[Any] =
     parseCheck(answer, SequentParser.parseFormulaList(_), (_: List[Formula]) => "Parsed OK")
@@ -134,6 +140,12 @@ object KeYmaeraX {
   @JSExportTopLevel("parsesAsInteger")
   def parsesAsInteger(answer: String, solution: String): Dictionary[Any] =
     parseCheck(answer, _.toInt, (_: Int) => "Parsed OK")
+
+  @JSExportTopLevel("parsesAsNumber")
+  def parsesAsNumber(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
+    case _: Number => "Parsed OK"
+    case _ => "Not a number"
+  })
 
   private def parseCheck[T](answer: String, parser: String=>T, check: T=>String): Dictionary[Any] = {
     Try(Parser(answer)).toOption match {
