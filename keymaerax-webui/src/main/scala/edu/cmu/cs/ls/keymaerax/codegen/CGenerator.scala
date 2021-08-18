@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature}
 
 object CGenerator {
   /** Prints a file header */
@@ -77,10 +78,44 @@ object CGenerator {
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
+class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
+
+  /** Prints function definitions of symbols in `mentionedIn`. */
+  private def printFuncDefs(mentionedIn: Expression, defs: Declaration): String = {
+    val what = StaticSemantics.symbols(mentionedIn)
+    defs.decls.
+      filter({
+        case (n, s@Signature(_, Real | Bool, Some(args), _, _)) => args.nonEmpty && what.contains(Declaration.asNamedSymbol(n, s))
+        case _ => false }).
+      map({
+        case (name, Signature(_, codomain, Some(args), interpretation, _)) =>
+          def ctype(s: Sort): String = s match {
+            case Real => "long double"
+            case Bool => "bool"
+            case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
+          }
+          val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
+          //@note ensure that args don't have both . and ._0
+          assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
+            case DotTerm(_, Some(i)) => Some(i)
+            case DotTerm(_, None) => Some(0)
+            case _ => None
+          }).count(_ == 0) <= 1))
+          val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
+            (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
+              SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
+          val body = interpretation match {
+            case Some(i) => (new CFormulaTermGenerator(_ => ""))(argsSubst(i))._2
+            case _ => "0; /* todo */"
+          }
+          s"""${ctype(codomain)} ${name.prettyString}($cargs) {
+             |  return $body;
+             |}""".stripMargin
+      }).mkString("\n\n") + "\n\n"
+  }
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
   private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
@@ -96,6 +131,7 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
+      printFuncDefs(expr, defs) +
       bodyDefs, bodyBody)
   }
 

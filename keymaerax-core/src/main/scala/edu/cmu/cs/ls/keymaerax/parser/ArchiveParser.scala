@@ -32,16 +32,7 @@ case class Declaration(decls: Map[Name, Signature]) {
   lazy val subst: USubst = USubst(substs)
 
   /** Declared names and signatures as [[NamedSymbol]]. */
-  lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case (Name(name, idx), Signature(domain, sort, _, rhs, _)) => sort match {
-    case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
-    case Real | Bool if domain.isDefined => Function(name, idx, domain.get, sort)
-    case Trafo =>
-      assert(idx.isEmpty, "Program/system constants are not allowed to have an index, but got " + name + "_" + idx)
-      rhs match {
-        case Some(p: Program) if FormulaTools.dualFree(p) => SystemConst(name)
-        case _ => ProgramConst(name)
-      }
-  }}).toList
+  lazy val asNamedSymbols: List[NamedSymbol] = decls.map(Declaration.asNamedSymbol _ tupled).toList
 
   /** Topologically sorts the names in `decls`. */
   private def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
@@ -206,6 +197,23 @@ case class Declaration(decls: Map[Name, Signature]) {
       UnknownLocation)
 
     SubstitutionPair(what, repl)
+  }
+}
+
+object Declaration {
+  /** Converts name `n` with signature `s` to a named symbol. */
+  def asNamedSymbol(n: Name, s: Signature): NamedSymbol = (n, s) match {
+    case (Name(name, idx), Signature(domain, sort, _, rhs, _)) => sort match {
+      case Real | Bool =>
+        if (domain.isEmpty) Variable(name, idx, sort)
+        else Function(name, idx, domain.get, sort)
+      case Trafo =>
+        assert(idx.isEmpty, "Program/system constants are not allowed to have an index, but got " + name + "_" + idx)
+        rhs match {
+          case Some(p: Program) if FormulaTools.dualFree(p) => SystemConst(name)
+          case _ => ProgramConst(name)
+        }
+    }
   }
 }
 

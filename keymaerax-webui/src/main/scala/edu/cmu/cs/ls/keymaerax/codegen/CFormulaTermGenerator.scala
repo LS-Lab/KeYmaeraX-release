@@ -91,14 +91,12 @@ class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGen
       case t@FuncOf(Function(fname, fidx, fdom, fsort, fintr), Nothing) if fname.endsWith("post") =>
         CVariable(termContainer(t) + nameIdentifier(Function(fname.stripSuffix("post"), fidx, fdom, fsort, fintr)))
       case t@FuncOf(fn, Nothing) => CVariable(termContainer(t) + nameIdentifier(fn))
-      case FuncOf(fn, child) if fn.interpreted =>
-        nameIdentifier(fn) match {
-          case "abs" => CAbs(compileTerm(child))
-          case "min" => val CPair(l, r) = compileTerm(child); CMin(l, r)
-          case "max" => val CPair(l, r) = compileTerm(child); CMax(l, r)
-          case _ => CUnaryFunction(nameIdentifier(fn), compileTerm(child))
-        }
-      case f@FuncOf(fn, _) if !fn.interpreted => throw new CodeGenerationException("Uninterpreted function symbols with arguments not supported: " + f.prettyString)
+      case FuncOf(fn, child)  => nameIdentifier(fn) match {
+        case "abs" => CAbs(compileTerm(child))
+        case "min" => val CPair(l, r) = compileTerm(child); CMin(l, r)
+        case "max" => val CPair(l, r) = compileTerm(child); CMax(l, r)
+        case _ => CUnaryFunction(nameIdentifier(fn), compileTerm(child))
+      }
       case Pair(l, r)  => CPair(compileTerm(l), compileTerm(r))
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
