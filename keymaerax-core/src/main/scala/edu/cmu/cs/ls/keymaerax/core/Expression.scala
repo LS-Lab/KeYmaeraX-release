@@ -304,6 +304,13 @@ case class Function(name: String, index: Option[Int] = None, domain: Sort, sort:
   }
   insistNamingConvention()
 
+  override def asString: String = {
+    interp match {
+      case None => super.asString
+      case Some(i) => super.asString + "<<" + i.prettyString + ">>"
+    }
+  }
+
   def interpreted = interp.nonEmpty
 }
 

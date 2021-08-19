@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.dbx
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{AxIndex, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLArchiveParser, InterpretedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, DLArchiveParser, DLParser, InterpretedSymbols, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter, ODEToInterpreted, Parser, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import org.scalatest.LoneElement.convertToCollectionLoneElementWrapper
@@ -26,32 +26,46 @@ import scala.language.postfixOps
  * @author James Gallicchio
  */
 class ImplicitFunctionTests extends TacticTestBase {
-  private val parser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
+  PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 
-  private def parse (input: String) = parser.parse(input).loneElement
+  private def parse (input: String) = ArchiveParser.parser.parse(input).loneElement
 
   "implicit fn oracle" should "return correct axiom for abs" in {
     val absAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.absF)
     absAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
-      Equal(DotTerm(),FuncOf(InterpretedSymbols.absF, DotTerm(idx=Some(0)))),
-      "._0 >= 0 & . = ._0 | ._0 < 0 & . = -._0".asFormula
+      Equal(DotTerm(idx=Some(0)),FuncOf(InterpretedSymbols.absF, DotTerm(idx=Some(1)))),
+      "._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1".asFormula
     )))
   }
 
-  "implicit fn oracle" should "return correct axiom for max" in {
+  it should "return correct axiom for max" in {
     val maxAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.maxF)
     maxAxiom.conclusion shouldBe Sequent(Vector[Formula](), Vector(Equiv(
-      Equal(DotTerm(),FuncOf(InterpretedSymbols.maxF, Pair(DotTerm(idx=Some(0)),DotTerm(idx=Some(1))))),
-      "._0 < ._1 & . = ._1 | ._0 >= ._1 & . = ._0".asFormula
+      Equal(DotTerm(idx=Some(0)),
+        FuncOf(InterpretedSymbols.maxF, Pair(DotTerm(idx=Some(1)),DotTerm(idx=Some(2))))),
+      "._1 < ._2 & ._0 = ._2 | ._1 >= ._2 & ._0 = ._1".asFormula
     )))
   }
 
-  "DLArchiveParser" should "parse implicit functions correctly" in {
+  "DLArchiveParser" should "parse inline function interps correctly" in {
+    val input =
+      """ArchiveEntry "entry1"
+        | Problem abs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+
+    // Note this is only equal to InterpretedSymbols.absF because the
+    // program's (implicit) definition is syntactically equivalent
+    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))),Number(1))
+  }
+
+  it should "parse implicit interp definitions correctly" in {
     val input =
       """ArchiveEntry "entry1"
         | ProgramVariables Real y; End.
-        | ImplicitDefinitions
-        |  Real abs(Real x) = y <-> x >= 0 & y = x | x < 0 & y = -x;
+        | Definitions
+        |  implicit Real abs(Real x) := y <-> (x < 0 & y = -(x)) | (x >= 0 & y = x);
         | End.
         | Problem abs(-1) = 1 End.
         |End.
@@ -61,6 +75,44 @@ class ImplicitFunctionTests extends TacticTestBase {
     // Note this is only equal to InterpretedSymbols.absF because the
     // program's (implicit) definition is syntactically equivalent
     prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+  }
+
+  it should "parse implicit ODE definitions correctly" in {
+    val input =
+      """ArchiveEntry "entry1"
+        | Definitions
+        |  implicit Real exp(Real x) :=' {exp:=1}{exp'=exp};
+        |  implicit Real sin(Real x), Real cos(Real x) :='
+        |    {sin:=0;cos:=1;} {sin'=cos, cos'=-sin};
+        | End.
+        | Problem abs(-1) = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+
+    // Note this is only equal to InterpretedSymbols.absF because the
+    // program's (implicit) definition is syntactically equivalent
+    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+  }
+
+  "KYXPrettyPrinter" should "print interpretations" in {
+    val input =
+      """ArchiveEntry "entry1"
+        | Problem abs<<(._0 < 0 & . = -(._0)) | (._0 >= 0 & . = ._0)>>(-1) = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+
+    val printer = new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))
+
+    val printed = printer(prog)
+    val prog2 = parse(printed)
+
+    prog2.model shouldBe prog.model
+  }
+
+  "throwaway" should "fail" in withMathematica { _ =>
+
   }
 
   "implicit fn axioms" should "substitute against an abbreviation" in withMathematica { _ =>
@@ -75,21 +127,24 @@ class ImplicitFunctionTests extends TacticTestBase {
     pvble shouldBe 'proved
   }
 
-  val exp = Function(name="exp",domain=Real, sort=Real,
-    interp = Some(/* . = exp(._0) <-> */ "\\exists t \\exists e t=0 & e=1 & ((<{t'=1,e'=e}> (t=._0 & e=.)) | (<{t'=-1,e'=-e}> (t=._0 & e=.)))".asFormula))
+  "differential defs" should "prove exp differential axiom" in withMathematica { _ =>
+    import InterpretedSymbols.expF
 
-  "differential defs" should "prove exp differential axiom" in {
-    val prob = Equal(Differential(FuncOf(exp,"x".asVariable)),
-                      Times(FuncOf(exp,"x".asVariable),Differential("x".asVariable)))
-    val pvble = proveBy(prob, skip
-      //TODO
+    val diffAx = ImplicitDiffAxiom.deriveDiffAxiom(List(expF)).head
+
+    println(diffAx)
+
+    val prob = Equal(Differential(FuncOf(expF,"x".asVariable)),
+                      Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))
+    val pvble = proveBy(prob,
+      useAt(diffAx)(1)
     )
 
     pvble shouldBe 'proved
   }
 
   it should "prove exp always positive in dL" in {
-    val problem = Greater(FuncOf(exp,"x".asVariable), Number(0))
+    val problem = Greater(FuncOf(InterpretedSymbols.expF,"x".asVariable), Number(0))
 
     val pvble = proveBy(problem,
       skip //TODO
@@ -98,30 +153,29 @@ class ImplicitFunctionTests extends TacticTestBase {
     pvble shouldBe 'proved
   }
 
-  val sin = Function(name="sin",domain=Real, sort=Real,
-    interp = Some(/* . = sin(._0) <-> */ "\\exists t \\exists s \\exists c t=0 & s=0 & c=1 & ((<{t'=1,s'=c,c'=-s}> (t=._0 & s=.)) | (<{t'=-1,s'=-c,c'=s}> (t=._0 & s=.)))".asFormula))
-  val cos = Function(name="cos",domain=Real, sort=Real,
-    interp = Some(/* . = cos(._0) <-> */ "\\exists t \\exists s \\exists c t=0 & s=0 & c=1 & ((<{t'=1,s'=c,c'=-s}> (t=._0 & c=.)) | (<{t'=-1,s'=-c,c'=s}> (t=._0 & c=.)))".asFormula))
-
   it should "prove simple trig lemmas in dL" in withMathematica { _ =>
-    val prob = Equal(Plus(Power(FuncOf(sin,"x".asVariable),Number(2)),
-                          Power(FuncOf(cos,"x".asVariable),Number(2))),
+    import InterpretedSymbols.{sinF, cosF}
+
+    println(sinF)
+
+    val prob = Equal(Plus(Power(FuncOf(sinF,"x".asVariable),Number(2)),
+                          Power(FuncOf(cosF,"x".asVariable),Number(2))),
                       Number(1))
     val pvble = proveBy(prob,
-      abbrvAll(FuncOf(sin,"x".asVariable),None)
-      & abbrvAll(FuncOf(cos,"x".asVariable),None)
-      & useAt(ElidingProvable(Provable.implicitFuncAxiom(sin)))(-1)
-      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cos)))(-2)
+      abbrvAll(FuncOf(sinF,"x".asVariable),None)
+      & abbrvAll(FuncOf(cosF,"x".asVariable),None)
+      & useAt(ElidingProvable(Provable.implicitFuncAxiom(sinF)))(-1)
+      & useAt(ElidingProvable(Provable.implicitFuncAxiom(cosF)))(-2)
       //TODO
     )
 
     pvble shouldBe 'proved
   }
 
-
   it should "prove sin differential axiom" in {
-    val prob = Equal(Differential(FuncOf(sin,"x".asVariable)),
-      Times(FuncOf(cos,"x".asVariable),Differential("x".asVariable)))
+    import InterpretedSymbols.{sinF,cosF}
+    val prob = Equal(Differential(FuncOf(sinF,"x".asVariable)),
+      Times(FuncOf(cosF,"x".asVariable),Differential("x".asVariable)))
     val pvble = proveBy(prob, skip
       //TODO
     )
@@ -130,7 +184,15 @@ class ImplicitFunctionTests extends TacticTestBase {
   }
 
   "kyx2mathematica" should "convert special implicit functions to Mathematica" in withMathematica { _ =>
-    //TODO: not sure how this will be set up
+    import InterpretedSymbols.expF
+
+    println(Parser.parser.getClass.getSimpleName)
+
+    val pr = proveBy(Equal(
+      Times(FuncOf(expF,Number(-1)),FuncOf(expF,Number(1))),
+      Number(1)), QE)
+
+    pr shouldBe 'proved
   }
 
   //TODO: substitute uninterpreted for interpreted functions in these tests

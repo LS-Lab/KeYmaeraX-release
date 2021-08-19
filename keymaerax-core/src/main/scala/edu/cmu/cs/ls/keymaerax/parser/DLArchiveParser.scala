@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLTacticParser
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ExpressionAugmentor
+import edu.cmu.cs.ls.keymaerax.parser.ODEToInterpreted.FromProgramException
 
 import scala.collection.immutable._
 
@@ -135,7 +136,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    NoCut((programVariables | definitions | implicitDefs).rep).map(_.reduce(_++_))
+    NoCut((programVariables | definitions).rep).map(_.reduceOption(_++_).getOrElse(Declaration(Map())))
   )
 
   /** `Description "text".` parsed. */
@@ -162,7 +163,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     * `Bool name(sort1 arg1, sorg2 arg2) <-> formula;` predicate definition or
     * `HP name ::= program;` program definition. */
   def declOrDef[_: P]: P[List[(Name,Signature)]] = P(
-      NoCut(progDef).map(p => p::Nil)
+      NoCut(implicitDef ~ ";")
+    | NoCut(progDef).map(p => p::Nil)
     | NoCut(declPartList ~ ";")
     | NoCut(declPart ~ "=" ~ term ~ ";").map({case (id, sig, e) => (id, sig.copy(interpretation = Some(e)))::Nil})
     | NoCut(declPart ~ "<->" ~ formula ~ ";").map({case (id, sig, f) => (id, sig.copy(interpretation = Some(f)))::Nil})
@@ -224,45 +226,83 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
       .rep.map(xs => Declaration(xs.flatten.map(x=>Name(x._1._1, x._1._2)->Signature(None,x._2,None,None,UnknownLocation)).toMap))
     ~ "End." )
 
-  /** ImplicitDefinitions
-   *    Real abs(Real x) = y <-> x < 0 && y = -x || x >= 0 && y = x;
-   *    Real exp(Real x) = y <-> \forall t. \forall e. t=0 && e=1 &&
-   *                             ((<t'=1,e'=e> x=t && y=e) || (<t'=-1,e'=-e> x=t && y=e));
-   *  End.
+  /** implicit ...
+   *
+   *  implicit Real sin(Real t), Real cos(Real t) :='
+   *    {sin:=0; cos:=1; {sin'=cos,cos'=-sin}}
+   *
+   *  implicit Real abs(Real x) := y <->
+   *    x < 0 & y = -x | x >= 0 & y = x
    *
    *  Note that implicitly defined functions can be given directly
    *  via the f<<interp>>(...) syntax, but the syntax here avoids
-   *  the need for dot terms and introduces a substitution of the
-   *  uninterpreted function for the interpreted function (at
-   *  elaboration).
+   *  the need for writing out interpretations with dot terms, and
+   *  introduces a substitution for the uninterpreted function at
+   *  the elaboration phase.
    */
-  def implicitDefs[_: P]: P[Declaration] = {
-    P("ImplicitDefinitions" ~~ blank ~/
-      (declPart ~ "=" ~ ident ~ "<->" ~ formula ~ ";")
-        .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
-          val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
-            // Replace res with DotTerm()
-            form.replaceFree(
-              BaseVariable(res._1,res._2,Real),
-              DotTerm()
-            )) { case (acc,(x,i)) =>
-            // Replace x with DotTerm(i)
-            acc.replaceFree(
-              BaseVariable(x._1.name,x._1.index,x._2),
-              DotTerm(idx = Some(i))
-            )
-          }
+  def implicitDef[_: P]: P[List[(Name,Signature)]] =
+    P("implicit" ~~ blank ~/ (implicitDefInterp.map(List(_)) | implicitDefODE))
 
-          val func = Function(fnName, fnNameNum, argSort, Real, interp = Some(formAfterSubstitutions))
-          Declaration(Map(
-            Name(fnName, fnNameNum) -> sig.copy(interpretation = Some(FuncOf(func,
-              vars.map({case(name,sort)=> Variable(name.name, name.index, sort)})
-                  .reduceRightOption(Pair).getOrElse(Nothing))))
-          ))
+  def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
+    (declPart.rep(min=1,sep=","./) ~ ":='" ~/ NoCut(program))
+      .map{case (sigs, prog) =>
+        if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
+          throw ParseException("Implicit ODE declarations can only declare real-valued " +
+            "functions of a single real variable.")
+
+        val (t,Real) = sigs.head._2.arguments.get.head
+        if (sigs.exists(_._2.arguments.get.head._1 != t))
+          throw ParseException("Implicit ODE declarations should all use the same " +
+            "argument name.")
+
+        val nameSet = sigs.map(_._1).toSet
+
+        if (nameSet.size != sigs.size)
+          throw ParseException("Tried declaring same function twice in an implicit ODE definition")
+
+        val interpFuncs = try {
+          ODEToInterpreted.fromProgram(prog,Variable(t.name,t.index))
+        } catch {
+          case FromProgramException(s) => throw ParseException("Failed to parse implicit definition by ODE: " + s)
         }
-      .rep.map(_.fold(Declaration(Map()))(_++_))
-    ~ "End."
-  )}
+
+        interpFuncs.map{f =>
+          if (!nameSet.contains(Name(f.name, f.index)))
+            throw ParseException("ODE variable missing from implicit declaration")
+
+          Name(f.name, f.index) -> Signature(
+              domain = Some(Real), codomain = Real, arguments = Some(List((t,Real))),
+              interpretation = Some(FuncOf(f, Variable(t.name, t.index, Real))),
+              loc = UnknownLocation
+          )
+        }.toList
+      }
+  )
+
+  def implicitDefInterp[_: P]: P[(Name,Signature)] = P(
+    (declPart ~ ":=" ~ ident ~ "<->" ~ formula)
+      .map{case (Name(fnName, fnNameNum), sig @ Signature(Some(argSort), Real, Some(vars), None, loc), res, form) =>
+        val formAfterSubstitutions = vars.zipWithIndex.foldLeft (
+          // Replace res with DotTerm(0)
+          form.replaceFree(
+            BaseVariable(res._1,res._2,Real),
+            DotTerm(idx=Some(0))
+          )) { case (acc,(x,i)) =>
+          // Replace x with DotTerm(i+1)
+          acc.replaceFree(
+            BaseVariable(x._1.name,x._1.index,x._2),
+            DotTerm(idx = Some(i+1))
+          )
+        }
+
+        val func = Function(fnName, fnNameNum, argSort, Real, interp = Some(formAfterSubstitutions))
+
+        Name(fnName, fnNameNum) -> sig.copy(interpretation = Some(FuncOf(func,
+            vars.map({case(name,sort)=> Variable(name.name, name.index, sort)})
+                .reduceRightOption(Pair).getOrElse(Nothing)))
+        )
+      }
+  )
 
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )

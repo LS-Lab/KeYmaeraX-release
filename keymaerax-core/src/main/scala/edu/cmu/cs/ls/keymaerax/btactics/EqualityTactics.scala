@@ -447,6 +447,26 @@ private object EqualityTactics {
     else skip //todo: skip or throw a catchable failure?
   })
 
+  /**
+   * Expands an interpreted function.
+   * @example {{{
+   *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
+   *    ---------------------------------------expand(1, 0::Nil)
+   *                                |- abs<<...>>(x)=5
+   * }}}
+   * @return The tactic.
+   */
+  @Tactic(names = "Expand interpreted function at position")
+  val expand: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    case (ctx, t@FuncOf(f@Function(fn, None, Real, Real, Some(interp)), _)) =>
+      val freshIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
+      val freshVar = Variable(fn + "_", freshIdx)
+      abbrvAt(t,Some(freshVar))(pos) &
+        ??? //useAt(ElidingProvable(Provable.implicitFuncAxiom(f)))('L, Equal(abs, absVar))
+
+    case (_, e) => throw new TacticInapplicableFailure("expand only applicable to interpreted functions, but got " + e.prettyString)
+  })
+
   /** Expands all special functions (abs/min/max). */
   @Tactic(names="Expand all special functions",
     revealInternalSteps = true)

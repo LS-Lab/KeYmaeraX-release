@@ -600,8 +600,8 @@ object ImplicitDiffAxiom {
 
     val ss = ((1 to fs.length) zip axsS).map(ia =>
       ia._2(USubst(List(
-        SubstitutionPair(DotTerm(), BaseVariable("z_", Some(ia._1))),
-        SubstitutionPair(DotTerm(Real,Some(0)), timevar)
+        SubstitutionPair(DotTerm(Real,Some(0)), BaseVariable("z_", Some(ia._1))),
+        SubstitutionPair(DotTerm(Real,Some(1)), timevar)
       )))
     )
 

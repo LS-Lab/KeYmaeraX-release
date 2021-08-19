@@ -854,8 +854,8 @@ object Provable {
     oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(
       Equiv(
         Equal(
-          DotTerm(f.sort, None),
-          FuncOf(f, dotTermForSort(f.domain, 0))
+          DotTerm(f.sort, Some(0)),
+          FuncOf(f, dotTermForSort(f.domain, 1))
         ),
         f.interp.get
       )
