@@ -256,27 +256,28 @@ object ImplicitDiffAxiom {
   )
 
   // Prove the n-dimensional partial derivative axiom
-  // [x'=f(x),t'=h()]x=g(t) -> [t':=h()](g(t))'=f(g(t))
+  // [x'=f(x,t),t'=h()]x=g(t) -> [t':=h()](g(t))'=f(g(t),t)
   def partialDer(dim : Int) : ProvableSig = {
 
     if(dim < 1)
       throw new IllegalArgumentException("Axiom derivable for dimension >= 1 but got: "+dim)
     //Indices 1,2,...dim
     val indices = 1 to dim
-    // The list of LHS variables x__1, x__2, ..., x__dim
-    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
-    val sort = indices.map(_ => Real).reduceRight(Tuple)
-    val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
-    // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
-    val RHSxarg = xLHS.reduceRight(Pair)
-    val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
 
     val tvar = "t_".asVariable
     val trhs = FuncOf(Function("h_", None, Unit, Real), Nothing)
 
+    // The list of LHS variables x__1, x__2, ..., x__dim
+    val xLHS = indices.map(i => BaseVariable("x_", Some(i)))
+    val sort = (indices:+0).map(_ => Real).reduceRight(Tuple)
+    val RHSfunc = indices.map(i => Function("f_", Some(i), sort, Real))
+    // The application f_(x_) where x_ is written as a tuple of the right sort  (x_1,(x_2,(...))
+    val RHSxarg = (xLHS:+tvar).reduceRight(Pair)
+    val xRHS = RHSfunc.map { f => FuncOf(f, RHSxarg) }
+
     val gFunc = indices.map(i => Function("g_", Some(i), Real, Real))
     val gApp = gFunc.map { f => FuncOf(f, tvar) }
-    val garg = gApp.reduceRight(Pair)
+    val garg = (gApp:+tvar).reduceRight(Pair)
     val gRHS = RHSfunc.map {f => FuncOf(f,garg)}
 
     val tode = AtomicODE(DifferentialSymbol(tvar),trhs)
@@ -477,12 +478,12 @@ object ImplicitDiffAxiom {
 
     val ode = fs.head.interp.get match {
       case Diamond(Compose(_,Choice(_,ODESystem(ode,True))),_) => ode
-      case _ => ???
+      case _ => throw new IllegalArgumentException("Function interpretation not of expected shape: "+ fs.head.interp.get)
     }
 
     // Canonicalize the shape of the implicit definition
     val canonPr = canonicalize(ode,fs)
-    // println("Canonicalized: ", canonPr)
+    println("Canonicalized: ", canonPr)
 
     // Set up for partial derivatives
 
@@ -579,7 +580,7 @@ object ImplicitDiffAxiom {
 
   // Canonicalize and give fixed names for variables
   // . = g(.0) <-> <{x_1:=*; x_0:=.; t:=.0;} {x'=-f(x), t'=-(1) ++ x'=f(x), t'=1} > Init
-  // x_0 = g(t_) <-> \exists x_1 {t'=-(1),x'=-f(x) ++ t'=1, x'=f(x)} > Init
+  // x_0 = g(t_) <-> \exists x_1 { x'=-f(x),t'=-(1) ++ x'=f(x),t'=1 } > Init
   private def canonicalize(ode: DifferentialProgram, fs : List[Function]) : List[ProvableSig] = {
 
     val odels = DifferentialProduct.listify(ode).map {

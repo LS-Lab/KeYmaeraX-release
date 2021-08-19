@@ -62,7 +62,7 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     println(pr)
 
     pr shouldBe 'proved
-    pr.conclusion shouldBe "==>  [{x__1'=f__1(x__1,x__2),x__2'=f__2(x__1,x__2),t_'=h_()}](x__1=g__1(t_)&x__2=g__2(t_))->[t_':=h_();]((g__1(t_))'=f__1(g__1(t_),g__2(t_))&(g__2(t_))'=f__2(g__1(t_),g__2(t_)))".asSequent
+    pr.conclusion shouldBe "==>  [{x__1'=f__1(x__1,x__2,t_),x__2'=f__2(x__1,x__2,t_),t_'=h_()}](x__1=g__1(t_)&x__2=g__2(t_))->[t_':=h_();]((g__1(t_))'=f__1(g__1(t_),g__2(t_),t_)&(g__2(t_))'=f__2(g__1(t_),g__2(t_),t_))".asSequent
   }
 
   "derive diff ax" should "derive differential axiom" in withMathematica { _ =>
@@ -112,6 +112,18 @@ class ImplicitDiffAxiomTests extends TacticTestBase {
     axs(1) shouldBe 'proved
     axs(2) shouldBe 'proved
 
+  }
+
+  it should "derive differential axiom with time" in withMathematica { _ =>
+
+    val exp = Function(name="exp",domain=Real, sort=Real,
+      interp = Some(/* . = exp(._0) <-> */ "<{e:=.; t :=._0;} {{e'=-(t),t'=-(1)} ++ {e'=t,t'=1}}> (t=0 & e=1)".asFormula))
+
+    val axs = deriveDiffAxiom(List(exp))
+    println(axs)
+
+    axs.length shouldBe 1
+    axs(0) shouldBe 'proved
   }
 
 }
