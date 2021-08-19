@@ -78,12 +78,24 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
   protected override def unifies2(s1:Formula, s2:Formula, t1:Formula, t2:Formula): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
-      compose(unify(Subst(u1)(s2), t2), u1)
+      compose(unify(Subst(u1)(s2), t2), u1) //@note fails on x=1, p(x)
     } catch {
       case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
+        try {
+          logger.trace("      try converse since " + e.getMessage)
+          compose(unify(t2, Subst(u1)(s2)), u1)
+        } catch {
+          case e: ProverException =>
+            logger.trace("      try next converse since " + e.getMessage)
+            val u2 = unify(s2, t2)
+            try {
+              compose(unify(t1, Subst(u2)(s1)), u2)
+            } catch {
+              case e: ProverException =>
+                logger.trace("      try final converse since " + e.getMessage)
+                compose(unify(Subst(u2)(s1), t1), u2)
+            }
+        }
     }
   }
   protected override def unifies2(s1:Program, s2:Program, t1:Program, t2:Program): List[SubstRepl] = {

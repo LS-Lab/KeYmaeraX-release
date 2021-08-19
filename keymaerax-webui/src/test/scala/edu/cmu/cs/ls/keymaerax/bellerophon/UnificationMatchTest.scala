@@ -155,6 +155,13 @@ class UnificationMatchTest extends SystemTestBase {
     )
   }
 
+  it should "support mixed left-right matching" in {
+    //@note needs to match p(x,y) with x=y but inside r needs the opposite direction
+    UnificationMatch(
+      "==> p(x,y) & r(x,y,0) -> r(x,y,a)".asSequent,
+      "==> x=y & (0>=0 & x^2+y^2=0) -> (a>=0 & x^2+y^2=0)".asSequent)
+  }
+
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {
     shouldUnify("[a;]x>=0".asFormula, "[x:=x+5;]x>=0".asFormula, USubst(
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
