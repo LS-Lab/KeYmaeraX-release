@@ -131,6 +131,8 @@ object UIIndex {
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case ProgramConst(name, _) if substs.exists({ case SubstitutionPair(ProgramConst(wn, _), _) => wn == name case _ => false }) =>
             s"""expand "$name"""" :: rules
+          case SystemConst(name, _) if substs.exists({ case SubstitutionPair(SystemConst(wn, _), _) => wn == name case _ => false }) =>
+            s"""expand "$name"""" :: rules
           case _ => rules
         }
 
