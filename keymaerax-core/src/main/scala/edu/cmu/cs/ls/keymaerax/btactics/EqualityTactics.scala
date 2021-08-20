@@ -282,10 +282,14 @@ private object EqualityTactics {
    */
   @Tactic(names = "Expand absolute value", codeName = "absExp")
   val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
+    case (_, _: Formula) => mapSubpositions(pos, sequent, {
+      case (FuncOf(InterpretedSymbols.absF, _), pp) => Some(?(abs(pp)))
+      case _ => None
+    }).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+    case (ctx, abs@FuncOf(fn@InterpretedSymbols.absF, t)) =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
-        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn + "_", sequent)
-        val absVar = Variable(fn + "_", freshAbsIdx)
+        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn.name + "_", sequent)
+        val absVar = Variable(fn.name + "_", freshAbsIdx)
         abbrv(abs, Some(absVar)) &
           useAt(Ax.equalCommute)('L, Equal(absVar, abs)) &
           useAt(Ax.abs)('L, Equal(abs, absVar))
@@ -302,7 +306,7 @@ private object EqualityTactics {
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   @Tactic(displayLevel = "internal")
   val absAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
+    case Some(absTerm@FuncOf(fn@InterpretedSymbols.absF, x)) =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {

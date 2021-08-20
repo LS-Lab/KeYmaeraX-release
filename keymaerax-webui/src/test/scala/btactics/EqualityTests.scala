@@ -367,6 +367,12 @@ class EqualityTests extends TacticTestBase {
       "==> \\forall x ( (x>=0 & x>=0 <-> (x>=0 | x<=0) ) | ( x<0 & -x>=0 <-> (x>=0 | x<=0) ) )".asSequent
   }
 
+  it should "find by top-level locator" in withQE { _ =>
+    val s = "a=2 & five=abs(-5) ==>".asSequent
+    proveBy(s, BelleParser(""" absExp('L=="a=2 & five=abs(-5)") """)).
+      subgoals.loneElement shouldBe "a=2&five=abs_, -5>=0&abs_=-5 | -5 < 0&abs_=-(-5) ==>".asSequent
+  }
+
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x<=y&min_=x | x>y&min_=y ==> min_>=5".asSequent
