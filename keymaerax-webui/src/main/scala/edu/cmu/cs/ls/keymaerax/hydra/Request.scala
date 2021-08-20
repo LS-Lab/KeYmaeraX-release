@@ -2387,8 +2387,16 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+
+        import TacticInfoJsonProtocol._
+        val tacticText = try {
+          t.parseJson.convertTo[TacticInfo].tacticText
+        } catch {
+          case _: ParsingException => t //@note backwards compatibility with database tactics not in JSON
+        }
+
         //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
-        val tactic = BelleParser.parseBackwardsCompatible(t, proofSession.defs)
+        val tactic = BelleParser.parseBackwardsCompatible(tacticText, proofSession.defs)
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
