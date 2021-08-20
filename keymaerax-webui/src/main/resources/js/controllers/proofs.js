@@ -176,5 +176,11 @@ angular.module('keymaerax.controllers').controller('ProofTacticDialogCtrl', func
       $scope.tactic.tacticBody = response.data.tacticText;
   });
 
-  $scope.ok = function () { $uibModalInstance.close(); };
+  $scope.ok = function() {
+    $uibModalInstance.close();
+  };
+
+  $scope.aceLoaded = function(editor) {
+    editor.setReadOnly(true);
+  }
 });
