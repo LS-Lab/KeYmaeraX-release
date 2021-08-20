@@ -879,6 +879,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       return 'rulehelp.html';
     }
 
+    $scope.toggleUseAllFmls = function() {
+      var node = sequentProofData.proofTree.node(sequentProofData.agenda.selectedId());
+      if (node) sequentProofData.formulas.toggleUseAllFmls(node.getSequent());
+    }
+
+    $scope.areAllFmlsUsed = function() {
+      var node = sequentProofData.proofTree.node(sequentProofData.agenda.selectedId());
+      return node ? sequentProofData.formulas.areAllFmlsUsed(node.getSequent()) : true;
+    }
+
     $scope.simulate = function() {
       $uibModal.open({
         templateUrl: 'templates/simulator.html',
@@ -1068,7 +1078,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.taskLabels = function(nodeId) {
-      return $scope.prooftree.node(nodeId).labels.map(function (l) { return trimTo(l, 10); }).join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
+      return $scope.prooftree.node(nodeId).labels.map(function (l) { return $scope.trimTo(l, 10); }).join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
     }
 
     $scope.saveTaskName = function(newName, oldName) {

@@ -308,7 +308,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       scope.deductionPath.isCollapsed = !scope.readOnly;
       // fetch child if top node is false to show additional proof line
       scope.proofTree.node(scope.nodeId).getSequent(function(sequent) {
-        var nodeIsFalse = sequent.ante.length == 0 && sequent.succ.length == 1 && sequent.succ[0].formula.json.plain == "false";
+        var nodeIsFalse = (sequent.ante ? sequent.ante.length : 0 == 0) &&
+          (sequent.succ ? sequent.succ.length : 0 == 1) && sequent.succ[0].formula.json.plain == "false";
         if (nodeIsFalse && scope.deductionPath.sections[0].path.length <= 1) scope.fetchParent(scope.nodeId);
       });
 

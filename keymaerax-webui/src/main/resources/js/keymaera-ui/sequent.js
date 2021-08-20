@@ -1,6 +1,6 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'derivationInfos',
-      function($rootScope, $uibModal, $http, spinnerService, derivationInfos) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', 'sequentProofData', 'derivationInfos',
+      function($rootScope, $uibModal, $http, spinnerService, sequentProofData, derivationInfos) {
     return {
         restrict: 'AE',
         scope: {
@@ -130,18 +130,11 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.areAllFmlsUsed = function() {
-              var anteUsed = $.grep(scope.sequent.ante, function(e, i) { return e.use; });
-              var succUsed = scope.sequent.succ;
-              if (anteUsed.length == scope.sequent.ante.length) {
-                succUsed = $.grep(scope.sequent.succ, function(e, i) { return e.use; });
-              }
-              return anteUsed.length == scope.sequent.ante.length && succUsed.length == scope.sequent.succ.length;
+              return sequentProofData.formulas.areAllFmlsUsed(scope.sequent);
             }
 
             scope.toggleAllFmls = function() {
-              var use = !scope.areAllFmlsUsed();
-              $.map(scope.sequent.ante, function(e, i) { e.use = use; return e; });
-              $.map(scope.sequent.succ, function(e, i) { e.use = use; return e; });
+              sequentProofData.formulas.toggleUseAllFml(scope.sequent);
             }
 
             scope.isFOL = function(formula) {

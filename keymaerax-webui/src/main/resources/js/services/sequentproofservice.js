@@ -255,6 +255,24 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         return sequent.ante.filter(function(f) { return f.use; }).map(function(f) { return f.id; }).
         concat(sequent.succ.filter(function(f) { return f.use; }).map(function(f) { return f.id; }));
       },
+      areAllFmlsUsed: function(sequent) {
+        if (sequent) {
+          var anteUsed = sequent.ante ? $.grep(sequent.ante, function(e, i) { return e.use; }) : [];
+          var succUsed = sequent.succ;
+          if (anteUsed.length == (sequent.ante ? sequent.ante.length : 0)) {
+            succUsed = sequent.succ ? $.grep(sequent.succ, function(e, i) { return e.use; }) : [];
+          }
+          return anteUsed.length == (sequent.ante ? sequent.ante.length : 0) &&
+                 succUsed.length == (sequent.succ ? sequent.succ.length : 0);
+        } else return true;
+      },
+      toggleUseAllFmls: function(sequent) {
+        if (sequent) {
+          var use = !this.areAllFmlsUsed(sequent);
+          $.map(sequent.ante, function(e, i) { e.use = use; return e; });
+          $.map(sequent.succ, function(e, i) { e.use = use; return e; });
+        }
+      },
       mode: 'prove',
       stickyEdit: false
     },
