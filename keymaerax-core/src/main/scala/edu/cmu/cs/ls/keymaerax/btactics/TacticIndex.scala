@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{BranchRecursor, Branches, T
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 import scala.annotation.switch
 
@@ -241,16 +242,8 @@ class DefaultTacticIndex extends TacticIndex {
       case "allL" | "allR" | "all stutter" => expr.isInstanceOf[Forall]
       case "existsL" | "existsR" | "exists stutter" => expr.isInstanceOf[Exists]
       case "allL2R" | "allR2L" | "equalCommute" => expr.isInstanceOf[Equal]
-      case "abs" => expr match {
-        case Equal(FuncOf(Function("abs", None, Real, Real, true), _), _) => true
-        case FuncOf(Function("abs", None, Real, Real, true), _) => true
-        case _ => false
-      }
-      case "minmax" => expr match {
-        case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _), _) => true
-        case FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _) => true
-        case _ => false
-      }
+      case "abs" => StaticSemantics.symbols(expr).contains(InterpretedSymbols.absF)
+      case "minmax" => StaticSemantics.symbols(expr).exists(s => s == InterpretedSymbols.minF || s == InterpretedSymbols.maxF)
 
       // box/diamond
       case "solve" | "solveEnd" | "ODE" | "dC" | "dI" | "dW" | "diffInvariant" =>

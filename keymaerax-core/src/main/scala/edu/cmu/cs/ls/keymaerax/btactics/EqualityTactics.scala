@@ -383,16 +383,17 @@ private object EqualityTactics {
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   @Tactic(displayLevel = "internal")
   val minmaxAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
+    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g)))
+      if fn == InterpretedSymbols.minF.name || fn == InterpretedSymbols.maxF.name =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
-        case Some(fml: Formula) if fn == "min" =>
+        case Some(fml: Formula) if fn == InterpretedSymbols.minF.name =>
           Or(
             And(LessEqual(f, g), fml.replaceFree(minmaxTerm, f)),
             And(Greater(f, g), fml.replaceFree(minmaxTerm, g))
           )
-        case Some(fml: Formula) if fn == "max" =>
+        case Some(fml: Formula) if fn == InterpretedSymbols.maxF.name =>
           Or(
             And(GreaterEqual(f, g), fml.replaceFree(minmaxTerm, f)),
             And(Less(f, g), fml.replaceFree(minmaxTerm, g))
@@ -403,7 +404,7 @@ private object EqualityTactics {
 
       val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
 
-      val contradiction = if (fn == "min") minContradiction else maxContradiction
+      val contradiction = if (fn == InterpretedSymbols.minF.name) minContradiction else maxContradiction
 
       val afterCMonPos =
         if (polarity >= 0) SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))

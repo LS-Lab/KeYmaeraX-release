@@ -445,6 +445,12 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=max_, x>=4&max_=x|x < 4&max_=4 ==> y>=4".asSequent
   }
 
+  it should "find by top-level locator" in withQE { _ =>
+    val s = "a=2 & five=max(0,5) ==>".asSequent
+    proveBy(s, BelleParser(""" minmax('L=="a=2 & five=max(0,5)") """)).
+      subgoals.loneElement shouldBe "a=2&five=max_, 0>=5&max_=0 | 0 < 5&max_=5 ==>".asSequent
+  }
+
   "expandAll" should "expand abs everywhere" in withQE { _ =>
     val result = proveBy("abs(x-y)>0 ==> abs(a-5)>0, abs(x-y)>37".asSequent, expandAll)
     result.subgoals.loneElement shouldBe "abs_>0, x-y>=0&abs_=x-y|x-y < 0&abs_=-(x-y), a-5>=0&abs__0=a-5|a-5 < 0&abs__0=-(a-5) ==> abs__0>0, abs_>37".asSequent
