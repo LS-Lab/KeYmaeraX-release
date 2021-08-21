@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Signature, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
@@ -391,12 +391,25 @@ private object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "Tactic loop applicable only at top-level in succedent, but got position " +
       pos.prettyString + ". Please apply more proof steps until the loop is top-level or use [*] iterateb instead.")
 
-    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, invariant)
+    //@note restrict to definitions that mention old(.) transitively
+    val invOldsDefs = Declaration(defs.decls.filter({ case (_, Signature(_, _, _, i, _)) =>
+      i.map(s => StaticSemantics.symbols(defs.exhaustiveSubst(s))).getOrElse(Set.empty).contains(TacticReservedSymbols.old) }))
+    val substInv = invOldsDefs.exhaustiveSubst(invariant)
+    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, substInv)
     val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
       val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
-      val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, invariant, ghosts.map(_._1).toMap)
+      val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, substInv, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
-      ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
+      val expandPrg = if (ghosts.nonEmpty) {
+        sequent.sub(pos) match {
+          case Some(Box(Loop(a), _)) =>
+            val toExpand = defs.transitiveSubstsFrom(a)
+            if (toExpand.nonEmpty) ExpandAll(toExpand)
+            else skip
+          case _ => skip
+        }
+      } else skip
+      expandPrg & ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) & inputanon {(pos, sequent) => sequent.sub(pos) match {
         case Some(Box(Loop(a), _)) =>
           if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
           else {
@@ -412,23 +425,30 @@ private object DLBySubst {
               if (consts.size > 1) And(oldified, consts.reduceRight(And))
               else if (consts.size == 1) And(oldified, consts.head)
               else And(oldified, True)
+
+            val expandInit = anon ((s: Sequent) => {
+              val toExpand = defs.transitiveSubstsFrom(s.toFormula)
+              if (toExpand.nonEmpty) ExpandAll(toExpand)
+              else skip
+            })
+
             label(startTx) &
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
               /* c */ useAt(Ax.I)(pos) & andR(pos) <(
                 andR(pos) <(
                   label(replaceTxWith(initCase)),
-                  (andR(pos) <(ExpandAll(Nil) & SaturateTactic(andL('L)) & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
+                  (andR(pos) <(expandInit & SaturateTactic(andL('L)) & DebuggingTactics.print("Foo") & closeIdWith(pos), TactixLibrary.nil))*constAntes.size &
                     (andR(pos) <(notR(pos) & closeIdWith('Llast), TactixLibrary.nil))*(constSuccs.size-1) &
-                    (if (constSuccs.nonEmpty) notR(pos) else skip) &
-                    ExpandAll(Nil) & SaturateTactic(andL('L)) & close & done),
+                    notR(pos) & SaturateTactic(andL('L)) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
                    else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
-                  andL(-1) & hideL(-1, oldified) & ExpandAll(Nil) & V(1) & close(-1, 1) & done)
+                  andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
               ),
-              /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
-                 else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(useCase))
+              /* c -> d */
+              cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
+              andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1) &
+              label(replaceTxWith(useCase))
             )
           }
         case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)

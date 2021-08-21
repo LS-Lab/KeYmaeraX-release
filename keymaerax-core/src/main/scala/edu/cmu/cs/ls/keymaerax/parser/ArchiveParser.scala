@@ -28,6 +28,14 @@ case class Declaration(decls: Map[Name, Signature]) {
       (name, sig.copy(interpretation = interpretation.map(elaborateToFunctions(_, taboo))))
   })).map((declAsSubstitutionPair _).tupled)
 
+  /** Returns the substitutions reachable transitively from symbols `s`. */
+  def transitiveSubstsFrom(e: Expression): List[SubstitutionPair] = {
+    val s = StaticSemantics.symbols(e).filterNot(_.isInstanceOf[DotTerm])
+    val expand = substs.filter(sp => StaticSemantics.symbols(sp.what).intersect(s).nonEmpty)
+    val also = expand.flatMap(sp => transitiveSubstsFrom(sp.repl) )
+    expand ++ also
+  }
+
   /** Substitution applying all definitions non-recursively (i.e., one level of substitution). */
   lazy val subst: USubst = USubst(substs)
 

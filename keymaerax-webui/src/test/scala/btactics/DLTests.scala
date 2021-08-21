@@ -742,6 +742,76 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x>=x_0, x_0>=0, A>0 ==> [x:=x+1;]x>=x_0, B>0, D>2, C>1".asSequent
   }
 
+  it should "keep constant assumptions even when hidden inside non-expanded assumptions/loop invariant" in withTactics {
+    val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=0 :: nil".asDeclaration
+    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "b()>0&x/b()>=1 ==> inv(x)".asSequent,
+      "inv(x), b()>0 ==> post(x)".asSequent,
+      "inv(x), b()>0 ==> [x:=x+1;]inv(x)".asSequent
+    )
+  }
+
+  it should "keep constant assumptions even when hidden transitively inside non-expanded assumptions/loop invariant" in withTactics {
+    val defs = "init(x) ~> bounds() & x/b()>=1 :: bounds() ~> b()>0 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=0 :: nil".asDeclaration
+    proveByS("init(x) ==> [{x:=x+1;}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "b()>0&x/b()>=1 ==> inv(x)".asSequent,
+      "inv(x), b()>0 ==> post(x)".asSequent,
+      "inv(x), b()>0 ==> [x:=x+1;]inv(x)".asSequent
+    )
+  }
+
+  it should "keep constant assumptions even when non-expanded program" in withTactics {
+    val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: prg{|^@|}; ~> x:=x+1; :: nil".asDeclaration
+    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("x/b()>=old(x)/b()".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b()".asSequent,
+      "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
+      "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> [x:=x+1;]x/b()>=x_0/b()".asSequent
+    )
+  }
+
+  it should "look up old in non-expanded inv" in withTactics {
+    val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> x/b()>=old(x)/b() :: prg{|^@|}; ~> x:=x+1; :: nil".asDeclaration
+    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b()".asSequent,
+      "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
+      "x/b()>=x_0/b(), b()>0, x_0/b()>=1 ==> [x:=x+1;]x/b()>=x_0/b()".asSequent
+    )
+  }
+
+  it should "look up old in non-expanded inv transitively" in withTactics {
+    val defs = "init(x) ~> b()>0 & x/b()>=1 :: post(x) ~> x/b()>=-1 :: inv(x) ~> p(x) & q(x) :: p(x) ~> x/b()>=old(x)/b() :: q(x) ~> x>=0 :: prg{|^@|}; ~> x:=x+1; :: nil".asDeclaration
+    proveByS("init(x) ==> [{prg{|^@|};}*]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "b()>0&x_0/b()>=1, x_0=x ==> x/b()>=x_0/b() & q(x)".asSequent,
+      "x/b()>=x_0/b() & q(x), b()>0, x_0/b()>=1 ==> post(x)".asSequent,
+      "x/b()>=x_0/b() & q(x), b()>0, x_0/b()>=1 ==> [x:=x+1;](x/b()>=x_0/b() & q(x))".asSequent
+    )
+  }
+
+  it should "not expand unnecessarily" in withTactics {
+    val defs = "init(x) ~> x>=1 :: prg{|^@|}; ~> x:=x+1; :: inv(x) ~> x>=0 :: post(x) ~> x>=-1 :: nil".asDeclaration
+    proveByS("init(x) ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "init(x) ==> inv(x)".asSequent,
+      "inv(x) ==> [prg{|^@|};]inv(x)".asSequent,
+      "inv(x) ==> post(x)".asSequent
+    )
+  }
+
+  it should "keep constants but not expand unnecessarily" in withTactics {
+    val defs = "init(x) ~> x>=y() :: prg{|^@|}; ~> x:=x+1; :: inv(x) ~> x>=0 :: post(x) ~> x>=-1 :: nil".asDeclaration
+    proveByS("init(x), y()>=1 ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "x>=y(), y()>=1 ==> inv(x)".asSequent,
+      "inv(x), y()>=1 ==> [prg{|^@|};]inv(x)".asSequent,
+      "inv(x), y()>=1 ==> post(x)".asSequent
+    )
+  }
+
   "Throughout" should "split simple sequences" in withTactics {
     val result = proveBy("x>2 ==> [{x:=x+1; x:=x+2; x:=x+3;}*]x>0".asSequent, throughout("x>1".asFormula)(1))
     result.subgoals should have size 5
