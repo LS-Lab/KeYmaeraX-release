@@ -259,8 +259,6 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
             "functions of a single real variable.")
 
-        println(sigs)
-
         val (t,Real) = sigs.head._2.arguments.get.head
         if (sigs.exists(_._2.arguments.get.head._1 != t))
           throw ParseException("Implicit ODE declarations should all use the same " +
