@@ -20,11 +20,11 @@ object InterpretedSymbols {
   val absF: Function = Function("abs", None, Real, Real,
     interp = Some("(._1 < 0 & ._0 = -(._1)) | (._1 >= 0 & ._0 = ._1)".asFormula))
 
-  val expF: Function = ODEToInterpreted.fromProgram("{exp:=1;} {exp'=exp}".asProgram).head
+  val expF: Function = ODEToInterpreted.fromProgram("{exp:=1;}; {exp'=exp}".asProgram).head
 
   val (sinF, cosF) = {
     val fns = ODEToInterpreted.fromProgram(
-      "{sin:=0;cos:=1;} {sin'=cos, cos'=-sin}".asProgram)
+      "{sin:=0;cos:=1;}; {sin'=cos, cos'=-sin}".asProgram)
     (fns(0), fns(1))
   }
 

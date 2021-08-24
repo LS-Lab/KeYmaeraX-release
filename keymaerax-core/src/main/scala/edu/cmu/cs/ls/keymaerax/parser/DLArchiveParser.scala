@@ -228,11 +228,14 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
 
   /** implicit ...
    *
-   *  implicit Real sin(Real t), Real cos(Real t) :='
-   *    {sin:=0; cos:=1; {sin'=cos,cos'=-sin}}
+   *  implicit Real sin(Real t), cos(Real t) :='
+   *    {sin:=0; cos:=1; t:=0; {t'=1, sin'=cos, cos'=-sin}};
+   *
+   *  implicit Real xsq(Real t) :='
+   *    {{xsq:=0; t:=0;}; {xsq'=2t,t'=1}};
    *
    *  implicit Real abs(Real x) := y <->
-   *    x < 0 & y = -x | x >= 0 & y = x
+   *    x < 0 & y = -x | x >= 0 & y = x;
    *
    *  Note that implicitly defined functions can be given directly
    *  via the f<<interp>>(...) syntax, but the syntax here avoids
@@ -244,7 +247,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     P("implicit" ~~ blank ~/ (implicitDefInterp.map(List(_)) | implicitDefODE))
 
   def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
-    (declPart.rep(min=1,sep=","./) ~ ":='" ~/ NoCut(program))
+    (declPartList ~ ":='" ~/ NoCut(program))
       .map{case (sigs, prog) =>
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
@@ -253,7 +256,7 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         val (t,Real) = sigs.head._2.arguments.get.head
         if (sigs.exists(_._2.arguments.get.head._1 != t))
           throw ParseException("Implicit ODE declarations should all use the same " +
-            "argument name.")
+            "time argument.")
 
         val nameSet = sigs.map(_._1).toSet
 

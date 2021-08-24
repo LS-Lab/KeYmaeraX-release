@@ -257,7 +257,14 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~/ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) => FuncOf(Function(s,idx,ts.sort,Real,interp), ts)})
+  def func[_: P]: P[FuncOf] = P(ident ~~ ("<<" ~ formula ~ ">>").? ~~ termList).map({case (s,idx,interp,ts) =>
+    FuncOf(
+      interp match {
+        case Some(i) => Function(s,idx,ts.sort,Real,Some(i))
+        case None => OpSpec.func(s, idx, ts.sort, Real)
+      },
+      ts)
+  })
   def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).

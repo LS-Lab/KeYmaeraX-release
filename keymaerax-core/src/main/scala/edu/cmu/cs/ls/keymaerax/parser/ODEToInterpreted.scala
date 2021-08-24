@@ -11,11 +11,11 @@ object ODEToInterpreted {
 
   /**
    * Parse program input for differential equation definitions, e.g.
-   *      {s:=0;c:=0;} {s'=c,c'=-s}
+   *      {s:=0;c:=0;t:=0} {s'=c,c'=-s,t'=1}
    *      {e:=1;} {e'=e}
    * into the form needed for `convert` (used by the parser).
    */
-  def fromProgram(system: Program, t: Variable = Variable("t"), t0: Term = Number(0)): Seq[Function] =
+  def fromProgram(system: Program, t: Variable = Variable("t")): Seq[Function] =
     system match {
       case Compose(assgns, ODESystem(ode, True)) =>
         def unfoldAssgns(x: Program): Map[Variable, Term] = x match {
@@ -30,9 +30,16 @@ object ODEToInterpreted {
         val assgnMap = unfoldAssgns(assgns)
         val odeMap = unfoldODE(ode)
 
-        fromSystem(assgnMap.toIndexedSeq.map{case(v,init) =>
-          (v,odeMap(v),init)
+        val t0 = assgnMap.getOrElse(t, Number(0))
+
+        if (odeMap.contains(t) && odeMap(t) != Number(1)) {
+          throw FromProgramException("Time differentially explicitly given, yet is not 1.")
+        }
+
+        fromSystem(assgnMap.toIndexedSeq.map { case (v, init) =>
+          (v, odeMap(v), init)
         }, t, t0)
+
       case _ => throw FromProgramException("Program not of the form Compose(initAssignments, ode)")
     }
 

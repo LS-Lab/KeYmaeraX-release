@@ -47,17 +47,27 @@ class ImplicitFunctionTests extends TacticTestBase {
     )))
   }
 
-  "DLArchiveParser" should "parse inline function interps correctly" in {
+  "DLArchiveParser" should "parse built-in interpreted functions correctly" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem abs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
+        | Problem abs(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
 
-    // Note this is only equal to InterpretedSymbols.absF because the
-    // program's (implicit) definition is syntactically equivalent
     prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))),Number(1))
+  }
+
+  it should "parse inline function interps correctly" in {
+    val input =
+      """ArchiveEntry "entry1"
+        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
+        |End.
+        |""".stripMargin
+    val prog = parse(input)
+
+    prog.model shouldBe Equal(FuncOf(InterpretedSymbols.absF.copy(name="myAbs"),
+      Neg(Number(1))),Number(1))
   }
 
   it should "parse implicit interp definitions correctly" in {
@@ -65,34 +75,33 @@ class ImplicitFunctionTests extends TacticTestBase {
       """ArchiveEntry "entry1"
         | ProgramVariables Real y; End.
         | Definitions
-        |  implicit Real abs(Real x) := y <-> (x < 0 & y = -(x)) | (x >= 0 & y = x);
+        |  implicit Real myAbs(Real x) := y <-> (x < 0 & y = -(x)) | (x >= 0 & y = x);
         | End.
-        | Problem abs(-1) = 1 End.
+        | Problem myAbs(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
 
     // Note this is only equal to InterpretedSymbols.absF because the
     // program's (implicit) definition is syntactically equivalent
-    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF.copy(name="myAbs"),
+      Neg(Number(1))), Number(1))
   }
 
   it should "parse implicit ODE definitions correctly" in {
     val input =
       """ArchiveEntry "entry1"
         | Definitions
-        |  implicit Real exp(Real x) :=' {exp:=1}{exp'=exp};
-        |  implicit Real sin(Real x), Real cos(Real x) :='
-        |    {sin:=0;cos:=1;} {sin'=cos, cos'=-sin};
+        |  implicit Real myExp(Real x) :=' {{x:=0,exp:=1}; {x'=1,exp'=exp}};
         | End.
-        | Problem abs(-1) = 1 End.
+        | Problem myExp(0) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
 
-    // Note this is only equal to InterpretedSymbols.absF because the
+    // Note this is only equal to InterpretedSymbols.expF because the
     // program's (implicit) definition is syntactically equivalent
-    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.absF, Neg(Number(1))), Number(1))
+    prog.expandedModel shouldBe Equal(FuncOf(InterpretedSymbols.expF, Number(0)), Number(1))
   }
 
   "KYXPrettyPrinter" should "print interpretations" in {
@@ -131,8 +140,6 @@ class ImplicitFunctionTests extends TacticTestBase {
     import InterpretedSymbols.expF
 
     val diffAx = ImplicitDiffAxiom.deriveDiffAxiom(List(expF)).head
-
-    println(diffAx)
 
     val prob = Equal(Differential(FuncOf(expF,"x".asVariable)),
                       Times(FuncOf(expF,"x".asVariable),Differential("x".asVariable)))
