@@ -92,7 +92,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val input =
       """ArchiveEntry "entry1"
         | Definitions
-        |  implicit Real myExp(Real x) :=' {{x:=0,exp:=1}; {x'=1,exp'=exp}};
+        |  implicit Real myExp(Real x) :=' {{x:=0,myExp:=1}; {x'=1,myExp'=myExp}};
         | End.
         | Problem myExp(0) = 1 End.
         |End.
@@ -107,7 +107,7 @@ class ImplicitFunctionTests extends TacticTestBase {
   "KYXPrettyPrinter" should "print interpretations" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem abs<<(._0 < 0 & . = -(._0)) | (._0 >= 0 & . = ._0)>>(-1) = 1 End.
+        | Problem myAbs<<(._0 < 0 & . = -(._0)) | (._0 >= 0 & . = ._0)>>(-1) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
