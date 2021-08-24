@@ -513,6 +513,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\forall x x'>=0".asSequent
   }
 
+  it should "derive implications" in withTactics {
+    proveBy("(a=0->b=1)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> a'=0 & b'=0".asSequent
+    proveBy("(a=0->(b=1->c=2))'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> a'=0 & b'=0 & c'=0".asSequent
+    proveBy("((a=0->b=1)->c=2)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> (a'=0 & b'=0) & c'=0".asSequent
+  }
+
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>
     // Equal(Differential(Variable("x")), "1".asTerm)
     val result = proveBy("(x)'=1".asFormula, Derive.Dvar(1, 0::Nil))
@@ -737,6 +743,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(0) shouldBe "x_0>0, x_0=x ==> [{x'=5&(true&x>=x_0)&x>=2*x_0-x_0}]x>0".asSequent
     result.subgoals(1) shouldBe "x_0>0, x_0=x ==> [{x'=5}]x>=x_0".asSequent
     result.subgoals(2) shouldBe "x_0>0, x_0=x ==> [{x'=5&true&x>=x_0}]x>=2*x_0-x_0".asSequent
+  }
+
+  it should "auto-generate old when const() is used" in withQE { _ =>
+    proveBy("x^2+y^2=1 ==> [{x'=y,y'=-w}]x^2+y^2=1".asSequent, dC("x^2+y^2=const()".asFormula)(1)).
+      subgoals should contain theSameElementsAs List(
+      "old=1, old=x^2+y^2 ==> [{x'=y,y'=-w&true&x^2+y^2=old}]x^2+y^2=1".asSequent,
+      "old=1, old=x^2+y^2 ==> [{x'=y,y'=-w}]x^2+y^2=old".asSequent
+    )
   }
 
   it should "work when not sole formula in succedent" in withMathematica { _ =>

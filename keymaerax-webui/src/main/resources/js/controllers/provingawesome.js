@@ -35,7 +35,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   // Explanations and help.
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   $scope.taskExplanation = {
-    selection: "Rule"
+    selection: "Rule",
+    proofStateNodeId: undefined,
+    proofStateNode: undefined
   };
   $scope.stepAxiom = function() {
     var selectedItem = sequentProofData.agenda.selectedItem()
@@ -665,7 +667,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var selected = sequentProofData.formulas.selectedIn(node.getSequent());
       if (selected.length >= node.getSequent().ante.length + node.getSequent().succ.length) selected = undefined;
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;
-      if (selected) {
+      var ignoreUsingWhen = ['chaseat','stepat'];
+      if (selected && ignoreUsingWhen.indexOf(tacticId.toLowerCase()) < 0) {
         $scope.onTacticScript(tacticId + (formulaId ? '(' + formulaId + ')' : '') + ' using "' + selected.join('::') +
           (selected.length > 0 ? '::' : '') + 'nil"', false)
       } else {
@@ -760,6 +763,21 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         } else {
           console.error("Undefined selected node in agenda when trying to run the tactic script '" + tacticText + "'");
         }
+      }
+    }
+
+    $scope.onNodeInTacticSelected = function(nodeId) {
+      if (nodeId) {
+        $scope.taskExplanation.proofStateNodeId = nodeId;
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/node').success(function(data) {
+          $scope.taskExplanation.proofStateNode = data;
+        });
+        if ($scope.agenda.contains(nodeId)) {
+          $scope.agenda.selectById(nodeId);
+        }
+      } else {
+        $scope.taskExplanation.proofStateNodeId = undefined;
+        $scope.taskExplanation.proofStateNode = undefined;
       }
     }
 

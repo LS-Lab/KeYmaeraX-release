@@ -247,7 +247,7 @@ class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
           if(preprocessOnly)
             proveBy(True, closeT)
           else
-            proveBy(seq, ?(QE(timeout = Some(timeout))))
+            proveBy(seq, ?(QEX(None, Some(Number(timeout)))))
         }
         val status = if (!qeTry.isProved) {
           if (qeTry.subgoals.exists(_.succ.contains(False))) {
@@ -434,7 +434,7 @@ class ConvertQELogToIsabelle extends TacticTestBase with PrivateMethodTester {
         case ToIsabelleTermException(msg) => s + "#" + msg + "\n"
       }
       if (filterFalse.isDefined) {
-        val qe = proveBy(seq, ?(QE(timeout = filterFalse)))
+        val qe = proveBy(seq, ?(QEX(None, filterFalse.map(Number(_)))))
         if (qe.subgoals.exists(_.succ.contains(False)))
           s + "#" + "keymaerax_qe_reduces_to_false\n"
         else converted

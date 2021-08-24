@@ -168,6 +168,10 @@ object TactixLibrary extends HilbertCalculus
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
       case (_: Forall, true) => Some(TacticInfo("chase"))
       case (_: Exists, false) => Some(TacticInfo("chase"))
+      case (_: And, false) => Some(TacticInfo("chase"))
+      case (_: Or, true) => Some(TacticInfo("chase"))
+      case (_: Imply, true) => Some(TacticInfo("chase"))
+      case (_: Equiv, _) => Some(TacticInfo("chase"))
       case _ => sequentStepIndex(isAnte)(expr)
     }
   )(pos) }
@@ -175,16 +179,20 @@ object TactixLibrary extends HilbertCalculus
   /** Chases program operators according to [[AxIndex]] or tactics according to `index`. */
   def chaseAt(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     if (pos.isTopLevel) seq.sub(pos) match {
-      case Some(_) =>
-        //@todo avoid recursion
-        def recurse: DependentTactic = anon { (result: Sequent) => {
-          //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
-          val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-          val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
-          if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
-          else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
-        }}
-        doStep(index)(pos) & recurse
+      case Some(e) =>
+        if (AxIndex.axiomsFor(e).nonEmpty) {
+          chase(pos)
+        } else {
+          //@todo avoid recursion
+          def recurse: DependentTactic = anon { (result: Sequent) => {
+            //@note implyR etc. could get recursor formula from index, but assignb and others have unknown outcome
+            val anteDiff = (result.ante.toSet -- seq.ante).map(f => ?(chaseAt(index)('L, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            val succDiff = (result.succ.toSet -- seq.succ).map(f => ?(chaseAt(index)('R, f))).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+            if (pos.isAnte) { if (anteDiff.eq(skip)) succDiff else if (succDiff.eq(skip)) anteDiff else anteDiff & succDiff }
+            else { if (succDiff.eq(skip)) anteDiff else if (anteDiff.eq(skip)) succDiff else succDiff & anteDiff }
+          }}
+          doStep(index)(pos) & recurse
+        }
       case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
     } else chase(pos) //@todo forward index to chase
   })
@@ -647,19 +655,21 @@ object TactixLibrary extends HilbertCalculus
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[Variable] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def QE(defs: Declaration, order: List[Variable] = Nil, tool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     if (order.isEmpty) QEX(tool, timeout.map(Number(_)))
-    else ToolTactics.timeoutQE(order, tool, timeout) // non-serializable for now
+    else ToolTactics.timeoutQE(defs, order, tool, timeout) // non-serializable for now
   }
 
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
-    (tool, timeout) match {
-      case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(Nil, Some(toolName), Some(time.value.toInt))
-      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(Nil, None, Some(Integer.parseInt(toolName)))
-      case (Some(toolName), _) =>  ToolTactics.timeoutQE(Nil, Some(toolName))
-      case (_, Some(time)) => ToolTactics.timeoutQE(Nil, None, Some(time.value.toInt))
-      case (_, _) => ToolTactics.timeoutQE(Nil, None, None)
+    new SingleGoalDependentTactic(TacticFactory.ANON) {
+      override def computeExpr(sequent: Sequent, defs: Declaration): BelleExpr = (tool, timeout) match {
+        case (Some(toolName), Some(time)) => ToolTactics.timeoutQE(defs, Nil, Some(toolName), Some(time.value.toInt))
+        case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => ToolTactics.timeoutQE(defs, Nil, None, Some(Integer.parseInt(toolName)))
+        case (Some(toolName), _) =>  ToolTactics.timeoutQE(defs, Nil, Some(toolName))
+        case (_, Some(time)) => ToolTactics.timeoutQE(defs, Nil, None, Some(time.value.toInt))
+        case (_, _) => ToolTactics.timeoutQE(defs, Nil, None, None)
+      }
     }
   }
   lazy val QE: BelleExpr = QEX(None, None)

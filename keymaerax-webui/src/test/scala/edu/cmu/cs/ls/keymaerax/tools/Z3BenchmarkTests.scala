@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
+import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
@@ -17,7 +18,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 @SlowTest
 class Z3BenchmarkTests extends TacticTestBase {
 
-  private val qeTimeout = Some(60)
+  private val qeTimeout = Some(Number(60))
 
   private val haveQeLogPath = qeLogPath + "haveqe.txt"
 
@@ -27,7 +28,7 @@ class Z3BenchmarkTests extends TacticTestBase {
     forEvery(examples) { (name, seq) =>
       whenever(tool.isInitialized) {
         println(s"Proving $name with Z3 ${seq.prettyString}")
-        proveBy(seq, TactixLibrary.QE(Nil, None, qeTimeout)) shouldBe 'proved
+        proveBy(seq, TactixLibrary.QEX(None, qeTimeout)) shouldBe 'proved
       }
     }
   }

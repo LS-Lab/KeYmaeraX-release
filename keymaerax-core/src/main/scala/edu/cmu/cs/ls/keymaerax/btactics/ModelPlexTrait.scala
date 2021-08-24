@@ -27,13 +27,12 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
                                            unobservable: Map[Variable, Option[Formula]]): (Formula, List[Formula])
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
-  def modelplexAxiomaticStyle(useOptOne: Boolean)(unprog: Boolean => DependentPositionTactic): DependentPositionTactic
-  def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic
-  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic
+  def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic
+  def controllerMonitorT: DependentPositionTactic
+  def modelMonitorT: DependentPositionTactic
   def diamondDiffSolve2DT: DependentPositionTactic
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
                                 unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic
-  def optimizationOne(unobservable: List[Variable] = Nil, inst: Option[(Variable, Term)] = None): DependentPositionTactic
 }

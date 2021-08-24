@@ -119,7 +119,7 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
+      case GetTacticResponse(tacticText, _) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
     }
   }}
 
@@ -137,7 +137,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText should equal(
+      case GetTacticResponse(tacticText, _) => tacticText should equal(
         """andR('R=="x^2>=0 & x^4>=0"); <(
           |"x^2>=0": nil,
           |"x^4>=0": nil
@@ -159,7 +159,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText should equal (
+      case GetTacticResponse(tacticText, _) => tacticText should equal (
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
         """andR(1); <(nil, prop); <(
           |"x=3": nil,
@@ -182,7 +182,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", andR(1))
     tacticRunner("(1,1)", prop)
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText should equal (
+      case GetTacticResponse(tacticText, _) => tacticText should equal (
         """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
           |"x=3": nil,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":

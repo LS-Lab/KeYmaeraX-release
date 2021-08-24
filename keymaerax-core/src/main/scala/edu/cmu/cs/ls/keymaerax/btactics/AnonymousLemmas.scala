@@ -6,13 +6,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 import java.util.UUID
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SubderivationSubstitutionException}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
+
 import scala.collection.immutable
 
 /**
@@ -23,9 +24,15 @@ object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
 
   /** A tactic `t` that caches its result in the lemma cache. */
-  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = anons ((provable: ProvableSig) => {
+  def cacheTacticResult(t: => BelleExpr, namespace: String, defs: Declaration): BuiltInTactic = anons ((provable: ProvableSig) => {
     val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
-    subderivations.foldRight(provable)({ case ((sub, i), p) => p(sub, i) })
+    subderivations.foldRight(provable)({ case ((sub, i), p) =>
+      try {
+        p(sub, i)
+      } catch {
+        case _: SubderivationSubstitutionException => p(defs.subst)(sub, i)
+      }
+    })
   })
 
   /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */

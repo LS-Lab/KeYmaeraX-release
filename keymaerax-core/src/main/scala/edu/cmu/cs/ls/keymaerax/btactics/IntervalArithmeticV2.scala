@@ -1213,22 +1213,22 @@ object IntervalArithmeticV2 {
             case LessEqual(_, Plus(a, b)) =>
               val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
-              plusDown(aa, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseLower), QE() & done)
+              plusDown(aa, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseLower), QE & done)
             case LessEqual(_, Minus(a, b)) =>
               val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
               val bB = eval_ivl_term_in_env(prec)(bounds)(b)._2
-              minusDown(aa, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseUpper), QE() & done)
+              minusDown(aa, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseUpper), QE & done)
             case LessEqual(_, Neg(a)) =>
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
-              negDown(aA) & andR(1) & Idioms.<(recurseUpper, QE() & done)
+              negDown(aA) & andR(1) & Idioms.<(recurseUpper, QE & done)
             case LessEqual(_, Times(f, g)) =>
               val (ff, fF) = eval_ivl_term_in_env(prec)(bounds)(f)
               val (gg, gG) = eval_ivl_term_in_env(prec)(bounds)(g)
               timesDown(ff, fF, gg, gG) & andR(1) & Idioms.<(
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
-                QE() & done)
-            case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(_, n) if isNumeric(n) => QE() & done
+                QE & done)
+            case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE & done
+            case LessEqual(_, n) if isNumeric(n) => QE & done
             case _ => throw new TacticInapplicableFailure("recurseLower went wrong")
           }
       }
@@ -1240,23 +1240,23 @@ object IntervalArithmeticV2 {
             case LessEqual(Plus(a, b), _) =>
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bB = eval_ivl_term_in_env(prec)(bounds)(b)._2
-              plusUp(aA, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseUpper), QE() & done)
+              plusUp(aA, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseUpper), QE & done)
             case LessEqual(Minus(a, b), _) =>
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
-              minusUp(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+              minusUp(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE & done)
             case LessEqual(Neg(a), _) =>
               val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
-              negUp(aa) & andR(1) & Idioms.<(recurseLower, QE() & done)
+              negUp(aa) & andR(1) & Idioms.<(recurseLower, QE & done)
             case LessEqual(Times(f, g), _) =>
               val (ff, fF) = eval_ivl_term_in_env(prec)(bounds)(f)
               val (gg, gG) = eval_ivl_term_in_env(prec)(bounds)(g)
               //       h()<=f()*g()  <- (((ff()<=f() & f()<=F()) & (gg()<=g() & g()<=G())) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))
               timesUp(ff, fF, gg, gG) & andR(1) & Idioms.<(
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
-                QE() & done)
-            case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(n, _) if isNumeric(n) => QE() & done
+                QE & done)
+            case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE & done
+            case LessEqual(n, _) if isNumeric(n) => QE & done
             case _ => throw new TacticInapplicableFailure("recurseUpper went wrong")
           }
       }
@@ -1268,11 +1268,11 @@ object IntervalArithmeticV2 {
             case LessEqual(a, b) =>
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
-              leBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+              leBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE & done)
             case Less(a, b) =>
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
-              lessBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+              lessBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE & done)
             case _ => throw new TacticInapplicableFailure("recurseFormula went wrong")
           })
       }

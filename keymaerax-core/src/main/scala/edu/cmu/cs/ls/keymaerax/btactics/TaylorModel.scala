@@ -638,7 +638,7 @@ object TaylorModelTactics extends Logging {
                     implyR(1) & dC(boxTMEnclosure.child)(1) &
                   Idioms.<(
                     // make implication via dW
-                    hideL(-2) & dWPlus(1) & implyR(1) & andL(-2) &
+                    hideL(-2) & dWPlus(1) & andL(-2) &
                       // obtain existential witnesses
                       existsL(-3) /* local time */ &
                       // instantiate them
@@ -661,7 +661,7 @@ object TaylorModelTactics extends Logging {
                   Idioms.<(
                     hideL(-2) &
                     dWPlus(1) &
-                    implyR(1) & implyR(1) & andL(-2) &
+                    implyR(1) & andL(-2) &
                       existsL(-4) /* time */ &
                       allL(time)(-1) & FOQuantifierTactics.allLs(state)(-1) &
                       DifferentialTactics.diffRefine(True)(1) &

@@ -474,7 +474,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     // ?monitor ++ ctrlVars+:=fallback
     val act = Choice(Test(monitor), fallbackCtrl)
 
-    val upsilonConjuncts = vars.sorted[NamedSymbol].map(v => Equal(BaseVariable(v.name + "post", v.index), v))
+    val upsilonConjuncts = vars.sorted[NamedSymbol].map(v => Equal(postVar(v), v))
     val upsilon = upsilonConjuncts.reduce(And)
 
     // ctrlVars+:=ctrlVars
@@ -901,14 +901,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @see [[controllerMonitorT]]
    * @see [[modelMonitorT]]
    */
-  def modelplexAxiomaticStyle(useOptOne: Boolean)
-                             (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     // was "Modelplex In-Place"
     sequent.sub(pos) match {
       case Some(Diamond(_, _)) =>
-        (SaturateTactic(debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))) &
-          debug("Done with transformation, now looking for quantifiers") &
-          debug("Modelplex done")
+        SaturateTactic(debug("Before HP") & unprog(pos) & debug("After  HP")) & debug("Modelplex done")
       case Some(e) => throw new TacticInapplicableFailure("Modelplex In-Place only applicable to diamond properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
@@ -917,46 +914,44 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /**
    * Returns a backward tactic for deriving controller monitors. Uses Opt. 1 immediately after nondeterministic
    * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-    *
-    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
-  def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
+  def controllerMonitorT: DependentPositionTactic =
     anon ((pos: Position) =>
       locateT(
         useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
         useAt(Ax.dDX, PosInExpr(1::Nil)) ::
         useAt(Ax.composed) ::
         useAt(Ax.choiced) ::
-        anon ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip)) ::
+        anon ((p: Position) => useAt(Ax.randomd)(p)) ::
         useAt(Ax.testd) ::
           anon ((p: Position) => TryCatch(
             useAt(Ax.assigndAxiom)(p),
             classOf[SubstitutionClashException],
             (_: SubstitutionClashException) => fail)) ::
-        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip)) ::
+        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p)) ::
         Nil)(pos))
 
   /**
    * Returns a backward tactic for deriving model monitors. Uses Opt. 1 immediately after nondeterministic
    * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
-    *
-    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
-  def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = anon ((pos: Position) =>
+  def modelMonitorT: DependentPositionTactic = anon ((pos: Position) =>
     locateT(
       useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
         AxiomaticODESolver.axiomaticSolve() ::
         useAt(Ax.composed) ::
         useAt(Ax.choiced) ::
-        anon ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip)) ::
+        anon ((p: Position) => useAt(Ax.randomd)(p)) ::
         useAt(Ax.testd) ::
         anon ((p: Position) => TryCatch(
           useAt(Ax.assigndAxiom)(p),
           classOf[SubstitutionClashException],
           (_: SubstitutionClashException) => fail)) ::
-        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip)) ::
+        anon ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p)) ::
         Nil)(pos))
 
   /**
@@ -1026,6 +1021,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
       simplifier.map(_(pos)).getOrElse(skip)
   })
 
+  /** Returns the polarity at `pos` in the `sequent`.
+    * @return <0 for positive polarity if antecedent, negative polarity in succedent;
+    *         >0 for negative polarity in antecedent, positive polarity in succedent
+    */
+  private def polarityInSeq(sequent: Sequent, pos: Position): Int = {
+    (if (pos.isSucc) 1 else -1)*FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)
+  }
+
   private def optimizationOneWithSearchImpl(tool: Option[SimplificationTool], assumptions: List[Formula],
                                             unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
     anon ((pos: Position, sequent: Sequent) => {
@@ -1045,16 +1048,16 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Forall(xs, Imply(Equal(x, y), q)), pp) =>
-          if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
+          if (polarityInSeq(sequent, pp) > 0 && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
             Some(useAt(simplForall1, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
           } else None
         case (Forall(xs, Imply(Equal(y, x: Variable), q)), pp) =>
-          if (pp.isSucc && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
+          if (polarityInSeq(sequent, pp) > 0 && xs.contains(x) && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(y)).isEmpty) {
             Some(useAt(simplForall2, PosInExpr(1::Nil))(pp) & simplifier.map(_(pp)).getOrElse(skip))
           } else None
         // @note shapes of ode solution
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
-            if tool.isDefined && pp.isSucc && t == "t_".asVariable && s == "s_".asVariable =>
+            if tool.isDefined && polarityInSeq(sequent, pp) > 0 && t == "t_".asVariable && s == "s_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
             case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
@@ -1063,7 +1066,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
                solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
                simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), _)), pp)
-          if tool.isDefined && pp.isSucc && t == "t_".asVariable =>
+          if tool.isDefined && polarityInSeq(sequent, pp) > 0 && t == "t_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
             case Function(_, _, Unit, _, None) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
@@ -1071,8 +1074,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
           Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
             solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
             simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
-        case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
-        case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
+        case (Exists(_, _), pp) if polarityInSeq(sequent, pp) > 0 =>
+          Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
+        case (Forall(_, _), pp) if polarityInSeq(sequent, pp) < 0 =>
+          //@todo: Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp)) not implemented for Forall
+          None
         case _ => None
       })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
@@ -1085,15 +1091,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
     anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1 with instance search at"
     sequent.sub(pos) match {
-      case Some(Exists(vars, phi)) if pos.isSucc && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
+      case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
         useAt(Ax.existsV)(pos) & simplifier.map(_(pos)).getOrElse(skip)
-      case Some(Exists(vars, And(Equal(l, r), _))) if pos.isSucc && vars.contains(l) &&
-        unobservableVars.intersect(vars).isEmpty =>
+      case Some(Exists(vars, And(Equal(l, r), q))) if polarityInSeq(sequent, pos) > 0 && vars.contains(l) &&
+        unobservableVars.intersect(vars).isEmpty && StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(r)).isEmpty =>
         // case from deterministic assignments
         val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
-        debug("Running optimization 1 at " + pos + " using equality " + equality) &
-          optimizationOneAt(unobservableVars, equality)(pos) & simplifier.map(_(pos)).getOrElse(skip)
-      case Some(Exists(vars, phi)) if pos.isSucc =>
+        optimizationOneAt(unobservableVars, equality)(pos) & simplifier.map(_(pos)).getOrElse(skip)
+      case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 =>
         // case from nondeterministic assignments
 
         class SynonymFinder(v: Variable) extends ExpressionTraversalFunction {
@@ -1143,56 +1148,43 @@ object ModelPlex extends ModelPlexTrait with Logging {
           case _ if unobservableVars.intersect(vars).isEmpty =>
             synonyms.find(s => StaticSemantics.freeVars(s).intersect(unobservableVars.toSet).isEmpty)
         }
-        optimizationOneAt(unobservableVars, equality.map(v -> _))(pos) & simplifier.map(_(pos)).getOrElse(skip)
+        if (StaticSemantics.boundVars(phi).intersect(equality.map(StaticSemantics.freeVars).getOrElse(SetLattice.bottom)).isEmpty) {
+          optimizationOneAt(unobservableVars, equality.map(v -> _))(pos) & simplifier.map(_(pos)).getOrElse(skip)
+        } else nil
       case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
-
-  /**
-   * Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates an existential quantifier with a post-variable. Since
-   * the tactic may be used in intermediate steps of ModelPlex, it uses fresh variants of the post-variable for
-   * instantiation, if asked to automatically instantiate.
-    *
-    * @example {{{
-   *           |- z>0 & xpost=z
-   *           -----------------------------------optimizationOne(Some(Variable("x"), Variable("z")))
-   *           |- \exists x (x>0 & xpost=x)
-   * }}}
-   * @example {{{
-   *           |- xpost_0>0 & xpost=xpost_0
-   *           -----------------------------------optimizationOne(None)
-   *           |- \exists x (x>0 & xpost=x)
-   * }}}
-   * @param inst The instance for a quantified variable. If None, the tactic will use a fresh variant of the
-   *             corresponding post-variable.
-   * @return The tactic.
-   */
-  def optimizationOne(unobservable: List[Variable] = Nil, inst: Option[(Variable, Term)] = None): DependentPositionTactic =
-    locateT(optimizationOneAt(unobservable, inst)::Nil)
-
   /** Opt. 1 at a specific position */
   private def optimizationOneAt(unobservable: List[Variable], inst: Option[(Variable, Term)] = None): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1"
     sequent.sub(pos) match {
-      case Some(Exists(vars, _)) if pos.isSucc => inst match {
-        case Some(i) => existsR(i._1, i._2)(pos)
+      case Some(Exists(vars, q)) if polarityInSeq(sequent, pos) > 0 => inst match {
+        case Some((what, repl)) =>
+          if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(repl)).isEmpty) existsR(what, repl)(pos)
+          else throw new IllFormedTacticApplicationException("Unable to instantiate because instance " +
+            repl.prettyString + " is bound in " + q.prettyString)
         case None if unobservable.intersect(vars).isEmpty =>
+          // existential quantifier from non-deterministic assignment
           require(vars.size == 1)
-          val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
-          existsR(v, post)(pos)
+          val (v, post) = vars.map(v => (v, postVar(v))).head
+          if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(post)).isEmpty) existsR(v, post)(pos)
+          else nil
         case None => nil
       }
-      case Some(Forall(vars, _)) if pos.isAnte => inst match {
-        case Some(i) => allL(i._1, i._2)(pos)
+      case Some(Forall(vars, q)) if polarityInSeq(sequent, pos) < 0 => inst match {
+        case Some((what, repl)) =>
+          if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(repl)).isEmpty) allL(what, repl)(pos)
+          else throw new IllFormedTacticApplicationException("Unable to instantiate because instance " + repl.prettyString + " is bound in " + q.prettyString)
         case None if unobservable.intersect(vars).isEmpty =>
           require(vars.size == 1)
-          val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
-          allL(v, post)(pos)
+          val (v, post) = vars.map(v => (v, postVar(v))).head
+          if (StaticSemantics.boundVars(q).intersect(StaticSemantics.freeVars(post)).isEmpty) allL(v, post)(pos)
+          else nil
         case None => nil
       }
-      case Some(e) => throw new TacticInapplicableFailure("Optimization 1 only applicable to quantifiers, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("Optimization 1 only applicable to existential quantifier in positive polarity or universal quantifier in negative polarity, but got " + e.prettyString + " with polarity " + polarityInSeq(sequent, pos))
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })

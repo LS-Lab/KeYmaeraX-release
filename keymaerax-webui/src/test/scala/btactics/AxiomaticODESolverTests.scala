@@ -290,7 +290,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy("x > 0 & v > 0 ==> [{x' = v / r}]x > 0".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "x>0&v>0 ==> \\forall t_ (t_>=0->v/r*t_+x>0)".asSequent
     // but QE should not be able to prove it
-    proveBy(result, QE()).subgoals.loneElement shouldBe "==> false".asSequent
+    proveBy(result, QE).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
   it should "rename duration variable correctly when solving nested ODEs" in withMathematica { _ =>
@@ -411,31 +411,31 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
+    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
     proveBy(f, t) shouldBe 'proved
   }
 
   it should "prove the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=3 -> [{x'=v,v'=a}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
+    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
     proveBy(f, t) shouldBe 'proved
   }
 
   it should "prove the triple integrator x'''=j" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
+    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
     proveBy(f, t) shouldBe 'proved
   }
 
   it should "prove with constant v'=0" in withMathematica { _ =>
     val f = "A>0 & B>0 & x+v^2/(2*B)<=S & v=0 -> [{x'=v,v'=0&v>=0&x+v^2/(2*B)>=S}](v>=0&x+v^2/(2*B)<=S)".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
+    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
     proveBy(f, t) shouldBe 'proved
   }
 
   it should "prove STTT tutorial example 5 acceleration" in withMathematica { _ =>
     val f = "A>0 & B>0 & ep>0 & v>=0 & x+v^2/(2*B)<=S & x+v^2/(2*B)+(A/B+1)*(A/2*ep^2+ep*v)<=S & c=0 -> [{x'=v,v'=A,c'=1&v>=0&c<=ep}](v>=0&x+v^2/(2*B)<=S)".asFormula
-    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
+    val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE
     proveBy(f, t) shouldBe 'proved
   }
 

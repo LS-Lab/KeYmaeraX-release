@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, TacticReservedSymbols}
 import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
@@ -41,11 +41,11 @@ private object DifferentialTactics extends Logging {
 
   // QE with default timeout for use in ODE tactics (timeout in seconds)
   private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
-  private[btactics] def timeoutQE = ToolTactics.hideNonFOL & QE(Nil, None, Some(ODE_QE_TIMEOUT))
+  private[btactics] def timeoutQE = ToolTactics.hideNonFOL & QEX(None, Some(Number(ODE_QE_TIMEOUT)))
   // QE with default timeout for use in counterexample tactics (timeout in seconds)
   private[btactics] val ODE_CEX_TIMEOUT =
       Try(Integer.parseInt(Configuration(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT))).getOrElse(-1)
-  private[btactics] def timeoutCEXQE = QE(Nil, None, Some(ODE_CEX_TIMEOUT))
+  private[btactics] def timeoutCEXQE = QEX(None, Some(Number(ODE_CEX_TIMEOUT)))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -308,9 +308,16 @@ private object DifferentialTactics extends Logging {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val ov = FormulaTools.argsOf("old", f)
+    val cutF = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+        case Equal(p, FuncOf(TacticReservedSymbols.const, Nothing)) => Right(Equal(p, FuncOf(TacticReservedSymbols.old, p)))
+        case _ => Left(None)
+      }
+    }, f).getOrElse(f)
+
+    val ov = FormulaTools.argsOf(TacticReservedSymbols.old, cutF)
     if (ov.isEmpty) {
-      if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
+      if (FormulaTools.conjuncts(cutF).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(cutF)(pos)
     } else {
       DLBySubst.discreteGhosts(ov, origSeq,
         (ghosts: List[((Term, Variable), BelleExpr)]) => {
@@ -318,7 +325,7 @@ private object DifferentialTactics extends Logging {
           val afterGhostsPos =
             if (pos.isTopLevel) LastSucc(0, pos.inExpr ++ posIncrements)
             else Fixed(pos ++ posIncrements)
-          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          val oldified = SubstitutionHelper.replaceFn(TacticReservedSymbols.old, cutF, ghosts.map(_._1).toMap)
           if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
           else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(afterGhostsPos)
         }
@@ -1050,7 +1057,7 @@ private object DifferentialTactics extends Logging {
 
         //@note diffWeaken will already include all cases where V works, without much additional effort.
         (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-          diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
+          diffWeaken(pos) & QEX(None, Some(Number(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))) & done else fail
           ) | (if (useOdeInvariant) proveInvariant(pos) else compatibilityFallback(pos, isOpen))
       })(pos))
   })

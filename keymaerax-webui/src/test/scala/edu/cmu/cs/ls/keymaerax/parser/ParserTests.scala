@@ -55,44 +55,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     a [Exception] shouldBe thrownBy(ArchiveParser.parser("\\u03C0"))
   }
 
-  it should "wtf" in {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val foo = new AtomicReference[List[String]](List.empty)
-    val c = Cancellable(
-      foo.synchronized(
-      try {
-        try {
-          println("Sleeping")
-          Thread.sleep(5000)
-          println("Done sleeping")
-        } catch {
-          case _: InterruptedException =>
-            foo.set(foo.get :+ "Starting cleanup")
-            throw new IllegalArgumentException("WTF")
-        }
-      } catch {
-        case _: Throwable => {
-          for (i <- 0 to 1000000) {
-            var j = i + 1
-          }
-          foo.set(foo.get :+ "Cleanup done")
-        }
-      }))
-    try {
-      Await.result(c.future, Duration(1000, MILLISECONDS))
-    } catch {
-      case _: TimeoutException =>
-        c.cancel()
-        foo.synchronized({
-          foo.set(foo.get :+ "Yay")
-        })
-    }
-
-    Thread.sleep(1000)
-
-    println(foo.get.mkString(","))
-  }
-
   it should "parse nullary predicate definitions" in {
     val input = """
       |Definitions.
@@ -689,6 +651,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser(input)
   }
 
+  it should "parse @variant annotation" in {
+    val input = "x=0 -> <{x:=x+1;}*@variant(\\exists i i+x>=5)>x>=5"
+    val listener = mock[(Program, Formula) => Unit]
+    inSequence {
+      (listener.apply _).expects("{x:=x+1;}*".asProgram, "\\exists i i+x>=5".asFormula).once
+    }
+    Parser.parser.setAnnotationListener(listener)
+    Parser(input)
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////
@@ -744,5 +716,12 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       PredOf(Function("gt", None, Tuple(Real, Real), Bool, None), Pair(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))),
       Greater(DotTerm(Real, Some(0)), DotTerm(Real, Some(1)))
     )
+  }
+
+  "Sequent parser" should "split formula lists" in {
+    SequentParser.parseFormulaList("x=2, y=3, z=4") should
+      contain theSameElementsInOrderAs List("x=2".asFormula, "y=3".asFormula, "z=4".asFormula)
+    SequentParser.parseFormulaList("f(x,y)=2, g(y)=3, h(z,3*(2+4))=4") should
+      contain theSameElementsInOrderAs List("f(x,y)=2".asFormula, "g(y)=3".asFormula, "h(z,3*(2+4))=4".asFormula)
   }
 }

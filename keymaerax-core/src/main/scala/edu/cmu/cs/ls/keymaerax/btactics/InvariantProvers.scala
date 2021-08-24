@@ -121,12 +121,12 @@ object InvariantProvers {
                 (localInv:Formula) => {
                   logger.debug("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
-                  dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.mathematicaODE(pos)) &
+                  dC(localInv)(pos) < (dW(pos) & QE, DifferentialTactics.mathematicaODE(pos)) &
                   done & DebuggingTactics.debug("success")
                 })
             }))(pos)
           ,
-          QE()
+          QE
         )(pos)) & done
 
       // invariant candidate iterators (avoid retrying same invariants over and over again when same assume-more-sequents are revisited)

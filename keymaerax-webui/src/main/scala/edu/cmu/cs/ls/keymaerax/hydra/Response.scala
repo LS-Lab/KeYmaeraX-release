@@ -871,8 +871,8 @@ class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
   def getJson: JsValue = agendaItemJson(item)
 }
 
-class ProofTaskParentResponse (parent: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
-  def getJson: JsValue = nodeJson(parent, withSequent=true, marginLeft, marginRight)._2
+class ProofTaskNodeResponse(node: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
+  def getJson: JsValue = nodeJson(node, withSequent=true, marginLeft, marginRight)._2
 }
 
 class GetPathAllResponse(path: List[ProofTreeNode], parentsRemaining: Int, marginLeft: Int, marginRight: Int) extends Response {
@@ -1416,9 +1416,23 @@ class NodeResponse(tree: String) extends Response {
 }
 
 
-case class GetTacticResponse(tacticText: String) extends Response {
+case class GetTacticResponse(tacticText: String, nodesByLoc: Map[Location, String]) extends Response {
+  private def locJson(l: Location) = l match {
+    case Region(l, c, el, ec) => JsObject(
+      "line" -> JsNumber(l),
+      "column" -> JsNumber(c),
+      "endLine" -> JsNumber(el),
+      "endColumn" -> JsNumber(ec)
+    )
+    case _ => throw new IllegalArgumentException("Unknown location kind " + l.getClass)
+  }
+  private def nodeByLoc(l: Location, n: String) = JsObject(
+    "loc" -> locJson(l),
+    "node" -> JsString(n)
+  )
   def getJson: JsValue = JsObject(
-    "tacticText" -> JsString(tacticText)
+    "tacticText" -> JsString(tacticText),
+    "nodesByLocation" -> JsArray(nodesByLoc.map({ case (k,v) => nodeByLoc(k, v) }).toVector)
   )
 }
 

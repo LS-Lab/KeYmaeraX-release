@@ -127,7 +127,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     try {
       mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
     } catch {
-      case _: MathematicaComputationAbortedException =>
+      case ex: MathematicaComputationAbortedException if qeCexTimeout != 0 =>
         mCEX.timeout = qeCexTimeout
         val cex = try {
           mCEX.findCounterExample(stripUniversalClosure(formula))
@@ -138,7 +138,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
           case _: ToolException => None
         }
         cex match {
-          case None =>
+          case None if qeMaxTimeout == 0 => throw ex
+          case None if qeMaxTimeout != 0 =>
             mQE.timeout = qeMaxTimeout
             if (Configuration.getBoolean(Configuration.Keys.MATHEMATICA_PARALLEL_QE).getOrElse(false) && StaticSemantics.freeVars(formula).isEmpty) {
               // ask parallel QE to find out how to prove, then follow that recipe to get lemmas and return combined
@@ -159,7 +160,6 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             ProvableSig.startProof(Equiv(formula, False)),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
         }
-      case ex: MathematicaComputationUserAbortException => throw ex
     }
   }
 

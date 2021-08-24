@@ -350,9 +350,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     */
   @Tactic("()'", revealInternalSteps = false /* uninformative as useFor proof */)
-  lazy val derive: DependentPositionTactic = anon {(pos:Position, seq: Sequent) =>
-    val chaseNegations = seq.sub(pos) match {
-      case Some(post: DifferentialFormula) =>
+  lazy val derive: DependentPositionTactic = anon {(pos: Position, seq: Sequent) =>
+    val chaseNegations = anon {(pos: Position, seq: Sequent) => seq.sub(pos) match {
+      case Some(post: Formula) =>
         val notPositions = ListBuffer.empty[PosInExpr]
         ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
@@ -360,12 +360,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
             case _ => Left(None)
           }
         }, post)
-        notPositions.map(p => chase('Rlast, pos.inExpr ++ p)).
-          reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+        notPositions.map(p => chase(pos ++ p)).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
       case _ => skip
-    }
+    }}
 
-    chaseNegations & chase(pos) & anon { (seq: Sequent) => {
+    SaturateTactic(chaseNegations(pos) & deepChase(pos)) & anon { (seq: Sequent) => {
       seq.sub(pos) match {
         case Some(e: Expression) =>
           val dvarPositions = ListBuffer.empty[PosInExpr]

@@ -23,7 +23,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
 import spray.json._
-import spray.json.DefaultJsonProtocol._
+import spray.json.DefaultJsonProtocol.{listFormat, _}
 
 import java.io._
 import java.net.URLEncoder
@@ -51,6 +51,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
+import spray.json.JsonParser.ParsingException
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -1678,6 +1679,19 @@ class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: St
   }
 }
 
+class ProofTaskNodeRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case Some(node) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        new ProofTaskNodeResponse(node, marginLeft, marginRight)::Nil
+      case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")::Nil
+    }
+  }
+}
+
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
@@ -1685,7 +1699,7 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
     tree.locate(nodeId).flatMap(_.parent) match {
       case Some(parent) =>
         val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-        new ProofTaskParentResponse(parent, marginLeft, marginRight)::Nil
+        new ProofTaskNodeResponse(parent, marginLeft, marginRight)::Nil
       case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")::Nil
     }
   }
@@ -1773,7 +1787,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           }
         } else {
           val innerTree = DbProofTree(db, localProofId.toString).load()
-          val stepDetails = innerTree.tacticString(new VerboseTraceToTacticConverter(innerTree.info.defs(db)))
+          val (stepDetails, _) = innerTree.tacticString(new VerboseTraceToTacticConverter(innerTree.info.defs(db)))
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
@@ -1802,7 +1816,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String)
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db))), innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))._1, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -2593,11 +2607,11 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String)
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-      val tactic = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
-      // remember tactic string
+      val (tactic, proofStateInfo) = tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
+      // remember tactic string and mapping to proof tree
       val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
         tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-        Some(tactic))
+        Some(GetTacticResponse(tactic, proofStateInfo.map({ case (k,v) => (k,v.id.toString) })).getJson.compactPrint))
       db.updateProofInfo(newInfo)
       // remember lemma
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
@@ -2699,23 +2713,44 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
 class ExtractTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String, verbose: Boolean) extends UserProofRequest(db, userId, proofIdStr) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
-    val tactic = tree.tacticString(
+    val (tactic, locInfoSrc) = tree.tacticString(
       if (verbose) new VerboseTraceToTacticConverter(tree.info.defs(db))
       else new VerbatimTraceToTacticConverter()
     )
     // remember tactic string
+    val locInfo = locInfoSrc.map({ case (k,v) => (k,v.id.toString) })
     val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-      Some(tactic))
+      Some(GetTacticResponse(tactic, locInfo).getJson.compactPrint))
     db.updateProofInfo(newInfo)
-    GetTacticResponse(tactic) :: Nil
+    GetTacticResponse(tactic, locInfo) :: Nil
   }
+}
+
+case class ProofStateInfo(loc: Region, node: String)
+case class TacticInfo(tacticText: String, nodesByLocation: List[ProofStateInfo])
+
+object TacticInfoJsonProtocol extends DefaultJsonProtocol {
+  implicit val regionFormat: RootJsonFormat[Region] = jsonFormat4(Region.apply)
+  implicit val proofStateInfoFormat: RootJsonFormat[ProofStateInfo] = jsonFormat2(ProofStateInfo)
+  implicit val tacticInfoFormat: RootJsonFormat[TacticInfo] = jsonFormat2(TacticInfo)
 }
 
 class GetTacticRequest(db: DBAbstraction, userId: String, proofIdStr: String) extends UserProofRequest(db, userId, proofIdStr) with ReadRequest {
   override def doResultingResponses(): List[Response] = {
     val proofInfo = db.getProofInfo(proofIdStr)
-    GetTacticResponse(proofInfo.tactic.getOrElse(BellePrettyPrinter(Idioms.nil))) :: Nil
+    val (tactic: String, proofStateInfo: Map[Location, String]) = proofInfo.tactic match {
+      case Some(t) =>
+        import TacticInfoJsonProtocol._
+        try {
+          val ti = t.parseJson.convertTo[TacticInfo]
+          (ti.tacticText, ti.nodesByLocation.map(i => (i.loc, i.node)).toMap.asInstanceOf[Map[Location, String]])
+        } catch {
+          case _: ParsingException => (t, Map.empty) //@note backwards compatibility with database tactics not in JSON
+        }
+      case None => (BellePrettyPrinter(Idioms.nil), Map.empty)
+    }
+    GetTacticResponse(tactic, proofStateInfo) :: Nil
   }
 }
 
@@ -2737,7 +2772,7 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val tactic = tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
+    val (tactic, _) = tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
     val provable = tree.root.provable
     val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
       "tool" -> "KeYmaera X",
@@ -2787,11 +2822,11 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     val tree = DbProofTree(db, proofId)
     val proofName = tree.info.name
     val tactic = try {
-      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))
+      tree.tacticString(new VerboseTraceToTacticConverter(tree.info.defs(db)))._1
     } catch {
       case _: ParseException =>
         // fallback if for whatever reason model or tactic is not parseable: print verbatim without beautification
-        tree.info.tactic.getOrElse("/* no tactic recorded */")
+        RequestHelper.tacticString(tree.info)
     }
     val model = db.getModel(tree.info.modelId.get)
 
@@ -2839,9 +2874,9 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
   extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     def printProof(tree: ProofTree, model: ModelPOJO): String = try {
-      tree.tacticString(new VerboseTraceToTacticConverter(model.defs))
+      tree.tacticString(new VerboseTraceToTacticConverter(model.defs))._1
     } catch {
-      case _: ParseException => tree.info.tactic.getOrElse("/* no tactic steps recorded */")
+      case _: ParseException => RequestHelper.tacticString(tree.info)
     }
 
     def modelProofs(model: ModelPOJO): List[(String, String)] = {
@@ -3028,6 +3063,19 @@ object RequestHelper {
     }
     proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs),
       invSupplier = mergedInvSupplier)
+  }
+
+  def tacticString(proofInfo: ProofPOJO): String = {
+    val text = proofInfo.tactic.getOrElse("/* no tactic recorded */")
+    try {
+      text.parseJson match {
+        case JsObject(fields) if fields.contains("tacticText") => fields("tacticText").asInstanceOf[JsString].value
+        case JsString(s) => s
+        case _ => "/* no tactic recorded */"
+      }
+    } catch {
+      case _: ParsingException => text //@note backwards-compatibility with database content that's not JSON
+    }
   }
 
 }

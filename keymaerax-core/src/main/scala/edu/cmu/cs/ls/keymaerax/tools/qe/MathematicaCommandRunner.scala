@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaInapplicableMethodException, MathematicaMathlinkException, MathematicaUnknownCauseCriticalException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
+import org.slf4j.{LoggerFactory, MarkerFactory}
 
 /** Interface for running and cancelling a Mathematica command. */
 trait MathematicaCommandRunner {
@@ -80,7 +81,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
     val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
     try {
-      logger.debug("Sending : " + checkErrorMsgCmd.toString)
+      LoggerFactory.getLogger(getClass).debug(MarkerFactory.getMarker("mathematica-qe-cmd"), checkErrorMsgCmd.toString)
       ml.synchronized {
         dispatch(checkErrorMsgCmd)
         getAnswer(qidx, m2k, indexedCmd) //@note disposes indexedCmd, do not use (except dispose) afterwards

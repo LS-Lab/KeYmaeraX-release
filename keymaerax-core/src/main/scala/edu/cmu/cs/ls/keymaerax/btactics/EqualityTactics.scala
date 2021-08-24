@@ -88,12 +88,9 @@ private object EqualityTactics {
                 filter(StaticSemantics.isDifferential).map({ case DifferentialSymbol(x) => x })).isEmpty
               case _ => false
             }))
-            val lhsPos = (f match {
-              //@note do not rewrite lhs at ante-pos if it is verbatim lhs of eq,
-              // otherwise x=y, x=y ==> rewrites slightly surprising to y=y ==>
-              case Equal(l, _) if pos.isAnte && l == lhs => FormulaTools.posOf(f, _ == lhs).filterNot(_ == PosInExpr(0 :: Nil))
-              case _ => FormulaTools.posOf(f, _ == lhs)
-            }).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
+            //@note rewrites lhs at ante-pos even if it is verbatim lhs of eq (dW and other tactics rely on it);
+            // as a result x=y, x=y ==> rewrites slightly surprising to y=y ==>
+            val lhsPos = FormulaTools.posOf(f, _ == lhs).filterNot(p => diffPos.exists(_.isPrefixOf(p)))
             val freeRhsPos = lhsPos.filter(p => {
               val bv = boundAt(topFml, pos.inExpr ++ p)
               bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })
@@ -158,12 +155,13 @@ private object EqualityTactics {
     seq.zipAnteWithPositions.filter({
       case (Equal(v: Variable, t), _) => v != t
       case (Equal(fn@FuncOf(Function(_, _, _, _, None), _), t), _) => fn != t
-      case _ => false }).
-      reverseMap({ case (_, pos) => Idioms.doIf(p => {
-        val Equal(l, r) = p.subgoals.head(pos.checkTop)
-        l != r })(EqualityTactics.atomExhaustiveEqL2R(pos))
-      }).
-      reduceOption[BelleExpr](_ & _).getOrElse(skip)
+      case _ => false
+    }).reverseMap({ case (_, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) match {
+          case Equal(l: Variable, r) => l != r
+          case Equal(l: FuncOf, r) => l != r
+          case _ => false // earlier rewriting may have rewritten LHS to non-trivial term, e.g., x=y+1, x=z+5 ~> z+5=y+1
+        })(EqualityTactics.atomExhaustiveEqL2R(pos))
+      }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   /**
