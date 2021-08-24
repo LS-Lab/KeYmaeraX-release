@@ -193,11 +193,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
     /* TODO: check that handling of arguments is right */
     sort ~~ blank ~~/ ident ~~ (
       ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs =>
-          ( xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
-            , xs.zipWithIndex.foldRight(Nil: List[(Name,Sort)]){case (((sort, name),i),acc) =>
-            (Name.tupled(name.getOrElse(("_default",Some(i)))), sort) :: acc}
-          )
+        map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+            , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
+            (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
+          })
         )
       //| "".!.map(_ => (core.Unit,Some(Nil)))
     )
@@ -207,10 +206,14 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
   def declPartList[_: P]: P[List[(Name,Signature)]] = P(
     sort ~~ blank ~~/ (ident ~~ (
       ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs => xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit))
-        //| "".!.map(_ => (core.Unit,Some(Nothing)))
+        map(xs => (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+            , xs.zipWithIndex.foldRight(Nil: List[(Name, Sort)]) { case (((sort, name), i), acc) =>
+            (Name.tupled(name.getOrElse(("_default", Some(i)))), sort) :: acc
+          })
+        )
+      //| "".!.map(_ => (core.Unit,Some(Nil)))
       )).rep(sep=","./)
-  ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => (Name(n,idx), Signature(Some(args), ty, Some(Nil), None, UnknownLocation))}).toList})
+  ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => (Name(n,idx), Signature(Some(args._1), ty, Some(args._2), None, UnknownLocation))}).toList})
 
   /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
     //@todo better return type with ProgramConst/SystemConst instead of Name
@@ -244,7 +247,10 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
    *  the elaboration phase.
    */
   def implicitDef[_: P]: P[List[(Name,Signature)]] =
-    P("implicit" ~~ blank ~/ (implicitDefInterp.map(List(_)) | implicitDefODE))
+    P("implicit" ~~ blank ~/ (
+      NoCut(implicitDefInterp).map(List(_)) |
+      NoCut(implicitDefODE)
+    ))
 
   def implicitDefODE[_: P]: P[List[(Name,Signature)]] = P(
     (declPartList ~ ":='" ~/ NoCut(program))
@@ -252,6 +258,8 @@ class DLArchiveParser(tacticParser: DLTacticParser) extends ArchiveParser {
         if (sigs.exists(s => s._2.domain != Some(Real) || s._2.codomain != Real))
           throw ParseException("Implicit ODE declarations can only declare real-valued " +
             "functions of a single real variable.")
+
+        println(sigs)
 
         val (t,Real) = sigs.head._2.arguments.get.head
         if (sigs.exists(_._2.arguments.get.head._1 != t))

@@ -27,8 +27,9 @@ import scala.language.postfixOps
  */
 class ImplicitFunctionTests extends TacticTestBase {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+  private val parser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
 
-  private def parse (input: String) = ArchiveParser.parser.parse(input).loneElement
+  private def parse (input: String) = parser.parse(input).loneElement
 
   "implicit fn oracle" should "return correct axiom for abs" in {
     val absAxiom = Provable.implicitFuncAxiom(InterpretedSymbols.absF)
@@ -61,7 +62,7 @@ class ImplicitFunctionTests extends TacticTestBase {
   it should "parse inline function interps correctly" in {
     val input =
       """ArchiveEntry "entry1"
-        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-1) = 1 End.
+        | Problem myAbs<<._1 < 0 & ._0 = -(._1) | ._1 >= 0 & ._0 = ._1>>(-(1)) = 1 End.
         |End.
         |""".stripMargin
     val prog = parse(input)
@@ -92,7 +93,7 @@ class ImplicitFunctionTests extends TacticTestBase {
     val input =
       """ArchiveEntry "entry1"
         | Definitions
-        |  implicit Real myExp(Real x) :=' {{x:=0,myExp:=1}; {x'=1,myExp'=myExp}};
+        |  implicit Real myExp(Real x) :=' {{x:=0;myExp:=1;}; {x'=1,myExp'=myExp}};
         | End.
         | Problem myExp(0) = 1 End.
         |End.
