@@ -33,11 +33,8 @@ object MathematicaConversion {
   def importResult[T](e: MExpr, conversion: MExpr => T): T = try { conversion(e) } finally { e.dispose() }
 
   /** Interpreted symbols. */
-  val interpretedSymbols: Map[Function, InterpretedMathOpSpec] = Map(
-    MathematicaOpSpec.abs.fn -> MathematicaOpSpec.abs,
-    MathematicaOpSpec.max.fn -> MathematicaOpSpec.max,
-    MathematicaOpSpec.min.fn -> MathematicaOpSpec.min
-  )
+  val interpretedSymbols: Map[Function, InterpretedMathOpSpec] =
+    MathematicaOpSpec.interpretedSymbols.map(i => i.fn -> i).toMap
 
   /** Returns true if `e` is aborted, false otherwise. */
   def isAborted(e: MExpr): Boolean = e == MathematicaOpSpec.aborted.op || e == MathematicaOpSpec.abort.op
@@ -91,9 +88,6 @@ trait K2MConverter[T] extends (T => MExpr) {
 
   /** Convert without contract checking */
   private[tools] def convert(e: T): MExpr
-
-  /** Interpreted symbols. */
-  def interpretedSymbols: Map[Function, InterpretedMathOpSpec] = MathematicaConversion.interpretedSymbols
 }
 
 /** Implicit conversion from Mathematica expressions to comparator. */

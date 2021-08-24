@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, interpretedSymbols, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
@@ -97,8 +97,6 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
   private val baseConverter = new UncheckedBaseK2MConverter {
     override def convert(e: KExpr): MExpr = {
       //insist on less strict input: interpreted function symbols allowed here
-      //TODO: interpretedSymbols must keep a map of all interpreted function symbols that
-      // we know how to convert to Mathematica
       insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
         "Interpreted functions must have known conversion to Mathematica")
       insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
@@ -196,7 +194,6 @@ object PegasusK2MConverter extends UncheckedBaseK2MConverter {
 
   override def convert(e: KExpr): MExpr = {
     //insist on less strict input: interpreted function symbols allowed here
-    //todo: interpreted
     insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, Some(_)) => interpretedSymbols.contains(fn) case _ => true }),
       "Interpreted functions must have expected domain and sort")
     insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")

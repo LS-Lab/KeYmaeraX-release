@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr, interpretedSymbols}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaNameConversion._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
@@ -65,8 +65,11 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     t match {
       //@note Uninterpreted functions are mapped to namespace kyx` to avoid clashes with any interpreted names
       case FuncOf(fn, child) =>
-        if (fn.interpreted) interpretedSymbols(fn)(convertFunctionArgs(child))
-        else MathematicaOpSpec.func(fn, convertFunctionArgs(child))
+        if (interpretedSymbols.contains(fn)) // If there is a Mathematica function available here
+          interpretedSymbols(fn)(convertFunctionArgs(child))
+        else {
+          MathematicaOpSpec.func(fn, convertFunctionArgs(child))
+        }
       case Neg(c) => MathematicaOpSpec.neg(convertTerm(c))
       case Plus(l, r) => MathematicaOpSpec.plus(convertTerm(l), convertTerm(r))
       case Minus(l, r) => MathematicaOpSpec.minus(convertTerm(l), convertTerm(r))

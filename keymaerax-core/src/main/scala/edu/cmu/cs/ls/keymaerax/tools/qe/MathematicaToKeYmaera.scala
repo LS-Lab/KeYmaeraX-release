@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException}
 
@@ -85,9 +86,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.mapply.applies(e)) convertAtomicTerm(e)
 
     //todo: more cases for converting interpreted symbols, possibly make this more generic
-    else if (MathematicaOpSpec.abs.applies(e)) convertAtomicTerm(e)
-    else if (MathematicaOpSpec.min.applies(e)) convertAtomicTerm(e)
-    else if (MathematicaOpSpec.max.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.interpretedSymbols.exists(_.applies(e))) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.lExpConst.applies(e)) FuncOf(InterpretedSymbols.expF, Number(1))
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
     else throw ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))

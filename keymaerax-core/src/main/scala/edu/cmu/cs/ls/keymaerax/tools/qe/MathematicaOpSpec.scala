@@ -142,11 +142,16 @@ object MathematicaOpSpec {
     override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
   }
 
-  def abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), InterpretedSymbols.absF)
+  def interpretedSymbols = List(
+    InterpretedMathOpSpec(symbol("RealAbs"), InterpretedSymbols.absF),
+    InterpretedMathOpSpec(symbol("Min"), InterpretedSymbols.minF),
+    InterpretedMathOpSpec(symbol("Max"), InterpretedSymbols.maxF),
+    InterpretedMathOpSpec(symbol("Exp"), InterpretedSymbols.expF),
+    InterpretedMathOpSpec(symbol("Sin"), InterpretedSymbols.sinF),
+    InterpretedMathOpSpec(symbol("Cos"), InterpretedSymbols.cosF)
+  )
 
-  def min: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Min"), InterpretedSymbols.minF)
-
-  def max: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Max"), InterpretedSymbols.maxF)
+  def lExpConst = LiteralMathOpSpec(symbol("E"))
 
   def variable: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {
