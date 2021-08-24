@@ -215,8 +215,15 @@ class DLParser extends Parser {
   def ident[_: P]: P[(String,Option[Int])] = {
     import NoWhitespace._
     P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).! ~~
-      (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!) | "_".!).? ).
-      map({case (s,None) => (s,None) case (s,Some("_")) => (s+"_",None) case (s,Some(n))=>(s,Some(n.toInt))})
+      (("_" ~~ ("_".? ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX)).!) |
+        "_".!).?
+    ).map({
+      case (s,None) => (s,None)
+      case (s,Some("_")) => (s+"_",None)
+      case (s,Some(n))=>
+        if (n.startsWith("_")) (s+"_",Some(n.drop(1).toInt))
+        else (s,Some(n.toInt))
+    })
   }
   /** `.` or `._2`: dot parsing */
   def dot[_:P]: P[DotTerm] = {
