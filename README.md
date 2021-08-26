@@ -96,7 +96,7 @@ https://www.ls.cs.cmu.edu/publications.html
 
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
-Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+Journal of Automated Reasoning 59(2), pp. 219-266, 2017.
 Extended version of [CADE-25](https://doi.org/10.1007/978-3-319-21401-6_32).
 
 2. André Platzer.
@@ -113,7 +113,7 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, Cham, 2018. [DOI](https://doi.org/10.1007/978-3-319-63588-0) [Videos](http://video.lfcps.org/)
+Springer, Cham, 2018. [DOI](https://doi.org/10.1007/978-3-319-63588-0), [Videos](http://video.lfcps.org/)
 
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus.
 
@@ -126,15 +126,15 @@ A secondary goal of KeYmaera X is to also make it possible to implement extensio
 
 7. André Platzer. 
 [Differential game logic](https://doi.org/10.1145/2817824).
-ACM Trans. Comput. Log., 17(1), 2015.
+ACM Trans. Comput. Log. 17(1), 2015.
 
 8. André Platzer. 
 [Differential hybrid games](https://doi.org/10.1145/3091123).
-ACM Trans. Comput. Log., 18(3), 2017.
+ACM Trans. Comput. Log. 18(3), 2017.
 
 9. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](https://doi.org/10.2168/LMCS-8(4:17)2012).
-Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
+Logical Methods in Computer Science 8(4), pages 1-44, 2012.
 
 KeYmaera X implements fast generalized uniform substitution algorithms, also cross-verified:
 
@@ -159,7 +159,7 @@ Liveness proofs for differential equations are based on:
 13. Yong Kiam Tan and André Platzer.
 Yong Kiam Tan and André Platzer. 
 [An axiomatic approach to existence and liveness for differential equations](https://doi.org/10.1007/s00165-020-00525-0). 
-Formal Aspects of Computing.
+Formal Aspects of Computing. To appear.
 Special issue for selected papers from [FM'19](https://doi.org/10.1007/978-3-030-30942-8_23). 
 
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
@@ -173,7 +173,7 @@ KeYmaera X implements the [ModelPlex](http://modelplex.net) method to ensure tha
 
 15. Stefan Mitsch and André Platzer. 
 [ModelPlex: Verified runtime validation of verified cyber-physical system models](https://doi.org/10.1007/s10703-016-0241-z). 
-Formal Methods in System Design, 49(1), pp. 33-74. 2016. 
+Formal Methods in System Design 49(1), pp. 33-74. 2016. 
 Special issue for selected papers from [RV'14](https://doi.org/10.1007/978-3-319-11164-3_17).
 
 The design principles for the user interface of KeYmaera X are described in:
