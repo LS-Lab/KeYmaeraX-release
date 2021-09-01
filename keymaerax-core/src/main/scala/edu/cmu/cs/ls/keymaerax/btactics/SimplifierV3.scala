@@ -305,24 +305,24 @@ object SimplifierV3 {
   private def applyFormulaProvable(f:Formula, ctx:context, pr:ProvableSig) : Option[(Formula,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
-      case Imply(prem,Equiv(k,v)) => {
-        val unif = try { UnificationMatch(k,f) } catch { case e:UnificationException => return None}
+      case Imply(prem,Equiv(k,v)) =>
+        val unif = try { UnificationMatch(k,f) } catch { case _: UnificationException => return None}
         val uprem = unif(prem)
-        if(ctx.contains(uprem)){
+        if (ctx.contains(uprem)) {
           val concl = unif(v)
           val proof = proveBy(Imply(uprem,Equiv(f,unif(v))), byUS(pr))
           //assert(proof.isProved)
           Some(concl,uprem,proof)
-        }
-        else None
-      }
-      case Equiv(k,v) => {
-        val unif = try { UnificationMatch(k,f) } catch { case e:UnificationException => return None}
-        val concl = unif(v)
-        val proof = proveBy(Imply(True,Equiv(f,unif(v))), implyR(1) & cohideR(1) & byUS(pr))
-        //assert(proof.isProved)
-        Some(concl,True,proof)
-      }
+        } else None
+      case Equiv(k,v) =>
+        val unif = try { UnificationMatch(k,f) } catch { case _: UnificationException => return None }
+        val Equiv(fsubst, _) = unif(Equiv(k,v))
+        if (fsubst == f) {
+          val concl = unif(v)
+          val proof = proveBy(Imply(True, Equiv(f, unif(v))), implyR(1) & cohideR(1) & byUS(pr))
+          //assert(proof.isProved)
+          Some(concl, True, proof)
+        } else None
       case _ => ??? //Illegal shape of rewrite
     }
   }
