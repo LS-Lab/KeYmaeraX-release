@@ -431,6 +431,16 @@ private object DLBySubst {
               if (toExpand.nonEmpty) ExpandAll(toExpand)
               else skip
             })
+            val expandPrg =
+              if (consts.flatMap(StaticSemantics.symbols).exists(_.isInstanceOf[Variable]) && StaticSemantics.boundVars(a).isInfinite) {
+                val asymbols = StaticSemantics.symbols(a)
+                ExpandAll(defs.substs.filter({
+                  case SubstitutionPair(p: ProgramConst, _) => asymbols.contains(p)
+                  case SubstitutionPair(p: SystemConst, _) => asymbols.contains(p)
+                  case _ => false
+                }))
+              }
+              else skip
 
             label(startTx) &
             cutR(Box(Loop(a), q))(pos.checkSucc.top) <(
@@ -443,7 +453,7 @@ private object DLBySubst {
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) <(
                   (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
                    else andL('Llast) & hideL('Llast, True)) & label(replaceTxWith(indStep)),
-                  andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
+                  andL(-1) & hideL(-1, oldified) & expandPrg & V(1) & close(-1, 1) & done)
               ),
               /* c -> d */
               cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &

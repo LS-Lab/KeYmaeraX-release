@@ -802,6 +802,20 @@ class DLTests extends TacticTestBase {
     )
   }
 
+  it should "expand when necessary" in withTactics {
+    //@todo would prefer motion/init unexpanded, but requires intermediate delayed substitution (inside loop tactic)
+    val defs = ("init(x,y) ~> x>=a() & y>=0 & a()>0 :: " +
+      "motion{|^@|}; ~> { x' = -y } :: " +
+      "nil").asDeclaration
+    val s = "init(x,y) ==> [{motion{|^@|};}*]x>0".asSequent
+    proveByS(s, loop("inv(x,y)".asFormula)(1), defs).
+      subgoals should contain theSameElementsAs List(
+      "x>=a()&y>=0&a()>0 ==> inv(x,y)".asSequent,
+      "inv(x,y), y>=0, a()>0 ==> [{x'=-y}]inv(x,y)".asSequent,
+      "inv(x,y), y>=0, a()>0 ==> x>0".asSequent
+    )
+  }
+
   it should "keep constants but not expand unnecessarily" in withTactics {
     val defs = "init(x) ~> x>=y() :: prg{|^@|}; ~> x:=x+1; :: inv(x) ~> x>=0 :: post(x) ~> x>=-1 :: nil".asDeclaration
     proveByS("init(x), y()>=1 ==> [{prg{|^@|};}*@invariant(inv(x))]post(x)".asSequent, loop("inv(x)".asFormula)(1), defs).
