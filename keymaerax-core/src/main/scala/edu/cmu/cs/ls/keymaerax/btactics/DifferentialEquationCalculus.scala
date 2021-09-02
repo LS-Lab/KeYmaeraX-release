@@ -212,7 +212,7 @@ trait DifferentialEquationCalculus {
   @Tactic(longDisplayName = "Differential Ghost",
     premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]P ), Δ", //@note G->P in context not yet supported
+    contextPremises = "Γ |- C( ∃y [x'=f(x),E & Q]G ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true, inputs = "E[y,x,y']:expression;; G[y]:option[formula]")
   def dG(E: Expression, G: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) =>
