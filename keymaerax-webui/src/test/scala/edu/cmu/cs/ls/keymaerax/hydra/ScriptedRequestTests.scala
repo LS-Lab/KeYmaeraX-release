@@ -165,8 +165,8 @@ class ScriptedRequestTests extends TacticTestBase {
           |"x=3": nil,
           |"x^2>=4//x>2": nil,
           |"x^4>=16//x>2": nil,
-          |"x^4>=16//x < (-2)": nil,
-          |"x^2>=4//x < (-2)": nil
+          |"x^2>=4//x < (-2)": nil,
+          |"x^4>=16//x < (-2)": nil
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
   }}
@@ -189,8 +189,8 @@ class ScriptedRequestTests extends TacticTestBase {
           |  prop; <(
           |    "x^2>=4//x>2": nil,
           |    "x^4>=16//x>2": nil,
-          |    "x^4>=16//x < (-2)": nil,
-          |    "x^2>=4//x < (-2)": nil
+          |    "x^2>=4//x < (-2)": nil,
+          |    "x^4>=16//x < (-2)": nil
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
     }
