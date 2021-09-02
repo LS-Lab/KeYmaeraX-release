@@ -101,6 +101,14 @@ output {
   text-overflow: ellipsis;
 }
 
+.k4-copy-clipboard {
+  position: relative;
+  top: 1.5ex;
+  right: 2.5em;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
 .navbar {
   min-height: 30px;
 }
