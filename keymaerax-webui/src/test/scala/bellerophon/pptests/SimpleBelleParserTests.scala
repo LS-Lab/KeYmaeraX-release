@@ -441,9 +441,14 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
 
   it should "require case labels on all branches" in {
     the [ParseException] thrownBy BelleParser("loop(\"x>=0\",1); <(andL(-1), \"Step\": andL(-2), \"Post\": andL(-3))") should
-      have message """1:17 Not all branches have labels
-                     |Found:    <unknown> at 1:17
-                     |Expected: <unknown>""".stripMargin
+      have message """1:19 Not all branches have labels. Please provide labels for the branches marked <missing>
+                     |  "<missing>": andL(-1),
+                     |  "Step": andL(-2),
+                     |  "Post": andL(-3)
+                     |resulting from
+                     |loop("x>=0", 1)
+                     |Found:    <missing> at 1:19
+                     |Expected: "A label":""".stripMargin
   }
 
 

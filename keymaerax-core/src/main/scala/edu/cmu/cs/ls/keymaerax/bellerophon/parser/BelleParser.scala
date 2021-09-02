@@ -250,7 +250,12 @@ object BelleParser extends TacticParser with Logging {
         val parsedExpr = {
           if (branchTactics.forall(_.label.isDefined)) left.switch(branchTactics.map(t => t.label.get -> t.expr):_*)
           else if (branchTactics.forall(_.label.isEmpty)) left <(branchTactics.map(_.expr):_*)
-          else throw ParseException("Not all branches have labels", combinatorLoc)
+          else {
+            val bt = branchTactics.map(t => "  \"" + t.label.map(_.prettyString).getOrElse("<missing>") + "\": " + t.expr.prettyString).mkString(",\n")
+            val msg = "Not all branches have labels. Please provide labels for the branches marked <missing>\n" +
+              bt + "\nresulting from\n" + left.prettyString
+            throw ParseException(msg, branchTactics.find(_.label.isEmpty).map(_.loc.begin).getOrElse(UnknownLocation), "<missing>", "\"A label\":")
+          }
         }
         parsedExpr.setLocation(combinatorLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(branchTactics.last.loc), l), st.input)
