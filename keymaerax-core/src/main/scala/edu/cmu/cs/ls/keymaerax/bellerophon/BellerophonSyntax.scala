@@ -499,8 +499,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       }
       case l@Find(_, _, start, _, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(provable, l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
+        tryAllAfter(provable, l, new TacticInapplicableFailure("Not found: locator " + locator.prettyString + "\nof position tactic " + prettyString +
+          "\ndoes not match anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
@@ -679,8 +679,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         case None => pt.factory(pos).computeExpr(BelleProvable(provable, labels, defs))
       }
       case l@Find(_, _, start, _, _) =>
-        tryAllAfter(l, new TacticInapplicableFailure("Position tactic " + prettyString +
-          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
+        tryAllAfter(l, new TacticInapplicableFailure("Not found: locator " + locator.prettyString + "\nof position tactic " + prettyString +
+          "\ndoes not match anywhere in " + (if (start.isAnte) "antecedent" else "succedent") + " of\n" + provable.prettyString))
       case LastAnte(goal, sub) => pt.factory(AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub))
       case LastSucc(goal, sub) => pt.factory(SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub))
     }
