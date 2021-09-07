@@ -159,7 +159,7 @@ Liveness proofs for differential equations are based on:
 13. Yong Kiam Tan and André Platzer.
 Yong Kiam Tan and André Platzer. 
 [An axiomatic approach to existence and liveness for differential equations](https://doi.org/10.1007/s00165-020-00525-0). 
-Formal Aspects of Computing 33, pp 461-518, 2021.
+Formal Aspects of Computing 33(4), pp 461-518, 2021.
 Special issue for selected papers from [FM'19](https://doi.org/10.1007/978-3-030-30942-8_23). 
 
 KeYmaera X uses the [Pegasus](http://pegasus.keymaeraX.org/) tool for invariant generation (which gets better when additional software is installed):
