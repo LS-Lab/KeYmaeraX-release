@@ -944,8 +944,11 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
 
   // error message handling
 
-  private def goodErrorMessage(st: ParseState): Option[String] = st.stack.top match {
-    case Token(edu.cmu.cs.ls.keymaerax.parser.RBOX, _) => Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
+  private def goodErrorMessage(st: ParseState): Option[String] = st.stack match {
+    case _ :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBOX, _) => Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
+    case _ :+ (e: edu.cmu.cs.ls.keymaerax.parser.Expr) :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBRACE, _) if !e.isInstanceOf[Program] =>
+      Some("Syntax error. Expression " + e.expr.prettyString + " is not a program, perhaps ; is missing?")
+    case _ :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBRACE, _) => Some("Syntax error. Perhaps the program contained in {} is ill-formed or incomplete?")
     case _ => None
   }
 
