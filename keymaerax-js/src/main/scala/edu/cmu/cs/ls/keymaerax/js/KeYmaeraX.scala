@@ -108,7 +108,7 @@ object KeYmaeraX {
 
   @JSExportTopLevel("parsesAsHP")
   def parsesAsHP(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
-    case hp: Program if FormulaTools.dualFree(hp) => "Parsed OK"
+    case hp: Program if FormulaTools.literalDualFree(hp) => "Parsed OK"
     case _ => "Parsed OK, but not a hybrid program"
   })
 
