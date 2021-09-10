@@ -315,6 +315,19 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser("{{x'=v}}^@") shouldBe Parser("{x'=v}^@")
   }
 
+  it should "parse program constants" in {
+    Parser("a;") shouldBe ProgramConst("a")
+    Parser("a{|^@|};") shouldBe SystemConst("a")
+    Parser("{a;b;}*") shouldBe Loop(Compose(ProgramConst("a"), ProgramConst("b")))
+  }
+
+  it should "generate legible error messages for program consts" in {
+    the [ParseException] thrownBy Parser("{a;b}*") should have message
+      """1:6 Syntax error. Expression b is not a program, perhaps ; is missing?
+        |Found:    * at 1:6
+        |Expected: """.stripMargin
+  }
+
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
     Parser("r_0 > 0") should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }
