@@ -1371,9 +1371,11 @@ object AssessmentProver {
   private def printJSONGrades(grades: List[(Submission.Problem, Option[String], List[(Submission.Prompt, Double)])], out: OutputStream): Unit = {
     val problemFields = grades.map({ case (problem, _, _) => problem.title -> JsNumber(problem.points) })
     val scoreFields = grades.map({ case (problem, _, pg) => problem.title -> JsNumber(pg.map(_._2).sum) })
+    val promptScoreFields = grades.flatMap(_._3.map({ case (prompt, score) => prompt.id.toString -> JsNumber(score) }))
     val jsonGrades = JsObject(
       "problems" -> JsObject(problemFields:_*),
-      "scores" -> JsObject(scoreFields:_*)
+      "scores" -> JsObject(scoreFields:_*),
+      "prompt_scores" -> JsObject(promptScoreFields:_*)
     )
     out.write(jsonGrades.compactPrint.getBytes("UTF-8"))
   }
