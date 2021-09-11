@@ -7,6 +7,7 @@
 
 Needs["Classifier`",FileNameJoin[{Directory[],"NewClassifier.m"}]] (* Load classifier package from current directory *)
 Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]] (* LZZ *)
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* LZZ *)
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]] (* Diff Sat *)
 Needs["DiffDivConquer`",FileNameJoin[{Directory[],"Strategies","DiffDivConquer.m"}]] (* Diff Sat *)
 Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]] (* Diff Sat *)
@@ -24,15 +25,6 @@ Options[InvGen]= {SanityCheckTimeout -> 0, UseDDC -> False};
 Begin["`Private`"]
 
 
-FindConst[ff_,var_,symbols_]:=Module[{ls,repr},
-ls = {ff//.And -> List}//Flatten;
-(* TODO: This line doesn't seem correct... *)
-repr = Select[Cases[ls,Equal[var,rhs_]->rhs],Not[MemberQ[symbols,#]]&]//DeleteDuplicates;
-If[Length[repr]>1,Print["Detected multiple values for ",var,repr]];
-If[Length[repr]==1,{var -> First[repr]},{}]
-]
-
-
 AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf,
 paramrep,paramfixed,paramfree,prefree,evofree,asmsfree},
 { pre, { f, vars, evoConst }, post } = problem;
@@ -40,7 +32,7 @@ symbols=Complement[DeleteDuplicates@Cases[{pre, post, f, evoConst},_Symbol,Infin
 parameters=Complement[symbols, vars];
 
 (* If the parameters have fixed values in pre then substitute that *)
-paramrep=Map[{#,FindConst[pre,#,symbols]}&,parameters];
+paramrep=Map[{#,Primitives`FindConst[pre,#,symbols]}&,parameters];
 paramfixed=Map[#[[2]]&,Select[paramrep,Length[#[[2]]]!=0 &]]//Flatten;
 paramfree=Map[#[[1]]&,Select[paramrep,Length[#[[2]]]==0&]];
 

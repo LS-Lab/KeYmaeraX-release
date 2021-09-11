@@ -94,8 +94,8 @@ Print["HeuInvariants skipped."]; {}]
 
 FirstIntegrals[problem_List, opts:OptionsPattern[]]:=Module[{
 	pre,post,vf,vars,Q,
-	fIs,maxminVs,deg,
-	rat,uppers,lowers,bound,constvars,constasms,vfe,varse},
+	fIs,fIc,fIres,maxminVs,deg,
+	rat,uppers,lowers,bound,constvars,constasms,constrepl,vfe,varse},
 {pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
 
 (* Heuristic *)
@@ -116,17 +116,22 @@ If[OptionValue[FirstIntegrals, Timeout] > 0,
 TimeConstrained[Block[{},
 (* Compute functionally independent first integrals up to given degree *)
 fIs=Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vfe,varse,Q},deg],varse];
-(* upper and lower bounds on the FIs
+
+(* upper and lower bounds on the FIs.
 todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
 If[TrueQ[OptionValue[FirstIntegrals, Numerical]],
 Block[{},
-uppers = Map[upperRat[NMaxValue[{#,pre},vars]]&,fIs];
-lowers = Map[lowerRat[NMinValue[{#,pre},vars]]&,fIs]],
+uppers = Map[upperRat[NMaxValue[{#,pre&&constasms},varse]]&,fIs];
+lowers = Map[lowerRat[NMinValue[{#,pre&&constasms},varse]]&,fIs]],
 Block[{},
-uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
-lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs]]];
+uppers = Map[upperRat[MaxValue[{#,pre&&constasms},varse]]&,fIs];
+lowers = Map[lowerRat[MinValue[{#,pre&&constasms},varse]]&,fIs]]];
 
-Print[fIs];
+(* First integrals where initial values are fixed *)
+constrepl=Join[Map[Primitives`FindConstHeu[pre,#,vars]&,vars],Map[Primitives`FindConst[pre,#,vars]&,vars]]//Flatten;
+fIc = fIs/.constrepl;
+fIres = MapThread[If[#1===#2,{},
+	If[Intersection[Variables[#2],vars]=={},{#1-#2<=0,#1-#2>=0},{}]]&,{fIs,fIc}]//Flatten;
 
 maxminVs=Flatten[MapThread[
   (* If the upper and lower bound are the same and non-infinity, return the equality *)
@@ -135,7 +140,7 @@ maxminVs=Flatten[MapThread[
     {If[#2==Infinity,{},{#1<=#2}], If[#3==-Infinity,{},{#1>=#3}]}] &,
   {fIs,uppers,lowers}]];
 
-maxminVs
+Join[maxminVs,fIres]
 ], OptionValue[FirstIntegrals,Timeout], {} (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 ],
 Print["FirstIntegrals skipped."]; {}]

@@ -45,6 +45,9 @@ InstantiateParameters::usage="InstantiateParameters[poly,vars,val] instantiates 
 
 RationalQ::usage="RationalQ analogous to IntegerQ"
 
+FindConst::usage="Find constant assumptions with respect to a variable"
+FindConstHeu::usage="Find constant assumptions with respect to a variable (heuristic)"
+
 
 Begin["`Private`"]
 
@@ -235,6 +238,25 @@ span, polys]
 
 CheckSemiAlgInclusion[subset_,set_,vars_List]:=Module[{},
 TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
+]
+
+
+FindConst[ff_,var_,symbols_]:=Module[{ls,repr},
+ls = {ff//.And -> List}//Flatten;
+(* TODO: This line doesn't seem correct... *)
+repr = Select[Cases[ls,Equal[var,rhs_]->rhs],Not[MemberQ[symbols,#]]&]//DeleteDuplicates;
+If[Length[repr]>1,Print["Detected multiple values for ",var,repr]];
+If[Length[repr]==1,{var -> First[repr]},{}]
+]
+
+FindConstHeu[ff_,var_,symbols_]:=Module[{ls,repr,reprL,reprR},
+ls = {ff//.And -> List}//Flatten;
+(* TODO: This line doesn't seem correct... *)
+reprL = Select[Cases[ls,GreaterEqual[var-rhs_,0]->rhs],Not[MemberQ[symbols,#]]&];
+reprR = Select[Cases[ls,GreaterEqual[var-rhs_,0]->rhs],Not[MemberQ[symbols,#]]&];
+repr=Join[reprL,reprR]//DeleteDuplicates;
+If[Length[repr]>1,Print["Detected multiple values for ",var,repr]];
+If[Length[repr]==1,{var -> First[repr]},{}]
 ]
 
 

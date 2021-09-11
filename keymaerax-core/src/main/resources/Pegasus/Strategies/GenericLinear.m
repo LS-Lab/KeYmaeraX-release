@@ -156,28 +156,37 @@ partitioning
 FirstIntegralsLin[problem_List,consts_List : {{},True}, opts:OptionsPattern[]]:=Module[{
 pre, vf, vars, evoConst, post,
 rat,bound,upperRat,lowerRat,fIs,uppers,lowers,
-maxminVs,constvars,constasms
+maxminVs,constvars,constasms,vfe,varse,constrepl,fIc,fIres
 },
 
 {pre, { vf, vars, evoConst }, post, {constvars,constasms}} = problem;
 
-
 rat = 5;
 bound=10^8;
+
+vfe=Join[vf,Table[0,{i,Length[constvars]}]];
+varse=Join[vars,constvars];
 
 (* Create rationalization function wrappers *)
 upperRat[num_]:=If[TrueQ[Element[num,Reals] && num < bound],Primitives`UpperRat[num, rat], Infinity];
 lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat[num, rat], -Infinity];
 
 If[OptionValue[FirstIntegralsLin, Timeout] > 0,
+
 TimeConstrained[Block[{},
 (* Compute functionally independent first integrals up to given degree *)
-fIs=Primitives`FuncIndep[FirstIntegrals`FindLinSysIntegrals[{vf, vars, evoConst}],vars];
-Print[fIs];
+fIs=Primitives`FuncIndep[FirstIntegrals`FindLinSysIntegrals[{vfe, varse, evoConst}],varse];
+
 (* upper and lower bounds on the FIs
 todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
-uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
-lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs];
+uppers = Map[upperRat[MaxValue[{#,pre&&constasms},varse]]&,fIs];
+lowers = Map[lowerRat[MinValue[{#,pre&&constasms},varse]]&,fIs];
+
+(* First integrals where initial values are fixed *)
+constrepl=Join[Map[Primitives`FindConstHeu[pre,#,vars]&,vars],Map[Primitives`FindConst[pre,#,vars]&,vars]]//Flatten;
+fIc = fIs/.constrepl;
+fIres = MapThread[If[#1===#2,{},
+	If[Intersection[Variables[#2],vars]=={},{#1-#2<=0,#1-#2>=0},{}]]&,{fIs,fIc}]//Flatten;
 
 maxminVs=Flatten[MapThread[
   (* If the upper and lower bound are the same and non-infinity, return the equality *)
@@ -186,7 +195,7 @@ maxminVs=Flatten[MapThread[
     {If[#2==Infinity,{},{#1<=#2}], If[#3==-Infinity,{},{#1>=#3}]}] &,
   {fIs,uppers,lowers}]];
 
-maxminVs
+Join[maxminVs,fIres]
 ], OptionValue[FirstIntegralsLin,Timeout],
 {}],
 Print["FirstIntegralsLin skipped."]; {}]
