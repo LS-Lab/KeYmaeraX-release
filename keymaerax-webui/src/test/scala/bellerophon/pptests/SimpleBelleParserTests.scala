@@ -199,6 +199,10 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
     BelleParser(s) shouldBe (round trip t)
   }
 
+  it should "parse a tactic without list argument specified" in {
+    BelleParser("universalClosure(1)") shouldBe (round trip FOQuantifierTactics.universalClosure(List.empty)(1))
+  }
+
   it should "parse nested arguments" in {
     BelleParser("pending({`loop({`x>=0`}, 1)`})") shouldBe (round trip DebuggingTactics.pending("loop({`x>=0`}, 1)"))
     //@note new syntax needs escaping inner " for nesting
