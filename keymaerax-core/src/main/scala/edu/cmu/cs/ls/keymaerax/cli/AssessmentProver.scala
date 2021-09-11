@@ -262,6 +262,8 @@ object AssessmentProver {
           case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.POLY_EQ => (have, expected) match {
+          case (ListExpressionArtifact(h), e: ExpressionArtifact) if h.distinct.size == 1 =>
+            check(ExpressionArtifact(h.head.prettyString), e)
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
               case (ht: Term, et: Term) => run(() => polynomialEquality(ht, et))
