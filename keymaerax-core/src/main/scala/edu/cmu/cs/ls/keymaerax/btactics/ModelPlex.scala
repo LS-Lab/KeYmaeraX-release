@@ -47,7 +47,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
   def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
-            unobservable: Map[Variable, Option[Formula]] = Map.empty): Formula = {
+            unobservable: Map[_ <: NamedSymbol, Option[Formula]] = Map.empty): Formula = {
     val vars = StaticSemantics.boundVars(formula).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
     val sortedVars = vars.sortWith((x,y)=>x<y)
     apply(sortedVars, kind, checkProvable)(formula)
@@ -102,7 +102,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
   }
 
-  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[Variable], simplifier: Option[DependentPositionTactic]): InputTactic = inputanon {
+  def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): InputTactic = inputanon {
     TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable, simplifier)(1)),
       classOf[Throwable], (_: Throwable) => TactixLibrary.skip)
   }
@@ -150,28 +150,40 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
     */
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
-                                           unobservable: Map[Variable, Option[Formula]]): (Formula, List[Formula]) = {
+                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula, List[Formula]) = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
       "ModelPlex post symbols must not occur in original formula")
+
+    val unobservableStateVars: Map[Variable, Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Variable]).
+      map({ case (k: Variable, v) => k -> v })
+    val unobservableParams: Map[(Function, Variable), Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Function]).
+      map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
 
     def conjectureOf(assumptions: Formula, prg: Program): (Formula, List[Formula]) = {
       val boundVars = StaticSemantics.boundVars(prg).symbols
       assert(boundVars.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
         "All bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
           "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.filterNot(_.isInstanceOf[DifferentialSymbol]) diff vars.toSet).mkString(", "))
-      val postEqs = unobservable.keys.
+      val postEqs = unobservableStateVars.keys.
         foldRight[Formula](vars.map(v => Equal(postVar(v), v)).
           reduceRight(And))((v, f) => Exists(postVar(v)::Nil, f))
-      val estimator = unobservable.
+      val estimator = unobservableStateVars.
         filter(_._2.isDefined).map({ case (_, Some(e)) => e }).
         reduceRightOption(And).getOrElse(True)
-      val conjectureBody = if (estimator == True) Diamond(prg, postEqs) else And(estimator, Diamond(prg, postEqs))
-      val conjecture = unobservable.foldRight[Formula](conjectureBody)((v, f) => Exists(v._1::Nil, f))
+      val varConjectureBody = if (estimator == True) Diamond(prg, postEqs) else And(estimator, Diamond(prg, postEqs))
+      val varConjecture = unobservableStateVars.foldRight[Formula](varConjectureBody)((v, f) => Exists(v._1::Nil, f))
+      val conjecture = unobservableParams.foldRight[Formula](varConjecture)({ case (((fn, v), _), f) =>
+        val args = fn.domain match {
+          case Unit  => Nothing
+          case d => d.toDots(0)._1
+        }
+        Exists(v::Nil, USubst(SubstitutionPair(FuncOf(fn, args), v) :: Nil)(f))
+       })
       //@note suppress assumptions mentioning bound variables
       val nonboundAssumptions = FormulaTools.conjuncts(assumptions).
         filter(a => boundVars.intersect(StaticSemantics.freeVars(a).symbols).isEmpty).
-        filter(a => StaticSemantics.freeVars(a).intersect(unobservable.keySet).isEmpty)
+        filter(a => StaticSemantics.freeVars(a).intersect(unobservableStateVars.keySet).isEmpty)
       (conjecture, nonboundAssumptions)
     }
 
@@ -183,7 +195,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Conjecture for double-checking a monitor formula for correctness: assumptions -> (monitor -> < prg; >Upsilon). */
   def createMonitorCorrectnessConjecture(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit],
-                                         unobservable: Map[Variable, Option[Formula]]): (Formula => Formula) = formula => {
+                                         unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula => Formula) = formula => {
     val monitor = apply(vars, kind, checkProvable)(formula)
     val (monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars, unobservable)
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
@@ -722,6 +734,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
     // remove ODEs for controller monitor
     case Diamond(ODESystem(_, _), _) => Ax.dDX :: Nil
+    // run inside quantifiers
+    case _: Exists => Ax.existsStutter :: Nil
+    case _: Forall => Ax.allStutter :: Nil
     case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
   })
 
@@ -1016,8 +1031,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see[[optimizationOneWithSearchAt]]
     */
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic = anon ((pos: Position) => {
-    SaturateTactic(optimizationOneWithSearchImpl(tool, assumptions, unobservableVars, simplifier)(pos)) &
+                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): DependentPositionTactic = anon ((pos: Position) => {
+    SaturateTactic(optimizationOneWithSearchImpl(tool, assumptions, unobservable, simplifier)(pos)) &
       simplifier.map(_(pos)).getOrElse(skip)
   })
 
@@ -1030,7 +1045,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   private def optimizationOneWithSearchImpl(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                            unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
+                                            unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
     anon ((pos: Position, sequent: Sequent) => {
     // was "Optimization 1 with instance search"
     def solutionQE(existsFml: Formula, qeFml: Formula, signature: Set[Function], assumptions: List[Formula]) = anon ((pp: Position, seq: Sequent) => {
@@ -1075,9 +1090,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
             solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) & simplifier.map(_(pp)).getOrElse(skip) |
             simplifier.map(_(pp ++ PosInExpr(0::Nil))).getOrElse(skip))
         case (Exists(_, _), pp) if polarityInSeq(sequent, pp) > 0 =>
-          Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp))
+          Some(optimizationOneWithSearchAt(unobservable, simplifier)(pp))
         case (Forall(_, _), pp) if polarityInSeq(sequent, pp) < 0 =>
-          //@todo: Some(optimizationOneWithSearchAt(unobservableVars, simplifier)(pp)) not implemented for Forall
+          //@todo: Some(optimizationOneWithSearchAt(unobservable, simplifier)(pp)) not implemented for Forall
           None
         case _ => None
       })
@@ -1086,9 +1101,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
     * somewhere in the quantified formula. */
-  private def optimizationOneWithSearchAt(unobservableVars: List[Variable],
+  private def optimizationOneWithSearchAt(unobservable: List[_ <: NamedSymbol],
                                           simplifier: Option[DependentPositionTactic]): DependentPositionTactic =
-    anon ((pos: Position, sequent: Sequent) => {
+      anon ((pos: Position, sequent: Sequent) => {
+    //@note assumes that conjecture created existentially quantified variables for unobservable parameters (functions)
+    val unobservableVars = unobservable.map({
+      case v: Variable => v
+      case Function(n, i, _, s, _) => Variable(n, i, s)
+    })
     // was "Optimization 1 with instance search at"
     sequent.sub(pos) match {
       case Some(Exists(vars, phi)) if polarityInSeq(sequent, pos) > 0 && StaticSemantics.freeVars(phi).intersect(vars.toSet).isEmpty =>
