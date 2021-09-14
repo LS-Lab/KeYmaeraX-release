@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleCEX, OnAll}
 import edu.cmu.cs.ls.keymaerax.btactics.{InvGenTool, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
@@ -20,11 +20,11 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{mwhile, part}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaToKeYmaera
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
 import scala.collection.mutable.ListBuffer
+import scala.collection.immutable.IndexedSeq
 
 /**
  * Mathematica/Wolfram Engine tool for quantifier elimination and solving differential equations.
@@ -156,9 +156,9 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
               val result = lemmas.init.foldLeft(combined)({ case (c, l) => c(AndRight(SuccPos(0)), 0)(l.fact, 0) })(lemmas.last.fact, 0)
               Lemma(result, Nil)
             } else mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
-          case Some(cexFml) => Lemma(
-            ProvableSig.startProof(Equiv(formula, False)),
-            ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
+          case Some(cex) =>
+            //@note only return Lemma if no open goals (but CEX tool not trusted, so impossible to create)
+            throw BelleCEX("QE counterexample", cex, Sequent(IndexedSeq(), IndexedSeq(formula)))
         }
     }
   }
