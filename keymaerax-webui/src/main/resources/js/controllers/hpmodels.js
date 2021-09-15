@@ -175,6 +175,8 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       templateUrl: 'partials/modeldialog.html',
       controller: 'ModelDialogCtrl',
       size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false,
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },
@@ -193,7 +195,9 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     $uibModal.open({
       templateUrl: 'templates/modeluploaddialog.html',
       controller: 'ModelUploadCtrl',
-      size: 'fullscreen'
+      size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false
     });
   };
 

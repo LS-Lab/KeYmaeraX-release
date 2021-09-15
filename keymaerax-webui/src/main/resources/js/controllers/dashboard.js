@@ -51,7 +51,9 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     $uibModal.open({
       templateUrl: 'templates/modeluploaddialog.html',
       controller: 'ModelUploadCtrl',
-      size: 'fullscreen'
+      size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false
     });
   };
 
