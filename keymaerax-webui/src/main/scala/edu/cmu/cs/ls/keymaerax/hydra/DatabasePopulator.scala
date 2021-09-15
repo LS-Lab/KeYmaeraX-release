@@ -12,6 +12,7 @@ import spray.json.DefaultJsonProtocol._
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
+import scala.util.Try
 
 /**
   * Populates the database from a JSON collection of models and tactics.
@@ -128,18 +129,35 @@ object DatabasePopulator extends Logging {
   /** Creates a backup if a different model with the same name as `entry` already exists in the database. Returns false
     * if the entry already exists verbatim in the database, true otherwise. */
   private def backupPriorModel(db: DBAbstraction, user: String, oldEntry: ModelPOJO, newEntry: TutorialEntry): Boolean = {
-    val backupName = db.getUniqueModelName(user, newEntry.name)
-    val oldContent :: Nil = ArchiveParser.parse(oldEntry.keyFile, parseTactics=false)
-    val newContent :: Nil = ArchiveParser.parse(newEntry.model, parseTactics=false)
-    // update only on change
-    if (oldContent.defs.exhaustiveSubst(oldContent.model) != newContent.defs.exhaustiveSubst(newContent.model) ||
-      oldContent.tactics != newContent.tactics) {
+    def createBackup(backupName: String): Unit = {
       db.updateModel(oldEntry.modelId, backupName,
         if (oldEntry.title != "") Some(oldEntry.title) else None,
         if (oldEntry.description != "") Some(oldEntry.description) else None,
         if (oldEntry.keyFile != "") Some(oldEntry.keyFile) else None)
-      true // entry with same name but different model existed, do import
-    } else false // entry exists verbatim in the database, do not re-import
+    }
+
+    val backupName = db.getUniqueModelName(user, newEntry.name)
+    val oldContent = Try(ArchiveParser.parse(oldEntry.keyFile, parseTactics=false).head).toOption
+    val newContent = Try(ArchiveParser.parse(newEntry.model, parseTactics=false).head).toOption
+    (oldContent, newContent) match {
+      // if entry with same name but different model exists, do import (return true)
+      case (None, None) =>
+        val changed = oldEntry.keyFile != newEntry.model
+        if (changed) createBackup(backupName)
+        changed
+      case (Some(_), None) =>
+        createBackup(backupName)
+        true
+      case (None, Some(_)) =>
+        createBackup(backupName)
+        true
+      case (Some(o), Some(n)) =>
+        // update only on change
+        if (o.defs.exhaustiveSubst(o.model) != n.defs.exhaustiveSubst(n.model) || o.tactics != n.tactics) {
+          createBackup(backupName)
+          true
+        } else false // entry exists verbatim in the database, do not re-import
+    }
   }
 
   /** Prepares an interpreter for executing tactics. */

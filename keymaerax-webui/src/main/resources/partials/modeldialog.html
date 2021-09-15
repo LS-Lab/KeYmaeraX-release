@@ -31,7 +31,7 @@
                     <button class="btn btn-default" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
                     </span>
-                    <button class="btn btn-link" ng-click="modelDataForm.$cancel();cancel()"><span class="fa fa-close"></span></button>
+                    <button class="btn btn-link" ng-click="save.cmd=cancel"><span class="fa fa-close"></span></button>
                 </span>
             </h3>
         </div>

@@ -2,7 +2,7 @@
  * Controllers for proof lists and proof information pages.
  */
 angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http,
-    $routeParams, $location, sessionService, spinnerService, Proofs) {
+    $routeParams, $location, $uibModal, sessionService, spinnerService, Proofs) {
   /** User data and helper functions. */
   $scope.user = {
     /** Returns true if the user is a guest, false otherwise. */
@@ -11,7 +11,18 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
 
   /** Create a new proof for model 'modelId' with 'proofName' and 'proofDescription' (both optional: empty ""). */
   $scope.createProof = function(modelId, proofName, proofDescription) {
-    Proofs.createProof(sessionService.getUser(), modelId, proofName, proofDescription);
+    Proofs.createProof(sessionService.getUser(), modelId, proofName, proofDescription).error(function(data, status, headers, config) {
+      $uibModal.open({
+        templateUrl: 'templates/modalMessageTemplate.html',
+        controller: 'ModalMessageCtrl',
+        size: 'md',
+        resolve: {
+          title: function() { return "Syntax error"; },
+          message: function() { return "The model has syntax errors, please click the model name to open the model editor and fix the errors before starting a proof."; },
+          mode: function() { return "ok"; }
+        }
+      });
+    })
   };
 
   /** Opens the last proof (finished or not) of this model. */

@@ -47,6 +47,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.{ToolConfiguration, Z3Installer}
@@ -1047,16 +1048,21 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
     if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
       if (ArchiveParser.isExercise(content)) {
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
-        BooleanResponse(flag = true) :: Nil
+        ModelUpdateResponse(modelId, name, content, emptyToOption(title), emptyToOption(description), None) :: Nil
       } else try {
         ArchiveParser.parse(content) match {
           case e :: Nil =>
-            db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(e.problemContent))
-            BooleanResponse(flag = true) :: Nil
+            db.updateModel(modelId.toInt, e.name, e.info.get("Title"), e.info.get("Description"), emptyToOption(e.problemContent))
+            //@todo update proofs from entry tactics
+            ModelUpdateResponse(modelId, e.name, e.problemContent, e.info.get("Title"), e.info.get("Description"), None) :: Nil
           case e => new ErrorResponse("Expected a single entry, but got " + e.size) :: Nil
         }
       } catch {
-        case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+        case e: ParseException =>
+          val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
+          val entryName = nameFinder.findFirstMatchIn(content).map(_.group("name")).getOrElse("<anonymous>")
+          db.updateModel(modelId.toInt, entryName, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description), emptyToOption(content))
+          ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description), Some(e.msg)) :: Nil
       }
     } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numAllProofSteps + " proof steps") :: Nil
   }
@@ -1087,7 +1093,14 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
         "\nModel import may have failed because of model name clashed. Try renaming the failed models in the archive to names that do not yet exist in your model list.")
     } catch {
       //@todo adapt parse error positions (are relative to problem inside entry)
-      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+      case e: ParseException =>
+        val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
+        val entryName = nameFinder.findFirstMatchIn(archiveText).map(_.group("name")).getOrElse("<anonymous>")
+        val entry = TutorialEntry(entryName, archiveText, None, None, None, List.empty)
+        DatabasePopulator.importModel(db, userId, prove=false)(entry) match {
+          case Left((_, id)) => ModelUploadResponse(Some(id.toString), Some(e.getMessage)) :: Nil
+          case _ => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+        }
     }
   }
 }

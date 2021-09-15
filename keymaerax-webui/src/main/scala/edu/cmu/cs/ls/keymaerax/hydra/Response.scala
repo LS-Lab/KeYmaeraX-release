@@ -115,8 +115,20 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
 case class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
   def getJson: JsValue = JsObject(
     "success" -> JsBoolean(modelId.isDefined),
-    "errorText"->JsString(errorText.getOrElse("")),
-    "modelId"->JsString(modelId.getOrElse("")))
+    "errorText" -> JsString(errorText.getOrElse("")),
+    "modelId" -> JsString(modelId.getOrElse("")))
+}
+
+case class ModelUpdateResponse(modelId: String, name: String, content: String, title: Option[String], description: Option[String], errorText: Option[String]) extends Response {
+  def getJson: JsValue = JsObject(
+    "success" -> JsBoolean(errorText.isEmpty),
+    "errorText" -> JsString(errorText.getOrElse("")),
+    "modelId" -> JsString(modelId),
+    "name" -> JsString(name),
+    "content" -> JsString(content),
+    "title" -> JsString(title.getOrElse("")),
+    "description" -> JsString(description.getOrElse(""))
+  )
 }
 
 class UpdateProofNameResponse(proofId: String, newName: String) extends Response {

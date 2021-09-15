@@ -3,9 +3,14 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      /** Model data */
      $scope.template = 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
 
+     $scope.userId = sessionService.getUser();
+
      $scope.model = {
        modelName: undefined,
-       content: $scope.template
+       modelId: undefined,
+       content: $scope.template,
+       savedContent: undefined,
+       savedContentErrorText: ''
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
@@ -30,13 +35,98 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        return (content && content.match(tacticRegex) || []).length;
      }
 
-     $scope.uploadContent = function(startProof) {
-       var url =  "user/" + sessionService.getUser() + "/modelupload/" + encodeURIComponent($scope.model.modelName);
-       upload(url, $scope.model.content,
-         startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0);
+     $scope.saveContent = function(startProof) {
+       var doStartProof = startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0;
+       if ($scope.model.modelId) {
+         // update model at modelId
+         $scope.updateContent($scope.userId, $scope.model.modelId, $scope.model.content, doStartProof);
+       } else {
+         // first-time save
+         var url =  "user/" + sessionService.getUser() + "/modelupload/" + encodeURIComponent($scope.model.modelName);
+         upload(url, $scope.model.content, doStartProof);
+       }
      }
 
-     $scope.close = function() { $uibModalInstance.close(); };
+     $scope.updateContent = function(userid, modelid, content, startProof) {
+       var data = {
+         name: '',
+         title: '',
+         description: '',
+         content: content
+       };
+       $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(
+         function(response) {
+           $scope.model.savedContent = content;
+           $scope.model.savedContentErrorText = response.data.errorText;
+           if (startProof) $scope.startProof('');
+         },
+         function(error) {
+           $scope.model.savedContent = content;
+           $scope.model.savedContentErrorText = error.data.textStatus;
+         }
+       )
+     }
+
+     $scope.uploadContent = function(startProof) {
+       if (startProof) {
+         if ($scope.model.savedContent !== $scope.model.content) {
+           var modalInstance = $uibModal.open({
+             templateUrl: 'templates/modalMessageTemplate.html',
+             controller: 'ModalMessageCtrl',
+             size: 'md',
+             resolve: {
+               title: function() { return "Unsaved changes"; },
+               message: function() { return "The editor has unsaved changes, do you want to save before starting the proof?"; },
+               mode: function() { return "yesnocancel"; }
+             }
+           });
+           modalInstance.result.then(
+             function(result) {
+               if (result == "ok") $scope.saveContent(startProof);
+               else $scope.startProof($scope.model.savedContentErrorText);
+             },
+             function() {
+               // cancel -> nothing to do, stay on dialog
+             }
+           );
+         } else $scope.startProof($scope.model.savedContentErrorText);
+       } else $scope.saveContent(startProof);
+     }
+
+     $scope.refreshModelList = function() {
+       //Update the models list -- this should result in the view being updated?
+       $http.get("models/users/" + sessionService.getUser() + "/").success(function(data) {
+         Models.setModels(data);
+       });
+     }
+
+     $scope.close = function() {
+       if ($scope.model.savedContent !== $scope.model.content) {
+         var modalInstance = $uibModal.open({
+           templateUrl: 'templates/modalMessageTemplate.html',
+           controller: 'ModalMessageCtrl',
+           size: 'md',
+           resolve: {
+             title: function() { return "Unsaved changes"; },
+             message: function() { return "The editor has unsave changes, do you want to save?"; },
+             mode: function() { return "yesnocancel"; }
+           }
+         });
+         modalInstance.result.then(
+           function(result) {
+             if (result == "ok") $scope.uploadContent(false);
+             $scope.refreshModelList();
+             $uibModalInstance.close();
+           },
+           function() {
+             // cancel -> nothing to do, stay on dialog
+           }
+         );
+       } else {
+         $scope.refreshModelList();
+         $uibModalInstance.close();
+       }
+     };
 
      $scope.aceLoaded = function(editor) {
        editor.focus();
@@ -52,6 +142,29 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        }
      }
 
+     $scope.startProof = function(errorText) {
+       if (errorText == '') {
+         $scope.close();
+         var uri = 'models/users/' + sessionService.getUser() + '/model/' + $scope.model.modelId + '/createProof'
+         $http.post(uri, {proofName: '', proofDescription: ''}).
+           success(function(data) { $location.path('proofs/' + data.id); }).
+           error(function(data, status, headers, config) {
+             console.log('Error starting new proof for model ' + modelId)
+           });
+       } else {
+         var modalInstance = $uibModal.open({
+           templateUrl: 'templates/modalMessageTemplate.html',
+           controller: 'ModalMessageCtrl',
+           size: 'md',
+           resolve: {
+             title: function() { return "Syntax error"; },
+             message: function() { return "The model has syntax errors, please fix before starting a proof."; },
+             mode: function() { return "ok"; }
+           }
+         });
+       }
+     }
+
      var upload = function(url, content, startProof) {
        spinnerService.show('caseStudyImportSpinner');
        $http.post(url, content)
@@ -63,21 +176,10 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
              }
            } else { //Successfully uploaded model!
-             $scope.close();
-             var modelId = response.data.modelId;
-             if (startProof) {
-               var uri = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createProof'
-               $http.post(uri, {proofName: '', proofDescription: ''}).
-                 success(function(data) { $location.path('proofs/' + data.id); }).
-                 error(function(data, status, headers, config) {
-                   console.log('Error starting new proof for model ' + modelId)
-                 });
-             } else {
-               //Update the models list -- this should result in the view being updated?
-               $http.get("models/users/" + sessionService.getUser() + "/").success(function(data) {
-                 Models.setModels(data);
-               });
-             }
+             $scope.model.modelId = response.data.modelId;
+             $scope.model.savedContent = $scope.model.content;
+             $scope.model.savedContentErrorText = response.data.errorText;
+             if (startProof) $scope.startProof($scope.model.savedContentErrorText);
            }
          })
          .catch(function(err) {
@@ -408,12 +510,36 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
      || $scope.origModel.description !== $scope.model.description
      || $scope.origModel.keyFile !== $scope.model.keyFile) {
-      if ($scope.model.numAllProofSteps > 0) {
-        $scope.deleteModelProofSteps($scope.uploadModel);
-      } else { $scope.uploadModel(); }
+      if ($scope.save.cmd == $scope.cancel) {
+        var modalInstance = $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Unsaved changes"; },
+            message: function() { return "The editor has unsaved changes, do you want to save?"; },
+            mode: function() { return "yesnocancel"; }
+          }
+        });
+        modalInstance.result.then(
+          function(result) {
+            if (result == "ok") {
+              if ($scope.model.numAllProofSteps > 0) {
+                $scope.deleteModelProofSteps($scope.uploadModel);
+              } else { $scope.uploadModel(); }
+            } else if ($scope.save.cmd) $scope.save.cmd();
+          },
+          function() {
+            // cancel -> nothing to do, stay on dialog
+          }
+        );
+      } else if ($scope.save.cmd == $scope.refreshModels) {
+        if ($scope.model.numAllProofSteps > 0) {
+          $scope.deleteModelProofSteps($scope.uploadModel);
+        } else { $scope.uploadModel(); }
+      }
       return false;           // form will not close automatically -> $scope.save.cmd() on successful parsing
     } else {
-      $uibModalInstance.close();
       if ($scope.save.cmd) $scope.save.cmd();
       return true;
     }
@@ -430,13 +556,12 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       var model = Models.getModel(modelid);
       if (model) {
         // model === undefined on proof page reload
-        model.name = $scope.model.name;
-        model.title = $scope.model.title;
-        model.description = $scope.model.description;
-        model.keyFile = $scope.model.keyFile;
+        model.name = response.data.name;
+        model.title = response.data.title;
+        model.description = response.data.description;
+        model.keyFile = response.data.content;
         $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       }
-      $uibModalInstance.close();
       $scope.save.cmd();
     })
     .catch(function(err) {
@@ -455,9 +580,22 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   $scope.startProof = function() {
     var uri = 'models/users/' + userid + '/model/' + $scope.model.id + '/createProof'
     $http.post(uri, {proofName: '', proofDescription: ''}).
-      success(function(data) { $location.path('proofs/' + data.id); }).
+      success(function(data) {
+        $uibModalInstance.close();
+        $location.path('proofs/' + data.id);
+      }).
       error(function(data, status, headers, config) {
-        console.log('Error starting new proof for model ' + modelid)
+        $scope.modelDataForm.$setError("", data.textStatus);
+        $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Syntax error"; },
+            message: function() { return "The model has syntax errors, please fix before starting a proof."; },
+            mode: function() { return "ok"; }
+          }
+        });
       });
   }
 
