@@ -265,8 +265,9 @@ angular.module('keymaerax.controllers').controller('ModalMessageCtrl', function(
   $scope.title = title;
   $scope.message = message;
   $scope.mode = mode;
-  $scope.ok = function() { $uibModalInstance.close(); }
-  $scope.cancel = function() { $uibModalInstance.dismiss(); }
+  $scope.ok = function() { $uibModalInstance.close("ok"); };
+  $scope.no = function() { $uibModalInstance.close("no"); };
+  $scope.cancel = function() { $uibModalInstance.dismiss(); };
 });
 
 angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope', '$http', '$uibModal', '$uibModalInstance', 'sessionService', function($scope, $http, $uibModal, $uibModalInstance, sessionService) {
