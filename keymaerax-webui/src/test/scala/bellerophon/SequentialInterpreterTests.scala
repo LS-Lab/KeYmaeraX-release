@@ -100,7 +100,9 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "report when no unification found with 'Rlike unification matching" in withMathematica { _ =>
     the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
       onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message
-      """Position tactic implyR('R~="p_()&q_()->r_()") is not applicable anywhere in succedent of
+      """Not found: locator 'R~="p_()&q_()->r_()"
+        |of position tactic implyR('R~="p_()&q_()->r_()")
+        |does not match anywhere in succedent of
         |ElidingProvable(Provable{
         |==> 1:  a=0	Equal
         |    2:  b=1	Equal
@@ -185,7 +187,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
     ex should have message "RepeatTactic failed on repetition 3"
     ex.getCause should have message
-      """Position tactic andL('L) is not applicable anywhere in antecedent of
+      """Not found: locator 'L
+        |of position tactic andL('L)
+        |does not match anywhere in antecedent of
         |ElidingProvable(Provable{
         |   -1:  x=2&y=3&z=4	And
         |==> 1:  x=2	Equal
