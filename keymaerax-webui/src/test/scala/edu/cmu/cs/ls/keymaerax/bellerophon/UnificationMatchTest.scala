@@ -191,6 +191,14 @@ class UnificationMatchTest extends SystemTestBase {
     ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
   }
 
+  it should "FEATURE_REQUEST: match functions if their arguments contradict other matches" taggedAs TodoTest in {
+    //@note matches x_~>x and x_~>y, but in this case should match x_~>x and f(x_)~>f(y)
+    UnificationMatch(
+      "[{x_'=f(x_)}]p(||)".asFormula,
+      "[{x'=f(y)]p(x)".asFormula
+    ).usubst
+  }
+
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {
     shouldUnify("[a;]x>=0".asFormula, "[x:=x+5;]x>=0".asFormula, USubst(
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
