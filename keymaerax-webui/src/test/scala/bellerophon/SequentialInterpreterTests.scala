@@ -799,6 +799,19 @@ class SequentialInterpreterTests extends TacticTestBase {
       loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
   }
 
+  it should "FEATURE_REQUEST: apply constified conclusion to non-constified open goal" taggedAs TodoTest in withMathematica { _ =>
+    //@note without defs, dIClose doesn't expand g(y) and so its result provable is unproved with x_0() still constified,
+    // which then in SequentialInterpreter.applySubDerivation cannot be merged with the parent (has x_0).
+    // Parent has 2 open subgoals, but dIClose result provable only 1, and so as a symptom of the wrong return value of
+    // applySubDerivation (see Interpreter.scala line 78) labels don't match
+    proveBy("p(x) ==> [{x'=g(y)}]p(x)".asSequent,
+      dC("x<=old(x)".asFormula)(1) <(
+        skip,
+        dIClose(1)
+      )
+    ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+  }
+
   "Using" should "keep mentioned and abbreviate unmentioned formulas" in withMathematica { _ =>
     def check(expected: Sequent) = anon ((seq: Sequent) => {
       seq shouldBe expected
