@@ -165,13 +165,15 @@ trait ProofTreeNode {
       val substGoal = exhaustiveSubst(goal, subst)
       val substSub = exhaustiveSubst(sub, subst)
       try {
-        val downSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> maxExpandedSubsts(substs ++ downSubst.subsDefsInput)
+        //@note unification now returns mixed up/down substitutions; thus we substitute in both sub and goal
+        val addSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
       } catch {
         case _: UnificationException =>
           try {
-            val upSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
-            substGoal(exhaustiveSubst(substSub, upSubst), i) -> maxExpandedSubsts(substs ++ upSubst.subsDefsInput)
+            //@todo mixed unification may no longer make this fallback necessary
+            val addSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+            exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
           } catch {
             case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>
               //@note proof step introduced function symbols with delayed substitution,
