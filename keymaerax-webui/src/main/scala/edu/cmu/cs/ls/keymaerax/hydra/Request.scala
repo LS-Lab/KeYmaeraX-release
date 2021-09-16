@@ -1047,13 +1047,13 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
     val modelInfo = db.getModel(modelId)
     if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
       if (ArchiveParser.isExercise(content)) {
-        db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
+        db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content), None)
         ModelUpdateResponse(modelId, name, content, emptyToOption(title), emptyToOption(description), None) :: Nil
       } else try {
         ArchiveParser.parse(content) match {
           case e :: Nil =>
-            db.updateModel(modelId.toInt, e.name, e.info.get("Title"), e.info.get("Description"), emptyToOption(e.problemContent))
-            //@todo update proofs from entry tactics
+            db.updateModel(modelId.toInt, e.name, e.info.get("Title"), e.info.get("Description"),
+              emptyToOption(e.fileContent), e.tactics.headOption.map(_._2))
             ModelUpdateResponse(modelId, e.name, e.problemContent, e.info.get("Title"), e.info.get("Description"), None) :: Nil
           case e => new ErrorResponse("Expected a single entry, but got " + e.size) :: Nil
         }
@@ -1061,8 +1061,10 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
         case e: ParseException =>
           val nameFinder = """(?:Theorem|Lemma|ArchiveEntry|Exercise)\s*"([^"]*)"""".r("name")
           val entryName = nameFinder.findFirstMatchIn(content).map(_.group("name")).getOrElse("<anonymous>")
-          db.updateModel(modelId.toInt, entryName, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description), emptyToOption(content))
-          ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description), Some(e.msg)) :: Nil
+          db.updateModel(modelId.toInt, entryName, emptyToOption(modelInfo.title), emptyToOption(modelInfo.description),
+            emptyToOption(content), modelInfo.tactic)
+          ModelUpdateResponse(modelId, entryName, content, emptyToOption(modelInfo.title),
+            emptyToOption(modelInfo.description), Some(e.msg)) :: Nil
       }
     } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numAllProofSteps + " proof steps") :: Nil
   }

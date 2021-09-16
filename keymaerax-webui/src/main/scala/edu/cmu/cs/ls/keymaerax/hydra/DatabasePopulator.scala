@@ -133,7 +133,8 @@ object DatabasePopulator extends Logging {
       db.updateModel(oldEntry.modelId, backupName,
         if (oldEntry.title != "") Some(oldEntry.title) else None,
         if (oldEntry.description != "") Some(oldEntry.description) else None,
-        if (oldEntry.keyFile != "") Some(oldEntry.keyFile) else None)
+        if (oldEntry.keyFile != "") Some(oldEntry.keyFile) else None,
+        oldEntry.tactic)
     }
 
     val backupName = db.getUniqueModelName(user, newEntry.name)
