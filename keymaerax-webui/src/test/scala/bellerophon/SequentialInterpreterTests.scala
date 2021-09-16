@@ -781,6 +781,20 @@ class SequentialInterpreterTests extends TacticTestBase {
       proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe 'proved
   }
 
+  it should "detect expanded definitions when stitching together provables" in withMathematica { _ =>
+    val defs = "g(x) ~> -x^2".asDeclaration
+    proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent,
+      dC("x<=old(x)".asFormula)(1) <(
+        skip,
+        dIClose(1)
+      ),
+      defs
+    ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+
+    proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent, diffInvariant("x<=old(x)".asFormula)(1), defs).subgoals.
+      loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+  }
+
   "Using" should "keep mentioned and abbreviate unmentioned formulas" in withMathematica { _ =>
     def check(expected: Sequent) = anon ((seq: Sequent) => {
       seq shouldBe expected

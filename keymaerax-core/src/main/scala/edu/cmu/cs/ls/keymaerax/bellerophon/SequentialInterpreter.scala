@@ -347,8 +347,24 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       apply(inner, BelleProvable(in, lbl, defs)) match {
         case p: BelleDelayedSubstProvable =>
           try {
-            val foo = p.p(us)
-            new BelleDelayedSubstProvable(provable(p.p(us), 0), p.label, p.defs, p.subst, p.parent)
+            val sub = p.p(us)
+            //@note inner may have expanded multiple levels of definitions at once; collect which ones
+            // (favor over unification, which would flatten all definitions into a single substitution)
+            @tailrec
+            def collectSubst(goal: ProvableSig, sub: ProvableSig, subst: USubst): USubst = {
+              if (goal.subgoals.head == sub.conclusion) subst
+              else {
+                val goalSym = StaticSemantics.symbols(goal.subgoals.head)
+                val subSym = StaticSemantics.symbols(sub.conclusion)
+                val diff = (goalSym -- subSym) ++ (subSym -- goalSym)
+                val addSubst = USubst(p.defs.substs.filter(s => diff.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
+                collectSubst(goal(addSubst), sub(addSubst), subst ++ addSubst)
+              }
+            }
+            val addSubst = collectSubst(provable, sub, USubst(List.empty))
+            val substGoal = exhaustiveSubst(provable, addSubst)
+            val substSub = exhaustiveSubst(sub, addSubst)
+            new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
               // happens on Let(v()=v, t) if t did not (yet) finish the proof, e.g., dIRule. postpone until subgoals are proved
