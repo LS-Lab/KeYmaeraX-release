@@ -666,7 +666,7 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       //        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
 
       // special case to force elaboration to DifferentialProgramConst {c} and {c,...} and {c&...}
-      case r :+ (tok1@Token(LBRACE,sl)) :+ Expr(e1:Variable, loc) if la==AMP || la==COMMA || la==RBRACE =>
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable, loc) if la==AMP || la==COMMA || la==RBRACE =>
         assume(r match {case _ :+ Token(_:IDENT,_) => false case _ => true}, "IDENT stack for predicationals has already been handled")
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, DifferentialProgramKind, e1, lax), loc, r :+ tok1)
 
@@ -798,6 +798,12 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
         reduce(st, 2, elaborate(st, optok, OpSpec.sProgramConst, ProgramKind, t1, lax), sl.spanTo(el), r)
 
+      // disallow {c}* because not clear whether missing semicolon so loop of program constant {c;}* or loop of differential constant
+      case _ :+ Expr(e@ODESystem(c: DifferentialProgramConst, _), sl) :+ Token(STAR,el) =>
+        error(st, sl.spanTo(el), e.prettyString + STAR.img, List(
+          ExpectNonterminal(LBRACE.img + c.name + SEMI.img + RBRACE.img + STAR.img + " (loop of program constant)"),
+          ExpectNonterminal(LBRACE.img + LBRACE.img + c.name + RBRACE.img + RBRACE.img + STAR.img + " (loop of differential program constant)")))
+
       case _ :+ Expr(_, _) :+ Token(STAR,_) =>
         if (firstTerm(la) && la!=EOF) shift(st) else error(st, List(FIRSTTERM))
       //@note explicit braces around loops so can't happen:
@@ -883,9 +889,16 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         else error(st, List(FIRSTPROGRAM, FIRSTTERM))
 
       // non-accepting expression
-      case _ :+ _ :+ Expr(t, _) =>
+      case _ :+ e :+ Expr(t, el) =>
         if (followsExpression(t, la, lax) && la!=EOF) shift(st)
-        else error(st, List(FOLLOWSEXPRESSION))
+        else (e, t) match {
+          case (Expr(_: Program, _), _: BaseVariable) => error(st, el, t.prettyString, List(SEMI))
+          case (Expr(p: Program, sl), _) => error(st, sl, p.prettyString, List(
+            ExpectNonterminal(LBOX.img + p.prettyString + RBOX.img),
+            ExpectNonterminal(LDIA.img + p.prettyString + RDIA.img)
+          ))
+          case _ => error(st, List(FOLLOWSEXPRESSION))
+        }
 
       // Help lexer convert PERIOD to DOT for convenience
       case r :+ Token(PERIOD,loc) =>
@@ -947,9 +960,20 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
   private def goodErrorMessage(st: ParseState): Option[String] = st.stack match {
     case _ :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBOX, _) => Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
     case _ :+ (e: edu.cmu.cs.ls.keymaerax.parser.Expr) :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBRACE, _) if !e.isInstanceOf[Program] =>
-      Some("Syntax error. Expression " + e.expr.prettyString + " is not a program, perhaps ; is missing?")
+      Some("Syntax error. Expression " + e.expr.prettyString + " is not a program: change to " +
+        e.expr.prettyString + "; for a program constant, or to " +
+        "{" + e.expr.prettyString + "} for a differential program constant.")
     case _ :+ Token(edu.cmu.cs.ls.keymaerax.parser.RBRACE, _) => Some("Syntax error. Perhaps the program contained in {} is ill-formed or incomplete?")
-    case _ => None
+    case s =>
+      //@note guess that problem is near first operator with non-matching expression kinds
+      s.toList.sliding(3).find({
+        case Expr(e2, _) :: Token(_: OPERATOR, _) :: Expr(e1, _) :: Nil => e1.kind != e2.kind
+        case _ => false
+      }).map({
+        case Expr(e2, _) :: Token(op, loc) :: Expr(e1, _) :: Nil =>
+          "Operator " + op.img + " at " + loc + " may connect non-matching kinds: " + e1.prettyString + op.img + e2.prettyString +
+            " (" + e1.kind + op.img + e2.kind + ")"
+      })
   }
 
   private def imbalancedParentheses(st: ParseState): Option[ParseException] = {
