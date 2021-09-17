@@ -1986,12 +1986,12 @@ object ODEInvariance {
     }
 
     //todo: robustness against s_, t_, fv_* appearing in model
-    val svar = BaseVariable("s_")
-    val tvar = BaseVariable("t_")
+    val svar = TacticHelper.freshNamedSymbol("s_".asVariable, seq)
+    val tvar = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
 
     val atoms = AtomicODE(DifferentialSymbol(tvar),Number(1))::atomicListify(sys.ode)
     val oldnames = atoms.map(p => p.xp.x)
-    val newnames = (1 to atoms.length).map( i => BaseVariable("fv_",Some(i)))
+    val newnames = (1 to atoms.length).map( i => TacticHelper.freshNamedSymbol(BaseVariable("fv_",Some(i)),seq))
     val nameszip = oldnames zip newnames
     val ipost = Not(Imply(And(sys.constraint,Or(post,Equal(tvar,svar))) ,Imply(Equal(tvar,svar), post)))
     val renfvipost = nameszip.foldLeft(ipost : Formula)( (tt, c) => tt.replaceFree(c._1,c._2))
