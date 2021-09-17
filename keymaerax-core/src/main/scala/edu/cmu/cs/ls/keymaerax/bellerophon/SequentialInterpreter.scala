@@ -88,6 +88,22 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case _ => curr != prev
   }
 
+  //@note inner may have expanded multiple levels of definitions at once; collect which ones
+  // (favor over unification, which would flatten all definitions into a single substitution)
+  @tailrec
+  protected final def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration, subst: USubst): USubst = {
+    if (goal.subgoals(i) == sub.conclusion) subst
+    else {
+      val goalSym = StaticSemantics.symbols(goal.subgoals.head)
+      val subSym = StaticSemantics.symbols(sub.conclusion)
+      val diff = (goalSym -- subSym) ++ (subSym -- goalSym)
+      val addSubst = USubst(defs.substs.filter(s => diff.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
+      if (addSubst.subsDefsInput.nonEmpty) collectSubst(goal(addSubst), i, sub(addSubst), defs, subst ++ addSubst)
+      else subst
+    }
+  }
+
+
   /** Returns the result of running tactic `expr` on value `v`. */
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
@@ -348,20 +364,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         case p: BelleDelayedSubstProvable =>
           try {
             val sub = p.p(us)
-            //@note inner may have expanded multiple levels of definitions at once; collect which ones
-            // (favor over unification, which would flatten all definitions into a single substitution)
-            @tailrec
-            def collectSubst(goal: ProvableSig, sub: ProvableSig, subst: USubst): USubst = {
-              if (goal.subgoals.head == sub.conclusion) subst
-              else {
-                val goalSym = StaticSemantics.symbols(goal.subgoals.head)
-                val subSym = StaticSemantics.symbols(sub.conclusion)
-                val diff = (goalSym -- subSym) ++ (subSym -- goalSym)
-                val addSubst = USubst(p.defs.substs.filter(s => diff.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
-                collectSubst(goal(addSubst), sub(addSubst), subst ++ addSubst)
-              }
-            }
-            val addSubst = collectSubst(provable, sub, USubst(List.empty))
+            val addSubst = collectSubst(provable, 0, sub, p.defs, USubst(List.empty))
             val substGoal = exhaustiveSubst(provable, addSubst)
             val substSub = exhaustiveSubst(sub, addSubst)
             new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
@@ -868,7 +871,8 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
             case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
               val substs = subderivation match {
                 case p: BelleDelayedSubstProvable => csubsts ++ p.subst
-                case _ => csubsts
+                //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
+                case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs, USubst(List.empty))
               }
               val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               //@todo want to keep names of cp abbreviated instead of substituted

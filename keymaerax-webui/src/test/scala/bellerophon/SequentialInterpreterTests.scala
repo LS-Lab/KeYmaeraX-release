@@ -799,6 +799,12 @@ class SequentialInterpreterTests extends TacticTestBase {
       loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
   }
 
+  it should "detect expanded definitions when stitching together provables after QE" in withMathematica { _ =>
+    val defs = "g(x) ~> x^2+1".asDeclaration
+    proveByS("==> x^2<=g(x) & x^2/g(x)>=0".asSequent, andR(1) <(skip, QE), defs).subgoals.
+      loneElement shouldBe "==> x^2<=x^2+1".asSequent
+  }
+
   it should "FEATURE_REQUEST: apply constified conclusion to non-constified open goal" taggedAs TodoTest in withMathematica { _ =>
     //@note without defs, dIClose doesn't expand g(y) and so its result provable is unproved with x_0() still constified,
     // which then in SequentialInterpreter.applySubDerivation cannot be merged with the parent (has x_0).
