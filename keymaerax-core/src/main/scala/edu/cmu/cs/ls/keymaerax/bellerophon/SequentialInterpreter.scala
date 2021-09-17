@@ -94,7 +94,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
   protected final def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration, subst: USubst): USubst = {
     if (goal.subgoals(i) == sub.conclusion) subst
     else {
-      val goalSym = StaticSemantics.symbols(goal.subgoals.head)
+      val goalSym = StaticSemantics.symbols(goal.subgoals(i))
       val subSym = StaticSemantics.symbols(sub.conclusion)
       val diff = (goalSym -- subSym) ++ (subSym -- goalSym)
       val addSubst = USubst(defs.substs.filter(s => diff.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
