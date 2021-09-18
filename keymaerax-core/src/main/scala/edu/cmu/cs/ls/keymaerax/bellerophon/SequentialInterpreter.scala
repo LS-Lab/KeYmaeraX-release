@@ -94,10 +94,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
   protected final def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration, subst: USubst): USubst = {
     if (goal.subgoals(i) == sub.conclusion) subst
     else {
-      val goalSym = StaticSemantics.symbols(goal.subgoals(i))
-      val subSym = StaticSemantics.symbols(sub.conclusion)
-      val diff = (goalSym -- subSym) ++ (subSym -- goalSym)
-      val addSubst = USubst(defs.substs.filter(s => diff.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
+      val unifSubstSymbols = UnificationMatch(goal.subgoals(i), sub.conclusion).usubst.subsDefsInput.
+        map(_.what).flatMap(StaticSemantics.symbols).toSet
+      val addSubst = USubst(defs.substs.filter(s => unifSubstSymbols.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
       if (addSubst.subsDefsInput.nonEmpty) collectSubst(goal(addSubst), i, sub(addSubst), defs, subst ++ addSubst)
       else subst
     }
@@ -640,7 +639,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         })
 
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l, d), (BelleProvable(sp, sl, sd), i)) =>
-          BelleProvable(p(sp, i),
+          val substs = collectSubst(p, i, sp, defs, USubst(List.empty))
+          val pSubst = exhaustiveSubst(p, substs)
+          val spSubst = exhaustiveSubst(sp, substs)
+          BelleProvable(pSubst(spSubst, i),
             l match {
               case Some(labels) => Some(labels.patch(i, Nil, 1) ++ sl.getOrElse(Nil))
               case None => sl match {
