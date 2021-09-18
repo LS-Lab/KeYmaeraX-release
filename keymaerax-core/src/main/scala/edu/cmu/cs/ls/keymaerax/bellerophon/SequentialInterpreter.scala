@@ -389,7 +389,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       if (provable.subgoals.length != 1)
         throw new IllFormedTacticApplicationException("Let of multiple goals is not currently supported.").inContext(expr, "")
 
-      val subst = (abbr, value) match {
+      def subst(abbr: Expression, value: Expression): SubstitutionPair = (abbr, value) match {
         case (FuncOf(name, arg), t: Term) =>
           val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
           SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
@@ -398,16 +398,28 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
       }
 
+      // flatten nested Lets into a single inner proof
+      @tailrec
+      def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
+                      repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
+        case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
+        case t => (
+          ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+          USubst(substs),
+          t
+        )
+      }
+
+      //@todo flattening helps to avoid nested constifications, which are not yet supported by DelayedSubstProvable
+
       //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
-      val us: USubst = USubst(subst :: Nil)
-      val in: ProvableSig = try {
-        ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
+      val (in: ProvableSig, us: USubst, innerMost) = try {
+        flattenLets(inner, subst(abbr, value) :: Nil, value -> abbr :: Nil)
       } catch {
         case e: Throwable => throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
       }
       logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
-      //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
-      apply(inner, BelleProvable(in, lbl, defs)) match {
+      apply(innerMost, BelleProvable(in, lbl, defs)) match {
         case p: BelleDelayedSubstProvable =>
           try {
             val sub = p.p(us)
