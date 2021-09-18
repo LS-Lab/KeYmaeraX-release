@@ -265,11 +265,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
                 else try {
                   val downSubst = UnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(cp, i), updateLabels(labels, i, cl))
+                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
                 } catch {
                   case _: UnificationException =>
                     val upSubst = UnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (provable(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
+                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
                 }
             })
 
