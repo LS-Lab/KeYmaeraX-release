@@ -26,6 +26,7 @@ object UIIndex {
     * Disregard tactics that require input. */
   def theStepAt(expr: Expression, pos: Option[Position], sequent: Option[Sequent], substs: List[SubstitutionPair]): Option[DerivationInfo] = expr match {
     case Box(Loop(_), _) => None //@note: [*] iterate caused user confusion, so avoid left-click step on loops
+    case Diamond(Loop(_), _) => None //@note: analogous to [*] iterate
     case _ => allStepsAt(expr, pos, sequent, substs).find(_.inputs.forall(_.isInstanceOf[OptionArg]))
   }
 
