@@ -524,19 +524,16 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
         modalInstance.result.then(
           function(result) {
             if (result == "ok") {
-              if ($scope.model.numAllProofSteps > 0) {
-                $scope.deleteModelProofSteps($scope.uploadModel);
-              } else { $scope.uploadModel(); }
+              $scope.save.cmd = $scope.redoProofAndClose;
+              $scope.deleteModelProofSteps($scope.uploadModel);
             } else if ($scope.save.cmd) $scope.save.cmd();
           },
           function() {
             // cancel -> nothing to do, stay on dialog
           }
         );
-      } else if ($scope.save.cmd == $scope.refreshModels) {
-        if ($scope.model.numAllProofSteps > 0) {
-          $scope.deleteModelProofSteps($scope.uploadModel);
-        } else { $scope.uploadModel(); }
+      } else if ($scope.save.cmd == $scope.refreshModels || $scope.save.cmd == $scope.redoProof) {
+        $scope.deleteModelProofSteps($scope.uploadModel);
       }
       return false;           // form will not close automatically -> $scope.save.cmd() on successful parsing
     } else {
@@ -560,8 +557,8 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
         model.title = response.data.title;
         model.description = response.data.description;
         model.keyFile = response.data.content;
-        $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       }
+      $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
       $scope.save.cmd();
     })
     .catch(function(err) {
@@ -602,6 +599,11 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   $scope.redoProof = function() {
     $route.reload();
   }
+
+  $scope.redoProofAndClose = function() {
+      $route.reload();
+      $uibModalInstance.close();
+    }
 
   $scope.modelIsComplete = function() { return $scope.model && $scope.model.keyFile.indexOf('__________') < 0; }
 
