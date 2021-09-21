@@ -84,7 +84,8 @@ private object ToolTactics {
         Idioms.doIf(!_.isProved)(
           close | Idioms.doIfElse(_.subgoals.forall(s => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL))(
             // if
-            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure & doQE
+            EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
+              abbreviateUninterpretedFuncs & closure & doQE
             ,
             // else
             anon { (s: Sequent) =>
@@ -96,7 +97,8 @@ private object ToolTactics {
                 }
               hidePredicates & hideQuantifiedFuncArgsFmls &
                 assertT((s: Sequent) => s.isPredicateFreeFOL && s.isFuncFreeArgsFOL, "Uninterpreted predicates and uninterpreted functions with bound arguments are not supported; attempted hiding but failed, please apply further manual steps to expand definitions and/or instantiate arguments and/or hide manually") &
-                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand & closure &
+                EqualityTactics.applyEqualities & hideTrivialFormulas & abbreviateDifferentials & expand &
+                abbreviateUninterpretedFuncs & closure &
                 Idioms.doIf(_ => doQE != nil)(
                   doQE & done | anon {(_: Sequent) => throw new TacticInapplicableFailure(msg) }
                 )
@@ -187,24 +189,40 @@ private object ToolTactics {
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  private def differentialsOf(fml: Formula): List[Term] = {
-    val differentials = scala.collection.mutable.ListBuffer.empty[Term]
+  /** Returns all sub-terms of `fml` that are differentials are differential symbols. */
+  private def differentialsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
+    case _: Differential => true
+    case _: DifferentialSymbol => true
+    case _ => false
+  })
+
+  /** Returns all sub-terms of `fml` that are uninterpreted functions. */
+  private def uninterpretedFuncsOf(fml: Formula): List[Term] = matchingTermsOf(fml, {
+    case f@FuncOf(Function(_, _, domain, _, false), _) => domain != Unit
+    case _ => false
+  })
+
+  /** Returns all sub-terms of `fml` that pass `matcher`. */
+  private def matchingTermsOf(fml: Formula, matcher: Term=>Boolean): List[Term] = {
+    val result = scala.collection.mutable.ListBuffer.empty[Term]
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case d: Differential =>
-          differentials += d
-          Left(None)
-        case d: DifferentialSymbol =>
-          differentials += d
-          Left(None)
-        case _ => Left(None)
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+        if (matcher(e)) result += e
+        Left(None)
       }
     }, fml)
-    differentials.toList
+    result.toList
   }
 
+  /** Abbreviates differentials and differential symbols to variables. */
   private val abbreviateDifferentials = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
     flatMap(differentialsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
+    reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+  )
+
+  /** Abbreviates uninterpreted functions with arity>0 to variables. */
+  private val abbreviateUninterpretedFuncs = anon ((seq: Sequent) => (seq.ante ++ seq.succ).
+    flatMap(uninterpretedFuncsOf).distinct.map(abbrvAll(_, None) & hideL('Llast)).
     reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
   )
 

@@ -171,6 +171,11 @@ class QETests extends TacticTestBase {
     result.conclusion shouldBe "x=2 ==> x^2 > x+1".asSequent
   }
 
+  it should "abbreviate uninterpreted functions with arity>0 since not supported by Reduce/Resolve" in withQE { tool =>
+    proveBy("v>=0, t>=0, t<=ep, ep>=0, x>=v*ep+f(v) ==> x>=v*t+f(v)".asSequent,
+      ToolTactics.fullQE(Declaration(Map.empty), List.empty)(tool)) shouldBe 'proved
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Declaration(Map.empty), Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
