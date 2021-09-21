@@ -794,7 +794,6 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       // special case for elaboration to a;
       case r :+ Expr(t1:Variable, sl) :+ (optok@Token(SEMI,el)) if statementSemicolon =>
         assert(r.isEmpty || !r.top.isInstanceOf[Token] || !(r.top.asInstanceOf[Token].tok==ASSIGN || r.top.asInstanceOf[Token].tok==EQ || r.top.asInstanceOf[Token].tok==TEST), "Would have recognized as atomic statement already or would not even have shifted to SEMI")
-        //@todo assert r.top is not formula or term operator or assignment or test
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
         reduce(st, 2, elaborate(st, optok, OpSpec.sProgramConst, ProgramKind, t1, lax), sl.spanTo(el), r)
 
@@ -809,6 +808,10 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
       //@note explicit braces around loops so can't happen:
       //        if (firstExpression(la) ||
       //          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
+
+      case _ :+ Expr(_: Program, _) :+ Expr(_: Variable, _) if statementSemicolon =>
+        if (la != EOF && followsIdentifier(la)) shift(st)
+        else error(st, List(SEMI))
 
       case _ :+ Expr(t1, _) :+ Token(op, _) if isOrContainsDifferentialSymbol(t1) && op == EQ =>
         if (firstExpression(la) && la!=EOF) shift(st)
@@ -845,14 +848,20 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (t1.isInstanceOf[Program] && followsProgram(la) && la!=EOF) shift(st)
         else if (la==EOF) throw ParseException.imbalancedError("Unmatched modality", tok, st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
-        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined) && followsProgram(la)) shift(st)
+        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+          && statementSemicolon && la != SEMI) error(st, List(SEMI))
+        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+          && (if (statementSemicolon) la == SEMI else followsProgram(la))) shift(st)
         else error(st, List(FOLLOWSPROGRAM, FOLLOWSIDENT))
 
       case _ :+ (tok@Token(LDIA,_)) :+ Expr(t1, _)  =>
         if (followsExpression(t1, la, lax) && la!=EOF) shift(st)
         else if (la==EOF) throw ParseException.imbalancedError("Unmatched suspected modality", tok, st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
-        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined) && followsProgram(la)) shift(st)
+        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+          && statementSemicolon && la != SEMI) error(st, List(SEMI))
+        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+          && (if (statementSemicolon) la == SEMI else followsProgram(la))) shift(st)
         else error(st, List(FOLLOWSEXPRESSION, FOLLOWSIDENT))
 
       case _ :+ Token(IF,_) =>

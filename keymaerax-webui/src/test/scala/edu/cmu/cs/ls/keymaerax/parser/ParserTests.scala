@@ -348,9 +348,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: [{sys}]
         |      or: <{sys}>""".stripMargin
 
+    //@note {sys} is an ODESystem with differential program constant sys and doesn't require ;
     the [ParseException] thrownBy Parser("A1;{sys}B1") should have message
-      """1:9 Unexpected token cannot be parsed
-        |Found:    B1 at 1:9 to 1:10
+      """1:11 Unexpected token cannot be parsed
+        |Found:    <EOF> at 1:11 to EOF$
         |Expected: ;""".stripMargin
 
     //@todo not great yet
@@ -362,6 +363,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
       """1:18 Operator -> at 1:5 to 1:6 may connect non-matching kinds: A1->{sys} (Term->Program)
         |Found:    & at 1:18
         |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("[sense][ctrl;plant;]x>y") should have message
+      """1:7 Unexpected token cannot be parsed
+        |Found:    ] at 1:7
+        |Expected: ;""".stripMargin
+
+    the [ParseException] thrownBy Parser("[sense;][ctrl;plant]x>y") should have message
+      """1:20 Unexpected token cannot be parsed
+        |Found:    ] at 1:20
+        |Expected: ;""".stripMargin
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
