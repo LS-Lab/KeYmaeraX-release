@@ -122,6 +122,8 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
       templateUrl: 'partials/modeldialog.html',
       controller: 'ModelDialogCtrl',
       size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false,
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },

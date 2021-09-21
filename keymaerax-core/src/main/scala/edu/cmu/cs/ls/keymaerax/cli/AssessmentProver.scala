@@ -132,10 +132,16 @@ object AssessmentProver {
     override def hintString: String = "Simple list/interval notation"
   }
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact {
-    override def hintString: String = "List of " + exprs.headOption.map(_.kind).getOrElse("<unknown>")
+    override def hintString: String = {
+      if (exprs.map(_.kind).toSet.size > 1) exprs.map(_.kind).mkString(",")
+      else "List of " + exprs.headOption.map(_.kind).getOrElse("<unknown>")
+    }
+    override def longHintString: String = exprs.map(_.kind).mkString(",") + ":\n  " + exprs.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")
   }
   case class SequentArtifact(goals: List[Sequent]) extends Artifact {
-    override def hintString: String = "Sequent"
+    override def hintString: String =
+      if (goals.size <= 1) "Sequent"
+      else "List of sequents"
   }
   case class TacticArtifact(s: String, t: BelleExpr) extends Artifact {
     override def hintString: String = "Tactic"
@@ -239,6 +245,16 @@ object AssessmentProver {
 
     private def run(p: => () => ProvableSig): Either[ProvableSig, String] = AssessmentProver.run(p, args.get(Options.FAIL_HINT))
 
+    private def errorMsg(expected: Artifact, have: Artifact): String = have match {
+      case e: ExpressionArtifact => e.expr match {
+        case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
+          if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
+          "Incorrect " + e.expr.prettyString
+        case _ => "Expected a " + expected.hintString + " but got " + have.longHintString
+      }
+      case _ => "Expected a " + expected.hintString + " but got " + have.longHintString
+    }
+
     private def check(have: Artifact, expected: Artifact): Either[ProvableSig, String] = {
       mode.getOrElse(Modes.SYN_EQ) match {
         case Modes.SYN_EQ => (have, expected) match {
@@ -264,8 +280,12 @@ object AssessmentProver {
           case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.POLY_EQ => (have, expected) match {
-          case (ListExpressionArtifact(h), e: ExpressionArtifact) if h.distinct.size == 1 =>
-            check(ExpressionArtifact(h.head.prettyString), e)
+          case (h@ListExpressionArtifact(have), e: ExpressionArtifact) =>
+            if (have.distinct.size == 1) check(ExpressionArtifact(have.head.prettyString), e)
+            else Right(errorMsg(e, h))
+          case (h: ExpressionArtifact, e@ListExpressionArtifact(expected)) =>
+            if (expected.distinct.size == 1) check(h, ExpressionArtifact(expected.head.prettyString))
+            else Right(errorMsg(e, h))
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
               case (ht: Term, et: Term) => run(() => polynomialEquality(ht, et))
@@ -570,19 +590,19 @@ object AssessmentProver {
           case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
             if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
             return Some(run(() => syntacticEquality(h.expr, e.expr)))
-          case _ => if (h.expr.kind != e.expr.kind) return Some(Right("Expected a " + e.expr.kind + " but got " + h.expr.kind + " " + h.exprString))
+          case _ => if (h.expr.kind != e.expr.kind) return Some(Right(errorMsg(e, h)))
         }
-        case (h: ExpressionArtifact, ListExpressionArtifact(exprs)) =>
-          if (exprs.exists(_.kind != h.expr.kind)) return Some(Right("Expected a " + exprs.head.kind + " but got " + h.expr.kind + " " + h.exprString))
-        case (ListExpressionArtifact(h), e: ExpressionArtifact) =>
-          if (h.exists(_.kind != e.expr.kind)) return Some(Right("Expected a " + e.expr.kind + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")))
-        case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
-          require(e.map(_.kind).toSet.nonEmpty)
-          if (e.map(_.kind).toSet.size > 1) {
-            if (e.zip(h).forall({ case (ee, he) => ee.kind == he.kind })) Right("Expected " + e.map(_.kind).mkString + " gut got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  "))
-          } else if (h.exists(_.kind != e.head.kind)) return Some(Right("Expected a list of " + e.headOption.map(_.kind).getOrElse("<unknown>") + " but got " + h.map(_.kind).mkString(",") + ":\n  " + h.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")))
+        case (h: ExpressionArtifact, e@ListExpressionArtifact(exprs)) =>
+          if (exprs.exists(_.kind != h.expr.kind)) return Some(Right(errorMsg(e, h)))
+        case (h@ListExpressionArtifact(have), e: ExpressionArtifact) =>
+          if (have.exists(_.kind != e.expr.kind)) return Some(Right(errorMsg(e, h)))
+        case (h@ListExpressionArtifact(have), e@ListExpressionArtifact(expected)) =>
+          require(expected.map(_.kind).toSet.nonEmpty)
+          if (expected.map(_.kind).toSet.size > 1) {
+            if (expected.zip(have).forall({ case (ee, he) => ee.kind == he.kind })) Right(errorMsg(e, h))
+          } else if (have.exists(_.kind != expected.head.kind)) return Some(Right(errorMsg(e, h)))
         case (h, e) =>
-          if (!e.getClass.isAssignableFrom(h.getClass)) return Some(Right("Expected a " + e.hintString + " but got " + h.longHintString))
+          if (!e.getClass.isAssignableFrom(h.getClass)) return Some(Right(errorMsg(e, h)))
       }
       None
     }
@@ -611,7 +631,7 @@ object AssessmentProver {
       case MultiArtifact(as) =>
         if (as.size < 1+earlier.size) {
           //@note some earlier answers not parseable
-          Right("Ignored explanation for a wrong answer")
+          Right("FAILED:IGNORE explanation for a wrong answer")
         } else grader.mode match {
           case Some(AskGrader.Modes.EXPLANATION_CHECK) =>
             val mainArtifact = as.last
@@ -622,14 +642,14 @@ object AssessmentProver {
                   case _ => false
                 }})
                 if (prereqAnsweredCorrectly) grader.check(mainArtifact)
-                else Right("Ignored explanation for a wrong answer")
+                else Right("FAILED:IGNORE explanation for a wrong answer")
               case None => grader.check(mainArtifact)
             }
           case _ =>
             val mergedHave = as.reduceRight[Artifact]({
               case (a: ExpressionArtifact, b: ExpressionArtifact) => ListExpressionArtifact(a.expr :: b.expr :: Nil)
               case (a: ExpressionArtifact, ListExpressionArtifact(all)) => ListExpressionArtifact(all :+ a.expr)
-              case (TextArtifact(None), _) => return Right("Missing answer for prerequisite question")
+              case (TextArtifact(None), _) => return Right("FAILED: missing answer for prerequisite question")
               case (_, TextArtifact(None)) => return Right(Messages.BLANK)
             })
             grader.check(mergedHave)

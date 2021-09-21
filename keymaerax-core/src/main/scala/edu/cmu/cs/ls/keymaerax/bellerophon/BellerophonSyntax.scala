@@ -904,6 +904,7 @@ class BelleDelayedSubstProvable(override val p: ProvableSig,
                                 override val label: Option[List[BelleLabel]],
                                 override val defs: Declaration,
                                 val subst: USubst,
+                                //@todo parent needs to be a list of provables and substs to support nested constifications etc., or complete data structure refactoring to emulate goals that close later with subproofs
                                 val parent: Option[(ProvableSig, Int)]) extends BelleProvable(p, label, defs) {
   assert(parent.isEmpty || parent.get._2 < parent.get._1.subgoals.size, "Subgoal index points outside provable: " + parent.get._1.subgoals)
   override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString

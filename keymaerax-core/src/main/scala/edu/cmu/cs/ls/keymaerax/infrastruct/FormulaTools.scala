@@ -132,6 +132,21 @@ object FormulaTools extends Logging {
     case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
   }
 
+  /** Turns `fml` into disjunctive normal form. */
+  def disjunctiveNormalForm(fml: Formula): Formula = {
+    def distributeOrOverAnd(fml: Formula): Formula = fml match {
+      case Or(l, r) => Or(distributeOrOverAnd(l), distributeOrOverAnd(r))
+      case And(Or(ll, lr), r) => distributeOrOverAnd(Or(And(ll, r), And(lr, r)))
+      case And(l, Or(rl, rr)) => distributeOrOverAnd(Or(And(l, rl), And(l, rr)))
+      case And(l, r) =>
+        val distributed = And(distributeOrOverAnd(l), distributeOrOverAnd(r))
+        if (distributed != fml) distributeOrOverAnd(distributed)
+        else distributed
+      case f => f
+    }
+    reassociate(distributeOrOverAnd(negationNormalForm(fml)))
+  }
+
   /** Read off all atomic subformulas of `formula`.
     * Will not descend into programs to find even further atomic formulas since they are not directly subformulas.
     * @see [[negationNormalForm()]] */

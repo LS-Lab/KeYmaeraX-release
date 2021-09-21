@@ -94,16 +94,17 @@ class InMemoryDB extends DBAbstraction {
   synchronized {
     if (!models.values.exists(_.name == name)) {
       val modelId = models.keys.size
-      models(modelId) = new ModelPOJO(modelId, userId, name, date, fileContents, description.getOrElse(""),
+      models(modelId) = ModelPOJO(modelId, userId, name, date, fileContents, description.getOrElse(""),
         publink.getOrElse(""), title.getOrElse(""), tactic, 0, temporary=false)
       Some(modelId)
     } else None
   }
 
-  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = {
+  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String],
+                           content: Option[String], tactic: Option[String]): Unit = {
     val model = models(modelId)
-    val nm = new ModelPOJO(modelId, model.userId, name, model.date, content.get, description.get, model.pubLink,
-      title.get, model.tactic, model.numAllProofSteps, model.temporary)
+    val nm = ModelPOJO(modelId, model.userId, name, model.date, content.get, description.get, model.pubLink,
+      title.get, tactic, model.numAllProofSteps, model.temporary)
     models(modelId) = nm
   }
 
@@ -111,7 +112,7 @@ class InMemoryDB extends DBAbstraction {
     val mId = modelId.toInt
     val model = models(mId)
     if (model.tactic.isEmpty) {
-      val nm = new ModelPOJO(mId, model.userId, model.name, model.date, model.keyFile, model.description, model.pubLink,
+      val nm = ModelPOJO(mId, model.userId, model.name, model.date, model.keyFile, model.description, model.pubLink,
         model.title, Some(fileContents), model.numAllProofSteps, model.temporary)
       models(mId) = nm
       Some(1)
@@ -125,7 +126,7 @@ class InMemoryDB extends DBAbstraction {
     val model = ArchiveParser.parseAsFormula(models(modelId).keyFile)
     val provable = ProvableSig.startProof(model)
     provables(provableId) = provable
-    proofs(proofId) = (provable, new ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
+    proofs(proofId) = (provable, ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
       Some(provableId), temporary=false, tactic))
     proofId
   }
@@ -134,7 +135,7 @@ class InMemoryDB extends DBAbstraction {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
     provables(provableId) = provable
-    proofs(proofId) = (provable, new ProofPOJO(proofId, None, "", "", "", 0, closed=false, Some(provableId),
+    proofs(proofId) = (provable, ProofPOJO(proofId, None, "", "", "", 0, closed=false, Some(provableId),
       temporary=true, None))
     proofId
   }
@@ -152,7 +153,6 @@ class InMemoryDB extends DBAbstraction {
     * Initializes a new database.
     */
   override def cleanup (): Unit = {}
-  def cleanup(which: String): Unit = {}
 
   /** Deletes a provable and all associated sequents / formulas */
   override def deleteProvable(provableId: Int): Boolean = true

@@ -100,7 +100,9 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "report when no unification found with 'Rlike unification matching" in withMathematica { _ =>
     the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
       onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message
-      """Position tactic implyR('R~="p_()&q_()->r_()") is not applicable anywhere in succedent of
+      """Not found: locator 'R~="p_()&q_()->r_()"
+        |of position tactic implyR('R~="p_()&q_()->r_()")
+        |does not match anywhere in succedent of
         |ElidingProvable(Provable{
         |==> 1:  a=0	Equal
         |    2:  b=1	Equal
@@ -185,7 +187,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
     ex should have message "RepeatTactic failed on repetition 3"
     ex.getCause should have message
-      """Position tactic andL('L) is not applicable anywhere in antecedent of
+      """Not found: locator 'L
+        |of position tactic andL('L)
+        |does not match anywhere in antecedent of
         |ElidingProvable(Provable{
         |   -1:  x=2&y=3&z=4	And
         |==> 1:  x=2	Equal
@@ -779,6 +783,39 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     proveBy(entry.model.asInstanceOf[Formula], let("r()".asTerm, "r".asTerm, by(
       proveBy("x^2+y^2=r() -> [{x'=r()*y,y'=-r()*x}]x^2+y^2=r()".asFormula, implyR(1) & ODE(1))))) shouldBe 'proved
+  }
+
+  it should "detect expanded definitions when stitching together provables" in withMathematica { _ =>
+    val defs = "g(x) ~> -x^2".asDeclaration
+    proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent,
+      dC("x<=old(x)".asFormula)(1) <(
+        skip,
+        dIClose(1)
+      ),
+      defs
+    ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+
+    proveByS("p(x) ==> [{x'=g(y)}]p(x)".asSequent, diffInvariant("x<=old(x)".asFormula)(1), defs).subgoals.
+      loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
+  }
+
+  it should "detect expanded definitions when stitching together provables after QE" in withMathematica { _ =>
+    val defs = "g(x) ~> x^2+1".asDeclaration
+    proveByS("==> x^2<=g(x) & x^2/g(x)>=0".asSequent, andR(1) <(skip, QE), defs).subgoals.
+      loneElement shouldBe "==> x^2<=x^2+1".asSequent
+  }
+
+  it should "FEATURE_REQUEST: apply constified conclusion to non-constified open goal" taggedAs TodoTest in withMathematica { _ =>
+    //@note without defs, dIClose doesn't expand g(y) and so its result provable is unproved with x_0() still constified,
+    // which then in SequentialInterpreter.applySubDerivation cannot be merged with the parent (has x_0).
+    // Parent has 2 open subgoals, but dIClose result provable only 1, and so as a symptom of the wrong return value of
+    // applySubDerivation (see Interpreter.scala line 78) labels don't match
+    proveBy("p(x) ==> [{x'=g(y)}]p(x)".asSequent,
+      dC("x<=old(x)".asFormula)(1) <(
+        skip,
+        dIClose(1)
+      )
+    ).subgoals.loneElement shouldBe "p(x_0), x_0=x ==> [{x'=-y^2 & true&x<=x_0}]p(x)".asSequent
   }
 
   "Using" should "keep mentioned and abbreviate unmentioned formulas" in withMathematica { _ =>

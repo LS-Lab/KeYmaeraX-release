@@ -1,10 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.{ByteArrayOutputStream, PrintWriter}
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{IllFormedTacticApplicationException, InapplicableUnificationKeyFailure, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.AskGrader.Modes
 import edu.cmu.cs.ls.keymaerax.cli.AssessmentProver.{AnyChoiceGrader, AnyOfArtifact, ArchiveArtifact, Artifact, AskGrader, AskTFGrader, BoolArtifact, ChoiceArtifact, ExpressionArtifact, Grader, ListExpressionArtifact, MultiArtifact, MultiAskGrader, OneChoiceGrader, SequentArtifact, SubstitutionArtifact, TacticArtifact, TexExpressionArtifact, TextArtifact}
 import edu.cmu.cs.ls.keymaerax.cli.QuizExtractor._
 import edu.cmu.cs.ls.keymaerax.cli.Submission.{ChoiceAnswer, TextAnswer}
@@ -373,6 +373,25 @@ class AssessmentProverTests extends TacticTestBase {
       "requirement failed: Formula operators do not match at position '.'; expected x>=0 (GreaterEqual) but got -(2-4*1/2)--(x+0*5)>0 (Greater)"
   }
 
+  it should "return useful error messages" in withZ3 { _ =>
+    // expected single expression, ok to answer with a list of duplicate elements
+    AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
+      check(ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).left.get shouldBe 'proved
+    // expected single expression, not ok to answer with a list
+    AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
+      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right(
+      """Expected a Term but got Term,Term:
+        |  (-1): Term
+        |  (-3): Term""".stripMargin)
+    // expected list of expression that happens to be one element (make it a list by duplicating element),
+    // ok to answer with a single expression
+    AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
+      check(ExpressionArtifact("-3")).left.get shouldBe 'proved
+    // expected list of expressions, ok to answer with a list
+    AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
+      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right("") // wrong but syntactically ok
+  }
+
   "Value equality" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.valueEquality("1".asTerm, "1".asTerm) shouldBe 'proved
     AssessmentProver.valueEquality("1".asTerm :: "2".asTerm :: Nil, "1+0".asTerm :: "4-2".asTerm :: Nil) shouldBe 'proved
@@ -444,6 +463,11 @@ class AssessmentProverTests extends TacticTestBase {
       List("y>0 ==> y>=0".asSequent, "x>0 ==> x>=0".asSequent),
       List("x>0 ==> x>=0".asSequent, "y>0 ==> y>=0".asSequent, "y>0 ==> y>0".asSequent)) should have message
         "requirement failed: Cannot check empty lists of sequents or sequent lists of different size"
+  }
+
+  it should "not reply with a syntax error on n/a" in withZ3 { _ =>
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, SequentArtifact(List("x>0 ==> [x:=x+1;]x>1".asSequent))).
+      check(ExpressionArtifact("n/a")) shouldBe Right("Incorrect n/a")
   }
 
   "Differential invariant checker" should "prove simple examples" in withZ3 { _ =>
@@ -617,7 +641,7 @@ class AssessmentProverTests extends TacticTestBase {
   "Quiz checking" should "prove quiz 2" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/2/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Solve ODEs", 5) :: ("Vector Field Examples", 4) :: ("Semantics of terms", 2) ::
+      ("Solve ODEs", 5) :: ("Vector field examples", 4) :: ("Semantics of terms", 2) ::
       ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 4) :: Nil
     run(problems)
   }
@@ -626,14 +650,14 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/3/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 6) ::
-        ("Reachable Sets", 5) :: ("Program Shapes", 8) :: ("Modeling pitfalls", 4) :: Nil
+        ("Reachable sets", 5) :: ("Program shapes", 8) :: ("Modeling pitfalls", 4) :: Nil
     run(problems)
   }
 
   it should "prove quiz 4" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/4/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("", 10) :: ("Truth Identification", 7) :: ("Multiple pre/postconditions", 4) ::
+      ("Valid formulas", 10) :: ("Truth identification", 7) :: ("Multiple pre/postconditions", 4) ::
         ("Direct velocity control", 2) :: Nil
     run(problems)
   }
@@ -657,7 +681,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 7" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/7/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Loop invariants", 5) :: ("Other Loop Rules", 8) ::
+      ("Loop invariants", 5) :: ("Other loop rules", 8) ::
         ("Incremental design in direct velocity control", 5) :: Nil
     run(problems)
   }
@@ -665,7 +689,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 8" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/8/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Revisiting ping-pong events", 4) :: ("Faithful Event Models", 6) ::
+      ("Revisiting ping-pong events", 4) :: ("Faithful event models", 6) ::
         ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 5) :: Nil
     run(problems)
   }
@@ -673,7 +697,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 9" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/9/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Comparing event-triggered versus time-triggered controllers", 4) :: ("Reaction Times", 2) ::
+      ("Comparing event-triggered versus time-triggered controllers", 4) :: ("Reaction times", 2) ::
         ("From event responses to reaction times", 5) :: Nil
     run(problems)
   }
@@ -682,7 +706,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/10/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
-        ("Differential Invariant Rules", 10) :: Nil
+        ("Differential invariant rules", 10) :: Nil
     run(problems)
   }
 
@@ -690,7 +714,7 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/11/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Explain differential cuts", 8) :: ("Identify differential invariants to cut", 10) ::
-        ("Differential Invariance Rules", 14) :: Nil
+        ("Differential invariance rules", 14) :: Nil
     run(problems)
   }
 
@@ -713,15 +737,15 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 14" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/14/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Player Count", 5) :: ("Strategically reachable minima", 6) :: ("Game shapes", 2) ::
-        ("Truth Identification", 10) :: Nil
+      ("Player count", 5) :: ("Strategically reachable minima", 6) :: ("Game shapes", 2) ::
+        ("Truth identification", 10) :: Nil
     run(problems)
   }
 
   it should "prove quiz 15" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/15/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Semantic comparisons", 4) :: ("Game Region Shapes", 6) :: ("Game loop semantics", 5) ::
+      ("Semantic comparisons", 4) :: ("Game region shapes", 6) :: ("Game loop semantics", 5) ::
         ("Direct velocity control", 2) :: Nil
     run(problems)
   }
@@ -729,7 +753,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 16" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/16/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Truth Identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
+      ("Truth identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
         ("Robot simple chase game", 2) :: Nil
     run(problems)
   }
@@ -737,7 +761,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "prove quiz 17" in withZ3 { _ =>
     val problems = extractProblems(QUIZ_PATH + "/17/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
-      ("Comparing systems versus games", 4) :: ("Loop variant identification", 3) :: ("Other Loop Variant Rules", 8) ::
+      ("Comparing systems versus games", 4) :: ("Loop variant identification", 3) :: ("Other loop variant rules", 8) ::
         ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
     run(problems)
   }
@@ -1268,7 +1292,7 @@ class AssessmentProverTests extends TacticTestBase {
             l shouldBe 'proved withClue (t + ": " + result.right.toOption.getOrElse("<unknown>"))
             println("Successfully verified sol")
           case Right(msg) =>
-            msg shouldBe "INSPECT"
+            msg shouldBe "INSPECT" withClue t
             println("WARNING: sol needs manual inspection (INSPECT)")
         }
         val toc = System.nanoTime()
@@ -1280,8 +1304,8 @@ class AssessmentProverTests extends TacticTestBase {
         grader.check(t) match {
           case Left(l) => grader match {
             case _: AnyChoiceGrader if l.isProved =>
-              l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent
-            case _ => l shouldNot be ('proved)
+              l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent  withClue t
+            case _ => l shouldNot be ('proved) withClue t
           }
           case Right(_) => //
         }

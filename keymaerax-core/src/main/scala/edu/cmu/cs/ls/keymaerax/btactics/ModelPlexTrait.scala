@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, NamedSymbol, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
@@ -20,11 +20,11 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
  */
 trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) {
   def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
-            unobservable: Map[Variable, Option[Formula]] = Map.empty): Formula
+            unobservable: Map[_ <: NamedSymbol, Option[Formula]] = Map.empty): Formula
   def apply(vars: List[Variable], kind: Symbol): Formula => Formula = apply(vars, kind, checkProvable=Some(_ => ()))
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
-                                           unobservable: Map[Variable, Option[Formula]]): (Formula, List[Formula])
+                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula, List[Formula])
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic
@@ -34,5 +34,5 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservableVars: List[Variable], simplifier: Option[DependentPositionTactic]): DependentPositionTactic
+                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): DependentPositionTactic
 }

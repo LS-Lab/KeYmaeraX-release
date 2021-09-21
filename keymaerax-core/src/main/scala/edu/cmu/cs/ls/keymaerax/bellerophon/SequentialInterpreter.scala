@@ -88,6 +88,69 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case _ => curr != prev
   }
 
+  //@note inner may have expanded multiple levels of definitions at once; collect which ones
+  // (favor over unification, which would flatten all definitions into a single substitution)
+  @tailrec
+  protected final def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration, subst: USubst): USubst = {
+    if (goal.subgoals(i) == sub.conclusion) subst
+    else {
+      val unifSubstSymbols = UnificationMatch(goal.subgoals(i), sub.conclusion).usubst.subsDefsInput.
+        map(_.what).flatMap(StaticSemantics.symbols).toSet
+      val addSubst = USubst(defs.substs.filter(s => unifSubstSymbols.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
+      if (addSubst.subsDefsInput.nonEmpty) collectSubst(goal(addSubst), i, sub(addSubst), defs, subst ++ addSubst)
+      else subst
+    }
+  }
+
+  /** Creates labels according to the number of subgoals of parent. */
+  private def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
+    (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
+    case None => BelleTopLevelLabel(s"$i") }).toList
+
+  /** Computes a single provable that contains the combined effect of all the piecewise computations. */
+  protected final def combineBranchResults(results: Seq[BelleValue], parent: ProvableSig,
+                                           defs: Declaration): BelleProvable = {
+    //@todo preserve labels from parent p (turn new labels into sublabels)
+    //@todo combine result defs?
+
+    //@note The cidx is threaded through to keep track of indexes changing, which can occur when a subgoal
+    // is replaced with 0 new subgoals (also means: drop labels).
+    val (combinedResult, _, combinedLabels, combinedSubsts) = {
+      results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((parent, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
+        case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
+          val substs = subderivation match {
+            case p: BelleDelayedSubstProvable => csubsts ++ p.subst
+            //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
+            case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs, USubst(List.empty))
+          }
+          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+          //@todo want to keep names of cp abbreviated instead of substituted
+          val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+            case (Some(origLabels), Some(newLabels)) =>
+              if (newLabels.isEmpty) Some(origLabels)
+              else {
+                val l :: rest = newLabels
+                Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+              }
+            case (Some(origLabels), None) =>
+              val labels = createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length)
+              if (labels.isEmpty) Some(origLabels)
+              else {
+                val l :: rest = labels
+                Some(origLabels.patch(cidx, List(l), 0) ++ rest)
+              }
+            case (None, Some(newLabels)) =>
+              Some(createLabels(None, 0, cidx) ++ newLabels)
+            case (None, None) => None
+          }
+          (combinedProvable, nextIdx, combinedLabels, substs)
+      })
+    }
+    //@todo delayed parent?
+    if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
+    else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
+  }
+
   /** Returns the result of running tactic `expr` on value `v`. */
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
@@ -326,7 +389,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       if (provable.subgoals.length != 1)
         throw new IllFormedTacticApplicationException("Let of multiple goals is not currently supported.").inContext(expr, "")
 
-      val subst = (abbr, value) match {
+      def subst(abbr: Expression, value: Expression): SubstitutionPair = (abbr, value) match {
         case (FuncOf(name, arg), t: Term) =>
           val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
           SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
@@ -335,20 +398,35 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
       }
 
+      // flatten nested Lets into a single inner proof
+      @tailrec
+      def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
+                      repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
+        case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
+        case t => (
+          ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
+          USubst(substs),
+          t
+        )
+      }
+
+      //@todo flattening helps to avoid nested constifications, which are not yet supported by DelayedSubstProvable
+
       //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
-      val us: USubst = USubst(subst :: Nil)
-      val in: ProvableSig = try {
-        ProvableSig.startProof(provable.subgoals.head.replaceAll(value, abbr))
+      val (in: ProvableSig, us: USubst, innerMost) = try {
+        flattenLets(inner, subst(abbr, value) :: Nil, value -> abbr :: Nil)
       } catch {
         case e: Throwable => throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
       }
       logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
-      //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
-      apply(inner, BelleProvable(in, lbl, defs)) match {
+      apply(innerMost, BelleProvable(in, lbl, defs)) match {
         case p: BelleDelayedSubstProvable =>
           try {
-            val foo = p.p(us)
-            new BelleDelayedSubstProvable(provable(p.p(us), 0), p.label, p.defs, p.subst, p.parent)
+            val sub = p.p(us)
+            val addSubst = collectSubst(provable, 0, sub, p.defs, USubst(List.empty))
+            val substGoal = exhaustiveSubst(provable, addSubst)
+            val substSub = exhaustiveSubst(sub, addSubst)
+            new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
               // happens on Let(v()=v, t) if t did not (yet) finish the proof, e.g., dIRule. postpone until subgoals are proved
@@ -573,7 +651,10 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         })
 
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l, d), (BelleProvable(sp, sl, sd), i)) =>
-          BelleProvable(p(sp, i),
+          val substs = collectSubst(p, i, sp, defs, USubst(List.empty))
+          val pSubst = exhaustiveSubst(p, substs)
+          val spSubst = exhaustiveSubst(sp, substs)
+          BelleProvable(pSubst(spSubst, i),
             l match {
               case Some(labels) => Some(labels.patch(i, Nil, 1) ++ sl.getOrElse(Nil))
               case None => sl match {
@@ -668,35 +749,7 @@ case class ConcurrentInterpreter(override val listeners: scala.collection.immuta
           }
         })
 
-        // Compute a single provable that contains the combined effect of all the piecewise computations.
-        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-        // is replaced with 0 new subgoals (also means: drop labels).
-        def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
-
-        //@todo preserve labels from parent p (turn new labels into sublabels)
-        //@todo combine result definitions?
-        val (combinedResult, _, combinedLabels, combinedSubsts) =
-          results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
-              val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
-                case _ => csubsts
-              }
-              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
-              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-                case (Some(origLabels), Some(newLabels)) =>
-                  Some(origLabels.patch(cidx, newLabels, 0))
-                case (Some(origLabels), None) =>
-                  Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length), 0))
-                case (None, Some(newLabels)) =>
-                  Some(createLabels(0, cidx) ++ newLabels)
-                case (None, None) => None
-              }
-              (combinedProvable, nextIdx, combinedLabels, substs)
-          })
-        //@todo delayed parent?
-        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
+        combineBranchResults(results, p, defs)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
     }
 
@@ -770,46 +823,7 @@ case class ExhaustiveSequentialInterpreter(override val listeners: scala.collect
           //todo: add case for user input exception?
           throw errors.reduce[BelleThrowable](new CompoundProofSearchException(_, _))
 
-        // Compute a single provable that contains the combined effect of all the piecewise computations.
-        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-        // is replaced with 0 new subgoals (also means: drop labels).
-        def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
-          (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
-          case None => BelleTopLevelLabel(s"$i") }).toList
-
-        //@todo preserve labels from parent p (turn new labels into sublabels)
-        //@todo combine result defs?
-        val (combinedResult, _, combinedLabels, combinedSubsts) =
-          results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
-              val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
-                case _ => csubsts
-              }
-              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
-              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-                case (Some(origLabels), Some(newLabels)) =>
-                  if (newLabels.isEmpty) Some(origLabels)
-                  else {
-                    val l :: rest = newLabels
-                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
-                  }
-                case (Some(origLabels), None) =>
-                  val labels = createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.length)
-                  if (labels.isEmpty) Some(origLabels)
-                  else {
-                    val l :: rest = labels
-                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
-                  }
-                case (None, Some(newLabels)) =>
-                  Some(createLabels(None, 0, cidx) ++ newLabels)
-                case (None, None) => None
-              }
-              (combinedProvable, nextIdx, combinedLabels, substs)
-          })
-        //@todo delayed parent?
-        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
+        combineBranchResults(results.collect({case Left(l) => l}), p, defs)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
     }
     case _ => super.runExpr(expr, v)
@@ -839,46 +853,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
             case _ => throw new BelleUnexpectedProofStateError("Each piecewise application in a branching tactic should result in a provable.", p.underlyingProvable).inContext(expr, "")
           }
         })
-
-        // Compute a single provable that contains the combined effect of all the piecewise computations.
-        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-        // is replaced with 0 new subgoals (also means: drop labels).
-        def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
-
-        //@todo preserve labels from parent p (turn new labels into sublabels)
-        //@todo combine result defs?
-        val (combinedResult, _, combinedLabels, combinedSubsts) =
-          results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
-              val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => csubsts ++ p.subst
-                case _ => csubsts
-              }
-              val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
-              //@todo want to keep names of cp abbreviated instead of substituted
-              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-                case (Some(origLabels), Some(newLabels)) =>
-                  if (newLabels.isEmpty) Some(origLabels)
-                  else {
-                    val l :: rest = newLabels
-                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
-                  }
-                case (Some(origLabels), None) =>
-                  val labels = createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length)
-                  if (labels.isEmpty) Some(origLabels)
-                  else {
-                    val l :: rest = labels
-                    Some(origLabels.patch(cidx, List(l), 0) ++ rest)
-                  }
-                case (None, Some(newLabels)) =>
-                  Some(createLabels(0, cidx) ++ newLabels)
-                case (None, None) => None
-              }
-              (combinedProvable, nextIdx, combinedLabels, substs)
-            })
-        //@todo delayed parent?
-        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, defs, combinedSubsts, None)
+        combineBranchResults(results, p, defs)
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
     }
     case _ => super.runExpr(expr, v)

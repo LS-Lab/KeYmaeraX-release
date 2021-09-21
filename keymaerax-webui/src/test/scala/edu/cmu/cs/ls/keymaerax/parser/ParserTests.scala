@@ -319,12 +319,48 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
     Parser("a;") shouldBe ProgramConst("a")
     Parser("a{|^@|};") shouldBe SystemConst("a")
     Parser("{a;b;}*") shouldBe Loop(Compose(ProgramConst("a"), ProgramConst("b")))
+    Parser("{a;{d;}*b;{c;}*}*") shouldBe Loop(Compose(ProgramConst("a"), Compose(Loop(ProgramConst("d")),
+      Compose(ProgramConst("b"), Loop(ProgramConst("c"))))))
+    Parser("{a;{d;}*b;{{c}}*}*") shouldBe Loop(Compose(ProgramConst("a"), Compose(Loop(ProgramConst("d")),
+      Compose(ProgramConst("b"), Loop(ODESystem(DifferentialProgramConst("c")))))))
   }
 
   it should "generate legible error messages for program consts" in {
     the [ParseException] thrownBy Parser("{a;b}*") should have message
-      """1:6 Syntax error. Expression b is not a program, perhaps ; is missing?
+      """1:6 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
         |Found:    * at 1:6
+        |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("{a;{d;}*b;{c}*}*") should have message
+      """1:12 Unexpected token cannot be parsed
+        |Found:    {c}* at 1:12 to 1:14
+        |Expected: {c;}* (loop of program constant)
+        |      or: {{c}}* (loop of differential program constant)""".stripMargin
+
+    the [ParseException] thrownBy Parser("{a;{c;}*b}*") should have message
+      """1:11 Syntax error. Expression b is not a program: change to b; for a program constant, or to {b} for a differential program constant.
+        |Found:    * at 1:11
+        |Expected: """.stripMargin
+
+    the [ParseException] thrownBy Parser("(A1 & A2) -> {sys} B1 & B2") should have message
+      """1:15 Unexpected token cannot be parsed
+        |Found:    {sys} at 1:15 to 1:17
+        |Expected: [{sys}]
+        |      or: <{sys}>""".stripMargin
+
+    the [ParseException] thrownBy Parser("A1;{sys}B1") should have message
+      """1:9 Unexpected token cannot be parsed
+        |Found:    B1 at 1:9 to 1:10
+        |Expected: ;""".stripMargin
+
+    //@todo not great yet
+    // parsing fails on &, but
+    // parser l. 730ff case r :+ Expr(t1, sl) :+ (optok1@Token(tok:OPERATOR,_)) :+ Expr(t2, el)
+    // needs to be permissive to support implicit parentheses (e.g., allows stack "p>0 & q" because "<=4" might follow)
+    // and additionally elaboration of term A1 to a predicate happens only after the right-hand side of -> is a formula
+    the [ParseException] thrownBy Parser("(A1 -> {sys} B1) & (A2 -> {sys} B2)") should have message
+      """1:18 Operator -> at 1:5 to 1:6 may connect non-matching kinds: A1->{sys} (Term->Program)
+        |Found:    & at 1:18
         |Expected: """.stripMargin
   }
 

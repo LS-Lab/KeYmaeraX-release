@@ -134,7 +134,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.toggleAllFmls = function() {
-              sequentProofData.formulas.toggleUseAllFml(scope.sequent);
+              sequentProofData.formulas.toggleUseAllFmls(scope.sequent);
             }
 
             scope.isFOL = function(formula) {

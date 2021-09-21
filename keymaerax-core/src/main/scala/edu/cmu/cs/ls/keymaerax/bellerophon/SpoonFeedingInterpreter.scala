@@ -265,11 +265,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
                 else try {
                   val downSubst = UnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(cp, i), updateLabels(labels, i, cl))
+                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
                 } catch {
                   case _: UnificationException =>
                     val upSubst = UnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (provable(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
+                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
                 }
             })
 
@@ -343,11 +343,20 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           if (provable.subgoals.length != 1)
             throw new IllFormedTacticApplicationException("Let of multiple goals is not currently supported.").inContext(tactic, "")
 
+          def subst(abbr: Expression, value: Expression): SubstitutionPair = (abbr, value) match {
+            case (FuncOf(name, arg), t: Term) =>
+              val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+              SubstitutionPair(FuncOf(name, dotArg), t.replaceFree(arg, dotArg))
+            case (PredOf(name, arg), f: Formula) =>
+              val dotArg = if (arg.sort == Unit) Nothing else arg.sort.toDots(0)._1
+              SubstitutionPair(PredOf(name, dotArg), f.replaceFree(arg, dotArg))
+          }
+
           // flatten nested Lets into a single inner proof
           @tailrec
           def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
                           repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
-            case Let(a, v, c) => flattenLets(c, substs :+ SubstitutionPair(a, v), repls :+ v -> a)
+            case Let(a, v, c) => flattenLets(c, substs :+ subst(a, v), repls :+ v -> a)
             case t => (
               ProvableSig.startProof(repls.foldLeft(provable.subgoals.head)({ case (s, (v, a)) => s.replaceAll(v, a) })),
               USubst(substs),
@@ -355,7 +364,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             )
           }
 
-          val (in: ProvableSig, us: USubst, innerMost) = flattenLets(innerTactic, SubstitutionPair(abbr, value) :: Nil, value -> abbr :: Nil)
+          //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
+          val (in: ProvableSig, us: USubst, innerMost) = try {
+            flattenLets(innerTactic, subst(abbr, value) :: Nil, value -> abbr :: Nil)
+          } catch {
+            case e: Throwable => throw new IllFormedTacticApplicationException("Unable to start inner proof in let: " + e.getMessage, e)
+          }
           logger.debug(tactic + " considers\n" + in + "\nfor outer\n" + provable)
           if (descend > 0) {
             val innerId = idProvider(in)
@@ -514,6 +528,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                     runningInner(tactic, BelleProvable(provable.sub(0), labels, defs)) match {
                       case p: BelleDelayedSubstProvable =>
+                        val foo = p
                         val resultLabels = updateLabels(labels, 0, p.label)
                         val (wasMerged, mergedProvable, _) = applySubDerivation(provable, 0, p.p, p.subst)
                         val parent = p.parent match {
@@ -521,6 +536,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                           case Some((pparent, pidx)) =>
                             if (pparent == provable) p.parent
                             else if (pparent.conclusion == provable.subgoals(pidx)) Some(provable(pparent, pidx), pidx)
+                            //@todo pparent.conclusion constified subgoal need to first finish dIRule subproof to unconstify
                             else throw new NotImplementedError("Delayed substitution parent provables: missing implementation to merge " + pparent.prettyString + " with " + provable.prettyString)
                         }
                         val result = (new BelleDelayedSubstProvable(mergedProvable, resultLabels, p.defs, p.subst, parent), ctx.store(tactic))

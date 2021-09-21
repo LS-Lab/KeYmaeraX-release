@@ -2438,6 +2438,30 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
+  it should "support nested constifications" in withMathematica { _ => withDatabase { db =>
+    val entry = ArchiveParser.parser(
+      """ArchiveEntry "Delayed Substitution from dIRule"
+        |ProgramVariables Real x, y, r, s; End.
+        |Problem x^2+y^2+s=r -> [{x'=r*y,y'=-r*x}]x^2+y^2+s=r End.
+        |End.""".stripMargin).head
+
+    val proofId = db.createProof(entry.problemContent)
+
+    val interpreter = registerInterpreter(
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, entry.defs, listener(db.db),
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    //@note dIRule constifies r,s
+    val tactic = BelleParser.parseWithInvGen(
+      """implyR(1); dIRule(1)""".stripMargin, defs=entry.defs, expandAll=false)
+    interpreter(tactic, BelleProvable.plain(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
+      case BelleProvable(p, _, _) =>
+        p.subgoals should contain theSameElementsAs List(
+          "x^2+y^2+s()=r(), true ==> x^2+y^2+s()=r()".asSequent,
+          "x_0^2+y_0^2+s()=r(), true ==> [y':=-r()*x;][x':=r()*y;]2*x^(2-1)*x'+2*y^(2-1)*y'+0=0".asSequent
+        )
+    }
+  }}
+
   it should "FEATURE_REQUEST: return delayed substitution on unfinished dIRule when mixed with unconstified branches" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"

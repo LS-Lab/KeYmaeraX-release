@@ -37,14 +37,16 @@ class QETest extends TacticTestBase {
     }
   }
 
-  it should "neither return $Failed nor complain about stale answer if $Failed" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
+  it should "neither return $Failed nor complain about stale answer if $Failed" in withMathematica { qeTool =>
     val t = "a".asVariable
     import edu.cmu.cs.ls.keymaerax.core._
     def eq(n: Int) = Equal(Times(Number(n), t), (0 until n).map(_ => t).reduce(Plus))
     val n = 250
     /** @note the reason behind this returning $Failed is triggered more directly by the
       *       "expressions deeper than 256" test case in JLinkMathematicaLinkTests */
-    qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True
+    withTemporaryConfig(Map(Configuration.Keys.JLINK_USE_EXPR_INTERFACE -> "true")) {
+      qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True
+    }
   }
 
 }

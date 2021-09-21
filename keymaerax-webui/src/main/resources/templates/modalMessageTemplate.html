@@ -12,6 +12,11 @@
             <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>Yes</button>
             <button type="submit" class="btn btn-primary" ng-click="cancel()">No</button>
         </span>
+        <span class="pull-right" ng-if="mode == 'yesnocancel'">
+            <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>Yes</button>
+            <button type="submit" class="btn btn-primary" ng-click="no()" autofocus>No</button>
+            <button type="submit" class="btn btn-primary" ng-click="cancel()">Cancel</button>
+        </span>
     </h3>
 </div>
 <div class="modal-body">

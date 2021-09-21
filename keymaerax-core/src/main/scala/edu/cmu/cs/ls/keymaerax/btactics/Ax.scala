@@ -1156,7 +1156,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("∃d","existsd"), key = "0", recursor = "*")
+  @Axiom(("∃d","existsd"), conclusion = "__¬∀x ¬P__ ↔ ∃x P", displayLevel = "all",
+    key = "0", recursor = "*", unifier = "surjlinear")
   lazy val existsDual: DerivedAxiomInfo = derivedAxiom("exists dual",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (!p_(||))) <-> \\exists x_ p_(||)".asFormula)),
     useAt(alld, PosInExpr(1::Nil))(1, 0::0::Nil) &

@@ -311,11 +311,14 @@ object SQLite {
       })
 
     /** @inheritdoc */
-    final override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = synchronizedTransaction({
+    final override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String],
+                                   content: Option[String], tactic: Option[String]): Unit = synchronizedTransaction({
       assert(Models.filter(m => m._Id === modelId && m.filecontents === content).exists.run
         || Proofs.innerJoin(Executionsteps).on((proofs, steps) => steps.proofid === proofs._Id).
         filter({ case (proofs, _) => proofs.modelid === modelId }).length.run <= 0, "Updating model content only possible for models without proof steps")
-      Models.filter(_._Id === modelId).map(m => (m.name, m.title, m.description, m.filecontents)).update(Some(name), title, description, content)
+      Models.filter(_._Id === modelId).
+        map(m => (m.name, m.title, m.description, m.filecontents, m.tactic)).
+        update(Some(name), title, description, content, tactic)
       nUpdates = nUpdates + 1
     })
 

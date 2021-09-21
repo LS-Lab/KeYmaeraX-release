@@ -141,6 +141,10 @@ object KeYmaeraX {
   def parsesAsInteger(answer: String, solution: String): Dictionary[Any] =
     parseCheck(answer, _.toInt, (_: Int) => "Parsed OK")
 
+  @JSExportTopLevel("parsesAsIntegerList")
+  def parsesAsIntegerList(answer: String, solution: String): Dictionary[Any] =
+    parseCheck(answer, _.split(",").map(_.toInt).toList, (_: List[Int]) => "Parsed OK")
+
   @JSExportTopLevel("parsesAsNumber")
   def parsesAsNumber(answer: String, solution: String): Dictionary[Any] = parseCheck(answer, Parser, (_: Expression) match {
     case _: Number => "Parsed OK"
