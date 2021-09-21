@@ -5,7 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.annotation.tailrec
 import scala.collection.immutable.Set
 
 /**
@@ -55,6 +58,27 @@ object SubstitutionHelper {
     }, fml) match {
       case Some(g) => g
     }
+  }
+
+  /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
+  def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst = {
+    if (goal.subgoals(i) == sub.conclusion) USubst(List.empty)
+    else {
+      val unifSubstSymbols = UnificationMatch(goal.subgoals(i), sub.conclusion).usubst.subsDefsInput.
+        map(_.what).flatMap(StaticSemantics.symbols).toSet
+      val subst = USubst(defs.substs.filter(s => unifSubstSymbols.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
+      if (subst.subsDefsInput.nonEmpty) subst ++ collectSubst(goal(subst), i, sub(subst), defs)
+      else subst
+    }
+  }
+
+
+  /** Applies substitutions `s` to provable `p` exhaustively. */
+  @tailrec
+  def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
+    val substituted = p(s)
+    if (substituted != p) exhaustiveSubst(substituted, s)
+    else substituted
   }
 }
 

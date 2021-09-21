@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -265,11 +265,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
                 else try {
                   val downSubst = UnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
+                  (SubstitutionHelper.exhaustiveSubst(provable, downSubst)(SubstitutionHelper.exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
                 } catch {
                   case _: UnificationException =>
                     val upSubst = UnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
+                    (SubstitutionHelper.exhaustiveSubst(provable, upSubst)(SubstitutionHelper.exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
                 }
             })
 
@@ -597,7 +597,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
       val preservedSubstResult = goal match {
         case p: BelleDelayedSubstProvable => result match {
           case fp: BelleDelayedSubstProvable =>
-            assert(p.parent.isEmpty || exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
+            assert(p.parent.isEmpty || SubstitutionHelper.exhaustiveSubst(p.parent.get._1, p.subst ++ fp.subst) == SubstitutionHelper.exhaustiveSubst(fp.parent.get._1, p.subst ++ fp.subst),
               "Delayed substitution parents disagree")
             new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst ++ fp.subst, fp.parent)
           case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.defs, p.subst, p.parent)

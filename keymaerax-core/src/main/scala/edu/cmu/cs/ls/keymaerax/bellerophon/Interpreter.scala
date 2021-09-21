@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -53,8 +53,8 @@ trait Interpreter {
     val (substParent, substChild) =
       if (original.subgoals(n) == subderivation.conclusion) (original, subderivation)
       else if (subderivation.isProved) {
-        val substOrig = exhaustiveSubst(original, subst)
-        val substSubDeriv = exhaustiveSubst(subderivation, subst)
+        val substOrig = SubstitutionHelper.exhaustiveSubst(original, subst)
+        val substSubDeriv = SubstitutionHelper.exhaustiveSubst(subderivation, subst)
         //@todo may no longer need unification now that inner sequential interpreter returns delayed substitutions
         val unified = Try(UnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
           case Left(_) =>
@@ -64,10 +64,10 @@ trait Interpreter {
             }
           case Right(s) => s
         }
-        val substSubderivation = exhaustiveSubst(substSubDeriv, unified.usubst)
+        val substSubderivation = SubstitutionHelper.exhaustiveSubst(substSubDeriv, unified.usubst)
         (substOrig, substSubderivation)
       } else {
-        (exhaustiveSubst(original, subst), subderivation)
+        (SubstitutionHelper.exhaustiveSubst(original, subst), subderivation)
       }
     if (substParent.subgoals(n) == substChild.conclusion) {
       val merged = substParent(substChild, n)
@@ -82,7 +82,7 @@ trait Interpreter {
     case (rmerged: Boolean, rp: ProvableSig, rn: Int) =>
       (rn == n || rn == n+1) &&
       ((!rmerged && rp==subderivation) ||
-       ( rmerged && exhaustiveSubst(rp, subst).conclusion == exhaustiveSubst(original, subst).conclusion &&
+       ( rmerged && SubstitutionHelper.exhaustiveSubst(rp, subst).conclusion == SubstitutionHelper.exhaustiveSubst(original, subst).conclusion &&
          (if (subderivation.isProved) {
            rp.subgoals.size == original.subgoals.size - 1
          } else {
@@ -97,7 +97,7 @@ trait Interpreter {
     * modulo constification renaming that is assumed to be applied in the future. Constification renaming requires
     * `parent` to have exactly one single subgoal. */
   protected def assertSubMatchesModuloConstification(parent: ProvableSig, sub: ProvableSig, n: Int, subst: USubst): Unit = {
-    if (exhaustiveSubst(parent, subst).subgoals(n) != Try(exhaustiveSubst(sub, subst)).toOption.getOrElse(sub).conclusion &&
+    if (SubstitutionHelper.exhaustiveSubst(parent, subst).subgoals(n) != Try(SubstitutionHelper.exhaustiveSubst(sub, subst)).toOption.getOrElse(sub).conclusion &&
         !subMatchesModuloConstification(parent.subgoals(n), sub.conclusion, subst)) {
       throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${parent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${sub.conclusion}}),\nbut is not despite substitution $subst", sub.underlyingProvable)
     }
@@ -122,15 +122,6 @@ trait Interpreter {
       val backSubstSubConclusion = constifications.foldRight(sub)({ case ((fn, v), s) => s.replaceAll(fn, v) })
       parent == backSubstSubConclusion
     } else true
-  }
-
-
-    /** Applies substitutions `s` to provable `p` exhaustively. */
-  @tailrec
-  protected final def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
-    val substituted = p(s)
-    if (substituted != p) exhaustiveSubst(substituted, s)
-    else substituted
   }
 }
 

@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SubstitutionHelper, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -88,20 +88,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
     case _ => curr != prev
   }
 
-  //@note inner may have expanded multiple levels of definitions at once; collect which ones
-  // (favor over unification, which would flatten all definitions into a single substitution)
-  @tailrec
-  protected final def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration, subst: USubst): USubst = {
-    if (goal.subgoals(i) == sub.conclusion) subst
-    else {
-      val unifSubstSymbols = UnificationMatch(goal.subgoals(i), sub.conclusion).usubst.subsDefsInput.
-        map(_.what).flatMap(StaticSemantics.symbols).toSet
-      val addSubst = USubst(defs.substs.filter(s => unifSubstSymbols.intersect(StaticSemantics.symbols(s.what)).nonEmpty))
-      if (addSubst.subsDefsInput.nonEmpty) collectSubst(goal(addSubst), i, sub(addSubst), defs, subst ++ addSubst)
-      else subst
-    }
-  }
-
   /** Creates labels according to the number of subgoals of parent. */
   private def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
     (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
@@ -121,9 +107,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           val substs = subderivation match {
             case p: BelleDelayedSubstProvable => csubsts ++ p.subst
             //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
-            case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs, USubst(List.empty))
+            case _ => csubsts ++ SubstitutionHelper.collectSubst(cp, cidx, subderivation.p, defs)
           }
-          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, SubstitutionHelper.exhaustiveSubst(subderivation.p, csubsts), substs)
           //@todo want to keep names of cp abbreviated instead of substituted
           val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
             case (Some(origLabels), Some(newLabels)) =>
@@ -423,9 +409,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         case p: BelleDelayedSubstProvable =>
           try {
             val sub = p.p(us)
-            val addSubst = collectSubst(provable, 0, sub, p.defs, USubst(List.empty))
-            val substGoal = exhaustiveSubst(provable, addSubst)
-            val substSub = exhaustiveSubst(sub, addSubst)
+            val addSubst = SubstitutionHelper.collectSubst(provable, 0, sub, p.defs)
+            val substGoal = SubstitutionHelper.exhaustiveSubst(provable, addSubst)
+            val substSub = SubstitutionHelper.exhaustiveSubst(sub, addSubst)
             new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
@@ -659,9 +645,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         })
 
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l, d), (BelleProvable(sp, sl, sd), i)) =>
-          val substs = collectSubst(p, i, sp, defs, USubst(List.empty))
-          val pSubst = exhaustiveSubst(p, substs)
-          val spSubst = exhaustiveSubst(sp, substs)
+          val substs = SubstitutionHelper.collectSubst(p, i, sp, defs)
+          val pSubst = SubstitutionHelper.exhaustiveSubst(p, substs)
+          val spSubst = SubstitutionHelper.exhaustiveSubst(sp, substs)
           BelleProvable(pSubst(spSubst, i),
             l match {
               case Some(labels) => Some(labels.patch(i, Nil, 1) ++ sl.getOrElse(Nil))
