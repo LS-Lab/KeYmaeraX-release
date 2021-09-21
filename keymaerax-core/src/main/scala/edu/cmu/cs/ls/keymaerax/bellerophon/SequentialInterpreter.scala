@@ -8,7 +8,7 @@ import java.util.concurrent.CancellationException
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -622,10 +622,18 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
             //@note positions are not stable, can't rely on p-index/q-index to refer to the right formula
             TacticFactory.anon ((seq: Sequent) => {
               if (fn == "p_") {
-                val i = seq.ante.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml).nonEmpty)
+                //@note only accept matches with DotTerm LHS, otherwise already back-assigned predicates p(x,y,z)
+                // may match still abbreviated s.repl [x:=._0;][y:=._1;][z:=._2;]blah and find wrong index
+                val i = seq.ante.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml) match {
+                  case Some(u) => u.usubst.subsDefsInput.map(_.what).forall(_.isInstanceOf[DotTerm])
+                  case None => false
+                })
                 TactixLibrary.assignb(AntePos(i))*StaticSemantics.symbols(arg).size
               } else if (fn == "q_") {
-                val i = seq.succ.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml).nonEmpty)
+                val i = seq.succ.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml) match {
+                  case Some(u) => u.usubst.subsDefsInput.map(_.what).forall(_.isInstanceOf[DotTerm])
+                  case None => false
+                })
                 TactixLibrary.assignb(SuccPos(i))*StaticSemantics.symbols(arg).size
               } else throw new BelleCriticalException("Implementation error in Using: expected abbreviated p_ or q_") {}
             })

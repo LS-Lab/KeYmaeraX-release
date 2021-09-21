@@ -942,4 +942,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       case None => fail("Expected labels, but got None")
     })
   }
+
+  it should "match correctly in index search" in withTactics {
+    val s = "x>=0, p(x,y), q(x,y,z) ==> x>=0 & p(x,y) & q(x)".asSequent
+    proveBy(s, Using(List("x>=0".asFormula), SimplifierV3.simplify(1))).subgoals.
+      loneElement shouldBe "x>=0, p(x,y), q(x,y,z) ==> p(x,y) & q(x)".asSequent
+  }
 }
