@@ -4,9 +4,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real, USubst}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
 import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Signature, UnknownLocation}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Name, Region, Signature, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -44,6 +44,16 @@ class ScriptedRequestTests extends TacticTestBase {
     db.db.getModelList("guest") shouldBe empty
   }
 
+  /** Returns the regions where `of` occurs in `text` (first occurrence per line). */
+  private def regionIn(text: String, of: String): List[Region] = {
+    text.linesWithSeparators.zipWithIndex.filter({ case (s, _) => s.contains(of) }).map({
+      case (s, i) =>
+        //@note verbose printer at most one tactic per line
+        val start = s.indexOf(of)
+        Region(i, start, i, start + of.length)
+    }).toList
+  }
+
   "Proof step execution" should "make a simple step" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> x>=0 End."
     val proofId = db.createProof(modelContents)
@@ -61,6 +71,43 @@ class ScriptedRequestTests extends TacticTestBase {
       case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some("x>=0 ==> x>=0".asSequent)))
+    }
+
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText, loc) =>
+        tacticText should equal("""implyR('R=="x>=0 -> x>=0");nil""".stripMargin) (after being whiteSpaceRemoved)
+        loc shouldBe Map(
+          regionIn(tacticText, """implyR('R=="x>=0->x>=0")""").head -> "()",
+          regionIn(tacticText, "nil").head -> "(1,0)"
+        )
+    }
+  }}
+
+  it should "close with a simple step" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", QE) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, leaves, _, _, _, _) =>
+        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        leaves shouldBe 'empty
+    }
+
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText, loc) =>
+        tacticText should equal("""QE""".stripMargin) (after being whiteSpaceRemoved)
+        loc shouldBe Map(
+          regionIn(tacticText, """QE""").head -> "()"
+        )
     }
   }}
 
@@ -97,6 +144,39 @@ class ScriptedRequestTests extends TacticTestBase {
         l1 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
         l2 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
         l3 should have ('goal (Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
+    }
+
+    tacticRunner("(2,2)", assignb(1))
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, _, root, l1::l2::l3::Nil, _, _, _, _) =>
+        root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
+        l1 should have ('goal (Some("x>=1 ==> x+1>=1".asSequent)))
+        l2 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
+        l3 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
+    }
+
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText, loc) =>
+        tacticText should equal (
+          """implyR('R=="x>=2->[{x:=x+1;}*]x>=0");
+            |loop("x>=1", 'R=="[{x:=x+1;}*]x>=0"); <(
+            |  "Init":
+            |    nil,
+            |  "Post":
+            |    nil,
+            |  "Step":
+            |    assignb('R=="[x:=x+1;]x>=1");
+            |    nil
+            |)""".stripMargin) (after being whiteSpaceRemoved)
+        val nilRegions = regionIn(tacticText, "nil")
+        loc shouldBe Map(
+          regionIn(tacticText, """implyR('R=="x>=2->[{x:=x+1;}*]x>=0")""").head -> "()",
+          regionIn(tacticText, """loop("x>=1", 'R=="[{x:=x+1;}*]x>=0")""").head -> "(1,0)",
+          nilRegions(0) -> "(2,0)",
+          nilRegions(1) -> "(2,1)",
+          regionIn(tacticText, """assignb('R=="[x:=x+1;]x>=1")""").head -> "(2,2)",
+          nilRegions(2) -> "(3,0)"
+        )
     }
   }}
 
@@ -137,11 +217,17 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText, _) => tacticText should equal(
+      case GetTacticResponse(tacticText, loc) =>
+        tacticText should equal(
         """andR('R=="x^2>=0 & x^4>=0"); <(
           |"x^2>=0": nil,
           |"x^4>=0": nil
           |)""".stripMargin) (after being whiteSpaceRemoved)
+        loc shouldBe Map(
+          regionIn(tacticText, """andR('R=="x^2>=0&x^4>=0")""").head -> "()",
+          regionIn(tacticText, "nil")(0) -> "(1,0)",
+          regionIn(tacticText, "nil")(1) -> "(1,1)",
+        )
     }
   }}
 
@@ -159,7 +245,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText, _) => tacticText should equal (
+      case GetTacticResponse(tacticText, loc) => tacticText should equal (
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
         """andR(1); <(nil, prop); <(
           |"x=3": nil,
@@ -168,6 +254,16 @@ class ScriptedRequestTests extends TacticTestBase {
           |"x^2>=4//x < (-2)": nil,
           |"x^4>=16//x < (-2)": nil
           |)""".stripMargin) (after being whiteSpaceRemoved)
+        val nilRegions = regionIn(tacticText, "nil")
+        loc shouldBe Map(
+          Region(0,0,3,1) -> "()",
+          //@note first nil is not its own node because it's part of the user-provided tactic script
+          nilRegions(1) -> "(1,0)",
+          nilRegions(2) -> "(1,1)",
+          nilRegions(3) -> "(1,2)",
+          nilRegions(4) -> "(1,3)",
+          nilRegions(5) -> "(1,4)"
+        )
     }
   }}
 
@@ -182,7 +278,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", andR(1))
     tacticRunner("(1,1)", prop)
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText, _) => tacticText should equal (
+      case GetTacticResponse(tacticText, loc) => tacticText should equal (
         """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
           |"x=3": nil,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":
@@ -193,6 +289,17 @@ class ScriptedRequestTests extends TacticTestBase {
           |    "x^4>=16//x < (-2)": nil
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
+        println(tacticText)
+        val nilRegions = regionIn(tacticText, "nil")
+        loc shouldBe Map(
+          regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "()",
+          nilRegions(0) -> "(1,0)",
+          regionIn(tacticText, "prop").head -> "(1,1)",
+          nilRegions(1) -> "(2,0)",
+          nilRegions(2) -> "(2,1)",
+          nilRegions(3) -> "(2,2)",
+          nilRegions(4) -> "(2,3)"
+        )
     }
   }}
 

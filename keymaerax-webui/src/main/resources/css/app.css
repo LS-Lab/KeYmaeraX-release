@@ -644,9 +644,46 @@ del {
   word-wrap: break-word;
 }
 
-.k4-tactic-diff {
+.k4-tactic-todo-icon::before {
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+.k4-tactic-todo::before {
+  content: "\f040"; /* fontawesome pencil */
+  color: gray;
+  font-family: FontAwesome;
+  left: -1em;
   position: absolute;
-  border-bottom: 1px dashed;
+  top: 0;
+}
+
+.k4-tactic-todo-active::before {
+  content: "\f04b  \f00d"; /* fontawesome play, times */
+  color: black;
+  font-family: FontAwesome;
+  left: 0.3em;
+  position: absolute;
+  top: -0.1ex;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.k4-tactic-todo-active {
+  position: absolute;
+  border-bottom: 1px solid green;
+  border-right: 1px solid green;
+  border-top: 1px solid green;
+  border-left: 5px solid green;
+}
+
+.k4-tactic-todo {
+  position: absolute;
+  border: 1px solid gray;
+  border-radius: 2px;
 }
 
 .k4-no-padding {

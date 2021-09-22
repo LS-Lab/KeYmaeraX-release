@@ -210,13 +210,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     /** The tactic model */
     tactic: {
       tacticText: "",
-      nodesByLocation: undefined,
+      nodesByLocation: [],
       snapshot: undefined,
       verbose: true,
 
       fetch: function(userId, proofId) {
         var theTactic = this;
-        theTactic.synced = false;
         $http.get('proofs/user/' + userId + '/' + proofId + '/extract/' + (theTactic.verbose ? "verbose" : "succinct")).then(function (response) {
           theTactic.snapshot = response.data.tacticText;
           theTactic.tacticText = response.data.tacticText;
@@ -229,7 +228,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
       nodeIdAtLoc: function(line, column) {
         var nodesAtLoc = $.grep(this.nodesByLocation, function(v) {
-          return v.loc.line <= line && line <= v.loc.endLine && v.loc.column <= column && column <= v.loc.endColumn;
+          return v.loc.line <= line && line <= v.loc.endLine; //&& v.loc.column <= column && column <= v.loc.endColumn;
         });
         return nodesAtLoc.length > 0 ? nodesAtLoc[0].node : undefined;
       },
