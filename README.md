@@ -62,7 +62,7 @@ To compile KeYmaera X from source code and learn about faster incremental compil
 In a nutshell, install
 
 * [Java Development Kit JDK](https://www.oracle.com/java/technologies/javase-downloads.html) or [OpenJDK](https://openjdk.java.net/) (be sure to use version 1.8-12, Java 13 onwards does not work)
-* SBT 0.13.17
+* SBT 1.3.7
 * Scala 2.12.8 
 
 and run the following to build `keymaerax.jar`:
