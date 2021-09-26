@@ -375,6 +375,13 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
         |Expected: ;""".stripMargin
   }
 
+  it should "now swallow parse exceptions when parsing sequents" in {
+    the [ParseException] thrownBy "==> [x'=:=2*y;][y':=-4*x;]4*(2*x*x')+2*(2*y*y')=0".asSequent should have message
+      """1:5 Missing right-hand side x'=
+        |Found:    := at 1:5 to 1:6
+        |Expected: $$$T""".stripMargin
+  }
+
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
     Parser("r_0 > 0") should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }
