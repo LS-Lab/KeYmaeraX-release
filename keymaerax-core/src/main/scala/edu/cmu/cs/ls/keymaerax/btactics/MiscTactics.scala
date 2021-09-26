@@ -247,6 +247,9 @@ object Idioms {
   /** no-op nil */
   lazy val ident: BuiltInTactic = nil
 
+  /** no-op nil */
+  lazy val todo: BuiltInTactic = nil
+
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = t | TactixLibrary.nil
 

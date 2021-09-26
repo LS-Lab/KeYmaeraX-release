@@ -74,7 +74,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           $scope.changeTab = function(nodeId) {
             if ($scope.edit.activeMarker) {
               var doc = $scope.aceEditor.getSession().getDocument();
-              if (doc.getTextRange($scope.edit.activeMarker.range).substring(1) != "nil") {
+              if (doc.getTextRange($scope.edit.activeMarker.range).substring(1) != "todo") {
                 $scope.askSaveTacticChanges(nodeId);
               } else {
                 $scope.onNodeSelected({nodeId: nodeId});
@@ -149,7 +149,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 var range = editor.selection.getRange();
                 var doc = editor.getSession().getDocument();
                 if ($scope.edit.activeMarker) {
-                  // editing between the anchors created on nil is allowed, but not outside
+                  // editing between the anchors created on unfinished tactics is allowed, but not outside
                   if (!$scope.edit.activeMarker.range.containsRange(range)) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -163,8 +163,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             });
           }
 
-          $scope.allIndicesOfNil = function(text) {
-            var regex = /nil/gi;
+          $scope.allIndicesOfTodo = function(text) {
+            var regex = /todo/gi;
             var result;
             var indices = [];
             while (result = regex.exec(text)) {
@@ -187,14 +187,14 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             } else if (delta[0].action == "insert" &&
                        delta[0].lines.length === doc.getAllLines().length &&
                        delta[0].lines.every(function(e,i) { return e === doc.getAllLines()[i]; } )) {
-              // mark all occurrences of nil
-              var nilIndices = $scope.allIndicesOfNil(doc.getValue());
+              // mark all occurrences of unfinished tactics
+              var todoIndices = $scope.allIndicesOfTodo(doc.getValue());
               if ($scope.edit.todoMarkers.length == 0) {
-                $.each(nilIndices, function(i,e) {
+                $.each(todoIndices, function(i,e) {
                   var pos = doc.indexToPosition(e);
                   var range = new ace.Range();
                   range.start = doc.createAnchor(pos.row, pos.column-1);
-                  range.end = doc.createAnchor(pos.row, pos.column + "nil".length);
+                  range.end = doc.createAnchor(pos.row, pos.column + "todo".length);
                   var marker = session.addMarker(range, "k4-tactic-todo-icon k4-tactic-todo", "text", true);
                   $scope.edit.todoMarkers.push({ range: range, marker: marker });
                 });

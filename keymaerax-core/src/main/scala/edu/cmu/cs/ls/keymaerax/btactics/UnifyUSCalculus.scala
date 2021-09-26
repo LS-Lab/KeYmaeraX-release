@@ -116,6 +116,10 @@ trait UnifyUSCalculus {
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
   val nil : BuiltInTactic = anonnoop { Idioms.nil.result }
+  /** A no-op tactic that as no effect but marks an open proof task.
+    * @see [[skip]],[[nil]] */
+  @Tactic()
+  val todo : BuiltInTactic = anonnoop { Idioms.todo.result }
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
