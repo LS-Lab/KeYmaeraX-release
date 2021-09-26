@@ -107,9 +107,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
           val substs = subderivation match {
             case p: BelleDelayedSubstProvable => csubsts ++ p.subst
             //@note child tactics may expand definitions internally and succeed, so won't return a delayed provable (e.g. QE)
-            case _ => csubsts ++ SubstitutionHelper.collectSubst(cp, cidx, subderivation.p, defs)
+            case _ => csubsts ++ collectSubst(cp, cidx, subderivation.p, defs)
           }
-          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, SubstitutionHelper.exhaustiveSubst(subderivation.p, csubsts), substs)
+          val (_, combinedProvable, nextIdx) = applySubDerivation(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
           //@todo want to keep names of cp abbreviated instead of substituted
           val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
             case (Some(origLabels), Some(newLabels)) =>
@@ -409,9 +409,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         case p: BelleDelayedSubstProvable =>
           try {
             val sub = p.p(us)
-            val addSubst = SubstitutionHelper.collectSubst(provable, 0, sub, p.defs)
-            val substGoal = SubstitutionHelper.exhaustiveSubst(provable, addSubst)
-            val substSub = SubstitutionHelper.exhaustiveSubst(sub, addSubst)
+            val addSubst = collectSubst(provable, 0, sub, p.defs)
+            val substGoal = exhaustiveSubst(provable, addSubst)
+            val substSub = exhaustiveSubst(sub, addSubst)
             new BelleDelayedSubstProvable(substGoal(substSub, 0), p.label, p.defs, p.subst ++ addSubst, p.parent)
           } catch {
             case _: SubstitutionClashException =>
@@ -645,9 +645,9 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
         })
 
         goalResults.zipWithIndex.reverse.foldLeft(bp)({ case (BelleProvable(p, l, d), (BelleProvable(sp, sl, sd), i)) =>
-          val substs = SubstitutionHelper.collectSubst(p, i, sp, defs)
-          val pSubst = SubstitutionHelper.exhaustiveSubst(p, substs)
-          val spSubst = SubstitutionHelper.exhaustiveSubst(sp, substs)
+          val substs = collectSubst(p, i, sp, defs)
+          val pSubst = exhaustiveSubst(p, substs)
+          val spSubst = exhaustiveSubst(sp, substs)
           BelleProvable(pSubst(spSubst, i),
             l match {
               case Some(labels) => Some(labels.patch(i, Nil, 1) ++ sl.getOrElse(Nil))

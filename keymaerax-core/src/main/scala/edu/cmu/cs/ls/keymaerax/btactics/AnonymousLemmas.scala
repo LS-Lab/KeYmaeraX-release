@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import TacticFactory._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
@@ -28,8 +28,8 @@ object AnonymousLemmas {
   def cacheTacticResult(t: => BelleExpr, namespace: String, defs: Declaration): BuiltInTactic = anons ((provable: ProvableSig) => {
     val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
     subderivations.foldRight(provable)({ case ((sub, i), p) =>
-      val subst = SubstitutionHelper.collectSubst(p, i, sub, defs)
-      SubstitutionHelper.exhaustiveSubst(p, subst)(sub, i)
+      val subst = UnificationTools.collectSubst(p.underlyingProvable, i, sub.underlyingProvable, defs)
+      p.reapply(SubstitutionHelper.exhaustiveSubst(p.underlyingProvable, subst))(sub, i)
     })
   })
 
