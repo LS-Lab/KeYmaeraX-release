@@ -8,9 +8,9 @@ import java.util.concurrent.CancellationException
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, DebuggingTactics, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{Ax, ConfigurableGenerator, FixedGenerator, InvariantGenerator, TacticFactory, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -506,7 +506,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       val unifications = children.map({ case (ty, expr) =>
         ty match {
           case SequentType(s) => try {
-            (UnificationMatch(s, provable.subgoals.head), expr)
+            (RestrictedBiDiUnificationMatch(s, provable.subgoals.head), expr)
           } catch {
             // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
             // fall back to user-provided substitution
@@ -519,7 +519,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       })
 
       //@note try user-provided last unification
-      val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) =
+      val unification: (RestrictedBiDiUnificationMatch.Subst, RenUSubst => BelleExpr) =
         if (unifications.forall(_._1.isEmpty)) unifications.last
         else unifications.filterNot(_._1.isEmpty).head
 
@@ -610,13 +610,13 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
               if (fn == "p_") {
                 //@note only accept matches with DotTerm LHS, otherwise already back-assigned predicates p(x,y,z)
                 // may match still abbreviated s.repl [x:=._0;][y:=._1;][z:=._2;]blah and find wrong index
-                val i = seq.ante.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml) match {
+                val i = seq.ante.indexWhere(fml => RestrictedBiDiUnificationMatch.unifiable(s.repl, fml) match {
                   case Some(u) => u.usubst.subsDefsInput.map(_.what).forall(_.isInstanceOf[DotTerm])
                   case None => false
                 })
                 TactixLibrary.assignb(AntePos(i))*StaticSemantics.symbols(arg).size
               } else if (fn == "q_") {
-                val i = seq.succ.indexWhere(fml => UnificationMatch.unifiable(s.repl, fml) match {
+                val i = seq.succ.indexWhere(fml => RestrictedBiDiUnificationMatch.unifiable(s.repl, fml) match {
                   case Some(u) => u.usubst.subsDefsInput.map(_.what).forall(_.isInstanceOf[DotTerm])
                   case None => false
                 })

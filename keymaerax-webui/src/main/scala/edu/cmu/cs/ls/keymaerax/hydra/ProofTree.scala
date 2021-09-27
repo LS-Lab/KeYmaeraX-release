@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, FuncOf, Loop, ODESystem, PredOf, Sequent, StaticSemantics, SubstitutionClashException, SubstitutionPair, USubst, Variable}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Location}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, RestrictedBiDiUnificationMatch}
+import edu.cmu.cs.ls.keymaerax.parser.Location
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -166,13 +166,13 @@ trait ProofTreeNode {
       val substSub = exhaustiveSubst(sub, subst)
       try {
         //@note unification now returns mixed up/down substitutions; thus we substitute in both sub and goal
-        val addSubst = UnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        val addSubst = RestrictedBiDiUnificationMatch(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
         exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
       } catch {
         case _: UnificationException =>
           try {
             //@todo mixed unification may no longer make this fallback necessary
-            val addSubst = UnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+            val addSubst = RestrictedBiDiUnificationMatch(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
             exhaustiveSubst(substGoal, addSubst)(exhaustiveSubst(substSub, addSubst), i) -> maxExpandedSubsts(substs ++ addSubst.subsDefsInput)
           } catch {
             case ex: SubstitutionClashException if ex.e.asTerm.isInstanceOf[Variable] && ex.context.asTerm.isInstanceOf[FuncOf] =>

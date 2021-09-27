@@ -239,6 +239,64 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
   }
 }
 
+object RestrictedBiDiUnificationMatch extends RestrictedBiDiUnificationMatch
+class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
+  override protected def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {
+    // homomorphic cases
+    case Neg(t)          => e2 match {case Neg(t2)          => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    // case o: BinaryCompositeTerm => e2 match {case o2: BinaryCompositeTerm if o2.reapply==o.reapply => unify(o.left,o.right, o2.left,o2.right) case _ => ununifiable(e1,e2)}
+    case Plus  (l, r) => e2 match {case Plus  (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Minus (l, r) => e2 match {case Minus (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Times (l, r) => e2 match {case Times (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Divide(l, r) => e2 match {case Divide(l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    case Power (l, r) => e2 match {case Power (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+    // unofficial
+    case Pair  (l, r) => e2 match {case Pair  (l2,r2) => unifies2(l,r, l2,r2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
+
+    // default
+    case _ => super.unify(e1, e2)
+  }
+
+  override protected def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
+    // homomorphic base cases
+    case Equal       (l, r) => e2 match {case Equal       (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case NotEqual    (l, r) => e2 match {case NotEqual    (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Greater     (l, r) => e2 match {case Greater     (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case LessEqual   (l, r) => e2 match {case LessEqual   (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Less        (l, r) => e2 match {case Less        (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // homomorphic cases
+    case Not(g)      => e2 match {case Not(g2)      => unify(g,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case And  (l, r) => e2 match {case And  (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Or   (l, r) => e2 match {case Or   (l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Imply(l, r) => e2 match {case Imply(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unifies2(l,r, l2,r2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // NOTE DifferentialFormula in analogy to Differential
+    case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // pseudo-homomorphic cases
+    //@todo join should be enough for the two unifiers in this case after they have been applied to the other side
+    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // homomorphic cases
+    case Box    (a, p)   => e2 match {case Box    (a2,p2) => unifies2(a,p, a2,p2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unifies2(a,p, a2,p2) case p: PredOf => unify(p,e1) case _ => ununifiable(e1,e2)}
+
+    // default implementation
+    case _ => super.unify(e1, e2)
+  }
+
+  override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] =
+    if (x1==e2) id else e2 match {
+      case v: Variable => unifier(x1,v)
+      case fn: FuncOf => unifier(fn,x1)
+      case _ => ununifiable(x1,e2)}
+}
+
 
 /**
   * Unification/matching algorithm for fresh shapes (with built-in names such as those in axioms).

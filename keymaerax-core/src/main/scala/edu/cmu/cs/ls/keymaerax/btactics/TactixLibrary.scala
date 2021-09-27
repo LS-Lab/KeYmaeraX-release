@@ -13,9 +13,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, FormulaTools, PosInExpr, Position, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification.autoMonotonicityTransform
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration}
@@ -1033,10 +1032,10 @@ object TactixLibrary extends HilbertCalculus
     val goal = USubst(recordedSubsts)(sanitize(seq.toFormula))
     // bridge additional differences not in the definitions (e.g., constant in lemma but variable in theorem)
     val subst = try {
-      Some(UnificationMatch(goal, conclusion))
+      Some(RestrictedBiDiUnificationMatch(goal, conclusion))
     } catch {
       case _: UnificationException => try {
-        Some(UnificationMatch(conclusion, goal))
+        Some(RestrictedBiDiUnificationMatch(conclusion, goal))
       } catch {
         case _: UnificationException => None
       }

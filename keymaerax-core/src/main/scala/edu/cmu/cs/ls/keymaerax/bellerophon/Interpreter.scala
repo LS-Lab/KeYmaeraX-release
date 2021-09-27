@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationMatch, UnificationTools}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RestrictedBiDiUnificationMatch, SubstitutionHelper, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -66,9 +66,9 @@ trait Interpreter {
         val substOrig = exhaustiveSubst(original, subst)
         val substSubDeriv = exhaustiveSubst(subderivation, subst)
         //@todo may no longer need unification now that inner sequential interpreter returns delayed substitutions
-        val unified = Try(UnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
+        val unified = Try(RestrictedBiDiUnificationMatch(substSubDeriv.conclusion, substOrig.subgoals(n))).toEither match {
           case Left(_) =>
-            Try(UnificationMatch(substOrig.subgoals(n), substSubDeriv.conclusion)).toEither match {
+            Try(RestrictedBiDiUnificationMatch(substOrig.subgoals(n), substSubDeriv.conclusion)).toEither match {
               case Left(ex) => throw ex
               case Right(s) => s
             }

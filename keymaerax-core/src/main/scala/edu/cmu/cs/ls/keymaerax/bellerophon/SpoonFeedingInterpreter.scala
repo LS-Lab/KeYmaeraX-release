@@ -4,21 +4,17 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.ExecutionException
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, SubstitutionHelper, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, TimeoutException}
-import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.util.{Failure, Success, Try}
 
 trait ExecutionContext {
@@ -264,11 +260,11 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                 // provables may have expanded or not expanded definitions arbitrarily
                 if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
                 else try {
-                  val downSubst = UnificationMatch(provable.subgoals(i), cp.conclusion).usubst
+                  val downSubst = RestrictedBiDiUnificationMatch(provable.subgoals(i), cp.conclusion).usubst
                   (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
                 } catch {
                   case _: UnificationException =>
-                    val upSubst = UnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
+                    val upSubst = RestrictedBiDiUnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
                     (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
                 }
             })
@@ -302,7 +298,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
             val expr = pair._2
             ty match {
               case SequentType(s) => try {
-                (UnificationMatch(s, provable.subgoals.head), expr)
+                (RestrictedBiDiUnificationMatch(s, provable.subgoals.head), expr)
               } catch {
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
@@ -315,7 +311,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           })
 
           //@note try user-provided last unification
-          val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) =
+          val unification: (RestrictedBiDiUnificationMatch.Subst, RenUSubst => BelleExpr) =
             if (unifications.forall(_._1.isEmpty)) unifications.last
             else unifications.filterNot(_._1.isEmpty).head
 
@@ -528,7 +524,6 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                     runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                     runningInner(tactic, BelleProvable(provable.sub(0), labels, defs)) match {
                       case p: BelleDelayedSubstProvable =>
-                        val foo = p
                         val resultLabels = updateLabels(labels, 0, p.label)
                         val (wasMerged, mergedProvable, _) = applySubDerivation(provable, 0, p.p, p.subst)
                         val parent = p.parent match {
