@@ -359,9 +359,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val diffInvariants = replace(pushOld(combineDiffInvariants(pl.diffInvariants.toList, plant, Map())), olds)
 
       val odeGuard = if (evolDomain == True) diffInvariants else And(evolDomain, diffInvariants)
-      val guardedPlant =
-        if (evolDomain == True) Compose(nondetPlant, Test(odeGuard))
-        else Compose(Test(evolDomain), Compose(nondetPlant, Test(odeGuard)))
+      val guardedPlant = Compose(Test(odeGuard), Compose(nondetPlant, Test(odeGuard)))
       val body = measure match {
         case Some(m) => Compose(ctrl, Compose(Compose(x0Ghosts, guardedPlant), m))
         case None => Compose(ctrl, Compose(x0Ghosts, guardedPlant))
