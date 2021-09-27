@@ -652,24 +652,26 @@ del {
   -webkit-font-smoothing: antialiased;
 }
 
-.k4-tactic-todo::before {
+.k4-tactic-todo::after {
   content: "\f040"; /* fontawesome pencil */
   color: gray;
   font-family: FontAwesome;
-  left: -1em;
+  right: -1em;
   position: absolute;
   top: 0;
 }
 
-.k4-tactic-todo-active::before {
-  content: "\f04b  \f00d"; /* fontawesome play, times */
-  color: black;
+.ace_gutter-cell.ace_breakpoint {
+  color: transparent; /* hide line number */
+  border-radius: 20px 0px 0px 20px;
+  box-shadow: 0px 0px 1px 1px green inset;
+}
+
+.ace_gutter-cell.ace_breakpoint::before {
+  content: "\f04b"; /* fontawesome play */
   font-family: FontAwesome;
-  left: 0.3em;
-  position: absolute;
-  top: -0.1ex;
-  pointer-events: auto;
-  cursor: pointer;
+  color: black;
+  margin-left: -1em; /* play icon is 1em wide */
 }
 
 .k4-tactic-todo-active {

@@ -29,6 +29,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           $scope.resetActiveEdit = function() {
             if ($scope.edit.activeMarker) {
               $scope.aceEditor.getSession().removeMarker($scope.edit.activeMarker.active);
+              $scope.aceEditor.getSession().clearBreakpoint($scope.edit.activeMarker.range.start.row);
               $scope.aceEditor.getSession().addMarker($scope.edit.activeMarker.marker);
             }
             $scope.edit.activeMarker = undefined;
@@ -52,7 +53,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                   // yes: execute tactic, but don't change tab
                   var editRange = $scope.edit.activeMarker.range;
                   var doc = $scope.aceEditor.getSession().getDocument();
-                  var tactic = { text: doc.getTextRange(editRange).substring(1) };
+                  var tactic = { text: doc.getTextRange(editRange) };
                   $scope.executeTactic(tactic, false);
                 } else {
                   // no: discard tactic changes if there are any and change tab
@@ -74,7 +75,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           $scope.changeTab = function(nodeId) {
             if ($scope.edit.activeMarker) {
               var doc = $scope.aceEditor.getSession().getDocument();
-              if (doc.getTextRange($scope.edit.activeMarker.range).substring(1) != "todo") {
+              if (doc.getTextRange($scope.edit.activeMarker.range) != "todo") {
                 $scope.askSaveTacticChanges(nodeId);
               } else {
                 $scope.onNodeSelected({nodeId: nodeId});
@@ -86,24 +87,26 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
 
           $scope.aceLoaded = function(editor) {
             $scope.aceEditor = editor;
+            editor.on("guttermousedown", function(e) {
+              var target = e.domEvent.target;
+              if (target.className.indexOf("ace_gutter-cell") == -1) return;
+              if (!editor.isFocused()) return;
+              if (e.clientX > 25 + target.getBoundingClientRect().left) return;
+
+              var doc = editor.getSession().getDocument();
+              var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;
+              if (activeRange) {
+                var tactic = { text: doc.getTextRange(activeRange) };
+                if (tactic.text.length > 0) $scope.executeTactic(tactic, false);
+              }
+              e.stop();
+            });
             editor.on("click", function(e) {
               var p = e.getDocumentPosition();
               var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;
               if (activeRange && activeRange.start.row <= p.row && p.row <= activeRange.end.row) {
-                var doc = editor.getSession().getDocument();
-                var tactic = { text: doc.getTextRange(activeRange).substring(1) };
                 e.preventDefault();
                 e.stopPropagation();
-                if (p.column == 1) {
-                  // execute tactic
-                  if (tactic.text.length > 0) {
-                    $scope.executeTactic(tactic, false);
-                  }
-                } else if (p.column == 3) {
-                  // discard tactic
-                  $scope.tactic.tacticText = $scope.tactic.snapshot;
-                  $scope.resetActiveEdit();
-                }
               } else {
                 var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
                 if (nodeId && nodeId != $scope.nodeId) {
@@ -132,6 +135,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                       $scope.edit.activeMarker = e;
                       editor.getSession().removeMarker(e.marker);
                       $scope.edit.activeMarker.active = editor.getSession().addMarker($scope.edit.activeMarker.range, "k4-tactic-todo-active", "fullLine", true);
+                      editor.getSession().setBreakpoint($scope.edit.activeMarker.range.start.row);
                     }
                   });
                 }
@@ -177,9 +181,9 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             var session = $scope.aceEditor.getSession();
             var doc = session.getDocument();
 
-            if (delta.length > 0 && delta[0] && delta[0].action == "remove") {
-              //@note remove happens when a tactic is executed or undone, need to recalculate markers on upcoming insert
-              if ($scope.edit.activeMarker) resetActiveEdit();
+            if (delta.length > 0 && delta[0] && delta[0].action == "remove" && delta[0].lines.length > 1) {
+              //@note multi-line remove happens when a tactic is executed or undone, need to recalculate markers on upcoming insert
+              if ($scope.edit.activeMarker) $scope.resetActiveEdit();
               $.each($scope.edit.todoMarkers, function(i, e) {
                 session.removeMarker(e.marker);
               });
@@ -193,7 +197,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 $.each(todoIndices, function(i,e) {
                   var pos = doc.indexToPosition(e);
                   var range = new ace.Range();
-                  range.start = doc.createAnchor(pos.row, pos.column-1);
+                  range.start = pos;
                   range.end = doc.createAnchor(pos.row, pos.column + "todo".length);
                   var marker = session.addMarker(range, "k4-tactic-todo-icon k4-tactic-todo", "text", true);
                   $scope.edit.todoMarkers.push({ range: range, marker: marker });
