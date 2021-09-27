@@ -799,7 +799,9 @@ object SimplifierV3 {
     useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentityNeg.provable))
 
   private lazy val negArith: List[ProvableSig] = List(
-    Ax.minusNeg.provable)
+    Ax.minusNeg.provable,
+    Ax.negNeg.provable
+  )
 
   private lazy val plusArith: List[ProvableSig] = List(
     Ax.plusZero.provable,
