@@ -221,7 +221,11 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
-      Subst(us)
+      try {
+        Subst(us)
+      } catch {
+        case ex: Throwable => throw new UnificationException(e1.prettyString, e2.prettyString, "Invalid substitution computed", ex)
+      }
     else {
       val ren = MultiRename(RenUSubst.renamingPartOnly(us))
       Subst(us.map(sp =>
