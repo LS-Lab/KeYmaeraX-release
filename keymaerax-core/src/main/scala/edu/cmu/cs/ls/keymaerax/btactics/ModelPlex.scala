@@ -1020,6 +1020,50 @@ object ModelPlex extends ModelPlexTrait with Logging {
     here | left | right
   })
 
+  /** Partial QE on a formula that first abbreviates all uninterpreted function symbols to variables and
+    * then substitutes back in on the result. */
+  def mxPartialQE(fml: Formula, defs: Declaration): Formula = {
+    // Reduce/Resolve do not support arbitrary functions -> abbreviate to nullary functions for QE
+    val is = scala.collection.mutable.Map.empty[Function, Int]
+    val vars = scala.collection.mutable.Map.empty[FuncOf, FuncOf]
+    val bv = StaticSemantics.boundVars(fml)
+
+    def replaceOrExpand[T <: Expression](expr: T): T = ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case fn@FuncOf(f@Function(n, i, d, _, false), args) if d != Unit =>
+          if (StaticSemantics.freeVars(args).intersect(bv).isEmpty) {
+            //@note can abbreviate, fn does not depend on any of the quantified variables
+            if (!vars.contains(fn)) {
+              is(fn.func) = is.get(fn.func).map(_ + 1).getOrElse(0)
+              vars(fn) = FuncOf(f.copy(
+                name = n + i.map(_.toString).getOrElse(""),
+                index = Some(is(fn.func)),
+                domain = Unit), Nothing)
+            }
+            Right(vars(fn))
+          } else {
+            //@note expand fn to expose dependency on quantified variables
+            val repl = replaceOrExpand(defs.substs.find(s => s.what match {
+              case FuncOf(wfn, _) => wfn == f
+              case _ => false
+            }).map(sp => USubst(List(sp))(fn)).getOrElse(fn))
+            Right(repl)
+          }
+        case _ => Left(None)
+      }
+    }, expr).get
+
+    val fnified = replaceOrExpand(fml)
+    //@todo sort vars topologically and use Let
+    proveBy(fnified, TactixLibrary.partialQE).subgoals.toList match {
+      case Nil => True
+      case Sequent(IndexedSeq(), IndexedSeq(g)) :: Nil =>
+        vars.map({ case (k, v) => v -> k }).foldLeft(g)({
+          case (fml, (v, fn)) => fml.replaceFree(v, fn)
+        })
+    }
+  }
+
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
     * somewhere in the quantified formula.
     *
