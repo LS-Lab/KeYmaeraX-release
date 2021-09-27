@@ -18,7 +18,7 @@ trait TraceToTacticConverter {
 }
 
 class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConverter {
-  private val INDENT_INCREMENT = "  "
+  private val INDENT_INCREMENT = BelleParser.TAB
 
   /** Tactic definitions from the tactic script (if any). */
   private val tacticDefs = scala.collection.mutable.Map.empty[String, BelleExpr]
@@ -102,10 +102,11 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
                                ts2: (String, Map[Location, ProofTreeNode]),
                                indent: String, sep: String = SEQ_COMBINATOR.img): (String, Map[Location, ProofTreeNode]) = {
     val (ts1t, ts2t) = if (ts2._1.lines.length <= 1) (ts1._1.trim, ts2._1.trim) else (ts1._1.trim, ts2._1.stripPrefix(indent))
+    //@note ts2 location columns are already correct, but indent prefix is temporarily stripped, so add indent prefix back in but shift by 0 columns
     (ts1t, ts2t) match {
       case (EMPTY_TACTIC | EMPTY_BRANCHES, EMPTY_TACTIC | EMPTY_BRANCHES) => (EMPTY_TACTIC, Map.empty)
       case (_, EMPTY_TACTIC | EMPTY_BRANCHES) => (indent + ts1t, shift(ts1._2, 0, indent.length))
-      case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => (indent + ts2t, shift(ts2._2, 0, indent.length))
+      case (EMPTY_TACTIC | EMPTY_BRANCHES, _) => (indent + ts2t, shift(ts2._2, 0, 0))
       case _ =>
         (indent + ts1t + sep + NEWLINE + indent + ts2t,
         shift(ts1._2, 0, indent.length) ++ shift(ts2._2, ts1t.lines.length, 0))
@@ -143,7 +144,8 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       else (TODO_TACTIC, None)
     case Some(c) => c.maker match {
       case None => (SKIP_TACTIC, None)
-      case Some(TODO_TACTIC) => (SKIP_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
+      case Some(NIL_TACTIC | SKIP_TACTIC) => (EMPTY_TACTIC, None) //@note do not print internal skip steps
+      case Some(TODO_TACTIC) => (EMPTY_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
       case Some(m) =>
         if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
         else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {

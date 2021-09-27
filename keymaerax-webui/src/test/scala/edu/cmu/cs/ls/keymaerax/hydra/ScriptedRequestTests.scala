@@ -15,6 +15,7 @@ import org.scalatest.LoneElement._
 import org.scalatest.Inside._
 import spray.json.{JsArray, JsBoolean, JsString}
 import org.scalatest.prop.TableDrivenPropertyChecks._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
   * Tests the server-side web API with scripted requests.
@@ -31,17 +32,15 @@ class ScriptedRequestTests extends TacticTestBase {
       'keyFile (modelContents))
   }
 
-  it should "report parse errors" in withDatabase { db =>
+  it should "save content but report parse errors" in withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End.\n Problem x=0->[x:=x+1]x=1 End."
     val request = new UploadArchiveRequest(db.db, "guest", modelContents, Some("Simple"))
     val response = request.resultingResponses().loneElement
-    response shouldBe a [ParseErrorResponse]
+    response shouldBe a [ModelUploadResponse]
     response should have (
-      'msg ("Unexpected token cannot be parsed"),
-      'found ("]"),
-      'expect (";")
+      'errorText (Some("2:22 Unexpected token cannot be parsed\nFound:    ] at 2:22\nExpected: ;"))
     )
-    db.db.getModelList("guest") shouldBe empty
+    db.db.getModelList("guest").head.keyFile shouldBe modelContents
   }
 
   /** Returns the regions where `of` occurs in `text` (first occurrence per line). */
@@ -75,10 +74,10 @@ class ScriptedRequestTests extends TacticTestBase {
 
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) =>
-        tacticText should equal("""implyR('R=="x>=0 -> x>=0");nil""".stripMargin) (after being whiteSpaceRemoved)
+        tacticText should equal("""implyR('R=="x>=0 -> x>=0");todo""".stripMargin) (after being whiteSpaceRemoved)
         loc shouldBe Map(
           regionIn(tacticText, """implyR('R=="x>=0->x>=0")""").head -> "()",
-          regionIn(tacticText, "nil").head -> "(1,0)"
+          regionIn(tacticText, "todo").head -> "(1,0)"
         )
     }
   }}
@@ -157,6 +156,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) =>
+        println(tacticText)
         tacticText should equal (
           """implyR('R=="x>=2->[{x:=x+1;}*]x>=0");
             |loop("x>=1", 'R=="[{x:=x+1;}*]x>=0"); <(
@@ -199,7 +199,9 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText, _) => tacticText shouldBe """hideR('R=="x>=0->x>=0")"""
+      case GetTacticResponse(tacticText, _) => tacticText shouldBe
+        """hideR('R=="x>=0->x>=0");
+          |todo""".stripMargin
     }
   }}
 
@@ -316,11 +318,9 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("(3,0)", prop)
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) => tacticText should equal (
-        """nil;
-          |andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
+        """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
           |"x=3": todo,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":
-          |  skip;
           |  prop; <(
           |    "x^2>=4//x>2": todo,
           |    "x^4>=16//x>2": todo,
@@ -331,10 +331,8 @@ class ScriptedRequestTests extends TacticTestBase {
         println(tacticText)
         val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
-          regionIn(tacticText, "nil").head -> "()",
           regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "(1,0)",
           todoRegions(0) -> "(2,0)",
-          regionIn(tacticText, "skip").head -> "(2,1)",
           regionIn(tacticText, "prop").head -> "(3,0)",
           todoRegions(1) -> "(4,0)",
           todoRegions(2) -> "(4,1)",
@@ -590,7 +588,7 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
-        BelleParser(stepsTactic) shouldBe BelleParser("implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\")")
+        BelleParser(stepsTactic) shouldBe BelleParser("implyR('R==\"x>=0&y>0->[x:=x+y;]x>=0\") ; andL('L==\"x>=0&y>0\") ; todo")
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
       case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
@@ -621,7 +619,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "expand auto with branches" in withMathematica { _ => withDatabase { db =>
+  it should "FEATURE_REQUEST: expand auto with branches" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val modelContents = "ProgramVariables Real x, y, z; End. Problem x>=0&y>0&z=0 -> [x:=x+y; ++ x:=x*y;]x>=z End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
