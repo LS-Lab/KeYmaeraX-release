@@ -161,21 +161,21 @@ class ScriptedRequestTests extends TacticTestBase {
           """implyR('R=="x>=2->[{x:=x+1;}*]x>=0");
             |loop("x>=1", 'R=="[{x:=x+1;}*]x>=0"); <(
             |  "Init":
-            |    nil,
+            |    todo,
             |  "Post":
-            |    nil,
+            |    todo,
             |  "Step":
             |    assignb('R=="[x:=x+1;]x>=1");
-            |    nil
+            |    todo
             |)""".stripMargin) (after being whiteSpaceRemoved)
-        val nilRegions = regionIn(tacticText, "nil")
+        val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
           regionIn(tacticText, """implyR('R=="x>=2->[{x:=x+1;}*]x>=0")""").head -> "()",
           regionIn(tacticText, """loop("x>=1", 'R=="[{x:=x+1;}*]x>=0")""").head -> "(1,0)",
-          nilRegions(0) -> "(2,0)",
-          nilRegions(1) -> "(2,1)",
+          todoRegions(0) -> "(2,0)",
+          todoRegions(1) -> "(2,1)",
           regionIn(tacticText, """assignb('R=="[x:=x+1;]x>=1")""").head -> "(2,2)",
-          nilRegions(2) -> "(3,0)"
+          todoRegions(2) -> "(3,0)"
         )
     }
   }}
@@ -220,13 +220,13 @@ class ScriptedRequestTests extends TacticTestBase {
       case GetTacticResponse(tacticText, loc) =>
         tacticText should equal(
         """andR('R=="x^2>=0 & x^4>=0"); <(
-          |"x^2>=0": nil,
-          |"x^4>=0": nil
+          |"x^2>=0": todo,
+          |"x^4>=0": todo
           |)""".stripMargin) (after being whiteSpaceRemoved)
         loc shouldBe Map(
           regionIn(tacticText, """andR('R=="x^2>=0&x^4>=0")""").head -> "()",
-          regionIn(tacticText, "nil")(0) -> "(1,0)",
-          regionIn(tacticText, "nil")(1) -> "(1,1)",
+          regionIn(tacticText, "todo")(0) -> "(1,0)",
+          regionIn(tacticText, "todo")(1) -> "(1,1)",
         )
     }
   }}
@@ -239,7 +239,7 @@ class ScriptedRequestTests extends TacticTestBase {
       FixedGenerator(Nil), Declaration(Map()))
     val tacticRunner = runTactic(db, t, proofId) _
 
-    tacticRunner("()", andR(1) <(nil, prop)) should have (
+    tacticRunner("()", andR(1) <(skip, prop)) should have (
       'proofId (proofId.toString),
       'parent (DbProofTree(db.db, proofId.toString).root),
       'progress (true)
@@ -247,22 +247,21 @@ class ScriptedRequestTests extends TacticTestBase {
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) => tacticText should equal (
         // first branching tactic does not have labels because it was the user-supplied tactic andR(1) <(nil, prop)
-        """andR(1); <(nil, prop); <(
-          |"x=3": nil,
-          |"x^2>=4//x>2": nil,
-          |"x^4>=16//x>2": nil,
-          |"x^2>=4//x < (-2)": nil,
-          |"x^4>=16//x < (-2)": nil
+        """andR(1); <(skip, prop); <(
+          |"x=3": todo,
+          |"x^2>=4//x>2": todo,
+          |"x^4>=16//x>2": todo,
+          |"x^2>=4//x < (-2)": todo,
+          |"x^4>=16//x < (-2)": todo
           |)""".stripMargin) (after being whiteSpaceRemoved)
-        val nilRegions = regionIn(tacticText, "nil")
+        val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
           Region(0,0,3,1) -> "()",
-          //@note first nil is not its own node because it's part of the user-provided tactic script
-          nilRegions(1) -> "(1,0)",
-          nilRegions(2) -> "(1,1)",
-          nilRegions(3) -> "(1,2)",
-          nilRegions(4) -> "(1,3)",
-          nilRegions(5) -> "(1,4)"
+          todoRegions(0) -> "(1,0)",
+          todoRegions(1) -> "(1,1)",
+          todoRegions(2) -> "(1,2)",
+          todoRegions(3) -> "(1,3)",
+          todoRegions(4) -> "(1,4)"
         )
     }
   }}
@@ -280,25 +279,67 @@ class ScriptedRequestTests extends TacticTestBase {
     inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText, loc) => tacticText should equal (
         """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
-          |"x=3": nil,
+          |"x=3": todo,
           |"x>2|x < (-2)->x^2>=4&x^4>=16":
           |  prop; <(
-          |    "x^2>=4//x>2": nil,
-          |    "x^4>=16//x>2": nil,
-          |    "x^2>=4//x < (-2)": nil,
-          |    "x^4>=16//x < (-2)": nil
+          |    "x^2>=4//x>2": todo,
+          |    "x^4>=16//x>2": todo,
+          |    "x^2>=4//x < (-2)": todo,
+          |    "x^4>=16//x < (-2)": todo
           |  )
           |)""".stripMargin) (after being whiteSpaceRemoved)
         println(tacticText)
-        val nilRegions = regionIn(tacticText, "nil")
+        val todoRegions = regionIn(tacticText, "todo")
         loc shouldBe Map(
           regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "()",
-          nilRegions(0) -> "(1,0)",
+          todoRegions(0) -> "(1,0)",
           regionIn(tacticText, "prop").head -> "(1,1)",
-          nilRegions(1) -> "(2,0)",
-          nilRegions(2) -> "(2,1)",
-          nilRegions(3) -> "(2,2)",
-          nilRegions(4) -> "(2,3)"
+          todoRegions(1) -> "(2,0)",
+          todoRegions(2) -> "(2,1)",
+          todoRegions(3) -> "(2,2)",
+          todoRegions(4) -> "(2,3)"
+        )
+    }
+  }}
+
+  it should "not record intermediate nil/skip as todo" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables Real x; End. Problem x=3 & (x > 2 | x < -2 -> x^2>=4 & x^4>=16) End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
+      FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", nil)
+    tacticRunner("(1,0)", andR(1))
+    tacticRunner("(2,1)", skip)
+    tacticRunner("(3,0)", prop)
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString, verbose=true).getResultingResponses(t).loneElement) {
+      case GetTacticResponse(tacticText, loc) => tacticText should equal (
+        """nil;
+          |andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)"); <(
+          |"x=3": todo,
+          |"x>2|x < (-2)->x^2>=4&x^4>=16":
+          |  skip;
+          |  prop; <(
+          |    "x^2>=4//x>2": todo,
+          |    "x^4>=16//x>2": todo,
+          |    "x^2>=4//x < (-2)": todo,
+          |    "x^4>=16//x < (-2)": todo
+          |  )
+          |)""".stripMargin) (after being whiteSpaceRemoved)
+        println(tacticText)
+        val todoRegions = regionIn(tacticText, "todo")
+        loc shouldBe Map(
+          regionIn(tacticText, "nil").head -> "()",
+          regionIn(tacticText, """andR('R=="x=3&(x>2|x < (-2)->x^2>=4&x^4>=16)")""").head -> "(1,0)",
+          todoRegions(0) -> "(2,0)",
+          regionIn(tacticText, "skip").head -> "(2,1)",
+          regionIn(tacticText, "prop").head -> "(3,0)",
+          todoRegions(1) -> "(4,0)",
+          todoRegions(2) -> "(4,1)",
+          todoRegions(3) -> "(4,2)",
+          todoRegions(4) -> "(4,3)"
         )
     }
   }}

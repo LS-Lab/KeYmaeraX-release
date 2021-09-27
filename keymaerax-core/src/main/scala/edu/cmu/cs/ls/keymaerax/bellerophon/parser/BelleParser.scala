@@ -22,6 +22,20 @@ import scala.util.matching.Regex
   * @see [[DLBelleParser]]
   */
 object BelleParser extends TacticParser with Logging {
+  //@todo some might better be terminal symbols
+  val NIL_TACTIC = "nil"
+  val SKIP_TACTIC = "skip"
+  val TODO_TACTIC = "todo"
+  val EMPTY_TACTIC = ""
+  val EMPTY_BRANCHES = "()"
+  val NEWLINE = "\n"
+  val TAB = "  "
+  val SPACE = " "
+  val LIST_END = "nil"
+  val DOUBLE_QUOTE = "\""
+  val EMPTY_ARGS = ""
+  val DOUBLE_COLON: String = COLON.img + COLON.img
+
   case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
                             parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
@@ -424,12 +438,12 @@ object BelleParser extends TacticParser with Logging {
 
       case r :+ ParsedBelleExpr(expr, eLoc, l) :+ BelleToken(USING, _) => st.input match {
         case BelleToken(EXPRESSION(s, delims), esLoc) :: tail =>
-          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).split("::").map(_.trim).toList match {
-            case "nil" :: Nil => Nil // explicit empty list
+          val fmls = s.stripPrefix(delims._1).stripSuffix(delims._2).split(DOUBLE_COLON).map(_.trim).toList match {
+            case LIST_END :: Nil => Nil // explicit empty list
             case head :: Nil => Parser.parser.formulaParser(head) :: Nil // single-element lists without :: nil
-            case scala.collection.:+(args, "nil") => args.map(Parser.parser.formulaParser) // all other lists
-            case l => throw ParseException("Formula list in using \"" + l.mkString("::") + "\" must end in :: nil",
-              esLoc, s, l.mkString("\"", "::", "::nil\""))
+            case scala.collection.:+(args, LIST_END) => args.map(Parser.parser.formulaParser) // all other lists
+            case l => throw ParseException("Formula list in " + USING.img + DOUBLE_QUOTE + l.mkString(DOUBLE_QUOTE) + DOUBLE_QUOTE + " must end in " + DOUBLE_COLON + LIST_END,
+              esLoc, s, l.mkString(DOUBLE_QUOTE, DOUBLE_COLON, DOUBLE_COLON + LIST_END + DOUBLE_QUOTE))
           }
           ParserState(r :+ ParsedBelleExpr(Using(fmls, expr), eLoc.spanTo(esLoc), l), tail)
       }

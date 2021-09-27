@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{EMPTY_BRANCHES, EMPTY_TACTIC, NEWLINE, NIL_TACTIC, SKIP_TACTIC, TODO_TACTIC}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParser, BellePrettyPrinter, CLOSE_PAREN, COLON, COMMA, OPEN_PAREN, SEQ_COMBINATOR}
 import edu.cmu.cs.ls.keymaerax.hydra.TacticExtractionErrors.TacticExtractionError
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
@@ -12,13 +13,6 @@ import scala.annotation.tailrec
 import scala.util.Try
 
 trait TraceToTacticConverter {
-  val NIL_TACTIC: String = "nil"
-  val SKIP_TACTIC: String = "skip"
-  val TODO_TACTIC = "todo"
-  val EMPTY_TACTIC = ""
-  val EMPTY_BRANCHES = "()"
-  val NEWLINE = "\n"
-
   def getTacticString(tree: ProofTree): (String, Map[Location, ProofTreeNode]) = getTacticString(tree.root, "")
   def getTacticString(node: ProofTreeNode, indent: String): (String, Map[Location, ProofTreeNode])
 }
@@ -148,7 +142,8 @@ class VerboseTraceToTacticConverter(defs: Declaration) extends TraceToTacticConv
       if (node.isProved) (EMPTY_TACTIC, None)
       else (TODO_TACTIC, None)
     case Some(c) => c.maker match {
-      case None => (TODO_TACTIC, None)
+      case None => (SKIP_TACTIC, None)
+      case Some(TODO_TACTIC) => (SKIP_TACTIC, None) //@note was recorded as TODO_TACTIC, but non-empty children indicate progress since then
       case Some(m) =>
         if (BelleExpr.isInternal(m)) ("???", None) //@note internal tactics are not serializable (and should not be in the trace)
         else Try(BelleParser.parseWithTacticDefs(m, tacticDefs.toMap)).toOption match {
@@ -200,7 +195,7 @@ class VerbatimTraceToTacticConverter extends TraceToTacticConverter {
   private def tacticStringAt(node: ProofTreeNode): String = node.children.headOption match {
     case None => TODO_TACTIC
     case Some(c) => c.maker match {
-      case None => TODO_TACTIC
+      case None => SKIP_TACTIC
       case Some(m) =>
         if (BelleExpr.isInternal(m)) "???" //@note internal tactics are not serializable (and should not be in the trace)
         else m
