@@ -769,6 +769,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     // remove loops and split compositions to isolate differential equations before splitting choices
     case Diamond(Loop(_), _) => Ax.loopApproxd:: Nil
     case Diamond(Compose(_, _), _) => AxIndex.axiomsFor(e)
+    // run inside quantifiers
+    case _: Exists => Ax.existsStutter :: Nil
+    case _: Forall => Ax.allStutter :: Nil
     case _ => Nil
   }
 
@@ -778,6 +781,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
     // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
+    // run inside quantifiers
+    case _: Exists => Ax.existsStutter :: Nil
+    case _: Forall => Ax.allStutter :: Nil
     case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
   }
 
