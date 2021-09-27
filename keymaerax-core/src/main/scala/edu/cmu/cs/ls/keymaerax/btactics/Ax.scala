@@ -4849,6 +4849,20 @@ object Ax extends Logging {
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
       byUS(proveBy("\\forall y \\forall x -(x-y)=y-x".asFormula, TactixLibrary.RCF)))
 
+
+  /**
+    * {{{Axiom "neg neg".
+    *    -(-f()) = f()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom("negNeg", unifier = "linear", key = "0", recursor = "")
+  lazy val negNeg: DerivedAxiomInfo = derivedAxiom("neg neg", Sequent(IndexedSeq(), IndexedSeq("-(-f_()) = f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
+      byUS(proveBy("\\forall x -(-x)=x".asFormula, TactixLibrary.RCF)))
+
   /**
     * {{{Axiom "-0".
     *    (f()-0) = f()
