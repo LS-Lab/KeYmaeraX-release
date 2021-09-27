@@ -1193,8 +1193,20 @@ object ModelPlex extends ModelPlexTrait with Logging {
           }
 
           def flattenSynonyms(of: Variable): Set[Term] = {
-            //@note if v synonyms empty but vpost contains a term: then v=vpost because vpost synonyms are result of [:=] subst
-            if (synonyms(v).isEmpty) synonyms(v) = synonyms(postVar(v))
+            //@note if v synonyms empty but vpost contains a term: then v=f(vpost) because vpost synonyms are result of [:=] subst
+            if (synonyms(v).isEmpty) {
+              synonyms(v) = synonyms(postVar(v)).map(s =>
+                if (!StaticSemantics.freeVars(s).contains(v)) {
+                  s
+                } else {
+                  val Equal(_, syn) = ToolProvider.solverTool() match {
+                    case Some(t) => t.solve(Equal(postVar(v), s), List(v)).getOrElse(Equal(v, s))
+                    case None => Equal(v, s) //@note filtered afterwards
+                  }
+                  syn
+                }
+              ).filter(s => !StaticSemantics.freeVars(s).contains(v))
+            }
             val direct = synonyms(of)
             val transitive1 = direct.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).flatMap(synonyms.getOrElse(_, Set()))
             val transitive2 = direct.flatMap(s => synonyms.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
