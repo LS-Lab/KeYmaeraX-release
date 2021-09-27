@@ -118,21 +118,6 @@ class UnificationMatchTest extends SystemTestBase {
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
-  it should "support mixed term left-right matching" in {
-    UnificationMatch(
-      "==> a=0, f(x)>=0".asSequent,
-      "==> a()=0, x^2>=0".asSequent
-    ).usubst shouldBe USubst(List("a()~>a".asSubstitutionPair, "f(.)~>.^2".asSubstitutionPair))
-    UnificationMatch(
-      "==> a()=0, x^2>=0".asSequent,
-      "==> a=0, f(x)>=0".asSequent
-    ).usubst shouldBe USubst(List("a()~>a".asSubstitutionPair, "f(.)~>.^2".asSubstitutionPair))
-    UnificationMatch(
-      "==> g(y)=0, x^2>=0".asSequent,
-      "==> y+1=0, f(x)>=0".asSequent
-    ).usubst shouldBe USubst(List("g(.)~>.+1".asSubstitutionPair, "f(.)~>.^2".asSubstitutionPair))
-  }
-
 
   "Unification formulas" should "unify p() with x^2+y>=0" in {
     shouldUnify("p()".asFormula, "x^2+y>=0".asFormula, USubst(
@@ -174,21 +159,7 @@ class UnificationMatchTest extends SystemTestBase {
     //@note needs to match p(x,y) with x=y but inside r needs the opposite direction
     UnificationMatch(
       "==> p(x,y) & r(x,y,0) -> r(x,y,a)".asSequent,
-      "==> x=y & (0>=0 & x^2+y^2=0) -> (a>=0 & x^2+y^2=0)".asSequent).usubst shouldBe USubst(
-      List(
-        "r(._0,._1,._2)~>._2>=0&._0^2+._1^2=0".asSubstitutionPair,
-        "p(._0,._1)~>._0=._1".asSubstitutionPair))
-  }
-
-  it should "support more mixed left-right matching" in {
-    UnificationMatch(
-      "==> a=0, p(x)".asSequent,
-      "==> q(a), x^2>=0".asSequent
-    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
-    UnificationMatch(
-      "==> q(a), x^2>=0".asSequent,
-      "==> a=0, p(x)".asSequent
-    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
+      "==> x=y & (0>=0 & x^2+y^2=0) -> (a>=0 & x^2+y^2=0)".asSequent)
   }
 
   it should "FEATURE_REQUEST: match functions if their arguments contradict other matches" taggedAs TodoTest in {
