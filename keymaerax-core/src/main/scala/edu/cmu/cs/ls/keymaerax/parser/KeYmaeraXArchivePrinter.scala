@@ -104,6 +104,7 @@ object KeYmaeraXArchivePrinter {
   })
 
   def printSort(sort: Sort): String = sort match {
+    case Unit => ""
     case Real => "Real"
     case Bool => "Bool"
     case Trafo => "HP"
