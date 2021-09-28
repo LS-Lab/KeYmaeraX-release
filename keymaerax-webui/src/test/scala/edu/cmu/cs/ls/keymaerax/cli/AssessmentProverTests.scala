@@ -178,6 +178,21 @@ class AssessmentProverTests extends TacticTestBase {
     inside (Problem.fromString(
       """\begin{problem}[1.0]
         |\ask
+        |\solfin
+        |\begin{lstlisting}
+        |x>=0 -> [{?____~~~~ true ~~~~____; x:=x+1;}*@invariant(____~~~~ x>=0 ~~~~____)]x>=0
+        |\end{lstlisting}
+        |\algog{testModel(precondition="x>0",postcondition="x>0)}
+        |\end{problem}""".stripMargin)) {
+      case p :: Nil =>
+        p.questions shouldBe
+          List(AskQuestion(Some("testModel"), Map("precondition" -> "x>0", "postcondition" -> "y>0"),
+            ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil),
+            List(ListExpressionArtifact("true".asFormula :: "x>=0".asFormula :: Nil)), List.empty))
+    }
+    inside (Problem.fromString(
+      """\begin{problem}[1.0]
+        |\ask
         |\sol
         |{\begin{lstlisting}
         |x>=0 -> [{?true; x:=x+1;}*@invariant(x>=0)]x>=0
@@ -513,12 +528,31 @@ class AssessmentProverTests extends TacticTestBase {
       check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got Sequent"
   }
 
+  it should "give correct feedback on model conditions" in {
+    AskGrader(Some(AskGrader.Modes.TEST_MODEL), Map(
+      "precondition" -> "x>0 & y>0",
+      "postcondition" -> "x>0 & y>0"),
+      ListExpressionArtifact(List("x>0".asFormula, "x>0 & y>0 & z>0".asFormula)))
+      .check(ListExpressionArtifact(List("x>0".asFormula, "x>0 & y>0 & z>0".asFormula)))
+      .right.value shouldBe (AssessmentProver.Messages.OK)
+  }
+
   "Program equivalence" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.prgEquivalence("a;b;c;".asProgram, "{a;b;};c;".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("a;++b;++c;".asProgram, "{a;++b;}++c;".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("{a;++b;}{c;++d;++e;}".asProgram, "{a;++b;}{{c;++d;}++e;}".asProgram) shouldBe 'proved
     AssessmentProver.prgEquivalence("x:=2;++y:=3;".asProgram, "y:=4-1;++z:=2;x:=z;".asProgram) shouldBe 'proved
   }
+
+  "Formula implication" should "succeed for simple examples" in withZ3 { _ =>
+    AssessmentProver.formulaImplication("a=0".asFormula, "a=0".asFormula) shouldBe 'proved
+    AssessmentProver.formulaImplication("a=0 & b=0".asFormula, "a=0".asFormula) shouldBe 'proved
+    AssessmentProver.formulaImplication("x>=0 & a=1".asFormula, "x>0 | a=1".asFormula) shouldBe 'proved
+  }
+
+//  "Formula implication" should "not prove false implications" in withZ3 { _ =>
+//    AssessmentProver.formulaImplication("x>=0 | a=1".asFormula, "x>0 & a=1".asFormula) shouldNot be ('proved)
+//  }
 
   it should "prove simple system loops" in withZ3 { _ =>
     AssessmentProver.prgEquivalence("{a{|^@|};++b{|^@|};}*".asProgram, "{b{|^@|};++a{|^@|};}*".asProgram) shouldBe 'proved

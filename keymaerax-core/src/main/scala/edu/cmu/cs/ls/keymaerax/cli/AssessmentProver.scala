@@ -208,6 +208,8 @@ object AssessmentProver {
       val BELLE_PROOF: String = "prove"
       /** Check a kyx archive */
       val CHECK_ARCHIVE: String = "checkArchive"
+      /** Check if model assumptions and postcondition are ok. */
+      val TEST_MODEL: String = "testModel"
       /** Skip grading */
       val SKIP: String = "skip"
     }
@@ -458,6 +460,34 @@ object AssessmentProver {
               else Right("Please elaborate your explanation")
             case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.longHintString)
+          }
+        case Modes.TEST_MODEL =>
+          val (havePrecondition, havePostcondition) = have match {
+            case ListExpressionArtifact(exprs) => (exprs.head, exprs.last)
+            case _ => return Right(Messages.INSPECT)
+          }
+          try {
+            val expectPrecondition = args.get("precondition") match {
+              case Some(p) => p.asFormula
+            }
+            val expectPostcondition = args.get("postcondition") match {
+              case Some(p) => p.asFormula
+            }
+            def makeResponse(preconditionOk: Boolean, postconditionOk: Boolean) : String = {
+              var response: String = "";
+              if (!preconditionOk)
+              { response = response + "\nYou may be assuming too much. Consider weakening your assumptions."}
+              if (!postconditionOk)
+              { response = response + "\nYour safety property may not be strong enough. Consider strengthening it."}
+              if (preconditionOk & postconditionOk) { response = Messages.OK}
+              response
+            }
+            val preconditionOk = isFormulaImplied(expectPrecondition.asInstanceOf[Formula], havePrecondition.asInstanceOf[Formula])
+            val postconditionOk = isFormulaImplied(havePostcondition.asInstanceOf[Formula], expectPostcondition.asInstanceOf[Formula])
+            Right(makeResponse(preconditionOk, postconditionOk))
+          }
+          catch {
+            case _ => Right(Messages.INSPECT)
           }
         case Modes.BELLE_PROOF =>
           @tailrec
@@ -944,6 +974,23 @@ object AssessmentProver {
     }
   }
 
+  /**
+    * True if a->b.
+    */
+  def isFormulaImplied(a: Formula, b:Formula): Boolean = {
+    try {
+      val isImplied = formulaImplication(a, b).isProved
+      isImplied
+    }
+    catch {
+      case ex => false
+    }
+  }
+
+  def formulaImplication(a: Formula, b:Formula): ProvableSig = {
+    KeYmaeraXProofChecker(60)(autoClose)(Sequent(IndexedSeq(), IndexedSeq(Imply(a, b))))
+  }
+  
   /** Checks program equivalence by `[a;]P <-> [b;]P.` */
   def prgEquivalence(a: Program, b: Program): ProvableSig = {
     val p = PredOf(Function("P", None, Unit, Bool), Nothing)

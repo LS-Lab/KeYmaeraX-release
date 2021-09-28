@@ -86,6 +86,28 @@ object ArithmeticSimplification {
     hideAnte & hideSucc
   })
 
+  /** Version of hideFactsAbout that hides all formulas mentioning free variable
+    * TODO: would be nice to allow multiple variable hide on the UI somehow?
+    * @param xs the variable to hide
+    */
+  @Tactic(names="Hide Facts",
+    premises="Γ |- Δ",
+    //    transformEquality(equality f=g) -----------
+    conclusion="Γ, P(xs) |- Q(xs), Δ",
+    displayLevel="browse")
+  def hideFactsAbout(xs: List[Variable]): DependentPositionWithAppliedInputTactic = inputanon ((pos:Position, sequent: Sequent) => {
+    val irrelevantSet = xs.toSet
+    val hideAnte = sequent.ante.zipWithIndex.filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideL(-(idx+1), fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    val hideSucc = sequent.succ.zipWithIndex.filter(p => !StaticSemantics.freeVars(p._1).intersect(irrelevantSet).isEmpty).
+      sortWith((l,r) => l._2 <= r._2).reverse.map {
+      case (fml, idx) => hideR(idx+1, fml)
+    }.foldLeft[BelleExpr](skip)((composite, atom) => composite & atom)
+    hideAnte & hideSucc
+  })
+
   def replaceTransform(left: Term, right: Term): DependentPositionWithAppliedInputTactic = transformEquality(Equal(left, right))
   /** Transforms the formula at position by replacing all free occurrences of equality.left with equality.right
     * @author Stefan Mitsch

@@ -27,30 +27,40 @@ Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, StrictMet
 Begin["`Private`"]
 
 
-ReduceCuts[cutlist_List, problem_, timeout_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,skipped,rest,cuts},
+ReduceCuts[cutlist_List, problem_, timeout_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,skipped,rest,cuts,stop},
 
 { pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
 cuts=Map[#[[1]]&,cutlist];
 added={};
 skipped={};
+stop=False;
 
 TimeConstrained[
 	For[i=1,i<=Length[cutlist],i++,
 		rest=Drop[cuts,i]/.List->And;
-		If[TrueQ[
-			(*TimeConstrained[*)
+		Print[rest];
+		If[stop,
+			If[TrueQ[And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms],cuts[[i]], vars]]],
+				(* skip i-th cut if already implied *)
+				Print["Skipped: ",cuts[[i]]];
+				AppendTo[skipped,{i}],
+				added=Join[added,{i}];
+				evoConst=And[evoConst,cuts[[i]]]
+			],
+			If[TrueQ[(*TimeConstrained[*)
 				And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars],
 						LZZ`InvSFast[rest, Join[f,Table[0,{i,Length[constvars]}]], Join[vars,constvars], And[evoConst,constasms]]]
-			(*5,*) (* TODO configuration *)
-			(*	False
-			]*)
-		],
-			Print["Skipped: ",cuts[[i]]];
-			AppendTo[skipped,{i}]
-			(* skip *),
-			added=Join[added,{i}];
-			evoConst=And[evoConst,cuts[[i]]]
-		];
+				(*5,*) (* TODO configuration *)
+				(*	False
+				]*)
+			],
+				Print["Skipped: ",cuts[[i]]];
+				AppendTo[skipped,{i}]
+				(* skip *),
+				added=Join[added,{i}];
+				evoConst=And[evoConst,cuts[[i]]];
+				stop=True
+		]];
 	];
 	cutlist[[added]]
 	,
