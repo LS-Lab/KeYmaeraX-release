@@ -668,10 +668,10 @@ del {
 }
 
 .ace_gutter-cell.ace_breakpoint::before {
-  content: "\f04b"; /* fontawesome play */
+  content: "\f04b  \f050"; /* fontawesome play, fast-forward */
   font-family: FontAwesome;
   color: black;
-  margin-left: -1em; /* play icon is 1em wide */
+  margin-left: -.7em;
 }
 
 .k4-tactic-todo-active {

@@ -93,13 +93,15 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               var target = e.domEvent.target;
               if (target.className.indexOf("ace_gutter-cell") == -1) return;
               if (!editor.isFocused()) return;
-              if (e.clientX > 25 + target.getBoundingClientRect().left) return;
+
+              //@note css buttons are approximately left/right of gutter half
+              var stepwise = e.clientX <= target.getBoundingClientRect().left + target.getBoundingClientRect().width/2;
 
               var doc = editor.getSession().getDocument();
               var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;
               if (activeRange) {
                 var tactic = { text: doc.getTextRange(activeRange) };
-                if (tactic.text.length > 0) $scope.executeTactic(tactic, false);
+                if (tactic.text.length > 0) $scope.executeTactic(tactic, stepwise);
               }
               e.stop();
             });
