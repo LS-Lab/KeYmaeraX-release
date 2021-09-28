@@ -175,7 +175,7 @@ object DatabasePopulator extends Logging {
         case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
       }
       new TraceRecordingListener(db, proofId, parentStep,
-        globalProvable, branch, recursive = false, tacticName) :: Nil
+        globalProvable, branch, recursive = false, tacticName, constructGlobalProvable = false) :: Nil
     }
     def interpreter(orig: Seq[IOListener]) = LazySequentialInterpreter(orig ++ listeners, throwWithDebugInfo = false)
     SpoonFeedingInterpreter(proofId, -1, db.createProof, defs, listener, interpreter, 0, strict=true, convertPending=true)

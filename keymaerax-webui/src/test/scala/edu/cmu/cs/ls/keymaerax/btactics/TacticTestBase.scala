@@ -518,7 +518,7 @@ class TacticTestBase(registerAxTactics: Option[String] = None) extends FlatSpec 
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db)(proofId)(tacticName, parentInTrace, branch)
+  def listener(db: DBAbstraction, constructGlobalProvable: Boolean = false)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db, constructGlobalProvable)(proofId)(tacticName, parentInTrace, branch)
 
   /** Removes all whitespace for string comparisons in tests.
     * @example {{{

@@ -3047,7 +3047,7 @@ object RequestHelper {
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
   def listenerFactory(db: DBAbstraction, session: ProofSession)(proofId: Int)(tacticName: String, parentInTrace: Int,
                                                                               branch: Int): Seq[IOListener] = {
-    DBTools.listener(db, (tn: String) => {
+    DBTools.listener(db, constructGlobalProvable = false, (tn: String) => {
       val codeName = tn.split("\\(").head
       Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName, session)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)

@@ -88,7 +88,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
     val expectedSubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.expandedModel.asInstanceOf[Formula]))
     val expectedUnsubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula]))
     val listener = new TraceRecordingListener(db, pId, None,
-      globalProvable, 0 /* start from single provable */, recursive = false, "custom")
+      globalProvable, 0 /* start from single provable */, recursive = false, "custom", constructGlobalProvable = false)
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
     BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]), None, entry.defs)) match {

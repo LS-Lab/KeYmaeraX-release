@@ -22,10 +22,11 @@ import scala.collection.mutable.ListBuffer
 class TraceRecordingListener(db: DBAbstraction,
                              proofId: Int,
                              initialSibling: Option[Int],
-                             globalProvable:ProvableSig,
-                             branch:Int,
+                             globalProvable: ProvableSig,
+                             branch: Int,
                              recursive: Boolean,
-                             ruleName: String) extends IOListener {
+                             ruleName: String,
+                             constructGlobalProvable: Boolean) extends IOListener {
   class TraceNode (isFirstNode: Boolean) {
     var id: Option[Int] = None
     var parent: TraceNode = null
@@ -124,6 +125,7 @@ class TraceRecordingListener(db: DBAbstraction,
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
           case Left(BelleProvable(p, labels, _)) =>
             // no longer want to construct global provables (want to allow halfway done substitutions)
+            if (constructGlobalProvable) current.output = globalProvable(p, branch)
             current.local = p
             current.branchLabel = labels.map(BelleLabel.toPrettyString)
             db.updateExecutionStep(current.stepId.get, current.asPOJO)

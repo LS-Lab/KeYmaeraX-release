@@ -372,7 +372,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proof: ProofTree) extends 
                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proof.info.proofId, stepId, localProvable,
-      goalIdx, recursive = false, shortName)
+      goalIdx, recursive = false, shortName, constructGlobalProvable = false)
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil), proof.info.defs(db)),
       interpreter(listener::Nil))
     if (wait) {
