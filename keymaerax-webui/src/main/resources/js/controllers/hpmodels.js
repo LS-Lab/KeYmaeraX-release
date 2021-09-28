@@ -75,9 +75,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
              controller: 'ModalMessageCtrl',
              size: 'md',
              resolve: {
-               title: function() { return "Unsaved changes"; },
-               message: function() { return "The editor has unsaved changes, do you want to save before starting the proof?"; },
-               mode: function() { return "yesnocancel"; }
+               title: function() { return "Want to save changes?"; },
+               message: function() { return "Do you want to save before starting the proof, or don't save and start the proof on the old model content?"; },
+               mode: function() { return "yesnocancel"; },
+               oktext: function() { return "Save"; },
+               notext: function() { return "Don't save"; }
              }
            });
            modalInstance.result.then(
@@ -107,9 +109,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
            controller: 'ModalMessageCtrl',
            size: 'md',
            resolve: {
-             title: function() { return "Unsaved changes"; },
-             message: function() { return "The editor has unsave changes, do you want to save?"; },
-             mode: function() { return "yesnocancel"; }
+             title: function() { return "Want to save your changes?"; },
+             message: function() { return "The editor has unsaved changes, do you want to save?"; },
+             mode: function() { return "yesnocancel"; },
+             oktext: function() { return "Save"; },
+             notext: function() { return "Don't save"; }
            }
          });
          modalInstance.result.then(
@@ -516,9 +520,11 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
           controller: 'ModalMessageCtrl',
           size: 'md',
           resolve: {
-            title: function() { return "Unsaved changes"; },
-            message: function() { return "The editor has unsaved changes, do you want to save?"; },
-            mode: function() { return "yesnocancel"; }
+            title: function() { return "Want to save your changes?"; },
+            message: function() { return "Saving tries to rerun existing proofs, which may need adaptation afterwards"; },
+            mode: function() { return "yesnocancel"; },
+            oktext: function() { return "Save"; },
+            notext: function() { return "Don't save"; }
           }
         });
         modalInstance.result.then(

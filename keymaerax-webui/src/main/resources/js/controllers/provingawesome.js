@@ -125,9 +125,11 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               controller: 'ModalMessageCtrl',
               size: 'md',
               resolve: {
-                title: function() { return "Prove lemmas"; },
+                title: function() { return "Check lemmas?"; },
                 message: function() { return "The proof uses " + usedLemmas.length + " unproved lemmas; do you want to check them now?"; },
-                mode: function() { return "yesno"; }
+                mode: function() { return "okcancel"; },
+                oktext: function() { return "Check"; },
+                canceltext: function () { return "Don't check"; }
               }
             });
 

@@ -41,9 +41,11 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               controller: 'ModalMessageCtrl',
               size: 'md',
               resolve: {
-                title: function() { return "Unsaved tactic changes"; },
-                message: function() { return "Do you want to save the tactic changes?"; },
-                mode: function() { return "yesnocancel"; }
+                title: function() { return "Want to save your changes?"; },
+                message: function() { return "Saving runs the tactic and returns new subgoals, if any"; },
+                mode: function() { return "yesnocancel"; },
+                yestext: function() { return "Save" },
+                notext: function() { return "Don't save" }
               }
             });
 
