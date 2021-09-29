@@ -130,8 +130,13 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               if (nodeId) {
                 var doc = editor.getSession().getDocument();
                 if (nodeId != $scope.nodeId && $scope.agenda.contains(nodeId)) {
-                  $scope.changeTab(nodeId);
+                  //@todo multi-line active tactic -> update node locations on edit; for now: do not switch tabs when the active marker has more than 1 line
+                  if (!$scope.edit.activeMarker ||
+                      $scope.edit.activeMarker.range.start.row === $scope.edit.activeMarker.range.end.row) {
+                    $scope.changeTab(nodeId);
+                  }
                 } else if (nodeId != $scope.nodeId) {
+                  //@todo may fetch wrong node below active marker
                   $scope.onNodeSelected({nodeId: nodeId});
                 } else if (!$scope.edit.activeMarker) {
                   $scope.edit.todoMarkers.filter(function(e) {
