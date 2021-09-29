@@ -112,7 +112,9 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 e.preventDefault();
                 e.stopPropagation();
               } else {
-                var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
+                var nodeId = $scope.edit.activeMarker ?
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column);
                 if (nodeId && nodeId != $scope.nodeId) {
                   if (sequentProofData.agenda.contains(nodeId)) {
                     // change tab
@@ -126,17 +128,14 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             });
             editor.getSelection().on("changeCursor", function(e) {
               var p = editor.getSelection().getCursor();
-              var nodeId = $scope.tactic.nodeIdAtLoc(p.row, p.column);
+              var nodeId = $scope.edit.activeMarker ?
+                $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                $scope.tactic.nodeIdAtLoc(p.row, p.column);
               if (nodeId) {
                 var doc = editor.getSession().getDocument();
                 if (nodeId != $scope.nodeId && $scope.agenda.contains(nodeId)) {
-                  //@todo multi-line active tactic -> update node locations on edit; for now: do not switch tabs when the active marker has more than 1 line
-                  if (!$scope.edit.activeMarker ||
-                      $scope.edit.activeMarker.range.start.row === $scope.edit.activeMarker.range.end.row) {
-                    $scope.changeTab(nodeId);
-                  }
+                  $scope.changeTab(nodeId);
                 } else if (nodeId != $scope.nodeId) {
-                  //@todo may fetch wrong node below active marker
                   $scope.onNodeSelected({nodeId: nodeId});
                 } else if (!$scope.edit.activeMarker) {
                   $scope.edit.todoMarkers.filter(function(e) {
@@ -222,7 +221,9 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 }
               } else {
                 var p = $scope.aceEditor.getCursorPosition();
-                var nodeId = $scope.tactic.nodeIdAtLoc(p);
+                var nodeId = $scope.edit.activeMarker ?
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column, $scope.edit.activeMarker.range) :
+                  $scope.tactic.nodeIdAtLoc(p.row, p.column);
                 if (nodeId && nodeId != $scope.nodeId && sequentProofData.agenda.contains(nodeId)) {
                   $scope.changeTab(nodeId);
                 }

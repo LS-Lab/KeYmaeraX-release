@@ -226,9 +226,12 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         });
       },
 
-      nodeIdAtLoc: function(line, column) {
+      nodeIdAtLoc: function(line, column, offset) {
         var nodesAtLoc = $.grep(this.nodesByLocation, function(v) {
-          return v.loc.line <= line && line <= v.loc.endLine; //&& v.loc.column <= column && column <= v.loc.endColumn;
+          if (offset && v.loc.line >= offset.start.row) {
+            var lines = offset.end.row-offset.start.row;
+            return v.loc.line+lines <= line && line <= v.loc.endLine+lines;
+          } else return v.loc.line <= line && line <= v.loc.endLine;
         });
         return nodesAtLoc.length > 0 ? nodesAtLoc[0].node : undefined;
       },
