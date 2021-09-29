@@ -216,6 +216,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               if (!$scope.edit.activeMarker) {
                 var nodeLoc = $scope.tactic.locOfNode($scope.nodeId);
                 if (nodeLoc) {
+                  $scope.aceEditor.focus();
+                  $scope.aceEditor.moveCursorTo(nodeLoc.line, nodeLoc.column);
                   $scope.aceEditor.getSelection().setSelectionRange(
                     new ace.Range(nodeLoc.line, nodeLoc.column, nodeLoc.endLine, nodeLoc.endColumn), true);
                 }
