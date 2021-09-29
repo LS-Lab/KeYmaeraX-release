@@ -66,7 +66,7 @@ object Augmentors {
       var pos: Option[(PosInExpr,Term)] = None
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (condition(e.asInstanceOf[Term])) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
+          if (condition(e)) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
           else Left(None)
       }, term)
       pos
@@ -308,7 +308,7 @@ object Augmentors {
             case _ => Left(None)
           }
         }, e) match {
-          case Some(r) => r.asInstanceOf[E]
+          case Some(r) => r
         }
 
         case afml: Formula => ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
@@ -316,7 +316,7 @@ object Augmentors {
             if (f == what) Right(afml)
             else Left(None)
         }, e) match {
-          case Some(r) => r.asInstanceOf[E]
+          case Some(r) => r
         }
 
         case aprg: Program => ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
@@ -324,7 +324,7 @@ object Augmentors {
             if (a == what) Right(aprg)
             else Left(None)
         }, e) match {
-          case Some(r) => r.asInstanceOf[E]
+          case Some(r) => r
         }
 
       }
