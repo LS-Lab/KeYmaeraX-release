@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.js
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, MapConfiguration}
+import edu.cmu.cs.ls.keymaerax.{Configuration, JsMapConfiguration}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -14,7 +14,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 object KeYmaeraX {
-  Configuration.setConfiguration(MapConfiguration)
+  Configuration.setConfiguration(JsMapConfiguration)
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   ArchiveParser.setParser(KeYmaeraXArchiveParser)
 
