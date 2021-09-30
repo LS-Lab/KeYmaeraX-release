@@ -5,7 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
-import edu.cmu.cs.ls.keymaerax.core.{Formula, NamedSymbol, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.NAMED_POST_VAR
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
@@ -19,12 +20,18 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
  *      In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
 trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) {
+  /** Returns the post variable of `v` identified by name postfix `post`. */
+  val NAMED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(v.name + "post", v.index)
+  /** Returns the post variable of `v` identified by index increase. */
+  val INDEXED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(v.name, Some(v.index.map(_ + 1).getOrElse(0)))
+
   def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
             unobservable: Map[_ <: NamedSymbol, Option[Formula]] = Map.empty): Formula
   def apply(vars: List[Variable], kind: Symbol): Formula => Formula = apply(vars, kind, checkProvable=Some(_ => ()))
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
-                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula, List[Formula])
+                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]],
+                                           postVar: Variable=>Variable = NAMED_POST_VAR): (Formula, List[Formula])
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic
@@ -34,5 +41,6 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def diamondTestRetainConditionT: DependentPositionTactic
   def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
-                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): DependentPositionTactic
+                                unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
+                                postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic
 }
