@@ -115,7 +115,14 @@ private object ToolTactics {
 
     AnonymousLemmas.cacheTacticResult(
       //@note TryCatch instead of | to preserve original exception
-      TryCatch(prepareQE(order, rcf(qeTool)), classOf[TacticInapplicableFailure],
+      TryCatch(prepareQE(order, rcf(qeTool)) &
+        // If not proved: check whether result false might have been caused by unexpanded definitions
+        Idioms.doIf(!_.isProved)(
+          DebuggingTactics.assertAt("False might be due to unexpanded definitions",
+            _ != False || !StaticSemantics.symbols(seq).exists(defs.contains),
+            new TacticInapplicableFailure(_))(1)
+        ),
+        classOf[TacticInapplicableFailure],
         (ex: TacticInapplicableFailure) =>
           if (StaticSemantics.symbols(seq).exists(defs.contains)) {
             ExpandAll(defs.substs) & prepareQE(order, rcf(qeTool))
