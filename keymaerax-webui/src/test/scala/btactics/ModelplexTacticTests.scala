@@ -1035,4 +1035,14 @@ class ModelplexTacticTests extends TacticTestBase {
       ModelPlex.optimizationOneWithSearch(Some(tool), Nil, "x1".asVariable :: Nil, Some(ModelPlex.mxSimplify))(1)).subgoals.
       loneElement shouldBe """==> \forall x1_0 (x1_0=x1->x1_0>=0&\exists x1 x1>=2)""".asSequent
   }
+
+  "Reassociating formulas" should "be fast" in withTactics {
+    val p = "((v=vpost&(A()=0&(v < 0&xpost < x|v>0&xpost>x)|x=xpost&v!=0)|v=0&(2*A()+vpost^2*(x+-xpost)^(-1)=0&(vpost < 0&xpost < x|vpost>0&xpost>x)|vpost=0&x=xpost))|A()=(v^2+-vpost^2)*(2*x+(-2)*xpost)^(-1)&(v < 0&(xpost < x&(v < vpost&v+vpost < 0|vpost < v)|v+vpost>0&xpost>x)|v>0&(xpost>x&(v+vpost>0&vpost < v|vpost>v)|v+vpost < 0&xpost < x)))|(v+vpost=0&x=xpost)&(v>0&A() < 0|A()>0&v < 0)".asFormula
+    val (q, qp) = ModelPlex.reassociate(p)
+    val tic = System.currentTimeMillis()
+    proveBy(Equiv(p, q), TactixLibrary.byUS(qp)) shouldBe 'proved
+    val toc = System.currentTimeMillis()
+    (toc-tic) should be <= 200L
+  }
+
 }

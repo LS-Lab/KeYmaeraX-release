@@ -107,14 +107,71 @@ object ModelPlex extends ModelPlexTrait with Logging {
       classOf[Throwable], (_: Throwable) => TactixLibrary.skip)
   }
 
+  /** Reassociates `fml` to default associativity.
+    * @param fml The formula to reassociate.
+    * @return The reassociated formula including a proof of equivalence to `fml`.
+    * @see [[FormulaTools.reassociate]]
+    */
+  def reassociate(fml: Formula): (Formula, ProvableSig) = fml match {
+    case Or(Or(ll, lr), r) =>
+      val ll2 = reassociate(ll)
+      val lr2 = reassociate(lr)
+      val r2 = reassociate(r)
+      val i = Or(ll2._1, Or(lr2._1, r2._1))
+      val ip = proveBy(Equiv(fml, i),
+        useAt(ll2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
+        useAt(lr2._2, PosInExpr(1::Nil))(1, 1::1::0::Nil) &
+        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::1::Nil) & equivR(1) <(
+          orR(1) & orR(2) & orL(-1) <(orL(-1) <(id, id), id),
+          orR(1) & orR(1) & orL(-1) <(id, orL(-1) <(id, id))
+        )
+      )
+      val result = reassociate(i)
+      val p = proveBy(Equiv(fml, result._1), useAt(result._2, PosInExpr(1::Nil))(1, 1::Nil) & byUS(ip))
+      (result._1, p)
+    case Or(l, r) =>
+      val l2 = reassociate(l)
+      val r2 = reassociate(r)
+      val result = Or(l2._1, r2._1)
+      val p = proveBy(Equiv(fml, result),
+        useAt(l2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
+        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::Nil) &
+        byUS(Ax.equivReflexive)
+      )
+      (result, p)
+    case And(And(ll, lr), r) =>
+      val ll2 = reassociate(ll)
+      val lr2 = reassociate(lr)
+      val r2 = reassociate(r)
+      val i = And(ll2._1, And(lr2._1, r2._1))
+      val ip = proveBy(Equiv(fml, i),
+        useAt(ll2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
+        useAt(lr2._2, PosInExpr(1::Nil))(1, 1::1::0::Nil) &
+        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::1::Nil) & equivR(1) <(
+          andL(-1) & andL(-1) & andR(1) <(id, andR(1) <(id, id)),
+          andL(-1) & andL(-2) & andR(1) <(andR(1) <(id, id), id)
+        )
+      )
+      val result = reassociate(i)
+      val p = proveBy(Equiv(fml, result._1), useAt(result._2, PosInExpr(1::Nil))(1, 1::Nil) & byUS(ip))
+      (result._1, p)
+    case And(l, r) =>
+      val l2 = reassociate(l)
+      val r2 = reassociate(r)
+      val result = And(l2._1, r2._1)
+      val p = proveBy(Equiv(fml, result),
+        useAt(l2._2, PosInExpr(1::Nil))(1, 1::0::Nil) &
+        useAt(r2._2, PosInExpr(1::Nil))(1, 1::1::Nil) &
+        byUS(Ax.equivReflexive)
+      )
+      (result, p)
+    case _ => (fml, proveBy(Equiv(fml, fml), byUS(Ax.equivReflexive)))
+  }
+
   private def reassociate(seq: Sequent, cont: BelleExpr): BelleExpr = {
     val monitorFml = seq.succ.head
-    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
-    cut(reassociatedMonitorFml) <(
-      prop & DebuggingTactics.done("Unable to reassociate monitor formula into a monitor program")
-      ,
-      hideR(1) & cont
-    )
+    val (_, rmp) = reassociate(monitorFml)
+    useAt(rmp)(1) & cont
   }
 
   @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
