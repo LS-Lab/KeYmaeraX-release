@@ -295,6 +295,18 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
       case v: Variable => unifier(x1,v)
       case fn: FuncOf => unifier(fn,x1)
       case _ => ununifiable(x1,e2)}
+
+  override protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
+    case Assign(x, t)             => e2 match {case Assign(x2,t2)    => unifies2(x,t, x2,t2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case AssignAny(x)             => e2 match {case AssignAny(x2)    => unify(x,x2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Test(f)                  => e2 match {case Test(f2)         => unify(f,f2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case ODESystem(a, h)          => e2 match {case ODESystem(a2,h2) => unifies2(a,h, a2,h2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Choice(a, b)             => e2 match {case Choice(a2,b2)    => unifies2(a,b, a2,b2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Compose(a, b)            => e2 match {case Compose(a2,b2)   => unifies2(a,b, a2,b2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Loop(a)                  => e2 match {case Loop(a2)         => unify(a,a2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case Dual(a)                  => e2 match {case Dual(a2)         => unify(a,a2) case _: ProgramConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
+    case _ => super.unify(e1, e2)
+  }
 }
 
 
