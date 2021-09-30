@@ -311,8 +311,10 @@ class HilbertTests extends TacticTestBase {
 
   it should "use Barcan" in withTactics {
     proveBy("[x:=2;]\\forall y y<=x".asFormula, useAt(Ax.barcan)(1)).subgoals.loneElement shouldBe "==> \\forall y [x:=2;]y<=x".asSequent
-    the [IllFormedTacticApplicationException] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
-      have message "Unable to execute tactic 'barcan', cause: Core requirement failed: Space-compatible substitution expected: (a{|^@x_|};~>x_:=2;)"
+    the [InapplicableUnificationKeyFailure] thrownBy proveBy("[x:=2;]\\forall x x<=3".asFormula, useAt(Ax.barcan)(1)) should
+      have message """Axiom barcan [a{|^@x_|};]\forall x_ p(||)<->\forall x_ [a{|^@x_|};]p(||) cannot be applied: The shape of
+                     |  expression               [x:=2;]\forall x x<=3
+                     |  does not match axiom key [a{|^@x_|};]\forall x_ p(||)""".stripMargin
   }
 
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
@@ -619,19 +621,19 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in withTactics {
-    useFor(Ax.dDX, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
+    useFor(Ax.dDX, PosInExpr(0::Nil))(SuccPosition(1, 1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
-    useFor(Ax.dDX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.dDX)(SuccPosition(1, 0::1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
-    useFor(Ax.dDX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.dDX)(SuccPosition(1, 0::1::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }

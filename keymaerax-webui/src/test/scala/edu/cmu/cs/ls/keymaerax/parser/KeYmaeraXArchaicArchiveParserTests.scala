@@ -5,10 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, Find, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Formula, Program, Real, SubstitutionPair, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.infrastruct.SuccPosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
@@ -1299,7 +1300,9 @@ class KeYmaeraXArchaicArchiveParserTests extends TacticTestBase {
         Name("y", None) -> Signature(None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Proof 1", "implyR(1) & QE", implyR(1) & QE) :: ("Proof 2", "implyR('R)", implyR('R)) :: Nil
+    entry.tactics should contain theSameElementsInOrderAs List(
+      ("Proof 1", "implyR(1) & QE", implyR(1) & QE),
+      ("Proof 2", "implyR('R)", implyR(Find(0, None, SuccPosition.base0(0), exact=true, entry.defs))))
     entry.info shouldBe empty
   }
 
