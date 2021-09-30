@@ -848,9 +848,10 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
         if (t1.isInstanceOf[Program] && followsProgram(la) && la!=EOF) shift(st)
         else if (la==EOF) throw ParseException.imbalancedError("Unmatched modality", tok, st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
-        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+        else if (!t1.isInstanceOf[Variable] && elaboratable(DifferentialProgramKind, t1, lax).isDefined) shift(st) //@note produce better error message about missing {} later when entire ODE is parsed
+        else if (elaboratable(ProgramKind, t1, lax).isDefined
           && statementSemicolon && la != SEMI) error(st, List(SEMI))
-        else if ((elaboratable(ProgramKind, t1, lax).isDefined || elaboratable(DifferentialProgramKind, t1, lax).isDefined)
+        else if (elaboratable(ProgramKind, t1, lax).isDefined
           && (if (statementSemicolon) la == SEMI else followsProgram(la))) shift(st)
         else error(st, List(FOLLOWSPROGRAM, FOLLOWSIDENT))
 

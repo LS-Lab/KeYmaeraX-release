@@ -230,6 +230,13 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
         |Expected: }""".stripMargin
   }
 
+  it should "refuse ODE systems 5 without {} in modalities" in {
+    the [ParseException] thrownBy parser("[c,d,x'=f(x)&q(x);]x=0") should have message
+      """1:19 ODE without {}
+        |Found:    ] at 1:19
+        |Expected: }""".stripMargin
+  }
+
   it should "refuse primed variables in evolution domain constraint" in {
     the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should have message
       """1:13 No differentials can be used in evolution domain constraints
