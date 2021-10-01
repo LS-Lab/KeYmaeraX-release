@@ -973,61 +973,144 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     //@note Learner's mode Level=0, Industry mode Level=1
-    val examples =
-    new ExamplePOJO(6, "Textbook",
-      "LFCPS 2018 Textbook",
-      "",
-      "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
-      "/examples/tutorials/lfcps-examples.png", 0) ::
-    new ExamplePOJO(6, "MOD19",
-      "Marktoberdorf 2019 Tutorial Examples",
-      //"/keymaerax-projects/lfcps-turorial/README.md",
-      "",
-      "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-    new ExamplePOJO(5, "POPL 2019 Tutorial",
-      "Programming CPS With Proofs",
-      //"/keymaerax-projects/popltutorial/README.md",
-      "",
-      "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(4, "DLDS",
-        "Dynamic Logic for Dynamical Systems Examples",
+    val examples = List(
+      ExamplePOJO(6, "Textbook",
+        "LFCPS 2018 Textbook Examples",
+        "",
+        "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
+        "/examples/tutorials/lfcps-examples.png", 0),
+      ExamplePOJO(6, "MOD19",
+        "Marktoberdorf 2019 Tutorial Examples",
+        //"/keymaerax-projects/lfcps-turorial/README.md",
+        "",
+        "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(5, "POPL 2019 Tutorial",
+        "Programming CPS With Proofs",
+        //"/keymaerax-projects/popltutorial/README.md",
+        "",
+        "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(4, "DLDS",
+        "Dynamic Logic for Dynamical Systems",
         //"/keymaerax-projects/dlds/README.md",
         "",
         "classpath:/keymaerax-projects/dlds/dlds.kya",
-        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(0, "STTT Tutorial",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(0, "STTT Tutorial",
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/sttt/sttt.kyx",
-        "/examples/tutorials/sttt/sttt.png", 1) ::
-      new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
-        "Proving ODEs",
+        "/examples/tutorials/sttt/sttt.png", 1),
+      ExamplePOJO(1, "CPSWeek 2016 Tutorial",
+        "Modeling and Proving ODEs",
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
         "classpath:/examples/tutorials/cpsweek/cpsweek.kyx",
-        "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-      new ExamplePOJO(2, "FM 2016 Tutorial",
+        "/examples/tutorials/cpsweek/cpsweek.png", 1),
+      ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/fm/fm.kyx",
-        "/examples/tutorials/fm/fm.png", 1) ::
-      new ExamplePOJO(3, "Beginner's Tutorial",
+        "/examples/tutorials/fm/fm.png", 1),
+      ExamplePOJO(3, "Beginner's Tutorial",
         "Feature Tour Tutorial",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/basic/basictutorial.kyx",
-        "/examples/tutorials/fm/fm.png", 0) ::
+        "/examples/tutorials/fm/fm.png", 0),
 //        new ExamplePOJO(3, "POPL 2019 Tutorial",
 //          "Programming CPS With Proofs",
 //          //"/keymaerax-projects/popltutorial/README.md",
 //          "",
 //          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-//          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
-        Nil
+//          "/examples/tutorials/cpsweek/cpsweek.png", 1)
+    )
 
     db.getUser(userId) match {
       case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
       case None => new ErrorResponse("Unable to retrieve examples. Unknown user " + userId) :: Nil
+    }
+
+  }
+}
+
+class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId, _ => true) with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val templates = List(
+      TemplatePOJO("Plain", "A plain dL formula",
+        """ArchiveEntry "New Entry"
+          |
+          |Problem
+          |  /* fill in dL formula here */
+          |End.
+          |End.""".stripMargin,
+        Some(new Region(3, 2, 3, 31)),
+        None
+      ),
+      TemplatePOJO(
+        "Structured", "Archive with definitions",
+        """ArchiveEntry "New Entry"
+          |
+          |Definitions
+          |  /* A constant with arbitrary value, constrained in predicate p */
+          |  /* Real any; */
+          |
+          |  /* The constant 2 */
+          |  /* Real two = 2; */
+          |
+          |  /* An uninterpreted function */
+          |  /* Real f(Real x, Real y); */
+          |
+          |  /* Function x^2 */
+          |  /* Real sq(Real x) = x^two; */
+          |
+          |  /* Predicate x<=y */
+          |  /* Bool leq(Real x, Real y) <-> x<=y; */
+          |
+          |  /* Predicate p uses other definitions */
+          |  /* Bool p(Real x) <-> any>=two & leq(x,two); */
+          |
+          |  /* Hybrid programs */
+          |  /* HP increment ::= { x:=x+1; }; */
+          |  /* HP ode ::= { {x'=sq(x) & leq(x,two) } }; */
+          |  /* HP system ::= { { increment; ode; }* }; */
+          |End.
+          |
+          |ProgramVariables
+          |  /* Real x; */
+          |End.
+          |
+          |Problem
+          |  /* fill in dL formula here */
+          |  /* p(x) -> [system;]leq(x,any) */
+          |End.
+          |
+          |/* Optional tactic to prove the problem */
+          |/*
+          |Tactic "Proof"
+          |implyR('R=="p(x)->[system{|^@|};]leq(x,any())");
+          |expand "system";
+          |loop("leq(x,two())", 'R=="[{increment{|^@|};ode{|^@|};}*]leq(x,any())"); <(
+          |  "Init":
+          |    propClose,
+          |  "Post":
+          |    QE,
+          |  "Step":
+          |    composeb('R=="[increment{|^@|};ode{|^@|};]x<=2");
+          |    expandAllDefs;
+          |    unfold;
+          |    ODE('R=="[{x'=x^2&x<=2}]x<=2")
+          |)
+          |End.
+          |*/
+          |End.""".stripMargin,
+        Some(new Region(33, 2, 33, 35)),
+        None
+      )
+    )
+
+    db.getUser(userId) match {
+      case Some(_) => new GetTemplatesResponse(templates) :: Nil
+      case None => new ErrorResponse("Unable to retrieve templates. Unknown user " + userId) :: Nil
     }
 
   }

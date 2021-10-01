@@ -1142,6 +1142,15 @@ object RestApi extends Logging {
     }
   }
 
+  val templates: SessionToken=>Route = (t : SessionToken) => path("templates" / "user" / Segment / "all") { userId =>
+    pathEnd {
+      get {
+        val request = new GetTemplatesRequest(database, userId)
+        completeRequest(request, t)
+      }
+    }
+  }
+
   //endregion
 
   //region More proof development stuff
@@ -1334,6 +1343,7 @@ object RestApi extends Logging {
     exportSequent         ::
     testSynthesis         ::
     examples              ::
+    templates             ::
     stepwiseTrace         ::
     updateUserModel       ::
     userTheme             ::

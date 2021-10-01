@@ -1002,6 +1002,10 @@ del {
 .k4-half-screenheight {
   height: calc(50vh);
 }
+.k4-screenheight-40 {
+  height: calc(40vh);
+  overflow: scroll;
+}
 /* first uib-tabset div */
 .k4-vertical-fill > div {
   height: 100%;

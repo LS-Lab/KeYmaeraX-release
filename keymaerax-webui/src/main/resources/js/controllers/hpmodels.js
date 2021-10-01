@@ -1,21 +1,19 @@
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
-     /** Model data */
-     $scope.template = 'ArchiveEntry "New Entry"\n\nProblem\n  /* fill in dL formula here */\nEnd.\nEnd.'
-
+  function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService,
+            template) {
+     $scope.template = template;
      $scope.userId = sessionService.getUser();
-
      $scope.model = {
        modelName: undefined,
        modelId: undefined,
-       content: $scope.template,
+       content: $scope.template.text,
        savedContent: undefined,
        savedContentErrorText: ''
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
-       if (!fileContent || fileContent == '') $scope.model.content = $scope.template;
+       if (!fileContent || fileContent == '') $scope.model.content = $scope.template.text;
        if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
@@ -139,10 +137,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.aceChanged = function(e) {
        var content = e[0];
        var editor = e[1];
-       if (content.id == 1) {
+       if (content.id == 1 && $scope.template.selectRange) {
          // first edit (id==1) inserts the initial template text; move cursor to beginning of comment and select
-         editor.moveCursorTo(3, 2);
-         editor.getSelection().setSelectionRange(new ace.Range(3, 2, 3, 31), true);
+         editor.moveCursorTo($scope.template.selectRange.start.row, $scope.template.selectRange.start.column);
+         editor.getSelection().setSelectionRange(new ace.Range(
+          $scope.template.selectRange.start.row, $scope.template.selectRange.start.column,
+          $scope.template.selectRange.end.row, $scope.template.selectRange.end.column), true);
        }
      }
 
@@ -251,9 +251,13 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   }
 
   $scope.examples = [];
-  $scope.activeTutorialSlide = 0;
   $http.get("examples/user/" + $scope.userId + "/all").then(function(response) {
       $scope.examples = response.data;
+  });
+
+  $scope.templates = [];
+  $http.get("templates/user/" + $scope.userId + "/all").then(function(response) {
+      $scope.templates = response.data;
   });
 
   $scope.readModelList = function(folder) {
@@ -297,15 +301,25 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     $scope.readModelList($scope.workingDir);
   }
 
-  $scope.openNewModelDialog = function() {
+  $scope.openNewModelDialog = function(template) {
     $uibModal.open({
       templateUrl: 'templates/modeluploaddialog.html',
       controller: 'ModelUploadCtrl',
       size: 'fullscreen',
       backdrop: 'static',
-      keyboard: false
+      keyboard: false,
+      resolve: {
+        template: function() { return template; }
+      }
     });
   };
+
+  $scope.switchGridList = function(where, to) {
+    switch(to) {
+      case "list": $(where).addClass('list-group-wrapper').removeClass('grid-group-wrapper'); break
+      case "grid": $(where).addClass('grid-group-wrapper').removeClass('list-group-wrapper'); break
+    }
+  }
 
   $scope.importRepo = function(repoUrl) {
     spinnerService.show('caseStudyImportSpinner');
