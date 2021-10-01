@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 
 import scala.collection.immutable.{List, Nil}
 import scala.util.Try
@@ -242,6 +243,7 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 object RestrictedBiDiUnificationMatch extends RestrictedBiDiUnificationMatch
 class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
   override protected def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {
+    case _: Number => e2 match {case Number(_) => if (e1==e2) id else ununifiable(e1,e2) case _: DotTerm | _: FuncOf => unify(e2,e1) case _ => ununifiable(e1,e2)}
     // homomorphic cases
     case Neg(t)          => e2 match {case Neg(t2)          => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
     case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case fn: FuncOf => unify(fn,e1) case _ => ununifiable(e1,e2)}
@@ -306,6 +308,32 @@ class RestrictedBiDiUnificationMatch extends FreshUnificationMatch {
     case Loop(a)                  => e2 match {case Loop(a2)         => unify(a,a2) case _: ProgramConst | _: SystemConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
     case Dual(a)                  => e2 match {case Dual(a2)         => unify(a,a2) case _: ProgramConst => unify(e2, e1) case _ => ununifiable(e1,e2)}
     case _ => super.unify(e1, e2)
+  }
+
+  override protected def unifyApplicationOf(F: (Function, Term) => Expression, f: Function, t: Term, e2: Expression): List[SubstRepl] = {
+    val dt = coloredDotsTerm(t.sort)
+
+    val uInv0 = unify(dt, t).map(_.swap.asInstanceOf[(Term, Term)]).toMap
+    val e2repl = SubstitutionHelper.replacesFree(e2)(uInv0.get)
+    val diff = StaticSemantics.symbols(dt) -- StaticSemantics.symbols(e2repl)
+
+    val uInv1: Map[Term, Term] =
+      if (diff.size == 1) {
+        // 1 argument not mentioned verbatim, see if e2 has a single number to match with
+        val nums = scala.collection.mutable.ListBuffer.empty[Number]
+        ExpressionTraversal.traverseExpr(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+            case n: Number => nums += n; Left(None)
+            case _ => Left(None)
+          }
+        }, e2)
+        if (nums.distinct.size == 1) {
+          val unmatched = uInv0.find(_._2 == diff.head).get
+          Map(nums.head -> unmatched._2)
+        } else Map.empty
+      } else Map.empty
+
+    unifier(F(f, dt), SubstitutionHelper.replacesFree(e2repl)(uInv1.get))
   }
 }
 

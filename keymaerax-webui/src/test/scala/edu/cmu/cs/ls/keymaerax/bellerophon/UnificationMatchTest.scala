@@ -118,7 +118,7 @@ class UnificationMatchTest extends SystemTestBase {
       SubstitutionPair("f(.)".asTerm, "(.)^2+y".asTerm) :: Nil))
   }
 
-  it should "support mixed term left-right matching" in {
+  "Simple bidirectional unification" should "support mixed term left-right matching" in {
     RestrictedBiDiUnificationMatch(
       "==> a=0, f(x)>=0".asSequent,
       "==> a()=0, x^2>=0".asSequent
@@ -133,6 +133,53 @@ class UnificationMatchTest extends SystemTestBase {
     ).usubst shouldBe USubst(List("g(.)~>.+1".asSubstitutionPair, "f(.)~>.^2".asSubstitutionPair))
   }
 
+  it should "support more mixed left-right matching" in {
+    RestrictedBiDiUnificationMatch(
+      "==> a=0, p(x)".asSequent,
+      "==> q(a), x^2>=0".asSequent
+    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
+    RestrictedBiDiUnificationMatch(
+      "==> q(a), x^2>=0".asSequent,
+      "==> a=0, p(x)".asSequent
+    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
+  }
+
+  it should "unify p(x,y) with x<=2" in {
+    RestrictedBiDiUnificationMatch(
+      "p(x,y)".asFormula,
+      "x<=2".asFormula
+    ).usubst shouldBe USubst(List(SubstitutionPair("p(._0,._1)".asFormula, "._0<=._1".asFormula)))
+  }
+
+  it should "unify p(x,c()) with x<=2" in {
+    RestrictedBiDiUnificationMatch(
+      "p(x,c())".asFormula,
+      "x<=2".asFormula
+    ).usubst shouldBe USubst(List(SubstitutionPair("p(._0,._1)".asFormula, "._0<=._1".asFormula)))
+  }
+
+  it should "unify p(x,y,z) with x+2<=3" in {
+    //@note unable to guess y=2/y=3 vs. z=2,z=3
+    RestrictedBiDiUnificationMatch(
+      "p(x,y,z)".asFormula,
+      "x+2<=3".asFormula
+    ).usubst shouldBe USubst(List(SubstitutionPair("p(._0,._1,._2)".asFormula, "._0+2<=3".asFormula)))
+  }
+
+  it should "match numbers with arguments when unambiguous" in {
+    RestrictedBiDiUnificationMatch(
+      "[{prg;}*](x<=2&any()>=2)".asFormula,
+      "[{prg;}*](leq(x,two())&any()>=2)".asFormula
+    ).usubst shouldBe USubst(List(SubstitutionPair("leq(._0,._1)".asFormula, "._0<=._1".asFormula)))
+
+    RestrictedBiDiUnificationMatch(
+      "any()>=2&x<=2 ==> [{prg;}*](x<=2&any()>=2)->[{prg;}*]x<=any()".asSequent,
+      "p(x) ==> [{prg;}*](leq(x,two())&any()>=2)->[{prg;}*]leq(x,any())".asSequent
+    ).usubst shouldBe USubst(List(
+      SubstitutionPair("p(.)".asFormula, "any()>=2 & .<=2".asFormula),
+      SubstitutionPair("leq(._0, ._1)".asFormula, "._0<=._1".asFormula)
+    ))
+  }
 
   "Unification formulas" should "unify p() with x^2+y>=0" in {
     shouldUnify("p()".asFormula, "x^2+y>=0".asFormula, USubst(
@@ -178,17 +225,6 @@ class UnificationMatchTest extends SystemTestBase {
       List(
         "r(._0,._1,._2)~>._2>=0&._0^2+._1^2=0".asSubstitutionPair,
         "p(._0,._1)~>._0=._1".asSubstitutionPair))
-  }
-
-  it should "support more mixed left-right matching" in {
-    RestrictedBiDiUnificationMatch(
-      "==> a=0, p(x)".asSequent,
-      "==> q(a), x^2>=0".asSequent
-    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
-    RestrictedBiDiUnificationMatch(
-      "==> q(a), x^2>=0".asSequent,
-      "==> a=0, p(x)".asSequent
-    ).usubst shouldBe USubst(List("q(.)~>.=0".asSubstitutionPair, "p(.)~>.^2>=0".asSubstitutionPair))
   }
 
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {
