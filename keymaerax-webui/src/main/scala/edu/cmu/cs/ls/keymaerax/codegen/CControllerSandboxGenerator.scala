@@ -50,7 +50,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
       }
 
       val monitorCode = (new CMonitorGenerator)(monitor, vars, inputVars)
-      val params = CGenerator.getParameters(monitor, vars)
+      val params = CodeGenerator.getParameters(monitor, vars)
       val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(vars) + "\n" +
         CGenerator.printInputDeclaration(inputVars)

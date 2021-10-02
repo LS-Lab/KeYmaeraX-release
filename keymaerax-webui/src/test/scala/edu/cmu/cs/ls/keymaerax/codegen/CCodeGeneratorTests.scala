@@ -484,7 +484,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
 
     // CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val inputs = CGenerator.getInputs(testProg)
+    val inputs = CodeGenerator.getInputs(testProg)
     val monitorCode = (new CGenerator(new CMonitorGenerator()))(testProg, stateVars.toSet, inputs, "Monitor")
 
     //val controlCode = (new CGenerator(new CMpfrControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
@@ -641,7 +641,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
     println("Test prog " + testProg.prettyString)
 
-    val inputs = CGenerator.getInputs(testProg)
+    val inputs = CodeGenerator.getInputs(testProg)
     val monitorCode = (new CGenerator(new CMonitorGenerator()))(testProg, stateVars.toSet, inputs, "Monitor")
     println(monitorCode)
   }

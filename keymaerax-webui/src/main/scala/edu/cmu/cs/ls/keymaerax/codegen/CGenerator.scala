@@ -4,11 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.codegen
 
-import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature}
 
 object CGenerator {
@@ -43,34 +41,6 @@ object CGenerator {
       |typedef struct verdict { int id; long double val; } verdict;
       |
       |""".stripMargin
-
-  /**
-    * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
-    * expression `expr`. */
-  def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr)
-      .filter({
-        case Function("abs", None, Real, Real, true) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
-        case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-        case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-        case _ => false //@note any other function or differential symbol
-      })
-
-  /** Returns a set of names whose values are chosen nondeterministically in the program `expr` (empty if `expr` is not
-    * a program). */
-  def getInputs(expr: Expression): Set[BaseVariable] = expr match {
-    case prg: Program =>
-      val inputs = scala.collection.mutable.Set[BaseVariable]()
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-          case AssignAny(v: BaseVariable) => inputs += v; Left(None)
-          case _ => Left(None)
-        }
-      }, prg)
-      inputs.toSet
-    case _ => Set()
-  }
 }
 
 /**
@@ -121,7 +91,7 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
   private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
-    val parameters = getParameters(expr, stateVars)
+    val parameters = CodeGenerator.getParameters(expr, stateVars)
 
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 

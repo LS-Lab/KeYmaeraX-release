@@ -10,6 +10,10 @@
                        ng-click="synthesize('C','boolean');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
                 </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='Python'}"
+                       ng-click="synthesize('Python','boolean');$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> Python
+                </label>
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
                        uib-tooltip="ModelPlex Proof Certificate"
                        ng-click="showProofArchive();$event.stopPropagation()">
@@ -40,6 +44,10 @@
                        ng-click="synthesize('C','metricfml');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
                 </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='Python'}"
+                       ng-click="synthesize('Python','metricfml');$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> Python
+                </label>
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
                        uib-tooltip="ModelPlex Proof Certificate"
                        ng-click="showProofArchive();$event.stopPropagation()">
@@ -69,6 +77,10 @@
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='C'}"
                        ng-click="synthesize('C','metricprg');$event.stopPropagation()">
                     <input type="radio" name="options" autocomplete="off"> C
+                </label>
+                <label class="btn btn-default btn-xs" ng-class="{'active':language=='Python'}"
+                       ng-click="synthesize('Python','metricprg');$event.stopPropagation()">
+                    <input type="radio" name="options" autocomplete="off"> Python
                 </label>
                 <label class="btn btn-default btn-xs" ng-class="{'active':language=='dLProof'}"
                        uib-tooltip="ModelPlex Proof Certificate"

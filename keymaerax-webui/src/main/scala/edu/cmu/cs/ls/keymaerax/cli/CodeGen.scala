@@ -1,10 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
-
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.cli.KeYmaeraX.{OptionMap, exit}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenerator}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, Imply, StaticSemantics, True}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
@@ -116,7 +115,7 @@ object CodeGen {
     val monitorProgProof = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2)
     assert(monitorProgProof.subgoals.size == 1, "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString)
     val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
-    val inputs = CGenerator.getInputs(monitorProg)
+    val inputs = CodeGenerator.getInputs(monitorProg)
     val monitorCode = (new CGenerator(new CMonitorGenerator()))(monitorProg, monitorStateVars, inputs, "Monitor")
 
     val pw = new PrintWriter(outputFileName)
