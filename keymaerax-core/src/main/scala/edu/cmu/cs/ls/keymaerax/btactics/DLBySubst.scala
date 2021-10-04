@@ -338,7 +338,7 @@ private object DLBySubst {
           else sequent.ante.map(fml =>
             ghosts.foldLeft(fml)({ case (f, ((what, repl), _)) => SubstitutionHelper.replaceFree(f)(what, repl) })).
             flatMap(FormulaTools.conjuncts).
-            filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
+            filter(StaticSemantics.freeVars(_).intersect(aBVs.toSet).isEmpty).toList
         (constConjuncts, isGame) match {
           case (Nil, _) | (_, true) => (oldifiedC, skip, implyR(1))
           case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
