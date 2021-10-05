@@ -168,17 +168,18 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case _ => (fml, proveBy(Equiv(fml, fml), byUS(Ax.equivReflexive)))
   }
 
-  private def reassociate(seq: Sequent, cont: BelleExpr): BelleExpr = {
+  @Tactic(longDisplayName = "ModelPlex Reassociate Formulas")
+  def reassociate: BelleExpr = anon ((seq: Sequent) => {
     val monitorFml = seq.succ.head
     val (_, rmp) = reassociate(monitorFml)
-    useAt(rmp)(1) & cont
-  }
+    useAt(rmp)(1)
+  })
 
   @Tactic(longDisplayName = "ModelPlex Monitor Shape Formatting")
   def mxFormatShape(shape: String): InputTactic = inputanon ((seq: Sequent) => shape match {
     //@ performance bottleneck: prop
-    case "boolean" => reassociate(seq, nil)
-    case "metricprg" => reassociate(seq, ModelPlex.chaseToTests(combineTests = false)(1)*2)
+    case "boolean" => reassociate
+    case "metricprg" => reassociate & ModelPlex.chaseToTests(combineTests = false)(1)*2
     case "metricfml" => toMetricT(seq.succ.head)
   })
 
