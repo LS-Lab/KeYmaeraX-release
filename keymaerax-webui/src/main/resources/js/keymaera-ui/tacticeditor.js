@@ -95,7 +95,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
               if (!editor.isFocused()) return;
 
               //@note css buttons are approximately left/right of gutter half
-              var stepwise = e.clientX <= target.getBoundingClientRect().left + target.getBoundingClientRect().width/2;
+              //var stepwise = e.clientX <= target.getBoundingClientRect().left + target.getBoundingClientRect().width/2;
+              var stepwise = false; //@note stepwise execution sometimes computes subgoal indices wrong, avoid for now
 
               var doc = editor.getSession().getDocument();
               var activeRange = $scope.edit.activeMarker ? $scope.edit.activeMarker.range : undefined;

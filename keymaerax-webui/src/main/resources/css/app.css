@@ -668,7 +668,7 @@ del {
 }
 
 .ace_gutter-cell.ace_breakpoint::before {
-  content: "\f04b  \f050"; /* fontawesome play, fast-forward */
+  content: "\f04b"; /* fontawesome play */
   font-family: FontAwesome;
   color: black;
   margin-left: -.7em;
