@@ -8,13 +8,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.{ModelPlex, SimplifierV3}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator.nameIdentifier
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
 /**
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
   */
-class PythonMonitorGenerator(conjunctionsAs: Symbol) extends CodeGenerator {
+class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) =
     generateMonitoredCtrlPythonCode(expr, stateVars)
@@ -27,7 +27,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol) extends CodeGenerator {
     require(names.intersect(PythonGenerator.RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " +
       names.intersect(PythonGenerator.RESERVED_NAMES).mkString(","))
 
-    val parameters = getParameters(expr, stateVars)
+    val parameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
 
     val monitorDistFuncHead =
       s"""def boundaryDist($MONITOR_PRE_STATE_NAME: State, $MONITOR_CURR_STATE_NAME: State, $MONITOR_PARAMS_NAME: Params) -> Verdict:
@@ -112,19 +112,6 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol) extends CodeGenerator {
     if (!errorIds.contains(fml)) errorIds.put(fml, if (errorIds.isEmpty) -1 else errorIds.minBy(_._2)._2-1)
     errorIds(fml)
   }
-
-  /**
-    * Returns a set of names (excluding names in `vars` and interpreted functions) that are immutable parameters of the
-    * expression `expr`. */
-  private def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr)
-      .filter({
-        case Function("abs", None, Real, Real, true) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
-        case Function(name, _, Unit, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
-        case _: Function => false
-        case BaseVariable(name, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
-      })
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new PythonFormulaTermGenerator({

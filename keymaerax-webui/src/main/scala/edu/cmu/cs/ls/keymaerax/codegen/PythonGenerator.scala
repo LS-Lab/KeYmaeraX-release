@@ -78,18 +78,31 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
 
+  /** The name of the monitor/control function argument representing monitor parameters. */
+  private val FUNC_PARAMS_NAME = "params"
+
+  /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
+  private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new PythonFormulaTermGenerator({
+    case t: Variable =>
+      if (parameters.contains(t)) FUNC_PARAMS_NAME + "."
+      else ""
+    case FuncOf(fn, Nothing) =>
+      if (parameters.contains(fn)) FUNC_PARAMS_NAME + "."
+      else throw new CodeGenerationException("Non-posterior, non-parameter function symbol " + fn.prettyString + " is not supported")
+  })
+
   /** Prints function definitions of symbols in `mentionedIn`. */
-  private def printFuncDefs(mentionedIn: Expression, defs: Declaration): String = {
-    val what = StaticSemantics.symbols(mentionedIn)
-    defs.decls.
+  private def printFuncDefs(mentionedIn: Expression, defs: Declaration, parameters: Set[NamedSymbol], printed: Set[NamedSymbol] = Set.empty): String = {
+    val what = StaticSemantics.symbols(mentionedIn) -- printed
+    val printing = defs.decls.
       filter({
         case (n, s@Signature(_, Real | Bool, Some(args), _, _)) => args.nonEmpty && what.contains(Declaration.asNamedSymbol(n, s))
-        case _ => false }).
-      map({
+        case _ => false })
+    printing.map({
         case (name, Signature(_, codomain, Some(args), interpretation, _)) =>
           def ptype(s: Sort): String = s match {
             case Real => "np.float64"
-            case Bool => "Bool"
+            case Bool => "bool"
             case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
           }
           val pargs = args.map({ case (n, s) => s"${n.prettyString}: ${ptype(s)}" }).mkString(", ")
@@ -102,11 +115,14 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
           val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
             (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
               SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
-          val body = interpretation match {
-            case Some(i) => (new CFormulaTermGenerator(_ => ""))(argsSubst(i))._2
-            case _ => PythonPrettyPrinter.numberLiteral(0.0) + " /* todo */"
+          val (interpretationDefs, body) = interpretation match {
+            case Some(i) =>
+              (printFuncDefs(i, defs, parameters, printed ++ printing.map({ case (n, s) => Declaration.asNamedSymbol(n, s) }).toSet),
+                primitiveExprGenerator(parameters)(argsSubst(i))._2)
+            case _ => ("", PythonPrettyPrinter.numberLiteral(0.0) + " # todo")
           }
-          s"""${name.prettyString}($pargs) -> ${ptype(codomain)}:
+          s"""$interpretationDefs
+             |def ${name.prettyString}($FUNC_PARAMS_NAME: Params, $pargs) -> ${ptype(codomain)}:
              |  return $body
              |""".stripMargin
       }).mkString("\n\n")
@@ -117,7 +133,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(PythonGenerator.RESERVED_NAMES).isEmpty, "Unexpected reserved Python names encountered: " +
       names.intersect(PythonGenerator.RESERVED_NAMES).mkString(","))
-    val parameters = CodeGenerator.getParameters(expr, stateVars)
+    val parameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
 
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
@@ -127,7 +143,7 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(expr, defs) +
+      printFuncDefs(expr, defs, parameters) +
       bodyDefs, bodyBody)
   }
 }

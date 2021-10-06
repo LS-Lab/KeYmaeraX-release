@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.core.{AssignAny, BaseVariable, Expression, Function, NamedSymbol, Program, Real, StaticSemantics, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.InterpretedSymbols
 
 object CodeGenerator {
   /**
@@ -15,8 +16,7 @@ object CodeGenerator {
   def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
     StaticSemantics.symbols(expr)
       .filter({
-        case Function("abs", None, Real, Real, true) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
+        case InterpretedSymbols.absF | InterpretedSymbols.minF | InterpretedSymbols.maxF => false
         case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
         case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
         case _ => false //@note any other function or differential symbol
