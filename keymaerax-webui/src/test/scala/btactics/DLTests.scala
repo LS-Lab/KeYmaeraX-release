@@ -350,6 +350,11 @@ class DLTests extends TacticTestBase {
     result.subgoals shouldBe "A>1&x>5 ==> [x:=A;]x>1".asSequent :: "A>1, x>1 ==> [y:=A*x;]y>1".asSequent :: Nil
   }
 
+  it should "preserve a quantified const fact" in withMathematica { _ =>
+    val result = proveBy("\\forall x (x^2+2>=A)&A>1&x>5 -> [x:=A;][y:=A*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
+    result.subgoals shouldBe "\\forall x (x^2+2>=A)&A>1&x>5 ==> [x:=A;]x>1".asSequent :: "\\forall x (x^2+2>=A)&A>1, x>1 ==> [y:=A*x;]y>1".asSequent :: Nil
+  }
+
   it should "preserve function facts" in withMathematica { _ =>
     val result = proveBy("A()>1&x>5 -> [x:=A();][y:=A()*x;]y>1".asFormula, implyR(1) & generalize("x>1".asFormula)(1))
     result.subgoals shouldBe "A()>1&x>5 ==> [x:=A();]x>1".asSequent :: "A()>1, x>1 ==> [y:=A()*x;]y>1".asSequent :: Nil
