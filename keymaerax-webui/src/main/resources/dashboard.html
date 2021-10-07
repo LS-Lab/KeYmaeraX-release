@@ -138,7 +138,7 @@
 <div ng-controller="ServerInfoCtrl">
     <div class="alert alert-warning" role="alert" ng-if="!upToDate && versionInfoAvailable" ng-cloak>
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <span class="text-warning"><b>Update:</b> version {{latestVersion}} is now available from <a href="https://keymaeraX.org/">KeYmaeraX.org</a>.</span>
+        <span class="text-warning"><b>Update:</b> version {{latestVersion}} is now available from <a target="blank_" href="https://keymaeraX.org/">KeYmaeraX.org</a>.</span>
     </div>
 </div>
 
@@ -151,7 +151,7 @@
 <div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
         <p class="text-muted k4-server-info">KeYmaera&#160;X {{keymaeraXVersion}}
-            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a target="_blank" class="text-danger" href="https://keymaeraX.org/">KeYmaeraX.org</a></b>).</span>
+            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a target="_blank" class="text-danger" target="blank_" href="https://keymaeraX.org/">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(no network).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest).</span>
             <i class="fa fa-copyright"></i> Carnegie Mellon University, <a href="https://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a> 2014-2021</p>
