@@ -10,40 +10,59 @@ import testHelper.KeYmaeraXTestTags.TodoTest
 
 class SwitchedSystemsTests extends TacticTestBase {
 
-  "state switch" should "return arbitrary switching models" in withMathematica { _ =>
+  "ADT" should "parse and print state-dependent system" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x+y,z'=a+b".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+    val ss = StateDependent(List(ode1,ode2,ode3))
+
+    ss.cvars shouldBe List(Variable("x"), Variable("z"))
+    ss.vars shouldBe List(Variable("z"), Variable("y"), Variable("x"), Variable("a"), Variable("b"))
+
+    println(ss)
+    println(ss.asProgram)
+    println(ss.asProgram(Variable("t_")))
+    ss.asProgram shouldBe "{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*".asProgram
+    ss.asProgram(Variable("t_")) shouldBe "{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*".asProgram
+
+    stateDependentFromProgram(ss.asProgram) shouldBe ss
+    stateDependentFromProgram(ss.asProgram(Variable("t_")),Some(Variable("t_"))) shouldBe ss
+
+    // requirement fail: StateDependent(List())
+    // freshness error: ss.asProgram(Variable("x"))
+  }
+
+  it should "parse and print controlled switching system" in withMathematica { _ =>
     val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
     val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
     val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
 
-    val ss = stateSwitch(List(ode1, ode2, ode3))
+    val mode1 = ("mode1", ode1,
+      List(
+        ("mode2", "x>a".asFormula, Assign(Variable("x"),Number(0)):: Assign(Variable("x"),Number(1)):: Assign(Variable("x"),Variable("y"))::Nil), // 1 -> 2
+        ("mode2", "x<=0".asFormula, Nil), // 1 -> 2
+        ("mode3", "x=0".asFormula, Assign(Variable("x"),Number(0))::Nil) // 1 -> 3
+      ))
 
-    println(ss)
-    ss shouldBe "{{{x'=-x}++{x'=-x^3}}++{x'=-x^5}}*".asProgram
+    val mode2 = ("mode2", ode2, List())
+
+    val mode3 = ("mode3", ode3, List(
+      ("mode2","x<=0".asFormula, Assign(Variable("x"),Number(0))::Nil))) // 3 -> 2
+
+    val cs = Controlled(List(mode1,mode2,mode3))
+
+    cs.cvars shouldBe List(Variable("x"))
+    cs.vars shouldBe List(Variable("x"), Variable("a"), Variable("y"))
+
+    cs.asProgram shouldBe "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{{?x>a;x:=0;x:=1;x:=y;}u:=mode2();++?x<=0;u:=mode2();++{?x=0;x:=0;}u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{{?x<=0;x:=0;}u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*".asProgram
+
+    controlledFromProgram(cs.asProgram) shouldBe cs
+    controlledFromProgram(cs.asProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
+    // Core requirement fail: StateDependent(List())
+    // freshness error: ss.asProgram(Variable("x"))
   }
 
-  it should "return arbitrary switching models with time" in withMathematica { _ =>
-    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
-    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
-    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
-
-    val ss = stateSwitch(List(ode1, ode2, ode3), Some(Variable("t_")))
-
-    println(ss)
-    ss shouldBe "{{{t_'=1,x'=-x}++{t_'=1,x'=-x^3}}++{t_'=1,x'=-x^5}}*".asProgram
-  }
-
-  it should "return state-dependent switching models" in withMathematica { _ =>
-    val ode1 = ODESystem("x'=-x".asDifferentialProgram, "x > 0".asFormula)
-    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, "x > 0".asFormula)
-    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, "x <= 0".asFormula)
-
-    val ss = stateSwitch(List(ode1, ode2, ode3), Some(Variable("t_")))
-
-    println(ss)
-    ss shouldBe "{{{t_'=1,x'=-x & x > 0}++{t_'=1,x'=-x^3 & x > 0}}++{t_'=1,x'=-x^5 & x <= 0}}*".asProgram
-  }
-
-  it should "check ODE active in domain" in withMathematica { _ =>
+  "state switch" should "check ODE active in domain" in withMathematica { _ =>
 
     val ode1 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)
     val ode2 = ODESystem("x'=-1".asDifferentialProgram, "x >= 0".asFormula)
@@ -119,33 +138,45 @@ class SwitchedSystemsTests extends TacticTestBase {
     stateSwitchActive(List(ode1E, ode2E),"eps > 0".asFormula) shouldBe None
   }
 
+  it should "check nonholonomic integrator" in withMathematica { _ =>
+
+    val ode1 = "{x' = -x+a*y, y' = -y-a*x, z'= x*(-y-a*x) - y*(-x+a*y) & z>=0}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x' = -x-a*y, y' = -y+a*x, z'= x*(-y+a*x) - y*(-x-a*y) & z<=0}".asProgram.asInstanceOf[ODESystem]
+    val ode3 = "{x' = -x, y' = -y, z'= x*(-y) - y*(-x) & z=0}".asProgram.asInstanceOf[ODESystem]
+
+    odeActive(ode1) shouldBe None
+    odeActive(ode2) shouldBe None
+    odeActive(ode3) shouldBe None
+    stateSwitchActive(List(ode1, ode2, ode3)) shouldBe None
+  }
+
   "stability" should "specify stability for ODEs" in withMathematica { _ =>
     val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram
 
     val stab1 = stableOrigin(ode)
-    val stab2 = stableOrigin(ode, varsopt=Some(List("x","y","z").map(_.asVariable)))
+    val stab2 = stableOrigin(ode, varsopt=Some(List("x","y","z").map(s => (s.asVariable,Number(0)))))
     val stab3 = stableOrigin(ode, varsopt=None, restr=Some("a > 0".asFormula))
     println(stab1)
     println(stab2)
     println(stab3)
 
     stab1 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))".asFormula
-    stab2 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z (x^2+y^2+z^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]x^2+y^2+z^2 < eps^2)))".asFormula
+    stab2 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall y \\forall z ((x-0)^2+(y-0)^2+(z-0)^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}](x-0)^2+(y-0)^2+(z-0)^2 < eps^2)))".asFormula
     stab3 shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall z \\forall y \\forall x (a>0&z^2+y^2+x^2 < del^2->[{x'=-x,y'=-y,z'=-z*a}]z^2+y^2+x^2 < eps^2)))".asFormula
   }
 
-  it should "be reusable for switched systems" in withMathematica { _ =>
-    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
-    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
-    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
-
-    val ss = stateSwitch(List(ode1,ode2,ode3))
-
-    val stab = stableOrigin(ss)
-    println(stab)
-
-    stab shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x (x^2 < del^2->[{{{x'=-x}++{x'=-x^3}}++{x'=-x^5}}*]x^2 < eps^2)))".asFormula
-  }
+//  it should "be reusable for switched systems" in withMathematica { _ =>
+//    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+//    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+//    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+//
+//    val ss = stateSwitch(List(ode1,ode2,ode3))
+//
+//    val stab = stableOrigin(ss)
+//    println(stab)
+//
+//    stab shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x (x^2 < del^2->[{{{x'=-x}++{x'=-x^3}}++{x'=-x^5}}*]x^2 < eps^2)))".asFormula
+//  }
 
   it should "prove ODE stable" in withMathematica { _ =>
     val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram
@@ -160,51 +191,51 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove system stable" in withMathematica { _ =>
-    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
-    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
-    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
-
-    val ss = stateSwitch(List(ode1,ode2,ode3))
-    val stab = stableOrigin(ss)
-
-    val pr = proveBy(stab,
-      proveStable("x^4+x^2".asTerm,ss)(1)
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "prove system stable 2" in withMathematica { _ =>
-    val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
-    val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
-
-    val ss = stateSwitch(List(ode1,ode2))
-    val stab = stableOrigin(ss)
-
-    val pr = proveBy(stab,
-      proveStable("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm,ss)(1)
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "prove system stable 3" in withMathematica { _ =>
-    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8 & x1*x2 <= 0}".asProgram.asInstanceOf[ODESystem]
-    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8 & x1*x2 >= 0}".asProgram.asInstanceOf[ODESystem]
-
-    val ss = stateSwitch(List(ode1,ode2))
-    val stab = stableOrigin(ss)
-
-    val pr = proveBy(stab,
-      proveStable("x1 ^ 2 + x2 ^2".asTerm,ss)(1)
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
+//  it should "prove system stable" in withMathematica { _ =>
+//    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+//    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+//    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+//
+//    val ss = stateSwitch(List(ode1,ode2,ode3))
+//    val stab = stableOrigin(ss)
+//
+//    val pr = proveBy(stab,
+//      proveStable("x^4+x^2".asTerm,ss)(1)
+//    )
+//
+//    println(pr)
+//    pr shouldBe 'proved
+//  }
+//
+//  it should "prove system stable 2" in withMathematica { _ =>
+//    val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
+//    val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
+//
+//    val ss = stateSwitch(List(ode1,ode2))
+//    val stab = stableOrigin(ss)
+//
+//    val pr = proveBy(stab,
+//      proveStable("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm,ss)(1)
+//    )
+//
+//    println(pr)
+//    pr shouldBe 'proved
+//  }
+//
+//  it should "prove system stable 3" in withMathematica { _ =>
+//    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8 & x1*x2 <= 0}".asProgram.asInstanceOf[ODESystem]
+//    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8 & x1*x2 >= 0}".asProgram.asInstanceOf[ODESystem]
+//
+//    val ss = stateSwitch(List(ode1,ode2))
+//    val stab = stableOrigin(ss)
+//
+//    val pr = proveBy(stab,
+//      proveStable("x1 ^ 2 + x2 ^2".asTerm,ss)(1)
+//    )
+//
+//    println(pr)
+//    pr shouldBe 'proved
+//  }
 
   // todo: need to handle arithmetic much better here (very slow)
   it should "prove ODE example stable" taggedAs TodoTest ignore withMathematica { _ =>
@@ -225,7 +256,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val stab1 = stableOrigin(ode)
 
     val pr = proveBy(stab1,
-        proveStable("2*x1^2 + 4*x2^4 + x3^2 + 11*x4^2 + 2*x5^4 + 4*x6^2".asTerm,ode)(1)
+      proveStable("2*x1^2 + 4*x2^4 + x3^2 + 11*x4^2 + 2*x5^4 + 4*x6^2".asTerm,ode)(1)
     )
 
     println(pr)
@@ -241,14 +272,14 @@ class SwitchedSystemsTests extends TacticTestBase {
     println(tt)
     tt shouldBe (
       "{s_:=0;{u_:=0;++u_:=1;}}" +
-      "{" +
-      " {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
-      "  ?u_=1;{{?s_>=5;u_:=0;}s_:=0;++u_:=1;}" +
-      " }" +
-      " {?u_=0;{t_'=1,s_'=1,x'=x&true&s_<=5}++" +
-      "  ?u_=1;{t_'=1,s_'=1,x'=-x}" +
-      " }" +
-      "}*").asProgram
+        "{" +
+        " {?u_=0;{{?s_>=5;u_:=1;}s_:=0;++u_:=0;}++" +
+        "  ?u_=1;{{?s_>=5;u_:=0;}s_:=0;++u_:=1;}" +
+        " }" +
+        " {?u_=0;{t_'=1,s_'=1,x'=x&true&s_<=5}++" +
+        "  ?u_=1;{t_'=1,s_'=1,x'=-x}" +
+        " }" +
+        "}*").asProgram
   }
 
   it should "model slow switching" in withMathematica { _ =>
@@ -267,7 +298,7 @@ class SwitchedSystemsTests extends TacticTestBase {
         "   {?u_=0;{s_'=1,x'=x}++" +
         "    ?u_=1;{s_'=1,x'=-x}}" +
         "}*").asProgram
-    )
+      )
   }
 
   it should "do a manual slow stability proof" in withMathematica { _ =>
@@ -317,97 +348,96 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(stab,
       allR(1) & implyR(1) &
-      cutR(epsw)(1) <(
-        //Automation should prove these bounds separately and then pick the smallest
-        QE,
-        implyR(1) & existsL(-2) & andL(-2) &
-        existsRmon(delw)(1) <(
-          hideL(-3) & QE,
-          andL(-4) & andL(-4) & andR(1) <(
-            id,
-            (allR(1)*2) & implyR(1) &
-            (allL(-4)*2) & implyL(-4) <(
-              id,
-              composeb(1) &
-              hideL(-1) &
-              hideL(-1) &
-              generalize(invariant)(1) <(
-                chase(1) & hideL(-3) & QE ,
-                andL(-1) & hideL('Llast) &
-                throughout(invariant)(1) <(
-                  prop,
-                  prop,
-                  cohideOnlyL(-1) & andL(-1) & chase(1) & orL(-2) <(
-                    andR(1) <(
-                      QE, // can do more simplification
-                      implyR(1) & hideR(1) & QE
-                    ),
-                    andR(1) <(
-                      implyR(1) & hideR(1) & QE,
-                      QE // can do more simplification
-                    )
-                  ),
-                  andL(-1) & hideL(-2) &
-                  andL(-1) & chase(1) & orL(-3) <(
-                    andR(1) <(
-                      implyR(1) &
-                      exhaustiveEqL2R('Llast) &
-                      // this sequence of cuts sets things up in the right order
-                      dC("s_>=0".asFormula)(1) <(
-                        dC(Less(Times(lyap1,exp), w))(1) <(
-                          dC(Less(normsq,epssq))(1) <(
-                            DW(1) & G(1) & QE, // can be simplified
-                            ODEInvariance.dCClosure(1) <(
-                              hideL(-1) & QE,
-                              dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
-                                DW(1) & G(1) & QE,
-                                dW(1) & andL(-1) & andL(-2) &
-                                allL(-2) & allL(-2) & id
-                              )
+        cutR(epsw)(1) <(
+          //Automation should prove these bounds separately and then pick the smallest
+          QE,
+          implyR(1) & existsL(-2) & andL(-2) &
+            existsRmon(delw)(1) <(
+              hideL(-3) & QE,
+              andL(-4) & andL(-4) & andR(1) <(
+                id,
+                (allR(1)*2) & implyR(1) &
+                  (allL(-4)*2) & implyL(-4) <(
+                  id,
+                  composeb(1) &
+                    hideL(-1) &
+                    hideL(-1) &
+                    generalize(invariant)(1) <(
+                      chase(1) & hideL(-3) & QE ,
+                      andL(-1) & hideL('Llast) &
+                        throughout(invariant)(1) <(
+                          prop,
+                          prop,
+                          cohideOnlyL(-1) & andL(-1) & chase(1) & orL(-2) <(
+                            andR(1) <(
+                              QE, // can do more simplification
+                              implyR(1) & hideR(1) & QE
+                            ),
+                            andR(1) <(
+                              implyR(1) & hideR(1) & QE,
+                              QE // can do more simplification
                             )
                           ),
-                          hideL(-1) & ODE(1)
-                        ),
-                        hideL(-1) & ODE(1)
-                      )
-                      ,
-                      implyR(1) & hideR(1) & QE
-                    ),
-                    andR(1) <(
-                      implyR(1) & hideR(1) & QE,
-                      implyR(1) &
-                        exhaustiveEqL2R('Llast) &
-                        dC("s_>=0".asFormula)(1) <(
-                          dC(Less(Times(lyap2,exp), w))(1) <(
-                            dC(Less(normsq,epssq))(1) <(
-                              DW(1) & G(1) & QE, // can be simplified
-                              ODEInvariance.dCClosure(1) <(
-                                hideL(-1) & QE,
-                                dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
-                                  DW(1) & G(1) & QE,
-                                  dW(1) & andL(-1) & andL(-2) &
-                                    allL(-2) & allL(-2) & id
+                          andL(-1) & hideL(-2) &
+                            andL(-1) & chase(1) & orL(-3) <(
+                            andR(1) <(
+                              implyR(1) &
+                                exhaustiveEqL2R('Llast) &
+                                // this sequence of cuts sets things up in the right order
+                                dC("s_>=0".asFormula)(1) <(
+                                  dC(Less(Times(lyap1,exp), w))(1) <(
+                                    dC(Less(normsq,epssq))(1) <(
+                                      DW(1) & G(1) & QE, // can be simplified
+                                      ODEInvariance.dCClosure(1) <(
+                                        hideL(-1) & QE,
+                                        dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
+                                          DW(1) & G(1) & QE,
+                                          dW(1) & andL(-1) & andL(-2) &
+                                            allL(-2) & allL(-2) & id
+                                        )
+                                      )
+                                    ),
+                                    hideL(-1) & ODE(1)
+                                  ),
+                                  hideL(-1) & ODE(1)
                                 )
-                              )
+                              ,
+                              implyR(1) & hideR(1) & QE
                             ),
-                            hideL(-1) & ODE(1)
-                          ),
-                          hideL(-1) & ODE(1)
+                            andR(1) <(
+                              implyR(1) & hideR(1) & QE,
+                              implyR(1) &
+                                exhaustiveEqL2R('Llast) &
+                                dC("s_>=0".asFormula)(1) <(
+                                  dC(Less(Times(lyap2,exp), w))(1) <(
+                                    dC(Less(normsq,epssq))(1) <(
+                                      DW(1) & G(1) & QE, // can be simplified
+                                      ODEInvariance.dCClosure(1) <(
+                                        hideL(-1) & QE,
+                                        dC(Imply(Equal(normsq, epssq), epsgeq))(1) <(
+                                          DW(1) & G(1) & QE,
+                                          dW(1) & andL(-1) & andL(-2) &
+                                            allL(-2) & allL(-2) & id
+                                        )
+                                      )
+                                    ),
+                                    hideL(-1) & ODE(1)
+                                  ),
+                                  hideL(-1) & ODE(1)
+                                )
+                            )
+                          )
                         )
                     )
-                  )
+
                 )
               )
-
             )
-          )
         )
-      )
     )
 
     println(pr)
     pr shouldBe 'proved
   }
-
 
 }
