@@ -516,14 +516,20 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   private def tryAllAfter(provable: ProvableSig, locator: Find, cause: => BelleThrowable): ProvableSig = {
     if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
+      /** Left: definitely known to be applicable, Right: unknown to be applicable but worth a try; None: inapplicable. */
       @tailrec
-      def toPos(locator: Find): Option[Position] = {
+      def toPos(locator: Find): Option[Either[Position, Position]] = {
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           locator.toPosition(provable) match {
             case Some(pos) =>
               provable.subgoals(locator.goal).sub(pos) match {
-                case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-                case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
+                case Some(expr) =>
+                  TacticIndex.default.isApplicable(expr, this) match {
+                    case Some(true) => Some(Left(pos))
+                    case Some(false) => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
+                    case None => Some(Right(pos))
+                  }
+                case None => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact, locator.defs))
               }
             case None => None
           }
@@ -532,7 +538,9 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         }
       }
       toPos(locator) match {
-        case Some(pos) =>
+        case Some(Left(pos)) =>
+          positionTactic.computeResult(provable, pos)
+        case Some(Right(pos)) =>
           try {
             positionTactic.computeResult(provable, pos)
           } catch {
@@ -728,12 +736,17 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       if (provable.subgoals.isEmpty) throw new TacticInapplicableFailure(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} since provable has no subgoals")
       if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
         @tailrec
-        def toPos(locator: Find): Option[Position] = {
+        def toPos(locator: Find): Option[Either[Position, Position]] = {
           if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
             locator.toPosition(provable) match {
               case Some(pos) =>
                 provable.subgoals(locator.goal).sub(pos) match {
-                  case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
+                  case Some(expr) =>
+                    TacticIndex.default.isApplicable(expr, this) match {
+                      case Some(true) => Some(Left(pos))
+                      case Some(false) => toPos(locator.copy(start = pos.topLevel.advanceIndex(1)))
+                      case None => Some(Right(pos))
+                    }
                   case _ => toPos(locator.copy(start = pos.topLevel.advanceIndex(1)))
                 }
               case None => None
@@ -743,7 +756,10 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           }
         }
         toPos(locator) match {
-          case Some(pos) => pt.factory(pos) | tryAllAfter(locator.copy(start = pos.topLevel.advanceIndex(1)), cause)
+          case Some(Left(pos)) =>
+            pt.factory(pos)
+          case Some(Right(pos)) =>
+            pt.factory(pos) | tryAllAfter(locator.copy(start = pos.topLevel.advanceIndex(1)), cause)
           case _ => throw cause
         }
       } else if (cause == null) {

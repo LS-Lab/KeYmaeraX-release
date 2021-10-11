@@ -57,8 +57,8 @@ trait TacticIndex {
   def tacticFor(expr: Expression, restrictTo: List[AtPosition[_ <: BelleExpr]]): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]])
   /** Returns canonical tactics to try at `expr` (tuple of antecedent and succedent tactics) */
   def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]])
-  /** Indicates whether `tactic` is potentially applicable at `expr`. */
-  def isApplicable(expr: Expression, tactic: BelleExpr): Boolean
+  /** Indicates whether `tactic` is potentially applicable at `expr`. Some(true) when definitely applicable, Some(false) when definitely inapplicable, None when unknown. */
+  def isApplicable(expr: Expression, tactic: BelleExpr): Option[Boolean]
 }
 
 class DefaultTacticIndex extends TacticIndex {
@@ -201,7 +201,7 @@ class DefaultTacticIndex extends TacticIndex {
     }
   }
 
-  def isApplicable(expr: Expression, tactic: BelleExpr): Boolean = {
+  def isApplicable(expr: Expression, tactic: BelleExpr): Option[Boolean] = {
     val name = tactic match {
       case AppliedPositionTactic(CoreRightTactic(n), _) => n
       case AppliedPositionTactic(CoreLeftTactic(n), _) => n
@@ -213,44 +213,44 @@ class DefaultTacticIndex extends TacticIndex {
     }
     name match {
       // propositional
-      case "orL"    | "orR"    => expr.isInstanceOf[Or]
-      case "andL"   | "andR"   => expr.isInstanceOf[And]
-      case "implyL" | "implyR" => expr.isInstanceOf[Imply]
-      case "equivL" | "equivR" => expr.isInstanceOf[Equiv]
-      case "notL"   | "notR"   => expr.isInstanceOf[Not]
-      case "CloseTrue"         => expr == True
-      case "CloseFalse"        => expr == False
+      case "orL"    | "orR"    => Some(expr.isInstanceOf[Or])
+      case "andL"   | "andR"   => Some(expr.isInstanceOf[And])
+      case "implyL" | "implyR" => Some(expr.isInstanceOf[Imply])
+      case "equivL" | "equivR" => Some(expr.isInstanceOf[Equiv])
+      case "notL"   | "notR"   => Some(expr.isInstanceOf[Not])
+      case "CloseTrue"         => Some(expr == True)
+      case "CloseFalse"        => Some(expr == False)
 
       // box
-      case "assignb"  => expr match { case Box(_: Assign, _) => true case _ => false }
-      case "randomb"  => expr match { case Box(_: AssignAny, _) => true case _ => false }
-      case "choiceb"  => expr match { case Box(_: Choice, _) => true case _ => false }
-      case "testb"    => expr match { case Box(_: Test, _) => true case _ => false }
-      case "composeb" => expr match { case Box(_: Compose, _) => true case _ => false }
+      case "assignb"  => Some(expr match { case Box(_: Assign, _) => true case _ => false })
+      case "randomb"  => Some(expr match { case Box(_: AssignAny, _) => true case _ => false })
+      case "choiceb"  => Some(expr match { case Box(_: Choice, _) => true case _ => false })
+      case "testb"    => Some(expr match { case Box(_: Test, _) => true case _ => false })
+      case "composeb" => Some(expr match { case Box(_: Compose, _) => true case _ => false })
       case "iterateb" | "loop" | "loopauto" =>
-        expr match { case Box(_: Loop, _) => true case _ => false }
-      case "GV"       => expr.isInstanceOf[Box]
+        Some(expr match { case Box(_: Loop, _) => true case _ => false })
+      case "GV"       => Some(expr.isInstanceOf[Box])
 
       // diamond
-      case "assignd"  => expr match { case Diamond(_: Assign, _) => true case _ => false }
-      case "randomd"  => expr match { case Diamond(_: AssignAny, _) => true case _ => false }
-      case "choiced"  => expr match { case Diamond(_: Choice, _) => true case _ => false }
-      case "testd"    => expr match { case Diamond(_: Test, _) => true case _ => false }
-      case "composed" => expr match { case Diamond(_: Compose, _) => true case _ => false }
+      case "assignd"  => Some(expr match { case Diamond(_: Assign, _) => true case _ => false })
+      case "randomd"  => Some(expr match { case Diamond(_: AssignAny, _) => true case _ => false })
+      case "choiced"  => Some(expr match { case Diamond(_: Choice, _) => true case _ => false })
+      case "testd"    => Some(expr match { case Diamond(_: Test, _) => true case _ => false })
+      case "composed" => Some(expr match { case Diamond(_: Compose, _) => true case _ => false })
 
       // FOL
-      case "allL" | "allR" | "all stutter" => expr.isInstanceOf[Forall]
-      case "existsL" | "existsR" | "exists stutter" => expr.isInstanceOf[Exists]
-      case "allL2R" | "allR2L" | "equalCommute" => expr.isInstanceOf[Equal]
-      case "abs" => StaticSemantics.symbols(expr).contains(InterpretedSymbols.absF)
-      case "minmax" => StaticSemantics.symbols(expr).exists(s => s == InterpretedSymbols.minF || s == InterpretedSymbols.maxF)
+      case "allL" | "allR" | "all stutter" => Some(expr.isInstanceOf[Forall])
+      case "existsL" | "existsR" | "exists stutter" => Some(expr.isInstanceOf[Exists])
+      case "allL2R" | "allR2L" | "equalCommute" => Some(expr.isInstanceOf[Equal])
+      case "abs" => Some(StaticSemantics.symbols(expr).contains(InterpretedSymbols.absF))
+      case "minmax" => Some(StaticSemantics.symbols(expr).exists(s => s == InterpretedSymbols.minF || s == InterpretedSymbols.maxF))
 
       // box/diamond
       case "solve" | "solveEnd" | "ODE" | "dC" | "dI" | "dW" | "diffInvariant" =>
-        expr match { case Box(_: ODESystem, _) => true case Diamond(_: ODESystem, _) => true case _ => false }
+        Some(expr match { case Box(_: ODESystem, _) => true case Diamond(_: ODESystem, _) => true case _ => false })
 
       // fallback to trial-and-error in all other cases
-      case _ => true
+      case _ => None
     }
   }
 
