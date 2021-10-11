@@ -54,8 +54,8 @@ angular.module('formula')
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
-              //@note do not click on text selection
-              if (getSelection().toString().length == 0) {
+              //@note do not execute click on text selection (copy-paste)
+              if (event.view.getSelection().toString().length == 0) {
                 if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
                   // avoid event propagation once a span with an ID is found
                   event.stopPropagation();
