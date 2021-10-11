@@ -512,9 +512,9 @@ object Ax extends Logging {
   @Axiom("VK", conclusion = "(p→__[a]p__)←[a]⊤",
     key = "1.1", recursor = "*", unifier = "surjlinear")
   val VK: CoreAxiomInfo = coreAxiom("VK vacuous")
-  @Axiom("[]T", conclusion = "__[a]⊤__", displayLevel = "all",
+  @Axiom("[]T axiom", conclusion = "__[a]⊤__", displayLevel = "all",
     key = "", recursor = "", unifier = "surjlinear")
-  val boxTrue: CoreAxiomInfo = coreAxiom("[]T system")
+  val boxTrueAxiom: CoreAxiomInfo = coreAxiom("[]T system")
   @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
     key = "1", recursor = "*")
   val K: CoreAxiomInfo = coreAxiom("K modal modus ponens")
@@ -626,7 +626,7 @@ object Ax extends Logging {
 
   lazy val boxTrueTrue: ProvableSig = TactixLibrary.proveBy(
     "[a{|^@|};]true <-> true".asFormula,
-    equivR(1) <(closeT, cohideR(1) & byUS(boxTrue)))
+    equivR(1) <(closeT, cohideR(1) & byUS(boxTrueAxiom)))
 
   lazy val impliesRightAnd: ProvableSig = TactixLibrary.proveBy(
     "(p_()->q_()) & (p_()->r_()) <-> (p_() -> q_()&r_())".asFormula,
@@ -713,7 +713,7 @@ object Ax extends Logging {
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
         byUS(monbaxiom) & hide(-1)
         ,
-        hide(1) & HilbertCalculus.boxTrue(1)
+        hide(1) & useAt(boxTrueAxiom)(1)
         )
   )
 
@@ -752,7 +752,7 @@ object Ax extends Logging {
       byUS(monbaxiom) & hide(-1)
       ,
       // show
-      hide(1) & HilbertCalculus.boxTrue(1)
+      hide(1) & useAt(boxTrueAxiom)(1)
       )
   )
 
@@ -769,7 +769,7 @@ object Ax extends Logging {
   lazy val V: DerivedAxiomInfo = derivedAxiom("V vacuous",
     Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
     useAt(VK, PosInExpr(1::Nil))(1) &
-    HilbertCalculus.boxTrue(1)
+    useAt(boxTrueAxiom)(1)
   )
 
   /**
@@ -1361,7 +1361,7 @@ object Ax extends Logging {
       useAt(K, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1) &
       useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &
-      byUS(boxTrue) & TactixLibrary.done
+      byUS(boxTrueAxiom) & TactixLibrary.done
   )
 
   /**
@@ -1591,7 +1591,7 @@ object Ax extends Logging {
         andR(1) <(
           useAt(diamond, PosInExpr(1::Nil))(1) & notR(1) & implyRi &
           useAt(K, PosInExpr(1::Nil))(1) &
-          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS(boxTrue)
+          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS(boxTrueAxiom)
           ,
           useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
           HilbertCalculus.V(2) & notR(2) & id
@@ -3429,7 +3429,7 @@ object Ax extends Logging {
             useAt(RIclosedgeq, PosInExpr(0::Nil))(1) & prop & HilbertCalculus.composeb(1) &
             dC("!p_(|t_|)=0".asFormula)(1) & Idioms.<(
             useAt(DW)(1) &
-              TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), nil) /* TODO: Goedel? */ &
+              TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
               implyR(1) &
               TactixLibrary.generalize("t_=0".asFormula)(1)& Idioms.<(cohideR(1) & assignb(1) & byUS(equalReflexive), nil) /* TODO: assignb? */ &
               implyR(1) &
@@ -3440,7 +3440,7 @@ object Ax extends Logging {
                 prop &
                 done),
               useAt(DW)(1) &
-                TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), nil) /* TODO: Goedel? */ &
+                TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), nil) /* TODO: Goedel? */ &
                 useAt(greaterEqual)(1, 1::Nil) &
                 prop &
                 done
@@ -3452,7 +3452,7 @@ object Ax extends Logging {
             useAt(diamond, PosInExpr(1::Nil))(-2) & notL(-2) &
             TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms.<(id, useAt(lessEqual)(-1,0::Nil) & prop & done),
           useAt(DW)(1) &
-            TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), prop & done) /* TODO: Goedel? */)
+            TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done) /* TODO: Goedel? */)
       )
     )
 
@@ -3629,13 +3629,13 @@ object Ax extends Logging {
 
   @Axiom("timeCond")
   lazy val timeCond: DerivedAxiomInfo = derivedFormula("timeCond", "[{x_'=1, c{|x_|} & q(||)}](!x_ <= h() -> [{x_'=1, c{|x_|} & q(||)}](!x_ <= h()))".asFormula,
-    generalize(True)(1) & Idioms.<(useAt(boxTrue)(1),
+    generalize(True)(1) & Idioms.<(useAt(boxTrueAxiom)(1),
       implyR(1) & useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(-2) &
         useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(1, 1 :: Nil)) &
       useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(id,
       derive(1, 1 :: Nil) &
         cohideR(1) & useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
-        generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
+        generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
     )
   )
 
@@ -3655,13 +3655,13 @@ object Ax extends Logging {
                         DLBySubst.boxElim(1) & prop & useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) &
                           Idioms.<(id, hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
                             Idioms.<(
-                              useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), prop & done),
+                              useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1), prop & done),
                               useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(
                                 hideL(-2) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) &
                                   useAt(Ax.flipLessEqual, PosInExpr(0::Nil))(-2) & id & done,
                                 useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
                                   generalize(True)(1) &
-                                  Idioms.<(cohideR(1) & useAt(boxTrue)(1),
+                                  Idioms.<(cohideR(1) & useAt(boxTrueAxiom)(1),
                                     derive(1, 1 :: Nil) & useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))))),
                         prop & cohideR(1) & by(timeCond)
                       ),

@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
@@ -47,7 +48,7 @@ private object DLBySubst {
             )) &
               hideL(-1, True)
             ,
-            hide(1) & boxTrue(1)
+            hide(1) & useAt(boxTrueAxiom)(1)
             ))::Nil)
     else
       USubstPatternTactic(

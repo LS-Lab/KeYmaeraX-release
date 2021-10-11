@@ -395,7 +395,10 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // def ind
 
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  val boxTrue                : DependentPositionTactic = useAt(Ax.boxTrue)
+  @Tactic("[]T", conclusion = "__[a]⊤__ ↔ ⊤", displayLevel = "all")
+  //@note: do not use in derived axioms, instead use useAt(Ax.boxTrueAxiom) to avoid circular dependencies!
+  lazy val boxTrue                : DependentPositionTactic = anon ((pos: Position) =>
+    useAt(Ax.boxTrueTrue)(pos) & (if (pos.isSucc && pos.isTopLevel) SequentCalculus.closeT else skip))
 
 
   /*******************************************************************

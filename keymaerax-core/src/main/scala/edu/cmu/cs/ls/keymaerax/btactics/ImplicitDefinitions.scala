@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 import scala.collection.immutable.List
@@ -241,7 +242,7 @@ object ImplicitDefinitions {
               DW(1) & G(1) & implyR(1) & andL(-1) & andL(-1) & hideL(-2) & QE,
               dR("true".asFormula)(1) <(
                 byUS(tt2),
-                cohideR(1) & boxTrue(1)
+                cohideR(1) & useAt(boxTrueAxiom)(1)
               )
             )
           )

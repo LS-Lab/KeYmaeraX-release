@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers._
 import edu.cmu.cs.ls.keymaerax.parser.{InterpretedSymbols, KeYmaeraXPrettierPrinter}
 import cc.redberry.rings
+import edu.cmu.cs.ls.keymaerax.btactics.Ax.boxTrueAxiom
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
@@ -677,7 +678,7 @@ object TaylorModelTactics extends Logging {
                           ),
                           id
                         ),
-                        cohideR(1) & boxTrue(1) & done),
+                        cohideR(1) & useAt(boxTrueAxiom)(1) & done),
                     useAt(lemma, PosInExpr(1::Nil))(1) & id)
               )
           )

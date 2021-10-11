@@ -84,7 +84,7 @@ object UIIndex {
             case _ => alwaysApplicable
           }
         "derive" :: tactics
-      case Box(a, True) if isTop && isSucc && FormulaTools.dualFree(a) => "[]T system" :: Nil
+      case Box(a, True) if FormulaTools.dualFree(a) => "boxTrue" :: Nil
 
       case Box(a, post) =>
         val maybeSplit = post match {
