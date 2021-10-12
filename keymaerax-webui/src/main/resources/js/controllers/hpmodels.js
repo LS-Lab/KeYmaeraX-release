@@ -314,13 +314,6 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     });
   };
 
-  $scope.switchGridList = function(where, to) {
-    switch(to) {
-      case "list": $(where).addClass('list-group-wrapper').removeClass('grid-group-wrapper'); break
-      case "grid": $(where).addClass('grid-group-wrapper').removeClass('list-group-wrapper'); break
-    }
-  }
-
   $scope.importRepo = function(repoUrl) {
     spinnerService.show('caseStudyImportSpinner');
     var userId = sessionService.getUser();
