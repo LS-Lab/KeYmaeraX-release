@@ -25,9 +25,8 @@ object SwitchedSystems {
   //An ADT encoding canonical formats for switched systems
   sealed trait SwitchedSystem {
     // Represent this switched system as a hybrid program
-    // Using topt as the optional clock variable
-    def asProgram(t : Variable) : Program
     def asProgram : Program
+    def asClockedProgram(t : Variable) : Program
 
     val cvars : List[Variable] // the default continuous state variables
     val vars : List[Variable]  // any variable appearing anywhere in the system
@@ -57,7 +56,7 @@ object SwitchedSystems {
     require(odes.nonEmpty, "State-dependent switched system requires at least 1 ODE")
 
     override def asProgram = asProgram(None)
-    override def asProgram(t:Variable) = asProgram(Some(t))
+    override def asClockedProgram(t:Variable) = asProgram(Some(t))
 
     private def asProgram(topt: Option[Variable]) = {
       require(topt.isEmpty || !vars.contains(topt.get), "Time variable " + topt.get + " must be fresh")
@@ -95,7 +94,7 @@ object SwitchedSystems {
     }
   }
 
-  def stateDependentFromProgram(p : Program, topt:Option[Variable] = None) : StateDependent = {
+  def stateDependentFromProgram(p : Program, topt:Option[Variable]) : StateDependent = {
     p match {
       case Loop(choices) =>
         val odes = choiceList(choices)
@@ -108,20 +107,19 @@ object SwitchedSystems {
     }
   }
 
-  /**  Controlled switching
-    *  List of modes, where each mode consists of:
-    *  name: String (represented as constant function name())
-    *  ode: ODESystem (continuous dynamics of the mode with domain aka mode invariant)
-    *  transitions: List[(Formula,List[Assign],Function)]
-    *   - guard: Formula (transition guard)
-    *   - reset: List[Assignment] (reset map, the resets happen IN ORDER, not simultaneously)
-    *   - target: String (target mode)
+  /** Controlled switching models
     *
-    *  ctrl: Variable (the variable to use as the control flag)
-    *
-    *  Note: this is the general structure for a hybrid automaton
+    * @param initopt optional initialization program
+    * @param modes   list of modes, each mode consisting of:
+    *                name: String (representing constant function name())
+    *                ode:  ODESystem (continuous dynamics)
+    *                transitions : List[(String,Program)]
+    *                   (transitions p->q where program a is executed along the transition, e.g., a guard and/or reset map)
+    * @param u       the mode control variable u
     */
-  case class Controlled(modes: List[(String,ODESystem,List[(String,Formula,List[Assign])])], u:Variable = Variable("u")) extends SwitchedSystem {
+  case class Controlled(initopt : Option[Program],
+                        modes   : List[(String,ODESystem,List[(String,Program)])],
+                        u       : Variable) extends SwitchedSystem {
 
     // Explicit names of the modes
     val names : List[String] = modes.map(_._1)
@@ -130,29 +128,39 @@ object SwitchedSystems {
     val odes : List[ODESystem] = modes.map(_._2)
 
     // Explicit list of transitions
-    val transitions: List[List[(String,Formula,List[Assign])]] = modes.map(_._3)
+    val transitions: List[List[(String,Program)]] = modes.map(_._3)
 
-    override val cvars : List[Variable] = odes.map(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten.distinct
-    override val vars : List[Variable] =
-      (odes.map(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten ++
-      transitions.flatten.map(t => (Test(t._2)::t._3).map(StaticSemantics.vars(_).toSet.toList).flatten).flatten).distinct
+    // Default approximation of the continuous state variables
+    override val cvars : List[Variable] = odes.flatMap(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).distinct
+
+    // All variables used in the program (except u)
+    val varsPre =   (
+      //Init
+      StaticSemantics.vars(initopt.getOrElse(Test(True))).toSet.toList ++
+        //Control
+        transitions.flatten.map(p => StaticSemantics.vars(p._2).toSet.toList).flatten ++
+        //Plant
+        odes.map(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten
+      ).distinct
+
+    require(!varsPre.contains(u), "Control variable " + u + " must be fresh")
+    override val vars : List[Variable] = u::varsPre
 
     // Some basic consistency checks
     require(modes.nonEmpty, "Controlled switching requires at least 1 mode")
 
     require(names.distinct.length == modes.length, "Controlled switching requires distinct names for each mode")
 
-    require(!vars.contains(u), "Control variable " + u + " must be fresh")
 
     transitions.map(_.map( f =>
         require(names.contains(f._1), "Unable to jump to undefined mode: " + f._1)
     ))
 
     override def asProgram = asProgram(None)
-    override def asProgram(t:Variable) = asProgram(Some(t))
+    override def asClockedProgram(t:Variable) = asProgram(Some(t))
 
     private def asProgram(topt: Option[Variable]) = {
-      require(topt.isEmpty || !vars.contains(topt.get) && topt.get != u, "Time variable " + topt.get + " must be fresh")
+      require(topt.isEmpty || !vars.contains(topt.get), "Time variable " + topt.get + " must be fresh")
 
       val todes: List[Program] = topt match {
         case None => odes
@@ -161,15 +169,21 @@ object SwitchedSystems {
             ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(t), Number(1)), ode.ode), ode.constraint))
       }
 
-      // initializer
-      val init = names.map( n => Assign(u,FuncOf(Function(n, None, Unit, Real), Nothing))).reduceRight(Choice)
+      // base initializer
+      // {u:=1 ; u :=2 ; ... } ; user-given-initializer (if any)
+      val initPre = names.map( n => Assign(u,FuncOf(Function(n, None, Unit, Real), Nothing))).reduceRight(Choice)
+      val init = initopt match {
+        case None => initPre
+        case Some(i) => Compose(initPre,i)
+      }
 
       // control
       val trans = transitions.map(mt =>
         mt.map( f =>
-          Compose((Test(f._2)::f._3).reduceRight(Compose), Assign(u,FuncOf(Function(f._1, None, Unit, Real), Nothing)))
+          Compose(f._2, Assign(u,FuncOf(Function(f._1, None, Unit, Real), Nothing)))
         ).foldRight(Assign(u,u):Program)(Choice) //self loops
       )
+
       val ctrl = (names zip trans).map(np =>
         Compose(Test(Equal(u,FuncOf(Function(np._1, None, Unit, Real), Nothing))), np._2)).reduceRight(Choice)
 
@@ -182,19 +196,26 @@ object SwitchedSystems {
     }
   }
 
-  private def parseInit(init : Program) : (Variable,List[String]) = {
-    val choices = choiceList(init)
+  private def parseInit(init : Program) : (Variable,List[String],Option[Program]) = {
+
+    val (initL, initR) = init match {
+      case Compose(l,r) => (l, Some(r))
+      case _ => (init,None)
+    }
+
+    val choices = choiceList(initL)
+
     if(!choices.forall(_.isInstanceOf[Assign]))
       throw new IllegalArgumentException("Unable to parse initializer for controlled switching "+init)
     val assigns = choices.map(c => c.asInstanceOf[Assign])
     val ctrl = assigns.map(f => f.x).distinct
 
-    if(ctrl.length!=1)
+    if(ctrl.length != 1)
       throw new IllegalArgumentException("Unable to parse initializer for controlled switching "+init)
 
     //todo: more precise check needed here
     val rhs = assigns.map(f=> f.e.asInstanceOf[FuncOf].func.name)
-    (ctrl.head,rhs)
+    (ctrl.head, rhs, initR)
   }
 
   private def parsePlant(plant : Program) : (Variable,List[String],List[ODESystem]) = {
@@ -209,7 +230,7 @@ object SwitchedSystems {
     (uvfo.head._1,uvfo.map(_._2.name),uvfo.map(_._3))
   }
 
-  private def parseCtrl(ctrl : Program) : (Variable,List[String],List[List[(String,Formula,List[Assign])]]) = {
+  private def parseCtrl(ctrl : Program) : (Variable, List[String],List[List[(String,Program)]]) = {
     val choices = choiceList(ctrl)
 
     val uvfo = choices.map( c => c match {
@@ -221,10 +242,8 @@ object SwitchedSystems {
     val transitions = uvfo.map( f => {
       val tchoices = choiceList(f._3).dropRight(1)
       tchoices.map( tc => tc match {
-        case Compose( Test(guard), Assign(_:Variable, FuncOf(f, Nothing)) ) =>
-          (f.name,guard,Nil)
-        case Compose( Compose(Test(guard),reset), Assign(_:Variable, FuncOf(f, Nothing)) ) =>
-          (f.name,guard, composeList(reset).map(_.asInstanceOf[Assign]) )
+        case Compose( prog, Assign(_:Variable, FuncOf(f, Nothing)) ) =>
+          (f.name, prog)
         case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching "+ ctrl)
       })
       }
@@ -234,33 +253,91 @@ object SwitchedSystems {
     (uvfo.head._1,uvfo.map(_._2.name),transitions)
   }
 
-  def controlledFromProgram(p : Program, topt:Option[Variable] = None) : Controlled = {
+  def controlledFromProgram(p : Program, topt:Option[Variable]) : Controlled = {
     p match {
       case Compose(init,Loop(Compose(ctrl,plant))) => {
-        val (u1, modes1) = parseInit(init)
+        val (u1, modes1, initopt) = parseInit(init)
         val (u2, modes2, odes) = parsePlant(plant)
         val (u3, modes3, transitions) = parseCtrl(ctrl)
 
         // todo: more consistency checks
-        // println(u1,modes1)
-        // println(u2,modes2,odes)
-        // println(u3,modes3,transitions)
+         println(u1,modes1,initopt)
+         println(u2,modes2,odes)
+         println(u3,modes3,transitions)
 
-        Controlled( (modes1,stripTimer(odes,topt),transitions).zipped.toList )
+        Controlled(initopt, (modes1,stripTimer(odes,topt),transitions).zipped.toList, u1)
       }
       case _ =>
         throw new IllegalArgumentException("Unable to parse program for controlled switching " + p)
     }
   }
 
-  /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
+  // Standard stability specification for a SwitchedSystem
+  def stabilitySpec(ss: SwitchedSystem): Formula = {
+
+    // Fixed names for now
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val freshVars = List(eps,del)
+
+    if (ss.vars.intersect(freshVars).nonEmpty)
+      throw new IllegalArgumentException("Switched system must not mention variables " + freshVars +" for stability specification")
+
+    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = Less(normsq, Power(del, Number(2)))
+
+    val fmlbody = Imply(init,
+      Box(ss.asProgram, Less(normsq, Power(eps, Number(2))))
+    )
+
+    val qbody = ss.cvars.foldRight(fmlbody: Formula)((v, f) => Forall(v :: Nil, f))
+
+    Forall(eps :: Nil, Imply(Greater(eps, Number(0)), // \forall eps > 0
+      Exists(del :: Nil, And(Greater(del, Number(0)), // \exists del > 0
+        qbody
+      ))))
+  }
+
+  // Standard global pre-attractivity specification for a SwitchedSystem
+  def attractivitySpec(ss: SwitchedSystem): Formula = {
+
+    // Fixed names for now
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val tVar = Variable("t_")
+    val TVar = Variable("T_")
+    val freshVars = List(eps,del,tVar,TVar)
+
+    if (ss.vars.intersect(freshVars).nonEmpty)
+      throw new IllegalArgumentException("Switched system must not mention variables " + freshVars +" for attractivity specification")
+
+    val normsq = ss.cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = Less(normsq, Power(del, Number(2)))
+
+    val fmlbody = Imply(init,
+      Box(Compose(Assign(tVar,Number(0)),ss.asClockedProgram(tVar)),
+        Imply(GreaterEqual(tVar,TVar), Less(normsq, Power(eps, Number(2)))))
+    )
+
+    val qbody = ss.cvars.foldRight(fmlbody: Formula)((v, f) => Forall(v :: Nil, f))
+
+    Forall(eps :: Nil, Imply(Greater(eps, Number(0)), // \forall eps > 0
+      Forall(del :: Nil, And(Greater(del, Number(0)), // \forall del > 0
+        Exists(TVar :: Nil, And(GreaterEqual(TVar, Number(0)), // \exists T >= 0
+        qbody
+      ))))))
+  }
+
+    /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
     *
     * @note for closed domains, this is automatically true
     * @note returns an option with string and counterexample if it manages to find one
     * @param sys the ODE under consideration
     * @param dom the "global" domain of points to be considered
     */
-  def odeActive(sys: ODESystem, dom: Formula = True): Option[(String, Map[NamedSymbol, Expression])] = {
+  def odeActive(sys: ODESystem, dom: Formula): Option[(String, Map[NamedSymbol, Expression])] = {
 
     val odels = DifferentialProduct.listify(sys.ode).map {
       case AtomicODE(x, e) => (x, e)
@@ -432,60 +509,6 @@ object SwitchedSystems {
     *                \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
     */
   def stableOrigin(prog: Program, varsopt: Option[List[(Variable,Term)]] = None, restr: Option[Formula] = None): Formula = {
-
-    val bv = StaticSemantics.boundVars(prog).intersect(StaticSemantics.freeVars(prog)).toSet.filterNot(StaticSemantics.isDifferential(_)).map(_.asInstanceOf[Variable])
-
-    val av = StaticSemantics.symbols(prog)
-
-    // Fixed names for now
-    val eps = Variable("eps")
-    val del = Variable("del")
-    if (av.contains(eps) || av.contains(del))
-      throw new IllegalArgumentException("Hybrid program must not mention variables eps or del for stability specification")
-
-    val vars: List[Variable] = varsopt match {
-      case None => bv.toList
-      case Some(vts) => vts.map( vt =>vt._1)
-    }
-
-    val normsq = varsopt match {
-      case None =>
-        vars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
-      case Some(vts) =>
-        vts.map(ee => Power(Minus(ee._1,ee._2),Number(2))).reduceLeft(Plus)
-    }
-
-    val init = restr match {
-      case None => Less(normsq, Power(del, Number(2)))
-      case Some(f) => And(f, Less(normsq, Power(del, Number(2)))) // Apply a restriction if needed
-    }
-
-    val body = Imply(init,
-      Box(prog, Less(normsq, Power(eps, Number(2))))
-    )
-    val qbody = vars.foldRight(body: Formula)((v, f) => Forall(v :: Nil, f))
-
-    Forall(eps :: Nil, Imply(Greater(eps, Number(0)), // \forall eps > 0
-      Exists(del :: Nil, And(Greater(del, Number(0)), // \exists del > 0
-        qbody
-      ))))
-  }
-
-  /** Global pre-attractivity of the origin for a given hybrid program
-    * \forall eps > 0 \exists del > 0
-    * \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
-    *
-    * @param prog    the hybrid program a to specify stability
-    * @param varsopt Optional list of variables to quantify and perturb.
-    *                By default None will pick non-differential freeVars(a) \cap boundVars(a)
-    * @param restr   an optional additional restriction on the initial perturbation
-    *
-    *                With the additional options, we can write down slightly more nuanced specifications
-    *
-    *                \forall eps > 0 \exists del > 0
-    *                \forall x ( ||x|| < del -> [ a ] ||x|| < eps )
-    */
-  def attrOrigin(prog: Program, varsopt: Option[List[(Variable,Term)]] = None, restr: Option[Formula] = None): Formula = {
 
     val bv = StaticSemantics.boundVars(prog).intersect(StaticSemantics.freeVars(prog)).toSet.filterNot(StaticSemantics.isDifferential(_)).map(_.asInstanceOf[Variable])
 

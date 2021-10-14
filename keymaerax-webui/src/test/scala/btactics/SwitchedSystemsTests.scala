@@ -21,12 +21,12 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(ss)
     println(ss.asProgram)
-    println(ss.asProgram(Variable("t_")))
+    println(ss.asClockedProgram(Variable("t_")))
     ss.asProgram shouldBe "{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*".asProgram
-    ss.asProgram(Variable("t_")) shouldBe "{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*".asProgram
+    ss.asClockedProgram(Variable("t_")) shouldBe "{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*".asProgram
 
-    stateDependentFromProgram(ss.asProgram) shouldBe ss
-    stateDependentFromProgram(ss.asProgram(Variable("t_")),Some(Variable("t_"))) shouldBe ss
+    stateDependentFromProgram(ss.asProgram, None) shouldBe ss
+    stateDependentFromProgram(ss.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe ss
 
     // requirement fail: StateDependent(List())
     // freshness error: ss.asProgram(Variable("x"))
@@ -39,27 +39,89 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val mode1 = ("mode1", ode1,
       List(
-        ("mode2", "x>a".asFormula, Assign(Variable("x"),Number(0)):: Assign(Variable("x"),Number(1)):: Assign(Variable("x"),Variable("y"))::Nil), // 1 -> 2
-        ("mode2", "x<=0".asFormula, Nil), // 1 -> 2
-        ("mode3", "x=0".asFormula, Assign(Variable("x"),Number(0))::Nil) // 1 -> 3
+        ("mode2", "?x>a ; x:=0; y:=0;".asProgram), // 1 -> 2
+        ("mode2", "?x<=0;".asProgram), // 1 -> 2
+        ("mode3", "?x=0; x:=0;".asProgram) // 1 -> 3
       ))
 
     val mode2 = ("mode2", ode2, List())
 
     val mode3 = ("mode3", ode3, List(
-      ("mode2","x<=0".asFormula, Assign(Variable("x"),Number(0))::Nil))) // 3 -> 2
+      ("mode2","?x<=0; x:=0;".asProgram))) // 3 -> 2
 
-    val cs = Controlled(List(mode1,mode2,mode3))
+    val cs = Controlled(None, List(mode1,mode2,mode3), Variable("u"))
 
     cs.cvars shouldBe List(Variable("x"))
-    cs.vars shouldBe List(Variable("x"), Variable("a"), Variable("y"))
+    cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"), Variable("y"))
 
-    cs.asProgram shouldBe "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{{?x>a;x:=0;x:=1;x:=y;}u:=mode2();++?x<=0;u:=mode2();++{?x=0;x:=0;}u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{{?x<=0;x:=0;}u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*".asProgram
+    println(cs.asProgram)
+    cs.asProgram shouldBe "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{{?x>a;x:=0;y:=0;}u:=mode2();++?x<=0;u:=mode2();++{?x=0;x:=0;}u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{{?x<=0;x:=0;}u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*".asProgram
 
-    controlledFromProgram(cs.asProgram) shouldBe cs
-    controlledFromProgram(cs.asProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
-    // Core requirement fail: StateDependent(List())
-    // freshness error: ss.asProgram(Variable("x"))
+    controlledFromProgram(cs.asProgram, None) shouldBe cs
+    controlledFromProgram(cs.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
+  }
+
+  it should "parse and print controlled switching system 2" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x, t'=1".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3, t'=1".asDifferentialProgram, True)
+
+    val mode1 = ("mode1", ode1,
+      List(
+        ("mode2", "?x>a ; x:=0; y:=0;".asProgram), // 1 -> 2
+        ("mode2", "?x<=0;".asProgram) // 1 -> 2
+      ))
+
+    val mode2 = ("mode2", ode2, List())
+
+    val cs = Controlled(Some("t:=0;".asProgram), List(mode1,mode2), Variable("mode"))
+
+    cs.cvars shouldBe List(Variable("x"), Variable("t"))
+    cs.vars shouldBe List(Variable("mode"), Variable("t"), Variable("x"), Variable("a"), Variable("y"))
+
+    println(cs.asProgram)
+    cs.asProgram shouldBe "{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{x'=-x,t'=1}++?mode=mode2();{x'=-x^3,t'=1}}}*".asProgram
+
+    controlledFromProgram(cs.asProgram, None) shouldBe cs
+    controlledFromProgram(cs.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
+  }
+
+  "specifications" should "generate specs (state-dependent)" in withMathematica { _ =>
+
+    val ode1 = ODESystem("x'=-x+y,z'=a+b".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+    val ss = StateDependent(List(ode1,ode2,ode3))
+
+    val spec = stabilitySpec(ss)
+    println(spec)
+    spec shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall z (x^2+z^2 < del^2->[{{x'=-x+y,z'=a+b}++{x'=-x^3}++{x'=-x^5}}*]x^2+z^2 < eps^2)))".asFormula
+
+    val spec2 = attractivitySpec(ss)
+    println(spec2)
+    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0&\\exists T_ (T_>=0&\\forall x \\forall z (x^2+z^2 < del^2->[t_:=0;{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*](t_>=T_->x^2+z^2 < eps^2)))))".asFormula
+  }
+
+  it should "generate specs (controlled)" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x, t'=1".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3, t'=1".asDifferentialProgram, True)
+
+    val mode1 = ("mode1", ode1,
+      List(
+        ("mode2", "?x>a ; x:=0; y:=0;".asProgram), // 1 -> 2
+        ("mode2", "?x<=0;".asProgram) // 1 -> 2
+      ))
+
+    val mode2 = ("mode2", ode2, List())
+
+    val cs = Controlled(Some("t:=0;".asProgram), List(mode1,mode2), Variable("mode"))
+
+    val spec = stabilitySpec(cs)
+    println(spec)
+    spec shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x \\forall t (x^2+t^2 < del^2->[{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{x'=-x,t'=1}++?mode=mode2();{x'=-x^3,t'=1}}}*]x^2+t^2 < eps^2)))".asFormula
+
+    val spec2 = attractivitySpec(cs)
+    println(spec2)
+    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0&\\exists T_ (T_>=0&\\forall x \\forall t (x^2+t^2 < del^2->[t_:=0;{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{t_'=1,x'=-x,t'=1}++?mode=mode2();{t_'=1,x'=-x^3,t'=1}}}*](t_>=T_->x^2+t^2 < eps^2)))))".asFormula
   }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
@@ -68,8 +130,8 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode2 = ODESystem("x'=-1".asDifferentialProgram, "x >= 0".asFormula)
     val ode3 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)
 
-    odeActive(ode1).isEmpty shouldBe false //Some((Unable to leave ODE {x'=(-1)&x>0},Map(x -> 0)))
-    odeActive(ode2) shouldBe None
+    odeActive(ode1, True).isEmpty shouldBe false //Some((Unable to leave ODE {x'=(-1)&x>0},Map(x -> 0)))
+    odeActive(ode2, True) shouldBe None
     odeActive(ode1, "x > 1".asFormula) shouldBe None //Bad point is excluded by global domain
   }
 
@@ -78,10 +140,10 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode1 = "{x'=v & l <= x & x <= r}".asProgram.asInstanceOf[ODESystem]
     val ode2 = "{x'=v & !(l <= x & x <= r)}".asProgram.asInstanceOf[ODESystem]
 
-    odeActive(ode1) shouldBe None
+    odeActive(ode1, True) shouldBe None
     //Bad event trigger domain separation:
     //Some((Unable to enter ODE {x'=v&!(l<=x&x<=r)},Map(l -> 0, r -> 1, v -> (-1), x -> 0)))
-    odeActive(ode2).isEmpty shouldBe false
+    odeActive(ode2, True).isEmpty shouldBe false
     //The other side is problematic too:
     //Some((Unable to enter ODE {x'=v&!(l<=x&x<=r)},Map(l -> 0, r -> 1, v -> 1, x -> 1)))
     odeActive(ode2, "v >= 0".asFormula).isEmpty shouldBe false
@@ -92,10 +154,10 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode1 = "{x'=v, v'=-g & x >= 0 & x <= 5}".asProgram.asInstanceOf[ODESystem]
     val ode2 = "{x'=v, v'=-g & x > 5}".asProgram.asInstanceOf[ODESystem]
 
-    odeActive(ode1) shouldBe None
+    odeActive(ode1, True) shouldBe None
     // Bad event domain split when x=5
     // Some((Unable to enter ODE {x'=v,v'=-g&x>5},Map(g -> 0, v -> 1, x -> 5)))
-    odeActive(ode2).isEmpty shouldBe false
+    odeActive(ode2, True).isEmpty shouldBe false
 
     // Points without evolution
     // Some((System cannot evolve forwards,Map(g -> (-1), v -> 0, x -> 5)))
@@ -117,24 +179,24 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode2 = "{x1'=-1,x2'=0 & x1 < x2}".asProgram.asInstanceOf[ODESystem]
     val ode22 = "{x1'=1,x2'=0 & x1 <= x2}".asProgram.asInstanceOf[ODESystem]
 
-    odeActive(ode1) shouldBe None
+    odeActive(ode1, True) shouldBe None
     // Some((Unable to enter ODE {x1'=(-1),x2'=0&x1 < x2},Map(x1 -> 0, x2 -> 0)))
-    odeActive(ode2).isEmpty shouldBe false
-    odeActive(ode22) shouldBe None
+    odeActive(ode2, True).isEmpty shouldBe false
+    odeActive(ode22, True) shouldBe None
     // Some((System cannot evolve forwards,Map(x1 -> 0, x2 -> 0)))
     stateSwitchActive(List(ode1, ode22)).isEmpty shouldBe false //missing sliding ,ode
 
     // Fixed with third ODE for sliding mode
     val ode3 = "{x1'=1/2,x2'=1/2 & x1 = x2}".asProgram.asInstanceOf[ODESystem]
-    odeActive(ode3) shouldBe None
+    odeActive(ode3, True) shouldBe None
     stateSwitchActive(List(ode1, ode22, ode3)) shouldBe None
 
     // Fixed with hysteresis
     val ode1E = "{x1'=0,x2'=1 & x1 >= x2 - eps}".asProgram.asInstanceOf[ODESystem]
     val ode2E = "{x1'=1,x2'=0 & x1 <= x2 + eps}".asProgram.asInstanceOf[ODESystem]
 
-    odeActive(ode1E) shouldBe None
-    odeActive(ode2E) shouldBe None
+    odeActive(ode1E, True) shouldBe None
+    odeActive(ode2E, True) shouldBe None
     stateSwitchActive(List(ode1E, ode2E),"eps > 0".asFormula) shouldBe None
   }
 
@@ -144,9 +206,9 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode2 = "{x' = -x-a*y, y' = -y+a*x, z'= x*(-y+a*x) - y*(-x-a*y) & z<=0}".asProgram.asInstanceOf[ODESystem]
     val ode3 = "{x' = -x, y' = -y, z'= x*(-y) - y*(-x) & z=0}".asProgram.asInstanceOf[ODESystem]
 
-    odeActive(ode1) shouldBe None
-    odeActive(ode2) shouldBe None
-    odeActive(ode3) shouldBe None
+    odeActive(ode1, True) shouldBe None
+    odeActive(ode2, True) shouldBe None
+    odeActive(ode3, True) shouldBe None
     stateSwitchActive(List(ode1, ode2, ode3)) shouldBe None
   }
 
