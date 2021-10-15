@@ -47,6 +47,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.Controlled
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
@@ -1116,6 +1117,34 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
   }
 }
 
+class CreateControlledStabilityTemplateRequest(userId: String, code: String, modes: JsArray,
+                                               transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val transitionsByMode = transitions.elements.toList.map(_.asJsObject).map(t => {
+      val ttext = t.fields("text").convertTo[String]
+      (t.fields("start").convertTo[String],
+        (t.fields("end").convertTo[String], convertTransition(if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext))))
+    }).groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
+    val c = Controlled(modes.elements.map(_.asJsObject).map(m => {
+      val mid = m.fields("id").convertTo[String]
+      (mid, Parser.parser.programParser("{" + m.fields("text").convertTo[String] + "}").asInstanceOf[ODESystem],
+        transitionsByMode.getOrElse(mid, List.empty).map({ case (a, (b, c)) => (a, b, c) })
+      )
+    }).toList, "mode".asVariable)
+    List(new GetControlledStabilityTemplateResponse(code, c.asProgram))
+  }
+
+  private def flattenAssignments(prg: Program): List[Assign] = prg match {
+    case a: Assign => List(a)
+    case Compose(a, b) => flattenAssignments(a) ++ flattenAssignments(b)
+    case _ => throw new IllegalArgumentException("Unsupported program in hybrid automaton guard; expected guard of the shape ?Q;x_0:=e_0;x_1:=e_1;...;x_n:=e_n;, but got " + prg.prettyString)
+  }
+
+  private def convertTransition(t: Program): (Formula, List[Assign]) = t match {
+    case t: Test => (t.cond, List.empty)
+    case Compose(t: Test, prg) => (t.cond, flattenAssignments(prg))
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models

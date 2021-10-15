@@ -422,6 +422,19 @@ object RestApi extends Logging {
     }
   }}}
 
+  val createTemplate: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / "templates" / Segment / "create") {(userId, template) => { pathEnd { post {
+    entity(as[String]) { x => {
+      val obj = x.parseJson.asJsObject
+      val code = obj.fields("code").asInstanceOf[JsString].value
+      val vertices = obj.fields("vertices").asInstanceOf[JsArray]
+      val edges = obj.fields("edges").asInstanceOf[JsArray]
+      val request = template match {
+        case "controlledstability" => new CreateControlledStabilityTemplateRequest(userId, code, vertices, edges)
+      }
+      completeRequest(request, t)
+    }}
+  }}}}
+
   //endregion
 
   //region Proofs
@@ -1344,6 +1357,7 @@ object RestApi extends Logging {
     testSynthesis         ::
     examples              ::
     templates             ::
+    createTemplate        ::
     stepwiseTrace         ::
     updateUserModel       ::
     userTheme             ::

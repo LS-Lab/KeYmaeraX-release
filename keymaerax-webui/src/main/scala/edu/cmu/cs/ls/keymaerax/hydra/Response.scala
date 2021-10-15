@@ -1367,6 +1367,45 @@ class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
   )
 }
 
+class GetControlledStabilityTemplateResponse(code: String, prg: Program) extends Response {
+  def getJson: JsValue = JsObject(
+    "title" -> JsString(""),
+    "description" -> JsString(""),
+    "text" -> JsString(
+      s"""/*
+         | * Generated from hybrid automaton
+         | * ${code.linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else " * " + l }).mkString}
+         | */
+         |ArchiveEntry "New Entry"
+         |
+         |Definitions
+         |  ${definitionsContent(prg)}
+         |End.
+         |
+         |ProgramVariables
+         |  ${programVariablesContent(prg)}
+         |End.
+         |
+         |Problem
+         |  true /* todo */ ->
+         |  [ ${new KeYmaeraXPrettierPrinter(80)(prg).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
+         |  ]false /* todo */
+         |End.
+         |
+         |End.""".stripMargin),
+    "selectRange" -> JsObject(),
+    "imageUrl" -> JsNull //@todo automaton SVG?
+  )
+
+  private def definitionsContent(prg: Program): String = {
+    (StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet).map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
+  }
+
+  private def programVariablesContent(prg: Program): String = {
+    StaticSemantics.boundVars(prg).toSet[Variable].filter(_.isInstanceOf[BaseVariable]).map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
+  }
+}
+
 
 /**
  * @return JSON that is directly usable by angular.treeview

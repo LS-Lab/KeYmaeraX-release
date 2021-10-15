@@ -1,0 +1,39 @@
+<div class="modal-header">
+    <div class="row">
+        <div class="col-md-8">
+            <h4>{{template.title}}</h4>
+        </div>
+        <div class="col-md-4 float-right">
+            <span class="pull-right">
+                <button ng-class="{'btn':true,
+                    'btn-primary':model.content !== model.savedContent,
+                    'btn-default':model.content == model.savedContent,
+                    'disabled':(numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0}"
+                        ng-click="uploadContent(false)" ng-cloak>Save</button>
+                <button ng-class="{'btn':true, 'btn-default':true,
+                               'disabled': (numKyxEntries(model.content)<=0 && !model.modelName) || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || numKyxTactics(model.content)>0}"
+                        ng-click="uploadContent(true)" ng-cloak>Start Proof <span ng-if="model.content !== model.savedContent">*</span></button>
+                <button class="btn btn-link" ng-click="close()"><i class="fa fa-close fa-lg"></i></button>
+            </span>
+        </div>
+    </div>
+</div>
+<div class="modal-body modal-nofoot">
+    <div class="row">
+        <div class="col-md-12">
+            <k4-hybrid-automaton-modeler theme="default"
+                                         layout="TD"
+                                         code="code"
+                                         on-change="onHAChange(code,svg)"></k4-hybrid-automaton-modeler>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12"><h5>{{template.title}} encoded as Hybrid Program</h5></div>
+    </div>
+    <div class="row k4-vertical-fill-flex">
+        <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex well well-compact">
+            <div ui-ace="{theme:'github',mode:'dl',showGutter:true,onLoad:aceLoaded,onChange:aceChanged}"
+                 ng-model="model.content" id="editor"></div>
+        </div>
+    </div>
+</div>

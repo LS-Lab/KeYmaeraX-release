@@ -1,3 +1,46 @@
+angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateDialogCtrl',
+  function($scope, $controller, $uibModal, $uibModalInstance, $window, $http,
+    $route, $location, Models, sessionService, spinnerService, userId, template) {
+  //@note inherit from ModelUploadCtrl, forward all parameters
+  $controller('ModelUploadCtrl', {
+    $scope: $scope,
+    $http: $http,
+    $route: $route,
+    $uibModalInstance: $uibModalInstance,
+    $uibModal: $uibModal,
+    $location: $location,
+    Models: Models,
+    sessionService: sessionService,
+    spinnerService: spinnerService,
+    template: template
+  });
+
+  var mermaid = $window.mermaid;
+  $scope.code = 'Mode1[x\'=1 & x<=5]\nMode2(x\'=-1 & x>=-5)\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1';
+
+  function decode(encodedString) {
+    var textArea = document.createElement('textarea');
+    textArea.innerHTML = encodedString;
+    return textArea.value;
+  }
+
+  $scope.onHAChange = function(code, svg) {
+    var ast = mermaid.parse(code).parser.yy;
+    var v = $.map(ast.getVertices(), function(e, k) { return { id: e.id, text: decode(e.text) }; });
+    var e = $.map(ast.getEdges(), function(e, i) { return { start: e.start, end: e.end, text: decode(e.text) }; });
+    var data = {
+      code: code,
+      vertices: v,
+      edges: e
+    };
+    $http.post("models/users/" + userId + "/templates/controlledstability/create", data).then(function(response) {
+      $scope.model.content = response.data.text;
+    }).catch(function(err) {
+
+    });
+  }
+});
+
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService,
             template) {
@@ -310,6 +353,20 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       keyboard: false,
       resolve: {
         template: function() { return template; }
+      }
+    });
+  };
+
+  $scope.openControlledStabilityModelTemplateDialog = function() {
+    var modal = $uibModal.open({
+      templateUrl: 'templates/hatemplatedialog.html',
+      controller: 'ControlledStabilityTemplateDialogCtrl',
+      size: 'fullscreen',
+      backdrop: 'static',
+      keyboard: false,
+      resolve: {
+        userId: function() { return $scope.userId; },
+        template: function() { return { 'title': 'Controlled Stability Automaton' }; }
       }
     });
   };
