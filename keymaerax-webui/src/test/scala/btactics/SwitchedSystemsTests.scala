@@ -178,6 +178,93 @@ class SwitchedSystemsTests extends TacticTestBase {
     spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0&\\exists T_ (T_>=0&\\forall x \\forall t (x^2+t^2 < del^2->[t_:=0;{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{t_'=1,x'=-x,t'=1}++?mode=mode2();{t_'=1,x'=-x^3,t'=1}}}*](t_>=T_->x^2+t^2 < eps^2)))))".asFormula
   }
 
+  "UGpAS CLF" should "prove system stable" in withMathematica { _ =>
+      val ode1 = ODESystem("x'=-a*x".asDifferentialProgram, True)
+      val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, "x^2 >= 0".asFormula)
+      val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+      val ode4 = ODESystem("x'=x".asDifferentialProgram, False) // unstable mode that is never entered
+
+      val ss = StateDependent(List(ode1,ode2,ode3,ode4))
+      val spec = stabilitySpec(ss)
+
+      val pr = proveBy(Imply("a>0".asFormula,spec),
+        implyR(1) &
+        proveStabilityCLF("x^4+x^2".asTerm)(1)
+      )
+
+      println(pr)
+      pr shouldBe 'proved
+  }
+
+  it should "prove ODE stable" in withMathematica { _ =>
+    val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram.asInstanceOf[ODESystem]
+
+    val ss = StateDependent(List(ode))
+    val spec = stabilitySpec(ss)
+
+    val pr = proveBy(Imply("a > 0".asFormula,spec),
+      implyR(1) &
+        proveStabilityCLF("x^2 + y^2 + z^2".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove controlled stable, ignoring switching mechanism" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-a*x^3".asDifferentialProgram, True)
+
+    val mode1 = ("mode1", ode1,
+      List(
+        ("mode2", "?x>a ; y:=0;".asProgram), // 1 -> 2
+        ("mode2", "?x<=0;".asProgram) // 1 -> 2
+      ))
+
+    val mode2 = ("mode2", ode2, List())
+
+    val cs = Controlled(Some("t:=0;".asProgram), List(mode1,mode2), Variable("mode"))
+    val spec = stabilitySpec(cs)
+
+    val pr = proveBy(Imply("a>0".asFormula,spec),
+      implyR(1) &
+        proveStabilityCLF("x^4+x^2".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove system stable 2" in withMathematica { _ =>
+    val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
+    val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
+
+    val ss = StateDependent(List(ode1,ode2))
+    val spec = stabilitySpec(ss)
+
+    val pr = proveBy(spec,
+      proveStabilityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove system stable 3" in withMathematica { _ =>
+    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8 & x1*x2 <= 0}".asProgram.asInstanceOf[ODESystem]
+    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8 & x1*x2 >= 0}".asProgram.asInstanceOf[ODESystem]
+
+    val ss = StateDependent(List(ode1,ode2))
+    val stab = stabilitySpec(ss)
+
+    val pr = proveBy(stab,
+      proveStabilityCLF("x1 ^ 2 + x2 ^2".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
 
     val ode1 = ODESystem("x'=-1".asDifferentialProgram, "x > 0".asFormula)
@@ -294,64 +381,6 @@ class SwitchedSystemsTests extends TacticTestBase {
 //    stab shouldBe "\\forall eps (eps>0->\\exists del (del>0&\\forall x (x^2 < del^2->[{{{x'=-x}++{x'=-x^3}}++{x'=-x^5}}*]x^2 < eps^2)))".asFormula
 //  }
 
-  it should "prove ODE stable" in withMathematica { _ =>
-    val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram
-    val stab1 = stableOrigin(ode)
-
-    val pr = proveBy(Imply("a > 0".asFormula,stab1),
-      implyR(1) &
-        proveStable("x^2 + y^2 + z^2".asTerm,ode)(1)
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-//  it should "prove system stable" in withMathematica { _ =>
-//    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
-//    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
-//    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
-//
-//    val ss = stateSwitch(List(ode1,ode2,ode3))
-//    val stab = stableOrigin(ss)
-//
-//    val pr = proveBy(stab,
-//      proveStable("x^4+x^2".asTerm,ss)(1)
-//    )
-//
-//    println(pr)
-//    pr shouldBe 'proved
-//  }
-//
-//  it should "prove system stable 2" in withMathematica { _ =>
-//    val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
-//    val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
-//
-//    val ss = stateSwitch(List(ode1,ode2))
-//    val stab = stableOrigin(ss)
-//
-//    val pr = proveBy(stab,
-//      proveStable("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm,ss)(1)
-//    )
-//
-//    println(pr)
-//    pr shouldBe 'proved
-//  }
-//
-//  it should "prove system stable 3" in withMathematica { _ =>
-//    val ode1 = "{x1'=-x1/8-x2,x2'=2*x1-x2/8 & x1*x2 <= 0}".asProgram.asInstanceOf[ODESystem]
-//    val ode2 = "{x1'=-x1/8-2*x2,x2'=x1-x2/8 & x1*x2 >= 0}".asProgram.asInstanceOf[ODESystem]
-//
-//    val ss = stateSwitch(List(ode1,ode2))
-//    val stab = stableOrigin(ss)
-//
-//    val pr = proveBy(stab,
-//      proveStable("x1 ^ 2 + x2 ^2".asTerm,ss)(1)
-//    )
-//
-//    println(pr)
-//    pr shouldBe 'proved
-//  }
 
   // todo: need to handle arithmetic much better here (very slow)
   it should "prove ODE example stable" taggedAs TodoTest ignore withMathematica { _ =>
@@ -365,7 +394,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-
   // todo: need to handle arithmetic much better here (too slow / doesn't prove)
   it should "prove large ODE stable" taggedAs TodoTest ignore withMathematica { _ =>
     val ode = "{x1' = -x1^3+4*x2^3-6*x3*x4,x2' = -x1-x2+x5^3,x3' = x1*x4-x3+x4*x6,x4' = x1*x3+x3*x6-x4^3,x5' = -2*x2^3-x5+x6,x6' = -3*x3*x4-x5^3-x6}".asProgram

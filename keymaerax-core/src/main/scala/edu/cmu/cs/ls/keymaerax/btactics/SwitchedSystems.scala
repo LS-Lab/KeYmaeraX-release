@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, IllFormedTacticApplicationException, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas.remember
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -344,6 +344,16 @@ object SwitchedSystems {
     Timed(modes,c.u, timer)
   }
 
+  // TODO: Collects all the parsers in some canonical order, probably not right way to do this, use options instead
+  def switchedFromProgram(p : Program, topt:Option[Variable]) : SwitchedSystem = {
+    try { stateDependentFromProgram(p, topt) }  catch{ case e: IllegalArgumentException =>
+    try { guardedFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
+    try { timedFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
+    try { controlledFromProgram(p, topt) } catch{ case e: IllegalArgumentException =>
+      throw new IllegalArgumentException("Unable to parse program as switched system: " + p)
+    }}}}
+  }
+
   // Standard stability specification for a SwitchedSystem
   def stabilitySpec(ss: SwitchedSystem): Formula = {
 
@@ -401,6 +411,133 @@ object SwitchedSystems {
         qbody
       ))))))
   }
+
+  // CLF tactics
+  private def stripTillBox(f : Formula) : Program = {
+    f match {
+      case Forall(_, r) => stripTillBox(r)
+      case Exists(_, r) => stripTillBox(r)
+      case And(_, r) => stripTillBox(r)
+      case Imply(_, r) => stripTillBox(r)
+      case Box(p, r) => p
+      case _ => ???
+    }
+  }
+
+  def proveStabilityCLF (lyap: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+
+    if (!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
+
+    val prog = seq.sub(pos) match{
+      case Some(f:Formula) => stripTillBox(f)
+      case _ => ???
+    }
+
+    val ss = switchedFromProgram(prog, None)
+
+    proveStabilityCLF(lyap, ss, seq.ante.length, pos)
+  })
+
+  // Internal CLF tactic
+  def proveStabilityCLF (lyap: Term, ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
+
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val epssq = Power(eps, Number(2))
+    val delsq = Power(del, Number(2))
+
+    val w = Variable("w_")
+
+    val cvars: List[Variable] = ss.cvars
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = Less(normsq, Power(del, Number(2)))
+
+    // w serves as an lower bound on V for ||x||=eps
+    val epsbound =
+      cvars.foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsw = Exists(w :: Nil,
+      And(Greater(w, Number(0)),
+        epsbound
+      ))
+
+    // w serves as an upper bound on V for ||x||<del
+    val delw = And(And(Greater(del, Number(0)), Less(del, eps)),
+      cvars.foldRight(Imply(Less(normsq, delsq), Less(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    )
+
+    // The relevant tactic for a single ODE
+    // Assumes antecedent has the form:
+    // assums, \forall x ( |x|=eps -> lyap >= w), lyap < w, |x| < eps
+    val odetac =
+    dC(Less(lyap, w))(pos) < (
+      DifferentialTactics.dCClosure(pos) < (
+        hideL(-(apos + 1)) & QE,
+        cohideOnlyL(-(apos + 1)) &
+          DifferentialTactics.DconstV(pos) &
+          DifferentialTactics.diffWeakenG(pos) & implyR(1) &
+          andL(-1) & (allL(-1) * cvars.length) & QE // can be done by subst
+      ),
+      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI('full)(pos)
+    )
+
+    val inv = And(Less(lyap, w), Less(normsq, epssq))
+
+    // Skip over [a;b]P to [b]P
+    val genSkip = composeb(pos) & generalize(inv)(pos) <(V(pos) & prop, skip)
+
+    // Continuation
+    val conttac = ss match {
+      case StateDependent(odes) =>
+        loop(inv)(pos) <(
+          prop,
+          prop,
+          implyRi & implyR(pos) & andL('Llast) &
+            (choiceb(pos) & andR(pos) <(odetac, skip))*(odes.length-1) & //split per control choice
+            odetac
+        )
+      // todo: would be really nice if we can just pattern match on "everything with an underlyingControlled, including Controlled itself"
+      case Controlled(initopt, modes, u) =>
+        composeb(pos) &
+          abstractionb(pos) & SaturateTactic(allR(pos)) &
+          loop(inv)(pos) <(
+            prop,
+            prop,
+            implyRi & implyR(pos) & andL('Llast) &
+            composeb(pos) & abstractionb(pos) & SaturateTactic(allR(pos)) &
+              (choiceb(pos) & andR(pos) <(
+              composeb(pos) & abstractionb(pos) & odetac,
+              skip)) * (modes.length-1) &
+              composeb(pos) & abstractionb(pos) & odetac
+            )
+    }
+
+    allR(pos) & implyR(pos) &
+      cutR(epsw)(pos) < (
+        QE,
+        implyR(pos) & existsL('Llast) & andL('Llast) &
+          existsRmon(delw)(pos) < (
+            hideL('Llast) & QE, //hide the \forall x ( ...) that was just cut
+            // Get rid of some unused assumptions now
+            hideL(-(apos + 1)) & hideL(-(apos + 1)) & andL(-(apos + 2)) & andL(-(apos + 2)) &
+            andR(pos) < (
+              id,
+              (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
+              (allL(-(apos + 2)) * cvars.length) & implyL(-(apos + 2)) < (
+                id,
+                cutR(Less(normsq, epssq))(pos) < (
+                  (implyRi()(AntePos(apos + 2), pos.checkSucc) * 3) & cohideR(pos) & byUS(edswap),
+                  (hideL(-(apos + 3)) * 3) & implyR(pos) &
+                    conttac
+                )
+              )
+            )
+          )
+      )
+
+  }
+
 
     /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
     *
