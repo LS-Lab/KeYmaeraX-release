@@ -80,17 +80,18 @@ object SwitchedSystems {
   }
 
   // Remove the time variable
+  private def stripTimer(ode: DifferentialProgram, t : Variable) : DifferentialProgram = {
+    ode match {
+      case DifferentialProduct(l,r) if l == AtomicODE(DifferentialSymbol(t), Number(1)) => r
+      case _ =>  throw new IllegalArgumentException("Unable to strip time variable " + t + " in ODE " + ode)
+    }
+  }
+
   private def stripTimer(odes:List[ODESystem], topt:Option[Variable]) : List[ODESystem] = {
     topt match {
       case None => odes
       case Some(t) =>
-        val tode = AtomicODE(DifferentialSymbol(t), Number(1))
-        odes.map( ode =>
-          ode.ode match {
-            case DifferentialProduct(l,r) if l == tode => ODESystem(r,ode.constraint)
-            case _ => throw new IllegalArgumentException("Unable to parse time variable " + t + " in ODE " + ode)
-          }
-        )
+        odes.map( ode => ODESystem(stripTimer(ode.ode,t),ode.constraint))
     }
   }
 
@@ -134,7 +135,7 @@ object SwitchedSystems {
     override val cvars : List[Variable] = odes.flatMap(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).distinct
 
     // All variables used in the program (except u)
-    val varsPre =   (
+    private val varsPre =   (
       //Init
       StaticSemantics.vars(initopt.getOrElse(Test(True))).toSet.toList ++
         //Control
@@ -156,8 +157,8 @@ object SwitchedSystems {
         require(names.contains(f._1), "Unable to jump to undefined mode: " + f._1)
     ))
 
-    override def asProgram = asProgram(None)
-    override def asClockedProgram(t:Variable) = asProgram(Some(t))
+    override def asProgram : Program = asProgram(None)
+    override def asClockedProgram(t:Variable) : Program = asProgram(Some(t))
 
     private def asProgram(topt: Option[Variable]) = {
       require(topt.isEmpty || !vars.contains(topt.get), "Time variable " + topt.get + " must be fresh")
@@ -206,12 +207,12 @@ object SwitchedSystems {
     val choices = choiceList(initL)
 
     if(!choices.forall(_.isInstanceOf[Assign]))
-      throw new IllegalArgumentException("Unable to parse initializer for controlled switching "+init)
+      throw new IllegalArgumentException("Unable to parse initializer for controlled switching at: "+init)
     val assigns = choices.map(c => c.asInstanceOf[Assign])
     val ctrl = assigns.map(f => f.x).distinct
 
     if(ctrl.length != 1)
-      throw new IllegalArgumentException("Unable to parse initializer for controlled switching "+init)
+      throw new IllegalArgumentException("Unable to parse initializer for controlled switching at: "+init)
 
     //todo: more precise check needed here
     val rhs = assigns.map(f=> f.e.asInstanceOf[FuncOf].func.name)
@@ -223,7 +224,7 @@ object SwitchedSystems {
 
     val uvfo = choices.map( c => c match {
       case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o: ODESystem) => (uv,f,o)
-      case _ => throw new IllegalArgumentException("Unable to parse plant for controlled switching "+ plant)
+      case _ => throw new IllegalArgumentException("Unable to parse plant for controlled switching at: "+ c)
     }
     )
 
@@ -235,7 +236,7 @@ object SwitchedSystems {
 
     val uvfo = choices.map( c => c match {
       case Compose(Test(Equal(uv:Variable, FuncOf(f, Nothing))), o) => (uv,f,o)
-      case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching "+ ctrl)
+      case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching at: "+ c)
     }
     )
 
@@ -244,7 +245,7 @@ object SwitchedSystems {
       tchoices.map( tc => tc match {
         case Compose( prog, Assign(_:Variable, FuncOf(f, Nothing)) ) =>
           (f.name, prog)
-        case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching "+ ctrl)
+        case _ => throw new IllegalArgumentException("Unable to parse ctrl for controlled switching at: "+ tc)
       })
       }
     )
@@ -261,15 +262,86 @@ object SwitchedSystems {
         val (u3, modes3, transitions) = parseCtrl(ctrl)
 
         // todo: more consistency checks
-         println(u1,modes1,initopt)
-         println(u2,modes2,odes)
-         println(u3,modes3,transitions)
+        // println(u1,modes1,initopt)
+        // println(u2,modes2,odes)
+        // println(u3,modes3,transitions)
 
         Controlled(initopt, (modes1,stripTimer(odes,topt),transitions).zipped.toList, u1)
       }
       case _ =>
         throw new IllegalArgumentException("Unable to parse program for controlled switching " + p)
     }
+  }
+
+  case class Guarded(modes : List[(String,ODESystem,List[(String,Formula)])], u : Variable) extends SwitchedSystem {
+
+    val underlyingControlled = Controlled(None, modes.map( t => (t._1,t._2,t._3.map( s => (s._1,Test(s._2))))) , u)
+
+    override def asProgram : Program = underlyingControlled.asProgram
+    override def asClockedProgram(t : Variable) : Program = underlyingControlled.asClockedProgram(t)
+
+    override val cvars : List[Variable] = underlyingControlled.cvars
+    override val vars : List[Variable]  = underlyingControlled.vars
+  }
+
+  def guardedFromProgram(p : Program, topt:Option[Variable]) : Guarded = {
+    val c = controlledFromProgram(p, topt)
+
+    if(c.initopt.nonEmpty)
+      throw new IllegalArgumentException("Unable to parse program for guarded switching at: " + c.initopt)
+
+    val modes = c.modes.map(t =>
+      (t._1,t._2,
+        t._3.map( s => (s._1, s._2 match {
+          case Test(g) => g
+          case _ => throw new IllegalArgumentException("Unable to parse program for guarded switching at: " + s._2)
+        }
+        ))
+      )
+    )
+    Guarded(modes,c.u)
+  }
+
+  case class Timed(modes : List[(String, DifferentialProgram, Option[Term],List[(String, Option[Term])])], u : Variable, timer : Variable) extends SwitchedSystem {
+
+    //todo: timer should be fresh in ODE RHS and terms
+    val underlyingControlled = Controlled(
+      Some(Assign(timer,Number(0))),
+      modes.map( t => (t._1,
+        ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(timer),Number(1)), t._2),
+          t._3 match { case None => True case Some(tt) => LessEqual(timer,tt)}),
+        t._4.map( s => (s._1,
+          Compose(Test(s._2 match{ case None => True case Some(ss) => GreaterEqual(timer,ss)}),Assign(timer,Number(0))))))) , u)
+
+    override def asProgram  : Program = underlyingControlled.asProgram
+    override def asClockedProgram(t : Variable) : Program = underlyingControlled.asClockedProgram(t)
+
+    override val cvars : List[Variable] = underlyingControlled.cvars.filterNot(p => p == timer)
+    override val vars : List[Variable] = underlyingControlled.vars
+  }
+
+  def timedFromProgram(p : Program, topt:Option[Variable]) : Timed = {
+    val c = controlledFromProgram(p, topt)
+
+    val timer = c.initopt match {
+      case Some(Assign(t:Variable, n: Number)) if n.value == 0 => t
+      case _ => throw new IllegalArgumentException("Unable to parse program for timed switching at: " + c.initopt)
+    }
+
+    val modes = c.modes.map(t =>
+      (t._1,
+        stripTimer(t._2.ode,timer),
+        t._2.constraint match {case True => None case LessEqual(t:Variable,bound) if t == timer => Some(bound)},
+        t._3.map( s => (s._1, s._2 match {
+          case Compose(Test(True),Assign(t:Variable,n)) if t == timer => None
+          case Compose(Test(GreaterEqual(t1:Variable,bound)),Assign(t2,n: Number)) if t1 == t2 && t2 == timer && n.value == 0 => Some(bound)
+          case _ => throw new IllegalArgumentException("Unable to parse program for timed switching at: " + s._2)
+        }
+        ))
+      )
+    )
+
+    Timed(modes,c.u, timer)
   }
 
   // Standard stability specification for a SwitchedSystem

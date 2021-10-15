@@ -85,6 +85,60 @@ class SwitchedSystemsTests extends TacticTestBase {
     controlledFromProgram(cs.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
   }
 
+  it should "parse and print guarded state-dependent switching system" in withMathematica { _ =>
+    val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, True)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+
+    val mode1 = ("mode1", ode1,
+      List(
+        ("mode2", "x>a".asFormula), // 1 -> 2
+        ("mode2", "x<=0".asFormula), // 1 -> 2
+        ("mode3", "x=0".asFormula) // 1 -> 3
+      ))
+
+    val mode2 = ("mode2", ode2, List())
+
+    val mode3 = ("mode3", ode3, List(
+      ("mode2","x<=0".asFormula))) // 3 -> 2
+
+    val cs = Guarded(List(mode1,mode2,mode3), Variable("u"))
+
+    cs.cvars shouldBe List(Variable("x"))
+    cs.vars shouldBe List(Variable("u"), Variable("x"), Variable("a"))
+
+    println(cs.asProgram)
+    cs.asProgram shouldBe "{u:=mode1();++u:=mode2();++u:=mode3();}{{?u=mode1();{?x>a;u:=mode2();++?x<=0;u:=mode2();++?x=0;u:=mode3();++u:=u;}++?u=mode2();u:=u;++?u=mode3();{?x<=0;u:=mode2();++u:=u;}}{?u=mode1();{x'=-x}++?u=mode2();{x'=-x^3}++?u=mode3();{x'=-x^5}}}*".asProgram
+
+    guardedFromProgram(cs.asProgram, None) shouldBe cs
+    guardedFromProgram(cs.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
+  }
+
+  it should "parse and print time-dependent switching system" in withMathematica { _ =>
+    val ode1 = "x'=-x".asDifferentialProgram
+    val ode2 = "x'=-x^3".asDifferentialProgram
+    val ode3 = "x'=-x^5".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, None,
+      List(
+        ("mode2", Some("1".asTerm)), // 1 -> 2
+        ("mode2", None) // 1 -> 3
+      ))
+
+    val mode2 = ("mode2", ode2, Some("5".asTerm), List())
+
+    val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
+
+    cs.cvars shouldBe List(Variable("x"))
+    cs.vars shouldBe List(Variable("u"),Variable("timer"), Variable("x"))
+
+    println(cs.asProgram)
+    cs.asProgram shouldBe "{{u:=mode1();++u:=mode2();}timer:=0;}{{?u=mode1();{{?timer>=1;timer:=0;}u:=mode2();++{?true;timer:=0;}u:=mode2();++u:=u;}++?u=mode2();u:=u;}{?u=mode1();{timer'=1,x'=-x}++?u=mode2();{timer'=1,x'=-x^3&timer<=5}}}*".asProgram
+
+    timedFromProgram(cs.asProgram, None) shouldBe cs
+    timedFromProgram(cs.asClockedProgram(Variable("t_")),Some(Variable("t_"))) shouldBe cs
+  }
+
   "specifications" should "generate specs (state-dependent)" in withMathematica { _ =>
 
     val ode1 = ODESystem("x'=-x+y,z'=a+b".asDifferentialProgram, True)
