@@ -4,11 +4,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas.remember
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+
+import scala.collection.immutable.Nil
 
 /**
   * Provides support for generating switched system models
@@ -30,6 +32,8 @@ object SwitchedSystems {
 
     val cvars : List[Variable] // the default continuous state variables
     val vars : List[Variable]  // any variable appearing anywhere in the system
+
+    val odes : List[ODESystem] // the underlying ODEs
   }
 
   // Unfold a choice of the form hp1++hp2++hp3 into a list (the order of association is important)
@@ -126,7 +130,7 @@ object SwitchedSystems {
     val names : List[String] = modes.map(_._1)
 
     // Explicit ODEs of the modes
-    val odes : List[ODESystem] = modes.map(_._2)
+    override val odes : List[ODESystem] = modes.map(_._2)
 
     // Explicit list of transitions
     val transitions: List[List[(String,Program)]] = modes.map(_._3)
@@ -282,6 +286,7 @@ object SwitchedSystems {
 
     override val cvars : List[Variable] = underlyingControlled.cvars
     override val vars : List[Variable]  = underlyingControlled.vars
+    override val odes : List[ODESystem] = underlyingControlled.odes
   }
 
   def guardedFromProgram(p : Program, topt:Option[Variable]) : Guarded = {
@@ -318,6 +323,7 @@ object SwitchedSystems {
 
     override val cvars : List[Variable] = underlyingControlled.cvars.filterNot(p => p == timer)
     override val vars : List[Variable] = underlyingControlled.vars
+    override val odes : List[ODESystem] = underlyingControlled.odes
   }
 
   def timedFromProgram(p : Program, topt:Option[Variable]) : Timed = {
@@ -406,7 +412,7 @@ object SwitchedSystems {
     val qbody = ss.cvars.foldRight(fmlbody: Formula)((v, f) => Forall(v :: Nil, f))
 
     Forall(eps :: Nil, Imply(Greater(eps, Number(0)), // \forall eps > 0
-      Forall(del :: Nil, And(Greater(del, Number(0)), // \forall del > 0
+      Forall(del :: Nil, Imply(Greater(del, Number(0)), // \forall del > 0
         Exists(TVar :: Nil, And(GreaterEqual(TVar, Number(0)), // \exists T >= 0
         qbody
       ))))))
@@ -429,9 +435,10 @@ object SwitchedSystems {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
 
-    val prog = seq.sub(pos) match{
-      case Some(f:Formula) => stripTillBox(f)
-      case _ => ???
+    val fopt = seq.sub(pos)
+    val prog = fopt match {
+      case Some(f) => stripTillBox(f.asInstanceOf[Formula])
+      case _ => throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a valid top-level succedent position")
     }
 
     val ss = switchedFromProgram(prog, None)
@@ -440,8 +447,8 @@ object SwitchedSystems {
   })
 
   // Internal CLF tactic
-  def proveStabilityCLF (lyap: Term, ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
-
+  private def proveStabilityCLF (lyap: Term, ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
+    require( StaticSemantics.freeVars(lyap).toSet.subsetOf(ss.cvars.toSet), "Common Lyapunov function should only mention "+ss.cvars+" free")
     val eps = Variable("eps")
     val del = Variable("del")
     val epssq = Power(eps, Number(2))
@@ -470,17 +477,18 @@ object SwitchedSystems {
     // The relevant tactic for a single ODE
     // Assumes antecedent has the form:
     // assums, \forall x ( |x|=eps -> lyap >= w), lyap < w, |x| < eps
+    // succedent has the form:
+    // assums, [ODE] (lyap < w & |x| < eps)
     val odetac =
-    dC(Less(lyap, w))(pos) < (
-      DifferentialTactics.dCClosure(pos) < (
-        hideL(-(apos + 1)) & QE,
-        cohideOnlyL(-(apos + 1)) &
-          DifferentialTactics.DconstV(pos) &
-          DifferentialTactics.diffWeakenG(pos) & implyR(1) &
-          andL(-1) & (allL(-1) * cvars.length) & QE // can be done by subst
-      ),
-      hideL(-(apos + 1)) & hideL(-(apos + 2)) & dI('full)(pos)
-    )
+      dC(Less(lyap, w))(pos) < (
+        DifferentialTactics.dCClosure('Rlast) < (
+          implyRiLast & implyRiLast & cohideR('Rlast) & QE,
+          hideL('Llast) & hideL('Llast) & implyRiLast & cohideR('Rlast) &
+          implyR(1) &
+          DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
+        ),
+        hideL('Llast) & implyRiLast & hideL('Llast) & implyR('Rlast) & dI('full)('Rlast)
+      )
 
     val inv = And(Less(lyap, w), Less(normsq, epssq))
 
@@ -493,9 +501,9 @@ object SwitchedSystems {
         loop(inv)(pos) <(
           prop,
           prop,
-          implyRi & implyR(pos) & andL('Llast) &
-            (choiceb(pos) & andR(pos) <(odetac, skip))*(odes.length-1) & //split per control choice
-            odetac
+          implyRi & implyR(1) & andL('Llast) &
+          (choiceb('Rlast) & andR('Rlast) <(odetac, skip))*(odes.length-1) & //split per control choice
+          odetac
         )
       // todo: would be really nice if we can just pattern match on "everything with an underlyingControlled, including Controlled itself"
       case Controlled(initopt, modes, u) =>
@@ -504,12 +512,12 @@ object SwitchedSystems {
           loop(inv)(pos) <(
             prop,
             prop,
-            implyRi & implyR(pos) & andL('Llast) &
-            composeb(pos) & abstractionb(pos) & SaturateTactic(allR(pos)) &
-              (choiceb(pos) & andR(pos) <(
-              composeb(pos) & abstractionb(pos) & odetac,
+            implyRi & implyR(1) & andL('Llast) &
+            composeb('Rlast) & abstractionb('Rlast) & SaturateTactic(allR('Rlast)) &
+              (choiceb('Rlast) & andR('Rlast) <(
+              composeb('Rlast) & abstractionb('Rlast) & odetac,
               skip)) * (modes.length-1) &
-              composeb(pos) & abstractionb(pos) & odetac
+              composeb('Rlast) & abstractionb('Rlast) & odetac
             )
     }
 
@@ -538,6 +546,218 @@ object SwitchedSystems {
 
   }
 
+  def proveAttractivityCLF (lyap: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+
+    if (!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " must point to a top-level succedent position")
+
+    val progPre = seq.sub(pos) match{
+      case Some(f:Formula) => stripTillBox(f)
+      case _ => ???
+    }
+
+    val (t,prog) = progPre match {
+      case Compose(Assign(t,n), p) => (t,p)
+      case _ => ???
+    }
+
+    require(t == Variable("t_"), "TODO: remove this requirement")
+
+    val ss = switchedFromProgram(prog, Some(t))
+
+    proveAttractivityCLF(lyap, ss, seq.ante.length, pos)
+  })
+
+  private def implyRiLast : DependentTactic = anon { (sequent: Sequent) => {
+    implyRi()(AntePos(sequent.ante.length-1), SuccPos(sequent.succ.length-1))
+  }}
+
+  // Internal CLF tactic
+  private def proveAttractivityCLF (lyap: Term, ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
+
+    require( StaticSemantics.freeVars(lyap).toSet.subsetOf(ss.cvars.toSet), "Common Lyapunov function should only mention "+ss.cvars+" free")
+
+    // Fixed names for now
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val tVar = Variable("t_")
+    val TVar = Variable("T_")
+    val epssq = Power(eps, Number(2))
+    val delsq = Power(del, Number(2))
+
+    val w = Variable("w_")
+    val u = Variable("u_")
+    val kName = "k_"
+    val k = Variable(kName)
+
+    val cvars: List[Variable] = ss.cvars
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    val init = Less(normsq, Power(del, Number(2)))
+
+    // w serves as an upper bound on V for ||x||<del
+    val delw = Exists(w :: Nil,
+      And(Greater(w, Number(0)),
+        cvars.foldRight(Imply(Less(normsq, delsq), Less(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))))
+
+    // u is internal sublevel set in ||x|| < eps
+    val epsu = Exists(u::Nil,
+      And(Greater(u,Number(0)),
+      cvars.foldRight(Imply(And( /* True */ Less(lyap, w), GreaterEqual(normsq, epssq)), GreaterEqual(lyap, u)): Formula)((v, f) => Forall(v :: Nil, f)))
+    )
+
+    val kis =
+      (0 to ss.odes.length-1).map(i => Variable(kName,Some(i))).toList
+
+    val derbod = ss.odes.zip(kis).map( odei => {
+      val ki = odei._2
+      Less(DifferentialHelper.simplifiedLieDerivative(odei._1.ode, lyap, ToolProvider.simplifierTool()),ki)})
+
+    val derPair : List[(Formula,Formula)] = ss.odes.zip(kis).map( odei => {
+      val ki = odei._2
+      val ld = DifferentialHelper.simplifiedLieDerivative(odei._1.ode, lyap, ToolProvider.simplifierTool())
+      val bod = Less(ld,ki )
+      (Exists(ki :: Nil,
+        And(Less(ki,Number(0)),
+        cvars.foldRight(Imply(
+          And(odei._1.constraint, And(GreaterEqual(lyap, u), /* True */ Less(lyap, w))), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
+    })
+
+    val derivatives = derPair.map(_._1)
+    val derbods = derPair.map(_._2)
+
+    val derFml = derivatives.reduceRight(And(_,_))
+
+    // k is an upper bound on all kis
+    val kMin = Exists(k :: Nil,
+      And(Less(k,Number(0)), kis.map( ki => LessEqual(ki,k)).reduceRight(And) )
+    )
+
+    val Tchoice = And(GreaterEqual(TVar,Number(0)),LessEqual(Plus(w,Times(k,TVar)),u))
+
+    // w serves as an lower bound on V for ||x||=eps
+    val epsbound =
+      cvars.foldRight(Imply(Equal(normsq, epssq), GreaterEqual(lyap, w)): Formula)((v, f) => Forall(v :: Nil, f))
+    val epsw = Exists(w :: Nil,
+      And(Greater(w, Number(0)),
+        epsbound
+      ))
+
+
+    // The relevant tactic for a single ODE
+    // Assumes antecedent has the form:
+    // assums, k_i < 0, \forall x ( Q&V>=U&V<W -> V' < k_i), k < 0, k <= k_i, lyap < w, lyap >= u -> lyap < w + k * t
+    // Succedent has form:
+    // assums, [ODE](lyap< W & ...)
+    def odetac (bd:Formula) : BelleExpr =
+    dC(Less(lyap, w))(pos) < (
+      boxAnd('Rlast) & andR('Rlast)<(
+        DifferentialTactics.diffWeakenG('Rlast) & prop,
+        useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast) <(
+          //here, we don't need assums
+          (implyRiLast * 5) & cohideOnlyR('Rlast) & cohideOnlyL('Llast) &
+            (implyR(1) * 5) &
+            dC(bd)(1)<( //maybe DR instead?
+              implyRiLast & hideL('Llast) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) & dI('full)(1),
+              DW(1) & abstractionb(1) & hideL(-1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
+            ),
+          (hideL('Llast)*6) & dW('Rlast) & implyR(1) & dI('full)(1)
+        )
+      ),
+      hideL('Llast) & implyRiLast & (hideL('Llast)*4) & implyR('Rlast) & dI('full)('Rlast)
+    )
+
+    val inv = And(Less(lyap, w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar)))))
+
+    // Continuation
+    val conttac = ss match {
+      case StateDependent(odes) =>
+        loop(inv)(pos) <(
+          cutR(Equal(tVar,Number(0)))(pos) <(
+            id,
+            implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) & closeT
+          ),
+          //Note: for these next two branches, the "loop" branch is moved to the first succedent position
+          ArithmeticSimplification.hideFactsAbout(kis) &
+          hideL('Llast) & implyRiLast & implyRiLast & (allL('Llast) * cvars.length) & implyL('Llast) <(
+            andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
+            andL(-1) & implyL('Llast) <( id, QE) //todo: this last QE can be done more manually
+          ),
+          ArithmeticSimplification.hideFactsAbout(TVar::eps::Nil) &
+          implyRi & implyR(1) & andL('Llast) &
+
+          (kis zip derbods).map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_!=kb._1)) & odetac(kb._2)).reduceRight(
+            (p1,p2) =>
+              choiceb('Rlast) & andR('Rlast) <(p1,p2)
+          )
+//          (choiceb(pos) & andR(pos) <(odetac, skip)) //*(odes.length-1)
+        )
+      // todo: would be really nice if we can just pattern match on "everything with an underlyingControlled, including Controlled itself"
+      case Controlled(initopt, modes, u) =>
+        composeb(pos) &
+          abstractionb(pos) & SaturateTactic(allR(pos)) &
+          loop(inv)(pos) <(
+            cutR(Equal(tVar,Number(0)))(pos) <(
+              id,
+              implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) & closeT
+            ),
+            //Note: for these next two branches, the "loop" branch is moved to the first succedent position
+            ArithmeticSimplification.hideFactsAbout(kis) &
+              hideL('Llast) & implyRiLast & implyRiLast & (allL('Llast) * cvars.length) & implyL('Llast) <(
+              andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
+              andL(-1) & implyL('Llast) <( id, QE) //todo: this last QE can be done more manually
+            ),
+            implyRi & implyR(1) & andL('Llast) &
+              composeb('Rlast) & abstractionb('Rlast) & SaturateTactic(allR('Rlast)) &
+
+              (kis zip derbods).map(kb => ArithmeticSimplification.hideFactsAbout(kis.filter(_!=kb._1)) & composeb('Rlast) & abstractionb('Rlast) & odetac(kb._2)).reduceRight(
+                (p1,p2) =>
+                  choiceb('Rlast) & andR('Rlast) <(p1,p2)
+              ))
+    }
+
+    allR(pos) & implyR(pos) & // \forall eps (eps>0 ->
+      allR(pos) & implyR(pos) & // \forall del (del>0 ->
+      cutR(delw)(pos) <( //find W,
+        QE,
+        implyR(pos) & existsL('Llast) & andL('Llast) & //skolemize W
+        // todo: can first try a "simpler" cut here that works (remove V<W conjunct)
+        cutR(epsu)(pos) <(
+          hideL('Llast) & QE, //hide \forall x ( ||x|| < del -> V < W)
+          implyR(pos) & existsL('Llast) & andL('Llast) & //skolemize U
+          cutR(derFml)(pos) < (
+            hideL('Llast) & hideL(-(apos+4)) &  //hide earlier quantified cuts
+              (andR(pos) <( QE , skip))*(derivatives.length-1) & QE // QE each V' < k condition separately
+            ,
+            implyR(pos) &
+              (andL('Llast) * (derivatives.length-1)) &
+              (existsL(-(apos+7))) * derivatives.length & //existsL shuffles assumption to the back
+              cutR(kMin)(pos) < (
+                // hide everything except k_i < 0 assumptions
+                SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(kis) &
+                  (1 to kis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
+                implyR(pos) & existsL('Llast) &
+                existsRmon(Tchoice)(pos) <(
+                  cohideOnlyL('Llast) & andL('Llast) & hideL('Llast) & QE,
+                  andL('Llast) & andR(pos) <(
+                    id,
+                    (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
+                    (allL(-(apos + 4)) * cvars.length) & implyL(-(apos + 4)) <( // discharge first cut on del
+                      id,
+                      // Don't need del anymore
+                      ArithmeticSimplification.hideFactsAbout(del::Nil) &
+                      hideL(-(apos+1)) & hideL(-(apos+1)) & hideL(-(apos+2)) & //hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
+                      composeb(pos) & assignb(pos) & //t_=0 initially
+                      conttac
+                    )
+                  )
+                )
+              )
+          )
+        )
+      )
+
+  }
 
     /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
     *

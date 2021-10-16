@@ -152,7 +152,7 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val spec2 = attractivitySpec(ss)
     println(spec2)
-    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0&\\exists T_ (T_>=0&\\forall x \\forall z (x^2+z^2 < del^2->[t_:=0;{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*](t_>=T_->x^2+z^2 < eps^2)))))".asFormula
+    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0 -> \\exists T_ (T_>=0&\\forall x \\forall z (x^2+z^2 < del^2->[t_:=0;{{t_'=1,x'=-x+y,z'=a+b}++{t_'=1,x'=-x^3}++{t_'=1,x'=-x^5}}*](t_>=T_->x^2+z^2 < eps^2)))))".asFormula
   }
 
   it should "generate specs (controlled)" in withMathematica { _ =>
@@ -175,25 +175,33 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val spec2 = attractivitySpec(cs)
     println(spec2)
-    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0&\\exists T_ (T_>=0&\\forall x \\forall t (x^2+t^2 < del^2->[t_:=0;{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{t_'=1,x'=-x,t'=1}++?mode=mode2();{t_'=1,x'=-x^3,t'=1}}}*](t_>=T_->x^2+t^2 < eps^2)))))".asFormula
+    spec2 shouldBe "\\forall eps (eps>0->\\forall del (del>0 -> \\exists T_ (T_>=0&\\forall x \\forall t (x^2+t^2 < del^2->[t_:=0;{{mode:=mode1();++mode:=mode2();}t:=0;}{{?mode=mode1();{{?x>a;x:=0;y:=0;}mode:=mode2();++?x<=0;mode:=mode2();++mode:=mode;}++?mode=mode2();mode:=mode;}{?mode=mode1();{t_'=1,x'=-x,t'=1}++?mode=mode2();{t_'=1,x'=-x^3,t'=1}}}*](t_>=T_->x^2+t^2 < eps^2)))))".asFormula
   }
 
   "UGpAS CLF" should "prove system stable" in withMathematica { _ =>
-      val ode1 = ODESystem("x'=-a*x".asDifferentialProgram, True)
-      val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, "x^2 >= 0".asFormula)
-      val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
-      val ode4 = ODESystem("x'=x".asDifferentialProgram, False) // unstable mode that is never entered
+    val ode1 = ODESystem("x'=-a*x".asDifferentialProgram, True)
+    val ode2 = ODESystem("x'=-x^3".asDifferentialProgram, "x^2 >= 0".asFormula)
+    val ode3 = ODESystem("x'=-x^5".asDifferentialProgram, True)
+    val ode4 = ODESystem("x'=x".asDifferentialProgram, False) // unstable mode that is never entered
 
-      val ss = StateDependent(List(ode1,ode2,ode3,ode4))
-      val spec = stabilitySpec(ss)
+    val ss = StateDependent(List(ode1,ode2,ode3,ode4))
+    val spec = stabilitySpec(ss)
 
-      val pr = proveBy(Imply("a>0".asFormula,spec),
-        implyR(1) &
-        proveStabilityCLF("x^4+x^2".asTerm)(1)
-      )
+    val pr = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec)),
+      implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2)
+    )
 
-      println(pr)
-      pr shouldBe 'proved
+    println(pr)
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec2)),
+     implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove ODE stable" in withMathematica { _ =>
@@ -209,9 +217,19 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(Imply("a > 0".asFormula,spec2),
+      implyR(1) & proveAttractivityCLF("x^2 + y^2 + z^2".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove controlled stable, ignoring switching mechanism" in withMathematica { _ =>
+
     val ode1 = ODESystem("x'=-x".asDifferentialProgram, True)
     val ode2 = ODESystem("x'=-a*x^3".asDifferentialProgram, True)
 
@@ -226,13 +244,21 @@ class SwitchedSystemsTests extends TacticTestBase {
     val cs = Controlled(Some("t:=0;".asProgram), List(mode1,mode2), Variable("mode"))
     val spec = stabilitySpec(cs)
 
-    val pr = proveBy(Imply("a>0".asFormula,spec),
-      implyR(1) &
-        proveStabilityCLF("x^4+x^2".asTerm)(1)
+    val pr = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec)),
+      implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2)
     )
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+
+    val pr2 = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec2)),
+      implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove system stable 2" in withMathematica { _ =>
@@ -248,6 +274,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(spec2,
+      proveAttractivityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove system stable 3" in withMathematica { _ =>
@@ -263,6 +298,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(spec2,
+      proveAttractivityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
