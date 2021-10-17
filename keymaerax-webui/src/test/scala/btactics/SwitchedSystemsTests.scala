@@ -302,7 +302,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityCLF("x1 ^ 2 / 2 + x2 ^ 4 / 4".asTerm)(1)
+      proveAttractivityCLF("x1 ^ 2 + x2 ^2".asTerm)(1)
     )
 
     println(pr2)

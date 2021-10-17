@@ -626,6 +626,8 @@ object SwitchedSystems {
     val derivatives = derPair.map(_._1)
     val derbods = derPair.map(_._2)
 
+    // println(derivatives)
+
     val derFml = derivatives.reduceRight(And(_,_))
 
     // k is an upper bound on all kis
@@ -658,13 +660,15 @@ object SwitchedSystems {
           (implyRiLast * 5) & cohideOnlyR('Rlast) & cohideOnlyL('Llast) &
             (implyR(1) * 5) &
             dC(bd)(1)<( //maybe DR instead?
-              implyRiLast & hideL('Llast) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) & dI('full)(1),
+              implyRiLast & hideL('Llast) & implyRiLast & cohideR(1) & implyR(1) & implyR(1) &
+                dI('full)(1),
               DW(1) & abstractionb(1) & hideL(-1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
             ),
           (hideL('Llast)*6) & dW('Rlast) & implyR(1) & dI('full)(1)
         )
       ),
-      hideL('Llast) & implyRiLast & (hideL('Llast)*4) & implyR('Rlast) & dI('full)('Rlast)
+      hideL('Llast) & implyRiLast & (hideL('Llast)*4) & implyR('Rlast) &
+        dI('full)('Rlast)
     )
 
     val inv = And(Less(lyap, w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar)))))
