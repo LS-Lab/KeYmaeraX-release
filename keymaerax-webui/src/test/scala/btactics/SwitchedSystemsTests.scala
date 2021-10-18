@@ -377,53 +377,30 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove guarded" in withMathematica { _ =>
-    // Johansson and Rantzer motivating example
-    val ode1 = ODESystem("x1' = -5*x1-4*x2, x2' =   -x1-2*x2".asDifferentialProgram, "x1<=0".asFormula)
-    val ode2 = ODESystem("x1' = -2*x1-4*x2, x2' = 20*x1-2*x2".asDifferentialProgram, "x1>=0".asFormula)
-    val ss = Guarded(List(
-      ("mode1", ode1, List()),
-      ("mode2", ode2, List()),
-      ("mode3", ode2, List())), Variable("mode"))
+  it should "prove guarded system stable 1" in withMathematica { _ =>
+    // Johansson and Rantzer example 2 & 3
+    val o1 = "x1' = -x1 -100 *x2,   x2' = 10*x1-x2".asDifferentialProgram
+    val o2 = "x1' = x1 + 10*x2, x2' = -100*x1 + x2".asDifferentialProgram
+    val ode1 = ODESystem(o1, True)
+    val ode2 = ODESystem(o2, "-10*x1-x2 >=0  & 2*x1-x2>=0".asFormula)
 
+    val ss = Guarded(List(
+      ("mode1", ode1, List(("mode2", "-10*x1-x2=0".asFormula))),
+      ("mode2", ode2, List(("mode1", "2*x1-x2=0".asFormula)))
+    ), Variable("mode"))
     val spec = stabilitySpec(ss)
 
-    val pr = proveBy(Imply("mode1()=1 & mode2()=2 & mode3()=3".asFormula,Or("x < 0".asFormula,spec)),
-      implyR(1) & orR(1) &
-      proveStabilityMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(2)
+    val v1="17.9*x1^2-2*0.89*x1*x2+179*x2^2".asTerm
+    val v2="739*x1^2-2*38.1*x1*x2+91.8*x2^2".asTerm
+
+    val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
+      implyR(1) &
+      proveStabilityMLF(v1::v2::Nil)(1)
     )
 
     println(pr)
     pr shouldBe 'proved
   }
-
-//  it should "prove guarded system stable" in withMathematica { _ =>
-//    // Johansson and Rantzer example 2 & 3
-//    val o1 = "x1' = -x1 -100 *x2,   x2' = -10*x1-x2".asDifferentialProgram
-//    val o2 = "x1' = x1 + 10*x2, x2' = -100*x1 - x2".asDifferentialProgram
-//    val ode1 = ODESystem(o1, True)
-//    val ode2 = ODESystem(o2, True)
-//    val ode3 = ODESystem(o1, False)
-//
-//    val ss = Guarded(List(
-//      ("mode1", ode1, List(("mode2", "-10*x1-x2=0".asFormula))),
-//      ("mode2", ode2, List(("mode1", "2*x1-x2=0".asFormula))),
-//      ("mode3", ode3, List())
-//    ), Variable("mode"))
-//    val spec = stabilitySpec(ss)
-//
-//    val v1="17.9*x1^2-2*0.89*x1*x2+179*x2^2".asTerm
-//    val v2="739*x1^2-2*38.1*x1*x2+91.8*x2^2".asTerm
-//    val v3="x1^2+x2^2".asTerm
-//
-//    val pr = proveBy(Imply("mode1()=1 & mode2()=2 & mode3()=3".asFormula,spec),
-//      implyR(1) &
-//      proveStabilityMLF(v1::v2::v3::Nil)(1)
-//    )
-//
-//    println(pr)
-////    pr shouldBe 'proved
-//  }
 
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>

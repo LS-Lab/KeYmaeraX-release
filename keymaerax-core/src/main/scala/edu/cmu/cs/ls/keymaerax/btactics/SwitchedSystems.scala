@@ -23,6 +23,7 @@ import scala.collection.immutable.Nil
 object SwitchedSystems {
 
   private val namespace = "switchedsys"
+  private val debugTactic = false
 
   //An ADT encoding canonical formats for switched systems
   sealed trait SwitchedSystem {
@@ -801,7 +802,6 @@ object SwitchedSystems {
     namespace
   )
 
-
   // Internal CLF tactic
   private def proveStabilityMLF (lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
@@ -872,7 +872,9 @@ object SwitchedSystems {
             DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
           )
         )  ,
-        ArithmeticSimplification.hideFactsAbout(eps::wis) & dI('full)('Rlast)
+        ArithmeticSimplification.hideFactsAbout(eps::wis) &
+          DebuggingTactics.debug("dI for: "+lyap,debugTactic) &
+          dI('full)('Rlast)
       )
 
     // Continuation
