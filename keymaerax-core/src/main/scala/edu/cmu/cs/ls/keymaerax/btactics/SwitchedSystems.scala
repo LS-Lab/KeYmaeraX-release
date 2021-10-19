@@ -506,8 +506,7 @@ object SwitchedSystems {
           (choiceb('Rlast) & andR('Rlast) <(odetac, skip))*(odes.length-1) & //split per control choice
           odetac
         )
-      // todo: would be really nice if we can just pattern match on "everything with an underlyingControlled, including Controlled itself"
-      case Controlled(initopt, modes, u) =>
+      case _ =>
         composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
           loop(inv)(pos) <(
@@ -517,7 +516,7 @@ object SwitchedSystems {
             composeb('Rlast) & abstractionb('Rlast) & SaturateTactic(allR('Rlast)) &
               (choiceb('Rlast) & andR('Rlast) <(
               composeb('Rlast) & abstractionb('Rlast) & odetac,
-              skip)) * (modes.length-1) &
+              skip)) * (ss.odes.length-1) &
               composeb('Rlast) & abstractionb('Rlast) & odetac
             )
     }
@@ -690,8 +689,7 @@ object SwitchedSystems {
               choiceb('Rlast) & andR('Rlast) <(p1,p2)
           )
         )
-      // todo: would be really nice if we can just pattern match on "everything with an underlyingControlled, including Controlled itself"
-      case Controlled(initopt, modes, u) =>
+      case _ =>
         composeb(pos) &
           abstractionb(pos) & SaturateTactic(allR(pos)) &
           loop(inv)(pos) <(

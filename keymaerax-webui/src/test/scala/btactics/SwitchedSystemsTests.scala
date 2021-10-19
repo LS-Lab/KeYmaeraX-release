@@ -261,6 +261,38 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+  it should "prove timed stable, ignoring switching mechanism" in withMathematica { _ =>
+
+    val ode1 = "x'=-x".asDifferentialProgram
+    val ode2 = "x'=-a*x^3".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, None,
+      List(("mode2", Some("3".asTerm)))) // 1 -> 2
+
+    val mode2 = ("mode2", ode2, None,
+      List(("mode1", Some("3".asTerm)))) // 1 -> 2
+
+    val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
+
+    val spec = stabilitySpec(cs)
+
+    val pr = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec)),
+      implyR(1) & orR(1) & proveStabilityCLF("x^4+x^2".asTerm)(2)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+
+    val pr2 = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec2)),
+      implyR(1) & orR(1) & proveAttractivityCLF("x^4+x^2".asTerm)(2)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
+  }
+
   it should "prove system stable 2" in withMathematica { _ =>
     val ode1 = ODESystem("x1'=-x1+x2^3, x2'=-x1-x2".asDifferentialProgram, True)
     val ode2 = ODESystem("x1'=-x1, x2'=-x2".asDifferentialProgram, True)
@@ -446,6 +478,32 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr2)
     pr2 shouldBe 'proved
+  }
+
+  it should "prove timed system stable 1" in withMathematica { _ =>
+
+    val ode1 = "x1'=-x1/8-x2,x2'=2*x1-x2/8".asDifferentialProgram
+    val ode2 = "x1'=-x1/8-2*x2,x2'=x1-x2/8".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, None,
+      List(("mode2", Some("3".asTerm)))) // 1 -> 2
+
+    val mode2 = ("mode2", ode2, None,
+      List(("mode1", Some("3".asTerm)))) // 1 -> 2
+
+    val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
+
+    val spec = stabilitySpec(cs)
+
+    val v1 = "2*x1^2+x2^2".asTerm
+    val v2 = "x1^2+2*x2^2".asTerm
+
+    val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
+      implyR(1) &
+        proveStabilityMLF(v1::v2::Nil)(1)
+    )
+
+    println(pr)
   }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
