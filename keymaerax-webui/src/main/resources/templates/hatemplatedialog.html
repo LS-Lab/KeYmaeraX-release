@@ -21,6 +21,31 @@
 <div class="modal-body modal-nofoot">
     <div class="row">
         <div class="col-md-12">
+            <h5>
+                <span>Switching</span>
+                <span class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='autonomous'}"
+                           ng-click="setAutomatonTemplate('autonomous')">
+                        <input type="radio" name="options" autocomplete="off" checked> Autonomous
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='timed'}"
+                           ng-click="setAutomatonTemplate('timed')">
+                        <input type="radio" name="options" autocomplete="off"> Timed
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='guarded'}"
+                           ng-click="setAutomatonTemplate('guarded')">
+                        <input type="radio" name="options" autocomplete="off"> Guarded
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':automatonTemplate=='controlled'}"
+                           ng-click="setAutomatonTemplate('controlled')">
+                        <input type="radio" name="options" autocomplete="off"> Generic
+                    </label>
+                </span>
+            </h5>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
             <k4-hybrid-automaton-modeler theme="default"
                                          layout="TD"
                                          code="code"

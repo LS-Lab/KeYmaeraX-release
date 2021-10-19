@@ -16,8 +16,17 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
   });
 
   var mermaid = $window.mermaid;
-  $scope.code = 'subgraph A\nMode1(x\'=1 & x<=5)\nMode2(x\'=-1 & x>=-5)\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1\nend\n\nInit("x:=0;") --> A';
-  $scope.specKind = 'stability'
+
+  $scope.templates = {
+    autonomous: 'Mode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-3")\nMode3("x\'=-x & x>=5 | x<=-3")\n\nMode1 & Mode2 & Mode3 --> Mode1 & Mode2 & Mode3',
+    timed: 'subgraph A\nMode1("t\'=1,x\'=1 & t<=5")\nMode2("t\'=1,x\'=-1 & t<=2")\n\nMode1 -->|"?t>=5;t:=0;"| Mode2\nMode2 -->|"?t>=2;t:=0;"| Mode1\nend\n\nInit("x:=0;t:=0;") --> A',
+    guarded: 'subgraph A\nMode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=4;"| Mode2\nMode2 -->|"?x<=-3;"| Mode1\nend\n\nInit("x:=0;") --> A',
+    controlled: 'subgraph A\nMode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1\nend\n\nInit("x:=0;") --> A',
+  }
+
+  $scope.code = $scope.templates.autonomous;
+  $scope.specKind = 'stability';
+  $scope.automatonTemplate = 'autonomous';
 
   function decode(encodedString) {
     var textArea = document.createElement('textarea');
@@ -47,7 +56,14 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
     $scope.getSpec($scope.code, specKind);
   }
 
+  $scope.setAutomatonTemplate = function(template) {
+    $scope.automatonTemplate = template;
+    $scope.code = $scope.templates[template];
+    $scope.getSpec($scope.code, $scope.specKind);
+  }
+
   $scope.onHAChange = function(code, svg) {
+    $scope.code = code;
     $scope.getSpec(code, $scope.specKind);
   }
 });
