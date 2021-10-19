@@ -18,12 +18,21 @@ angular.module('keymaerax.ui.hamodeler', ['ngSanitize'])
         flowchart: { curve: 'basis' }
       });
 
-      $scope.aceChanged = function(delta) {
+      $scope.toggleLayout = function() {
+        $scope.layout = $scope.layout=='TD' ? 'LR' : 'TD';
+        $scope.renderAutomaton();
+      }
+
+      $scope.renderAutomaton = function() {
         var code = 'flowchart ' + $scope.layout + '\n' + $scope.code;
         mermaid.render('graphDiv', code, function(svgCode, bindFunctions) {
           $('#automatonview').html(svgCode);
-          $scope.onChange({code: code, svg: svgCode});
+          $scope.onChange({code: $scope.code, svg: svgCode});
         });
+      }
+
+      $scope.aceChanged = function(delta) {
+        $scope.renderAutomaton();
       }
     }],
     templateUrl: 'templates/hamodeler.html'

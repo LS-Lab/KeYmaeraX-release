@@ -28,7 +28,25 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12"><h5>{{template.title}} encoded as Hybrid Program</h5></div>
+        <div class="col-md-12">
+            <h5>
+                <span>Specification</span>
+                <span class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='stability'}"
+                           ng-click="setSpecKind('stability')">
+                        <input type="radio" name="options" autocomplete="off" checked> Stability
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='attractivity'}"
+                           ng-click="setSpecKind('attractivity')">
+                        <input type="radio" name="options" autocomplete="off"> Attractivity
+                    </label>
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='custom'}"
+                           ng-click="setSpecKind('custom')">
+                        <input type="radio" name="options" autocomplete="off"> Custom
+                    </label>
+                </span>
+            </h5>
+        </div>
     </div>
     <div class="row k4-vertical-fill-flex">
         <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex well well-compact">

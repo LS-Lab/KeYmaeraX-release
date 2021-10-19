@@ -16,7 +16,8 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
   });
 
   var mermaid = $window.mermaid;
-  $scope.code = 'Mode1[x\'=1 & x<=5]\nMode2(x\'=-1 & x>=-5)\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1';
+  $scope.code = 'subgraph A\nMode1(x\'=1 & x<=5)\nMode2(x\'=-1 & x>=-5)\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1\nend\n\nInit("x:=0;") --> A';
+  $scope.specKind = 'stability'
 
   function decode(encodedString) {
     var textArea = document.createElement('textarea');
@@ -24,8 +25,9 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
     return textArea.value;
   }
 
-  $scope.onHAChange = function(code, svg) {
-    var ast = mermaid.parse(code).parser.yy;
+  $scope.getSpec = function(code, specKind) {
+    var augmentedCode = 'flowchart TD\n' + code
+    var ast = mermaid.parse(augmentedCode).parser.yy;
     var v = $.map(ast.getVertices(), function(e, k) { return { id: e.id, text: decode(e.text) }; });
     var e = $.map(ast.getEdges(), function(e, i) { return { start: e.start, end: e.end, text: decode(e.text) }; });
     var data = {
@@ -33,11 +35,20 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
       vertices: v,
       edges: e
     };
-    $http.post("models/users/" + userId + "/templates/controlledstability/create", data).then(function(response) {
+    $http.post("models/users/" + userId + "/templates/controlledstability/create/" + specKind, data).then(function(response) {
       $scope.model.content = response.data.text;
     }).catch(function(err) {
 
     });
+  }
+
+  $scope.setSpecKind = function(specKind) {
+    $scope.specKind = specKind;
+    $scope.getSpec($scope.code, specKind);
+  }
+
+  $scope.onHAChange = function(code, svg) {
+    $scope.getSpec(code, $scope.specKind);
   }
 });
 

@@ -146,11 +146,11 @@ object SwitchedSystems {
     // All variables used in the program (except u)
     private val varsPre =   (
       //Init
-      StaticSemantics.vars(initopt.getOrElse(Test(True))).toSet.toList ++
+      (StaticSemantics.vars(initopt.getOrElse(Test(True))).toSet -- Set(u)).toList ++ //@note allow u in initialization code
         //Control
-        transitions.flatten.map(p => StaticSemantics.vars(p._2).toSet.toList).flatten ++
+        transitions.flatten.flatMap(p => StaticSemantics.vars(p._2).toSet.toList) ++
         //Plant
-        odes.map(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten
+        odes.flatMap(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_)))
       ).distinct
 
     require(!varsPre.contains(u), "Control variable " + u + " must be fresh")

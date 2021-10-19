@@ -19,14 +19,15 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import java.io.{PrintWriter, StringWriter}
 
+import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.Controlled
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -1367,7 +1368,19 @@ class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
   )
 }
 
-class GetControlledStabilityTemplateResponse(code: String, prg: Program) extends Response {
+class GetControlledStabilityTemplateResponse(code: String, c: Controlled, specKind: String) extends Response {
+  private val prg = c.asProgram
+  private val printer = new KeYmaeraXPrettierPrinter(80)
+  private val fml = specKind match {
+    case "stability" => printer(SwitchedSystems.stabilitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case "attractivity" => printer(SwitchedSystems.attractivitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case "custom" =>
+      s"""true /* todo */ ->
+         |  [ ${printer(c.asProgram).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
+         |  ]false /* todo */
+         |""".stripMargin
+  }
+
   def getJson: JsValue = JsObject(
     "title" -> JsString(""),
     "description" -> JsString(""),
@@ -1387,9 +1400,7 @@ class GetControlledStabilityTemplateResponse(code: String, prg: Program) extends
          |End.
          |
          |Problem
-         |  true /* todo */ ->
-         |  [ ${new KeYmaeraXPrettierPrinter(80)(prg).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
-         |  ]false /* todo */
+         |  $fml
          |End.
          |
          |End.""".stripMargin),

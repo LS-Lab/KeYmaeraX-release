@@ -1117,32 +1117,55 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
   }
 }
 
-class CreateControlledStabilityTemplateRequest(userId: String, code: String, modes: JsArray,
-                                               transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
+class CreateControlledStabilityTemplateRequest(userId: String, code: String, specKind: String,
+                                               modes: JsArray, transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
+    val mode = "mode".asVariable
+    def modeOf(s: String): Term = FuncOf(Function(s, None, Unit, Real), Nothing)
     val transitionsByMode = transitions.elements.toList.map(_.asJsObject).map(t => {
       val ttext = t.fields("text").convertTo[String]
       (t.fields("start").convertTo[String],
-        (t.fields("end").convertTo[String], convertTransition(if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext))))
+        (t.fields("end").convertTo[String], if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext)))
     }).groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
-    val c = Controlled(modes.elements.map(_.asJsObject).map(m => {
+
+    val (odes, init) = modes.elements.map(_.asJsObject).map(m => {
       val mid = m.fields("id").convertTo[String]
-      (mid, Parser.parser.programParser("{" + m.fields("text").convertTo[String] + "}").asInstanceOf[ODESystem],
-        transitionsByMode.getOrElse(mid, List.empty).map({ case (a, (b, c)) => (a, b, c) })
-      )
-    }).toList, "mode".asVariable)
-    List(new GetControlledStabilityTemplateResponse(code, c.asProgram))
+      val prg = m.fields("text").convertTo[String].trim match {
+        case "" => Test(True)
+        case s => Parser.parser.programParser("{" + s + "}")
+      }
+      (mid, prg, transitionsByMode.getOrElse(mid, List.empty))
+    }).toList.
+      //@note ignore subgraphs (identified by program constant nodes without transitions)
+      filter({ case (_, prg, _) => !StaticSemantics.freeVars(prg).isInfinite }).
+      partition(_._2.isInstanceOf[ODESystem])
+
+    if (init.length <= 1) {
+      val initPrg = init.headOption.flatMap({ case (n, prg, _) =>
+        val initTransitions = transitionsByMode(n).flatMap({
+          case (d, Test(True)) =>
+            if (odes.exists(_._1 == d)) Some(Test(Equal(mode, modeOf(d))))
+            else None
+          case (d, tp) =>
+            if (odes.exists(_._1 == d)) Some(Compose(Test(Equal(mode, modeOf(d))), tp))
+            else Some(tp)
+        }).reduceRightOption(Choice)
+        prg match {
+          case Test(True) => initTransitions
+          case _ => Some(initTransitions.map(Compose(prg, _)).getOrElse(prg))
+        }
+      })
+      val c = Controlled(initPrg, odes.map({ case (n, o: ODESystem, t) => (n, o, t) }), mode)
+      List(new GetControlledStabilityTemplateResponse(code, c, specKind))
+    } else {
+      List(new ErrorResponse("At most 1 initialization node expected, but got nodes " + init.map(_._1).mkString(",")))
+    }
   }
 
   private def flattenAssignments(prg: Program): List[Assign] = prg match {
     case a: Assign => List(a)
     case Compose(a, b) => flattenAssignments(a) ++ flattenAssignments(b)
     case _ => throw new IllegalArgumentException("Unsupported program in hybrid automaton guard; expected guard of the shape ?Q;x_0:=e_0;x_1:=e_1;...;x_n:=e_n;, but got " + prg.prettyString)
-  }
-
-  private def convertTransition(t: Program): (Formula, List[Assign]) = t match {
-    case t: Test => (t.cond, List.empty)
-    case Compose(t: Test, prg) => (t.cond, flattenAssignments(prg))
   }
 }
 
