@@ -316,6 +316,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode4 = ODESystem("x'=x".asDifferentialProgram, False) // unstable mode that is never entered
 
     val ss = StateDependent(List(ode1,ode2,ode3,ode4))
+
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec)),
@@ -324,6 +325,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec2)),
+        implyR(1) & orR(1) & proveAttractivityMLF("x^4+x^2".asTerm::"(2*x^4+2*x^2)/2".asTerm::"(3*x^4+3*x^2)/3".asTerm::"4*x^4+100*x^2".asTerm::Nil)(2)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove state-dependent system stable 2" in withMathematica { _ =>
@@ -338,6 +348,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(spec2,
+      proveAttractivityMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove state-dependent system stable 3" in withMathematica { _ =>
@@ -353,6 +372,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(spec2,
+      proveAttractivityMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove state-dependent system stable 4" in withMathematica { _ =>
@@ -375,6 +403,15 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(ss)
+
+    val pr2 = proveBy(spec2,
+      proveAttractivityMLF(v13::v24::v13::v24::Nil)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove guarded system stable 1" in withMathematica { _ =>
@@ -388,11 +425,11 @@ class SwitchedSystemsTests extends TacticTestBase {
       ("mode1", ode1, List(("mode2", "-10*x1-x2=0".asFormula))),
       ("mode2", ode2, List(("mode1", "2*x1-x2=0".asFormula)))
     ), Variable("mode"))
-    val spec = stabilitySpec(ss)
 
     val v1="17.9*x1^2-2*0.89*x1*x2+179*x2^2".asTerm
     val v2="739*x1^2-2*38.1*x1*x2+91.8*x2^2".asTerm
 
+    val spec = stabilitySpec(ss)
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
       proveStabilityMLF(v1::v2::Nil)(1)
@@ -400,8 +437,16 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr)
     pr shouldBe 'proved
-  }
 
+    val spec2 = attractivitySpec(ss)
+    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
+      implyR(1) &
+        proveAttractivityMLF(v1::v2::Nil)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
+  }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
 

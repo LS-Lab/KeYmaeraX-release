@@ -440,8 +440,7 @@ object SwitchedSystems {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
 
-    val fopt = seq.sub(pos)
-    val prog = fopt match {
+    val prog = seq.sub(pos) match {
       case Some(f) => stripTillBox(f.asInstanceOf[Formula])
       case _ => throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a valid top-level succedent position")
     }
@@ -549,18 +548,17 @@ object SwitchedSystems {
   }
 
   def proveAttractivityCLF (lyap: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
-
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " must point to a top-level succedent position")
 
     val progPre = seq.sub(pos) match{
       case Some(f:Formula) => stripTillBox(f)
-      case _ => ???
+      case _ => throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " must point to a valid top-level succedent position")
     }
 
     val (t,prog) = progPre match {
       case Compose(Assign(t,n), p) => (t,p)
-      case _ => ???
+      case _ => throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " does not match attractivity specification")
     }
 
     require(t == Variable("t_"), "TODO: remove this requirement")
@@ -610,10 +608,6 @@ object SwitchedSystems {
 
     val kis =
       (0 to ss.odes.length-1).map(i => Variable(kName,Some(i))).toList
-
-    val derbod = ss.odes.zip(kis).map( odei => {
-      val ki = odei._2
-      Less(DifferentialHelper.simplifiedLieDerivative(odei._1.ode, lyap, ToolProvider.simplifierTool()),ki)})
 
     val derPair : List[(Formula,Formula)] = ss.odes.zip(kis).map( odei => {
       val ki = odei._2
@@ -763,22 +757,7 @@ object SwitchedSystems {
 
   }
 
-  def proveStabilityMLF (lyaps: List[Term]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
-
-    if (!(pos.isTopLevel && pos.isSucc))
-      throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
-
-    val fopt = seq.sub(pos)
-    val prog = fopt match {
-      case Some(f) => stripTillBox(f.asInstanceOf[Formula])
-      case _ => throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a valid top-level succedent position")
-    }
-
-    val ss = switchedFromProgram(prog, None)
-
-    proveStabilityMLF(lyaps, ss, seq.ante.length, pos)
-  })
-
+  // MLF tactics
   private val conjSplit = proveBy("((p(||) | q(||))&r(||)) <-> (p(||) & r(||) | q(||)&r(||))".asFormula,
     equivR(1) <(
       prop,
@@ -802,7 +781,21 @@ object SwitchedSystems {
     namespace
   )
 
-  // Internal CLF tactic
+  def proveStabilityMLF (lyaps: List[Term]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+    if (!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
+
+    val prog = seq.sub(pos) match {
+      case Some(f) => stripTillBox(f.asInstanceOf[Formula])
+      case _ => throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a valid top-level succedent position")
+    }
+
+    val ss = switchedFromProgram(prog, None)
+
+    proveStabilityMLF(lyaps, ss, seq.ante.length, pos)
+  })
+
+  // Internal MLF tactic
   private def proveStabilityMLF (lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
     require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
@@ -812,10 +805,8 @@ object SwitchedSystems {
     val epssq = Power(eps, Number(2))
     val delsq = Power(del, Number(2))
 
-
     val wName = "w_"
-    val w = Variable("w_")
-    val u = Variable("u_")
+    val w = Variable(wName)
 
     val wis = (0 to lyaps.length-1).map(i => Variable(wName,Some(i))).toList
     val delis = (0 to lyaps.length-1).map(i => Variable(delName,Some(i))).toList
@@ -838,7 +829,7 @@ object SwitchedSystems {
 
     val lyapw = lyaps.map( lyap => Less(lyap,w)).reduceRight(And)
 
-    // w is an upper bound on all wis
+    // w is a lower bound on all wis
     val wMin = Exists(w :: Nil,
       And(Greater(w,Number(0)), wis.map( wi => LessEqual(w,wi)).reduceRight(And) )
     )
@@ -1001,6 +992,330 @@ object SwitchedSystems {
                   )
                 )
             )
+        )
+      )
+
+  }
+
+  def proveAttractivityMLF (lyaps: List[Term]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+    if (!(pos.isTopLevel && pos.isSucc))
+      throw new IllFormedTacticApplicationException("proveAttractivityMLF: position " + pos + " must point to a top-level succedent position")
+
+    val progPre = seq.sub(pos) match{
+      case Some(f:Formula) => stripTillBox(f)
+      case _ => throw new IllFormedTacticApplicationException("proveAttractivityMLF: position " + pos + " must point to a valid top-level succedent position")
+    }
+
+    val (t,prog) = progPre match {
+      case Compose(Assign(t,n), p) => (t,p)
+      case _ => throw new IllFormedTacticApplicationException("proveAttractivityMLF: position " + pos + " does not match attractivity specification")
+    }
+
+    require(t == Variable("t_"), "TODO: remove this requirement")
+
+    val ss = switchedFromProgram(prog, Some(t))
+
+    proveAttractivityMLF(lyaps, ss, seq.ante.length, pos)
+  })
+
+  // Internal MLF tactic
+  private def proveAttractivityMLF (lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
+    require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
+    require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
+
+    val eps = Variable("eps")
+    val del = Variable("del")
+    val tVar = Variable("t_")
+    val TVar = Variable("T_")
+    val epssq = Power(eps, Number(2))
+    val delsq = Power(del, Number(2))
+
+    val wName = "w_"
+    val w = Variable(wName)
+
+    // can specialize this
+    val lessTransW =  proveBy("(p() -> f() < g()) -> (p() & g() <= w_ -> f() < w_)".asFormula,
+      implyR(1) & implyR(1) & andL(-2) & implyL(-1) <(
+        id,
+        QE
+      )
+    )
+
+    val uName = "u_"
+    val u = Variable(uName)
+    val kName = "k_"
+    val k = Variable(kName)
+
+    val wis = (0 to lyaps.length-1).map(i => Variable(wName,Some(i))).toList
+
+    val cvars: List[Variable] = ss.cvars
+    val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
+
+    // Each V_i < W_i < W
+    val wbod : List[Formula] = lyaps.zip(wis).map( lyapi => {
+      val wi = lyapi._2
+      Exists(wi :: Nil,
+        And(Greater(wi, Number(0)),
+          cvars.foldRight(Imply(Less(normsq, delsq), Less(lyapi._1,wi)): Formula)((v, f) => Forall(v :: Nil, f))
+        ))
+    })
+
+    val wbodFml = wbod.reduceRight(And(_,_))
+
+    val uis = (0 to lyaps.length-1).map(i => Variable(uName,Some(i))).toList
+    // Each U <= U_i < V_i
+    val ubod : List[Formula] = lyaps.zip(uis).map( lyapi => {
+      val ui = lyapi._2
+      Exists(ui :: Nil,
+        And(Greater(ui, Number(0)),
+          cvars.foldRight(Imply(And( /* True */ Less(lyapi._1, w), GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
+        )
+    })
+
+    val ubodFml = ubod.reduceRight(And(_,_))
+
+    val lyapw = lyaps.map( lyap => Less(lyap,w)).reduceRight(And)
+
+    // w is an upper bound on all wis
+    val wMax = Exists(w :: Nil,
+      And(Greater(w,Number(0)), wis.map( wi => LessEqual(wi,w)).reduceRight(And) )
+    )
+
+    // u is a lower bound on all uis
+    val uMin = Exists(u::Nil,
+      And(Greater(u,Number(0)), uis.map( ui => LessEqual(u,ui)).reduceRight(And) )
+    )
+
+    val kis =
+      (0 to ss.odes.length-1).map(i => Variable(kName,Some(i))).toList
+
+    val derPair : List[(Formula,Formula)] = (ss.odes,lyaps,kis).zipped.map( (ode,lyap,ki) => {
+      val ld = DifferentialHelper.simplifiedLieDerivative(ode.ode, lyap, ToolProvider.simplifierTool())
+      val bod = Less(ld,ki )
+      (Exists(ki :: Nil,
+        And(Less(ki,Number(0)),
+          cvars.foldRight(Imply(
+            And(ode.constraint, And(GreaterEqual(lyap, u),  True  /*Less(lyap, w)*/)), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
+    })
+
+    val derivatives = derPair.map(_._1)
+    val derbods = derPair.map(_._2)
+
+    // println(derivatives)
+
+    val derFml = derivatives.reduceRight(And(_,_))
+
+    // k is an upper bound on all kis
+    val kMin = Exists(k :: Nil,
+      And(Less(k,Number(0)), kis.map( ki => LessEqual(ki,k)).reduceRight(And) )
+    )
+
+    val Tchoice = And(GreaterEqual(TVar,Number(0)),LessEqual(Plus(w,Times(k,TVar)),u))
+
+    // The relevant tactic for a single ODE
+    // Assumes antecedent has the form (k_i assumptions might be in mixed order):
+    // assums, k < 0, k <= k_i,  k_i < 0, \forall x ( Q&V>=U&V<W -> V' < k_i),  V_i < w , (V_i >= u -> V_i < w + k * t)
+    // Succedent has form:
+    // assums, [ODE_i](V_i < w & (V_i >= u -> V_i < w + k * t))
+    def odetac (lyap: Term, bd:Formula, ki :Term) : BelleExpr =
+      DebuggingTactics.debug("Enter ODE for "+lyap, debugTactic) &
+      dC(Less(lyap, w))(pos) <(
+        boxAnd('Rlast) & andR('Rlast)<(
+          DifferentialTactics.diffWeakenG('Rlast) & prop,
+          useAt(Ax.DCC, PosInExpr(1::Nil))('Rlast) & andR('Rlast) <(
+            implyRiLast & hideL('Llast) &
+            implyRiLast * 3 & cohideOnlyR('Rlast) & cohideOnlyL('Llast) & implyR('Rlast) * 4 &
+            dC(bd)(1)<(
+                implyRiLast & cutR(LessEqual(ki,k))('Rlast) <(
+                  prop,
+                  cohideR('Rlast) & implyR(1) & implyR(1) &
+                    DebuggingTactics.debug("dI 1",debugTactic) & dI('full)(1) & DebuggingTactics.debug("done",debugTactic)
+                ),
+              ArithmeticSimplification.hideFactsAbout(k::Nil) &
+              hideL(-1) & DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & prop
+            ),
+            (hideL('Llast)*4) & dW('Rlast) & implyR(1) & DebuggingTactics.debug("dI 2",debugTactic) & dI('full)(1) & DebuggingTactics.debug("done",debugTactic)
+          )
+        ),
+        hideL('Llast) & implyRiLast & (hideL('Llast)*3) & implyR('Rlast) &
+          DebuggingTactics.debug("dI 3",debugTactic) & dI('full)('Rlast) & DebuggingTactics.debug("done",debugTactic)
+      )
+
+    // Continuation
+    val conttac =  ss match {
+      case StateDependent(odes) => {
+        val invPre =
+          (ss.odes zip lyaps).map( odel =>
+            And(odel._1.constraint,
+              And( Less(odel._2,w), Imply(GreaterEqual(odel._2,u),Less(odel._2, Plus(w,Times(k,tVar))))))
+          )
+        // TODO: currently assumes that domains cover entire state space
+        // However, can tweak proof to bypass this requirement
+        val inv = invPre.reduceRight(Or)
+
+        loop(inv)(pos) <(
+          cutR(Equal(tVar,Number(0)))(pos) <(
+            id,
+            implyR(pos) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(pos) &
+              ArithmeticSimplification.hideFactsAbout(w :: u :: k :: uis ++ kis) &
+              QE
+          ),
+          //Note: for these next two branches, the "loop" branch is moved to the first succedent position
+          // Tricky here: loop
+          ArithmeticSimplification.hideFactsAbout(kis) &
+            uis.map( ui =>
+              ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
+                (allL('Llast) * cvars.length) & implyL('Llast) <(
+                andR('Rlast) <(prop, SaturateTactic(hideL('L)) & QE),
+                andL(-1) & andL('Llast) & implyL('Llast) <(
+                  ArithmeticSimplification.keepFactsAbout(u::ui::Nil) & QE,
+                  QE
+                )
+              )
+            ).reduceRight((p1, p2) => orL(-1) <(p1,p2)),
+          ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
+          implyRi & implyR(1) &
+          (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
+            ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
+              DifferentialTactics.diffUnpackEvolutionDomainInitially('Rlast) &
+              cutR(And( Less(lyap,w), Imply(GreaterEqual(lyap,u),Less(lyap, Plus(w,Times(k,tVar))))))('Rlast) <(
+                implyRiLast & implyRiLast & (hideL('Llast) * 4) & QE,
+                hideL('Llast) & hideL('Llast) & implyR('Rlast) & boxAnd('Rlast) &
+                  andR('Rlast)<(
+                    DifferentialTactics.diffWeakenG('Rlast) & prop,
+                    andL('Llast) & odetac(lyap, bd, ki)
+                  )
+              )
+          ).reduceRight(
+            (p1, p2) =>
+            choiceb('Rlast) & andR('Rlast) <(
+              useAt(boxOrLeft,PosInExpr(1::Nil))('Rlast) & p1,
+              useAt(boxOrRight,PosInExpr(1::Nil))('Rlast) & p2
+            )
+          )
+        )
+      }
+
+      case Guarded(modes,mode) => {
+
+        val invPre =
+          (modes zip lyaps).map( namel =>
+            And( Equal(mode,mkMode(namel._1._1)),
+              And(Less(namel._2,w), Imply(GreaterEqual(namel._2,u),Less(namel._2, Plus(w,Times(k,tVar))))))
+          )
+        val inv = invPre.reduceRight(Or)
+        val invMode =
+          modes.map(name => Equal(mode,mkMode(name._1))).reduceRight(Or)
+
+        val gen =
+          (modes zip lyaps).map( namel =>
+            Imply( Equal(mode,mkMode(namel._1._1)), And(Less(namel._2,w), Imply(GreaterEqual(namel._2,u),Less(namel._2, Plus(w,Times(k,tVar))))))
+          ).reduceRight(And)
+
+        composeb(pos) & generalize(invMode)(pos) <(
+          unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
+          //note: generalize throws away context, so pos is now 1
+          loop(inv)(1) <(
+            cutR(Equal(tVar,Number(0)))(pos) <(
+              id,
+              implyR(1) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(1) & closeT
+            ),
+            //Note: for these next two branches, the "loop" branch is moved to the first succedent position
+            ArithmeticSimplification.hideFactsAbout(kis) &
+            uis.map( ui =>
+              ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
+              implyRiLast*4 & (allL('Llast) * cvars.length) & implyL('Llast) <(
+                andR('Rlast) <(prop, SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
+                QE
+              )
+            ).reduceRight((p1, p2) => orL(-1) <(p1,p2)),
+            ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
+            composeb(1) & generalize(gen)(1) <(
+              ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
+
+              (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
+                  composeb(1) & testb(1) & implyL('Llast) <(
+                  implyR(1) & id,
+                  implyR(1) & boxAnd(1) & andR(1) <(
+                    V(1) & id,
+                    implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
+                      implyR(1) & hideL('Llast) &
+                    ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
+                      implyRi & implyR(1) &
+                      implyRi & implyR(1) & odetac(lyap, bd, ki)
+                  )
+                )
+              ).reduceRight(
+                (p1, p2) =>
+                    choiceb(1) & andL('Llast) & andR(1) <(
+                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
+                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
+                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
+                  )
+              )
+            )
+          )
+        )
+      }
+    }
+
+    allR(pos) & implyR(pos) & // \forall eps (eps>0 ->
+      allR(pos) & implyR(pos) & // \forall del (del>0 ->
+      cutR(wbodFml)(pos) <( // cut Vi < Wi <= W
+        (andR(pos) <( QE , skip))*(lyaps.length-1) & QE, // This should follow from compactness
+        implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+        (existsL(-(apos+3))) * lyaps.length & //existsL shuffles assumption to the back
+        cutR(wMax)(pos) < (
+          SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(wis) &
+            (1 to wis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
+          // Remove sign assumptions s on w_i
+          (andL(-(apos+3)) & hideL(-(apos+lyaps.length+2))) * lyaps.length &
+          implyR(pos) & existsL('Llast) & andL('Llast) &
+          cutR(ubodFml)(pos) <(
+            ArithmeticSimplification.hideFactsAbout(del::wis) &
+              (andR(pos) <( QE , skip))*(lyaps.length-1) & QE,
+            implyR(pos) & (andL('Llast) * (lyaps.length-1)) &
+            (existsL(-(apos+lyaps.length+5))) * lyaps.length &
+            cutR(uMin)(pos) < (
+              SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(uis) &
+                (1 to uis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
+              implyR(pos) & existsL('Llast) & andL('Llast)*lyaps.length &
+              cutR(derFml)(pos) < (
+                ArithmeticSimplification.hideFactsAbout(eps::del::uis++wis) &
+                  (andR(pos) <( QE , skip))*(derivatives.length-1) & QE,
+                implyR(pos) &
+                (andL('Llast) * (derivatives.length-1)) &
+                (existsL(-(apos+3*lyaps.length+6))) * lyaps.length &
+                cutR(kMin)(pos) <(
+                  // hide everything except k_i < 0 assumptions
+                  SaturateTactic(andL('L)) & ArithmeticSimplification.keepFactsAbout(kis) &
+                    (1 to kis.length).reverse.map( i => hideL(-2*i) : BelleExpr).reduceRight( _ & _ ) & QE,
+                  implyR(pos) & existsL('Llast) &
+                  (andL('Llast) * derivatives.length) &
+                  existsRmon(Tchoice)(pos) <(
+                      hideL('Llast) * lyaps.length & cohideOnlyL('Llast) & QE,
+                      andL('Llast) & andR(pos) <(
+                      id,
+                      (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
+                      // create V_i < W assumptions
+                      (1 to lyaps.length).map( i =>
+                      (allL(-(apos + 2 + i)) * cvars.length) &
+                        useAt(lessTransW)(-(apos + 2 + i)) &
+                        implyL(-(apos + 2 + i)) <(
+                          prop,
+                          skip
+                        )).reduceRight( _ & _) &
+                      // Don't need del, w_i anymore
+                      ArithmeticSimplification.hideFactsAbout(del::wis) &
+                      hideL(-(apos+1)) & hideL(-(apos+lyaps.length+1)) & hideL(-(apos+2*lyaps.length+1)) & //hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
+                      composeb(pos) & assignb(pos) & //t_=0 initially
+                      conttac
+                    )
+                  )
+                )
+              )
+            )
+          )
         )
       )
 
