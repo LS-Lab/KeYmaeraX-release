@@ -19,9 +19,9 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
 
   $scope.templates = {
     autonomous: 'Mode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-3")\nMode3("x\'=-x & x>=5 | x<=-3")\n\nMode1 & Mode2 & Mode3 --> Mode1 & Mode2 & Mode3',
-    timed: 'subgraph A\nMode1("t\'=1,x\'=1 & t<=5")\nMode2("t\'=1,x\'=-1 & t<=2")\n\nMode1 -->|"?t>=5;t:=0;"| Mode2\nMode2 -->|"?t>=2;t:=0;"| Mode1\nend\n\nInit("x:=0;t:=0;") --> A',
-    guarded: 'subgraph A\nMode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=4;"| Mode2\nMode2 -->|"?x<=-3;"| Mode1\nend\n\nInit("x:=0;") --> A',
-    controlled: 'subgraph A\nMode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=0;"| Mode1\nend\n\nInit("x:=0;") --> A',
+    timed: 'subgraph Timed:t\nMode1("x\'=1 & t<=5")\nMode2("x\'=-1 & t<=3")\n\nMode1 -->|"?t>=3;"| Mode2\nMode2 -->|"?t>=2;"| Mode1\nend',
+    guarded: 'Mode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=4;"| Mode2\nMode2 -->|"?x<=-3;"| Mode1',
+    controlled: 'subgraph automaton\nMode1("x\'=1 & x<=5")\nMode2("x\'=-1 & x>=-5")\n\nMode1 -->|"?x>=5;x:=0;"| Mode2\nMode2 -->|"?x<=-5;x:=*;?-1<=x&x<=4;"| Mode1\nend\n\nInit("x:=0;") --> automaton',
   }
 
   $scope.code = $scope.templates.autonomous;
@@ -34,17 +34,19 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
     return textArea.value;
   }
 
-  $scope.getSpec = function(code, specKind) {
+  $scope.getSpec = function(code, specKind, switchingKind) {
     var augmentedCode = 'flowchart TD\n' + code
     var ast = mermaid.parse(augmentedCode).parser.yy;
+    var s = $.map(ast.getSubGraphs(), function(e, k) { return { id: e.id }; });
     var v = $.map(ast.getVertices(), function(e, k) { return { id: e.id, text: decode(e.text) }; });
     var e = $.map(ast.getEdges(), function(e, i) { return { start: e.start, end: e.end, text: decode(e.text) }; });
     var data = {
       code: code,
       vertices: v,
-      edges: e
+      edges: e,
+      subGraphs: s
     };
-    $http.post("models/users/" + userId + "/templates/controlledstability/create/" + specKind, data).then(function(response) {
+    $http.post("models/users/" + userId + "/templates/controlledstability/create/" + switchingKind + "/" + specKind, data).then(function(response) {
       $scope.model.content = response.data.text;
     }).catch(function(err) {
 
@@ -53,18 +55,18 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
 
   $scope.setSpecKind = function(specKind) {
     $scope.specKind = specKind;
-    $scope.getSpec($scope.code, specKind);
+    $scope.getSpec($scope.code, specKind, $scope.automatonTemplate);
   }
 
   $scope.setAutomatonTemplate = function(template) {
     $scope.automatonTemplate = template;
     $scope.code = $scope.templates[template];
-    $scope.getSpec($scope.code, $scope.specKind);
+    $scope.getSpec($scope.code, $scope.specKind, $scope.automatonTemplate);
   }
 
   $scope.onHAChange = function(code, svg) {
     $scope.code = code;
-    $scope.getSpec(code, $scope.specKind);
+    $scope.getSpec(code, $scope.specKind, $scope.automatonTemplate);
   }
 });
 

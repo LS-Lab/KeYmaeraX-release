@@ -47,7 +47,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.Controlled
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, Guarded, StateDependent, SwitchedSystem, Timed}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, TestSynthesis, WolframScript, Z3}
@@ -1117,32 +1117,36 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
   }
 }
 
-class CreateControlledStabilityTemplateRequest(userId: String, code: String, specKind: String,
-                                               modes: JsArray, transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
+class CreateControlledStabilityTemplateRequest(userId: String, code: String, switchingKind: String, specKind: String,
+                                               vertices: JsArray, subGraphs: JsArray, transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val mode = "mode".asVariable
     def modeOf(s: String): Term = FuncOf(Function(s, None, Unit, Real), Nothing)
-    val transitionsByMode = transitions.elements.toList.map(_.asJsObject).map(t => {
+
+    val transitionsByVertex = transitions.elements.toList.map(_.asJsObject).map(t => {
       val ttext = t.fields("text").convertTo[String]
       (t.fields("start").convertTo[String],
         (t.fields("end").convertTo[String], if (ttext.isEmpty) Test(True) else Parser.parser.programParser(ttext)))
     }).groupBy(_._1).map({ case (k, v) => k -> v.map(_._2) })
 
-    val (odes, init) = modes.elements.map(_.asJsObject).map(m => {
+    val subgraphIds = subGraphs.elements.map(_.asJsObject).map(s => s.fields("id").convertTo[String])
+    val modes = vertices.elements.map(_.asJsObject).filter(v => !subgraphIds.contains(v.fields("id").convertTo[String]))
+
+    val (odes, init) = modes.map(m => {
       val mid = m.fields("id").convertTo[String]
       val prg = m.fields("text").convertTo[String].trim match {
         case "" => Test(True)
         case s => Parser.parser.programParser("{" + s + "}")
       }
-      (mid, prg, transitionsByMode.getOrElse(mid, List.empty))
+      (mid, prg, transitionsByVertex.getOrElse(mid, List.empty))
     }).toList.
-      //@note ignore subgraphs (identified by program constant nodes without transitions)
+      //@note ignore subgraphs and other nodes without ODEs
       filter({ case (_, prg, _) => !StaticSemantics.freeVars(prg).isInfinite }).
       partition(_._2.isInstanceOf[ODESystem])
 
     if (init.length <= 1) {
       val initPrg = init.headOption.flatMap({ case (n, prg, _) =>
-        val initTransitions = transitionsByMode(n).flatMap({
+        val initTransitions = transitionsByVertex(n).flatMap({
           case (d, Test(True)) =>
             if (odes.exists(_._1 == d)) Some(Test(Equal(mode, modeOf(d))))
             else None
@@ -1155,7 +1159,48 @@ class CreateControlledStabilityTemplateRequest(userId: String, code: String, spe
           case _ => Some(initTransitions.map(Compose(prg, _)).getOrElse(prg))
         }
       })
-      val c = Controlled(initPrg, odes.map({ case (n, o: ODESystem, t) => (n, o, t) }), mode)
+      val c: SwitchedSystem = switchingKind match {
+        case "autonomous" => StateDependent(odes.map({ case (_, o: ODESystem, _) => o }))
+        case "timed" =>
+          if (init.nonEmpty) {
+            throw new IllegalArgumentException("Initialization not supported in timed switching template")
+          } else {
+            val time = subgraphIds.find(_.startsWith("Timed")).flatMap(_.split(":").toList match {
+              case _ :: t :: Nil => Some(t)
+              case _ => None
+            }).getOrElse("t_").asVariable
+
+            val modes = odes.map({ case (n, ODESystem(ode, q), transitions) =>
+              val tBound = q match {
+                case True => None
+                case LessEqual(l, r) if l == time => Some(r)
+                case _ => throw new IllegalArgumentException("Only time guards of the shape " + time + "<=T allowed as evolution domain constraints in timed switching template")
+              }
+              val boundedTransitions = transitions.map({
+                case (d, Test(True)) => (d, None)
+                case (d, Test(GreaterEqual(l, r))) if l == time => (d, Some(r))
+                case (d, _) => throw new IllegalArgumentException("Only time guards of the shape " + time + ">=T allowed on transitions in timed switching template")
+              })
+              (n, ode, tBound, boundedTransitions)
+            })
+
+            Timed(modes, "mode".asVariable, time)
+          }
+        case "guarded" =>
+          if (init.nonEmpty) {
+            throw new IllegalArgumentException("Initialization not supported in guarded switching template")
+          } else {
+            val modes = odes.map({ case (n, o: ODESystem, transitions) =>
+              val guardedTransitions = transitions.map({
+                case (d, Test(p)) => (d, p)
+                case (d, _) => throw new IllegalArgumentException("Only tests allowed on transitions in guarded mode")
+              })
+              (n, o, guardedTransitions)
+            })
+            Guarded(modes, "mode".asVariable)
+          }
+        case "controlled" => Controlled(initPrg, odes.map({ case (n, o: ODESystem, t) => (n, o, t) }), mode)
+      }
       List(new GetControlledStabilityTemplateResponse(code, c, specKind))
     } else {
       List(new ErrorResponse("At most 1 initialization node expected, but got nodes " + init.map(_._1).mkString(",")))

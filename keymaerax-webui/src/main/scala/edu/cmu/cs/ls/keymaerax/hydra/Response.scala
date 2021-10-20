@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.Controlled
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, SwitchedSystem}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -1368,7 +1368,7 @@ class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
   )
 }
 
-class GetControlledStabilityTemplateResponse(code: String, c: Controlled, specKind: String) extends Response {
+class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, specKind: String) extends Response {
   private val prg = c.asProgram
   private val printer = new KeYmaeraXPrettierPrinter(80)
   private val fml = specKind match {
