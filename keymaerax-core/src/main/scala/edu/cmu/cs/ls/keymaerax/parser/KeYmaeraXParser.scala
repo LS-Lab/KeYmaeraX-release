@@ -304,8 +304,8 @@ class KeYmaeraXParser(val LAX_MODE: Boolean) extends Parser with TokenParser wit
     case None => e match {
       case Equal(_: DifferentialSymbol, t) if kind==ProgramKind && !StaticSemantics.isDifferential(t) => throw ParseException("Unexpected " + optok.tok.img + " in system of ODEs", st, optok, COMMA.img)
       case _ =>
-        throw ParseException("Impossible elaboration: Operator " + op.op + " expects a " + kind + " as argument but got the " + e.kind + " "  + e.prettyString,
-          st, optok, kind.toString)
+        throw ParseException((if (op != OpSpec.sNone) "Operator " + op.op + " expects a " else "Expected a ") + kind + " but got the " + e.kind + " "  + KeYmaeraXPrettyPrinter.stringify(e),
+          st, if (optok != PSEUDOTOK) optok.description else KeYmaeraXPrettyPrinter.stringify(e), kind.toString)
     }
   }
 

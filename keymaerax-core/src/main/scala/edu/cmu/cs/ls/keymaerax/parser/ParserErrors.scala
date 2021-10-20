@@ -67,6 +67,9 @@ object ParseException {
   def apply(msg: String, state: ParseState, found: Token, expect: String): ParseException =
     new ParseException(msg, found.loc, found = found.description, expect = expect, after = state.topString, state = state.toString)
 
+  def apply(msg: String, state: ParseState, found: String, expect: String): ParseException =
+    new ParseException(msg, state.location, found = found, expect = expect, after = state.topString, state = state.toString)
+
   def apply(msg: String, loc: Location, found: String, expect: String): ParseException =
     new ParseException(msg, loc, found = found, expect = expect, after = "<unknown>", state = "<unknown>")
 
