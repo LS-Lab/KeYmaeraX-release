@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-import scala.annotation.tailrec
 import scala.collection.immutable.Set
 
 /**
@@ -56,14 +55,6 @@ object SubstitutionHelper {
     }, fml) match {
       case Some(g) => g
     }
-  }
-
-  /** Applies substitutions `s` to provable `p` exhaustively. */
-  @tailrec
-  def exhaustiveSubst(p: Provable, s: USubst): Provable = {
-    val substituted = p(s)
-    if (substituted != p) exhaustiveSubst(substituted, s)
-    else substituted
   }
 }
 

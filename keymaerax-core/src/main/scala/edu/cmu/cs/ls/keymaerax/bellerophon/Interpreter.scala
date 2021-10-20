@@ -2,11 +2,10 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
-import edu.cmu.cs.ls.keymaerax.infrastruct.{RestrictedBiDiUnificationMatch, SubstitutionHelper, UnificationTools}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, RestrictedBiDiUnificationMatch, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -43,7 +42,7 @@ trait Interpreter {
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
   protected def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig =
-    p.reapply(SubstitutionHelper.exhaustiveSubst(p.underlyingProvable, s))
+    p.reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, s))
 
   /**
     * Replaces the nth subgoal of `original` with the remaining subgoals of `subderivation`.
@@ -107,7 +106,7 @@ trait Interpreter {
     * modulo constification renaming that is assumed to be applied in the future. Constification renaming requires
     * `parent` to have exactly one single subgoal. */
   protected def assertSubMatchesModuloConstification(parent: ProvableSig, sub: ProvableSig, n: Int, subst: USubst): Unit = {
-    if (SubstitutionHelper.exhaustiveSubst(parent.underlyingProvable, subst).subgoals(n) != Try(SubstitutionHelper.exhaustiveSubst(sub.underlyingProvable, subst)).toOption.getOrElse(sub.underlyingProvable).conclusion &&
+    if (ProvableHelper.exhaustiveSubst(parent.underlyingProvable, subst).subgoals(n) != Try(ProvableHelper.exhaustiveSubst(sub.underlyingProvable, subst)).toOption.getOrElse(sub.underlyingProvable).conclusion &&
         !subMatchesModuloConstification(parent.subgoals(n), sub.conclusion, subst)) {
       throw new BelleUnexpectedProofStateError(s"Subgoal #$n of the original provable (${parent.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${sub.conclusion}}),\nbut is not despite substitution $subst", sub.underlyingProvable)
     }

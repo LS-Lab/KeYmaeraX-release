@@ -7,12 +7,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 import java.util.UUID
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SubderivationSubstitutionException}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import TacticFactory._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{SubstitutionHelper, UnificationTools}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.immutable
@@ -29,7 +29,7 @@ object AnonymousLemmas {
     val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
     subderivations.foldRight(provable)({ case ((sub, i), p) =>
       val subst = UnificationTools.collectSubst(p.underlyingProvable, i, sub.underlyingProvable, defs)
-      p.reapply(SubstitutionHelper.exhaustiveSubst(p.underlyingProvable, subst))(sub, i)
+      p.reapply(ProvableHelper.exhaustiveSubst(p.underlyingProvable, subst))(sub, i)
     })
   })
 
