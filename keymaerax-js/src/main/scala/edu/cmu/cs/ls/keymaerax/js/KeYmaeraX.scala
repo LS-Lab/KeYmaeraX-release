@@ -160,10 +160,13 @@ object KeYmaeraX {
       case _ => try {
         fillDictionary(check(parser(answer)), 1.0)
       } catch {
-        case ex: ParseException =>
+        case ex: ParseException => try {
           val answerLines = answer.linesWithSeparators.toList
           val info = answerLines.patch(ex.loc.line - 1, answerLines(ex.loc.line - 1).patch(ex.loc.column - 1, " ⚠ ", 0), 1).mkString("")
           fillDictionary("Parse error: " + info + "\n" + ex.getMessage, 0.0)
+        } catch {
+          case _: Throwable => fillDictionary("Parse error: " + ex.getMessage, 0.0)
+        }
         case ex: Throwable => fillDictionary("Parsing failed: " + ex.getMessage, 0.0)
       }
     }
