@@ -12,8 +12,6 @@ angular.module('keymaerax.ui.hamodeler', ['ngSanitize'])
       var mermaid = $window.mermaid;
       mermaid.initialize({
         theme: $scope.theme,
-        logLevel: 3,
-        securityLevel: 'loose',
         useMaxWidth: 'true',
         flowchart: { curve: 'basis' }
       });
