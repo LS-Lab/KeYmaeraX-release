@@ -254,13 +254,22 @@ object FormulaTools extends Logging {
   }
 
   /** Finds the closest parent to `pos` in `formula` that is a formula. */
-  @tailrec
-  def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr =
-    if (pos.pos.isEmpty) pos
-    else Augmentors.FormulaAugmentor(fml).sub(pos) match {
-      case Some(_: Formula) => pos
-      case Some(_) => parentFormulaPos(pos.parent, fml)
-    }
+  def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr = {
+    var result = pos
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        if (p.isPrefixOf(pos)) {
+          result = p
+          Left(None)
+        } else if (pos.isPrefixOf(p)) {
+          Left(Some(stop))
+        } else {
+          Left(None)
+        }
+      }
+    }, fml)
+    result
+  }
 
   /** Read off the set of all possible singularities coming from divisors or negative powers.
     * @example {{{
