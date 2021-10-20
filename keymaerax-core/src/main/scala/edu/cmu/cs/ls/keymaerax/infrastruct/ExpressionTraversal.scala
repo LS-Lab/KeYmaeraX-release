@@ -16,22 +16,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
  *
  */
 object ExpressionTraversal {
-  type N[A] = A => Nothing
-  type NN[A] = N[N[A]]
-
-  trait UnionType[T] {
-    type and[S] = UnionType[T with N[S]]
-    type andProvideAType = N[T]
-    type andProvideEvidence[X] = NN[X] <:< N[T]
-  }
-
-  // for convenience
-  type union[T] = { type and[S] = UnionType[N[T]]#and[S] }
-
-  type FTPG[T] = union[Term]#and[Formula]#and[Program]#andProvideEvidence[T]
-
-  def fail(x: Expression) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expression])
-  def failFTPG[T, A : FTPG](x: A) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expression])
+  def fail(x: Expression) = throw UnknownOperatorException("Unimplemented case in Expr traversal", x)
 
   trait StopTraversal
   val stop = new StopTraversal {}
@@ -66,10 +51,10 @@ object ExpressionTraversal {
           case _ => Left(Some(stop))
         }
       else e match {
-        case Forall(v, phi) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
-        case Exists(v, phi) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
-        case Box(a, c) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) => Left(Some(stop))
-        case Diamond(a, c) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) =>  Left(Some(stop))
+        case Forall(v, _) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Exists(v, _) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Box(a, _) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Diamond(a, _) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) =>  Left(Some(stop))
         case _ =>
           if (p.isPrefixOf(t))
           // proceed
@@ -96,72 +81,72 @@ object ExpressionTraversal {
       Right(e)
   }
 
-  final def pre[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+  final def pre[A <: Expression](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
     case x: Formula => f.preF(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Program => f.preP(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Term => f.preT(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
   }
 
-  final def in[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+  final def in[A <: Expression](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
     case x: Formula => f.inF(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Program => f.inP(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Term => f.inT(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
   }
 
-  final def post[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+  final def post[A <: Expression](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
     case x: Formula => f.postF(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Program => f.postP(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Term => f.postT(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
   }
 
-  def matchZero[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, a: A): Option[A] = post(f, p, a) match {
+  def matchZero[A <: Expression](p: PosInExpr, f: ExpressionTraversalFunction, a: A): Option[A] = post(f, p, a) match {
     case Left(Some(_)) => None
     case Left(None) => Some(a)
     case Right(x) => Some(x)
   }
 
-  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p++0, f, a) match {
+  def matchOne[A <: Expression, B <: Expression](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p++0, f, a) match {
     case Some(na) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
 
-  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p++0, f, a) match {
+  def matchTwo[A <: Expression, B <: Expression, C <: Expression](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p++1, f, b) match {
@@ -174,7 +159,7 @@ object ExpressionTraversal {
   }
 
   //@todo this should never happen
-  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p++0, f, a) match {
+  def matchThree[A <: Expression, B <: Expression, C <: Expression, D <: Expression](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p++0, f, a) match {
     case Some(na) => in(f, p, const(na, b, c)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p++1, f, b) match {
@@ -191,14 +176,14 @@ object ExpressionTraversal {
     }
     case None => None
   }
-  def traverse[A : FTPG](f: ExpressionTraversalFunction, e: A): Option[A] = traverse(HereP, f, e)
+  def traverse[A <: Expression](f: ExpressionTraversalFunction, e: A): Option[A] = traverse(HereP, f, e)
   def traverseExpr[E <: Expression](f: ExpressionTraversalFunction, expr: E): Option[E] = expr match {
     case e: Term => traverse(HereP, f, e).map(_.asInstanceOf[E])
     case e: Formula => traverse(HereP, f, e).map(_.asInstanceOf[E])
     case e: Program => traverse(HereP, f, e).map(_.asInstanceOf[E])
   }
 
-  def traverse[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, e: A): Option[A] = {
+  def traverse[A <: Expression](p: PosInExpr, f: ExpressionTraversalFunction, e: A): Option[A] = {
     pre(f, p, e) match {
       case Left(Some(_)) => None
       case Left(None) => (e match {
@@ -258,7 +243,7 @@ object ExpressionTraversal {
         case DifferentialProduct(a, b) => matchTwo(p, DifferentialProduct.apply, f, a, b)
         case ODESystem(a, h) => matchTwo(p, ODESystem(_: DifferentialProgram, _: Formula), f, a, h)
 
-        case _ => failFTPG(e)
+        case _ => fail(e)
       }) match {
         case Some(y) => Some(y.asInstanceOf[A])
         case None => None
