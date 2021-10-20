@@ -19,6 +19,11 @@
     </div>
 </div>
 <div class="modal-body modal-nofoot">
+    <div class="row" ng-if="alert.msg">
+        <div class="col-md-12">
+            <div uib-alert class="alert-danger" close="alert.msg=undefined"><pre class="bg-danger">{{alert.msg}}</pre></div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <h5>
@@ -49,7 +54,8 @@
             <k4-hybrid-automaton-modeler theme="default"
                                          layout="TD"
                                          code="code"
-                                         on-change="onHAChange(code,svg)"></k4-hybrid-automaton-modeler>
+                                         on-change="onHAChange(code,svg)"
+                                         on-error="onHAError(error)"></k4-hybrid-automaton-modeler>
         </div>
     </div>
     <div class="row">

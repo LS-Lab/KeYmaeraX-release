@@ -27,6 +27,9 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
   $scope.code = $scope.templates.autonomous;
   $scope.specKind = 'stability';
   $scope.automatonTemplate = 'autonomous';
+  $scope.alert = {
+    msg: undefined
+  }
 
   function decode(encodedString) {
     var textArea = document.createElement('textarea');
@@ -47,9 +50,10 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
       subGraphs: s
     };
     $http.post("models/users/" + userId + "/templates/controlledstability/create/" + switchingKind + "/" + specKind, data).then(function(response) {
+      $scope.alert.msg = undefined
       $scope.model.content = response.data.text;
     }).catch(function(err) {
-
+      $scope.alert.msg = err.data.textStatus;
     });
   }
 
@@ -67,6 +71,10 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
   $scope.onHAChange = function(code, svg) {
     $scope.code = code;
     $scope.getSpec(code, $scope.specKind, $scope.automatonTemplate);
+  }
+
+  $scope.onHAError = function(error) {
+    $scope.alert.msg = error.str;
   }
 });
 
@@ -395,7 +403,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       keyboard: false,
       resolve: {
         userId: function() { return $scope.userId; },
-        template: function() { return { 'title': 'Controlled Stability Automaton' }; }
+        template: function() { return { 'title': 'Switched Systems' }; }
       }
     });
   };

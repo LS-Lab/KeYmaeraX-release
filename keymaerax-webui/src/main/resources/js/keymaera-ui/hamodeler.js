@@ -6,7 +6,8 @@ angular.module('keymaerax.ui.hamodeler', ['ngSanitize'])
       theme: '@',
       layout: '@',
       code: '=',
-      onChange: '&'
+      onChange: '&',
+      onError: '&'
     },
     controller: ['$scope', function($scope) {
       var mermaid = $window.mermaid;
@@ -23,10 +24,14 @@ angular.module('keymaerax.ui.hamodeler', ['ngSanitize'])
 
       $scope.renderAutomaton = function() {
         var code = 'flowchart ' + $scope.layout + '\n' + $scope.code;
-        mermaid.render('graphDiv', code, function(svgCode, bindFunctions) {
-          $('#automatonview').html(svgCode);
-          $scope.onChange({code: $scope.code, svg: svgCode});
-        });
+        try {
+          mermaid.render('graphDiv', code, function(svgCode, bindFunctions) {
+            $('#automatonview').html(svgCode);
+            $scope.onChange({code: $scope.code, svg: svgCode});
+          });
+        } catch (e) {
+          $scope.onError({ error: e });
+        }
       }
 
       $scope.aceChanged = function(delta) {
