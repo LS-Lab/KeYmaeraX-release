@@ -352,7 +352,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec)),
-      implyR(1) & orR(1) & proveStabilityMLF("x^4+x^2".asTerm::"(2*x^4+2*x^2)/2".asTerm::"(3*x^4+3*x^2)/3".asTerm::"4*x^4+100*x^2".asTerm::Nil)(2)
+      implyR(1) & orR(1) & proveStabilityStateMLF("x^4+x^2".asTerm::"(2*x^4+2*x^2)/2".asTerm::"(3*x^4+3*x^2)/3".asTerm::"4*x^4+100*x^2".asTerm::Nil)(2)
     )
 
     println(pr)
@@ -361,7 +361,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(Imply("100>b".asFormula,Or("a <= 0".asFormula,spec2)),
-        implyR(1) & orR(1) & proveAttractivityMLF("x^4+x^2".asTerm::"(2*x^4+2*x^2)/2".asTerm::"(3*x^4+3*x^2)/3".asTerm::"4*x^4+100*x^2".asTerm::Nil)(2)
+        implyR(1) & orR(1) & proveAttractivityStateMLF("x^4+x^2".asTerm::"(2*x^4+2*x^2)/2".asTerm::"(3*x^4+3*x^2)/3".asTerm::"4*x^4+100*x^2".asTerm::Nil)(2)
     )
 
     println(pr2)
@@ -375,7 +375,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(spec,
-      proveStabilityMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
+      proveStabilityStateMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
     )
 
     println(pr)
@@ -384,7 +384,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
+      proveAttractivityStateMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
     )
 
     println(pr2)
@@ -399,7 +399,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(spec,
-      proveStabilityMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
+      proveStabilityStateMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
     )
 
     println(pr)
@@ -408,7 +408,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
+      proveAttractivityStateMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
     )
 
     println(pr2)
@@ -430,7 +430,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val v24 = "x1^2+5*x2^2".asTerm
 
     val pr = proveBy(spec,
-      proveStabilityMLF(v13::v24::v13::v24::Nil)(1)
+      proveStabilityStateMLF(v13::v24::v13::v24::Nil)(1)
     )
 
     println(pr)
@@ -439,7 +439,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityMLF(v13::v24::v13::v24::Nil)(1)
+      proveAttractivityStateMLF(v13::v24::v13::v24::Nil)(1)
     )
 
     println(pr2)
@@ -464,7 +464,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
-      proveStabilityMLF(v1::v2::Nil)(1)
+      proveStabilityStateMLF(v1::v2::Nil)(1)
     )
 
     println(pr)
@@ -473,7 +473,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
     val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
       implyR(1) &
-        proveAttractivityMLF(v1::v2::Nil)(1)
+        proveAttractivityStateMLF(v1::v2::Nil)(1)
     )
 
     println(pr2)
@@ -485,11 +485,11 @@ class SwitchedSystemsTests extends TacticTestBase {
     val ode1 = "x1'=-x1/8-x2,x2'=2*x1-x2/8".asDifferentialProgram
     val ode2 = "x1'=-x1/8-2*x2,x2'=x1-x2/8".asDifferentialProgram
 
+    // This is simply slow switching with minimum dwell time 2
     val mode1 = ("mode1", ode1, None,
       List(("mode2", Some("3".asTerm)))) // 1 -> 2
-
     val mode2 = ("mode2", ode2, None,
-      List(("mode1", Some("3".asTerm)))) // 1 -> 2
+      List(("mode1", Some("3".asTerm)))) // 2 -> 1
 
     val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
 
@@ -497,13 +497,129 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val v1 = "2*x1^2+x2^2".asTerm
     val v2 = "x1^2+2*x2^2".asTerm
-
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
-        proveStabilityMLF(v1::v2::Nil)(1)
+        proveStabilityTimeMLF(v1::v2::Nil, "1/4>0".asFormula :: "1/4>0".asFormula ::Nil)(1)
     )
 
     println(pr)
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+
+    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
+      implyR(1) &
+        proveAttractivityTimeMLF(v1::v2::Nil, "1/4>0".asFormula :: "1/4>0".asFormula ::Nil,"1/4-7/30".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
+  }
+
+  it should "bla" in withMathematica { _ =>
+    val qe = proveBy(
+      "(x1^2+x2^2)*(((-2)*timer)^3/6+(((-2)*timer)^2/2+(((-2)*timer)^1/1+1))) < w_*(((-((-2)))*(1/10))^3/6+(((-((-2)))*(1/10))^2/2+(((-((-2)))*(1/10))^1/1+1)))&timer<=1/10, timer>=0  ==>  (x1^2+x2^2)*((2*0)^3/6+((2*0)^2/2+((2*0)^1/1+1))) < w_".asSequent,
+
+      QE
+    )
+    println(qe)
+
+  }
+
+  it should "prove timed system stable 2" in withMathematica { _ =>
+    //Zhai, Hu, Yasuda & Michel Example 1
+    val ode1 = "x1'=x2,x2'=x1".asDifferentialProgram
+    val ode2 = "x1'=-2*x1+x2,x2'=x1-2*x2".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, Some("1/10".asTerm), List(("mode2", None))) // 1 -> 2
+    val mode2 = ("mode2", ode2, None, List(("mode1", Some("3/10".asTerm)))) // 2 -> 1
+
+    val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
+
+    val spec = stabilitySpec(cs)
+
+    val v1 = "x1^2+x2^2".asTerm
+    val v2 = "x1^2+x2^2".asTerm
+
+    val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
+      implyR(1) &
+        proveStabilityTimeMLF(v1::v2::Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula ::Nil)(1)
+    )
+
+    println(pr)
+//    pr shouldBe 'proved
+//
+//    val spec2 = attractivitySpec(cs)
+//
+//    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
+//      implyR(1) &
+//        proveAttractivityTimeMLF(v1::v2::Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula ::Nil,"6/10".asTerm)(1)
+//    )
+//
+//    println(pr2)
+//    pr2 shouldBe 'proved
+  }
+
+  it should "prove timed system stable 3" in withMathematica { _ =>
+    //Zhai, Hu, Yasuda & Michel Example 2
+    val ode1 = "x1'=2*x1+2*x2,x2'=x1+3*x2".asDifferentialProgram
+    val ode2 = "x1'=-2*x1+x2,x2'=x1-2*x2".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, Some("1/2".asTerm), List(("mode2", None))) // 1 -> 2
+    val mode2 = ("mode2", ode2, None, List(("mode1", Some("9/2".asTerm)))) // 2 -> 1
+
+    val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
+
+    val spec = stabilitySpec(cs)
+
+    val v1 = "2*x1^2+x2^2".asTerm
+    val v2 = "x1^2+x2^2".asTerm
+
+    val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
+      implyR(1) &
+        // Works, but slow and requires configuring to degree 17? Taylor expansion
+        skip // proveStabilityTimeMLF(v1::v2::Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula ::Nil)(1)
+    )
+
+    println(pr)
+//    pr shouldBe 'proved
+  }
+
+  it should "prove timed system stable 4" in withMathematica { _ =>
+    // Cyclic slow switching
+    val ode1 = "x1'=-x1/8-x2,x2'=2*x1-x2/8".asDifferentialProgram
+    val ode2 = "x1'=-x1/8-2*x2,x2'=x1-x2/8".asDifferentialProgram
+    val ode3 = "x1'=-x1,x2'=-x2".asDifferentialProgram
+
+    val mode1 = ("mode1", ode1, None, List(("mode2", Some("3".asTerm)))) // 1 -> 2
+    val mode2 = ("mode2", ode2, None, List(("mode3", None))) // 2 -> 3
+    val mode3 = ("mode3", ode3, None, List(("mode1", Some("0.4".asTerm)))) // 3 -> 1
+
+    val cs = Timed(List(mode1,mode2,mode3), Variable("u"), Variable("timer"))
+
+    val spec = stabilitySpec(cs)
+
+    val v1 = "2*x1^2+x2^2".asTerm
+    val v2 = "x1^2+2*x2^2".asTerm
+    val v3 = "x1^2+x2^2".asTerm
+
+    val pr = proveBy(Imply("mode1()=1 & mode2()=2 & mode3()=3".asFormula,spec),
+      implyR(1) &
+        proveStabilityTimeMLF(v1::v2::v3::Nil, "1/4 > 0".asFormula :: "1/4 > 0".asFormula :: "2 > 0".asFormula ::Nil)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+
+    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2 & mode3()=3".asFormula,spec2),
+      implyR(1) &
+        proveAttractivityTimeMLF(v1::v2::v3::Nil, "1/4 > 0".asFormula :: "1/4 > 0".asFormula :: "2 > 0".asFormula ::Nil,"1/4-7/30".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   "state switch" should "check ODE active in domain" in withMathematica { _ =>
