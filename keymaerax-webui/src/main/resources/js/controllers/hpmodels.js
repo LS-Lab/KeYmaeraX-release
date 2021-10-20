@@ -25,7 +25,11 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
   }
 
   $scope.code = $scope.templates.autonomous;
-  $scope.specKind = 'stability';
+  $scope.specKind = {
+    stability: true,
+    attractivity: false,
+    custom: false
+  };
   $scope.automatonTemplate = 'autonomous';
   $scope.alert = {
     msg: undefined
@@ -47,9 +51,10 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
       code: code,
       vertices: v,
       edges: e,
-      subGraphs: s
+      subGraphs: s,
+      specKind: $.map($scope.specKind, function(e, k) { return e ? k : undefined; }).filter(e => e !== undefined)
     };
-    $http.post("models/users/" + userId + "/templates/controlledstability/create/" + switchingKind + "/" + specKind, data).then(function(response) {
+    $http.post("models/users/" + userId + "/templates/controlledstability/create/" + switchingKind, data).then(function(response) {
       $scope.alert.msg = undefined
       $scope.model.content = response.data.text;
     }).catch(function(err) {
@@ -57,8 +62,8 @@ angular.module('keymaerax.controllers').controller('ControlledStabilityTemplateD
     });
   }
 
-  $scope.setSpecKind = function(specKind) {
-    $scope.specKind = specKind;
+  $scope.toggleSpecKind = function(specKind) {
+    $scope.specKind[specKind] = !$scope.specKind[specKind];
     $scope.getSpec($scope.code, specKind, $scope.automatonTemplate);
   }
 

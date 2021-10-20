@@ -1117,7 +1117,7 @@ class GetTemplatesRequest(db: DBAbstraction, userId: String) extends UserRequest
   }
 }
 
-class CreateControlledStabilityTemplateRequest(userId: String, code: String, switchingKind: String, specKind: String,
+class CreateControlledStabilityTemplateRequest(userId: String, code: String, switchingKind: String, specKind: List[String],
                                                vertices: JsArray, subGraphs: JsArray, transitions: JsArray) extends UserRequest(userId, _ => true) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val mode = "mode".asVariable

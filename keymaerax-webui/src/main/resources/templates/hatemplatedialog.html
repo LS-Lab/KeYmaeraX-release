@@ -63,17 +63,17 @@
             <h5>
                 <span>Specification</span>
                 <span class="btn-group btn-group-toggle" data-toggle="buttons">
-                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='stability'}"
-                           ng-click="setSpecKind('stability')">
-                        <input type="radio" name="options" autocomplete="off" checked> Stability
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.stability}"
+                           ng-click="toggleSpecKind('stability')">
+                        <input type="checkbox" name="options" autocomplete="off" checked> Stability
                     </label>
-                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='attractivity'}"
-                           ng-click="setSpecKind('attractivity')">
-                        <input type="radio" name="options" autocomplete="off"> Attractivity
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.attractivity}"
+                           ng-click="toggleSpecKind('attractivity')">
+                        <input type="checkbox" name="options" autocomplete="off"> Attractivity
                     </label>
-                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind=='custom'}"
-                           ng-click="setSpecKind('custom')">
-                        <input type="radio" name="options" autocomplete="off"> Custom
+                    <label class="btn btn-default btn-xs" ng-class="{'active':specKind.custom}"
+                           ng-click="toggleSpecKind('custom')">
+                        <input type="checkbox" name="options" autocomplete="off"> Custom
                     </label>
                 </span>
             </h5>

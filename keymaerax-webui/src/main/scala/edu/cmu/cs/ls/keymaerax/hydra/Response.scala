@@ -1368,18 +1368,35 @@ class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
   )
 }
 
-class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, specKind: String) extends Response {
+class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, specKind: List[String]) extends Response {
   private val prg = c.asProgram
   private val printer = new KeYmaeraXPrettierPrinter(80)
-  private val fml = specKind match {
-    case "stability" => printer(SwitchedSystems.stabilitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
-    case "attractivity" => printer(SwitchedSystems.attractivitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
-    case "custom" =>
-      s"""true /* todo */ ->
-         |  [ ${printer(c.asProgram).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
-         |  ]false /* todo */
-         |""".stripMargin
-  }
+  private val fmls = specKind.map({
+    case s@"stability" => s -> printer(SwitchedSystems.stabilitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"attractivity" => s -> printer(SwitchedSystems.attractivitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"custom" =>
+      s -> s"""true /* todo */ ->
+              |  [ ${printer(c.asProgram).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
+              |  ]false /* todo */
+              |""".stripMargin
+  })
+  private val entries = fmls.map({ case (s, fml) =>
+    s"""ArchiveEntry "New Entry: $s"
+       |
+       |Definitions
+       |  ${definitionsContent(prg)}
+       |End.
+       |
+       |ProgramVariables
+       |  ${programVariablesContent(prg)}
+       |End.
+       |
+       |Problem
+       |  $fml
+       |End.
+       |
+       |End.
+       |""".stripMargin}).mkString("\n\n")
 
   def getJson: JsValue = JsObject(
     "title" -> JsString(""),
@@ -1389,21 +1406,7 @@ class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, sp
          | * Generated from hybrid automaton
          | * ${code.linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else " * " + l }).mkString}
          | */
-         |ArchiveEntry "New Entry"
-         |
-         |Definitions
-         |  ${definitionsContent(prg)}
-         |End.
-         |
-         |ProgramVariables
-         |  ${programVariablesContent(prg)}
-         |End.
-         |
-         |Problem
-         |  $fml
-         |End.
-         |
-         |End.""".stripMargin),
+         |$entries""".stripMargin),
     "selectRange" -> JsObject(),
     "imageUrl" -> JsNull //@todo automaton SVG?
   )

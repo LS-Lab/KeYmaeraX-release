@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import spray.json._
+import spray.json.DefaultJsonProtocol._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import edu.cmu.cs.ls.keymaerax.{Configuration, Logging}
 import edu.cmu.cs.ls.keymaerax.core.Formula
@@ -422,13 +423,14 @@ object RestApi extends Logging {
     }
   }}}
 
-  val createTemplate: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / "templates" / Segment / "create" / Segment / Segment) {(userId, template, switchingKind, specKind) => { pathEnd { post {
+  val createTemplate: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / "templates" / Segment / "create" / Segment) {(userId, template, switchingKind) => { pathEnd { post {
     entity(as[String]) { x => {
       val obj = x.parseJson.asJsObject
-      val code = obj.fields("code").asInstanceOf[JsString].value
+      val code = obj.fields("code").convertTo[String]
       val vertices = obj.fields("vertices").asInstanceOf[JsArray]
       val subGraphs = obj.fields("subGraphs").asInstanceOf[JsArray]
       val edges = obj.fields("edges").asInstanceOf[JsArray]
+      val specKind = obj.fields("specKind").convertTo[List[String]]
       val request = template match {
         case "controlledstability" => new CreateControlledStabilityTemplateRequest(userId, code, switchingKind, specKind, vertices, subGraphs, edges)
       }
