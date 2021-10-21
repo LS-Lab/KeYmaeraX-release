@@ -493,10 +493,10 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
 
-    val spec = stabilitySpec(cs)
-
     val v1 = "2*x1^2+x2^2".asTerm
     val v2 = "x1^2+2*x2^2".asTerm
+
+    val spec = stabilitySpec(cs)
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
         proveStabilityTimeMLF(v1::v2::Nil, "1/4>0".asFormula :: "1/4>0".asFormula ::Nil)(1)
@@ -506,7 +506,6 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr shouldBe 'proved
 
     val spec2 = attractivitySpec(cs)
-
     val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
       implyR(1) &
         proveAttractivityTimeMLF(v1::v2::Nil, "1/4>0".asFormula :: "1/4>0".asFormula ::Nil,"1/4-7/30".asTerm)(1)
@@ -514,16 +513,6 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     println(pr2)
     pr2 shouldBe 'proved
-  }
-
-  it should "bla" in withMathematica { _ =>
-    val qe = proveBy(
-      "(x1^2+x2^2)*(((-2)*timer)^3/6+(((-2)*timer)^2/2+(((-2)*timer)^1/1+1))) < w_*(((-((-2)))*(1/10))^3/6+(((-((-2)))*(1/10))^2/2+(((-((-2)))*(1/10))^1/1+1)))&timer<=1/10, timer>=0  ==>  (x1^2+x2^2)*((2*0)^3/6+((2*0)^2/2+((2*0)^1/1+1))) < w_".asSequent,
-
-      QE
-    )
-    println(qe)
-
   }
 
   it should "prove timed system stable 2" in withMathematica { _ =>
@@ -536,10 +525,10 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
 
-    val spec = stabilitySpec(cs)
-
     val v1 = "x1^2+x2^2".asTerm
     val v2 = "x1^2+x2^2".asTerm
+
+    val spec = stabilitySpec(cs)
 
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
@@ -547,20 +536,21 @@ class SwitchedSystemsTests extends TacticTestBase {
     )
 
     println(pr)
-//    pr shouldBe 'proved
-//
-//    val spec2 = attractivitySpec(cs)
-//
-//    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
-//      implyR(1) &
-//        proveAttractivityTimeMLF(v1::v2::Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula ::Nil,"6/10".asTerm)(1)
-//    )
-//
-//    println(pr2)
-//    pr2 shouldBe 'proved
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+
+    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
+      implyR(1) &
+        proveAttractivityTimeMLF(v1::v2::Nil, "-2 <= 0".asFormula :: "2 > 0".asFormula ::Nil,"1/100".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
-  it should "prove timed system stable 3" in withMathematica { _ =>
+  // Works, but slow and requires configuring to degree 15 and factor 1.2 Taylor expansion
+  it should "prove timed system stable 3" taggedAs TodoTest ignore withMathematica { _ =>
     //Zhai, Hu, Yasuda & Michel Example 2
     val ode1 = "x1'=2*x1+2*x2,x2'=x1+3*x2".asDifferentialProgram
     val ode2 = "x1'=-2*x1+x2,x2'=x1-2*x2".asDifferentialProgram
@@ -570,19 +560,27 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val cs = Timed(List(mode1,mode2), Variable("u"), Variable("timer"))
 
-    val spec = stabilitySpec(cs)
-
     val v1 = "2*x1^2+x2^2".asTerm
     val v2 = "x1^2+x2^2".asTerm
 
+    val spec = stabilitySpec(cs)
     val pr = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec),
       implyR(1) &
-        // Works, but slow and requires configuring to degree 17? Taylor expansion
-        skip // proveStabilityTimeMLF(v1::v2::Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula ::Nil)(1)
+        // Works, but slow and requires configuring to degree 15 and factor 1.2 Taylor expansion
+        proveStabilityTimeMLF(v1::v2::Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula ::Nil)(1)
     )
 
     println(pr)
-//    pr shouldBe 'proved
+    pr shouldBe 'proved
+
+    val spec2 = attractivitySpec(cs)
+    val pr2 = proveBy(Imply("mode1()=1 & mode2()=2".asFormula,spec2),
+      implyR(1) &
+        proveAttractivityTimeMLF(v1::v2::Nil, "-9 <= 0".asFormula :: "2 > 0".asFormula ::Nil,"0.01".asTerm)(1)
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove timed system stable 4" in withMathematica { _ =>

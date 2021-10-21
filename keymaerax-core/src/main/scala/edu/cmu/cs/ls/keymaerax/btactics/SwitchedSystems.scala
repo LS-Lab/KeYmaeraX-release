@@ -24,6 +24,8 @@ object SwitchedSystems {
 
   private val namespace = "switchedsys"
   private val debugTactic = false
+  private val expDepth = 3 // Taylor expansion for exp, todo: make configurable?
+  private val factor = 1.2 // Scale factor for maximum time bounds
 
   //An ADT encoding canonical formats for switched systems
   sealed trait SwitchedSystem {
@@ -1047,8 +1049,6 @@ object SwitchedSystems {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
     require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
 
-    val expDepth = 3 //todo: make configurable?
-
     val eps = Variable("eps")
     val delName = "del"
     val del = Variable(delName)
@@ -1083,27 +1083,28 @@ object SwitchedSystems {
 
     // The loop invariant uses the following bounds based on lambda:
     // V_p * e^(lambda_p t) < W for those with lambda_p > 0
-    // V_p * e^(lambda_p t) < W e^(-lambda * T_p) for those with lambda_p <= 0
+    // V_p *  e^(-lambda * T_p) * e^(lambda_p t) < W for those with lambda_p <= 0
     // Note: For stability, we actually can settle for lambda_p < 0
 
-    // The invariant's RHS:
-    val invRHS : List[Term] = (lambdas,ss.maxDwell).zipped.map( (lambda,mD) =>
+    // Construct the V_p e^(-lambda * T_p) terms
+    val lyapsE : List[Term] = (lyaps, lambdas, ss.maxDwell).zipped.map( (lyap,lambda,mD) =>
       lambda match {
-        case Greater(l, n : Number) if n.value==0 => w
+        case Greater(l, n : Number) if n.value==0 => lyap
         case LessEqual(l, n : Number) if n.value==0 =>
-          Times(w,expExpand(Times(Neg(l),mD.getOrElse(throw new IllegalArgumentException("Lyapunov functions with lambda <=0 must have maximum dwell time"))),expDepth))
+          Times(lyap,expExpand(Times(Neg(l),Times(Number(factor),mD.getOrElse(throw new IllegalArgumentException("Lyapunov functions with lambda <=0 must have maximum dwell time")))),expDepth))
         case _ => ???
       }
     )
 
-    val lyapw = (lyaps, invRHS).zipped.map( (lyap,rhs) => Less(lyap,rhs)).reduceRight(And)
-
-    val delw : List[Formula] = (lyaps,delis,invRHS).zipped.map( (lyap,deli,rhs) => {
+    //\\exists d_i ||x||<d_i -> V_p E < w_i
+    val delw : List[Formula] = (lyapsE,delis).zipped.map( (lyapE,deli) => {
       Exists(deli :: Nil,
         And(And(Greater(deli, Number(0)), Less(deli, eps)),
-          cvars.foldRight(Imply(Less(normsq, Power(deli,Number(2))), Less(lyap, rhs)): Formula)((v, f) => Forall(v :: Nil, f))
+          cvars.foldRight(Imply(Less(normsq, Power(deli,Number(2))), Less(lyapE, w)): Formula)((v, f) => Forall(v :: Nil, f))
         ))
     })
+
+    val lyapw = lyapsE.map( lyapE => Less(lyapE,w)).reduceRight(And)
 
     val delwFml = delw.reduceRight(And(_,_))
 
@@ -1112,10 +1113,11 @@ object SwitchedSystems {
 
     // The relevant tactic for a single ODE
     // Assumes antecedent has the form:
-    // t>=0, assums, \forall x ( |x|=eps -> lyap >= w_i), w_ > 0, w <= w_0, Inv , |x| < eps
+    // assums, \forall x ( |x|=eps -> lyap >= w_i), w_ > 0, w <= w_0, Inv , |x| < eps
     // succedent has the form:
-    // assums, [ODE] (lyaps < w & |x| < eps)
+    // assums, [ODE] (Inv & |x| < eps)
     def odetac (less : Formula) : BelleExpr =
+      DebuggingTactics.debug("ODE tac: "+less, debugTactic) &
       dC(GreaterEqual(ss.timer,Number(0)))('Rlast) <( //t>=0 (trivial from t'=1)
         dC(less)('Rlast) < (
           dC(Less(normsq, epssq))('Rlast) <(
@@ -1123,18 +1125,15 @@ object SwitchedSystems {
             DifferentialTactics.dCClosure('Rlast) < (
               implyRiLast & cohideR('Rlast) & QE,
               hideL('Llast) * 2 & implyRiLast * 3 & cohideR('Rlast) & implyR(1) * 3 &
-                DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) & QE
+                DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) &
+                DebuggingTactics.print("??")  &
+                QE &
+                DebuggingTactics.debug("done",debugTactic)
             )
           )  ,
           ArithmeticSimplification.hideFactsAbout(eps::wis) &
             dI('full)('Rlast) &
             DebuggingTactics.debug("done",debugTactic)
-          // weird unification error
-//            dI('none)('Rlast) <(
-//              id,
-//              chase(1,1::Nil) & DE('Rlast) & DifferentialTactics.diffWeakenG('Rlast) & implyR(1) & unfoldProgramNormalize & QE
-//            ) &
-//            DebuggingTactics.debug("done", debugTactic)
         ),
         ArithmeticSimplification.keepFactsAbout(ss.timer::Nil) &
         dI('full)('Rlast)
@@ -1143,10 +1142,10 @@ object SwitchedSystems {
     // Continuation
     val conttac = {
       val invLHS: List[Term] =
-        (lambdas, lyaps).zipped.map((lambda, lyap) =>
-          Times(lyap, expExpand(Times(lambda.asInstanceOf[ComparisonFormula].left, ss.timer), expDepth)))
+        (lambdas, lyapsE).zipped.map((lambda, lyapE) =>
+          Times(lyapE, expExpand(Times(lambda.asInstanceOf[ComparisonFormula].left, ss.timer), expDepth)))
 
-      val invLess = (invLHS,invRHS).zipped.map(Less(_,_))
+      val invLess = invLHS.map(e => Less(e,w))
 
       val invBody = (invLess,lambdas,ss.maxDwell).zipped.map((less,lambda,mD) =>
         lambda match {
@@ -1182,16 +1181,19 @@ object SwitchedSystems {
               andR(1)<(cohideR(1) & Idioms.?(QE & done), prop)),
             prop,
             composeb(1) & generalize(gen)(1) < (
-              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll( Idioms.?(QE & done)),
+              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
+                OnAll(DebuggingTactics.print("switching") & Idioms.?(QE & done)),
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
                   implyR(1) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
+                    implyRiLast & implyRiLast &
                     SaturateTactic(andL('L)) &
                       ArithmeticSimplification.hideFactsAbout(wis.filter(_ != wi)) &
-                    hideL(-1) & implyRi & implyRi & implyR(1) & implyR(1) & odetac(less)
+                      implyR('Rlast) & implyR('Rlast) & hideL('Llast) & implyRi & implyR(1) &
+                      odetac(less)
                   )
                 )
               ).reduceRight(
@@ -1372,8 +1374,6 @@ object SwitchedSystems {
 
     val derivatives = derPair.map(_._1)
     val derbods = derPair.map(_._2)
-
-    // println(derivatives)
 
     val derFml = derivatives.reduceRight(And(_,_))
 
@@ -1624,7 +1624,6 @@ object SwitchedSystems {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
     require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
 
-    val expDepth = 3 //todo: make configurable?
 
     val eps = Variable("eps")
     val del = Variable("del")
@@ -1640,8 +1639,7 @@ object SwitchedSystems {
     val lessTransW =  proveBy("(p() -> f() < g()) -> (p() & g() <= w_ -> f() < w_)".asFormula,
       implyR(1) & implyR(1) & andL(-2) & implyL(-1) <(
         id,
-        QE
-      )
+        QE)
     )
 
     val uName = "u_"
@@ -1655,34 +1653,25 @@ object SwitchedSystems {
     val normsq = cvars.map(e => Power(e, Number(2))).reduceLeft(Plus) // ||x||^2
 
     // The loop invariant uses the following bounds based on lambda:
-    // V_p * e^(rate t) * e^(lambda_p t) < W for those with lambda_p > 0
-    // V_p * e^(rate t) * e^(lambda_p t) < W e^(-lambda * T_p) for those with lambda_p <= 0
+    // V_p * e^(rate t) * e^(lambda_p s) < W for those with lambda_p > 0
+    // V_p e^(-lambda_p * T_p) * e^(rate t) * e^(lambda_p s) < W for those with lambda_p <= 0
     // Note: For stability, we actually can settle for lambda_p < 0
 
-    // The invariant's RHS:
-    val invRHS : List[Term] = (lambdas,ss.maxDwell).zipped.map( (lambda,mD) =>
+    // Construct the V_p e^(-lambda * T_p) terms
+    val lyapsE : List[Term] = (lyaps, lambdas, ss.maxDwell).zipped.map( (lyap,lambda,mD) =>
       lambda match {
-        case Greater(l, n : Number) if n.value==0 => w
+        case Greater(l, n : Number) if n.value==0 => lyap
         case LessEqual(l, n : Number) if n.value==0 =>
-          Times(w,expExpand(Times(Neg(l),mD.getOrElse(throw new IllegalArgumentException("Lyapunov functions with lambda <=0 must have maximum dwell time"))),expDepth))
-        case _ => ???
-      }
-    )
-
-    val wRHS : List[Term] = (lambdas,ss.maxDwell,wis).zipped.map( (lambda,mD,wi) =>
-      lambda match {
-        case Greater(l, n : Number) if n.value==0 => wi
-        case LessEqual(l, n : Number) if n.value==0 =>
-          Times(wi,expExpand(Times(Neg(l),mD.get),expDepth))
+          Times(lyap,expExpand(Times(Neg(l),Times(Number(factor),mD.getOrElse(throw new IllegalArgumentException("Lyapunov functions with lambda <=0 must have maximum dwell time")))),expDepth))
         case _ => ???
       }
     )
 
     // The cut for each of the invariant's RHS
-    val wbod : List[Formula] = (lyaps,wRHS,wis).zipped.map( (lyap,rhs,wi) => {
+    val wbod : List[Formula] = (lyapsE,wis).zipped.map( (lyapE,wi) => {
       Exists(wi :: Nil,
         And(Greater(wi, Number(0)),
-          cvars.foldRight(Imply(Less(normsq, delsq), Less(lyap,rhs)): Formula)((v, f) => Forall(v :: Nil, f))
+          cvars.foldRight(Imply(Less(normsq, delsq), Less(lyapE,wi)): Formula)((v, f) => Forall(v :: Nil, f))
         ))
     })
 
@@ -1714,10 +1703,11 @@ object SwitchedSystems {
 
     // The relevant tactic for a single ODE
     // Assumes antecedent has the form:
-    // assums, V*exp < w, timer >=0 , t_ >= timer
+    // assums, Inv, timer >=0 , t_ >= timer
     // succedent has the form:
-    // assums, [ODE] (lyaps < w & |x| < eps)
+    // assums, [ODE] (Inv & (timer >=0 & t_ >= timer))
     def odetac (less : Formula) : BelleExpr =
+      DebuggingTactics.debug("odetac for: "+less, debugTactic) &
       dC(GreaterEqual(ss.timer,Number(0)))('Rlast) <( //t>=0 (trivial from t'=1)
         dC( GreaterEqual(tVar, ss.timer))('Rlast) < (
           dC(less)('Rlast) <(
@@ -1736,10 +1726,10 @@ object SwitchedSystems {
     // Continuation
     val conttac = {
       val invLHS: List[Term] =
-        (lambdas, lyaps).zipped.map((lambda, lyap) =>
-          Times(lyap,Times(expExpand(Times(tVar,rate),expDepth),expExpand(Times(Minus(lambda.asInstanceOf[ComparisonFormula].left,rate), ss.timer), expDepth))))
+        (lambdas, lyapsE).zipped.map((lambda, lyapE) =>
+          Times(lyapE,Times(expExpand(Times(tVar,rate),expDepth),expExpand(Times(Minus(lambda.asInstanceOf[ComparisonFormula].left,rate), ss.timer), expDepth))))
 
-      val invLess = (invLHS, invRHS).zipped.map(Less(_, _))
+      val invLess = invLHS.map(e => Less(e, w))
 
       val invBody = (invLess, lambdas, ss.maxDwell).zipped.map((less, lambda, mD) =>
         lambda match {
@@ -1780,7 +1770,7 @@ object SwitchedSystems {
             uis.map( ui =>
               ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
                 implyRiLast*4 & (allL('Llast) * cvars.length) & implyL('Llast) <(
-                  andR('Rlast) <(QE, SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
+                  andR('Rlast) <( Idioms.?(QE & done), SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
                   QE
                 )
             ).reduceRight((p1, p2) => orL('Llast) <(p1,p2)),
@@ -1793,9 +1783,9 @@ object SwitchedSystems {
                   implyR(1) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
-                    SaturateTactic(andL('L)) &
-                    ArithmeticSimplification.hideFactsAbout(wis.filter(_ != wi)) &
-                    hideL(-1) & odetac(less)
+                    DebuggingTactics.print("rerrange") &
+                      hideL('Llast) & andL('Llast) & andL('Llast) &
+                      odetac(less)
                   )
                 )
               ).reduceRight(
@@ -1809,98 +1799,10 @@ object SwitchedSystems {
                   )
               )
             )
-//              composeb(1) & generalize(gen)(1) <(
-//              ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
-//
-//              (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
-//                composeb(1) & testb(1) & implyL('Llast) <(
-//                  implyR(1) & id,
-//                  implyR(1) & boxAnd(1) & andR(1) <(
-//                    V(1) & id,
-//                    implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
-//                      implyR(1) & hideL('Llast) &
-//                      ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
-//                      implyRi & implyR(1) &
-//                      implyRi & implyR(1) & odetac(lyap, bd, ki)
-//                  )
-//                )
-//              ).reduceRight(
-//                (p1, p2) =>
-//                  choiceb(1) & andL('Llast) & andR(1) <(
-//                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
-//                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
-//                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
-//                  )
-//              )
-//            )
           )
       )
     }
 
-//    ss match {
-//
-//      case Guarded(modes,mode) => {
-//
-//        val invPre =
-//          (modes zip lyaps).map( namel =>
-//            And( Equal(mode,mkMode(namel._1._1)),
-//              And(Less(namel._2,w), Imply(GreaterEqual(namel._2,u),Less(namel._2, Plus(w,Times(k,tVar))))))
-//          )
-//        val inv = invPre.reduceRight(Or)
-//        val invMode =
-//          modes.map(name => Equal(mode,mkMode(name._1))).reduceRight(Or)
-//
-//        val gen =
-//          (modes zip lyaps).map( namel =>
-//            Imply( Equal(mode,mkMode(namel._1._1)), And(Less(namel._2,w), Imply(GreaterEqual(namel._2,u),Less(namel._2, Plus(w,Times(k,tVar))))))
-//          ).reduceRight(And)
-//
-//        composeb(pos) & generalize(invMode)(pos) <(
-//          unfoldProgramNormalize & OnAll(SimplifierV3.fullSimplify & closeT),
-//          //note: generalize throws away context, so pos is now 1
-//          loop(inv)(1) <(
-//            cutR(Equal(tVar,Number(0)))(pos) <(
-//              id,
-//              implyR(1) & exhaustiveEqL2R('Llast) & SimplifierV3.simplify(1) & closeT
-//            ),
-//            //Note: for these next two branches, the "loop" branch is moved to the first succedent position
-//            ArithmeticSimplification.hideFactsAbout(kis) &
-//              uis.map( ui =>
-//                ArithmeticSimplification.hideFactsAbout(uis.filter(_ != ui)) &
-//                  implyRiLast*4 & (allL('Llast) * cvars.length) & implyL('Llast) <(
-//                  andR('Rlast) <(prop, SaturateTactic(hideL('L)) & SaturateTactic(implyR('R)) & QE),
-//                  QE
-//                )
-//              ).reduceRight((p1, p2) => orL(-1) <(p1,p2)),
-//            ArithmeticSimplification.hideFactsAbout(TVar::eps::uis) &
-//              composeb(1) & generalize(gen)(1) <(
-//              ArithmeticSimplification.hideFactsAbout(kis) & unfoldProgramNormalize & OnAll(QE),
-//
-//              (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
-//                composeb(1) & testb(1) & implyL('Llast) <(
-//                  implyR(1) & id,
-//                  implyR(1) & boxAnd(1) & andR(1) <(
-//                    V(1) & id,
-//                    implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
-//                      implyR(1) & hideL('Llast) &
-//                      ArithmeticSimplification.hideFactsAbout(kis.filter(_ != ki)) &
-//                      implyRi & implyR(1) &
-//                      implyRi & implyR(1) & odetac(lyap, bd, ki)
-//                  )
-//                )
-//              ).reduceRight(
-//                (p1, p2) =>
-//                  choiceb(1) & andL('Llast) & andR(1) <(
-//                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
-//                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
-//                      implyRiLast & hideL('Llast) & implyR('Rlast) & p2
-//                  )
-//              )
-//            )
-//          )
-//        )
-//      }
-//    }
 
     allR(pos) & implyR(pos) & // \forall eps (eps>0 ->
       allR(pos) & implyR(pos) & // \forall del (del>0 ->
@@ -1928,14 +1830,15 @@ object SwitchedSystems {
                       andL('Llast) & andR(pos) <(
                         id,
                         (allR(pos) * cvars.length) & implyR(pos) & // strip forall x (d^2 < del^2 -> )
-                        // create V_i < W assumptions
+                        // create V_i < W assumptions from V_i < W_i
                         (1 to lyaps.length).map( i =>
                           (allL(-(apos + 2 + i)) * cvars.length) &
-                            useAt(lessTransW)(-(apos + 2 + i)) &
-                            implyL(-(apos + 2 + i)) <(
+                            useAt (lessTransW) (- (apos + 2 + i) ) &
+                            implyL (- (apos + 2 + i) ) < (
                               prop,
                               skip
-                            )).reduceRight( _ & _) &
+                              )
+                        ).reduceRight( _ & _) &
                         // Don't need del, w_i anymore
                         ArithmeticSimplification.hideFactsAbout(del::wis) &
                         hideL(-(apos+1)) & hideL(-(apos+lyaps.length+1)) & hideL(-(apos+2*lyaps.length+1)) & //hide eps > 0, W > 0 and U > 0 assumptions which aren't needed anymore from here
