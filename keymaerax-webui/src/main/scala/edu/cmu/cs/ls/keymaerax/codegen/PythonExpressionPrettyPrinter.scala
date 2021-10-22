@@ -4,9 +4,14 @@
   */
 package edu.cmu.cs.ls.keymaerax.codegen
 
+import edu.cmu.cs.ls.keymaerax.codegen.PythonPrettyPrinter.{CURR, PARAMS, PRE}
 import edu.cmu.cs.ls.keymaerax.core.{Bool, NamedSymbol, Real, Sort, Tuple, Unit}
 
 object PythonPrettyPrinter extends (CExpression => (String, String)) {
+  val CURR = "curr"
+  val PARAMS = "params"
+  val PRE = "pre"
+
   var printer: CExpression => (String, String) = new PythonExpressionPrettyPrinter(printDebugOut = false)
   override def apply(e: CExpression): (String, String) = printer(e)
 
@@ -38,10 +43,10 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |def OrLeft${uniqueName(l)}(pre, curr, params):
+         |def OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS):
          |${print(l).linesWithSeparators.map("  " + _).mkString}
          |
-         |def OrRight${uniqueName(r)}(pre, curr, params):
+         |def OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS):
          |${print(r).linesWithSeparators.map("  " + _).mkString}
          |
          |""".stripMargin
@@ -49,10 +54,10 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |def AndLeft${uniqueName(l)}(pre, curr, params):
+         |def AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS):
          |${print(l).linesWithSeparators.map("  " + _).mkString}
          |
-         |def AndRight${uniqueName(r)}(pre, curr, params):
+         |def AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS):
          |${print(r).linesWithSeparators.map("  " + _).mkString}
          |
          |""".stripMargin
@@ -73,7 +78,7 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CNumber(n) if n>=0 => numberLiteral(n)
     case CNumber(n) if n<0 => "(" + numberLiteral(n) + ")"
     case CVariable(n) => n
-    case CUnaryFunction(n, arg) => n + "(" + print(arg) + ")"
+    case CUnaryFunction(n, arg) => n + s"($PARAMS," + print(arg) + ")" //@see [[PythonGenerator.printFuncDefs]]
     case CPair(l, r) => print(l) + "," + print(r)
     case CNeg(c) => "-(" + print(c) + ")"
     case CPlus(l, r) => "(" + print(l) + ")+(" + print(r) + ")"
@@ -103,27 +108,27 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CError(id: Int, retVal: CExpression, _: String) => s"result = Verdict($id, ${print(retVal)})\nreturn result"
     case COrProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""leftDist = OrLeft${uniqueName(l)}(pre,curr,params)
-           |rightDist = OrRight${uniqueName(r)}(pre,curr,params)
+        s"""leftDist = OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
+           |rightDist = OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
            |verdictId = leftDist.id if leftDist.val >= rightDist.val else rightDist.id
            |result = Verdict(verdictId, max(leftDist.val, rightDist.val));
            |return result""".stripMargin
       else
-        s"""leftDist = OrLeft${uniqueName(l)}(pre,curr,params)
-           |rightDist = OrRight${uniqueName(r)}(pre,curr,params)
+        s"""leftDist = OrLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
+           |rightDist = OrRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
            |verdictId = leftDist.id if leftDist.val >= rightDist.val else rightDist.id
            |result = Verdict(verdictId, max(leftDist.val, rightDist.val))
            |return result""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
-           |rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+        s"""leftDist = AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS);
+           |rightDist = AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS);
            |verdictId = leftDist.id if leftDist.val <= rightDist.val else rightDist.id
            |result = Verdict(verdictId, min(leftDist.val, rightDist.val))
            |return result""".stripMargin
       else
-        s"""leftDist = AndLeft${uniqueName(l)}(pre,curr,params)
-           |rightDist = AndRight${uniqueName(r)}(pre,curr,params)
+        s"""leftDist = AndLeft${uniqueName(l)}($PRE, $CURR, $PARAMS)
+           |rightDist = AndRight${uniqueName(r)}($PRE, $CURR, $PARAMS)
            |verdictId = leftDist.id if leftDist.val <= rightDist.val else rightDist.id
            |result = Verdict(verdictId, min(leftDist.val, rightDist.val))
            |return result""".stripMargin
