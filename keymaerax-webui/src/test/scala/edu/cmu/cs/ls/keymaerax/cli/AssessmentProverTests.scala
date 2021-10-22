@@ -643,6 +643,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Solve ODEs", 5) :: ("Vector field examples", 4) :: ("Semantics of terms", 2) ::
       ("Semantics of formulas", 5) :: ("Formulas as evolution domain constraints", 4) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 12
+    nosols shouldBe 10
     run(problems)
   }
 
@@ -651,6 +655,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Programs vs. formulas vs. terms", 10) :: ("Misplaced parentheses", 6) ::
         ("Reachable sets", 5) :: ("Program shapes", 8) :: ("Modeling pitfalls", 4) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 10
+    nosols shouldBe 16
     run(problems)
   }
 
@@ -659,6 +667,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Valid formulas", 10) :: ("Truth identification", 7) :: ("Multiple pre/postconditions", 4) ::
         ("Direct velocity control", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 12
+    nosols shouldBe 18
     run(problems)
   }
 
@@ -667,6 +679,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Axiom application", 10) :: ("Axiom identification: Top", 6) :: ("Axiom identification: All", 6) ::
         ("Distributivity and non-distributivity", 10) :: ("If-then-else", 2) :: ("Nondeterministic assignments", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 19
+    nosols shouldBe 21
     run(problems)
   }
 
@@ -675,6 +691,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Rule application", 10) :: ("Rule identification", 8) :: ("Arithmetic simplification", 6) ::
         ("Proof rule criticism", 10) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 14
+    nosols shouldBe 26
     run(problems)
   }
 
@@ -683,6 +703,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Loop invariants", 5) :: ("Other loop rules", 8) ::
         ("Incremental design in direct velocity control", 5) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 2
+    nosols shouldBe 5
     run(problems)
   }
 
@@ -691,6 +715,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Revisiting ping-pong events", 4) :: ("Faithful event models", 6) ::
         ("Identify event invariants", 3) :: ("Incremental design in velocity event control", 5) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 0
+    nosols shouldBe 0
     run(problems)
   }
 
@@ -699,6 +727,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Comparing event-triggered versus time-triggered controllers", 4) :: ("Reaction times", 2) ::
         ("From event responses to reaction times", 5) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 0
+    nosols shouldBe 0
     run(problems)
   }
 
@@ -707,6 +739,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Differential invariance", 10) :: ("Identify differential invariants", 5) ::
         ("Differential invariant rules", 10) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 14
+    nosols shouldBe 9
     run(problems)
   }
 
@@ -715,6 +751,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Explain differential cuts", 8) :: ("Identify differential invariants to cut", 10) ::
         ("Differential invariance rules", 14) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 7
+    nosols shouldBe 1
     run(problems)
   }
 
@@ -723,6 +763,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Using differential ghosts", 3) :: ("Differential ghost construction", 8) ::
         ("Parachute", 3) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 9
+    nosols shouldBe 8
     run(problems)
   }
 
@@ -731,6 +775,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Provability with differential invariants", 3) :: ("Differential invariant reduction", 5) ::
         ("Differential invariant search", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 5
+    nosols shouldBe 15
     run(problems)
   }
 
@@ -739,6 +787,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Player count", 5) :: ("Strategically reachable minima", 6) :: ("Game shapes", 2) ::
         ("Truth identification", 10) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 11
+    nosols shouldBe 28
     run(problems)
   }
 
@@ -747,6 +799,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Semantic comparisons", 4) :: ("Game region shapes", 6) :: ("Game loop semantics", 5) ::
         ("Direct velocity control", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 5
+    nosols shouldBe 6
     run(problems)
   }
 
@@ -755,6 +811,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Truth identification", 5) :: ("Axiom or not?", 10) :: ("Demon's controls", 5) ::
         ("Robot simple chase game", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 10
+    nosols shouldBe 6
     run(problems)
   }
 
@@ -763,6 +823,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Comparing systems versus games", 4) :: ("Loop variant identification", 3) :: ("Other loop variant rules", 8) ::
         ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 13
+    nosols shouldBe 6
     run(problems)
   }
 
@@ -770,6 +834,10 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/18/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Uniform substitution application", 13) :: ("Finding uniform substitutions", 8) :: ("Axiom for axiom schema", 4) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 1
+    nosols shouldBe 0
     run(problems)
   }
 
@@ -779,6 +847,10 @@ class AssessmentProverTests extends TacticTestBase {
       ("Check the monitor quality", 8) :: ("Controller monitor for runaround robot", 2) ::
         ("Monitors for velocity controlled car", 4) :: ("Controller monitor for event-triggered ping-pong ball", 2) ::
         ("Controller monitor for time-triggered ping-pong", 2) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 10
+    nosols shouldBe 14
     run(problems)
   }
 
@@ -787,6 +859,10 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = extractProblems(QUIZ_PATH + "/20/main.tex")
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Substitution of linear equations", 7) :: ("Square root arithmetic", 3) :: ("Eliminate quantifiers", 6) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 6
+    nosols shouldBe 12
     run(problems)
   }
 
@@ -795,6 +871,10 @@ class AssessmentProverTests extends TacticTestBase {
     problems.map(p => (p.name.getOrElse(""), p.questions.size)) shouldBe
       ("Virtual substitution with real tradeoffs", 1) :: ("Infinity and infinitesimal virtual substitution", 2) ::
         ("Eliminate quantifiers", 10) :: Nil
+    val (sols, testsols, nosols) = solCounts(problems)
+    sols shouldBe problems.map(_.questions.size).sum
+    testsols shouldBe 3
+    nosols shouldBe 5
     run(problems)
   }
 
@@ -1373,6 +1453,14 @@ class AssessmentProverTests extends TacticTestBase {
       val correct = BoolArtifact(Some(q.isTrue))
       val incorrect = BoolArtifact(Some(!q.isTrue))
       (AskTFGrader(correct), correct :: Nil, incorrect :: Nil)
+  }
+
+  private def solCounts(problems: List[Problem]): (Int, Int, Int) = {
+    problems.flatMap(_.questions.map({
+      case AskQuestion(_, _, _, testsols, nosols) => (1, testsols.size-1, nosols.size)
+      case MultiAskQuestion(AskQuestion(_, _, _, testsols, nosols), _) => (1, testsols.size-1, nosols.size)
+      case _ => (1, 0, 0)
+    })).reduce[(Int, Int, Int)]({ case ((la, lb, lc), (ra, rb, rc)) => (la+ra, lb+rb, lc+rc) })
   }
 
 }

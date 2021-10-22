@@ -458,6 +458,9 @@ object AssessmentProver {
                 run(() => prove(("==> " + Modes.EXPLANATION_CHECK + "&min<->" + Modes.EXPLANATION_CHECK + "&min").asSequent,
                   byUS(Ax.equivReflexive)))
               else Right("Please elaborate your explanation")
+            case (_, TextArtifact(None)) =>
+              run(() => prove(("==> " + Modes.EXPLANATION_CHECK + "&full<->" + Modes.EXPLANATION_CHECK + "&full").asSequent,
+                byUS(Ax.equivReflexive)))
             case (TextArtifact(None), _) => Right("Missing answer")
             case _ => Right("Answer must be an explanation, but got " + have.longHintString)
           }
@@ -485,9 +488,8 @@ object AssessmentProver {
             val preconditionOk = isFormulaImplied(expectPrecondition.asInstanceOf[Formula], havePrecondition.asInstanceOf[Formula])
             val postconditionOk = isFormulaImplied(havePostcondition.asInstanceOf[Formula], expectPostcondition.asInstanceOf[Formula])
             Right(makeResponse(preconditionOk, postconditionOk))
-          }
-          catch {
-            case _ => Right(Messages.INSPECT)
+          } catch {
+            case _: Throwable => Right(Messages.INSPECT)
           }
         case Modes.BELLE_PROOF =>
           @tailrec
@@ -582,7 +584,7 @@ object AssessmentProver {
         case (_, AnyOfArtifact(artifacts)) =>
           val anyOfResults = artifacts.map(checkArtifactKind(have, _))
           if (!anyOfResults.exists(_.isEmpty)) return anyOfResults.head
-        case (TextArtifact(h), _) if h.getOrElse("").trim.isEmpty => return Some(Right(Messages.BLANK))
+        case (TextArtifact(h), TextArtifact(Some(_))) if h.getOrElse("").trim.isEmpty => return Some(Right(Messages.BLANK))
         case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Some(Right(Messages.BLANK))
         case (ListExpressionArtifact(Nil), _) => return Some(Right(Messages.BLANK))
         case (SequentArtifact(Nil), _) => return Some(Right(Messages.BLANK))
