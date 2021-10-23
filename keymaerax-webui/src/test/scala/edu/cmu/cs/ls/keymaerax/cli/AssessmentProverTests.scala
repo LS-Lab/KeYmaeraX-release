@@ -599,6 +599,31 @@ class AssessmentProverTests extends TacticTestBase {
         |Expected: <BeginningOfExpression>""".stripMargin
   }
 
+  it should "parse typical examples" in {
+    SubstitutionParser.parseSubstitutionPairs("a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2") should
+      contain theSameElementsAs List(
+      SubstitutionPair(ProgramConst("a"), ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")))),
+      SubstitutionPair(ProgramConst("b"), Assign(Variable("v"), Neg(Times(Variable("c"), Variable("v"))))),
+      SubstitutionPair(UnitPredicational("p", AnyArg), "2*g*x<=2*g*H-v^2".asFormula)
+    )
+    SubstitutionParser.parseSubstitutionPairs("(a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2)") shouldBe SubstitutionParser.parseSubstitutionPairs("a~>{x'=v}, b~>{v:=-c*v;}, p(||)~>2*g*x<=2*g*H-v^2")
+    SubstitutionParser.parseSubstitutionPairs("p~>v^2<=2*x, a~>{x'=v}") should
+      contain theSameElementsAs List(
+      SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "v^2<=2*x".asFormula),
+      SubstitutionPair(ProgramConst("a"), ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v"))))
+    )
+    SubstitutionParser.parseSubstitutionPairs("(c() ~> x+y, p(.) ~> [z:=.;{z:=z-.;}*].-1>=0)") should
+      contain theSameElementsAs List(
+      SubstitutionPair(FuncOf(Function("c", None, Unit, Real), Nothing), Plus(Variable("x"), Variable("y"))),
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()),
+        Box(Compose(
+          Assign(Variable("z"), DotTerm()),
+          Loop(Assign(Variable("z"), Minus(Variable("z"), DotTerm())))
+        ), GreaterEqual(Minus(DotTerm(), Number(1)), Number(0)))
+      )
+    )
+  }
+
   "Grading" should "not give points for \\anychoice when no answer was selected" in withZ3 { _ =>
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val anyChoiceProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AnyChoiceQuestion]))).toList
