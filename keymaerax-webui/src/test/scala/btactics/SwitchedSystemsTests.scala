@@ -375,7 +375,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(spec,
-      proveStabilityStateMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
+      proveStabilityStateMLF("0.0011587*x1^2+ 0.00062432*x2^2 ".asTerm::"0.00032638*x1^2 + 0.00062432*x2^2".asTerm::Nil)(1)
     )
 
     println(pr)
@@ -384,7 +384,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityStateMLF("2*x1^2+x2^2".asTerm::"1/2*x1^2+x2^2".asTerm::Nil)(1)
+      proveAttractivityStateMLF("0.0011587*x1^2+ 0.00062432*x2^2 ".asTerm::"0.00032638*x1^2 + 0.00062432*x2^2".asTerm::Nil)(1)
     )
 
     println(pr2)
@@ -399,7 +399,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec = stabilitySpec(ss)
 
     val pr = proveBy(spec,
-      proveStabilityStateMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
+      proveStabilityStateMLF("0.00038025*x1^2 + 0.00010669*x1*x2 + 0.00019159*x2^2".asTerm::"0.00067908*x1^2 + 0.00019159*x2^2".asTerm::Nil)(1)
     )
 
     println(pr)
@@ -408,7 +408,7 @@ class SwitchedSystemsTests extends TacticTestBase {
     val spec2 = attractivitySpec(ss)
 
     val pr2 = proveBy(spec2,
-      proveAttractivityStateMLF("x1^2+3*x2^2".asTerm::"10*x1^2+3*x2^2".asTerm::Nil)(1)
+      proveAttractivityStateMLF("0.00038025*x1^2 + 0.00010669*x1*x2 + 0.00019159*x2^2".asTerm::"0.00067908*x1^2 + 0.00019159*x2^2".asTerm::Nil)(1)
     )
 
     println(pr2)
