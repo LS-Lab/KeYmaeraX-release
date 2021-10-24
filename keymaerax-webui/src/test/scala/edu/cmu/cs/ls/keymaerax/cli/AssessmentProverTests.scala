@@ -597,6 +597,16 @@ class AssessmentProverTests extends TacticTestBase {
       """1:39 Unexpected token cannot be parsed
         |Found:    * at 1:39
         |Expected: <BeginningOfExpression>""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("x+y ~> 5+4") should have message
+      """1:1 Non-substitutable expression on left-hand side of ~>
+        |Found:    x+y  at 1:1
+        |Expected: substitutable expression (e.g., predicate, function, program constant)""".stripMargin
+
+    the [ParseException] thrownBy SubstitutionParser.parseSubstitutionPairs("c() ~> x^2, x+y ~> 5+4, p(||) ~> x=y") should have message
+      """1:13 Non-substitutable expression on left-hand side of ~>
+        |Found:    x+y  at 1:13
+        |Expected: substitutable expression (e.g., predicate, function, program constant)""".stripMargin
   }
 
   it should "parse typical examples" in {

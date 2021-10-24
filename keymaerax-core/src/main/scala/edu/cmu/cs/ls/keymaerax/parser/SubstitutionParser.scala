@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Expression, Formula, FormulaKind, Program, SubstitutionPair, Term, TermKind}
+import edu.cmu.cs.ls.keymaerax.core.{CoreException, DotTerm, Expression, Formula, FormulaKind, Program, SubstitutionClashException, SubstitutionPair, Term, TermKind}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 
@@ -37,8 +37,12 @@ object SubstitutionParser {
         if (s.startsWith("(")) throw ex.copy(loc = Region(ex.loc.begin.line, ex.loc.begin.column+1))
         else throw ex
     }
-    val result = matcher(what, repl)
-    result.copy(what = result.what, repl = result.repl)
+    try {
+      matcher(what, repl)
+    } catch {
+      case _: CoreException =>
+        throw ParseException("Non-substitutable expression on left-hand side of ~>", Region(1, 1, 1, exprs(0).length), exprs(0), "substitutable expression (e.g., predicate, function, program constant)")
+    }
   }
 
   /** Parses a list of substitution pairs `what~>repl, what2~>repl2, ..., whatn~>repln`, optionally enclosed in parentheses. */
