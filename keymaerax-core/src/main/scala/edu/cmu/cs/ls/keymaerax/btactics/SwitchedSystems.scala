@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
+import scala.annotation.tailrec
 import scala.collection.immutable.Nil
 
 /**
@@ -37,6 +38,9 @@ object SwitchedSystems {
     val vars : List[Variable]  // any variable appearing anywhere in the system
 
     val odes : List[ODESystem] // the underlying ODEs
+
+    /** Mode names. */
+    val modeNames: Set[String]
   }
 
   // Unfold a choice of the form hp1++hp2++hp3 into a list (the order of association is important)
@@ -62,8 +66,8 @@ object SwitchedSystems {
 
     require(odes.nonEmpty, "State-dependent switched system requires at least 1 ODE")
 
-    override def asProgram = asProgram(None)
-    override def asClockedProgram(t:Variable) = asProgram(Some(t))
+    override def asProgram: Program = asProgram(None)
+    override def asClockedProgram(t: Variable): Program = asProgram(Some(t))
 
     private def asProgram(topt: Option[Variable]) = {
       require(topt.isEmpty || !vars.contains(topt.get), "Time variable " + topt.get + " must be fresh")
@@ -84,6 +88,7 @@ object SwitchedSystems {
 
     override val cvars : List[Variable] = odes.map(ode => StaticSemantics.boundVars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten.distinct
     override val vars : List[Variable] = odes.map(ode => StaticSemantics.vars(ode).toSet.toList.filterNot(StaticSemantics.isDifferential(_))).flatten.distinct
+    override val modeNames: Set[String] = Set.empty
   }
 
   // Remove the time variable
@@ -157,6 +162,7 @@ object SwitchedSystems {
 
     require(!varsPre.contains(u), "Control variable " + u + " must be fresh")
     override val vars : List[Variable] = u::varsPre
+    override val modeNames: Set[String] = names.toSet
 
     // Some basic consistency checks
     require(modes.nonEmpty, "Controlled switching requires at least 1 mode")
@@ -286,7 +292,7 @@ object SwitchedSystems {
 
   case class Guarded(modes : List[(String,ODESystem,List[(String,Formula)])], u : Variable) extends SwitchedSystem {
 
-    val underlyingControlled = Controlled(None, modes.map( t => (t._1,t._2,t._3.map( s => (s._1,Test(s._2))))) , u)
+    private val underlyingControlled = Controlled(None, modes.map( t => (t._1,t._2,t._3.map( s => (s._1,Test(s._2))))) , u)
 
     override def asProgram : Program = underlyingControlled.asProgram
     override def asClockedProgram(t : Variable) : Program = underlyingControlled.asClockedProgram(t)
@@ -294,6 +300,7 @@ object SwitchedSystems {
     override val cvars : List[Variable] = underlyingControlled.cvars
     override val vars : List[Variable]  = underlyingControlled.vars
     override val odes : List[ODESystem] = underlyingControlled.odes
+    override val modeNames: Set[String] = underlyingControlled.modeNames
   }
 
   def guardedFromProgram(p : Program, topt:Option[Variable]) : Guarded = {
@@ -317,7 +324,7 @@ object SwitchedSystems {
   case class Timed(modes : List[(String, DifferentialProgram, Option[Term],List[(String, Option[Term])])], u : Variable, timer : Variable) extends SwitchedSystem {
 
     //todo: timer should be fresh in ODE RHS and terms
-    val underlyingControlled = Controlled(
+    private val underlyingControlled = Controlled(
       Some(Assign(timer,Number(0))),
       modes.map( t => (t._1,
         ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(timer),Number(1)), t._2),
@@ -331,9 +338,10 @@ object SwitchedSystems {
     override val cvars : List[Variable] = underlyingControlled.cvars.filterNot(p => p == timer)
     override val vars : List[Variable] = underlyingControlled.vars
     override val odes : List[ODESystem] = underlyingControlled.odes
+    override val modeNames: Set[String] = underlyingControlled.modeNames
 
-    val maxDwell = modes.map(_._3) //None represents infinity
-    val minDwell = modes.map(_._4)
+    val maxDwell: List[Option[Term]] = modes.map(_._3) //None represents infinity
+    val minDwell: List[List[(String, Option[Term])]] = modes.map(_._4)
   }
 
   def timedFromProgram(p : Program, topt:Option[Variable]) : Timed = {
@@ -429,6 +437,7 @@ object SwitchedSystems {
   }
 
   // CLF tactics
+  @tailrec
   private def stripTillBox(f : Formula) : Program = {
     f match {
       case Forall(_, r) => stripTillBox(r)

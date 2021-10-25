@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, SwitchedSystem}
+import edu.cmu.cs.ls.keymaerax.btactics.SwitchedSystems.{Controlled, Guarded, SwitchedSystem, Timed}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -1368,15 +1368,15 @@ class GetTemplatesResponse(templates: List[TemplatePOJO]) extends Response {
   )
 }
 
-class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, specKind: List[String]) extends Response {
-  private val prg = c.asProgram
+class GetControlledStabilityTemplateResponse(code: String, switched: SwitchedSystem, specKind: List[String]) extends Response {
+  private val prg = switched.asProgram
   private val printer = new KeYmaeraXPrettierPrinter(80)
   private val fmls = specKind.map({
-    case s@"stability" => s -> printer(SwitchedSystems.stabilitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
-    case s@"attractivity" => s -> printer(SwitchedSystems.attractivitySpec(c)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"stability" => s -> printer(SwitchedSystems.stabilitySpec(switched)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
+    case s@"attractivity" => s -> printer(SwitchedSystems.attractivitySpec(switched)).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "  " + l}).mkString
     case s@"custom" =>
       s -> s"""true /* todo */ ->
-              |  [ ${printer(c.asProgram).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
+              |  [ ${printer(prg).linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else "    " + l}).mkString}
               |  ]false /* todo */
               |""".stripMargin
   })
@@ -1411,7 +1411,10 @@ class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, sp
   )
 
   private def definitionsContent(prg: Program): String = {
-    (StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet).map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
+    val consts = StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet
+    val (m, c) = consts.partition(s => switched.modeNames.contains(s.prettyString))
+    m.toList.sortBy(_.prettyString).zipWithIndex.map({ case (v, i) => v.sort.toString + " " + v.prettyString + " = " + i + ";" }).mkString("\n  ") +
+      c.map(v => v.sort.toString + " " + v.prettyString + ";").mkString("\n  ")
   }
 
   private def programVariablesContent(prg: Program): String = {
