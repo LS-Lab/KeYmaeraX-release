@@ -2398,6 +2398,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val values = Parser.parseExpressionList(value).map(_.prettyString)
         if (values.isEmpty) value
         else "\"" + values.mkString("::") + "::nil\""
+      case BelleTermInput(value, Some(ListArg(_: TermArg))) =>
+        val values = Parser.parseExpressionList(value).map(_.prettyString)
+        if (values.isEmpty) value
+        else "\"" + values.mkString("::") + "::nil\""
       case BelleTermInput(value, Some(_:StringArg)) => "\""+value.replaceAllLiterally("\"", "\\\"")+"\""
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) =>
         "\"" + Parser.parseExpressionList(value).map(_.prettyString).mkString("::") + "::nil\""
