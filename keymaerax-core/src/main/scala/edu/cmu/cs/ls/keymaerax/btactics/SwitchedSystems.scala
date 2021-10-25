@@ -2,9 +2,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas.remember
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.anon
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
@@ -449,7 +450,13 @@ object SwitchedSystems {
     }
   }
 
-  def proveStabilityCLF (lyap: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="stabilityCLF",
+    codeName="stabilityCLF",
+    longDisplayName="Stability by Control Lyapunov Function",
+    premises = "Γ |- R>=w", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{x'=f(x) & Q}*]x<sup>2</sup><ℇ<sup>2</sup>, Δ")
+  def proveStabilityCLF(R: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
 
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
@@ -461,7 +468,7 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, None)
 
-    proveStabilityCLF(lyap, ss, seq.ante.length, pos)
+    proveStabilityCLF(R, ss, seq.ante.length, pos)
   })
 
   // Internal CLF tactic
@@ -560,7 +567,13 @@ object SwitchedSystems {
 
   }
 
-  def proveAttractivityCLF (lyap: Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="attractivityCLF",
+    codeName="attractivityCLF",
+    longDisplayName="Attractivity by Control Lyapunov Function",
+    premises = "Γ |- R<w", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveAttractivityCLF(R: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " must point to a top-level succedent position")
 
@@ -570,7 +583,7 @@ object SwitchedSystems {
     }
 
     val (t,prog) = progPre match {
-      case Compose(Assign(t,n), p) => (t,p)
+      case Compose(Assign(t, _), p) => (t,p)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " does not match attractivity specification")
     }
 
@@ -578,7 +591,7 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, Some(t))
 
-    proveAttractivityCLF(lyap, ss, seq.ante.length, pos)
+    proveAttractivityCLF(R, ss, seq.ante.length, pos)
   })
 
   private def implyRiLast : DependentTactic = anon { (sequent: Sequent) => {
@@ -797,7 +810,13 @@ object SwitchedSystems {
   )
 
   // MLF tactic for state-dependent and guarded state-dependents
-  def proveStabilityStateMLF (lyaps: List[Term]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="stabilityStateMLF",
+    codeName="stabilityStateMLF",
+    longDisplayName="State-based Stability by Multiple Control Lyapunov Functions",
+    premises = "Γ |- R>=w", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveStabilityStateMLF(R: List[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityStateMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -809,10 +828,8 @@ object SwitchedSystems {
     val ss = switchedFromProgram(prog, None)
 
     ss match {
-      case ss : StateDependent =>
-        proveStabilityStateMLF(lyaps, ss, seq.ante.length, pos)
-      case ss : Guarded =>
-        proveStabilityStateMLF(lyaps, ss, seq.ante.length, pos)
+      case ss: StateDependent => proveStabilityStateMLF(R, ss, seq.ante.length, pos)
+      case ss: Guarded => proveStabilityStateMLF(R, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveStabilityStateMLF: not implemented for switching mechanism: "+ss)
     }
   })
@@ -1027,7 +1044,13 @@ object SwitchedSystems {
     *                This is to support parametric lambda (where the sign is not necessarily known)
     * @return Tactic proving stability for the Timed switched system at a given position
     */
-  def proveStabilityTimeMLF (lyaps: List[Term], lambdas:List[Formula]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="stabilityTimeMLF",
+    codeName="stabilityTimeMLF",
+    longDisplayName="Time-based Stability by Multiple Control Lyapunov Functions",
+    premises = "Γ |- R>=w, L", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveStabilityTimeMLF(R: List[Term], L: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityTimeMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1039,8 +1062,7 @@ object SwitchedSystems {
     val ss = switchedFromProgram(prog, None)
 
     ss match {
-      case ss : Timed =>
-        proveStabilityTimeMLF(lyaps, lambdas, ss, seq.ante.length, pos)
+      case ss : Timed => proveStabilityTimeMLF(R, L, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveStabilityTimeMLF: not implemented for switching mechanism: "+ss)
     }
   })
@@ -1277,7 +1299,13 @@ object SwitchedSystems {
 
   }
 
-  def proveAttractivityStateMLF (lyaps: List[Term]): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="attractivityStateMLF",
+    codeName="attractivityStateMLF",
+    longDisplayName="State-based Attractivity by Multiple Control Lyapunov Functions",
+    premises = "Γ |- R<w", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveAttractivityStateMLF(R: List[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityStateMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1296,10 +1324,8 @@ object SwitchedSystems {
     val ss = switchedFromProgram(prog, Some(t))
 
     ss match {
-      case ss : StateDependent =>
-        proveAttractivityStateMLF(lyaps, ss, seq.ante.length, pos)
-      case ss : Guarded =>
-        proveAttractivityStateMLF(lyaps, ss, seq.ante.length, pos)
+      case ss : StateDependent => proveAttractivityStateMLF(R, ss, seq.ante.length, pos)
+      case ss : Guarded => proveAttractivityStateMLF(R, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityStateMLF: not implemented for switching mechanism: "+ss)
     }
   })
@@ -1608,7 +1634,13 @@ object SwitchedSystems {
 
   }
 
-  def proveAttractivityTimeMLF (lyaps: List[Term], lambdas: List[Formula], rate : Term): DependentPositionTactic = anon((pos: Position, seq: Sequent) => {
+  @Tactic(
+    names="attractivityTimeMLF",
+    codeName="attractivityTimeMLF",
+    longDisplayName="Time-based Attractivity by Multiple Control Lyapunov Functions",
+    premises = "Γ |- R<w, L, rate>0", //@todo need input R represented somewhere
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveAttractivityTimeMLF(R: List[Term], L: List[Formula], rate: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityTimeMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1618,18 +1650,16 @@ object SwitchedSystems {
     }
 
     val (t,prog) = progPre match {
-      case Compose(Assign(t,n), p) => (t,p)
+      case Compose(Assign(t, _), p) => (t,p)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityTimeMLF position " + pos + " does not match attractivity specification")
     }
 
     require(t == Variable("t_"), "TODO: remove this requirement")
 
-
     val ss = switchedFromProgram(prog, Some(t))
 
     ss match {
-      case ss : Timed =>
-        proveAttractivityTimeMLF(lyaps, lambdas, rate, ss, seq.ante.length, pos)
+      case ss : Timed => proveAttractivityTimeMLF(R, L, rate, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityTimeMLF: not implemented for switching mechanism: "+ss)
     }
   })
