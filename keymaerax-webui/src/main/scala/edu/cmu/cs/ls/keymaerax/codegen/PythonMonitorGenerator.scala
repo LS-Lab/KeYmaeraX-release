@@ -95,13 +95,13 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declara
   }
 
   /** The name of the monitor/control function argument representing the current state. */
-  private val MONITOR_CURR_STATE_NAME = "curr"
+  private val MONITOR_CURR_STATE_NAME = PythonPrettyPrinter.CURR
   /** The name of the monitor/control function argument representing the previous state. */
-  private val MONITOR_PRE_STATE_NAME = "pre"
+  private val MONITOR_PRE_STATE_NAME = PythonPrettyPrinter.PRE
   /** The name of the monitor/control function argument representing the next state. */
   private val MONITOR_POST_STATE_NAME = "post"
   /** The name of the monitor/control function argument representing monitor parameters. */
-  private val MONITOR_PARAMS_NAME = "params"
+  private val MONITOR_PARAMS_NAME = PythonPrettyPrinter.PARAMS
   /** The name of the control function argument representing inputs (resolves picking values for non-deterministically
     * assigned discrete variables in the model). */
   private val INPUT_NAME = "inp"

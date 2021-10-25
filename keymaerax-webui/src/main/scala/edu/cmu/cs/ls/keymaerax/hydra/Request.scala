@@ -1179,7 +1179,7 @@ class CreateControlledStabilityTemplateRequest(userId: String, code: String, swi
               val boundedTransitions = transitions.map({
                 case (d, Test(True)) => (d, None)
                 case (d, Test(GreaterEqual(l, r))) if l == time => (d, Some(r))
-                case (d, _) => throw new IllegalArgumentException("Only time guards of the shape " + time + ">=T allowed on transitions in timed switching template")
+                case (_, _) => throw new IllegalArgumentException("Only time guards of the shape " + time + ">=T allowed on transitions in timed switching template")
               })
               (n, ode, tBound, boundedTransitions)
             })
@@ -1193,7 +1193,7 @@ class CreateControlledStabilityTemplateRequest(userId: String, code: String, swi
             val modes = odes.map({ case (n, o: ODESystem, transitions) =>
               val guardedTransitions = transitions.map({
                 case (d, Test(p)) => (d, p)
-                case (d, _) => throw new IllegalArgumentException("Only tests allowed on transitions in guarded mode")
+                case (_, _) => throw new IllegalArgumentException("Only tests allowed on transitions in guarded mode")
               })
               (n, o, guardedTransitions)
             })
