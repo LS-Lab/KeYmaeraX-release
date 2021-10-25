@@ -9,14 +9,14 @@ BeginPackage["Lyapunov`"];
 
 (* This should be at a higher level than primitives, probably... *)
 GenCLF::usage="GenCLF[systems_List] tries to solve for a CLF of the given systems";
-GenMLF::usage="GenMLF[systems_List] tries to solve for an MLF of the given systems";
+GenMLF::usage="GenMLF[systems_List, transitions_List] tries to solve for an MLF of the given systems";
 
 
 Begin["`Private`"];
 
 
 DEFAULTPRECISION = 10;
-DEFAULTROUND=4;
+DEFAULTROUND=6;
 
 
 (* Return all monomials of a given polynomial wrt the variables *)
@@ -140,8 +140,8 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.001;
-minfeas=0.9;
+eps=0.00001;
+minfeas=0.1;
 
 for d = minDeg : maxDeg
 	deg = 2*d;
@@ -285,9 +285,9 @@ vars = "<>MmaToMatlab[allvars]<>";
 "<>fieldstr<>"\n"<>domstr<>"
 
 minDeg = 1;
-maxDeg = 1;
-eps=0.000001;
-minfeas=-1;
+maxDeg = 2;
+eps=0.00001;
+minfeas=0.1;
 
 for d = minDeg : maxDeg
 	deg = 2*d;
