@@ -9,13 +9,14 @@ BeginPackage["Lyapunov`"];
 
 (* This should be at a higher level than primitives, probably... *)
 GenCLF::usage="GenCLF[systems_List] tries to solve for a CLF of the given systems";
-GenMLF::usage="GenMLF[systems_List] tries to solve for an MLF of the given systems";
+GenMLF::usage="GenMLF[systems_List, transitions_List] tries to solve for an MLF of the given systems";
 
 
 Begin["`Private`"];
 
 
 DEFAULTPRECISION = 10;
+DEFAULTROUND=6;
 
 
 (* Return all monomials of a given polynomial wrt the variables *)
@@ -56,18 +57,26 @@ ConjunctiveIneqSetQ[S_]:=Module[{},
 
 (* Checks that set is a conjunction and extracts polynomials TODO: this should "relax" equalities p=0 by bloating them to -eps \[LessEqual] p \[LessEqual] eps rather than p\[GreaterEqual]0 && p\[LessEqual]0 which are ill-behaved *)
 ExtractPolys[set_]:=Module[{S=Primitives`DNFNormalizeGtGeq[set],lst},
-If[ConjunctiveIneqSetQ[S],
-  lst= S/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
-  If[TrueQ[Head[S]==And],
-    lst,
-    {lst}
-  ],
-	{}
-]]
+	If[ConjunctiveIneqSetQ[S],
+	  lst= S/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
+	  If[TrueQ[Head[S]==And],
+	    lst,
+	    {lst}
+	  ],
+		{}
+	]
+]
+
+RoundPolys[p_,vars_]:=Module[{cr},
+	cr = CoefficientRules[p,vars];
+	If[Length[cr] > 0,
+		MapAt[Function[x,Rationalize[Round[x,1/10^DEFAULTROUND]]],cr,{All,2}]~FromCoefficientRules~vars
+	,{}]
+]
 
 
 GenCLF[systems_List, opts:OptionsPattern[]]:=Catch[Module[
-{allvars,vfs,vfsstr,domains,normdom,dim,origsubs,i,fieldstr,domainsstr,domstr,locstr,constrstr,script,res,lines,B,sosprog},
+{allvars,vfs,vfsstr,domains,normdom,dim,origsubs,i,fieldstr,domainsstr,domstr,locstr,constrstr,script,res,lines,B,sosprog,link},
 
 Print["Attempting to generate a CLF with SOS Programming"];
 
@@ -131,8 +140,8 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.001;
-minfeas=0.9;
+eps=0.00001;
+minfeas=0.1;
 
 for d = minDeg : maxDeg
 	deg = 2*d;
@@ -169,6 +178,7 @@ Print[sosprog];
 res=MATLink`MEvaluate@script;
 lines=Map[StringReplace[StringDelete[First[#],"\n" | "\r" |" "|"="],{"e-"->"*10^-", "backtick"->"`"}]&,StringCases[StringSplit[res,"Bres"][[2;;-1]],"="~~___]];
 B=N[lines//ToExpression//Expand, DEFAULTPRECISION];
+B=Map[RoundPolys[#,allvars]&,B];
 If[B=={}, Print["No feasible solution found by SOS programming."];Return[{}]];
 Return[B];
 ]]
@@ -176,7 +186,8 @@ Return[B];
 
 GenMLF[systems_List, transitions_List,opts:OptionsPattern[]]:=Catch[Module[
 {sosprog,link,allvars,vfs,vfsstr,domains,normdom,dim,
-origsubs,i,fieldstr,domainsstr,domstr,locstr,constrstr,script,res,lines,B,mlfstr,solstr,tind},
+origsubs,i,fieldstr,domainsstr,domstr,locstr,constrstr,script,res,lines,B,mlfstr,solstr,tind,
+tempstr,guardstr,},
 
 Print["Attempting to generate MLFs with SOS Programming"];
 
@@ -274,9 +285,9 @@ vars = "<>MmaToMatlab[allvars]<>";
 "<>fieldstr<>"\n"<>domstr<>"
 
 minDeg = 1;
-maxDeg = 1;
-eps=0.000001;
-minfeas=-1;
+maxDeg = 2;
+eps=0.00001;
+minfeas=0.1;
 
 for d = minDeg : maxDeg
 	deg = 2*d;
@@ -307,10 +318,9 @@ sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 Print[sosprog];
 script=MATLink`MScript["MLF",sosprog, "Overwrite" -> True];
 res=MATLink`MEvaluate@script;
-Print[res];
 lines=Map[StringReplace[StringDelete[First[#],"\n" | "\r" |" "|"="],{"e-"->"*10^-", "backtick"->"`"}]&,StringCases[StringSplit[res,"Bres"][[2;;-1]],___~~"="~~___]];
-Print[lines];
 B=N[lines//ToExpression//Expand, DEFAULTPRECISION];
+B=Map[RoundPolys[#,allvars]&,B];
 If[B=={}, Print["No feasible solution found by SOS programming."];Return[{}]];
 Return[B]
 ]]

@@ -1900,6 +1900,27 @@ object SwitchedSystems {
 
   }
 
+  /**
+    * Extract an underlying indexed transition map suitable for MLF generation
+    * @param ss the switched system under consideration
+    */
+  def guardedTransitionMap(ss : SwitchedSystem) : List[(Int,Int, Formula)]= {
+    ss match {
+      case StateDependent(odes) =>
+        odes.zipWithIndex.map(ode1 =>
+          odes.zipWithIndex.filter(p => p._2 > ode1._2).map(ode2 => //Transitions are symmetric, so we can drop half of them
+            (ode1._2+1, ode2._2+1, And(ode1._1.constraint,ode2._1.constraint):Formula)
+        )).flatten
+      case Guarded(modes, u) =>
+        modes.zipWithIndex.map( modei =>
+          modei._1._3.map( trans =>
+            (modei._2+1,modes.indexWhere( p => p._1 == trans._1)+1, trans._2)
+          )).flatten
+      case _ => throw new IllegalArgumentException("Guarded transition map not available for switched system: " + ss)
+    }
+  }
+
+
   /** Check that ODE's domain includes points that are about to locally exit or enter it under the dynamics of the ODE
     *
     * @note for closed domains, this is automatically true
