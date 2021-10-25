@@ -590,6 +590,9 @@ object SwitchedSystems {
 
     require( StaticSemantics.freeVars(lyap).toSet.subsetOf(ss.cvars.toSet), "Common Lyapunov function should only mention "+ss.cvars+" free")
 
+    // whether to use the full QE question for radial unboundedness
+    val fullInv = false
+
     // Fixed names for now
     val eps = Variable("eps")
     val del = Variable("del")
@@ -616,7 +619,7 @@ object SwitchedSystems {
     // u is internal sublevel set in ||x|| < eps
     val epsu = Exists(u::Nil,
       And(Greater(u,Number(0)),
-      cvars.foldRight(Imply(And( /* True */ Less(lyap, w), GreaterEqual(normsq, epssq)), GreaterEqual(lyap, u)): Formula)((v, f) => Forall(v :: Nil, f)))
+      cvars.foldRight(Imply(And( if(fullInv) Less(lyap, w) else True , GreaterEqual(normsq, epssq)), GreaterEqual(lyap, u)): Formula)((v, f) => Forall(v :: Nil, f)))
     )
 
     val kis =
@@ -629,7 +632,7 @@ object SwitchedSystems {
       (Exists(ki :: Nil,
         And(Less(ki,Number(0)),
         cvars.foldRight(Imply(
-          And(odei._1.constraint, And(GreaterEqual(lyap, u), /* True */ Less(lyap, w))), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
+          And(odei._1.constraint, And(GreaterEqual(lyap, u), if(fullInv) Less(lyap, w) else True )), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
     })
 
     val derivatives = derPair.map(_._1)
@@ -1306,6 +1309,9 @@ object SwitchedSystems {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
     require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
 
+    // whether to use the full QE question for radial unboundedness
+    val fullInv = false
+
     val eps = Variable("eps")
     val del = Variable("del")
     val tVar = Variable("t_")
@@ -1351,7 +1357,7 @@ object SwitchedSystems {
       val ui = lyapi._2
       Exists(ui :: Nil,
         And(Greater(ui, Number(0)),
-          cvars.foldRight(Imply(And( /* True */ Less(lyapi._1, w), GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
+          cvars.foldRight(Imply(And( if(fullInv)  Less(lyapi._1, w) else True, GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
         )
     })
 
@@ -1378,7 +1384,7 @@ object SwitchedSystems {
       (Exists(ki :: Nil,
         And(Less(ki,Number(0)),
           cvars.foldRight(Imply(
-            And(ode.constraint, And(GreaterEqual(lyap, u),  True  /*Less(lyap, w)*/)), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
+            And(ode.constraint, And(GreaterEqual(lyap, u), if(fullInv)  Less(lyap, w) else True)), bod): Formula)((v, f) => Forall(v :: Nil, f)))), bod)
     })
 
     val derivatives = derPair.map(_._1)
@@ -1633,6 +1639,8 @@ object SwitchedSystems {
     require( lyaps.map(StaticSemantics.freeVars(_).toSet).flatten.toSet.subsetOf(ss.cvars.toSet), "Multiple Lyapunov functions should only mention "+ss.cvars+" free")
     require( lyaps.length == ss.odes.length, "Require one Lyapunov function for each mode but got : "+ lyaps.length +" out of " +ss.odes.length +" required")
 
+    // whether to use the full QE question for radial unboundedness
+    val fullInv = false
 
     val eps = Variable("eps")
     val del = Variable("del")
@@ -1692,7 +1700,7 @@ object SwitchedSystems {
       val ui = lyapi._2
       Exists(ui :: Nil,
         And(Greater(ui, Number(0)),
-          cvars.foldRight(Imply(And( /* True */ Less(lyapi._1, w), GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
+          cvars.foldRight(Imply(And( if(fullInv)  Less(lyapi._1, w) else True, GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
       )
     })
 
