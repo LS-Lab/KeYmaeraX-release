@@ -1382,6 +1382,10 @@ class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, sp
   })
   private val entries = fmls.map({ case (s, fml) =>
     s"""ArchiveEntry "New Entry: $s"
+       |/*
+       | * Generated from hybrid automaton
+       | * ${code.linesWithSeparators.zipWithIndex.map({ case (l, i) => if (i == 0) l else " * " + l }).mkString}
+       | */
        |
        |Definitions
        |  ${definitionsContent(prg)}
@@ -1401,12 +1405,7 @@ class GetControlledStabilityTemplateResponse(code: String, c: SwitchedSystem, sp
   def getJson: JsValue = JsObject(
     "title" -> JsString(""),
     "description" -> JsString(""),
-    "text" -> JsString(
-      s"""/*
-         | * Generated from hybrid automaton
-         | * ${code.linesWithSeparators.zipWithIndex.map({ case (l,i) => if (i == 0) l else " * " + l }).mkString}
-         | */
-         |$entries""".stripMargin),
+    "text" -> JsString(entries),
     "selectRange" -> JsObject(),
     "imageUrl" -> JsNull //@todo automaton SVG?
   )
