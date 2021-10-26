@@ -122,6 +122,8 @@ class UnprovableAnnotatedInvariant(message: => String, cause: Throwable = null) 
 
 class UnexpandedDefinitionsFailure(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
 
+class MissingLyapunovFunction(message: => String, cause: Throwable = null) extends BelleUserCorrectableException(message, cause)
+
 /** Signaling that a tactic was not applicable or did not work at the current goal.
   * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */
 abstract class BelleTacticFailure(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)

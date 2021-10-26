@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Logging
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -16,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simul
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, ExprFactory, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec.{appendTo, applyFunc, compoundExpression, fileNameJoin, homeDirectory, needs, path, quiet, setDirectory}
+import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 
 import scala.collection.immutable
 import scala.math.BigDecimal
@@ -708,6 +709,44 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
       case r: And => FormulaTools.conjuncts(r).map({case Equal(_,b) => b}).iterator
       case r: Or => FormulaTools.disjuncts(r).flatMap(disj=>FormulaTools.conjuncts(disj).map{case Equal(_,b) => b}).iterator
       case r => throw ToolExecutionException("Mathematica did not solve the PDE for : " + diffSys + "\n" + r)
+    }
+  }
+}
+
+class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, PegasusK2MConverter, PegasusM2KConverter) with LyapunovSolverTool {
+
+  private val LYAPUNOV_NAMESPACE = "Lyapunov`"
+
+  private def lsymbol(s: String) = symbol(LYAPUNOV_NAMESPACE + s)
+
+  private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
+  private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
+  private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
+  private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
+
+  override def genCLF(sys: List[ODESystem]): Option[Term] = {
+    val input = applyFunc(lsymbol("GenCLF"))(
+      list(sys.map(ode => {
+        val primedVars = DifferentialHelper.getPrimedVariables(ode)
+        val atomicODEs = DifferentialHelper.atomicOdes(ode)
+
+        val vars = list(primedVars.map(k2m):_*)
+        val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
+        list(vectorField, vars, k2m(ode.constraint))
+      }):_*)
+    )
+
+    val command = quiet(compoundExpression(
+      setPathsCmd,
+      needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list((homeDirectory.op :: pathSegments) :+ string("Primitives") :+ string("Lyapunov.m"):_*))),
+      input
+    ))
+
+    val (_, result) = run(command)
+    result match {
+      case Nothing => None
+      case Pair(t: Term, Nothing) => Some(t)
+      case t => throw ConversionException("Unexpected Lyapunov Function result: " + t.prettyString) //@todo
     }
   }
 }

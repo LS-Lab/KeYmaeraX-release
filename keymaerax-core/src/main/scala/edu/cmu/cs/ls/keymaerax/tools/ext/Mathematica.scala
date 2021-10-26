@@ -37,7 +37,7 @@ import scala.collection.immutable.IndexedSeq
 class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends Tool
     with QETacticTool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
-    with PDESolverTool with SOSsolveTool with ToolOperationManagement {
+    with PDESolverTool with SOSsolveTool with LyapunovSolverTool with ToolOperationManagement {
 
   /** Indicates whether the tool is initialized. */
   private var initialized = false
@@ -52,6 +52,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
   private val mSimplify = new MathematicaSimplificationTool(link)
+  private val mLyapunov = new MathematicaLyapunovSolverTool(link)
 
   private val qeInitialTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_INITIAL))
   private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
@@ -70,6 +71,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     mSolve.memoryLimit = memoryLimit
     mAlgebra.memoryLimit = memoryLimit
     mSimplify.memoryLimit = memoryLimit
+    mLyapunov.memoryLimit = memoryLimit
 
     // initialze tool thread pools
     mQE.init()
@@ -82,6 +84,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     mAlgebra.init()
     mSimplify.init()
     mSOSsolve.init()
+    mLyapunov.init()
 
     initialized = link match {
       case l: JLinkMathematicaLink =>
@@ -113,6 +116,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     mSolve.shutdown()
     mAlgebra.shutdown()
     mSimplify.shutdown()
+    mLyapunov.shutdown()
     //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
     link match {
       case l: JLinkMathematicaLink => l.shutdown()
@@ -320,6 +324,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
   override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): Result = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
+  override def genCLF(sys: List[ODESystem]): Option[Term] = mLyapunov.genCLF(sys)
 
 
   /** Restarts the MathKernel with the current configuration */

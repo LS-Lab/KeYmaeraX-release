@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.core.{DifferentialProgram, Expression, Formula, NamedSymbol, Number, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{DifferentialProgram, Expression, Formula, NamedSymbol, Number, ODESystem, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.tools.ToolInterface
 
 /**
@@ -62,6 +62,12 @@ trait PDESolverTool extends ToolInterface {
     *         if found.
     */
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term]
+}
+
+/** Tool for computing Lyapunov functions. */
+trait LyapunovSolverTool extends ToolInterface {
+  /** Computes a Common Lyapunov Function for the switched system `sys`. */
+  def genCLF(sys: List[ODESystem]): Option[Term]
 }
 
 /**

@@ -457,7 +457,7 @@ object SwitchedSystems {
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<=0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
     displayLevel="browse")
-  def proveStabilityCLF(V: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+  def proveStabilityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
 
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityCLF: position " + pos + " must point to a top-level succedent position")
@@ -469,8 +469,18 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, None)
 
-    proveStabilityCLF(V, ss, seq.ante.length, pos)
+    V match {
+      case Some(v) => proveStabilityCLF(v, ss, seq.ante.length, pos)
+      case None => ToolProvider.lyapunovTool() match {
+        case Some(lt) => lt.genCLF(ss.odes) match {
+          case Some(v) => proveStabilityCLF(v, ss, seq.ante.length, pos)
+          case None => throw new MissingLyapunovFunction("V not provided, tried to generate automatically but failed; please provide V manually")
+        }
+        case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide V manually")
+      }
+    }
   })
+  def proveStabilityCLF(V: Term): DependentPositionTactic = proveStabilityCLF(Some(V))
 
   // Internal CLF tactic
   private def proveStabilityCLF (lyap: Term, ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
@@ -575,7 +585,7 @@ object SwitchedSystems {
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (V)'<0 ;; Γ |- V(0)=0 ∧ (x!=0 -> V>0) ∧ RUB(V)",
     conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
     displayLevel="browse")
-  def proveAttractivityCLF(V: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+  def proveAttractivityCLF(V: Option[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityCLF: position " + pos + " must point to a top-level succedent position")
 
@@ -593,8 +603,18 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, Some(t))
 
-    proveAttractivityCLF(V, ss, seq.ante.length, pos)
+    V match {
+      case Some(v) => proveAttractivityCLF(v, ss, seq.ante.length, pos)
+      case None => ToolProvider.lyapunovTool() match {
+        case Some(lt) => lt.genCLF(ss.odes) match {
+          case Some(v) => proveAttractivityCLF(v, ss, seq.ante.length, pos)
+          case None => throw new MissingLyapunovFunction("V not provided, tried to generate automatically but failed; please provide V manually")
+        }
+        case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide V manually")
+      }
+    }
   })
+  def proveAttractivityCLF(V: Term): DependentPositionTactic = proveAttractivityCLF(Some(V))
 
   private def implyRiLast : DependentTactic = anon { (sequent: Sequent) => {
     implyRi()(AntePos(sequent.ante.length-1), SuccPos(sequent.succ.length-1))

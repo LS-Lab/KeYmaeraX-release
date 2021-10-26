@@ -204,6 +204,16 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+  it should "prove system stable automatically" in withMathematicaMatlab { _ =>
+    val ode1 = ODESystem("x1'=-2*x1-x2-x3, x2'=-x2, x3'=-x1-x2-2*x3".asDifferentialProgram, True)
+    val ode2 = ODESystem("x1'=2*x2, x2'=-2*x1-x2, x3'=x1-2*x2-x3".asDifferentialProgram, True)
+
+    val ss = StateDependent(List(ode1,ode2))
+    val spec = stabilitySpec(ss)
+
+    proveBy(spec, proveStabilityCLF(None)(1)) shouldBe 'proved
+  }
+
   it should "prove ODE stable" in withMathematica { _ =>
     val ode = "{x' = -x, y'= -y, z'= -z * a}".asProgram.asInstanceOf[ODESystem]
 
