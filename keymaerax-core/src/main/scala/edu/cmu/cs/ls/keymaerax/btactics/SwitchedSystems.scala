@@ -986,7 +986,7 @@ object SwitchedSystems {
               ArithmeticSimplification.hideFactsAbout(w :: Nil) & QE, prop),
             prop,
             composeb(1) & generalize(gen)(1) <(
-              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(QE),
+              SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize & OnAll(Idioms.?(QE & done)),
               (lyaps zip wis).map(lyapwi =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
@@ -1948,7 +1948,7 @@ object SwitchedSystems {
     ss match {
       case StateDependent(odes) =>
         odes.zipWithIndex.map(ode1 =>
-          odes.zipWithIndex.filter(p => p._2 > ode1._2).map(ode2 => //Transitions are symmetric, so we can drop half of them
+          odes.zipWithIndex.filter(p => p._2 != ode1._2).map(ode2 =>
             (ode1._2+1, ode2._2+1, And(ode1._1.constraint,ode2._1.constraint):Formula)
         )).flatten
       case Guarded(modes, u) =>
