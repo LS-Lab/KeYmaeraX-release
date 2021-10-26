@@ -961,7 +961,7 @@ object SwitchedSystems {
               (lyaps zip wis).map(lyapwi =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & id,
+                  implyR(1) & ExpandAll(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     SaturateTactic(andL('L)) &
@@ -1050,10 +1050,10 @@ object SwitchedSystems {
   @Tactic(
     names="stabilityTimeMLF",
     codeName="stabilityTimeMLF",
-    longDisplayName="Time-based Stability by Multiple Control Lyapunov Functions",
-    premises = "Γ |- R>=w, L", //@todo need input R represented somewhere
-    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
-  def proveStabilityTimeMLF(R: List[Term], L: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+    longDisplayName="Time-based Stability by Multiple Lyapunov Functions",
+    premises = "Γ |- Vs' <= Ls*Vs",
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveStabilityTimeMLF(Vs: List[Term], Ls: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityTimeMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1065,7 +1065,7 @@ object SwitchedSystems {
     val ss = switchedFromProgram(prog, None)
 
     ss match {
-      case ss : Timed => proveStabilityTimeMLF(R, L, ss, seq.ante.length, pos)
+      case ss : Timed => proveStabilityTimeMLF(Vs, Ls, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveStabilityTimeMLF: not implemented for switching mechanism: "+ss)
     }
   })
@@ -1163,7 +1163,6 @@ object SwitchedSystems {
               implyRiLast & cohideR('Rlast) & QE,
               hideL('Llast) * 2 & implyRiLast * 3 & cohideR('Rlast) & implyR(1) * 3 &
                 DW(1) & abstractionb(1) & SaturateTactic(allR(1)) & SaturateTactic(allL(-1)) &
-                DebuggingTactics.print("??")  &
                 QE &
                 DebuggingTactics.debug("done",debugTactic)
             )
@@ -1219,11 +1218,11 @@ object SwitchedSystems {
             prop,
             composeb(1) & generalize(gen)(1) < (
               SaturateTactic(andL('L)) & ArithmeticSimplification.hideFactsAbout(wis) & unfoldProgramNormalize &
-                OnAll(DebuggingTactics.print("switching") & Idioms.?(QE & done)),
+                OnAll(Idioms.?(QE & done)),
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & id,
+                  implyR(1) & ExpandAll(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     implyRiLast & implyRiLast &
@@ -1387,7 +1386,7 @@ object SwitchedSystems {
       val ui = lyapi._2
       Exists(ui :: Nil,
         And(Greater(ui, Number(0)),
-          cvars.foldRight(Imply(And( if(fullInv)  Less(lyapi._1, w) else True, GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
+          cvars.foldRight(Imply(And( if(fullInv) Less(lyapi._1, w) else True, GreaterEqual(normsq, epssq)), GreaterEqual(lyapi._1, ui)): Formula)((v, f) => Forall(v :: Nil, f)))
         )
     })
 
@@ -1552,7 +1551,7 @@ object SwitchedSystems {
 
               (kis,lyaps,derbods).zipped.map( (ki,lyap,bd) =>
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & id,
+                  implyR(1) & ExpandAll(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
                     implyRiLast & andL('Llast) & SaturateTactic(andL('L)) &
@@ -1641,10 +1640,10 @@ object SwitchedSystems {
   @Tactic(
     names="attractivityTimeMLF",
     codeName="attractivityTimeMLF",
-    longDisplayName="Time-based Attractivity by Multiple Control Lyapunov Functions",
-    premises = "Γ |- R<w, L, rate>0", //@todo need input R represented somewhere
-    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
-  def proveAttractivityTimeMLF(R: List[Term], L: List[Formula], rate: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+    longDisplayName="Time-based Attractivity by Multiple Lyapunov Functions",
+    premises = "Γ |- Vs' <= Ls*Vs, rate > 0",
+    conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ")
+  def proveAttractivityTimeMLF(Vs: List[Term], Ls: List[Formula], rate: Term): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityTimeMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1663,7 +1662,7 @@ object SwitchedSystems {
     val ss = switchedFromProgram(prog, Some(t))
 
     ss match {
-      case ss : Timed => proveAttractivityTimeMLF(R, L, rate, ss, seq.ante.length, pos)
+      case ss : Timed => proveAttractivityTimeMLF(Vs, Ls, rate, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityTimeMLF: not implemented for switching mechanism: "+ss)
     }
   })
@@ -1831,10 +1830,9 @@ object SwitchedSystems {
               (invLess,wis).zipped.map( (less,wi) =>
                 useAt(conjAssoc)(1,1::Nil) &
                   composeb(1) & testb(1) & implyL('Llast) <(
-                  implyR(1) & id,
+                  implyR(1) & ExpandAll(Nil) & id,
                   implyR(1) & boxAnd(1) & andR(1) <(
                     V(1) & id,
-                    DebuggingTactics.print("rerrange") &
                       hideL('Llast) & andL('Llast) & andL('Llast) &
                       odetac(less)
                   )
