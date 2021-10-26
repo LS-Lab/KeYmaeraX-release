@@ -839,7 +839,7 @@ object SwitchedSystems {
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<=0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0)",
     conclusion = "Γ |- ∀ℇ>0 ∃∆>0 ∀x<sup>2</sup><∆<sup>2</sup> [{ a; x'=f_p(x) & Q }*]x<sup>2</sup><ℇ<sup>2</sup>, Δ",
     displayLevel="browse")
-  def proveStabilityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+  def proveStabilityStateMLF(Vp: Option[List[Term]]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveStabilityStateMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -850,12 +850,21 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, None)
 
+    val vp = Vp match {
+      case Some(vp) => vp
+      case None => ToolProvider.lyapunovTool() match {
+        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
+      }
+    }
+
     ss match {
-      case ss: StateDependent => proveStabilityStateMLF(Vp, ss, seq.ante.length, pos)
-      case ss: Guarded => proveStabilityStateMLF(Vp, ss, seq.ante.length, pos)
+      case ss: StateDependent => proveStabilityStateMLF(vp, ss, seq.ante.length, pos)
+      case ss: Guarded => proveStabilityStateMLF(vp, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveStabilityStateMLF: not implemented for switching mechanism: "+ss)
     }
   })
+  def proveStabilityStateMLF(Vp: List[Term]): DependentPositionTactic = proveStabilityStateMLF(Some(Vp))
 
   // Internal MLF tactic for state-dependent
   private def proveStabilityStateMLF (lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {
@@ -1328,7 +1337,7 @@ object SwitchedSystems {
     premises = "Γ |- [{ x'=f_p(x) & Q }*] (Vp)'<0 ;; Vp < W |- [a;] Vp < W ;; Γ |- Vp(0)=0 ∧ (x!=0 -> Vp>0) ∧ RUB(Vp)",
     conclusion = "Γ |- ∀ℇ>0 ∀∆>0 ∃T≥0 ∀x<sup>2</sup><∆<sup>2</sup> [t:=0; {t'=1,x'=f_p(x) & Q}*](t≥T → x<sup>2</sup><ℇ<sup>2</sup>), Δ",
     displayLevel="browse")
-  def proveAttractivityStateMLF(Vp: List[Term]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
+  def proveAttractivityStateMLF(Vp: Option[List[Term]]): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, seq: Sequent) => {
     if (!(pos.isTopLevel && pos.isSucc))
       throw new IllFormedTacticApplicationException("proveAttractivityStateMLF: position " + pos + " must point to a top-level succedent position")
 
@@ -1346,12 +1355,21 @@ object SwitchedSystems {
 
     val ss = switchedFromProgram(prog, Some(t))
 
+    val vp = Vp match {
+      case Some(vp) => vp
+      case None => ToolProvider.lyapunovTool() match {
+        case Some(t) => t.genMLF(ss.odes, guardedTransitionMap(ss))
+        case None => throw new MissingLyapunovFunction("No Lyapunov solver available; please configure Mathematica+Matlab, or provide Vp manually")
+      }
+    }
+
     ss match {
-      case ss : StateDependent => proveAttractivityStateMLF(Vp, ss, seq.ante.length, pos)
-      case ss : Guarded => proveAttractivityStateMLF(Vp, ss, seq.ante.length, pos)
+      case ss : StateDependent => proveAttractivityStateMLF(vp, ss, seq.ante.length, pos)
+      case ss : Guarded => proveAttractivityStateMLF(vp, ss, seq.ante.length, pos)
       case _ => throw new IllFormedTacticApplicationException("proveAttractivityStateMLF: not implemented for switching mechanism: "+ss)
     }
   })
+  def proveAttractivityStateMLF(Vp: List[Term]): DependentPositionTactic = proveAttractivityStateMLF(Some(Vp))
 
   // Internal MLF tactic
   private def proveAttractivityStateMLF (lyaps: List[Term], ss: SwitchedSystem, apos: Integer, pos : Position) : BelleExpr = {

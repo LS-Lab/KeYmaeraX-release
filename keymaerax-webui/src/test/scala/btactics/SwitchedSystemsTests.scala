@@ -490,6 +490,21 @@ class SwitchedSystemsTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+
+  it should "FEATURE_REQUEST: prove guarded system stable automatically" taggedAs TodoTest in withMathematica { _ =>
+    // Johansson and Rantzer motivating example
+    val ode1 = ODESystem("x1' = -5*x1-4*x2, x2' =   -x1-2*x2".asDifferentialProgram, "x1<=0".asFormula)
+    val ode2 = ODESystem("x1' = -2*x1-4*x2, x2' = 20*x1-2*x2".asDifferentialProgram, "x1>=0".asFormula)
+    val ss = Guarded(List(
+      ("mode1", ode1, List(("mode2", "x1=0".asFormula))),
+      ("mode2", ode2, List(("mode1", "x1=0".asFormula)))
+    ), Variable("mode"))
+
+    //@todo generates something but seems false
+    proveBy(stabilitySpec(ss), proveStabilityStateMLF(None)(1)) shouldBe 'proved
+    proveBy(attractivitySpec(ss), proveAttractivityStateMLF(None)(1)) shouldBe 'proved
+  }
+
   it should "prove timed system stable 1" in withMathematica { _ =>
 
     val ode1 = "x1'=-x1/8-x2,x2'=2*x1-x2/8".asDifferentialProgram

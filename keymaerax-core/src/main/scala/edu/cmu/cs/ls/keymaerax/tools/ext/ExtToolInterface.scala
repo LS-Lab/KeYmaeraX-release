@@ -68,6 +68,9 @@ trait PDESolverTool extends ToolInterface {
 trait LyapunovSolverTool extends ToolInterface {
   /** Computes a Common Lyapunov Function for the switched system `sys`. */
   def genCLF(sys: List[ODESystem]): Option[Term]
+
+  /** Computes a Lyapunov function for the switched system `sys`. */
+  def genMLF(sys: List[ODESystem], trans: List[(Int, Int, Formula)]): List[Term]
 }
 
 /**

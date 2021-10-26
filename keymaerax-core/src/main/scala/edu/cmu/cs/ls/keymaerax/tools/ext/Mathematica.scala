@@ -325,6 +325,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
   override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): Result = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
   override def genCLF(sys: List[ODESystem]): Option[Term] = mLyapunov.genCLF(sys)
+  override def genMLF(sys: List[ODESystem], trans: List[(Int, Int, Formula)]): List[Term] = mLyapunov.genMLF(sys, trans)
 
 
   /** Restarts the MathKernel with the current configuration */

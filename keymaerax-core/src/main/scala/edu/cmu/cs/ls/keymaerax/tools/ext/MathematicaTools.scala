@@ -724,12 +724,12 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
   private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
+  /** @inheritdoc */
   override def genCLF(sys: List[ODESystem]): Option[Term] = {
     val input = applyFunc(lsymbol("GenCLF"))(
       list(sys.map(ode => {
         val primedVars = DifferentialHelper.getPrimedVariables(ode)
         val atomicODEs = DifferentialHelper.atomicOdes(ode)
-
         val vars = list(primedVars.map(k2m):_*)
         val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
         list(vectorField, vars, k2m(ode.constraint))
@@ -744,10 +744,42 @@ class MathematicaLyapunovSolverTool(override val link: MathematicaLink) extends 
 
     val (_, result) = run(command)
     result match {
-      case Nothing => None
-      case Pair(t: Term, Nothing) => Some(t)
+      case t: Term => flattenPairs(t).headOption
       case t => throw ConversionException("Unexpected Lyapunov Function result: " + t.prettyString) //@todo
     }
+  }
+
+  /** @inheritdoc */
+  override def genMLF(sys: List[ODESystem], trans: List[(Int, Int, Formula)]): List[Term] = {
+    val input = applyFunc(lsymbol("GenMLF"))(
+      list(sys.map(ode => {
+        val primedVars = DifferentialHelper.getPrimedVariables(ode)
+        val atomicODEs = DifferentialHelper.atomicOdes(ode)
+        val vars = list(primedVars.map(k2m):_*)
+        val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
+        list(vectorField, vars, k2m(ode.constraint))
+      }):_*),
+      list(trans.map({ case (s, t, g) => list(int(s), int(t), k2m(g)) }):_*)
+    )
+
+    val command = quiet(compoundExpression(
+      setPathsCmd,
+      needs(string(LYAPUNOV_NAMESPACE), fileNameJoin(list((homeDirectory.op :: pathSegments) :+ string("Primitives") :+ string("Lyapunov.m"):_*))),
+      input
+    ))
+
+    val (_, result) = run(command)
+    result match {
+      case t: Term => flattenPairs(t)
+      case t => throw ConversionException("Unexpected Lyapunov Function result: " + t.prettyString) //@todo
+    }
+  }
+
+  /** Flattens the pairs in term `t` into a list of terms. */
+  private def flattenPairs(t: Term): List[Term] = t match {
+    case Nothing => List.empty
+    case Pair(l, r) => flattenPairs(l) ++ flattenPairs(r)
+    case t => List(t)
   }
 }
 
