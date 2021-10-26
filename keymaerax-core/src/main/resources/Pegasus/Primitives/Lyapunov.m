@@ -140,7 +140,7 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.0001;
+eps=0.00001;
 minfeas=0.1;
 
 for d = minDeg : maxDeg
@@ -286,7 +286,7 @@ vars = "<>MmaToMatlab[allvars]<>";
 
 minDeg = 1;
 maxDeg = 2;
-eps=0.0001;
+eps=0.00001;
 minfeas=0.1;
 
 for d = minDeg : maxDeg
