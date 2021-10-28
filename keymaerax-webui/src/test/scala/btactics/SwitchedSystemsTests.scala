@@ -504,10 +504,10 @@ class SwitchedSystemsTests extends TacticTestBase {
 
     val pr = proveBy(Imply("mode1()!=mode2()".asFormula,stabilitySpec(ss)),
       implyR(1) &
-        proveStabilityStateMLF(None)(1)) shouldBe 'proved
+        proveStabilityStateMLF(Nil)(1)) shouldBe 'proved
     proveBy(Imply("mode1()!=mode2()".asFormula,attractivitySpec(ss)),
       implyR(1) &
-        proveAttractivityStateMLF(None)(1)) shouldBe 'proved
+        proveAttractivityStateMLF(Nil)(1)) shouldBe 'proved
   }
 
   it should "prove timed system stable 1" in withMathematica { _ =>
