@@ -57,14 +57,7 @@ object KeYmaeraXArchiveParser extends KeYmaeraXArchiveParserBase {
 
   override protected def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = try {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
-
-    // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
-    val usMatchers = defs.decls.filter(_._2.arguments.isDefined).map({ case (Name(name, idx), _) => name + idx.map("_" + _).getOrElse("") })
-    val expandAll = usMatchers.nonEmpty &&
-      !BelleParser.tacticExpandsDefsExplicitly(t.tacticText) &&
-      usMatchers.mkString("US\\(\"(", "|", ")").r.findFirstIn(t.tacticText).isEmpty
-    val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
-
+    val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll=false)
     (t.name, t.tacticText, tactic)
   } catch {
     case ex: ParseException if ex.msg.startsWith("Lexer") =>
