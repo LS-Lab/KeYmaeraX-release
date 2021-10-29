@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.{anon, inputanon}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -112,14 +112,18 @@ object SwitchedSystems {
     FuncOf(Function(name, None, Unit, Real), Nothing)
   }
 
-  def stateDependentFromProgram(p : Program, topt:Option[Variable]) : StateDependent = {
+  def stateDependentFromProgram(p: Program, topt :Option[Variable]): StateDependent = {
+    def stateDependentFromLoop(l: Loop): StateDependent = {
+      val odes = choiceList(l.child)
+      if (odes.forall(_.isInstanceOf[ODESystem])) StateDependent(stripTimer(odes.map(_.asInstanceOf[ODESystem]),topt))
+      else throw new IllegalArgumentException("Unexpected program found in " + odes)
+    }
     p match {
-      case Loop(choices) =>
-        val odes = choiceList(choices)
-        if(odes.forall(_.isInstanceOf[ODESystem]))
-          StateDependent(stripTimer(odes.map(_.asInstanceOf[ODESystem]),topt))
-        else
-          throw new IllegalArgumentException("Unexpected program found in " + odes)
+      case Compose(Assign(BaseVariable(v, None, Real), Number(n)), l: Loop) if v == "t_" && n == 0 =>
+        //@note attractivity spec. adds a time reset at the beginning
+        stateDependentFromLoop(l)
+      case l: Loop =>
+        stateDependentFromLoop(l)
       case _ =>
         throw new IllegalArgumentException("Unable to parse program as state-dependent switched system " + p)
     }
