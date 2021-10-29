@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.cli
 import java.io.{BufferedOutputStream, BufferedWriter, File, FileOutputStream, FileReader, FileWriter, IOException, OutputStream, PrintStream, PrintWriter}
 import java.util.Properties
 import java.util.concurrent.TimeoutException
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleUnfinished, BelleUserCorrectableException, BranchTactic, NamedBelleExpr, OnAll, SaturateTactic, SeqTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
@@ -21,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, ParseException, ParsedArchiveEntry, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException, ParsedArchiveEntry, Parser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -316,7 +315,7 @@ object AssessmentProver {
               def runQE(question: String, answers: List[String]) = {
                 run(() => {
                   val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
-                  KeYmaeraXProofChecker(5)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
+                  KeYmaeraXProofChecker(5, Declaration(Map.empty))(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
                 })
               }
               have match {
@@ -664,7 +663,7 @@ object AssessmentProver {
       case ChoiceArtifact(Nil) => Right(Messages.BLANK)
       case ChoiceArtifact(h) =>
         //@note correct if answering with any of the correctly marked solutions
-        if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000)(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))), None)
+        if (h.toSet.subsetOf(expected.selected.toSet)) run(() => KeYmaeraXProofChecker(1000, Declaration(Map.empty))(closeT)(Sequent(IndexedSeq.empty, IndexedSeq(True))), None)
         else Right("")
     }
   }
@@ -688,7 +687,7 @@ object AssessmentProver {
       case BoolArtifact(Some(h)) =>
         val ef = if (expected.value.get) True else False
         val hf = if (h) True else False
-        run(() => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))), None)
+        run(() => KeYmaeraXProofChecker(1000, Declaration(Map.empty))(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equiv(hf, ef)))), None)
     }
   }
 
@@ -706,7 +705,7 @@ object AssessmentProver {
 
   /** Proves equivalence of `a` and `b` by QE. */
   def qe(a: Formula, b: Formula, op: (Formula, Formula) => Formula): ProvableSig = {
-    KeYmaeraXProofChecker(60)(QE)(Sequent(IndexedSeq.empty, IndexedSeq(op(a, b))))
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(QE)(Sequent(IndexedSeq.empty, IndexedSeq(op(a, b))))
   }
 
   /** Compares terms `a` and `b` for having the same real values. */
@@ -750,7 +749,7 @@ object AssessmentProver {
         "Expected uninterpreted function arguments to be equal, but not all are.")
       val encodeda = encodeFunctions(expa, funca.map({ case (fn, (v, _)) => fn -> v }))
       val encodedb = encodeFunctions(expb, funcb.map({ case (fn, (v, _)) => fn -> v }))
-      KeYmaeraXProofChecker(60)(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
+      KeYmaeraXProofChecker(60, Declaration(Map.empty))(PolynomialArithV2.equate(1))(Sequent(IndexedSeq.empty, IndexedSeq(Equal(encodeda, encodedb))))
   }
 
   private def nameOf(t: Term): String = StaticSemantics.freeVars(t).toSet[Variable].map(_.prettyString.replaceAllLiterally("_", "$u$")).mkString("")
@@ -884,9 +883,9 @@ object AssessmentProver {
 
   /** Compares expressions for syntactic equality. */
   def syntacticEquality(a: Expression, b: Expression): ProvableSig = (a, b) match {
-    case (af: Formula, bf: Formula) => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equiv(af, bf))))
-    case (at: Term, bt: Term) => KeYmaeraXProofChecker(1000)(useAt(Ax.equalReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equal(at, bt))))
-    case (ap: Program, bp: Program) => KeYmaeraXProofChecker(1000)(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(ap, True), Box(bp, True)))))
+    case (af: Formula, bf: Formula) => KeYmaeraXProofChecker(1000, Declaration(Map.empty))(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equiv(af, bf))))
+    case (at: Term, bt: Term) => KeYmaeraXProofChecker(1000, Declaration(Map.empty))(useAt(Ax.equalReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equal(at, bt))))
+    case (ap: Program, bp: Program) => KeYmaeraXProofChecker(1000, Declaration(Map.empty))(useAt(Ax.equivReflexive)(1))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(ap, True), Box(bp, True)))))
   }
   /** Compares sequents for syntactic equality. */
   def syntacticEquality(a: List[Sequent], b: List[Sequent]): ProvableSig = {
@@ -923,8 +922,8 @@ object AssessmentProver {
       assert(zipped.map({ case (_, a, b) => polynomialEquality(a, b) }).forall(_.isProved), "Unexpected differential assignment right-hand side")
     }
 
-    val ap: ProvableSig = KeYmaeraXProofChecker(1000)(chase(1))(Sequent(IndexedSeq(), IndexedSeq(a)))
-    val bp: ProvableSig = KeYmaeraXProofChecker(1000)(chase(1))(Sequent(IndexedSeq(), IndexedSeq(b)))
+    val ap: ProvableSig = KeYmaeraXProofChecker(1000, Declaration(Map.empty))(chase(1))(Sequent(IndexedSeq(), IndexedSeq(a)))
+    val bp: ProvableSig = KeYmaeraXProofChecker(1000, Declaration(Map.empty))(chase(1))(Sequent(IndexedSeq(), IndexedSeq(b)))
     polynomialEquality(ap.subgoals.head, bp.subgoals.head, normalize)
   }
 
@@ -942,7 +941,7 @@ object AssessmentProver {
   def dICheck(ode: ODESystem, inv: Formula): ProvableSig = {
     require(!StaticSemantics.freeVars(SimplifierV3.formulaSimp(inv, HashSet.empty,
       SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).isEmpty, "Invariant " + inv.prettyString + " does not mention free variables")
-    KeYmaeraXProofChecker(60)(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(dI(auto='cex)(1))(Sequent(IndexedSeq(inv), IndexedSeq(Box(ode, inv))))
   }
 
   /** Checks that formula `h` is equivalent differential invariant to formula `e`, i.e. (e<->h) & (e' -> h')  */
@@ -951,7 +950,7 @@ object AssessmentProver {
       StaticSemantics.freeVars(s).toSet.filter(_.isInstanceOf[DifferentialSymbol]).
         map(abbrvAll(_, None)).reduceRightOption[BelleExpr](_&_).getOrElse(skip) & SaturateTactic(hideL('L))
     }
-    KeYmaeraXProofChecker(60)(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(chase(1, PosInExpr(1::0::Nil)) & chase(1, PosInExpr(1::1::Nil)) & abbreviatePrimes &
       SimplifierV3.fullSimplify & prop & OnAll(QE & done))(
       Sequent(IndexedSeq(), IndexedSeq(And(Equiv(e, h), Imply(DifferentialFormula(e), DifferentialFormula(h)))))
     )
@@ -990,7 +989,7 @@ object AssessmentProver {
   }
 
   def formulaImplication(a: Formula, b:Formula): ProvableSig = {
-    KeYmaeraXProofChecker(60)(autoClose)(Sequent(IndexedSeq(), IndexedSeq(Imply(a, b))))
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(autoClose)(Sequent(IndexedSeq(), IndexedSeq(Imply(a, b))))
   }
   
   /** Checks program equivalence by `[a;]P <-> [b;]P.` */
@@ -1023,7 +1022,7 @@ object AssessmentProver {
       }
     }
     val (as, bs) = (elaborateToSystem(a), elaborateToSystem(b))
-    KeYmaeraXProofChecker(60)(chase(1, 0::Nil) & chase(1, 1::Nil) &
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(chase(1, 0::Nil) & chase(1, 1::Nil) &
       SaturateTactic(OnAll(prop & OnAll(searchCMon(PosInExpr(1::Nil)) | unloop))) & DebuggingTactics.done("Program is not as expected"))(Sequent(IndexedSeq(), IndexedSeq(Equiv(Box(as, p), Box(bs, p)))))
   }
 
@@ -1039,13 +1038,13 @@ object AssessmentProver {
         map({ case (Equiv(l, _), pr) => useAt(pr, if (l == fml) PosInExpr(0::Nil) else PosInExpr(1::Nil))(Position(SuccPos(i)) ++ PosInExpr(1::Nil)) }) }).
         reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }
-    KeYmaeraXProofChecker(60)(chase(1) & prop & OnAll(rephrasePost & prop) & DebuggingTactics.done(""))(
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(chase(1) & prop & OnAll(rephrasePost & prop) & DebuggingTactics.done(""))(
       Sequent(IndexedSeq(), IndexedSeq(Equiv(elaborateToSystems(expected), elaborateToSystems(have)))))
   }
 
   /** Generic assessment prover uses tactic `t` to prove sequent `s`, aborting after `timeout` time. */
   def prove(s: Sequent, t: BelleExpr): ProvableSig = {
-    KeYmaeraXProofChecker(60)(t)(s)
+    KeYmaeraXProofChecker(60, Declaration(Map.empty))(t)(s)
   }
 
   /** Exports answers from `chapter` to individual files in directory `out`, on for each question (named 1a.txt ... Xy.txt) */
