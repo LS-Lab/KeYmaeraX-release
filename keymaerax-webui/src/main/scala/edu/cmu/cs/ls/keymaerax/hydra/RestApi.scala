@@ -716,7 +716,10 @@ object RestApi extends Logging {
             val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
             val paramInfo = expectedInputs.find(_.name == paramName)
             paramInfo.isEmpty ||
-              (paramInfo match { case Some(_: OptionArg) => false case _ => obj.getFields("value").isEmpty})
+              (paramInfo match {
+                case Some(_: OptionArg) => false
+                case Some(_: ListArg) => false
+                case _ => obj.getFields("value").isEmpty})
           })
           if (illFormedParams.isEmpty) {
             val inputs = paramArray.map({ obj =>
@@ -725,6 +728,10 @@ object RestApi extends Logging {
                 case Some(OptionArg(paramInfo)) => obj.getFields("value").headOption match {
                   case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
                   case _ => None
+                }
+                case Some(ListArg(paramInfo)) => obj.getFields("value").headOption match {
+                  case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
+                  case _ => Some(BelleTermInput("nil", Some(paramInfo)))
                 }
                 case paramInfo =>
                   val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
