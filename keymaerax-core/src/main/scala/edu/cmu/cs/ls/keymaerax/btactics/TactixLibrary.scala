@@ -1032,10 +1032,10 @@ object TactixLibrary extends HilbertCalculus
     val goal = USubst(recordedSubsts)(sanitize(seq.toFormula))
     // bridge additional differences not in the definitions (e.g., constant in lemma but variable in theorem)
     val subst = try {
-      Some(RestrictedBiDiUnificationMatch(goal, conclusion))
+      Some(RestrictedBiDiUnificationMatch(conclusion, goal))
     } catch {
       case _: UnificationException => try {
-        Some(RestrictedBiDiUnificationMatch(conclusion, goal))
+        Some(RestrictedBiDiUnificationMatch(goal, conclusion))
       } catch {
         case _: UnificationException => None
       }
