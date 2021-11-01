@@ -102,6 +102,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
   }
 
+  @Tactic(longDisplayName = "ModelPlex Auto-Instantiation")
+  def mxAutoInstantiate(assumptions: List[Formula]): InputTactic = inputanon {
+    mxAutoInstantiate(assumptions, List.empty, Some(ModelPlex.mxSimplify))
+  }
+
   def mxAutoInstantiate(assumptions: List[Formula], unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic]): InputTactic = inputanon {
     TryCatch(SaturateTactic(optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions, unobservable, simplifier)(1)),
       classOf[Throwable], (_: Throwable) => TactixLibrary.skip)

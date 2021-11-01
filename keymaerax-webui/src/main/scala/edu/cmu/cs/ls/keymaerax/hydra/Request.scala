@@ -1460,7 +1460,9 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
     val mx = ModelPlex.mxSynthesize(monitorKind) &
-      ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify)) &
+      //@todo unobservable symbols tactic argument not yet serializable
+      //ModelPlex.mxAutoInstantiate(assumptions, unobservable.keySet.toList, Some(ModelPlex.mxSimplify)) &
+      ModelPlex.mxAutoInstantiate(assumptions) &
       ModelPlex.mxFormatShape(monitorShape)
 
     val monitorCond = try {
