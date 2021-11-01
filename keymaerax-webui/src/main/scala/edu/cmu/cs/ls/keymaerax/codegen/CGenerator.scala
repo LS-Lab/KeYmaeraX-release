@@ -94,7 +94,7 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
             case Some(i) =>
               (printFuncDefs(i, defs, parameters, printed ++ printing.map({ case (n, s) => Declaration.asNamedSymbol(n, s) }).toSet),
                 primitiveExprGenerator(parameters)(argsSubst(i))._2)
-            case _ => "0; /* todo */"
+            case _ => ("", "0; /* todo */")
           }
           s"""$interpretationDefs
              |${ctype(codomain)} ${name.prettyString}(const parameters* const $FUNC_PARAMS_NAME, $cargs) {
