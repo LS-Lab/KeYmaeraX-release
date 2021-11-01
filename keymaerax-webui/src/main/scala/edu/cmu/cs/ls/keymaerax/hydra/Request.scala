@@ -1415,7 +1415,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
               val ctrlInputs = CodeGenerator.getInputs(monitorCond)
-              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(monitorCond, stateVars, ctrlInputs, "Monitor")
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist)))(monitorCond, stateVars, ctrlInputs, "Monitor")
               val inputs = CodeGenerator.getInputs(prg)
               val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
               val declarations = ctrlMonitorCode._1.trim
@@ -1493,7 +1493,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
+            val monitor = (new CGenerator(new CMonitorGenerator('resist)))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}

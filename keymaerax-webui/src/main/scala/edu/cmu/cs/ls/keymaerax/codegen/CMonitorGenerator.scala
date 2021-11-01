@@ -8,13 +8,13 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.{ModelPlex, SimplifierV3}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
 /**
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
   */
-class CMonitorGenerator extends CodeGenerator {
+class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars)
@@ -26,7 +26,7 @@ class CMonitorGenerator extends CodeGenerator {
     require(names.size == symbols.size, "Expect unique name_index identifiers for code generation")
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
 
-    val parameters = getParameters(expr, stateVars)
+    val parameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
 
     val monitorDistFuncHead =
       s"""/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
@@ -116,6 +116,12 @@ class CMonitorGenerator extends CodeGenerator {
         case BaseVariable(name, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
       })
 
+  private def onlyEqualities(fml: Formula): Boolean = fml match {
+    case _: Equal => true
+    case And(l, r) => onlyEqualities(l) && onlyEqualities(r)
+    case _ => false
+  }
+
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
     case t: Variable if  parameters.contains(t) => "params->"
@@ -143,12 +149,6 @@ class CMonitorGenerator extends CodeGenerator {
       case t: Term => super.apply(t, stateVars, inputVars, modelName)
     }
 
-    def onlyEqualities(fml: Formula): Boolean = fml match {
-      case _: Equal => true
-      case And(l, r) => onlyEqualities(l) && onlyEqualities(r)
-      case _ => false
-    }
-
     //@todo preprocess `f` to collect distance measure `dist` by proof instead of here:
     // transform <?s=t><?x<=y><?a<=b>true into <?s=t><?x<=y><?a<=b>min(x-y,a-b)>=0
     private def compileProgramFormula(f: Formula, dist: Term): CProgram = f match {
@@ -166,36 +166,61 @@ class CMonitorGenerator extends CodeGenerator {
       case And(l, r) => CAndProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
       case True => CReturn(compileTerm(dist))
       case Diamond(Test(p), q) =>
-        val (pMetric: Term, pSatDist) = ModelPlex.toMetric(p) match {
-          //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting pMetric has same property.
-          // Encode And as 1/(1/x+1/y) (instead of min) has the advantage that changes in each conjunct
-          // are reflected in the combined safety distance
-          case c: ComparisonFormula =>
-            assert(c.right == Number(0))
-            // we want safety margin>=0 when formula is true
-            val margin: Term = c match {
-              //@note incorrect translation of greater/less prevented with outside if(x>y) margin else error
-              case _: GreaterEqual | _: Greater => c.left
-              case _: LessEqual | _: Less => Neg(c.left)
-              case _: Equal => Neg(FuncOf(Function("abs", None, Real, Real), c.left))
-              case _: NotEqual => FuncOf(Function("abs", None, Real, Real), c.left)
-            }
-            val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
-            val (errorMargin, combinedMargin) = dist match {
-              case Number(n) if n == 0 => (simpMargin, simpMargin)
-              case Divide(Number(n), Plus(l: Divide, r)) if n == 1 =>
-                //@note parallel composition of successive tests (n-ary conjunction)
-                (simpMargin, Divide(Number(1), Plus(l, Plus(r, Divide(Number(1), simpMargin)))))
-              case _ =>
-                //@todo other non-obvious divisions by zero
-                (simpMargin, Divide(Number(1), Plus(Divide(Number(1), dist), Divide(Number(1), simpMargin))))
-            }
-            (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
+        val (pMetric: Term, pSatDist) = conjunctionsAs match {
+          case 'min => printAndMin(p, dist)
+          case 'resist => printAndParallelResistors(p, dist)
         }
         //@note offset error distance from -1 since weak inequalities may otherwise result in safe distance 0
         val errorDist = CPlus(CNumber(-1), compileTerm(pMetric))
         CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorId(p), errorDist, p.prettyString))
     }
+  }
+
+  /** Combines conjunction of distance `dist` and metric of `p` with min. */
+  private def printAndMin(p: Formula, dist: Term) = ModelPlex.toMetric(p) match {
+    //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
+    case c: ComparisonFormula =>
+      assert(c.right == Number(0))
+      // we want safety margin>=0 when formula is true
+      val margin: Term = c match {
+        //@note incorrect translation of greater/less prevented with outside if(x>y) margin else error
+        case _: GreaterEqual | _: Greater => c.left
+        case _: LessEqual | _: Less => Neg(c.left)
+        case _: Equal => Neg(FuncOf(InterpretedSymbols.absF, c.left))
+        case _: NotEqual => FuncOf(InterpretedSymbols.absF, c.left)
+      }
+      val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
+      val errorMargin = simpMargin
+      val combinedMargin = FuncOf(InterpretedSymbols.minF, Pair(dist, simpMargin))
+      (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
+  }
+
+  /** Combines conjunction of distance `dist` and metric of `p` in analogy to total resistance of parallel resistors 1/(1/dist + 1/metric(p))) */
+  private def printAndParallelResistors(p: Formula, dist: Term) = ModelPlex.toMetric(p) match {
+    //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
+    // Encode And as 1/(1/x+1/y) (instead of min) has the advantage that changes in each conjunct
+    // are reflected in the combined safety distance
+    case c: ComparisonFormula =>
+      assert(c.right == Number(0))
+      // we want safety margin>=0 when formula is true
+      val margin: Term = c match {
+        //@note incorrect translation of greater/less prevented with outside if(x>y) margin else error
+        case _: GreaterEqual | _: Greater => c.left
+        case _: LessEqual | _: Less => Neg(c.left)
+        case _: Equal => Neg(FuncOf(InterpretedSymbols.absF, c.left))
+        case _: NotEqual => FuncOf(InterpretedSymbols.absF, c.left)
+      }
+      val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
+      val (errorMargin, combinedMargin) = dist match {
+        case Number(n) if n == 0 => (simpMargin, simpMargin)
+        case Divide(Number(n), Plus(l: Divide, r)) if n == 1 =>
+          //@note parallel composition of successive tests (n-ary conjunction)
+          (simpMargin, Divide(Number(1), Plus(l, Plus(r, Divide(Number(1), simpMargin)))))
+        case _ =>
+          //@todo other non-obvious divisions by zero
+          (simpMargin, Divide(Number(1), Plus(Divide(Number(1), dist), Divide(Number(1), simpMargin))))
+      }
+      (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
   }
 
   /**

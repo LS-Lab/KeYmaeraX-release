@@ -49,7 +49,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
         case "metric" => ModelPlex.toMetric(monitorFml)
       }
 
-      val monitorCode = (new CMonitorGenerator)(monitor, vars, inputVars)
+      val monitorCode = (new CMonitorGenerator('resist))(monitor, vars, inputVars)
       val params = CodeGenerator.getParameters(monitor, vars)
       val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(vars) + "\n" +
