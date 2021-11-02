@@ -103,7 +103,7 @@ class Robix extends TacticTestBase {
   it should "synthesize a controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs_curvestraight_curvature_brakingonly.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, List(Variable("x"),
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, List(Variable("x"),
       Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w")), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
@@ -116,7 +116,7 @@ class Robix extends TacticTestBase {
     val entry = ArchiveParser.getEntry("IJRR17/Theorem 1: Static safety", io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString).get
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
       List("x","y","v","a","dx","dy","w","xo","yo","r","t").map(Variable(_)), Map.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &

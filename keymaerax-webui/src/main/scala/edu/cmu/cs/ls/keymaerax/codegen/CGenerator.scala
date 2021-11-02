@@ -48,10 +48,10 @@ object CGenerator {
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class CGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
-    generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
+    generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)
 
   /** The name of the monitor/control function argument representing monitor parameters. */
   private val FUNC_PARAMS_NAME = "params"
@@ -107,12 +107,17 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
   }
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
+  private def generateMonitoredCtrlCCode(expr: Expression, init: Formula, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
-    val parameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
+    val bodyParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
+    val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
+    val parameters = bodyParameters ++ initParameters
 
+    val (initBody, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
+
+    val exprDefs = printFuncDefs(expr, defs, parameters)
 
     (printHeader(fileName) +
       INCLUDE_STATEMENTS +
@@ -120,8 +125,12 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(expr, defs, parameters)._1 +
-      bodyDefs, bodyBody)
+      exprDefs._1 +
+      printFuncDefs(init, defs, parameters, exprDefs._2)._1 +
+      initDefs +
+      bodyDefs
+      ,
+      initBody + bodyBody)
   }
 
   private val RESERVED_NAMES = Set("main", "Main")

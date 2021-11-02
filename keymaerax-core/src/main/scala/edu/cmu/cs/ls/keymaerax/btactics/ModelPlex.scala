@@ -61,7 +61,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    */
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
-    val (mxInputFml, assumptions) = createMonitorSpecificationConjecture(formula, vars, Map.empty)
+    val ModelPlexConjecture(_, mxInputFml, assumptions) = createMonitorSpecificationConjecture(formula, vars, Map.empty)
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     //@note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
     val tactic = (kind, ToolProvider.simplifierTool()) match {
@@ -220,7 +220,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     */
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
                                            unobservable: Map[_ <: NamedSymbol, Option[Formula]],
-                                           postVar: Variable=>Variable = NAMED_POST_VAR): (Formula, List[Formula]) = {
+                                           postVar: Variable=>Variable = NAMED_POST_VAR): ModelPlexConjecture = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
       "ModelPlex post symbols must not occur in original formula")
@@ -255,7 +255,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     }
 
     normalizeInputFormula(fml) match {
-      case f@Imply(_, Box(prg, _)) => conjectureOf(f, prg)
+      case f@Imply(init, Box(prg, _)) =>
+        val (conjecture, constAssumptions) = conjectureOf(f, prg)
+        ModelPlexConjecture(init, conjecture, constAssumptions)
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml.prettyString + "; formula must be propositionally equivalent to A -> [prg;]P")
     }
   }
@@ -277,7 +279,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     assert(vars.forall(_.index.isEmpty), "Variables with index not allowed, since sliding window generates indices")
     assert(windowSize >= 1, "Window size must be at least 1")
     //@todo encode in dL
-    val (spec, assms) = createMonitorSpecificationConjecture(fml, vars, unobservable, NAMED_POST_VAR)
+    val ModelPlexConjecture(_, spec, assms) = createMonitorSpecificationConjecture(fml, vars, unobservable, NAMED_POST_VAR)
 
     val (unobservableStateVars, unknownParams) = partitionUnobservable(unobservable)
     val (ctx, specFml: Formula) = spec.at(PosInExpr(List.fill(unknownParams.keys.size)(0)))
@@ -294,7 +296,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def createMonitorCorrectnessConjecture(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit],
                                          unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula => Formula) = formula => {
     val monitor = apply(vars, kind, checkProvable)(formula)
-    val (monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars, unobservable)
+    val ModelPlexConjecture(_, monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars, unobservable)
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
   }
 

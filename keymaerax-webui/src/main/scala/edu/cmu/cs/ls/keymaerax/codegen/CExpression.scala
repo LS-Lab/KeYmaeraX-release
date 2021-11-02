@@ -16,6 +16,13 @@ trait CExpression {
 trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
 trait CProgram extends CExpression {}
+trait CComment {
+  val comment: String
+}
+
+case class CTermComment(comment: String) extends CTerm with CComment {}
+case class CFormulaComment(comment: String) extends CFormula with CComment {}
+case class CProgramComment(comment: String) extends CProgram with CComment {}
 
 case object CNothing extends CTerm {}
 case class CNumber(n: BigDecimal) extends CTerm {}
@@ -34,6 +41,7 @@ case class CMin(l: CTerm, r: CTerm) extends CTerm {}
 case class CMax(l: CTerm, r: CTerm) extends CTerm {}
 case class CAbs(c: CTerm) extends CTerm {}
 
+case class CPredicate(name: String, arg: CTerm) extends CFormula {}
 case class CLess(l: CTerm, r: CTerm) extends CFormula {}
 case class CLessEqual(l: CTerm, r: CTerm) extends CFormula {}
 case class CEqual(l: CTerm, r: CTerm) extends CFormula {}
@@ -132,6 +140,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CMax(l, r) => "fmaxl(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "fabsl(" + print(c) + ")"
 
+    case CPredicate(n, arg) => n + "(" + print(arg) + ")"
     case CLess(l, r) => print(l) + " < " + print(r)
     case CLessEqual(l, r) => print(l) + " <= " + print(r)
     case CEqual(l, r) => print(l) + " == " + print(r)
@@ -141,6 +150,8 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CNot(c) => "!(" + print(c) + ")"
     case CAnd(l, r) => "(" + print(l) + ") && (" + print(r) + ")"
     case COr(l, r) => "(" + print(l) + ") || (" + print(r) + ")"
+
+    case comment: CComment => "/*" + comment.comment + "*/"
 
     case CTrue => "1.0L"
     case CFalse => "-1.0L"

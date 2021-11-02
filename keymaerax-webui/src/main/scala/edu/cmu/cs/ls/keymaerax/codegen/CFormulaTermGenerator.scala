@@ -15,12 +15,9 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
   */
 object CFormulaTermGenerator {
   /** C Identifier corresponding to a NamedSymbol */
-  def nameIdentifier(s: NamedSymbol): String = {
-    require(s.sort == Real, "Expected named symbol of sort Real, but got " + s.sort)
-    s match {
-      case _: Function | _: Variable => s.name + s.index.map("_" + _).getOrElse("")
-      case _ => throw new CodeGenerationException("Unsupported named symbol " + s.prettyString)
-    }
+  def nameIdentifier(s: NamedSymbol): String = s match {
+    case _: Function | _: Variable => s.name + s.index.map("_" + _).getOrElse("")
+    case _ => throw new CodeGenerationException("Unsupported named symbol " + s.prettyString)
   }
 
   /** Prints a struct declaration named `structName` with a field for each of the names in `vars`. */

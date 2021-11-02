@@ -10,6 +10,9 @@ import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Term, V
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
+/** A ModelPlex conjecture. The `constAssumptions` are a subset of `init` for variables/function symbols not bound in the program. */
+case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumptions: List[Formula])
+
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
  * @author Stefan Mitsch
@@ -31,7 +34,7 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
                                            unobservable: Map[_ <: NamedSymbol, Option[Formula]],
-                                           postVar: Variable=>Variable = NAMED_POST_VAR): (Formula, List[Formula])
+                                           postVar: Variable=>Variable = NAMED_POST_VAR): ModelPlexConjecture
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic

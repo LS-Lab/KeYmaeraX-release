@@ -73,10 +73,10 @@ object PythonGenerator {
   * Python code generator that prints a file header, include statements, declarations, and the output of `bodyGenerator`.
   * @author Stefan Mitsch
   */
-class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
   /** Generate Python code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
-    generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
+    generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)
 
   /** The name of the monitor/control function argument representing monitor parameters. */
   private val FUNC_PARAMS_NAME = "params"
@@ -132,13 +132,18 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
   }
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
+  private def generateMonitoredCtrlCCode(expr: Expression, init: Formula, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(PythonGenerator.RESERVED_NAMES).isEmpty, "Unexpected reserved Python names encountered: " +
       names.intersect(PythonGenerator.RESERVED_NAMES).mkString(","))
-    val parameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
+    val bodyParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars)
+    val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
+    val parameters = bodyParameters ++ initParameters
 
+    val (initBody, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
+
+    val exprDefs = printFuncDefs(expr, defs, parameters)
 
     (printHeader(fileName) +
       IMPORT_STATEMENTS +
@@ -146,7 +151,11 @@ class PythonGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declarat
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(expr, defs, parameters)._1 +
-      bodyDefs, bodyBody)
+      exprDefs._1 +
+      printFuncDefs(init, defs, parameters, exprDefs._2)._1 +
+      initDefs +
+      bodyDefs
+      ,
+      initBody + bodyBody)
   }
 }

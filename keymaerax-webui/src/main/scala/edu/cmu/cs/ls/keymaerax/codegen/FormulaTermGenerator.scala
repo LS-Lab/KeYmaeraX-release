@@ -22,6 +22,7 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
   protected def compileTerm(t: Term): CTerm = {
     require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "Expected sort Real, but got unsupported sort " + t.sort)
     t match {
+      case Nothing      => CNothing
       case Neg(c)       => CNeg(compileTerm(c))
       case Plus(l, r)   => CPlus(compileTerm(l), compileTerm(r))
       case Minus(l, r)  => CMinus(compileTerm(l), compileTerm(r))
@@ -54,7 +55,7 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
         case _ => CUnaryFunction(nameIdentifier(fn), compileTerm(child))
       }
       case Pair(l, r)  => CPair(compileTerm(l), compileTerm(r))
-      case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
+      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString + " is not defined")
     }
   }
 
@@ -95,6 +96,7 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
   /** Compile a formula to a C expression checking it (in the same arithmetic) */
   protected def compileFormula(f: Formula): CFormula = {
     f match {
+      case PredOf(fn, args) => CPredicate(nameIdentifier(fn), compileTerm(args))
       case Not(ff)     => CNot(compileFormula(ff))
       case And(l, r)   => CAnd(compileFormula(l), compileFormula(r))
       case Or(l, r)    => COr(compileFormula(l), compileFormula(r))
@@ -109,7 +111,9 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
       case LessEqual(l,r)    => CLessEqual(compileTerm(l), compileTerm(r))
       case True              => CTrue
       case False             => CFalse
-      case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
+      case t: Modal  => CFormulaComment(t.prettyString)
+      case t: Forall => CFormulaComment(t.prettyString)
+      case t: Exists => CFormulaComment(t.prettyString)
       case _ => throw new CodeGenerationException("Conversion of formula " + KeYmaeraXPrettyPrinter(f) + " is not defined")
     }
   }

@@ -1457,7 +1457,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
     * Returns the monitor conjecture together with the synthesized monitor, or an error. */
   private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable],
                                      unobservable: Map[NamedSymbol, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
     val mx = ModelPlex.mxSynthesize(monitorKind) &
       //@todo unobservable symbols tactic argument not yet serializable
@@ -1537,7 +1537,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val unobservable = Map.empty[NamedSymbol, Option[Formula]]
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))

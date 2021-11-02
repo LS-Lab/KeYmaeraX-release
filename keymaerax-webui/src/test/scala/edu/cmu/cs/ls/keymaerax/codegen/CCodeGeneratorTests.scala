@@ -473,7 +473,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val model = ArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Theorem 1: Safety").head.model.asInstanceOf[Formula]
 
     val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
     val tactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
@@ -627,7 +627,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     // modelplex
     val stateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","xg_0","v_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars, Map.empty)
 
     val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)

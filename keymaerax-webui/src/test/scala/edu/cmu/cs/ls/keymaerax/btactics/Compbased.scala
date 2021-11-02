@@ -163,7 +163,7 @@ class Compbased extends TacticTestBase {
     val entry = ArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
 
-    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
       List("po","po0","so","t","t0").map(Variable(_)), Map.empty)
     val monitor = proveBy(modelplexInput, ExpandAll(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1), defs = entry.defs)

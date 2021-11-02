@@ -92,6 +92,8 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CMax(l, r) => "max(" + print(l) + ", " + print(r) + ")"
     case CAbs(c) => "abs(" + print(c) + ")"
 
+    case CPredicate(n, CNothing) => n + "(" + PARAMS + ")"
+    case CPredicate(n, arg) => n + "(" + PARAMS + "," + print(arg) + ")"
     case CLess(l, r) => print(l) + " < " + print(r)
     case CLessEqual(l, r) => print(l) + " <= " + print(r)
     case CEqual(l, r) => print(l) + " == " + print(r)
@@ -101,6 +103,8 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CNot(c) => "not(" + print(c) + ")"
     case CAnd(l, r) => "(" + print(l) + ") and (" + print(r) + ")"
     case COr(l, r) => "(" + print(l) + ") or (" + print(r) + ")"
+
+    case comment: CComment => "(\n# " + comment.comment + "\n)"
 
     case CTrue => "True"
     case CFalse => "False"
