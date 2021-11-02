@@ -106,6 +106,15 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Decla
       })
   }
 
+  private def initGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
+    case t: Variable if  parameters.contains(t) => "params->"
+    case t: Variable if !parameters.contains(t) => "init->"
+    case FuncOf(fn, Nothing) if  parameters.contains(fn) => "params->"
+    case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "init->"
+    case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
+      throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
+  }, defs)
+
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
   private def generateMonitoredCtrlCCode(expr: Expression, init: Formula, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
@@ -114,8 +123,14 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Decla
     val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
     val parameters = bodyParameters ++ initParameters
 
-    val (initBody, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
+    val (_, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
+    val initBody = initGenerator(parameters)(init)._2
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
+
+    val initCheck =
+      s"""bool checkInit(const state* const init, const parameters* const params) {
+         |  return $initBody
+         |}""".stripMargin
 
     val exprDefs = printFuncDefs(expr, defs, parameters)
 
@@ -127,10 +142,11 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Decla
       printVerdictDeclaration +
       exprDefs._1 +
       printFuncDefs(init, defs, parameters, exprDefs._2)._1 +
-      initDefs +
+      initDefs + "\n" +
+      initCheck + "\n" +
       bodyDefs
       ,
-      initBody + bodyBody)
+      bodyBody)
   }
 
   private val RESERVED_NAMES = Set("main", "Main")
