@@ -39,7 +39,6 @@ class EulerIntegrationCompiler extends NumericalCompiler {
     * @return a discrete program, which, if run, computes a numerical integration of `hp`.
     */
   override def apply(hp: Program): Program = {
-    //val sig: StaticSemantics.VCP = StaticSemantics(hp)
     // fresh step size variable for numerical integration
     val step: Variable = TacticHelper.freshNamedSymbol(BaseVariable("step", None, Real), hp)
 
@@ -70,8 +69,6 @@ class EulerIntegrationCompiler extends NumericalCompiler {
       case ODESystem(ode, constraint) =>
         // (non-differential) state variables changing during hp
         val vars: Set[Variable] = StaticSemantics(ode).bv.toSet.filter(_.isInstanceOf[BaseVariable])
-//        // map of fresh next variables for each state variable of the ODE
-//        val next: Map[Variable,Variable] = vars.map(x => x->TacticHelper.freshNamedSymbol(BaseVariable(x.name + "next", x.index, x.sort), hp)).toMap
          // explicit forward Euler integration loop
          // x':=f(x); for all x
         val toDiffs = toDifferentialAssignments(ode)
@@ -81,10 +78,6 @@ class EulerIntegrationCompiler extends NumericalCompiler {
               Test(constraint), // ?Q
                 // x:=x+step*x'; for all x
                 vars.foldLeft(toDiffs)((acc,x) => Compose(acc, Assign(x, Plus(x, Times(step, DifferentialSymbol(x))))))
-//                // xnext:=x+step*f(x); for all x
-//                vars.foldLeft(Test(constraint):Program)((acc,x) => Compose(acc, Assign(next(x), Plus(x, Times(step, next(x)))))),
-//                // x:=xnext; for all x
-//                vars.foldLeft(Test(True):Program)((acc,x) => Compose(acc, Assign(x, next(x))))
             )
           )   // *
           ,   // ;
