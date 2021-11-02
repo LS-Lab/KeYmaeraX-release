@@ -77,7 +77,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declara
         ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val > " + rhs)
       case f: Formula if f.isFOL =>
         val monitor = printMonitor(expr, parameters)
-        ((monitor._1, s"result = Verdict((1 if ${monitor._2} else -1), (1 if ${monitor._2} else -1) }\nreturn result"), s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= 0")
+        ((monitor._1, s"result = Verdict((1 if ${monitor._2} else -1), (1 if ${monitor._2} else -1) )\nreturn result"), s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= 0")
       case f: Formula if !f.isFOL => (printMonitor(expr, parameters), s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= 0")
     }
 
