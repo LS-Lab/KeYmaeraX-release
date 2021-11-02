@@ -64,43 +64,46 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
     case FuncOf(fn, Nothing) =>
       if (parameters.contains(fn)) FUNC_PARAMS_NAME + "->"
       else throw new CodeGenerationException("Non-posterior, non-parameter function symbol " + fn.prettyString + " is not supported")
-  })
+  }, defs)
 
   /** Prints function definitions of symbols in `mentionedIn`. */
-  private def printFuncDefs(mentionedIn: Expression, defs: Declaration, parameters: Set[NamedSymbol], printed: Set[NamedSymbol] = Set.empty): String = {
+  private def printFuncDefs(mentionedIn: Expression, defs: Declaration, parameters: Set[NamedSymbol], printed: Set[NamedSymbol] = Set.empty): (String, Set[NamedSymbol]) = {
     val what = StaticSemantics.symbols(mentionedIn) -- printed
     val printing = defs.decls.
       filter({
-        case (n, s@Signature(_, Real | Bool, Some(args), _, _)) => args.nonEmpty && what.contains(Declaration.asNamedSymbol(n, s))
+        case (n, s@Signature(_, Real | Bool, Some(_), _, _)) =>
+          val sym = Declaration.asNamedSymbol(n, s)
+          !parameters.contains(sym) && !printed.contains(sym) && what.contains(sym)
         case _ => false })
-    printing.map({
-        case (name, Signature(_, codomain, Some(args), interpretation, _)) =>
-          def ctype(s: Sort): String = s match {
-            case Real => "long double"
-            case Bool => "bool"
-            case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
-          }
-          val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
-          //@note ensure that args don't have both . and ._0
-          assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
-            case DotTerm(_, Some(i)) => Some(i)
-            case DotTerm(_, None) => Some(0)
-            case _ => None
-          }).count(_ == 0) <= 1))
-          val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
-            (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
-              SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
-          val (interpretationDefs, body) = interpretation match {
-            case Some(i) =>
-              (printFuncDefs(i, defs, parameters, printed ++ printing.map({ case (n, s) => Declaration.asNamedSymbol(n, s) }).toSet),
-                primitiveExprGenerator(parameters)(argsSubst(i))._2)
-            case _ => ("", "0; /* todo */")
-          }
+    printing.foldLeft(("", printed))({
+      case ((result, printed), (name, sig@Signature(_, codomain, Some(args), interpretation, _))) =>
+        def ctype(s: Sort): String = s match {
+          case Real => "long double"
+          case Bool => "bool"
+          case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
+        }
+        val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
+        //@note ensure that args don't have both . and ._0
+        assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
+          case DotTerm(_, Some(i)) => Some(i)
+          case DotTerm(_, None) => Some(0)
+          case _ => None
+        }).count(_ == 0) <= 1))
+        val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
+          (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
+            SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
+        val ((interpretationDefs, subPrinted), body) = interpretation match {
+          case Some(i) => (printFuncDefs(i, defs, parameters, printed), primitiveExprGenerator(parameters)(argsSubst(i))._2)
+          case _ => (("", Set.empty), "0; /* todo */")
+        }
+        def arguments(x: String): String = "const parameters* const " + FUNC_PARAMS_NAME + (if (x.nonEmpty) ", " + x else "")
+        (result + "\n\n" +
           s"""$interpretationDefs
-             |${ctype(codomain)} ${name.prettyString}(const parameters* const $FUNC_PARAMS_NAME, $cargs) {
-             |  return $body;
-             |}""".stripMargin
-      }).mkString("\n\n") + "\n\n"
+           |${ctype(codomain)} ${name.prettyString}(${arguments(cargs)}) {
+           |  return $body;
+           |}""".stripMargin,
+          printed ++ subPrinted ++ Set(Declaration.asNamedSymbol(name, sig)))
+      })
   }
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
@@ -117,7 +120,7 @@ class CGenerator(bodyGenerator: CodeGenerator, defs: Declaration = Declaration(M
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(expr, defs, parameters) +
+      printFuncDefs(expr, defs, parameters)._1 +
       bodyDefs, bodyBody)
   }
 

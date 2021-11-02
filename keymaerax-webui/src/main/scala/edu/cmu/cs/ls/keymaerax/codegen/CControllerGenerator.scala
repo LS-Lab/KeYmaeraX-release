@@ -6,13 +6,14 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 /**
   * Generates a controller from a hybrid program without loops and ODEs.
   * A controller transforms an input state by choosing control set values depending on inputs and parameters.
   * @author Stefan Mitsch
   */
-class CControllerGenerator extends CodeGenerator {
+class CControllerGenerator(defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {
     case ctrl: Program =>
@@ -41,7 +42,7 @@ class CControllerGenerator extends CodeGenerator {
     case FuncOf(Function(name, idx, _, _, _), Nothing) if parameters.exists(p => p.name == name && p.index == idx) => PARAMS_NAME + "->"
     case t: NamedSymbol if parameters.exists(p => p.name == t.name && p.index == t.index) => PARAMS_NAME + "->"
     case _ => CURR_STATE_NAME + "."
-  })
+  }, defs)
 
   private def generateProgramBody(prg: Program, indent: String)(implicit exprGenerator: Expression => (String, String)): String = prg match {
     case Assign(x, t) => indent + exprGenerator(x)._2 + " = " + exprGenerator(t)._2 + "; prg.success = 1;"
@@ -70,7 +71,7 @@ class CControllerGenerator extends CodeGenerator {
   }
 }
 
-class CMpfrControllerGenerator extends CodeGenerator {
+class CMpfrControllerGenerator(defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {
     case ctrl: Program =>
@@ -99,7 +100,7 @@ class CMpfrControllerGenerator extends CodeGenerator {
     case FuncOf(Function(name, idx, _, _, _), Nothing) if parameters.exists(p => p.name == name && p.index == idx) => PARAMS_NAME + "->"
     case t: NamedSymbol if parameters.exists(p => p.name == t.name && p.index == t.index) => PARAMS_NAME + "->"
     case _ => CURR_STATE_NAME + "."
-  })
+  }, defs)
 
   private def printPlain(e: Expression)(implicit exprGenerator: Expression => (String, String)): (String, String) = {
     val printer = CPrettyPrinter.printer
@@ -156,7 +157,7 @@ class CMpfrControllerGenerator extends CodeGenerator {
   * A controller transforms an input state by choosing control set values depending on inputs and parameters.
   * @author Stefan Mitsch
   */
-class CDetControllerGenerator extends CodeGenerator {
+class CDetControllerGenerator(defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {
     case ctrl: Program =>
@@ -182,7 +183,7 @@ class CDetControllerGenerator extends CodeGenerator {
     case FuncOf(Function(name, idx, _, _, _), Nothing) if parameters.exists(p => p.name == name && p.index == idx) => PARAMS_NAME + "->"
     case t: NamedSymbol if parameters.exists(p => p.name == t.name && p.index == t.index) => PARAMS_NAME + "->"
     case _ => CURR_STATE_NAME + "."
-  })
+  }, defs)
 
   private def generateProgramBody(prg: Program, indent: String)(implicit exprGenerator: Expression => (String, String)): String = prg match {
     case Assign(x, t) => indent + exprGenerator(x)._2 + " = " + exprGenerator(t)._2 + ";"

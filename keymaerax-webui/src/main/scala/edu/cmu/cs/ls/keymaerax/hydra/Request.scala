@@ -1376,7 +1376,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
     case Imply(_, Box(prg, _)) => conditionKind match {
       case "dL" => new ModelPlexArtifactResponse(model, extractController(prg)) :: Nil
       case "C" =>
-        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars, CodeGenerator.getInputs(prg))
+        val controller = (new CGenerator(new CControllerGenerator(model.defs)))(prg, vars, CodeGenerator.getInputs(prg))
         val code =
           s"""${controller._1}
            |${controller._2}
@@ -1415,9 +1415,9 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
               val ctrlInputs = CodeGenerator.getInputs(monitorCond)
-              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist)))(monitorCond, stateVars, ctrlInputs, "Monitor")
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, model.defs)))(monitorCond, stateVars, ctrlInputs, "Monitor")
               val inputs = CodeGenerator.getInputs(prg)
-              val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
+              val fallbackCode = new CControllerGenerator(model.defs)(prg, stateVars, inputs)
               val declarations = ctrlMonitorCode._1.trim
               val monitorCode = ctrlMonitorCode._2.trim
 
@@ -1495,7 +1495,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new CGenerator(new CMonitorGenerator('resist)))(monitorFml, vars, inputs, model.name)
+            val monitor = (new CGenerator(new CMonitorGenerator('resist, model.defs)))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}

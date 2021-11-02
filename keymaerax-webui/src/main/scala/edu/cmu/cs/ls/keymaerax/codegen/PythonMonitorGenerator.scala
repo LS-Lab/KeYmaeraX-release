@@ -122,7 +122,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declara
     case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
     case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
-  })
+  }, defs)
 
   private def onlyEqualities(fml: Formula): Boolean = fml match {
     case _: Equal => true
@@ -138,7 +138,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declara
     case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
     case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
-  }) {
+  }, defs) {
     override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                        modelName: String): (String, String) = expr match {
       case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)

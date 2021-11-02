@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXPrettyPrinter}
 
 
 /**
@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
   * @author Stefan Mitsch
   * @author Ran Ji
   */
-abstract class FormulaTermGenerator(termContainer: Expression => String) extends CodeGenerator {
+abstract class FormulaTermGenerator(termContainer: Expression => String, defs: Declaration) extends CodeGenerator {
   /** Identifier corresponding to a NamedSymbol */
   protected def nameIdentifier(s: NamedSymbol): String
 
@@ -37,9 +37,16 @@ abstract class FormulaTermGenerator(termContainer: Expression => String) extends
         CVariable(termContainer(t) + nameIdentifier(BaseVariable(t.name.stripSuffix("post"), t.index, t.sort)))
       case t: Variable if !t.name.endsWith("post") => CVariable(termContainer(t) + nameIdentifier(t))
       //@note _idx are aliases for the same post variable, todo: preprocess with tactic
-      case t@FuncOf(Function(fname, fidx, fdom, fsort, fintr), Nothing) if fname.endsWith("post") =>
-        CVariable(termContainer(t) + nameIdentifier(Function(fname.stripSuffix("post"), fidx, fdom, fsort, fintr)))
-      case t@FuncOf(fn, Nothing) => CVariable(termContainer(t) + nameIdentifier(fn))
+      case t@FuncOf(fn@Function(fname, fidx, fdom, fsort, fintr), Nothing) =>
+        if (fname.endsWith("post")) {
+          CVariable(termContainer(t) + nameIdentifier(Function(fname.stripSuffix("post"), fidx, fdom, fsort, fintr)))
+        } else if (defs.substs.exists(_.what == t)) {
+          // defined function
+          CUnaryFunction(nameIdentifier(fn), CNothing)
+        } else {
+          // parameter or input
+          CVariable(termContainer(t) + nameIdentifier(fn))
+        }
       case FuncOf(fn, child)  => nameIdentifier(fn) match {
         case "abs" => CAbs(compileTerm(child))
         case "min" => val CPair(l, r) = compileTerm(child); CMin(l, r)

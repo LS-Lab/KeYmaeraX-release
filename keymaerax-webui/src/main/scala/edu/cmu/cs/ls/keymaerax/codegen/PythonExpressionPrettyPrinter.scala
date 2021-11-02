@@ -75,10 +75,12 @@ class PythonExpressionPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
+    case CNothing => ""
     case CNumber(n) if n>=0 => numberLiteral(n)
     case CNumber(n) if n<0 => "(" + numberLiteral(n) + ")"
     case CVariable(n) => n
-    case CUnaryFunction(n, arg) => n + s"($PARAMS," + print(arg) + ")" //@see [[PythonGenerator.printFuncDefs]]
+    case CUnaryFunction(n, CNothing) => n + "(" + PARAMS + ")" //@see [[PythonGenerator.printFuncDefs]]
+    case CUnaryFunction(n, arg) => n + "(" + PARAMS + "," + print(arg) + ")" //@see [[PythonGenerator.printFuncDefs]]
     case CPair(l, r) => print(l) + "," + print(r)
     case CNeg(c) => "-(" + print(c) + ")"
     case CPlus(l, r) => "(" + print(l) + ")+(" + print(r) + ")"

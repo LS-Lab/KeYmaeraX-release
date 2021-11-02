@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 import scala.collection.mutable.ListBuffer
 
@@ -19,7 +20,7 @@ import scala.collection.mutable.ListBuffer
   * @param logEval Whether or not to generate code that logs reasons for why terms/formulas have their value
   * @author Stefan Mitsch
   */
-class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean) extends CodeGenerator {
+class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean, defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {
     case ctrl: Program =>
@@ -40,7 +41,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
         if (logEval) new CExpressionLogPrettyPrinter
         else new CExpressionPlainPrettyPrinter(printDebugOut = false)
 
-      val fallbackCode = new CControllerGenerator()(ctrl, vars, inputVars)
+      val fallbackCode = new CControllerGenerator(defs)(ctrl, vars, inputVars)
 
       val inputModel = Imply(True, Box(ctrl, True))
       val monitorFml = ModelPlex(inputModel, 'ctrl)
@@ -49,7 +50,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
         case "metric" => ModelPlex.toMetric(monitorFml)
       }
 
-      val monitorCode = (new CMonitorGenerator('resist))(monitor, vars, inputVars)
+      val monitorCode = (new CMonitorGenerator('resist, defs))(monitor, vars, inputVars)
       val params = CodeGenerator.getParameters(monitor, vars)
       val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(vars) + "\n" +

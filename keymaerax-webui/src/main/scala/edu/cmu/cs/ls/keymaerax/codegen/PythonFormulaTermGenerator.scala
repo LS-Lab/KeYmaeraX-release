@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 /**
   * Generates formula and term evaluation C code. `termContainer` configures the location where primitive terms are
@@ -13,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   * @author Stefan Mitsch
   * @author Ran Ji
   */
-class PythonFormulaTermGenerator(termContainer: Expression => String) extends FormulaTermGenerator(termContainer) {
+class PythonFormulaTermGenerator(termContainer: Expression => String, defs: Declaration) extends FormulaTermGenerator(termContainer, defs) {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {
     case f: Formula if f.isFOL => PythonPrettyPrinter(compileFormula(f))

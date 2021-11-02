@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaera
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
   */
-class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars)
@@ -131,7 +131,7 @@ class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(
     case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "curr."
     case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
-  })
+  }, defs)
 
   private def structuredExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
     case t: Variable if  parameters.contains(t) => "params->"
@@ -141,7 +141,7 @@ class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(
     case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "curr."
     case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
-  }) {
+  }, defs) {
     override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                        modelName: String): (String, String) = expr match {
       case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)

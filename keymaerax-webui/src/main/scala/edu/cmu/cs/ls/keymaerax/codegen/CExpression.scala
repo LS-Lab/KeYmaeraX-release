@@ -17,6 +17,7 @@ trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
 trait CProgram extends CExpression {}
 
+case object CNothing extends CTerm {}
 case class CNumber(n: BigDecimal) extends CTerm {}
 case class CVariable(name: String) extends CTerm {}
 case class CUnaryFunction(name: String, arg: CTerm) extends CTerm {}
@@ -108,6 +109,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
+    case CNothing => ""
     case CNumber(n) if n>=0 => longDoubleLiteral(n)
     case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
