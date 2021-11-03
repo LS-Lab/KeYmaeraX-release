@@ -117,7 +117,7 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
-    case CNothing => ""
+    case CNothing => "???"
     case CNumber(n) if n>=0 => longDoubleLiteral(n)
     case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n

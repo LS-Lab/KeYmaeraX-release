@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
+import scala.util.Try
+
 /**
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
@@ -174,9 +176,9 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends 
   }
 
   /** Combines conjunction of distance `dist` and metric of `p` with min. */
-  private def printAndMin(p: Formula, dist: Term) = ModelPlex.toMetric(p) match {
+  private def printAndMin(p: Formula, dist: Term) = Try(ModelPlex.toMetric(p)).toOption match {
     //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
-    case c: ComparisonFormula =>
+    case Some(c: ComparisonFormula) =>
       assert(c.right == Number(0))
       // we want safety margin>=0 when formula is true
       val margin: Term = c match {
@@ -190,14 +192,17 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends 
       val errorMargin = simpMargin
       val combinedMargin = FuncOf(InterpretedSymbols.minF, Pair(dist, simpMargin))
       (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
+    case _ =>
+      //@note unable to translate to distance, assume p is false and return -1
+      (Nothing, Nothing)
   }
 
   /** Combines conjunction of distance `dist` and metric of `p` in analogy to total resistance of parallel resistors 1/(1/dist + 1/metric(p))) */
-  private def printAndParallelResistors(p: Formula, dist: Term) = ModelPlex.toMetric(p) match {
+  private def printAndParallelResistors(p: Formula, dist: Term) = Try(ModelPlex.toMetric(p)).toOption match {
     //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
     // Encode And as 1/(1/x+1/y) (instead of min) has the advantage that changes in each conjunct
     // are reflected in the combined safety distance
-    case c: ComparisonFormula =>
+    case Some(c: ComparisonFormula) =>
       assert(c.right == Number(0))
       // we want safety margin>=0 when formula is true
       val margin: Term = c match {
@@ -209,6 +214,7 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends 
       }
       val simpMargin = SimplifierV3.termSimp(margin, scala.collection.immutable.HashSet.empty, SimplifierV3.defaultTaxs)._1
       val (errorMargin, combinedMargin) = dist match {
+        case Nothing => (Nothing, Nothing)
         case Number(n) if n == 0 => (simpMargin, simpMargin)
         case Divide(Number(n), Plus(l: Divide, r)) if n == 1 =>
           //@note parallel composition of successive tests (n-ary conjunction)
@@ -218,6 +224,9 @@ class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends 
           (simpMargin, Divide(Number(1), Plus(Divide(Number(1), dist), Divide(Number(1), simpMargin))))
       }
       (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
+    case _ =>
+      //@note unable to translate to distance, propagate invalid distance upwards
+      (Nothing, Nothing)
   }
 
   /**
