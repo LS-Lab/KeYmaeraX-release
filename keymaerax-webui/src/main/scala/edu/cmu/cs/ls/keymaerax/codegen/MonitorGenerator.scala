@@ -133,3 +133,14 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
       (Nothing, Nothing)
   }
 }
+
+/** Generates a monitor expression without surrounding function head, comments. */
+class SimpleMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration,
+                             prettyPrinter: CodePrettyPrinter,
+                             termContainer: (Expression, Set[NamedSymbol])=>String)
+  extends MonitorGenerator(conjunctionsAs, defs, prettyPrinter, termContainer) {
+  /** @inheritdoc */
+  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], modelName: String): (String, String) = {
+    printMonitor(expr, CodeGenerator.getParameters(defs.exhaustiveSubst(expr), stateVars))
+  }
+}
