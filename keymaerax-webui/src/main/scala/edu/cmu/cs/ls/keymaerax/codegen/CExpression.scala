@@ -3,6 +3,7 @@
   * See LICENSE.txt for the conditions of this license.
   */
 package edu.cmu.cs.ls.keymaerax.codegen
+import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Sort}
 
 /**
   * C expressions.
@@ -65,9 +66,17 @@ object CNoop extends CProgram
 
 
 /** Prints C expressions. */
-object CPrettyPrinter extends (CExpression => (String, String)) {
-  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+object CPrettyPrinter extends CodePrettyPrinter {
+  var printer: CExpression => (String, String) = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+
+  /** @inheritdoc */
   override def apply(e: CExpression): (String, String) = printer(e)
+
+  /** @inheritdoc */
+  override def nameIdentifier(s: NamedSymbol): String = CFormulaTermGenerator.nameIdentifier(s)
+
+  /** @inheritdoc */
+  override def printSort(s: Sort): String = CFormulaTermGenerator.printSort(s)
 }
 
 /** Prints expressions in plain C. */

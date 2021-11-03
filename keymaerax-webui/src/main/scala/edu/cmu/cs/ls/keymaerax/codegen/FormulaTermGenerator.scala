@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, KeYmaeraXPrettyPrinter}
 
 
@@ -117,4 +118,22 @@ abstract class FormulaTermGenerator(termContainer: Expression => String, defs: D
       case _ => throw new CodeGenerationException("Conversion of formula " + KeYmaeraXPrettyPrinter(f) + " is not defined")
     }
   }
+}
+
+/** Converts formulas and terms according to `prettyPrinter`. Uses `termContainer` to refer to arguments. */
+class GenericFormulaTermGenerator(prettyPrinter: CodePrettyPrinter,
+                                  termContainer: Expression => String,
+                                  defs: Declaration) extends FormulaTermGenerator(termContainer, defs) {
+  /** @inheritdoc */
+  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
+                     modelName: String): (String, String) = expr match {
+    case f: Formula if f.isFOL => prettyPrinter(compileFormula(f))
+    case t: Term => prettyPrinter(compileTerm(t))
+  }
+
+  /** @inheritdoc */
+  override def nameIdentifier(s: NamedSymbol): String = prettyPrinter.nameIdentifier(s)
+
+  /** @inheritdoc */
+  override def printSort(s: Sort): String = prettyPrinter.printSort(s)
 }

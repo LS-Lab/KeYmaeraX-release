@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
   * @author Stefan Mitsch
   * @author Ran Ji
   */
+@deprecated("Use GenericFormulaTermGenerator instead")
 class PythonFormulaTermGenerator(termContainer: Expression => String, defs: Declaration) extends FormulaTermGenerator(termContainer, defs) {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) = expr match {

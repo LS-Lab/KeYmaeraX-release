@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.codegen.PythonPrettyPrinter.{CURR, PARAMS, PRE}
 import edu.cmu.cs.ls.keymaerax.core.{Bool, NamedSymbol, Real, Sort, Tuple, Unit}
 
-object PythonPrettyPrinter extends (CExpression => (String, String)) {
+object PythonPrettyPrinter extends CodePrettyPrinter {
   val CURR = "curr"
   val PARAMS = "params"
   val PRE = "pre"

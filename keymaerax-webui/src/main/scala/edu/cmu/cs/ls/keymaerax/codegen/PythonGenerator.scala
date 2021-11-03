@@ -150,8 +150,8 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
     val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
     val parameters = bodyParameters ++ initParameters
 
-    val (_, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
-    val initBody = initGenerator(parameters)(init)._2
+    val (initBody, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
+    //val initBody = initGenerator(parameters)(init)._2
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     val initCheck =
