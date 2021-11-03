@@ -1373,10 +1373,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = modelFml match {
-    case Imply(_, Box(prg, _)) => conditionKind match {
+    case Imply(init, Box(prg, _)) => conditionKind match {
       case "dL" => new ModelPlexArtifactResponse(model, extractController(prg)) :: Nil
       case "C" =>
-        val controller = (new CGenerator(new CControllerGenerator(model.defs)))(prg, vars, CodeGenerator.getInputs(prg))
+        val controller = (new CGenerator(new CControllerGenerator(model.defs), init, model.defs))(prg, vars, CodeGenerator.getInputs(prg))
         val code =
           s"""${controller._1}
            |${controller._2}
@@ -1401,7 +1401,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
-    case Imply(_, Box(prg, _)) =>
+    case Imply(init, Box(prg, _)) =>
       createMonitorCondition(modelFml, stateVars, Map.empty) match {
         case Left((monitorConjecture, monitorCond, _)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
@@ -1415,7 +1415,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               new ModelPlexSandboxResponse(model, monitorConjecture, sandbox) :: Nil
             case "C" =>
               val ctrlInputs = CodeGenerator.getInputs(monitorCond)
-              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, model.defs)))(monitorCond, stateVars, ctrlInputs, "Monitor")
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorCond, stateVars, ctrlInputs, "Monitor")
               val inputs = CodeGenerator.getInputs(prg)
               val fallbackCode = new CControllerGenerator(model.defs)(prg, stateVars, inputs)
               val declarations = ctrlMonitorCode._1.trim
@@ -1478,7 +1478,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   }
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
-    val Imply(_, Box(prg, _)) = modelFml
+    val Imply(init, Box(prg, _)) = modelFml
     createMonitorCondition(modelFml, vars, Map.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) =>
         conditionKind match {
@@ -1495,7 +1495,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexMonitorResponse(model, monitorFml, new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))(entry)) :: Nil
           case "C" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new CGenerator(new CMonitorGenerator('resist, model.defs)))(monitorFml, vars, inputs, model.name)
+            val monitor = (new CGenerator(new CMonitorGenerator('resist, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}
@@ -1516,7 +1516,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             new ModelPlexCCodeResponse(model, code) :: Nil
           case "Python" =>
             val inputs = CodeGenerator.getInputs(prg)
-            val monitor = (new PythonGenerator(new PythonMonitorGenerator('min)))(monitorFml, vars, inputs, model.name)
+            val monitor = (new PythonGenerator(new PythonMonitorGenerator('min, model.defs), init, model.defs))(monitorFml, vars, inputs, model.name)
             val code =
               s"""${monitor._1}
                  |${monitor._2}""".stripMargin

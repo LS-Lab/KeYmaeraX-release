@@ -48,7 +48,7 @@ object CGenerator {
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class CGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration) extends CodeGenerator {
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)

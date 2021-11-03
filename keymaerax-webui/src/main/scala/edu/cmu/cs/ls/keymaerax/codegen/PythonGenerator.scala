@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 import edu.cmu.cs.ls.keymaerax.codegen.PythonPrettyPrinter.{nameIdentifier, printSort}
 import edu.cmu.cs.ls.keymaerax.codegen.PythonGenerator.{IMPORT_STATEMENTS, printHeader, printInputDeclaration, printParameterDeclaration, printStateDeclaration, printVerdictDeclaration}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, Name, Signature}
 
 /**
@@ -73,7 +74,7 @@ object PythonGenerator {
   * Python code generator that prints a file header, include statements, declarations, and the output of `bodyGenerator`.
   * @author Stefan Mitsch
   */
-class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula = True, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration) extends CodeGenerator {
   /** Generate Python code for given expression using the data type cDataType throughout and the input list of variables */
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)

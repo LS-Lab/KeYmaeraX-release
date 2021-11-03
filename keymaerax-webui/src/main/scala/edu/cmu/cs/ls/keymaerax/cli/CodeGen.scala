@@ -86,7 +86,7 @@ object CodeGen {
 
     val codegenStart = Platform.currentTime
     //@todo input variables (nondeterministically assigned in original program)
-    val output = (new CGenerator(new CMonitorGenerator('resist, entry.defs)))(inputFormula, theVars, Set(), outputFileName)
+    val output = (new CGenerator(new CMonitorGenerator('resist, entry.defs), True, entry.defs))(inputFormula, theVars, Set(), outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName)
     pw.write(head)
@@ -116,7 +116,7 @@ object CodeGen {
     assert(monitorProgProof.subgoals.size == 1, "Converted to tests incorrectly: expected a single goal but got\n" + monitorProgProof.prettyString)
     val Imply(True, monitorProg) = monitorProgProof.subgoals.head.toFormula
     val inputs = CodeGenerator.getInputs(monitorProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs)))(monitorProg, monitorStateVars, inputs, "Monitor")
+    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, entry.defs), True, entry.defs))(monitorProg, monitorStateVars, inputs, "Monitor")
 
     val pw = new PrintWriter(outputFileName)
     pw.write(head)

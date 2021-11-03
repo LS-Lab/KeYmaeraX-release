@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import java.io.File
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Equiv, Formula, NamedSymbol, Sequent, True, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, Parser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
@@ -22,13 +22,17 @@ import org.scalatest.LoneElement._
  */
 class CCodeGeneratorTests extends TacticTestBase {
 
+  private var generator: CGenerator = _
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+    generator = new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty)), True, Declaration(Map.empty))
   }
 
   override def afterEach(): Unit = {
     CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
+    generator = null
     super.afterEach()
   }
 
@@ -93,22 +97,22 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "numbers" should "compile floating point" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("2+1.5>3.25".asFormula)
+    val monitor = generator("2+1.5>3.25".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("(2.0L)+(1.5L) > 3.25L")
   }
 
   it should "compile large number" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("9223372036854775807>1".asFormula)
+    val monitor = generator("9223372036854775807>1".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("9223372036854775807.0L > 1.0L")
   }
 
   it should "throw exception for too large number" in {
-    a [CodeGenerationException] should be thrownBy (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("92233720368547758079>1".asFormula)
+    a [CodeGenerationException] should be thrownBy generator("92233720368547758079>1".asFormula)
   }
 
   it should "compile to MPFR" in {
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("2+1.5>3.25".asFormula)
+    val monitor = generator("2+1.5>3.25".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
       /*"mpfr_cmp(_t_3, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_3, MPFR_RNDD)",
       "", "", "",
@@ -137,7 +141,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double y_1;
         |  long double z;""".stripMargin
     val stateDecls = "long double x;"
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x*z-y_1>1".asFormula, Set(Variable("x")))
+    val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("((pre.x)*(params->z))-(params->y_1) > 1.0L", paramDecls, stateDecls)
   }
 
@@ -147,7 +151,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x*z-y_1>1".asFormula, Set(Variable("x")))
+    val monitor = generator("x*z-y_1>1".asFormula, Set(Variable("x")))
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
       /*"mpfr_cmp(_t_5, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_5, MPFR_RNDD)", paramDecls, stateDecls, "",
       """mpfr_t _t_0 /* ((pre.x)*(params->z))-(params->y_1) */,
@@ -177,18 +181,18 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "nullary functions" should "compile to parameters" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x()>1".asFormula)
+    val monitor = generator("x()>1".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
   }
 
   "terms" should "compile plain" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x+3*y > 1".asFormula, Set(Variable("x")))
+    val monitor = generator("x+3*y > 1".asFormula, Set(Variable("x")))
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("(pre.x)+((3.0L)*(params->y)) > 1.0L", "long double y;", "long double x;")
   }
 
   it should "compile with log" in {
     CPrettyPrinter.printer = new CExpressionLogPrettyPrinter()
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x+3*y > 1".asFormula, Set(Variable("x")))
+    val monitor = generator("x+3*y > 1".asFormula, Set(Variable("x")))
     monitor._1 + "\n\n" + monitor._2 shouldBe
       expectedMonitor(
         """eval(gt(plus(variable(pre.x, "pre.x"), times(number(3), variable(params->y, "params->y"))), number(1)))""",
@@ -196,12 +200,12 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "power" should "compile int exp" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x^3>1".asFormula)
+    val monitor = generator("x^3>1".asFormula)
     monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("(params->x)*((params->x)*(params->x)) > 1.0L", "long double x;")
   }
 
   it should "compile exp=1" in {
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x^1>1".asFormula)
+    val monitor = generator("x^1>1".asFormula)
     monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
   }
 
@@ -209,7 +213,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("(x+y)^-3>1".asFormula)
+    val monitor = generator("(x+y)^-3>1".asFormula)
     monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor(
       "(1.0L)/(((params->x)+(params->y))*(((params->x)+(params->y))*((params->x)+(params->y)))) > 1.0L", paramDecls)
   }
@@ -218,7 +222,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("x^y>1".asFormula)
+    val monitor = generator("x^y>1".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls)
   }
 
@@ -226,7 +230,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("abs(x-y)>0".asFormula)
+    val monitor = generator("abs(x-y)>0".asFormula)
     monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls)
   }
 
@@ -234,7 +238,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("min(x,y)<=x".asFormula)
+    val monitor = generator("min(x,y)<=x".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, "", "", "", "metric")
   }
 
@@ -242,7 +246,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("max(x,y)>=x".asFormula)
+    val monitor = generator("max(x,y)>=x".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls)
   }
 
@@ -250,7 +254,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
-    val monitor = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("<?x>=y;>true".asFormula)
+    val monitor = generator("<?x>=y;>true".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
       """if (params->x >= params->y) {
         |verdict result = { .id=1, .val=(params->x)-(params->y) }; return result;
@@ -261,14 +265,14 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   "C generator" should "compile function with 2 parameters" ignore {
-    (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("f(x,y)>g(y,z)".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
+    generator("f(x,y)>g(y,z)".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
       "#include <math.h>\n#include <stdbool.h>\n\n" +
       "/* function declaration */\nlong double f(long double, long double);\nlong double g(long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
       "/* monitor */\nbool monitor () {\n  return (f(x(), y()))>(g(y(), z()));\n}\n\n")
   }
 
   it should "compile function with more parameters" ignore {
-    (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))("f(x,y,z)>0".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
+    generator("f(x,y,z)>0".asFormula) should be("/**************************\n * Generated by KeYmaera X\n **************************/\n\n" +
       "#include <math.h>\n#include <stdbool.h>\n\n" +
       "/* function declaration */\nlong double f(long double, long double, long double);\nlong double x();\nlong double y();\nlong double z();\n\n" +
       "/* monitor */\nbool monitor () {\n  return (f(x(), y(), z()))>((0.0L));\n}\n\n")
@@ -297,7 +301,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double w;
         |  long double xo;
         |  long double yo;""".stripMargin
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, Set(Variable("a"),Variable("w"),Variable("r"),Variable("xo"),Variable("yo"),
+    val genCode = generator(monitorExp, Set(Variable("a"),Variable("w"),Variable("r"),Variable("xo"),Variable("yo"),
       Variable("dxo"),Variable("dyo"),Variable("t")))
     genCode._1 + "\n\n" + genCode._2 shouldBe expectedMonitor(
       "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
@@ -324,7 +328,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double t;
         |  long double xo;
         |  long double yo;""".stripMargin
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, Set(Variable("a"),Variable("om"),Variable("r"),Variable("xo"),Variable("yo"),
+    val genCode = generator(monitorExp, Set(Variable("a"),Variable("om"),Variable("r"),Variable("xo"),Variable("yo"),
       Variable("dxo"),Variable("dyo"),Variable("t")))
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
@@ -357,7 +361,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double xo;
         |  long double y;
         |  long double yo;""".stripMargin
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, vars)
+    val genCode = generator(monitorExp, vars)
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a_0) && (curr.a_0 <= params->A)) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == pre.v) && (((fabsl((pre.x)-(curr.xo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo_0) && (curr.yo == curr.yo_0)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w_0)) && (curr.a == curr.a_0)) && (curr.r == curr.r_0)) && (curr.t == 0.0L)))))))))",
@@ -389,7 +393,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double xo;
         |  long double y;
         |  long double yo;""".stripMargin
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, vars)
+    val genCode = generator(monitorExp, vars)
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "-(fmaxl((((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t)))), fminl(fmaxl(fmaxl(pre.v, -(pre.v)), fmaxl(-(params->ep), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, -(curr.w))), fmaxl(curr.a, -(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, -(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a_0), (curr.a_0)-(params->A)), fmaxl(fminl(curr.r_0, -(curr.r_0)), fmaxl(fmaxl(((curr.w_0)*(curr.r_0))-(pre.v), (pre.v)-((curr.w_0)*(curr.r_0))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)-(curr.xo_0))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)-(curr.yo_0)))), fmaxl(fmaxl(-(params->ep), -(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo_0), (curr.xo_0)-(curr.xo)), fmaxl((curr.yo)-(curr.yo_0), (curr.yo_0)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w_0), (curr.w_0)-(curr.w))), fmaxl((curr.a)-(curr.a_0), (curr.a_0)-(curr.a))), fmaxl((curr.r)-(curr.r_0), (curr.r_0)-(curr.r))), fmaxl(curr.t, -(curr.t)))))))))))) > -(0.0L)",
@@ -438,7 +442,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double t;
         |  long double talpha;
         |  long double w;""".stripMargin
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp,
+    val genCode = generator(monitorExp,
       Set(Variable("a"), Variable("w"), Variable("dx"), Variable("dy"), Variable("r"), Variable("t"), Variable("ox"),
            Variable("oy"), Variable("odx"), Variable("ody"), Variable("isVisible"),
            Variable("talpha")))
@@ -458,7 +462,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double sqrkp;
         |  long double v;
         |  long double y;""".stripMargin
-    val code = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, Set(Variable("href")))
+    val code = generator(monitorExp, Set(Variable("href")))
     println(code)
     code._1 + "\n\n" + code._2 shouldBe expectedMonitor(
       "(params->h >= curr.href_0) && ((curr.href_0 > 0.0L) && ((((((params->kp < 0.0L) && ((params->v == 0.0L) && (curr.href_0 >= params->h))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L)))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (curr.href_0 == params->h))) || (((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))) || ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))))))))))) || ((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href_0))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))))))))))))) && ((((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && (params->y >= 0.0L)) && ((((params->sqrkp)*(params->sqrkp) == params->kp) && (params->sqrkp >= 0.0L)) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href_0))*((params->kp)*(params->kp))))+(((curr.href_0)*(curr.href_0))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href_0)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) != 0.0L)))) || ((((params->kp < 0.0L) && ((params->v == 0.0L) && (((params->h)*(params->y) <= (params->h)*(params->kd)) || (((params->h)*((params->kd)+(params->y)) <= 0.0L) || (params->h > curr.href_0))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v)) != (((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y))))))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href_0))*(params->kp)))))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (((params->h != curr.href_0) && (((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->h)*((params->kd)+(params->y)) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))) || (((params->kd == (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->kd < (2.0L)*(params->sqrkp)) && ((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L)) || ((params->h > curr.href_0) || (((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*((params->kd)+(params->y)) <= 0.0L)) || (((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L) && ((params->h)*(params->y) <= (params->h)*(params->kd)))))))))) || (((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) != (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) || (params->kd <= (2.0L)*(params->sqrkp)))) || ((params->kd < (2.0L)*(params->sqrkp)) || (((params->kd > (2.0L)*(params->sqrkp)) && ((((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href_0))*(params->kp))) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href_0))*(params->kp))))) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L))) || ((((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) && (params->kd <= (2.0L)*(params->sqrkp))) || ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))))))) || ((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href_0))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) >= 0.0L) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L))) || ((params->kd >= (2.0L)*(params->sqrkp)) || ((((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L) && (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href_0))*(params->kp)) || (((((2.0L)*(curr.href_0))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href_0))*(params->kp))))))) || (((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L) || ((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v)))))))))))))) && (((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && ((params->y >= 0.0L) && (((params->sqrkp)*(params->sqrkp) == params->kp) && ((params->sqrkp >= 0.0L) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href_0))*((params->kp)*(params->kp))))+(((curr.href_0)*(curr.href_0))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href_0)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) == 0.0L))))))) && (curr.href == curr.href_0)))",
@@ -485,7 +489,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     // CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val inputs = CodeGenerator.getInputs(testProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(testProg, stateVars.toSet, inputs, "Monitor")
+    val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
 
     //val controlCode = (new CGenerator(new CMpfrControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
     //val controlCode = (new CGenerator(new CControllerGenerator()))(prg, stateVars.toSet, inputs, "Controller")
@@ -642,7 +646,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     println("Test prog " + testProg.prettyString)
 
     val inputs = CodeGenerator.getInputs(testProg)
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(testProg, stateVars.toSet, inputs, "Monitor")
+    val monitorCode = generator(testProg, stateVars.toSet, inputs, "Monitor")
     println(monitorCode)
   }
 
@@ -651,7 +655,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val monitorExp = Parser.parser(io.Source.fromInputStream(inputFile).mkString)
     val vars = List("a","dx","dy","r","v","w","x","y","xo","yo","dxo","dyo","t","a_0","dxo_0","dyo_0","r_0","w_0",
       "xo_0","yo_0").map(_.asVariable.asInstanceOf[BaseVariable]).toSet
-    val genCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, vars)
+    val genCode = generator(monitorExp, vars)
     val monitorCode = genCode._1 + "\n\n" + genCode._2
 
     // robot and obstacle drive straight towards each other
@@ -692,7 +696,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val vars =
       Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
         Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
-    val monitorCode = (new CGenerator(new CMonitorGenerator('resist, Declaration(Map.empty))))(monitorExp, vars)
+    val monitorCode = generator(monitorExp, vars)
 
     // robot and obstacle drive straight towards each other
     val code =
@@ -950,7 +954,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "compile and run a controller" in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
-    val code = (new CGenerator(new CControllerGenerator(Declaration(Map.empty))))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
+    val code = (new CGenerator(new CControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty)))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
 
     val mainCode =
       s"""
@@ -982,7 +986,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   it should "compile and run a controller with MPFR" taggedAs IgnoreInBuildTest in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
-    val code = (new CGenerator(new CMpfrControllerGenerator(Declaration(Map.empty))))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
+    val code = (new CGenerator(new CMpfrControllerGenerator(Declaration(Map.empty)), True, Declaration(Map.empty)))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
 
     val mainCode =
       s"""

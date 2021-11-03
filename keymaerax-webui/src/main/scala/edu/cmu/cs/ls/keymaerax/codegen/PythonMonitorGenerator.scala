@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaera
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
   */
-class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration = Declaration(Map.empty)) extends CodeGenerator {
+class PythonMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) =
     generateMonitoredCtrlPythonCode(expr, stateVars)
