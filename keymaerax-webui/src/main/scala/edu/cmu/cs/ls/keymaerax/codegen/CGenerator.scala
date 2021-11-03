@@ -123,13 +123,20 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
     val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
     val parameters = bodyParameters ++ initParameters
 
-    val (_, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
-    val initBody = initGenerator(parameters)(init)._2
+    def initTermContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
+      case t: Variable if  params.contains(t) => "params->"
+      case t: Variable if !params.contains(t) => "init->"
+      case FuncOf(fn, Nothing) if  params.contains(fn) => "params->"
+      case _ => throw new CodeGenerationException("Unsupported symbol " + expr.prettyString + " found in initial conditions " + init.prettyString)
+    }
+
+    val initGen = new SimpleMonitorGenerator('resist, defs, CPrettyPrinter, initTermContainer)
+    val (initDefs, initBody) = initGen(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     val initCheck =
-      s"""bool checkInit(const state* const init, const parameters* const params) {
-         |  return $initBody
+      s"""verdict checkInit(const state* const init, const parameters* const params) {
+         |${initBody.linesWithSeparators.map("  " + _).mkString}
          |}""".stripMargin
 
     val exprDefs = printFuncDefs(expr, defs, parameters)

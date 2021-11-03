@@ -150,13 +150,20 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
     val initParameters = CodeGenerator.getParameters(defs.exhaustiveSubst(init), stateVars)
     val parameters = bodyParameters ++ initParameters
 
-    val (initBody, initDefs) = bodyGenerator(init, stateVars, inputVars, fileName)
-    //val initBody = initGenerator(parameters)(init)._2
+    def initTermContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
+      case t: Variable if  params.contains(t) => "params."
+      case t: Variable if !params.contains(t) => "init."
+      case FuncOf(fn, Nothing) if  params.contains(fn) => "params."
+      case _ => throw new CodeGenerationException("Unsupported symbol " + expr.prettyString + " found in initial conditions " + init.prettyString)
+    }
+
+    val initGen = new SimpleMonitorGenerator('resist, defs, PythonPrettyPrinter, initTermContainer)
+    val (initDefs, initBody) = initGen(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     val initCheck =
-      s"""def checkInit(init: State, params: Params) -> bool:
-         |  return $initBody
+      s"""def checkInit(init: State, params: Params) -> Verdict:
+         |${initBody.linesWithSeparators.map("  " + _).mkString}
          |""".stripMargin
 
     val exprDefs = printFuncDefs(expr, defs, parameters)
@@ -169,8 +176,8 @@ class PythonGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declara
       printVerdictDeclaration +
       exprDefs._1 +
       printFuncDefs(init, defs, parameters, exprDefs._2)._1 +
-      initDefs +
-      initCheck +
+      initDefs.trim + "\n" +
+      initCheck + "\n" +
       bodyDefs
       ,
       bodyBody)
