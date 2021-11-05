@@ -66,54 +66,42 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
       else throw new CodeGenerationException("Non-posterior, non-parameter function symbol " + fn.prettyString + " is not supported")
   }, defs)
 
-  /** Prints function definitions of symbols in `mentionedIn`. */
-  private def printFuncDefs(mentionedIn: Expression, defs: Declaration, parameters: Set[NamedSymbol], printed: Set[NamedSymbol] = Set.empty): (String, Set[NamedSymbol]) = {
-    val what = StaticSemantics.symbols(mentionedIn) -- printed
-    val printing = defs.decls.
-      filter({
-        case (n, s@Signature(_, Real | Bool, Some(_), _, _)) =>
-          val sym = Declaration.asNamedSymbol(n, s)
-          !parameters.contains(sym) && !printed.contains(sym) && what.contains(sym)
-        case _ => false })
-    printing.foldLeft(("", printed))({
-      case ((result, printed), (name, sig@Signature(_, codomain, Some(args), interpretation, _))) =>
-        def ctype(s: Sort): String = s match {
-          case Real => "long double"
-          case Bool => "bool"
-          case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
-        }
-        val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
-        //@note ensure that args don't have both . and ._0
-        assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
-          case DotTerm(_, Some(i)) => Some(i)
-          case DotTerm(_, None) => Some(0)
-          case _ => None
-        }).count(_ == 0) <= 1))
-        val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
-          (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
-            SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
-        val ((interpretationDefs, subPrinted), body) = interpretation match {
-          case Some(i) => (printFuncDefs(i, defs, parameters, printed), primitiveExprGenerator(parameters)(argsSubst(i))._2)
-          case _ => (("", Set.empty), "0; /* todo */")
-        }
-        def arguments(x: String): String = "const parameters* const " + FUNC_PARAMS_NAME + (if (x.nonEmpty) ", " + x else "")
-        (result + "\n\n" +
-          s"""$interpretationDefs
-           |${ctype(codomain)} ${name.prettyString}(${arguments(cargs)}) {
-           |  return $body;
-           |}""".stripMargin,
-          printed ++ subPrinted ++ Set(Declaration.asNamedSymbol(name, sig)))
-      })
+  /** Prints function definitions. */
+  private def printFuncDefs(defs: Declaration, parameters: Set[NamedSymbol]): String = {
+    //@note substs are topologically sorted, print in that order
+    defs.substs.reverse.
+      flatMap({
+        case SubstitutionPair(FuncOf(what, _), _) => Some(what)
+        case SubstitutionPair(PredOf(what, _), _) => Some(what)
+        case _ => None
+      }).map(name =>
+      defs.decls.find({ case (n, s) => Declaration.asNamedSymbol(n, s) == name }) match {
+        case Some((name, Signature(_, codomain, Some(args), interpretation, _))) =>
+          def ctype(s: Sort): String = s match {
+            case Real => "long double"
+            case Bool => "bool"
+            case _ => throw new IllegalArgumentException("Sort " + s + " not supported")
+          }
+          val cargs = args.map({ case (n, s) => s"${ctype(s)} ${n.prettyString}" }).mkString(", ")
+          //@note ensure that args don't have both . and ._0
+          assert(interpretation.forall(StaticSemantics.symbols(_).flatMap({
+            case DotTerm(_, Some(i)) => Some(i)
+            case DotTerm(_, None) => Some(0)
+            case _ => None
+          }).count(_ == 0) <= 1))
+          val argsSubst = USubst(args.zipWithIndex.flatMap({ case ((Name(n, idx), s), i) =>
+            (if (i == 0) List(SubstitutionPair(DotTerm(s, None), Variable(n, idx, s))) else Nil) :+
+              SubstitutionPair(DotTerm(s, Some(i)), Variable(n, idx, s)) }))
+          val body = interpretation match {
+            case Some(i) => primitiveExprGenerator(parameters)(argsSubst(i))._2
+            case _ => PythonPrettyPrinter.numberLiteral(0.0) + " /* todo */"
+          }
+          def arguments(x: String): String = "const parameters* const " + FUNC_PARAMS_NAME + (if (x.nonEmpty) ", " + x else "")
+          s"""${ctype(codomain)} ${name.prettyString}(${arguments(cargs)}) {
+             |  return $body;
+             |}""".stripMargin
+      }).mkString("\n")
   }
-
-  private def initGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
-    case t: Variable if  parameters.contains(t) => "params->"
-    case t: Variable if !parameters.contains(t) => "init->"
-    case FuncOf(fn, Nothing) if  parameters.contains(fn) => "params->"
-    case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "init->"
-    case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
-      throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
-  }, defs)
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
   private def generateMonitoredCtrlCCode(expr: Expression, init: Formula, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
@@ -131,7 +119,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
     }
 
     val initGen = new SimpleMonitorGenerator('resist, defs, CPrettyPrinter, initTermContainer)
-    val (initDefs, initBody) = initGen(init, stateVars, inputVars, fileName)
+    val (_, initBody) = initGen(init, stateVars, inputVars, fileName)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     val initCheck =
@@ -139,17 +127,13 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
          |${initBody.linesWithSeparators.map("  " + _).mkString}
          |}""".stripMargin
 
-    val exprDefs = printFuncDefs(expr, defs, parameters)
-
     (printHeader(fileName) +
       INCLUDE_STATEMENTS +
       printParameterDeclaration(parameters) +
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      exprDefs._1 +
-      printFuncDefs(init, defs, parameters, exprDefs._2)._1 +
-      initDefs + "\n" +
+      printFuncDefs(defs, parameters) +
       initCheck + "\n" +
       bodyDefs
       ,
