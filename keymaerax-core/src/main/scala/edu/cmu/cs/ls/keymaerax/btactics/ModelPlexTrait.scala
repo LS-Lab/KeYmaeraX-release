@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Term, V
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
+import scala.collection.immutable.ListMap
+
 /** A ModelPlex conjecture. The `constAssumptions` are a subset of `init` for variables/function symbols not bound in the program. */
 case class ModelPlexConjecture(init: Formula, conjecture: Formula, constAssumptions: List[Formula])
 
@@ -29,11 +31,11 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   val INDEXED_POST_VAR: Variable=>Variable = (v: Variable) => BaseVariable(v.name, Some(v.index.map(_ + 1).getOrElse(0)))
 
   def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
-            unobservable: Map[_ <: NamedSymbol, Option[Formula]] = Map.empty): Formula
+            unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty): Formula
   def apply(vars: List[Variable], kind: Symbol): Formula => Formula = apply(vars, kind, checkProvable=Some(_ => ()))
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
-                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]],
+                                           unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
                                            postVar: Variable=>Variable = NAMED_POST_VAR): ModelPlexConjecture
   def controllerMonitorByChase: DependentPositionTactic
   def modelplexSequentStyle: DependentPositionTactic

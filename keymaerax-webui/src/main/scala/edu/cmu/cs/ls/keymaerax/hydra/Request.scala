@@ -1402,7 +1402,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
     case Imply(init, Box(prg, _)) =>
-      createMonitorCondition(modelFml, stateVars, Map.empty) match {
+      createMonitorCondition(modelFml, stateVars, ListMap.empty) match {
         case Left((monitorConjecture, monitorCond, _)) =>
           def fresh(v: Variable, postfix: String): Variable = BaseVariable(v.name + postfix, v.index, v.sort)
 
@@ -1456,7 +1456,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
   /** Synthesizes a ModelPlex monitor formula over variables `vars` from the model `modelFml`.
     * Returns the monitor conjecture together with the synthesized monitor, or an error. */
   private def createMonitorCondition(modelFml: Formula, vars: Set[BaseVariable],
-                                     unobservable: Map[NamedSymbol, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
+                                     unobservable: ListMap[NamedSymbol, Option[Formula]]): Either[(Formula, Formula, BelleExpr), ErrorResponse] = {
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol], unobservable)
 
     val mx = ModelPlex.mxSynthesize(monitorKind) &
@@ -1479,7 +1479,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val Imply(init, Box(prg, _)) = modelFml
-    createMonitorCondition(modelFml, vars, Map.empty) match {
+    createMonitorCondition(modelFml, vars, ListMap.empty) match {
       case Left((modelplexConjecture, monitorFml, synthesizeTactic)) =>
         conditionKind match {
           case "dL" =>
@@ -1536,7 +1536,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val model = db.getModel(modelId)
     val modelFml = ArchiveParser.parseAsFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
-    val unobservable = Map.empty[NamedSymbol, Option[Formula]]
+    val unobservable = ListMap.empty[NamedSymbol, Option[Formula]]
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars, unobservable)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>

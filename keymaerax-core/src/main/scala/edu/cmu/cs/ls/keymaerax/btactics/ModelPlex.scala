@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, TacticReservedSymbols}
 
+import scala.collection.immutable.ListMap
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
 
@@ -47,7 +48,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
   def apply(formula: Formula, kind: Symbol, checkProvable: Option[ProvableSig => Unit] = Some(_ => ()),
-            unobservable: Map[_ <: NamedSymbol, Option[Formula]] = Map.empty): Formula = {
+            unobservable: ListMap[_ <: NamedSymbol, Option[Formula]] = ListMap.empty): Formula = {
     val vars = StaticSemantics.boundVars(formula).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
     val sortedVars = vars.sortWith((x,y)=>x<y)
     apply(sortedVars, kind, checkProvable)(formula)
@@ -61,7 +62,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    */
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit]): Formula => Formula = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
-    val ModelPlexConjecture(_, mxInputFml, assumptions) = createMonitorSpecificationConjecture(formula, vars, Map.empty)
+    val ModelPlexConjecture(_, mxInputFml, assumptions) = createMonitorSpecificationConjecture(formula, vars, ListMap.empty)
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     //@note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
     val tactic = (kind, ToolProvider.simplifierTool()) match {
@@ -200,10 +201,10 @@ object ModelPlex extends ModelPlexTrait with Logging {
   }
 
   /** Partitions the unobservable symbols into unobservable state variables and unknown model parameters. */
-  def partitionUnobservable(unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Map[Variable, Option[Formula]], Map[(Function, Variable), Option[Formula]]) = {
-    val unobservableStateVars: Map[Variable, Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Variable]).
+  def partitionUnobservable(unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (ListMap[Variable, Option[Formula]], ListMap[(Function, Variable), Option[Formula]]) = {
+    val unobservableStateVars: ListMap[Variable, Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Variable]).
       map({ case (k: Variable, v) => k -> v })
-    val unknownParams: Map[(Function, Variable), Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Function]).
+    val unknownParams: ListMap[(Function, Variable), Option[Formula]] = unobservable.filter(_._1.isInstanceOf[Function]).
       map({ case (k: Function, v) => (k, Variable(k.name, k.index, k.sort)) -> v })
     (unobservableStateVars, unknownParams)
   }
@@ -219,7 +220,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @see Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
     */
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
-                                           unobservable: Map[_ <: NamedSymbol, Option[Formula]],
+                                           unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
                                            postVar: Variable=>Variable = NAMED_POST_VAR): ModelPlexConjecture = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
@@ -274,7 +275,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @return A tuple of monitor conjecture and assumptions
     */
   def createSlidingMonitorSpec(fml: Formula, vars: List[Variable],
-                               unobservable: Map[_ <: NamedSymbol, Option[Formula]],
+                               unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
                                windowSize: Int): (Formula, List[Formula]) = {
     assert(vars.forall(_.index.isEmpty), "Variables with index not allowed, since sliding window generates indices")
     assert(windowSize >= 1, "Window size must be at least 1")
@@ -294,7 +295,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
   /** Conjecture for double-checking a monitor formula for correctness: assumptions -> (monitor -> < prg; >Upsilon). */
   def createMonitorCorrectnessConjecture(vars: List[Variable], kind: Symbol, checkProvable: Option[ProvableSig => Unit],
-                                         unobservable: Map[_ <: NamedSymbol, Option[Formula]]): (Formula => Formula) = formula => {
+                                         unobservable: ListMap[_ <: NamedSymbol, Option[Formula]]): (Formula => Formula) = formula => {
     val monitor = apply(vars, kind, checkProvable)(formula)
     val ModelPlexConjecture(_, monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars, unobservable)
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))

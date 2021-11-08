@@ -4,13 +4,15 @@
 */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, SimplifierV2, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, ModelPlex, ModelPlexConjecture, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+
+import scala.collection.immutable.ListMap
 
 /**
   * Tests the test synthesis tactics.
@@ -20,7 +22,7 @@ class TestSynthesisTests extends TacticTestBase {
 
   "Test synthesis" should "generate test cases without safety margin" in withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), ListMap.empty)
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       DebuggingTactics.print("After chase") &
@@ -42,7 +44,7 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "generate test cases with safety margin in some range" in withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), ListMap.empty)
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       DebuggingTactics.print("After chase") &
@@ -65,7 +67,7 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "generate no tests when safety margin range is invalid" in withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
+      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), ListMap.empty)
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       DebuggingTactics.print("After chase") &
@@ -83,7 +85,7 @@ class TestSynthesisTests extends TacticTestBase {
 
   it should "find the maximum safety margin range" in withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), Map.empty)
+      "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, List(Variable("x")), ListMap.empty)
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       DebuggingTactics.print("After chase") &
@@ -100,7 +102,7 @@ class TestSynthesisTests extends TacticTestBase {
   //@todo cannot reparse number 1.5E-14
   it should "find the maximum even when safety margin range is a point" ignore withMathematica { tool =>
     val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(
-      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), Map.empty)
+      "true -> [x:=2;]x>=2".asFormula, List(Variable("x")), ListMap.empty)
 
     val Sequent(IndexedSeq(), IndexedSeq(monitor)) = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       DebuggingTactics.print("After chase") &

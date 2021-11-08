@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 import testHelper.ParserFactory._
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, ListMap}
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
 
@@ -55,7 +55,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/simple.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), ListMap.empty)
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
       // no equational assignments
@@ -72,14 +72,14 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> xpost=1".asSequent
 
     val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(
-      List(Variable("x")), 'ctrl, None, Map.empty)(model)
+      List(Variable("x")), 'ctrl, None, ListMap.empty)(model)
     println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
     proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & autoClose) shouldBe 'proved
   }
 
   it should "chase away a loop by updateCalculus implicationally" in withTactics {
     val model = ArchiveParser.parseAsFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
-    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), ListMap.empty)
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
       case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
@@ -93,7 +93,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("f","l","c").map(_.asVariable), Map.empty)
+      List("f","l","c").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists f ((-1<=f&f<=(m()-l)/ep())&(0<=l&0<=ep())&fpost=f&lpost=l&cpost=0)".asSequent
@@ -110,7 +110,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("f","l","c").map(_.asVariable), Map.empty)
+      List("f","l","c").map(_.asVariable), ListMap.empty)
     val expected = "==> ((-1)<=fpost&fpost<=(m()-l)/ep())&(0=cpost&(lpost=l&(fpost < 0&(0=ep()&l>=0|ep()>0&l>=0)|(ep()>=0&l>=0)&fpost>0)|((fpost=0&l=lpost)&ep()>=0)&l>=0)|(cpost>0&ep()>=cpost)&(l>=0&(fpost=0&l=lpost|lpost=cpost*fpost+l&fpost>0)|(lpost=cpost*fpost+l&fpost < 0)&cpost*fpost+l>=0))".asSequent
 
     val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.modelMonitorT)(1) &
@@ -125,7 +125,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
   it should "find euler model monitor condition" ignore withMathematica { tool =>
     val model = "true -> [x:=2;{x'=-3*x}]x>0".asFormula
-    val ModelPlexConjecture(_, modelplexConjecture, assumptions) = createMonitorSpecificationConjecture(model, List(Variable("x")), Map.empty)
+    val ModelPlexConjecture(_, modelplexConjecture, assumptions) = createMonitorSpecificationConjecture(model, List(Variable("x")), ListMap.empty)
     //replace post with post()
     //@todo no longer necessary when axiom is added to axiom base
     val modelplexInput = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
@@ -159,7 +159,7 @@ class ModelplexTacticTests extends TacticTestBase {
   it should "find euler model monitor condition for systems" ignore withMathematica { tool =>
     val model = "true -> [x:=2;{x'=-3*x,y'=x-y}]x>0".asFormula
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","y").map(_.asVariable), Map.empty)
+      List("x","y").map(_.asVariable), ListMap.empty)
 
     val eulerApproxed = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(ModelPlex.eulerSystemAllIn)(1))
     eulerApproxed.subgoals should have size 2
@@ -208,7 +208,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val Imply(_, Box(prg, _)) = model
 
     val stateVars = List("f","l","c").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, stateVars, Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
     val tactic = ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1)
     val result = proveBy(modelplexInput, tactic)
@@ -283,7 +283,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model,
-      List("f","l","c").map(_.asVariable), Map.empty)
+      List("f","l","c").map(_.asVariable), ListMap.empty)
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)('R) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
@@ -349,7 +349,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model,
-      List("xl","vl","al","xf","vf","af","t").map(_.asVariable), Map.empty)
+      List("xl","vl","al","xf","vf","af","t").map(_.asVariable), ListMap.empty)
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
@@ -364,7 +364,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fm11/llc.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("xl","vl","al","xf","vf","af","t").map(_.asVariable), Map.empty)
+      List("xl","vl","al","xf","vf","af","t").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists al ((-B()<=al&al<=A())&(xf+vf^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vf) < xl+vl^2/(2*B())&\\exists af ((-B()<=af&af<=A())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=af&tpost=0)|vf=0&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=0&tpost=0|\\exists af ((-B()<=af&af<=-b())&(vf>=0&vl>=0&0<=ep())&xlpost=xl&vlpost=vl&alpost=al&xfpost=xf&vfpost=vf&afpost=af&tpost=0)))".asSequent
@@ -379,7 +379,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/fixedwing_simple_nobound.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("a","w","xo","theta","dxy","y","t","v","dx","w","yo","dz","x","dy").map(_.asVariable), Map.empty)
+      List("a","w","xo","theta","dxy","y","t","v","dx","w","yo","dz","x","dy").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> (v=Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=0&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy)|v>Vmin()&(theta=Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|theta=-Theta()&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=0&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=0&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(0<=theta&theta < Theta())&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy|(-Theta() < theta&theta < 0)&((!theta=Theta()|dxy=dXY()&dz=dZ())&(!theta=-Theta()|dxy=-dXY()&dz=dZ()))&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=-B()&wpost=-W()&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=-W()&yopost=yo&dzpost=dz&xpost=x&dypost=dy))|\\exists a ((-B()<=a&a<=A())&\\exists w ((-W()<=w&w<=W())&\\exists v (v>=Vmin()&\\exists theta ((-Theta()<=theta&theta<=Theta())&\\exists xo \\exists yo ((abs(x-xo)>(v^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)&abs(x-xo)>(v^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(theta))/W()-(v-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)+Vmin()*ep()|abs(y-yo)>(v^2-Vmin()^2)/(2*B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)&abs(y-yo)>(v^2-Vmin()^2)/(2*B())+Vmin()*((Theta()-abs(theta))/W()-(v-Vmin())/B())+2*r()+(A()/B()+1)*(A()/2*ep()^2+ep()*v)+Vmin()*ep())&(0<=ep()&v>=Vmin()&-Theta()<=theta&theta<=Theta())&apost=a&wpost=w&xopost=xo&thetapost=theta&dxypost=dxy&ypost=y&tpost=0&vpost=v&dxpost=dx&wpost=w&yopost=yo&dzpost=dz&xpost=x&dypost=dy)))))".asSequent
@@ -394,7 +394,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("vdes","SB","v","state","do","z","t","mo","m","d","a").map(_.asVariable), Map.empty)
+      List("vdes","SB","v","state","do","z","t","mo","m","d","a").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> (\\forall do (do=d->\\forall mo (mo=m->\\exists m \\exists d \\exists vdes ((d>=0&do^2-d^2<=2*b()*(m-mo)&vdes>=0)&vdespost=vdes&SBpost=SB&vpost=v&statepost=state&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)))|vdespost=vdes&SBpost=SB&vpost=v&statepost=brake&dopost=do&zpost=z&tpost=t&mopost=mo&mpost=m&dpost=d&apost=a)|v<=vdes&\\exists a ((a>=-b()&a<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))|v>=vdes&\\exists a ((a < 0&a>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|state=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&state!=brake)&(v>=0&0<=ep())&vdespost=vdes&SBpost=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost=v&statepost=state&dopost=do&zpost=z&tpost=0&mopost=mo&mpost=m&dpost=d&apost=a))".asSequent
@@ -412,7 +412,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString)
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), Map.empty)
+      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists w ((-W()<=w&w<=W())&\\exists r \\exists xo \\exists yo ((r!=0&r*w=v)&(abs(x-xo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=A()&rpost=r&tpost=0))))".asSequent
@@ -428,7 +428,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString)
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), Map.empty)
+      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists w ((-W()<=w&w<=W())&\\exists r \\exists xo \\exists yo ((r!=0&r*w=v)&(abs(x-xo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=A()&rpost=r&tpost=0))))".asSequent
@@ -444,7 +444,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString)
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model,
-      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), Map.empty)
+      List("xo","yo","vxo","vyo","x","y","dx","dy","v","w","a","r","t").map(_.asVariable), ListMap.empty)
     val expected = "vxopost^2+vyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-b()&rpost=r&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-W()<=wpost&wpost<=W())&(rpost!=0&rpost*wpost=v)&(abs(x-xopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*b())+V()*v/b()+(A()/b()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&apost=A()&tpost=0)".asFormula
 
     val axiomatic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
@@ -467,7 +467,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, List("x","y","v","a","dx",
-      "dy","w","r","xo","yo","vxo","vyo","t","beta","visDeg").map(_.asVariable), Map.empty)
+      "dy","w","r","xo","yo","vxo","vyo","t","beta","visDeg").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists vxo \\exists vyo (vxo^2+vyo^2<=V()^2&(\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=beta&visDegpost=visDeg)|v=0&\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=0&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=beta&visDegpost=visDeg)|\\exists r (r!=0&\\exists xo \\exists yo \\exists visDeg ((visDeg>0->abs(x-xo)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V())|abs(y-yo)>v^2/(2*b())+V()*v/b()+((A()/b()+1)*(A()/2*ep()^2+ep()*v)+(A()/b()+1)*ep()*V()))&v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < GammA()*abs(r)&\\exists w (w*r=v&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy&wpost=w&rpost=r&xopost=xo&yopost=yo&vxopost=vxo&vyopost=vyo&tpost=0&betapost=0&visDegpost=visDeg)))))".asSequent
@@ -486,7 +486,7 @@ class ModelplexTacticTests extends TacticTestBase {
   "Hybrid quadcopter" should "extract the correct controller monitor" ignore withTactics {
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
-    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List("href","v","h").map(_.asVariable), Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List("href","v","h").map(_.asVariable), ListMap.empty)
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
@@ -501,7 +501,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("href","v","h").map(_.asVariable), Map.empty)
+      List("href","v","h").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> \\exists href ((h>=href&href>0&((kp < 0&v=0&href>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*href*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&href=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*href*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*href*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*href*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*href*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*href*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>href)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*href*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*href*kp)|kp>0&v=0&(h!=href&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>href|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*href*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*href*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*href*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*href*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*href*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*href*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2=0))&true&hrefpost=href&vpost=v&hpost=h)".asSequent
@@ -531,7 +531,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model,
-      List("xsl","vsl","x1","v1","a1","t").map(_.asVariable), Map.empty)
+      List("xsl","vsl","x1","v1","a1","t").map(_.asVariable), ListMap.empty)
 
     val tactic = ModelPlex.modelplexAxiomaticStyle(ModelPlex.controllerMonitorT)(1) &
       ModelPlex.optimizationOneWithSearch(None, Nil, Nil, Some(ModelPlex.mxSimplify))(1)
@@ -547,7 +547,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/iccps12/vsl.key")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("xsl","vsl","x1","v1","a1","t").map(_.asVariable), Map.empty)
+      List("xsl","vsl","x1","v1","a1","t").map(_.asVariable), ListMap.empty)
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
     foResult.subgoals.loneElement shouldBe "==> xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=-B()&tpost=t|xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1)&\\exists a1 ((-B()<=a1&a1<=A())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=t)|x1>=xsl&\\exists a1 ((-B()<=a1&a1<=A()&a1<=(v1-vsl)/ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=t)|\\exists xsl \\exists vsl ((vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v1))&(v1>=0&0<=ep())&xslpost=xsl&vslpost=vsl&x1post=x1&v1post=v1&a1post=a1&tpost=0)".asSequent
@@ -582,7 +582,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","a","t").map(_.asVariable), Map.empty)
+      List("x","v","a","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -598,7 +598,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","t").map(_.asVariable), Map.empty)
+      List("x","v","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -613,7 +613,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","d","c","t").map(_.asVariable), Map.empty)
+      List("x","v","d","c","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -628,7 +628,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsign.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","a","t").map(_.asVariable), Map.empty)
+      List("x","v","a","t").map(_.asVariable), ListMap.empty)
 
     val mxResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1))
     mxResult.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)&xpost=A*(t_^2/2)+v*t_+x&vpost=A*t_+v&apost=A&tpost=t_+0)|v=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+v>=0&s_+0<=ep)&xpost=0*(t_^2/2)+v*t_+x&vpost=0*t_+v&apost=0&tpost=t_+0)|\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)&xpost=(-b)*(t_^2/2)+v*t_+x&vpost=(-b)*t_+v&apost=-b&tpost=t_+0)".asSequent
@@ -643,7 +643,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignv.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","t").map(_.asVariable), Map.empty)
+      List("x","v","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -657,7 +657,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/pldi16/stopsignvdistchange.kyx")
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("x","v","d","c","t").map(_.asVariable), Map.empty)
+      List("x","v","d","c","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -678,7 +678,7 @@ class ModelplexTacticTests extends TacticTestBase {
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/veriphy/velocitycar_extended_dist.kyx")).mkString)
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val ModelPlexConjecture(_, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      List("d","v","t").map(_.asVariable), Map.empty)
+      List("d","v","t").map(_.asVariable), ListMap.empty)
 
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1))
@@ -759,7 +759,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val ctrlMonitorStateVars = List("d","v","t").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(init, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, ctrlMonitorStateVars, Map.empty)
+    val ModelPlexConjecture(init, modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, ctrlMonitorStateVars, ListMap.empty)
 
     val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Monitor Result")
@@ -884,7 +884,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
 
     val stateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
+    val ModelPlexConjecture(_, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
     val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
@@ -914,7 +914,7 @@ class ModelplexTacticTests extends TacticTestBase {
     evolDomain shouldBe expectedEvolutionDomain
 
     val modelMonitorStateVars = List("xg","yg","v","a","t","vl","vh","k","t_0","v_0","xg_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(monitorInit, modelMonitorInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, modelMonitorStateVars, Map.empty)
+    val ModelPlexConjecture(monitorInit, modelMonitorInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, modelMonitorStateVars, ListMap.empty)
     val monitorTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Monitor Result")
 
@@ -925,14 +925,14 @@ class ModelplexTacticTests extends TacticTestBase {
 
     /* Derive a controller monitor (monitor only controller, use right after control decision) */
     val ctrlMonitorStateVars = List("xg","yg","v","a","t","vl","vh","k").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, ctrlMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), ctrlMonitorStateVars, Map.empty)
+    val ModelPlexConjecture(_, ctrlMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), ctrlMonitorStateVars, ListMap.empty)
     val ctrlMonitorResult = proveBy(ctrlMonitorInput, monitorTactic)
     val ctrlMonitorFml = ctrlMonitorResult.subgoals.head.succ.head
     ctrlMonitorFml shouldBe "(ygpost>0&abs(kpost)*eps()<=100&((kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (kpost*(eps()*eps())+200*eps())*100)&0<=vlpost&vlpost < vhpost&A()*T()<=10*(vhpost-vlpost)&B()*T()<=10*(vhpost-vlpost))&((-B()<=apost&apost<=A())&10*v+apost*T()>=0&(v<=vhpost&10*v+apost*T()<=10*vhpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(ygpost-10*eps())*10000*100)&(vlpost<=v&10*v+apost*T()>=10*vlpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(ygpost-10*eps())*10000*100))&vpost=v&tpost=0".asFormula
 
     /* Derive a plant monitor (monitor only physics, use right after plant/before controller) */
     val plantMonitorStateVars = List("xg","yg","v","t","t_0","v_0","xg_0","yg_0").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(_, plantMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), plantMonitorStateVars, Map.empty)
+    val ModelPlexConjecture(_, plantMonitorInput, _) = ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), plantMonitorStateVars, ListMap.empty)
     val plantMonitorResult = proveBy(plantMonitorInput, monitorTactic)
     val plantMonitorFml = plantMonitorResult.subgoals.head.succ.head
     plantMonitorFml shouldBe "((v>=0&t<=T())&(t>=0&(k*(eps()*eps())-200*eps())*100 < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+200*eps())*100|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*10000*100|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*10000*100)&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*10000*100|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*10000*100)))&((vpost>=0&tpost<=T())&(tpost>=0&(k*(eps()*eps())-200*eps())*100 < k*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&k*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (k*(eps()*eps())+200*eps())*100|10*vpost+a*(T()-tpost)>=0&((a>=0&10*vpost+a*(T()-tpost)<=10*vh|a<=0&vpost<=vh)|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(B()*(2*vpost*(T()-tpost)*10+a*((T()-tpost)*(T()-tpost)))+((vpost*10+a*(T()-tpost))*(vpost*10+a*(T()-tpost))-10*vh*(10*vh)))<=2*B()*(ygpost-10*eps())*10000*100|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(B()*(2*vpost*(T()-tpost)*10+a*((T()-tpost)*(T()-tpost)))+((vpost*10+a*(T()-tpost))*(vpost*10+a*(T()-tpost))-10*vh*(10*vh)))<=2*B()*(abs(xgpost)-10*eps())*10000*100)&((a>=0&vpost>=vl|a<=0&10*vpost+a*(T()-tpost)>=10*vl)|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(A()*(2*vpost*(T()-tpost)*10+a*((T()-tpost)*(T()-tpost)))+(vl*10*(vl*10)-(vpost*10+a*(T()-tpost))*(vpost*10+a*(T()-tpost))))<=2*A()*(ygpost-10*eps())*10000*100|(10000+2*eps()*abs(k)*100+eps()*eps()*(k*k))*(A()*(2*vpost*(T()-tpost)*10+a*((T()-tpost)*(T()-tpost)))+(vl*10*(vl*10)-(vpost*10+a*(T()-tpost))*(vpost*10+a*(T()-tpost))))<=2*A()*(abs(xgpost)-10*eps())*10000*100)))&tpost_0=t&vpost_0=v&xgpost_0=xg&ygpost_0=yg".asFormula
@@ -967,7 +967,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = entry.expandedModel.asInstanceOf[Formula]
 
     val stateVars = List("acc","d","jpb","m","st","t","v","z").map(_.asVariable.asInstanceOf[BaseVariable])
-    val ModelPlexConjecture(init, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, Map.empty)
+    val ModelPlexConjecture(init, modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars, ListMap.empty)
     val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions, Nil, Some(ModelPlex.mxSimplify))(1) & DebuggingTactics.print("Ctrl Monitor Result")
     val ctrlResult = proveBy(modelplexInput, ctrlTactic)
