@@ -470,6 +470,11 @@ class AssessmentProverTests extends TacticTestBase {
       check(ExpressionArtifact("n/a")) shouldBe Right("Incorrect n/a")
   }
 
+  it should "not reply with a syntax error on expected n/a" in withZ3 { _ =>
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
+      check(SubstitutionArtifact(List("f() ~> 5".asSubstitutionPair))) shouldBe Right("Incorrect (f()~>5)")
+  }
+
   "Differential invariant checker" should "prove simple examples" in withZ3 { _ =>
     AssessmentProver.dICheck(ODESystem("{x'=1,y'=2}".asDifferentialProgram), "2*x=y".asFormula) shouldBe 'proved
     AssessmentProver.dICheck(ODESystem("{x'=x,y'=-y}".asDifferentialProgram), "x*y=1".asFormula) shouldBe 'proved
@@ -525,7 +530,7 @@ class AssessmentProverTests extends TacticTestBase {
 
   it should "reply with expected answer type to wrong answer format" in {
     AskGrader(Some(AskGrader.Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>0")).
-      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got Sequent"
+      check(SequentArtifact("==> x>0".asSequent :: Nil)).right.value shouldBe "Expected a Formula but got Sequent:\n==> 1:  x>0\tGreater"
   }
 
   it should "give correct feedback on model conditions" in {
@@ -665,11 +670,26 @@ class AssessmentProverTests extends TacticTestBase {
     val problems = (2 to 16).flatMap(i => extractProblems(QUIZ_PATH + "/" + i + "/main.tex"))
     val askProblems = problems.map(p => p.copy(questions = p.questions.filter(_.isInstanceOf[AskQuestion]))).toList
     val graders = askProblems.flatMap(p => p.questions.map(toGrader)).map(_._1)
-    forEvery(Table("Grader", graders:_*)) {
-      _.check(TextArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
+    forEvery(Table("Grader", graders:_*).drop(42)) {
+      g => g.expected match {
+        case TextArtifact(None) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case TextArtifact(Some("")) => g.check(TextArtifact(None)).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case _ => g.check(TextArtifact(None)).right.value shouldBe AssessmentProver.Messages.BLANK
+      }
     }
     forEvery(Table("Grader", graders:_*)) {
-      _.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
+      g => g.expected match {
+        case TextArtifact(None) => g.check(TextArtifact(Some(""))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case TextArtifact(Some("")) => g.check(TextArtifact(Some(""))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case _ => g.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
+      }
+    }
+    forEvery(Table("Grader", graders:_*)) {
+      g => g.expected match {
+        case TextArtifact(None) => g.check(TextArtifact(Some("   \n  \t  "))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case TextArtifact(Some("")) => g.check(TextArtifact(Some("\n  \t\n"))).left.value.conclusion shouldBe "==>  explanation()&full()<->explanation()&full()".asSequent
+        case _ => g.check(TextArtifact(Some(""))).right.value shouldBe AssessmentProver.Messages.BLANK
+      }
     }
   }
 
@@ -896,7 +916,7 @@ class AssessmentProverTests extends TacticTestBase {
       ("Substitution of linear equations", 7) :: ("Square root arithmetic", 3) :: ("Eliminate quantifiers", 6) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 6
+    testsols shouldBe 15
     nosols shouldBe 12
     run(problems)
   }

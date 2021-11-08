@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, ParseException, ParsedArchiveEntry, Parser}
+import edu.cmu.cs.ls.keymaerax.parser.{ArchiveParser, Declaration, KeYmaeraXArchivePrinter, ParseException, ParsedArchiveEntry, Parser, PrettierPrintFormatProvider}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter.StringToStringConverter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -54,6 +54,7 @@ object AssessmentProver {
   abstract class Artifact {
     def hintString: String
     def longHintString: String = hintString
+    def prettyString: String
     /** Checks the artifact for being of a certain shape (skip if None), returns None if shape constraint is met, an error message otherwise. */
     def checkShape(shape: Option[String]): Option[String] = None
   }
@@ -61,6 +62,7 @@ object AssessmentProver {
     val expr: Expression = exprString.asExpr
     override def hintString: String = expr.kind.toString
     override def longHintString: String = expr.kind.toString + " " + exprString
+    override def prettyString: String = expr.prettyString
     override def checkShape(shape: Option[String]): Option[String] = {
       shape match {
         case Some("&=") => expr match {
@@ -129,6 +131,7 @@ object AssessmentProver {
   }
   case class TexExpressionArtifact(expr: Expression) extends Artifact {
     override def hintString: String = "Simple list/interval notation"
+    override def prettyString: String = expr.prettyString
   }
   case class ListExpressionArtifact(exprs: List[Expression]) extends Artifact {
     override def hintString: String = {
@@ -136,38 +139,49 @@ object AssessmentProver {
       else "List of " + exprs.headOption.map(_.kind).getOrElse("<unknown>")
     }
     override def longHintString: String = exprs.map(_.kind).mkString(",") + ":\n  " + exprs.map(e => e.prettyString + ": " + e.kind).mkString("\n  ")
+    override def prettyString: String = if (exprs.isEmpty) Messages.BLANK else longHintString
   }
   case class SequentArtifact(goals: List[Sequent]) extends Artifact {
     override def hintString: String =
       if (goals.size <= 1) "Sequent"
       else "List of sequents"
+
+    override def prettyString: String = hintString + ":\n" + goals.map(_.prettyString).mkString("\n")
   }
   case class TacticArtifact(s: String, t: BelleExpr) extends Artifact {
     override def hintString: String = "Tactic"
+    override def prettyString: String = t.prettyString
   }
   case class ArchiveArtifact(s: String) extends Artifact {
     lazy val entries: List[ParsedArchiveEntry] = ArchiveParser.parse(s, parseTactics=true)
     override def hintString: String = "Archive"
+    override def prettyString: String = entries.map(new KeYmaeraXArchivePrinter(PrettierPrintFormatProvider(_, 80))).mkString("\n")
   }
   case class SubstitutionArtifact(s: List[SubstitutionPair]) extends Artifact {
     override def hintString: String = "Uniform substitution"
+    override def prettyString: String = s.map(_.toString).mkString(", ")
   }
   case class ChoiceArtifact(selected: List[String]) extends Artifact {
     override def hintString: String = "Choice"
+    override def prettyString: String = selected.mkString(",")
   }
   case class BoolArtifact(value: Option[Boolean]) extends Artifact {
     override def hintString: String = "Boolean"
+    override def prettyString: String = value.map(_.toString).getOrElse(Messages.BLANK)
   }
   case class TextArtifact(value: Option[String]) extends Artifact {
     override def hintString: String = "Text"
+    override def prettyString: String = if (value.map(_.trim).getOrElse("").isEmpty) Messages.BLANK else value.get
   }
   /** Artifacts from multiple questions. */
   case class MultiArtifact(artifacts: List[Artifact]) extends Artifact {
     override def hintString: String = "<unknown>"
+    override def prettyString: String = artifacts.map(_.prettyString).mkString("\n")
   }
   /** Any of the artifacts is correct. */
   case class AnyOfArtifact(artifacts: List[Artifact]) extends Artifact {
     override def hintString: String = artifacts.map(_.hintString).distinct.reduceOption(_ + "/" + _).getOrElse("<unknown>")
+    override def prettyString: String = artifacts.map(_.prettyString).distinct.reduceOption(_ + "/" + _).getOrElse("<unknown>")
   }
 
   abstract class Grader {
@@ -244,14 +258,29 @@ object AssessmentProver {
 
     private def run(p: => () => ProvableSig): Either[ProvableSig, String] = AssessmentProver.run(p, args.get(Options.FAIL_HINT))
 
+    private def errorMsg(expected: Artifact, haveMsg: String) = expected match {
+      case h: ExpressionArtifact => h.expr match {
+        case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
+          if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
+          if (haveMsg == Messages.BLANK) haveMsg
+          else "Incorrect " + haveMsg
+        case _ =>
+          if (haveMsg == Messages.BLANK) haveMsg
+          else "Expected a " + expected.hintString + " but got " + haveMsg
+      }
+      case _ =>
+        if (haveMsg == Messages.BLANK) haveMsg
+        else "Expected a " + expected.hintString + " but got " + haveMsg
+    }
+
     private def errorMsg(expected: Artifact, have: Artifact): String = have match {
       case e: ExpressionArtifact => e.expr match {
         case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
           if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
           "Incorrect " + e.expr.prettyString
-        case _ => "Expected a " + expected.hintString + " but got " + have.longHintString
+        case _ => errorMsg(expected, e.expr.prettyString)
       }
-      case _ => "Expected a " + expected.hintString + " but got " + have.longHintString
+      case _ => errorMsg(expected, have.prettyString)
     }
 
     private def check(have: Artifact, expected: Artifact): Either[ProvableSig, String] = {
