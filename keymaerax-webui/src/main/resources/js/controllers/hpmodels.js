@@ -612,6 +612,18 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       if (data.success) {
         $scope.model.numAllProofSteps = 0;
         onSuccess();
+      } else {
+        var modalInstance = $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Error saving model changes"; },
+            message: function() { return "Deleting proof steps was required for model editing but failed. Model changes are not saved. Please delete proofs manually prior to editing the model."; },
+            mode: function() { return "ok"; },
+            oktext: function() { return "OK"; }
+          }
+        });
       }
     });
   }

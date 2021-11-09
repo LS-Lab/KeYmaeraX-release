@@ -1306,8 +1306,9 @@ class DeleteAllModelsRequest(db: DBAbstraction, userId: String) extends UserRequ
 
 class DeleteModelProofStepsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
-    val deletedSteps = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).sum
-    BooleanResponse(deletedSteps > 0) :: Nil
+    val modelProofs = db.getProofsForModel(modelId)
+    val deleted = modelProofs.map(p => (p.stepCount, db.deleteProofSteps(p.proofId)))
+    BooleanResponse(deleted.forall({ case (hadSteps, deletedSteps) => hadSteps == deletedSteps })) :: Nil
   }
 }
 
