@@ -754,6 +754,7 @@ del {
   position: absolute;
   top: calc(50% - 70px);
   left: calc(50% - 50px);
+  z-index: 2000;
 }
 
 .tactic-spinner {
@@ -762,6 +763,7 @@ del {
   position: absolute;
   top: calc(10% - 20px);
   left: calc(50% - 25px);
+  z-index: 2000;
 }
 
 .spinner-double-bounce1, .spinner-double-bounce2 {
@@ -774,7 +776,7 @@ del {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 10;
+  z-index: 2010;
 
   -webkit-animation: spinner-bounce 2.0s infinite ease-in-out;
   animation: spinner-bounce 2.0s infinite ease-in-out;
@@ -806,7 +808,7 @@ del {
   width: calc(100% + 10px);
   height: calc(100% + 30px);
   position: absolute;
-  z-index: 5;
+  z-index: 2005;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -817,7 +819,7 @@ del {
   width: calc(100% + 10px);
   height: calc(100% + 30px);
   position: absolute;
-  z-index: 5;
+  z-index: 2005;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -828,7 +830,7 @@ del {
   width: calc(100% + 10px);
   height: 150px; /*calc(100% + 30px);*/
   position: absolute;
-  z-index: 7;
+  z-index: 2007;
   margin: -20px -20px;
   border-radius: 3px;
 }
@@ -839,7 +841,7 @@ del {
   top: calc(50% + 45px);
   left: calc(50% - 100px);
   color: var(--lsmainback);
-  z-index: 10;
+  z-index: 2010;
 }
 
 .tactic-spinner-please-wait {
@@ -848,7 +850,7 @@ del {
   top: calc(10% + 25px);
   width: calc(100% + 10px);
   color: var(--lsmainback);
-  z-index: 10;
+  z-index: 2010;
 }
 
 .tactic-spinner-progresslist {
