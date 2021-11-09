@@ -58,8 +58,21 @@ object AssessmentProver {
     /** Checks the artifact for being of a certain shape (skip if None), returns None if shape constraint is met, an error message otherwise. */
     def checkShape(shape: Option[String]): Option[String] = None
   }
-  case class ExpressionArtifact(exprString: String) extends Artifact {
-    val expr: Expression = exprString.asExpr
+  case class ExpressionArtifact(exprString: String, kind: Option[Kind] = None) extends Artifact {
+    val expr: Expression = kind match {
+      case Some(FormulaKind) => exprString.asFormula
+      case Some(ProgramKind) => exprString.asProgram
+      case Some(DifferentialProgramKind) => exprString.asDifferentialProgram
+      case Some(TermKind) => exprString.asTerm
+      case _ => exprString.asExpr
+    }
+    def as(kind: Kind): Expression = kind match {
+      case FormulaKind => exprString.asFormula
+      case ProgramKind => exprString.asProgram
+      case DifferentialProgramKind => exprString.asDifferentialProgram
+      case TermKind => exprString.asTerm
+      case _ => exprString.asExpr
+    }
     override def hintString: String = expr.kind.toString
     override def longHintString: String = expr.kind.toString + " " + exprString
     override def prettyString: String = expr.prettyString
@@ -233,17 +246,32 @@ object AssessmentProver {
   case class AskGrader(mode: Option[String], args: Map[String, String], expected: Artifact) extends Grader {
     /** Checks whether artifact `have` fits artifact `expected` using `mode`. */
     override def check(have: Artifact): Either[ProvableSig, String] = {
-      if (mode.contains(Modes.SKIP)) return Right(Messages.SKIPPED)
-      checkArtifactKind(have, expected) match {
-        case Some(toReturn) => return toReturn
-        case None => // continue
+      if (mode.contains(Modes.SKIP)) Right(Messages.SKIPPED)
+      else checkArtifactKind(have, expected) match {
+        case Right(e) => Right(e)
+        case Left(have) => expected match {
+          case e: ExpressionArtifact => e.expr match {
+            // central treatment of N/A
+            case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
+              if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") => have match {
+              case h: ExpressionArtifact => h.expr match {
+                case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
+                  if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
+                  run(() => syntacticEquality(h.copy(exprString = h.exprString.toLowerCase).expr, e.expr))
+                case _ => Right(errorMsg(expected, have))
+              }
+            }
+            case _ => checkShapeThenRun(have, expected)
+          }
+          case _ => checkShapeThenRun(have, expected)
+        }
       }
-      have.checkShape(args.get("shape")) match {
-        case Some(e) => return Right(e)
-        case None => // shape check passed
-      }
+    }
 
-      expected match {
+    /** Checks the shape of artifact `have`; if successful, runs the grader afterwards. */
+    private def checkShapeThenRun(have: Artifact, expected: Artifact): Either[ProvableSig, String] = have.checkShape(args.get("shape")) match {
+      case Some(e) => Right(e)
+      case None => expected match {
         case AnyOfArtifact(exp) =>
           for (e <- exp) {
             check(have, e) match {
@@ -259,7 +287,7 @@ object AssessmentProver {
     private def run(p: => () => ProvableSig): Either[ProvableSig, String] = AssessmentProver.run(p, args.get(Options.FAIL_HINT))
 
     private def errorMsg(expected: Artifact, haveMsg: String) = expected match {
-      case h: ExpressionArtifact => h.expr match {
+      case e: ExpressionArtifact => e.expr match {
         case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
           if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
           if (haveMsg == Messages.BLANK) haveMsg
@@ -274,11 +302,11 @@ object AssessmentProver {
     }
 
     private def errorMsg(expected: Artifact, have: Artifact): String = have match {
-      case e: ExpressionArtifact => e.expr match {
+      case h: ExpressionArtifact => h.expr match {
         case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
           if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
-          "Incorrect " + e.expr.prettyString
-        case _ => errorMsg(expected, e.expr.prettyString)
+          "Incorrect " + h.expr.prettyString
+        case _ => errorMsg(expected, h.expr.prettyString)
       }
       case _ => errorMsg(expected, have.prettyString)
     }
@@ -294,7 +322,7 @@ object AssessmentProver {
             else Right("")
           case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
         }
-        case Modes.VALUE_EQ =>(have, expected) match {
+        case Modes.VALUE_EQ => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
               case (ht: Term, et: Term) => run(() => valueEquality(ht, et))
@@ -317,7 +345,7 @@ object AssessmentProver {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
               case (ht: Term, et: Term) => run(() => polynomialEquality(ht, et))
-              case (hf: Formula, ef: Formula) => run(() => polynomialEquality(hf, ef, normalize=false))
+              case (hf: Formula, ef: Formula) => run(() => polynomialEquality(hf, ef, normalize = false))
               case _ => Right("Answer must be a KeYmaera X term, list of terms, or simple list/interval notation, but got " + have.longHintString)
             }
           case (ListExpressionArtifact(h), ListExpressionArtifact(e)) =>
@@ -335,7 +363,7 @@ object AssessmentProver {
               case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
             }
           case (TexExpressionArtifact(h: Formula), TexExpressionArtifact(e: Formula)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
-          case (SequentArtifact(h::Nil), SequentArtifact(e::Nil)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
+          case (SequentArtifact(h :: Nil), SequentArtifact(e :: Nil)) => run(() => polynomialEquality(h, e, args.getOrElse("normalize", "false").toBoolean))
           case _ => Right("Answer must be a KeYmaera X expression, sequent, or simple list/interval notation, but got " + have.longHintString)
         }
         case Modes.QE =>
@@ -347,6 +375,7 @@ object AssessmentProver {
                   KeYmaeraXProofChecker(5, Declaration(Map.empty))(QE)(Sequent(IndexedSeq.empty, IndexedSeq(m)))
                 })
               }
+
               have match {
                 case h: ExpressionArtifact => runQE(q, h.exprString :: Nil)
                 case ListExpressionArtifact(hs) => runQE(q, hs.map(_.prettyString))
@@ -377,8 +406,8 @@ object AssessmentProver {
                   case Some(r) => r
                 }
               case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
+            }
           }
-        }
         case Modes.PROP => (have, expected) match {
           case (h: ExpressionArtifact, e: ExpressionArtifact) =>
             (h.expr, e.expr) match {
@@ -441,7 +470,7 @@ object AssessmentProver {
           case _ => Right("Answer must be a KeYmaera X formula, but got " + have.longHintString)
         }
         case Modes.MIN_PARENS => (have, expected) match {
-          case (h@ExpressionArtifact(hs), e@ExpressionArtifact(es)) =>
+          case (h@ExpressionArtifact(hs, _), e@ExpressionArtifact(es, _)) =>
             run(() => syntacticEquality(h.expr, e.expr)) match {
               case Left(p) =>
                 if (hs.count(_ == '(') + hs.count(_ == '{') <= es.count(_ == '(') + es.count(_ == '{') + 1) Left(p)
@@ -479,7 +508,7 @@ object AssessmentProver {
               val esTrimmed = trim.findFirstMatchIn(es).map(_.group("text")).getOrElse("")
               val minLength = args.getOrElse("minLength", "8").toInt
               val fracOfSol = args.getOrElse("fracOfSol", "0.3").toDouble
-              if (hsTrimmed.length >= fracOfSol*esTrimmed.length)
+              if (hsTrimmed.length >= fracOfSol * esTrimmed.length)
                 run(() => prove(("==> " + Modes.EXPLANATION_CHECK + "&full<->" + Modes.EXPLANATION_CHECK + "&full").asSequent,
                   byUS(Ax.equivReflexive)))
               else if (hsTrimmed.length >= minLength)
@@ -504,15 +533,21 @@ object AssessmentProver {
             val expectPostcondition = args.get("postcondition") match {
               case Some(p) => p.asFormula
             }
-            def makeResponse(preconditionOk: Boolean, postconditionOk: Boolean) : String = {
+
+            def makeResponse(preconditionOk: Boolean, postconditionOk: Boolean): String = {
               var response: String = "";
-              if (!preconditionOk)
-              { response = response + "\nYou may be assuming too much. Consider weakening your assumptions."}
-              if (!postconditionOk)
-              { response = response + "\nYour safety property may not be strong enough. Consider strengthening it."}
-              if (preconditionOk & postconditionOk) { response = Messages.OK}
+              if (!preconditionOk) {
+                response = response + "\nYou may be assuming too much. Consider weakening your assumptions."
+              }
+              if (!postconditionOk) {
+                response = response + "\nYour safety property may not be strong enough. Consider strengthening it."
+              }
+              if (preconditionOk & postconditionOk) {
+                response = Messages.OK
+              }
               response
             }
+
             val preconditionOk = isFormulaImplied(expectPrecondition.asInstanceOf[Formula], havePrecondition.asInstanceOf[Formula])
             val postconditionOk = isFormulaImplied(havePostcondition.asInstanceOf[Formula], expectPostcondition.asInstanceOf[Formula])
             Right(makeResponse(preconditionOk, postconditionOk))
@@ -530,7 +565,7 @@ object AssessmentProver {
             run(() => {
               val generator = new ConfigurableGenerator[GenProduct]()
               Parser.parser.setAnnotationListener((p: Program, inv: Formula) =>
-                generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
+                generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard = true)))).distinct))
               TactixInit.invSupplier = generator
               val m = expand(question, answers, Parser.parser).asInstanceOf[Formula]
               val t = expand(args("tactic"), answers, BelleParser)
@@ -573,7 +608,7 @@ object AssessmentProver {
                   })
                   if (lemmaResults.forall(_.isLeft)) {
                     val lemmas = lemmaResults.map(_.left.get).map(byUS)
-                    run(() => prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R))*(e.size-1) & BranchTactic(lemmas)))
+                    run(() => prove(Sequent(IndexedSeq(), IndexedSeq(combined)), OnAll(andR('R)) * (e.size - 1) & BranchTactic(lemmas)))
                   } else {
                     lemmaResults.find(_.isRight).get
                   }
@@ -584,7 +619,7 @@ object AssessmentProver {
           //@todo not sure what we could do with a "tactic" argument that is not already possible in the archive, ignore for now
           val entries = have match {
             case TacticArtifact(s, _) => args.get("question") match {
-              case Some(q) => expand(q, s :: Nil, ArchiveParser.parse(_, parseTactics=true))
+              case Some(q) => expand(q, s :: Nil, ArchiveParser.parse(_, parseTactics = true))
               case None => return Right(Messages.INSPECT)
             }
             case a: ArchiveArtifact => a.entries
@@ -607,36 +642,45 @@ object AssessmentProver {
       }
     }
 
-    private def checkArtifactKind(have: Artifact, expected: Artifact): Option[Either[ProvableSig, String]] = {
-      (have, expected) match {
-        case (_, AnyOfArtifact(artifacts)) =>
-          val anyOfResults = artifacts.map(checkArtifactKind(have, _))
-          if (!anyOfResults.exists(_.isEmpty)) return anyOfResults.head
-        case (TextArtifact(h), TextArtifact(Some(_))) if h.getOrElse("").trim.isEmpty => return Some(Right(Messages.BLANK))
-        case (ExpressionArtifact(e), _) if e.trim.isEmpty => return Some(Right(Messages.BLANK))
-        case (ListExpressionArtifact(Nil), _) => return Some(Right(Messages.BLANK))
-        case (SequentArtifact(Nil), _) => return Some(Right(Messages.BLANK))
-        case (h: ExpressionArtifact, e: ExpressionArtifact) => e.expr match {
-          case Divide(BaseVariable(n, None, Real), BaseVariable(a, None, Real))
-            if n.equalsIgnoreCase("n") && a.equalsIgnoreCase("a") =>
-            return Some(run(() => syntacticEquality(h.expr, e.expr)))
-          case _ => if (h.expr.kind != e.expr.kind) return Some(Right(errorMsg(e, h)))
+    /** Checks artifact `have` for being of the kind expected by artifact `expected`. Returns either
+      * the (elaborated) artifact `have`, or an error message. */
+    private def checkArtifactKind(have: Artifact, expected: Artifact): Either[Artifact, String] = (have, expected) match {
+      case (_, AnyOfArtifact(artifacts)) =>
+        val anyOfResults = artifacts.map(checkArtifactKind(have, _))
+        anyOfResults.find(r => r.isRight || r.left.get != have) match {
+          case Some(result) => result
+          case None => Left(have)
         }
-        case (h: ExpressionArtifact, e@ListExpressionArtifact(exprs)) =>
-          if (exprs.exists(_.kind != h.expr.kind)) return Some(Right(errorMsg(e, h)))
-        case (h@ListExpressionArtifact(have), e: ExpressionArtifact) =>
-          if (have.exists(_.kind != e.expr.kind)) return Some(Right(errorMsg(e, h)))
-        case (h@ListExpressionArtifact(have), e@ListExpressionArtifact(expected)) =>
-          require(expected.map(_.kind).toSet.nonEmpty)
-          if (expected.map(_.kind).toSet.size > 1) {
-            if (expected.zip(have).forall({ case (ee, he) => ee.kind == he.kind })) Right(errorMsg(e, h))
-          } else if (have.exists(_.kind != expected.head.kind)) return Some(Right(errorMsg(e, h)))
-        case (h, e) =>
-          if (!e.getClass.isAssignableFrom(h.getClass)) return Some(Right(errorMsg(e, h)))
-      }
-      None
+      case (TextArtifact(h), TextArtifact(Some(_))) if h.getOrElse("").trim.isEmpty => Right(Messages.BLANK)
+      case (ExpressionArtifact(e, _), _) if e.trim.isEmpty => Right(Messages.BLANK)
+      case (ListExpressionArtifact(Nil), _) => Right(Messages.BLANK)
+      case (SequentArtifact(Nil), _) => Right(Messages.BLANK)
+      case (h: ExpressionArtifact, e: ExpressionArtifact) =>
+        Try(h.as(e.expr.kind)).toOption match {
+          case None => Right(errorMsg(e, h))
+          case Some(_) => Left(h.copy(kind = Some(e.expr.kind)))
+        }
+      case (h: ExpressionArtifact, e@ListExpressionArtifact(exprs)) =>
+        if (exprs.exists(_.kind != h.expr.kind)) Right(errorMsg(e, h))
+        else Left(have)
+      case (h@ListExpressionArtifact(have), e: ExpressionArtifact) =>
+        if (have.exists(_.kind != e.expr.kind)) Right(errorMsg(e, h))
+        else Left(h)
+      case (h@ListExpressionArtifact(have), e@ListExpressionArtifact(expected)) =>
+        require(expected.map(_.kind).toSet.nonEmpty)
+        if (expected.map(_.kind).toSet.size > 1) {
+          if (expected.zip(have).exists({ case (ee, he) => ee.kind != he.kind })) Right(errorMsg(e, h))
+          else Left(h)
+        } else if (have.exists(_.kind != expected.head.kind)) {
+          Right(errorMsg(e, h))
+        } else Left(h)
+      case (h, e) =>
+        if (!e.getClass.isAssignableFrom(h.getClass)) Right(errorMsg(e, h))
+        else Left(have)
+      case _ => Left(have)
     }
   }
+
   /** A grader that has access to multiple answers. */
   case class MultiAskGrader(main: Grader, earlier: Map[Int, Grader]) extends Grader {
     private val grader = main match {

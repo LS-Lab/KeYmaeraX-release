@@ -287,6 +287,21 @@ class AssessmentProverTests extends TacticTestBase {
     }
   }
 
+  "Syntactic equality" should "return useful error messages" in withZ3 { _ =>
+    // expected formula, answered with predicate
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("x>=0")).
+      check(ExpressionArtifact("p(x)")).right.value shouldBe "" //@note expect term p(x) to be elaborated to predicate p(x), so no hint about wrong answer kind expected
+  }
+
+  it should "handle expected n/a" in withZ3 { _ =>
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
+      check(ExpressionArtifact("n/a")).left.value shouldBe 'proved
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
+      check(ExpressionArtifact("N/A")).left.value shouldBe 'proved
+    AskGrader(Some(Modes.SYN_EQ), Map.empty, ExpressionArtifact("n/a")).
+      check(ExpressionArtifact("f(x)")).right.value shouldBe "Incorrect f(x)"
+  }
+
   "Polynomial equality" should "prove simple term examples" in withZ3 { _ =>
     AssessmentProver.polynomialEquality("2*x^2".asTerm, "x^2*2".asTerm) shouldBe 'proved
     AssessmentProver.polynomialEquality("x^3*y^2".asTerm, "y * x/1^2 * 4*x^2/2^2 * y".asTerm) shouldBe 'proved
@@ -376,7 +391,7 @@ class AssessmentProverTests extends TacticTestBase {
   it should "return useful error messages" in withZ3 { _ =>
     // expected single expression, ok to answer with a list of duplicate elements
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
-      check(ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).left.get shouldBe 'proved
+      check(ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).left.value shouldBe 'proved
     // expected single expression, not ok to answer with a list
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ExpressionArtifact("-3")).
       check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right(
@@ -386,10 +401,10 @@ class AssessmentProverTests extends TacticTestBase {
     // expected list of expression that happens to be one element (make it a list by duplicating element),
     // ok to answer with a single expression
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
-      check(ExpressionArtifact("-3")).left.get shouldBe 'proved
+      check(ExpressionArtifact("-3")).left.value shouldBe 'proved
     // expected list of expressions, ok to answer with a list
     AskGrader(Some(Modes.POLY_EQ), Map.empty, ListExpressionArtifact(List("-3".asTerm, "-3".asTerm))).
-      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))) shouldBe Right("") // wrong but syntactically ok
+      check(ListExpressionArtifact(List("-1".asTerm, "-3".asTerm))).right.value shouldBe "" // wrong but syntactically ok
   }
 
   "Value equality" should "prove simple examples" in withZ3 { _ =>
@@ -917,7 +932,7 @@ class AssessmentProverTests extends TacticTestBase {
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
     testsols shouldBe 15
-    nosols shouldBe 12
+    nosols shouldBe 16
     run(problems)
   }
 
@@ -1239,7 +1254,7 @@ class AssessmentProverTests extends TacticTestBase {
     }
 
     def artifactString(a: Artifact): String = a match {
-      case ExpressionArtifact(expr) => expr
+      case ExpressionArtifact(expr, _) => expr
       case TexExpressionArtifact(expr) => expr match {
         case fml: Formula =>
           val disjuncts = FormulaTools.disjuncts(fml)
@@ -1293,7 +1308,7 @@ class AssessmentProverTests extends TacticTestBase {
               case Some(q) if q.contains(AskQuestion.ARG_PLACEHOLDER) =>
                 def solfinText(artifact: Artifact): String = {
                   val exprs = artifact match {
-                    case ExpressionArtifact(s) => s :: Nil
+                    case ExpressionArtifact(s, _) => s :: Nil
                     case ListExpressionArtifact(exprs) => exprs.map(_.prettyString)
                     case TacticArtifact(s, _) => s :: Nil
                     case ArchiveArtifact(s) => s :: Nil
@@ -1347,7 +1362,7 @@ class AssessmentProverTests extends TacticTestBase {
         case Some(s) if q.isInstanceOf[AskQuestion] || q.isInstanceOf[MultiAskQuestion] =>
           @tailrec
           def correctString(a: Artifact): String = a match {
-            case ExpressionArtifact(s) => s
+            case ExpressionArtifact(s, _) => s
             case ListExpressionArtifact(expr) => expr.map(_.prettyString).mkString(",")
             case TexExpressionArtifact(expr) => expr.prettyString
             case TextArtifact(Some(s)) => s
