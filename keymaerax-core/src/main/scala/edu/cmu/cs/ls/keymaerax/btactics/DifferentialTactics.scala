@@ -1451,7 +1451,7 @@ private object DifferentialTactics extends Logging {
     val pre = diffCut(barrierFml)(pos) < (
         skip, /* diffWeakenG faster but loses assumptions*/
         //todo: Not sure why dW sometimes fails here
-        (dW(pos) & useAt(barrierCond)(1) | diffWeakenG(pos) & useAt(barrierCond)(1, 1 :: Nil)) & timeoutQE & done
+        (dW(pos) & useAt(barrierCond)(1) | diffWeakenG(pos) & useAt(barrierCond)(1, 1 :: Nil)) & timeoutQE & DebuggingTactics.done("Attempted to prove generated Barrier " + barrierFml.prettyString + " without any assumptions, but failed to prove; try to use dC to preserve additional facts from your assumptions")
     ) &
     starter
 
