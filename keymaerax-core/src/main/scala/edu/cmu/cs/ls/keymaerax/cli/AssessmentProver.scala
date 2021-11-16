@@ -236,6 +236,8 @@ object AssessmentProver {
       val CHECK_ARCHIVE: String = "checkArchive"
       /** Check if model assumptions and postcondition are ok. */
       val TEST_MODEL: String = "testModel"
+      /** Checks a ModelPlex monitor */
+      val CHECK_MODELPLEX_MONITOR: String = "checkmx"
       /** Skip grading */
       val SKIP: String = "skip"
     }
@@ -553,6 +555,17 @@ object AssessmentProver {
             Right(makeResponse(preconditionOk, postconditionOk))
           } catch {
             case _: Throwable => Right(Messages.INSPECT)
+          }
+        case Modes.CHECK_MODELPLEX_MONITOR =>
+          AskGrader(Some(Modes.POLY_EQ), args, expected).check(have) match {
+            case Left(result) => Left(result)
+            case Right("INSPECT") =>
+              AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + expected.prettyString)), expected).check(have) match {
+                case Left(_) =>
+                  Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies".asSequent, byUS(Ax.equivReflexive)))
+                case r@Right("INSPECT") => r
+              }
+            case Right(errorMsg) => Right(errorMsg)
           }
         case Modes.BELLE_PROOF =>
           @tailrec
@@ -1314,6 +1327,11 @@ object AssessmentProver {
                   (prompt, prompt.points)
                 case "partial()" =>
                   msgStream.println(Messages.PASS + ":Partial")
+                  (prompt, prompt.points/2)
+              }
+              case Sequent(IndexedSeq(), IndexedSeq(Equiv(And(p, q), _))) if p.prettyString.startsWith("checkmx") => q.prettyString match {
+                case "partialimplies()" =>
+                  msgStream.println(Messages.PASS + ":Partial (answer identifies too many situations as violations)")
                   (prompt, prompt.points/2)
               }
               case _ =>

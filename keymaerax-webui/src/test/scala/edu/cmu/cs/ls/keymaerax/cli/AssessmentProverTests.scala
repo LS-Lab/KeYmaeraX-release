@@ -919,8 +919,8 @@ class AssessmentProverTests extends TacticTestBase {
         ("Controller monitor for time-triggered ping-pong", 2) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 10
-    nosols shouldBe 14
+    testsols shouldBe 20
+    nosols shouldBe 9
     run(problems)
   }
 
