@@ -10,10 +10,20 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
 
+/**
+  * Some commonly useful helper utilities for basic tactic implementations.
+  */
 object TacticHelper {
 
   /** Returns a fresh index for `name` in formula `f`. */
-  def freshIndexInFormula(name: String, f: Formula): Option[Int] = {
+  def freshIndexInFormula(name: String, f: Formula): Option[Int] = freshIndexInExpression(name, f)
+  /** Returns a fresh index for `name` in program `a`. */
+  def freshIndexInProgram(name: String, a: Program): Option[Int] = freshIndexInExpression(name, a)
+  /** Returns a fresh index for `name` in Term `t`. */
+  def freshIndexInTerm(name: String, t: Term): Option[Int] = freshIndexInExpression(name, t)
+
+  /** Returns a fresh index for `name` in expression `e`. */
+  def freshIndexInExpression(name: String, e: Expression): Option[Int] = {
     var maxIdx: Option[Int] = None
 
     def max(n: NamedSymbol, max: Option[Int]): Option[Int] = {
@@ -54,10 +64,11 @@ object TacticHelper {
         }
         Left(None)
       }
-    }, f)
+    }, e)
 
     maxIdx.map(_ + 1)
   }
+
 
   /** Returns the symbols in `f`. */
   @deprecated("Use StaticSemantics.symbols instead")
@@ -87,6 +98,8 @@ object TacticHelper {
     }
   /** Returns a named symbol with name `t.name` and fresh index in formula `f`. */
   def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T = freshNamedSymbol(t, freshIndexInFormula(_, f))
+  /** Returns a named symbol with name `t.name` and fresh index in program `a`. */
+  def freshNamedSymbol[T <: NamedSymbol](t: T, a: Program): T = freshNamedSymbol(t, freshIndexInProgram(_, a))
   /** Returns a named symbol with name `t.name` and fresh index in sequent `s`. */
   def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T = freshNamedSymbol(t, freshIndexInSequent(_, s))
 

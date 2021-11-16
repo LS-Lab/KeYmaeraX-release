@@ -255,6 +255,8 @@ private[core] object AxiomBase extends Logging {
     * @author Stefan Mitsch
     * @author Jan-David Quesel
     * @author Andre Platzer
+    * @author Yong Kiam Tan
+    * @author Fabian Immler
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -327,7 +329,7 @@ Axiom "DE differential effect (system)"
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
-/* @todo soundness requires only vectorial x in p(||) */
+/* @todo soundness requires only vectorial x in p(||). Already no primes in q(||). */
 Axiom "DI differential invariance"
   ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
