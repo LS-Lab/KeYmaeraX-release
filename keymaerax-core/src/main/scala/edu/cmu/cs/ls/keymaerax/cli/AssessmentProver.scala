@@ -563,7 +563,25 @@ object AssessmentProver {
               AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + expected.prettyString)), expected).check(have) match {
                 case Left(_) =>
                   Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies".asSequent, byUS(Ax.equivReflexive)))
-                case r@Right("INSPECT") => r
+                case r@Right("INSPECT") => (expected, have) match {
+                  case (e: ExpressionArtifact, h: ExpressionArtifact) => (e.expr, h.expr) match {
+                    case (ef: Formula, hf: Formula) =>
+                      val fvDiff = (StaticSemantics.symbols(e.expr) -- StaticSemantics.symbols(h.expr)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+                      if (fvDiff.nonEmpty) {
+                        val existsExpected = fvDiff.foldLeft[Formula](ef)({ case (p, v) => Exists(v :: Nil, p) })
+                        AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + existsExpected.prettyString)), expected).check(have) match {
+                          case Left(_) =>
+                            val v = fvDiff.map(_.prettyString).mkString(",")
+                            //@todo measure "importance" of variables, e.g., occurs in how many of the FormulaTools.atomicFormulas(ef)
+                            val expectedCount = StaticSemantics.symbols(e.expr).count(_.isInstanceOf[Variable])
+                            Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount) <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount)".asSequent, byUS(Ax.equivReflexive)))
+                          case r => r
+                        }
+                      } else r
+                    case _ => r
+                  }
+                  case _ => r
+                }
               }
             case Right(errorMsg) => Right(errorMsg)
           }
@@ -1329,11 +1347,19 @@ object AssessmentProver {
                   msgStream.println(Messages.PASS + ":Partial")
                   (prompt, prompt.points/2)
               }
-              case Sequent(IndexedSeq(), IndexedSeq(Equiv(And(p, q), _))) if p.prettyString.startsWith("checkmx") => q.prettyString match {
-                case "partialimplies()" =>
+              case Sequent(IndexedSeq(), IndexedSeq(Equiv(And(p, q), _))) if p.prettyString.startsWith("checkmx") =>
+                if (q.prettyString == "partialimplies()") {
                   msgStream.println(Messages.PASS + ":Partial (answer identifies too many situations as violations)")
-                  (prompt, prompt.points/2)
-              }
+                  (prompt, prompt.points*0.75)
+                } else if (q.prettyString.startsWith("partialexists(")) {
+                  val args = q.prettyString.stripPrefix("partialexists(").stripSuffix(")").split(",").toList
+                  val (v, missing :: expected :: Nil) = args.splitAt(args.length-2)
+                  msgStream.println(Messages.PASS + ":Partial (think about the role of " + v.mkString(",") + ")")
+                  (prompt, prompt.points*0.5*(expected.toFloat-missing.toFloat)/expected.toFloat)
+                } else {
+                  msgStream.println(Messages.FAILED + failedMessage(prompt))
+                  (prompt, 0.0)
+                }
               case _ =>
                 msgStream.println(Messages.PASS)
                 (prompt, prompt.points)

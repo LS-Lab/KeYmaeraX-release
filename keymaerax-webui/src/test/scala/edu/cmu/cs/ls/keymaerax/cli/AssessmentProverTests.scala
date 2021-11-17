@@ -835,7 +835,7 @@ class AssessmentProverTests extends TacticTestBase {
         ("Parachute", 3) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 9
+    testsols shouldBe 11
     nosols shouldBe 8
     run(problems)
   }
@@ -871,8 +871,8 @@ class AssessmentProverTests extends TacticTestBase {
         ("Direct velocity control", 2) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 5
-    nosols shouldBe 6
+    testsols shouldBe 11
+    nosols shouldBe 15
     run(problems)
   }
 
@@ -895,7 +895,7 @@ class AssessmentProverTests extends TacticTestBase {
         ("Complete diamond loop game proofs", 3) :: ("Completeness questions", 4) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 13
+    testsols shouldBe 21
     nosols shouldBe 6
     run(problems)
   }
@@ -919,9 +919,13 @@ class AssessmentProverTests extends TacticTestBase {
         ("Controller monitor for time-triggered ping-pong", 2) :: Nil
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
-    testsols shouldBe 20
-    nosols shouldBe 9
+    testsols shouldBe 24
+    nosols shouldBe 6
     run(problems)
+
+    //@note for debugging the partial points computation: particularly bad partial solution that doesn't earn points
+    val submission = createSubmission(problems.filter(_.name.contains("Monitors for velocity controlled car")), "", rand, Some("true"))
+    runGrader(submission._1)
   }
 
   it should "prove quiz 20" in withZ3 { _ =>
@@ -1086,7 +1090,7 @@ class AssessmentProverTests extends TacticTestBase {
   }
 
   it should "run all quizzes" in {
-    val quizzes = (2 to 16).map(QUIZ_PATH + "/" + _ + "/main.tex")
+    val quizzes = (1 to 21).map(QUIZ_PATH + "/" + _ + "/main.tex")
     val allProblems = quizzes.map(extractProblems)
     val tic = System.nanoTime()
     allProblems.zipWithIndex.foreach({ case (problems, i) =>
@@ -1097,7 +1101,7 @@ class AssessmentProverTests extends TacticTestBase {
       beforeEach()
       withZ3 { _ =>
         val (submission, _) = createSubmission(problems, "", rand, None)
-        runGrader(submission, "", None)
+        runGrader(submission)
       }
       afterEach()
       afterAll()
@@ -1115,10 +1119,6 @@ class AssessmentProverTests extends TacticTestBase {
     for (i <- 1 to RANDOM_TRIALS) { runGrader(problems, i, "lab:0", checkScore = false) }
   }
 
-  it should "grade quiz 9 submission" in withZ3 { _ =>
-    AssessmentProver.grade(Map('skiponparseerror -> "true", 'in -> ("/Users/smitsch/Documents/projects/keymaera/github/KeYmaeraX-Collab/KeYmaera4-Collab/keymaerax-webui/src/test/resources" + QUIZ_PATH + "/9/chapter_submission.json")), System.out, System.out, "")
-  }
-
   /** Runs the autograder on the `i`th random submission (list of `problems`), unless `uniformAnswer`
     * (text+whether parseable) is provided; uses `chapterLabel` to look up the grading information
     * currently missing from problems. */
@@ -1128,7 +1128,7 @@ class AssessmentProverTests extends TacticTestBase {
                         checkScore: Boolean = true): Unit = {
     val randClue = "Submission produced in " + i + "th run of " + RANDOM_TRIALS + " random trials from seed " + rand.seed
     val (submission, expected) = createSubmission(problems, chapterLabel, rand, uniformAnswer.map(_._1))
-    val (resultsString, msgLines) = runGrader(submission, chapterLabel, uniformAnswer)
+    val (resultsString, msgLines) = runGrader(submission)
 
     val parseFailed = """.*?\((\d+)\)\.\.\.PARSE ERROR""".r("id")
     val graded = """.*?\((\d+)\)\.\.\.(?:(?:PASS)|(?:FAILED)|(?:BLANK)|(?:INSPECT)|(?:SKIPPED))""".r("id")
@@ -1202,7 +1202,12 @@ class AssessmentProverTests extends TacticTestBase {
               val partial = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_.startsWith(AssessmentProver.Messages.PASS + ":Partial"))
               val inspect = gradedLinesById.contains(p.id) && gradedLinesById(p.id).map(_.split("""\.\.\.""")(1)).forall(_.startsWith(AssessmentProver.Messages.INSPECT))
               if (!skipped && !partial && !inspect && uniformAnswer.forall(_._2) && answeredCorrectly) 1.0
-              else if (partial) 0.5
+              else if (partial) {
+                //@todo introduce \partialsol tex command with expected partial score
+                // monitor check computes score depending on how wrong the answer is, does not return a single uniform partial score
+                if (problem.title.toLowerCase.contains("monitor")) cancel("Test TODO: unable to check partial score of monitors")
+                else 0.5
+              }
               else if (inspect) 0.0
               else expectedFailScore
             case _ => if (answeredCorrectly) 1.0 else expectedFailScore
@@ -1214,7 +1219,7 @@ class AssessmentProverTests extends TacticTestBase {
     }
   }
 
-  private def runGrader(submission: Submission.Chapter, chapterLabel: String, uniformAnswer: Option[(String, Boolean)]) = {
+  private def runGrader(submission: Submission.Chapter) = {
     val json = {
       import Submission.SubmissionJsonFormat._
       submission.toJson
@@ -1454,7 +1459,7 @@ class AssessmentProverTests extends TacticTestBase {
         grader.check(t) match {
           case Left(l) => grader match {
             case _: AnyChoiceGrader if l.isProved =>
-              l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent  withClue t
+              l.conclusion shouldBe "==> anychoice&partial <-> anychoice&partial".asSequent withClue t
             case _ => l shouldNot be ('proved) withClue t
           }
           case Right(_) => //
