@@ -920,12 +920,13 @@ class AssessmentProverTests extends TacticTestBase {
     val (sols, testsols, nosols) = solCounts(problems)
     sols shouldBe problems.map(_.questions.size).sum
     testsols shouldBe 24
-    nosols shouldBe 6
+    nosols shouldBe 8
     run(problems)
 
     //@note for debugging the partial points computation: particularly bad partial solution that doesn't earn points
-    val submission = createSubmission(problems.filter(_.name.contains("Monitors for velocity controlled car")), "", rand, Some("true"))
-    runGrader(submission._1)
+    runGrader(createSubmission(problems.filter(_.name.contains("Monitors for velocity controlled car")), "", rand, Some("true"))._1)
+    // not a solution
+    runGrader(createSubmission(problems.filter(_.name.contains("Monitors for velocity controlled car")), "", rand, Some("false"))._1)
   }
 
   it should "prove quiz 20" in withZ3 { _ =>

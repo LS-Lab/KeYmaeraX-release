@@ -559,29 +559,34 @@ object AssessmentProver {
         case Modes.CHECK_MODELPLEX_MONITOR =>
           AskGrader(Some(Modes.POLY_EQ), args, expected).check(have) match {
             case Left(result) => Left(result)
-            case Right("INSPECT") =>
-              AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + expected.prettyString)), expected).check(have) match {
-                case Left(_) =>
-                  Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies".asSequent, byUS(Ax.equivReflexive)))
-                case r@Right("INSPECT") => (expected, have) match {
-                  case (e: ExpressionArtifact, h: ExpressionArtifact) => (e.expr, h.expr) match {
-                    case (ef: Formula, hf: Formula) =>
-                      val fvDiff = (StaticSemantics.symbols(e.expr) -- StaticSemantics.symbols(h.expr)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
-                      if (fvDiff.nonEmpty) {
-                        val existsExpected = fvDiff.foldLeft[Formula](ef)({ case (p, v) => Exists(v :: Nil, p) })
-                        AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + existsExpected.prettyString)), expected).check(have) match {
-                          case Left(_) =>
-                            val v = fvDiff.map(_.prettyString).mkString(",")
-                            //@todo measure "importance" of variables, e.g., occurs in how many of the FormulaTools.atomicFormulas(ef)
-                            val expectedCount = StaticSemantics.symbols(e.expr).count(_.isInstanceOf[Variable])
-                            Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount) <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount)".asSequent, byUS(Ax.equivReflexive)))
-                          case r => r
-                        }
-                      } else r
+            case r@Right("INSPECT") =>
+              AskGrader(Some(Modes.QE), args ++ Map("question" -> ("!(" + QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1)")), expected).check(have) match {
+                // answer is satisfiable, now check implication
+                case Right(_) => AskGrader(Some(Modes.QE), args ++ Map("question" -> ("(" + QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1) -> " + expected.prettyString)), expected).check(have) match {
+                  case Left(_) =>
+                    Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialimplies".asSequent, byUS(Ax.equivReflexive)))
+                  case r@Right("INSPECT") => (expected, have) match {
+                    case (e: ExpressionArtifact, h: ExpressionArtifact) => (e.expr, h.expr) match {
+                      case (ef: Formula, hf: Formula) =>
+                        val fvDiff = (StaticSemantics.symbols(e.expr) -- StaticSemantics.symbols(h.expr)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+                        if (fvDiff.nonEmpty) {
+                          val existsExpected = fvDiff.foldLeft[Formula](ef)({ case (p, v) => Exists(v :: Nil, p) })
+                          AskGrader(Some(Modes.QE), args ++ Map("question" -> (QuizExtractor.AskQuestion.ARG_PLACEHOLDER + "1 -> " + existsExpected.prettyString)), expected).check(have) match {
+                            case Left(_) =>
+                              val v = fvDiff.map(_.prettyString).mkString(",")
+                              //@todo measure "importance" of variables, e.g., occurs in how many of the FormulaTools.atomicFormulas(ef)
+                              val expectedCount = StaticSemantics.symbols(e.expr).count(_.isInstanceOf[Variable])
+                              Left(prove(s"==> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount) <-> ${Modes.CHECK_MODELPLEX_MONITOR}&partialexists($v,${fvDiff.size},$expectedCount)".asSequent, byUS(Ax.equivReflexive)))
+                            case r => r
+                          }
+                        } else r
+                      case _ => r
+                    }
                     case _ => r
                   }
                   case _ => r
                 }
+                case _ => r
               }
             case Right(errorMsg) => Right(errorMsg)
           }
