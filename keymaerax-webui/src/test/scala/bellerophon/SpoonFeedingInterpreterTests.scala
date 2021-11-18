@@ -2528,6 +2528,30 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
+  it should "support tactic-internal definition expansion" in withMathematica { _ => withDatabase { db =>
+    val defs = "wUp()~>-1 :: wLo()~>1 :: maxI(v,w,vlo)~>max(0, w*(vlo-v)) :: nil".asDeclaration
+    val s =
+      """(w=wUp()|w=wLo()) &
+        |(0 < maxI(v,w,vlo)/alo() | 0>=maxI(v,w,vlo)/alo() & 0=-w*maxI(v,w,vlo)^2/(2*alo())
+        |   -> abs(r)>rp()|w*h < -hp()) &
+        |rp()>=0 & hp()>0 & rv>=0 & alo()>0
+        |->
+        |abs(r)>rp() | abs(h)>hp()
+        |""".stripMargin
+
+    val proofId = db.createProof(s)
+    val interpreter = registerInterpreter(
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
+        listener(db.db, constructGlobalProvable = false),
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    //@note QE expands wUp and wLo
+    val tactic = BelleParser.parseWithInvGen(
+      """implyR(1); andL('L)*; implyL('L); <(QE, QE)""".stripMargin, defs=defs, expandAll=false)
+    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula), defs)) match {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
+    }
+  }}
+
   it should "FEATURE_REQUEST: return delayed substitution on unfinished dIRule when mixed with unconstified branches" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"

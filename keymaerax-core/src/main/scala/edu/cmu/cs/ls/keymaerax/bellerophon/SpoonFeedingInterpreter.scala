@@ -547,7 +547,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                         result
                       case BelleProvable(innerProvable, innerLabels, defs) =>
                         val resultLabels = updateLabels(labels, 0, innerLabels)
-                        val result = (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
+                        val result =
+                          if (innerProvable.conclusion == provable.subgoals(0)) {
+                            (BelleProvable(provable(innerProvable, 0), resultLabels, defs), ctx.store(tactic))
+                          } else {
+                            // some tactics (e.g., QE, dI) internally expand definitions
+                            val subst = RestrictedBiDiUnificationMatch(provable.subgoals(0), innerProvable.conclusion).usubst
+                            (new BelleDelayedSubstProvable(innerProvable, resultLabels, defs, subst, Some((provable, 0))), ctx.store(tactic))
+                          }
                         runningInner = null
                         result
                     }
