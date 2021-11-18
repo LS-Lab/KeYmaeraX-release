@@ -824,17 +824,6 @@ object SwitchedSystems {
       prop
     ))
 
-  //todo: copied from ImplicitDefinitions
-  private lazy val boxOrLeft = remember("[a;]p(||) -> [a;](p(||) | q(||))".asFormula,
-    implyR(1) & monb & prop,
-    namespace
-  )
-
-  private lazy val boxOrRight = remember("[a;]q(||) -> [a;](p(||) | q(||))".asFormula,
-    implyR(1) & monb & prop,
-    namespace
-  )
-
   // MLF tactic for state-dependent and guarded state-dependents
   @Tactic(
     names="stabilityStateMLF",
@@ -1005,9 +994,9 @@ object SwitchedSystems {
                 (p1, p2) =>
                 useAt(conjSplit)(1,1::Nil) &
                 choiceb(1) & andL('Llast) & andR(1) <(
-                useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
                 ,
-                useAt(boxOrRight,PosInExpr(1::Nil))(1) &
+                useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
                   implyRiLast & hideL('Llast) & implyR('Rlast) & p2
                 )
               )
@@ -1268,9 +1257,9 @@ object SwitchedSystems {
                 (p1, p2) =>
                   useAt(conjSplit)(1,1::Nil) &
                     choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
                     ,
-                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
+                    useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
                       implyRiLast & hideL('Llast) & implyR('Rlast) & p2
                   )
               )
@@ -1545,8 +1534,8 @@ object SwitchedSystems {
           ).reduceRight(
             (p1, p2) =>
             choiceb('Rlast) & andR('Rlast) <(
-              useAt(boxOrLeft,PosInExpr(1::Nil))('Rlast) & p1,
-              useAt(boxOrRight,PosInExpr(1::Nil))('Rlast) & p2
+              useAt(Ax.boxOrLeft,PosInExpr(1::Nil))('Rlast) & p1,
+              useAt(Ax.boxOrRight,PosInExpr(1::Nil))('Rlast) & p2
             )
           )
         )
@@ -1604,8 +1593,8 @@ object SwitchedSystems {
               ).reduceRight(
                 (p1, p2) =>
                     choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
-                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1,
+                    useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
                       implyRiLast & hideL('Llast) & implyR('Rlast) & p2
                   )
               )
@@ -1881,9 +1870,9 @@ object SwitchedSystems {
                 (p1, p2) =>
                   useAt(conjSplit)(1,1::Nil) &
                     choiceb(1) & andL('Llast) & andR(1) <(
-                    useAt(boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
+                    useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & hideL('Llast) & p1
                     ,
-                    useAt(boxOrRight,PosInExpr(1::Nil))(1) &
+                    useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) &
                       implyRiLast & hideL('Llast) & implyR('Rlast) & p2
                   )
               )

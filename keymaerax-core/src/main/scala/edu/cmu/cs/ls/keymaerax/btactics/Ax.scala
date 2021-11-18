@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tools.ext.Z3
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -1504,6 +1505,36 @@ object Ax extends Logging {
         useAt(K2, PosInExpr(1::Nil))(1) & close
       )
     )
+
+  /**
+    * {{{Axiom "[] or left".
+    *    [a;](p(||)) -> [a;](p(||)|[a;]q(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("[]∨L", "[]orL"), conclusion = "[a]P->__[a](P∨Q)__", displayLevel = "browse", key = "1")
+  lazy val boxOrLeft: DerivedAxiomInfo =
+  derivedAxiom("[] or left",
+    Sequent(IndexedSeq(), IndexedSeq("[a;]p(||) -> [a;](p(||) | q(||))".asFormula)),
+    implyR(1) & monb & prop
+  )
+
+  /**
+    * {{{Axiom "[] or right".
+    *    [a;](p(||)) -> [a;](p(||)|[a;]q(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("[]∨R", "[]orR"), conclusion = "[a]Q->__[a](P∨Q)__", displayLevel = "browse", key = "1")
+  lazy val boxOrRight: DerivedAxiomInfo =
+  derivedAxiom("[] or right",
+    Sequent(IndexedSeq(), IndexedSeq("[a;]q(||) -> [a;](p(||) | q(||))".asFormula)),
+    implyR(1) & monb & prop
+  )
 
   /**
     * {{{Axiom "[] conditional split".
@@ -3517,7 +3548,7 @@ object Ax extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(Ax.DGpp, (us:Option[Subst])=>us.get ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3571,7 +3602,7 @@ object Ax extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        useAt(Ax.DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(Ax.DGpp, (us:Option[Subst])=>us.get++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3607,6 +3638,177 @@ object Ax extends Logging {
             cohide2(-4, 1) & HilbertCalculus.monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>0".asFormula), IndexedSeq("e()>0".asFormula)), QE & done))
         )
     )
+
+  private val assignbexistsy = Ax.assignbexists.provable(URename("x_".asVariable,dbx_internal,semantic=true))
+  private val DBXgtz = Ax.DBXgt.provable(URename(dbx_internal,"z_".asVariable,semantic=true))
+
+  /**
+    * {{{Axiom "DBX>=".
+    *   (e>=0 -> [c&q(||)]e>=0) <- [c&q(||)](e)'>=g*e
+    * End.
+    * }}}
+    * Non-strict Darboux inequality / Grönwall inequality.
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX>=", conclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
+    key = "1.1", unifier = "surjlinearpretend")
+  lazy val DBXge: DerivedAxiomInfo =
+    derivedAxiom("DBX>=",
+      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)>=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)>=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'>=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      implyR(1) & implyR(1) &
+        dG(AtomicODE(DifferentialSymbol(dbx_internal),
+          Times(Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2)))), dbx_internal)), None)(1) &
+        useAt(Ax.DGpp, (us: Option[Subst]) => us.get ++ RenUSubst(
+          (UnitFunctional("a", Except(Variable("y_", None, Real) :: Nil), Real), Neg(Divide("g(|y_,z_|)".asTerm, Number(BigDecimal(2))))) ::
+            (UnitFunctional("b", Except(Variable("y_", None, Real) :: Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+        cutR("\\exists y_ y_>0".asFormula)(1) < (cohideR(1) & QE, implyR(1) & existsL('Llast)) &
+        useAt(assignbexistsy, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("f_()".asTerm, dbx_internal) :: Nil))(1) &
+        useAt(selfassignby)(1) &
+        useAt(ally, PosInExpr(0 :: Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+        useAt(commaCommute)(-1) &
+        cutR("[{c{|y_,z_|},y_'=(-(g(|y_,z_|)/2))*y_+0&q(|y_,z_|)}](e(|y_,z_|)*y_^2>=0 & y_ > 0)".asFormula)(1) < (
+          TactixLibrary.boxAnd(1) & andR(1) < (
+            useAt(DI)(1) & implyR(1) & andR(1) < (
+              hideL(-4) & hideL(-1) &
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>=0".asFormula, "y()>0".asFormula), IndexedSeq("e()*y()^2>=0".asFormula)), QE & done)),
+              derive(1, PosInExpr(1 :: Nil)) &
+                useAt(commaCommute)(1) & useAt(DEsysy)(1) &
+                useAt(Dassignby, PosInExpr(0 :: Nil))(1, PosInExpr(1 :: Nil)) &
+                cohide2(-1, 1) & HilbertCalculus.monb &
+                byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e()".asFormula), IndexedSeq("ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+            ),
+            cohideOnlyL('Llast) &
+              implyRi &
+              useAt(DBXgtz, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g(|z_|)".asTerm, "(-g(|y_,z_|)/2)".asTerm) :: Nil))(1) &
+              derive(1, PosInExpr(1 :: 0 :: Nil)) &
+              useAt(commaCommute)(1) & useAt(DEsysy)(1) &
+              G(1) & useAt(Dassignby, PosInExpr(0 :: Nil))(1) &
+              byUS(TactixLibrary.proveBy("f()+0>=f()".asFormula, QE & done))
+          ),
+          cohideR(1) & implyR(1) &
+            HilbertCalculus.monb &
+            byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>=0 & y() > 0".asFormula), IndexedSeq("e()>=0".asFormula)), QE & done))
+        )
+    )
+
+  // Some extra versions of the dbx axioms for use in implementations
+
+  private val dbxEqArith = proveBy("f_() = 0 <-> f_()>=0 & -f_()>=0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX=".
+    *   (e=0 -> [c&q(||)]e=0) <- [c&q(||)](e)'=g*e
+    * End.
+    * }}}
+    * Darboux equality
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXge]]
+    */
+  @Axiom("DBX=", conclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge", displayLevel = "menu",
+    key = "1.1", unifier = "surjlinearpretend")
+  lazy val DBXeq: DerivedAxiomInfo =
+    derivedAxiom("DBX=",
+      Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+      implyR(1) & implyR(1) &
+        useAt(dbxEqArith)('Llast) & andL('Llast) &
+        useAt(dbxEqArith)(1,PosInExpr(1::Nil)) &
+        TactixLibrary.boxAnd(1) & andR(1) <(
+        hideL(-3) & exchangeL(-1,-2) & implyRi &
+          useAt(Ax.DBXge, PosInExpr(1 :: Nil))(1) & monb &
+          byUS(TactixLibrary.proveBy("f()=g() ==> f()>=g()".asSequent, QE & done)),
+        hideL(-2) & exchangeL(-1,-2) & implyRi &
+          useAt(Ax.DBXge, PosInExpr(1 :: Nil))(1) & monb &
+          derive(1,0::Nil) &
+          byUS(TactixLibrary.proveBy("f()=g()*h() ==> -f()>=g()*(-h())".asSequent, QE & done))
+      )
+    )
+
+  private val dbxLtArith = proveBy("f_() < 0 <-> -f_()>0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX> open".
+    *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
+    * End.
+    * }}}
+    * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
+    *
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX< open", conclusion = "(e<0 → __[x'=f(x)&Q]e<0__) ← [x'=f(x)&Q](e<0→(e)'<=ge)",
+    key = "1.1", unifier = "surjlinearpretend")
+  lazy val DBXltOpen: DerivedAxiomInfo =
+  derivedAxiom("DBX< open",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)<0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)<0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) < 0 -> (e(|y_|)'<=g(|y_|)*e(|y_|)))".asFormula)),
+    implyR(1) &
+      useAt(dbxLtArith)(1,0::Nil) &
+      useAt(dbxLtArith)(1,1::1::Nil) &
+      useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) &
+      monb &
+      derive(1,1::0::Nil) &
+      byUS(TactixLibrary.proveBy("e() < 0->f()<=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+  )
+
+  private val dbxLeArith = proveBy("f_() <= 0 <-> -f_()>=0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX<=".
+    *   (e<=0 -> [c&q(||)]e<=0) <- [c&q(||)](e)'<=g*e
+    * End.
+    * }}}
+    * Non-strict Darboux inequality / Grönwall inequality.
+    *
+    * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX<=", conclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge", displayLevel = "menu",
+    key = "1.1", unifier = "surjlinearpretend")
+  lazy val DBXle: DerivedAxiomInfo =
+  derivedAxiom("DBX<=",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)<=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)<=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'<=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
+    implyR(1) &
+      useAt(dbxLeArith)(1,0::Nil) &
+      useAt(dbxLeArith)(1,1::1::Nil) &
+      useAt(DBXge, PosInExpr(1 :: Nil))(1) &
+      monb &
+      derive(1,0::Nil) &
+      byUS(TactixLibrary.proveBy("f()<=g()*h() ==> -f()>=g()*(-h())".asSequent, QE & done))
+  )
+
+  private val dbxNeArith = proveBy("f_() != 0 <-> f_()>0 | -f_()>0".asFormula,QE)
+  /**
+    * {{{Axiom "DBX!= open".
+    *   (e!=0 -> [c&q(||)]e!=0) <- [c&q(||)](e!=0 -> (e)'=g*e)
+    * End.
+    * }}}
+    * Strict Darboux != benefiting from open inequality in postcondition.
+    *
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[DBXgt]]
+    */
+  @Axiom("DBX!= open", conclusion = "(e!=0 → __[x'=f(x)&Q]e!=0__) ← [x'=f(x)&Q](e!=0→(e)'=ge)",
+    key = "1.1", unifier = "surjlinearpretend")
+  lazy val DBXneOpen: DerivedAxiomInfo =
+  derivedAxiom("DBX!= open",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)!=0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)!=0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) != 0 -> (e(|y_|)'=g(|y_|)*e(|y_|)))".asFormula)),
+    implyR(1) &
+      useAt(dbxNeArith)(1,0::Nil) &
+      useAt(dbxNeArith)(1,1::1::Nil) &
+      implyR(1) & orL('Llast) <(
+      useAt(Ax.boxOrLeft)(1) & exchangeL(-1,-2) & implyRi &
+        useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
+        byUS(TactixLibrary.proveBy("e() != 0->f()=g() ==> e()>0 -> f()>=g()".asSequent, QE & done)),
+      useAt(Ax.boxOrRight)(1) & exchangeL(-1,-2) & implyRi &
+        useAt(Ax.DBXgtOpen, PosInExpr(1 :: Nil))(1) & monb &
+        derive(1,1::0::Nil) &
+        byUS(TactixLibrary.proveBy("e() != 0->f()=g()*h() ==> -e()>0 -> -f()>=g()*(-h())".asSequent, QE & done))
+    )
+  )
 
   /**
     * Dual version of initial-value theorem.

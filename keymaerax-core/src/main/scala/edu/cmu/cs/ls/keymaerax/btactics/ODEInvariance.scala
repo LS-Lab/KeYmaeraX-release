@@ -100,17 +100,6 @@ object ODEInvariance {
       useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
-  //Refine or under box
-  private lazy val boxOrL =
-    remember("[{c&q(||)}]p(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop,
-      namespace)
-
-  private lazy val boxOrR =
-    remember("[{c&q(||)}]r(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop,
-      namespace)
-
   private lazy val fastGeqCheck =
     remember("f_() = g_() -> (f_() >=0 -> g_()>=0)".asFormula,QE,
       namespace)
@@ -567,8 +556,8 @@ object ODEInvariance {
           recRankOneTac(r))
       )
       case Or(l,r) => orL(-1)<(
-        useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
-        useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
+        useAt(Ax.boxOrLeft,PosInExpr(1::Nil))(1) & recRankOneTac(l),
+        useAt(Ax.boxOrRight,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
       case _ => (diffInd()(1) | dgDbxAuto(1) | dgBarrier(1)) & done
     })
