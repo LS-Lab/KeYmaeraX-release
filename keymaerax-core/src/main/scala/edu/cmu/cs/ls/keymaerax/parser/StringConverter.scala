@@ -21,6 +21,14 @@ class StringConverter(val s: String) {
   /** Converts to an expression. */
   def asExpr: Expression = Parser(s)
 
+  /** Converts a `::` separated list of expressions. */
+  def asExprList[T <: Expression]: List[T] = {
+    def convert(elements: Array[String]): List[T] = elements.map(new StringConverter(_).asExpr.asInstanceOf[T]).toList
+    val elements = s.split("::")
+    if (elements.last.trim == "nil") convert(elements.dropRight(1))
+    else convert(elements)
+  }
+
   /** Converts to a term. */
   def asTerm: Term = Parser.parser.termParser(s)
 
