@@ -3504,7 +3504,8 @@ object Ax extends Logging {
     *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e)'>=g*e
     * End.
     * }}}
- *
+    * Strict Darboux inequality / Grönwall inequality.
+    *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgtOpen]]
@@ -3557,6 +3558,7 @@ object Ax extends Logging {
     *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
     * End.
     * }}}
+    * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
  *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
@@ -3606,6 +3608,9 @@ object Ax extends Logging {
         )
     )
 
+  /**
+    * Dual version of initial-value theorem.
+    */
   @Axiom("dualIVT", key="1", unifier="linear")
   lazy val dualIVT: DerivedAxiomInfo = derivedFormula("dualIVT", "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
     implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
