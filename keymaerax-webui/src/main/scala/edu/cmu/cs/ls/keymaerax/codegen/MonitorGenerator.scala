@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core.{And, BaseVariable, ComparisonFormula, Diamo
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.parser.{Declaration, InterpretedSymbols, KeYmaeraXPrettyPrinter}
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 
@@ -80,7 +81,8 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
   }
 
   /** Combines conjunction of distance `dist` and metric of `p` with min. */
-  private def printAndMin(p: Formula, dist: Term) = Try(ModelPlex.toMetric(p)).toOption match {
+  @tailrec
+  private def printAndMin(p: Formula, dist: Term): (Term, Term) = Try(ModelPlex.toMetric(p)).toOption match {
     //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
     case Some(c: ComparisonFormula) =>
       assert(c.right == Number(0))
@@ -97,12 +99,15 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
       val combinedMargin = FuncOf(InterpretedSymbols.minF, Pair(dist, simpMargin))
       (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
     case _ =>
-      //@note unable to translate to distance, assume p is false and return -1
-      (Nothing, Nothing)
+      val psubst = defs.exhaustiveSubst(p)
+      if (psubst != p) printAndMin(psubst, dist)
+      //@note unable to translate to distance, propagate invalid distance upwards
+      else (Nothing, Nothing)
   }
 
   /** Combines conjunction of distance `dist` and metric of `p` in analogy to total resistance of parallel resistors 1/(1/dist + 1/metric(p))) */
-  private def printAndParallelResistors(p: Formula, dist: Term) = Try(ModelPlex.toMetric(p)).toOption match {
+  @tailrec
+  private def printAndParallelResistors(p: Formula, dist: Term): (Term, Term) = Try(ModelPlex.toMetric(p)).toOption match {
     //@note when all nested ifs are satisfied, dist>=0; otherwise dist<=0. Resulting first term has same property.
     // Encode And as 1/(1/x+1/y) (instead of min) has the advantage that changes in each conjunct
     // are reflected in the combined safety distance
@@ -129,8 +134,10 @@ abstract class MonitorGenerator(conjunctionsAs: Symbol,
       }
       (errorMargin, if (onlyEqualities(p)) dist else combinedMargin)
     case _ =>
+      val psubst = defs.exhaustiveSubst(p)
+      if (psubst != p) printAndParallelResistors(psubst, dist)
       //@note unable to translate to distance, propagate invalid distance upwards
-      (Nothing, Nothing)
+      else (Nothing, Nothing)
   }
 }
 
