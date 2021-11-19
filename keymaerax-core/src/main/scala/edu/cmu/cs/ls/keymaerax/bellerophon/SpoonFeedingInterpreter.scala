@@ -245,9 +245,15 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
               }
 
               val branchOpenGoals = branchResult._1 match {
-                case bdp: BelleDelayedSubstProvable =>
-                  cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
-                  bdp.p.subgoals.size
+                case bdp: BelleDelayedSubstProvable => bdp.parent match {
+                  case Some((pp, i)) =>
+                    assertSubMatchesModuloConstification(pp, bdp.p, i, bdp.subst)
+                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, pp, 0, bdp.subst) }
+                    bdp.p.subgoals.size
+                  case None =>
+                    cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bdp.p, 0, bdp.subst) }
+                    bdp.p.subgoals.size
+                }
                 case BelleProvable(bp, _, _) =>
                   cp match { case BelleProvable(cbp, _, _) => assertSubMatchesModuloConstification(cbp, bp, 0, USubst(Nil)) }
                   bp.subgoals.size
@@ -553,7 +559,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
                           } else {
                             // some tactics (e.g., QE, dI) internally expand definitions
                             val subst = RestrictedBiDiUnificationMatch(provable.subgoals(0), innerProvable.conclusion).usubst
-                            (new BelleDelayedSubstProvable(innerProvable, resultLabels, defs, subst, Some((provable, 0))), ctx.store(tactic))
+                            (new BelleDelayedSubstProvable(provable(subst)(innerProvable(subst), 0), resultLabels, defs, subst, None), ctx.store(tactic))
                           }
                         runningInner = null
                         result

@@ -2552,6 +2552,33 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
+  it should "correctly plug into branch parents when tactics expand definitions internally" in withMathematica { _ => withDatabase { db =>
+    val defs = "one()~>1 :: nil".asDeclaration
+    val s =
+      """y>=0 & f()=1 ->
+        |((x>=0 -> y*x>=0) & (a=0 -> y*a=0)) &
+        |(z>=1&z<=2 -> (y/(z*one())>=0 & (b=0 -> b/z=0)))
+        |""".stripMargin
+
+    val proofId = db.createProof(s)
+    val interpreter = registerInterpreter(
+      SpoonFeedingInterpreter(proofId, -1, db.db.createProof, defs,
+        listener(db.db, constructGlobalProvable = false),
+        ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict=true, convertPending=true))
+    //@note QE expands one()
+    val tactic = BelleParser.parseWithInvGen(
+      """implyR(1); andL('L)*; andR(1); <(
+        | prop; doall(QE)
+        | ,
+        | implyR(1);
+        | andL('Llast);
+        | QE using "y>=0 :: z>=1 :: y/(z*one())>=0 & (b=0 -> b/z=0) :: nil"
+        |)""".stripMargin, defs=defs, expandAll=false)
+    interpreter(tactic, BelleProvable.withDefs(ProvableSig.startProof(s.asFormula), defs)) match {
+      case BelleProvable(p, _, _) => p shouldBe 'proved
+    }
+  }}
+
   it should "FEATURE_REQUEST: return delayed substitution on unfinished dIRule when mixed with unconstified branches" taggedAs TodoTest in withMathematica { _ => withDatabase { db =>
     val entry = ArchiveParser.parser(
       """ArchiveEntry "Delayed Substitution from dIRule"
