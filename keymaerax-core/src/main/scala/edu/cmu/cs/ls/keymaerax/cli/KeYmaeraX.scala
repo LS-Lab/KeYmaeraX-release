@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.cli
 
 import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
-import edu.cmu.cs.ls.keymaerax.bellerophon.LazySequentialInterpreter
+import edu.cmu.cs.ls.keymaerax.bellerophon.{LazySequentialInterpreter, ProverSetupException, TacticAssertionError}
 import edu.cmu.cs.ls.keymaerax.{Configuration, FileConfiguration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
@@ -203,22 +203,26 @@ object KeYmaeraX {
   /** Initializes Z3 from command line options. */
   private def initZ3(options: OptionMap): Unit = {
     ToolProvider.setProvider(Z3ToolProvider())
+    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Z3; please check the configured path")
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: OptionMap, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(MathematicaToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
+    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Mathematica; the license may be expired")
   }
 
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: OptionMap, usage: String): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
     ToolProvider.setProvider(MultiToolProvider(WolframEngineToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
+    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Wolfram Engine; the license may be expired (try starting Wolfram Engine from the command line to renew the license)")
   }
 
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: OptionMap, usage: String): Unit = {
     ToolProvider.setProvider(MultiToolProvider(WolframScriptToolProvider(mathematicaConfig(options, usage)) :: Z3ToolProvider() :: Nil))
+    if (!ToolProvider.isInitialized) throw new ProverSetupException("Failed to initialize Wolfram Script; the license may be expired (try starting Wolfram Script from the command line to renew the license)")
   }
 
   /** Reads the mathematica configuration from command line options, if specified, otherwise from default configuration.  */
