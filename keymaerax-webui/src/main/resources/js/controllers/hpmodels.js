@@ -269,6 +269,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
              $scope.model.savedContent = $scope.model.content;
              $scope.model.savedContentErrorText = response.data.errorText;
              if (startProof) $scope.startProof($scope.model.savedContentErrorText);
+             else $scope.refreshModelList();
            }
          })
          .catch(function(err) {
