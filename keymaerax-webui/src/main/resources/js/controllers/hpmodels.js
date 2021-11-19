@@ -232,7 +232,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      }
 
      $scope.startProof = function(errorText) {
-       if (errorText == '') {
+       if (!errorText || errorText == '') {
          $scope.close();
          var uri = 'models/users/' + sessionService.getUser() + '/model/' + $scope.model.modelId + '/createProof'
          $http.post(uri, {proofName: '', proofDescription: ''}).
