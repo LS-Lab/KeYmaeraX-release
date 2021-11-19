@@ -11,19 +11,21 @@ import edu.cmu.cs.ls.keymaerax.parser.Declaration
 
 object CMonitorGenerator {
 
+  /** The name of the monitor function argument representing the previous state. */
+  private val MONITOR_PRE_STATE_NAME = CPrettyPrinter.PRE
   /** The name of the monitor function argument representing the current state. */
-  private val MONITOR_CURR_STATE_NAME = "curr"
+  private val MONITOR_CURR_STATE_NAME = CPrettyPrinter.CURR
   /** The name of the monitor function argument representing monitor parameters. */
-  private val MONITOR_PARAMS_NAME = "params"
+  private val MONITOR_PARAMS_NAME = CPrettyPrinter.PARAMS
   /** The name of the monitor function argument representing controller inputs. */
   private val INPUT_NAME = "in"
 
   def termContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
-    case t: Variable if  params.contains(t) => "params->"
-    case t: Variable if !params.contains(t) && t.name.endsWith("post") => "curr."
-    case t: Variable if !params.contains(t) => "pre."
-    case FuncOf(fn, Nothing) if  params.contains(fn) => "params->"
-    case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !params.contains(fn) && fname.endsWith("post") => "curr."
+    case t: Variable if  params.contains(t) => MONITOR_PARAMS_NAME + "->"
+    case t: Variable if !params.contains(t) && t.name.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
+    case t: Variable if !params.contains(t) => MONITOR_PRE_STATE_NAME + "."
+    case FuncOf(fn, Nothing) if  params.contains(fn) => MONITOR_PARAMS_NAME + "->"
+    case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !params.contains(fn) && fname.endsWith("post") => MONITOR_CURR_STATE_NAME + "."
     case FuncOf(fn, Nothing) if !params.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
   }
@@ -57,21 +59,22 @@ class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends Monit
 
     val monitorDistFuncHead =
       s"""/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
-         |verdict boundaryDist(state pre, state curr, const parameters* const params)""".stripMargin
+         |verdict boundaryDist(state $MONITOR_PRE_STATE_NAME, state $MONITOR_CURR_STATE_NAME, const parameters* const $MONITOR_PARAMS_NAME)""".stripMargin
 
     val monitorSatFuncHead =
       s"""/* Evaluates monitor condition in prior and current state */
-        |bool monitorSatisfied(state pre, state curr, const parameters* const params)""".stripMargin
+        |bool monitorSatisfied(state $MONITOR_PRE_STATE_NAME, state $MONITOR_CURR_STATE_NAME, const parameters* const $MONITOR_PARAMS_NAME)""".stripMargin
 
     val monitoredCtrlFuncHead =
       s"""/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
         |state monitoredCtrl(state $MONITOR_CURR_STATE_NAME, const parameters* const $MONITOR_PARAMS_NAME, const input* const $INPUT_NAME,
-        |                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const))""".stripMargin
+        |                    state (*ctrl)(state,const parameters* const,const input* const),
+        |                    state (*fallback)(state,const parameters* const,const input* const))""".stripMargin
 
     val monitoredCtrlFuncBody =
-      s"""  state pre = curr;
-         |  state post = (*ctrl)(pre,params,in);
-         |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
+      s"""  state $MONITOR_PRE_STATE_NAME = $MONITOR_CURR_STATE_NAME;
+         |  state post = (*ctrl)($MONITOR_PRE_STATE_NAME,$MONITOR_PARAMS_NAME,$INPUT_NAME);
+         |  if (!monitorSatisfied($MONITOR_PRE_STATE_NAME,post,$MONITOR_PARAMS_NAME)) return (*fallback)($MONITOR_PRE_STATE_NAME,$MONITOR_PARAMS_NAME,$INPUT_NAME);
          |  else return post;""".stripMargin
 
     // @note negate to turn into safety distance >=0 satisfied, <0 unsatisfied monitor
@@ -85,17 +88,23 @@ class CMonitorGenerator(conjunctionsAs: Symbol, defs: Declaration) extends Monit
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params).val >= " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"),
+          s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= " + rhs)
       case Less(l, r) =>
         val lhsMonitor = printMonitor(l, parameters)
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params).val > " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"),
+          s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val > " + rhs)
       case f: Formula if f.isFOL =>
         val monitor = printMonitor(expr, parameters)
-        ((monitor._1, s"verdict result = { .id=(${monitor._2} ? 1 : -1), .val=(${monitor._2} ? 1.0L : -1.0L) }; return result"), "boundaryDist(pre,curr,params).val >= 0.0L")
-      case f: Formula if !f.isFOL => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params).val >= 0.0L")
+        ((monitor._1,
+          s"verdict result = { .id=(${monitor._2} ? 1 : -1), .val=(${monitor._2} ? 1.0L : -1.0L) }; return result"),
+          s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= 0.0L")
+      case f: Formula if !f.isFOL =>
+        (printMonitor(expr, parameters),
+          s"boundaryDist($MONITOR_PRE_STATE_NAME,$MONITOR_CURR_STATE_NAME,$MONITOR_PARAMS_NAME).val >= 0.0L")
     }
 
     (s"""$monitorDistFuncHead {

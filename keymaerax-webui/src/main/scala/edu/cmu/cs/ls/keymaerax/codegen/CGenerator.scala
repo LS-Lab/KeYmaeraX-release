@@ -54,7 +54,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
     generateMonitoredCtrlCCode(expr, init, stateVars, inputVars, fileName)
 
   /** The name of the monitor/control function argument representing monitor parameters. */
-  private val FUNC_PARAMS_NAME = "params"
+  private val FUNC_PARAMS_NAME = CPrettyPrinter.PARAMS
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
@@ -112,9 +112,9 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
     val parameters = bodyParameters ++ initParameters
 
     def initTermContainer(expr: Expression, params: Set[NamedSymbol]): String = expr match {
-      case t: Variable if  params.contains(t) => "params->"
+      case t: Variable if  params.contains(t) => FUNC_PARAMS_NAME + "->"
       case t: Variable if !params.contains(t) => "init->"
-      case FuncOf(fn, Nothing) if  params.contains(fn) => "params->"
+      case FuncOf(fn, Nothing) if  params.contains(fn) => FUNC_PARAMS_NAME + "->"
       case _ => throw new CodeGenerationException("Unsupported symbol " + expr.prettyString + " found in initial conditions " + init.prettyString)
     }
 
@@ -123,8 +123,10 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
     val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     val initCheck =
-      s"""verdict checkInit(const state* const init, const parameters* const params) {
-         |${initBody.linesWithSeparators.map("  " + _).mkString}
+      s"""verdict checkInit(const state* const init, const parameters* const $FUNC_PARAMS_NAME) {
+         |  bool initOk = ${initBody.linesWithSeparators.map("    " + _).mkString.stripPrefix("    ")};
+         |  verdict result = { .id=(initOk ? 1 : -1), .val=(initOk ? 1.0L : -1.0L) };
+         |  return result;
          |}""".stripMargin
 
     (printHeader(fileName) +
@@ -133,7 +135,7 @@ class CGenerator(bodyGenerator: CodeGenerator, init: Formula, defs: Declaration)
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
       printVerdictDeclaration +
-      printFuncDefs(defs, parameters) +
+      printFuncDefs(defs, parameters) + "\n" +
       initCheck + "\n" +
       bodyDefs
       ,
