@@ -3538,6 +3538,7 @@ object Ax extends Logging {
     * Strict Darboux inequality / Grönwall inequality.
     *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG).
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgtOpen]]
     */
@@ -3590,8 +3591,9 @@ object Ax extends Logging {
     * End.
     * }}}
     * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
- *
+    *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
@@ -3650,6 +3652,7 @@ object Ax extends Logging {
     * Non-strict Darboux inequality / Grönwall inequality.
     *
     * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
@@ -3705,6 +3708,7 @@ object Ax extends Logging {
     * Darboux equality
     *
     * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXge]]
     */
@@ -3736,6 +3740,7 @@ object Ax extends Logging {
     * Strict Darboux inequality / Grönwall inequality benefiting from open inequality in postcondition.
     *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
@@ -3762,6 +3767,7 @@ object Ax extends Logging {
     * Non-strict Darboux inequality / Grönwall inequality.
     *
     * @note More precisely: this derivation assumes that y_,z_ do not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
@@ -3788,6 +3794,7 @@ object Ax extends Logging {
     * Strict Darboux != benefiting from open inequality in postcondition.
     *
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @note For soundness, the cofactor g must not mention divisions that are not guarded by the ODE domain constraint (see DG)
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
