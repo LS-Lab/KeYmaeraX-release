@@ -330,7 +330,7 @@ object Ax extends Logging {
   @ProofRule
   val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
   @ProofRule
-  val indrule: AxiomaticRuleInfo = coreRule("ind induction")
+  val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
   @ProofRule
   val conrule: AxiomaticRuleInfo = coreRule("con convergence")
 
@@ -695,6 +695,102 @@ object Ax extends Logging {
     TactixLibrary.prop)
 
   // derived rules
+
+  /**
+    * Rule "contra2".
+    * Premise !q(||) ==> !p(||)
+    * Conclusion p(||) ==> q(||)
+    * End.
+    *
+    * @derived
+    */
+  @ProofRule("contra2",  premises = "!Q |- !P", conclusion = "P |- Q")
+  lazy val contraposition2Rule: DerivedRuleInfo = derivedRuleSequent("contra2",
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
+    useAt(doubleNegation, PosInExpr(1::Nil))(1) &
+      useAt(doubleNegation, PosInExpr(1::Nil))(-1) &
+      notR(1) &
+      notL(-1)
+  )
+
+  /**
+    * Rule "ind induction".
+    * Premise p(||) ==> [a;]p(||)
+    * Conclusion p(||) ==> [a*]p(||)
+    * {{{
+    *     p(x) |- [a]p(x)
+    *   --------------------- ind
+    *     p(x) |- [{a}*]p(x)
+    * }}}
+    * Interderives with FP fixpoint rule.
+    * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see Lemma 7.2 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+    */
+//  ("ind induction",
+//    (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
+//      Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
+  @ProofRule(conclusion = "P |- [a*]P", premises = "P |- [a]P")
+  lazy val indrule: DerivedRuleInfo = derivedRuleSequent("ind induction",
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("[{a_;}*]p_(||)".asFormula)),
+    useAt(box, PosInExpr(1::Nil))(1) &
+      useAt(doubleNegation, PosInExpr(1::Nil))(-1) & notR(1) & notL(-1) &
+      byUS(FPrule) &
+      orL(-1) <(
+        closeId(-1,1)
+        ,
+        useAt(doubleNegation, PosInExpr(1::Nil))(-1) & notR(1) & notL(-1) &
+          useAt(box)(1)
+      )
+  )
+
+  /**
+    * DUPLICATE: Rule "FP fixpoint duplicate" only for documentation purposes to show that FP rule derives from ind induction rule,
+    * except with a duplicate premise.
+    * Premise p(||) | <a>q(||) ==> q(||)
+    * Conclusion <a*>p(||) ==> q(||)
+    * {{{
+    *     p(x) | <a>q(x) |- q(x)    p(x) | <a>q(x) |- q(x)
+    *   --------------------------------------------------- FP
+    *     <a*>p(x) |- q(x)
+    * }}}
+    * Interderives with ind induction rule.
+    * FP is used as basis, because deriving FP from ind leads to a duplicate premise, needing list to set contraction.
+    * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see Lemma 16.11 and Corollary 16.1 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+    * @see [[FPrule]]
+    */
+  @ProofRule(conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q ;; P | <a>Q |- Q", displayLevel = "internal")
+  private[btactics] lazy val FPruleduplicate: DerivedRuleInfo = derivedRuleSequent("FP rule duplicate",
+    Sequent(immutable.IndexedSeq("<{a_;}*>p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
+    cut("<{a_;}*>q_(||)".asFormula) <(
+      /* use: */
+      hide(-1) &
+        useAt(diamond, PosInExpr(1::Nil))(-1) &
+        useAt(doubleNegation, PosInExpr(1::Nil))(1) & notL(-1) & notR(1) &
+        byUS(indrule) &
+        useAt(box, PosInExpr(1::Nil))(1) &
+        useAt(doubleNegation)(1, 0::1::Nil) &
+        notL(-1) & notR(1) &
+        cut("p_(||) | <a_;>q_(||)".asFormula) <(
+          /* use: */
+          hide(-1)
+          ,
+          /* show: */
+          orR(2) & closeId(-1,3)
+        )
+      ,
+      /* show: */
+      hide(1) &
+        byUS(mondrule) &
+        cut("p_(||) | <a_;>q_(||)".asFormula) <(
+          /* use: */
+          hide(-1)
+          ,
+          /* show: */
+          orR(2) & closeId(-1,2)
+        )
+    )
+  )
 
   /**
     * Rule "all generalization".
@@ -1317,7 +1413,7 @@ object Ax extends Logging {
     * @note almost same proof as "exists dual"
     * @Derived
     */
-  @Axiom(("[·]", "[.]"), conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ &langle;a&rangle;P", displayLevel = "menu",
+  @Axiom(("[·]", "[.]"), conclusion = "__&not;&langle;a&rangle;&not;P__ ↔ [a]P", displayLevel = "menu",
     key = "0", recursor = "*", unifier = "surjlinear")
   lazy val box: DerivedAxiomInfo = derivedAxiom("[] box",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>(!p_(||))) <-> [a_;]p_(||)".asFormula)),
