@@ -104,6 +104,12 @@ trait HybridProgramCalculus {
     *   ---------------------------------------------------------------I("x>1".asFormula)(1)
     *   x>2, y>0 |- [{x:=x+y;}*]x>0
     * }}}
+    * @example Games {{{
+    *   Init:                  Step:                                   Post:
+    *   x>1, y=1 |- x>0&y>0    x>0&y>0 |- [x:=0;--x:=x+y;](x>0&y>0)    x&0&y>0 |- x>0
+    *   -----------------------------------------------------------------------------I("x>0&y>0".asFormula)(1)
+    *   x>1, y=1 |- [{x:=0; -- x:=x+y;}*]x>0
+    * }}}
     * @param invariant The loop invariant `I`.
     * @note Currently uses I induction axiom, which is unsound for hybrid games and will, thus, throw an exception on hybrid games.
     * @note Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
@@ -119,12 +125,25 @@ trait HybridProgramCalculus {
   /** fp: make use of an assumption `⟨a*⟩P` to read off a fixpoint `J` of `⟨a⟩` that is implied by postcondition `P`.
     * Presently wipes all context.
     * {{{
-    *   Usefix:           Fixpoint:
-    *   G,<a*>P, J | D    P | <a>J |- J
-    *   ------------------------------- fp(J)
+    *   Usefix:            Fixpoint:
+    *   G,<a*>P, J |- D    P | <a>J |- J
+    *   -------------------------------- fp(J)
     *   G, <a*>P |- D
     * }}}
     *
+    * @example {{{
+    *   Usefix:                                    Fixpoint:
+    *   <{x:=x+y;}*>x<=0,x<=2|y<=0 |- x<=2|y<=0    x<=0 | <x:=x+y;>(x<=2|y<=0) |- x<=2|y<=0
+    *   -----------------------------------------------------------------------------------fp("x<=2|y<=0".asFormula)(1)
+    *   <{x:=x+y;}*>x<=0 |- x<=2|y<=0
+    * }}}
+    * @example {{{
+    *   Usefix:                             Fixpoint:
+    *   <{x:=0;--x:=x+1;}*>P, x<1 |- x<1    x<=0 | <x:=0;--x:=x+1;>x<1 |- x<1
+    *   --------------------------------------------------------------------- fp("x<1".asFormula)(-1)
+    *   <{x:=0;--x:=x+1;}*>x<=0 |- x<1
+    * }}}
+
     * @param fixpoint A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
     */
   @Tactic(
