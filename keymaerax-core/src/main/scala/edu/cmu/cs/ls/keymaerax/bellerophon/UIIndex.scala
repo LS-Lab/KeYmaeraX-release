@@ -148,7 +148,8 @@ object UIIndex {
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
-          case _: Loop => "con" +: maybeSplit :+ "<*> iterate"
+          case _: Loop => val opts = "con" +: maybeSplit :+ "<*> iterate"
+            if (pos.forall(p=>p.isAnte&&p.isTopLevel)) "fp" +: opts else opts
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
               if (pos.forall(_.isTopLevel)) ("dV" :: "solve" :: "kDomainDiamond" :: "dDR" :: "compatCut":: "gEx" :: Nil)

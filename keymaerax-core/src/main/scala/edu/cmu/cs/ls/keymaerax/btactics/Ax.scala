@@ -329,7 +329,7 @@ object Ax extends Logging {
   val CErule: AxiomaticRuleInfo = coreRule("CE congruence")
   @ProofRule
   val mondrule: AxiomaticRuleInfo = coreRule("<> monotone")
-  @ProofRule
+  @ProofRule(conclusion = "<a*>P |- Q", premises = "P | <a>Q |- Q", displayLevel = "browse")
   val FPrule: AxiomaticRuleInfo = coreRule("FP fixpoint")
   @ProofRule
   val conrule: AxiomaticRuleInfo = coreRule("con convergence")

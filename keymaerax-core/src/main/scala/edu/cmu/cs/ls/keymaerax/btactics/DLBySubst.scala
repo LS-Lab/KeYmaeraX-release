@@ -561,6 +561,18 @@ private object DLBySubst {
       split(pos)
     )})
 
+  /** [[TactixLibrary.fp()]] */
+  def fpRule(fixpoint: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
+    require(pos.isTopLevel && pos.isAnte, "fp fixpoint only at top-level in antecedent, but got " + pos)
+    require(seq(pos) match { case Diamond(Loop(_),_) => true case _ => false }, "only applicable for <a*>p(||)")
+    label(startTx) &
+      cut(fixpoint) <(
+        label(replaceTxWith(BelleLabels.fixUseCase))
+        ,
+        cohide2(pos, SuccPosition(seq.succ.length+1/*'Rlast*/)) & byUS(Ax.FPrule) & label(replaceTxWith(BelleLabels.fixpoint))
+      )
+  }
+
   /** [[TactixLibrary.con()]] */
   @Tactic(
     longDisplayName = "Loop Convergence",

@@ -82,30 +82,31 @@ trait HybridProgramCalculus {
     revealInternalSteps = true)
   def generalize(C: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos:Position) => DLBySubst.generalize(C)(pos) }
 
-  /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    * Wipes conditions that contain bound variables of the loop.
+  /** loop: prove a property of a loop by induction with the given loop invariant.
+    * For hybrid systems wipes conditions that contain bound variables of the loop.
+    * For hybrid games may wipe all context.
     * {{{
-    *   use:                        init:        step:
-    *   I, G\BV(a) |- p, D\BV(a)    G |- I, D    I, G\BV(a) |- [a]p, D\BV(a)
-    *   --------------------------------------------------------------------
-    *   G |- [{a}*]p, D
+    *   Post:                       Init:        Step:
+    *   J, G\BV(a) |- P, D\BV(a)    G |- J, D    J, G\BV(a) |- [a]J, D\BV(a)
+    *   -------------------------------------------------------------------- loop(J)
+    *   G |- [{a}*]P, D
     * }}}
     *
     * @example {{{
-    *   use:          init:         step:
+    *   Post:         Init:         Step:
     *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
     *   ------------------------------------------------I("x>1".asFormula)(1)
     *   x>2 |- [{x:=x+1;}*]x>0
     * }}}
     * @example {{{
-    *   use:               init:              step:
+    *   Post:              Init:              Step:
     *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
     *   ---------------------------------------------------------------I("x>1".asFormula)(1)
     *   x>2, y>0 |- [{x:=x+y;}*]x>0
     * }}}
     * @param invariant The loop invariant `I`.
-    * @note Currently uses I induction axiom, which is unsound for hybrid games.
-    * @note Beware that the order of premises for hybrid games is use, step, init.
+    * @note Currently uses I induction axiom, which is unsound for hybrid games and will, thus, throw an exception on hybrid games.
+    * @note Beware that, unlike for hybrid systems, the order of premises for hybrid games is Post, Step, Init.
     */
   @Tactic(
     longDisplayName = "Loop Invariant",
@@ -114,6 +115,25 @@ trait HybridProgramCalculus {
     //@note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula", displayLevel = "full")
   def loop(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.loop(invariant)(pos) }
+
+  /** fp: make use of an assumption `⟨a*⟩P` to read off a fixpoint `J` of `⟨a⟩` that is implied by postcondition `P`.
+    * Presently wipes all context.
+    * {{{
+    *   Usefix:           Fixpoint:
+    *   G,<a*>P, J | D    P | <a>J |- J
+    *   ------------------------------- fp(J)
+    *   G, <a*>P |- D
+    * }}}
+    *
+    * @param fixpoint A formula `J` that is a prefixpoint of `⟨a⟩` that also follows from `P`.
+    */
+  @Tactic(
+    longDisplayName = "Fixpoint",
+    premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P, &langle;a&rangle;J |- J",
+    conclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ", revealInternalSteps = true,
+    //@note contextPremises, contextConclusion without J not allowed
+    inputs = "J:formula", displayLevel = "full")
+  def fp(fixpoint: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.fpRule(fixpoint)(pos) }
 
   /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
     * {{{
