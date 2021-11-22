@@ -426,15 +426,15 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach wi
     parser("[a;]P(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("P", AnyArg))
     parser.laxParser("[a;]P") shouldBe parser("[a;]P(||)")
     the [ParseException] thrownBy parser.strictParser("[a;]P") should
-      have message """1:4 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term P
-                     |Found:    ] at 1:4
+      have message """1:6 Expected a Formula but got the Term P
+                     |Found:    ] at 1:6 to EOF$
                      |Expected: Formula""".stripMargin
     parser("[a;]p(||)") shouldBe Box(ProgramConst("a"), UnitPredicational("p", AnyArg))
     parser("[a;]p()") shouldBe Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))
     parser.laxParser("[a;]p") shouldBe parser("[a;]p()")
     the [ParseException] thrownBy parser.strictParser("[a;]p") should
-      have message """1:4 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term p
-                     |Found:    ] at 1:4
+      have message """1:6 Expected a Formula but got the Term p
+                     |Found:    ] at 1:6 to EOF$
                      |Expected: Formula""".stripMargin
     parser("[a;]P()") shouldBe Box(ProgramConst("a"), PredOf(Function("P", None, Unit, Bool), Nothing))
   }

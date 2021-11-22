@@ -538,8 +538,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
                      |Found:    ( at 1:2
                      |Expected: """.stripMargin
     the [ParseException] thrownBy Parser.parseExpressionList("f(x,y, x>=2") should
-      have message """1:6 Impossible elaboration: Operator COMMA$ expects a Term as argument but got the Formula x>=2
-                     |Found:    , at 1:6
+      have message """1:12 Operator COMMA$ expects a Term but got the Formula x>=2
+                     |Found:    , at 1:12 to EOF$
                      |Expected: Term""".stripMargin
   }
 
@@ -668,7 +668,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Be
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy ArchiveParser.parser(input) should have message
-      """1:20 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
+      """1:20 Expected a Term but got the Formula 3>2
         |Found:    (3>2) at 1:20 to 1:24
         |Expected: Term""".stripMargin
   }
