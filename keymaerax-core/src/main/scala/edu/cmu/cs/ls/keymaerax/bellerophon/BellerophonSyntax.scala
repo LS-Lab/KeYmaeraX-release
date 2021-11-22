@@ -1044,6 +1044,7 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
     case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
     case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
     case BelleStartTxLabel | BelleRollbackTxLabel => BelleLabelTx(this, None)
+    case _ => BelleSubLabel(this, l.label)
   }
 }
 
