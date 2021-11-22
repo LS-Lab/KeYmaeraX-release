@@ -443,8 +443,7 @@ object Ax extends Logging {
   @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)", displayLevel = "browse",
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
-
-  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ TODO",
+  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ ∀s [t'=1,x'=f(x)&Q&(P|t=s)](t=s -> P & (<t'=1,x'=f(x)&(Q|t=s)>t!=s -> <t'=1,x'=f(x)&(P|t=s)>t!=s))",
     key = "0", recursor = "*")
   val RI: CoreAxiomInfo = coreAxiom("RI& real induction")
 

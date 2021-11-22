@@ -1742,7 +1742,7 @@ private object DifferentialTactics extends Logging {
   /** Pieces together some ODE invariance tactics into a prover for ODE invariance:
     *
     * G |- P   P|-[x'=f(x)&Q]P
-    * ---
+    * ----------------------------
     * G |- [x'=f(x)&Q]P
     *
     * @param tryHard configures how hard the tactic tries to prove invariance in particular

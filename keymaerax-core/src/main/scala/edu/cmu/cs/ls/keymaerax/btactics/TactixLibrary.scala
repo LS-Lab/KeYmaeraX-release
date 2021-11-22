@@ -507,13 +507,25 @@ object TactixLibrary extends HilbertCalculus
 
   // major differential equation automation
 
-  /** ODE: try to prove a property of a differential equation automatically.
+  /** ODE: prove a top-level ODE safety property using invariants Inv (as annotated by users, if available).
+    * Attempts to automatically generate suitable invariants Inv when the postcondition does not suffice.
+    * Closes all resulting subgoals or fails otherwise.
     *
+    * {{{
+    *     *                *                             *
+    *   -----------    --------------------------    ----------
+    *   G |- Inv, D    Inv |- [{x'=f(x)&q(x)}]Inv    Inv |- p(x)
+    *   --------------------------------------------------------
+    *   G |- [{x'=f(x)&q(x)}]p(x), D
+    * }}}
     * @see [[solve]]
     * @todo @see [[dC]]
     * @see [[dI]]
     * @see [[dW]]
     * @see [[dG]]
+    * @see [[odeInvariant]]
+    * @example For sequent x=1 |- [{x'=x}]x >=-1, the postcondition is not invariant but [[ODE]] proves it automatically
+    *          using e.g., x>=1 as the generated invariant.
     */
   @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
@@ -582,31 +594,41 @@ object TactixLibrary extends HilbertCalculus
     else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
   })
 
-  /**
-    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+  /** Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+    * The tactic defaults to trying a quick invariance proof which may fail, but handles common cases.
+    * The complete invariance tactic is available with [[odeInvariantComplete]]
+    *
     * {{{
-    * G |- P    P |- [x'=f(x)&Q]P
-    * ---------------------------
-    * G |- [x'=f(x)&Q]P
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
+    * G |- [x'=f(x)&Q]P, D
     * }}}
-    * (Default behavior: fast (but incomplete) version, no solving attempted)
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariantComplete]]
+    * @example For sequent x=1 |- [{x'=x}]x >=0 proves automatically since x>=0 is an invariant of the ODE.
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
-  /** Same as [[odeInvariant]] but directly reports an error when it detects that the postcondition should be invariant
-    * but is currently unprovable.
+  /** Same as [[odeInvariant]] but implements a slower, complete version of the invariance tactic
+    * Capable of handling invariance proofs for arbitrary semialgebraic invariants P and domain Q
+    * Completeness failure is considered a tactic bug
+    *
     * {{{
-    *         *
-    * -----------------
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
     * G |- [x'=f(x)&Q]P
     * }}}
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariant]]
-    */
+    * @example For sequent x = 1 |- [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0) proves automatically
+    *          by [[odeInvariantComplete]] but not [[odeInvariant]]
+    **/
   @Tactic("ODE Invariant Complete", codeName = "odeInvC",
     longDisplayName = "ODE Invariant Complete",
     premises = "*",
@@ -1131,7 +1153,16 @@ object TactixLibrary extends HilbertCalculus
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-  /** Solve an arithmetic goal with sum-of-squares real arithmetic.
+  /** Attempt to prove a goal of universal real arithmetic goal using sum-of-squares.
+    * It normalizes the sequent and then finds sum-of-squares polynomials g_i, see "Real World Verification" below
+    * {{{
+    *        *
+    * -----------------------------------
+    *        |- 1+g_1^2+g_2^2+...+g_n^2=0
+    * -----------------------------------
+    * G_FOLR |- D_FOLR
+    * }}}
+    * @see Andre Platzer, Jan-David Quesel and Philipp Rummer. [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. CADE-22.
     * @see [[QE()]] */
   @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
     premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
