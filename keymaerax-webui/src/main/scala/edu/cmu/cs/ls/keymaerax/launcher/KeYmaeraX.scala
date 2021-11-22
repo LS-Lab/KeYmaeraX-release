@@ -81,12 +81,12 @@ object KeYmaeraX {
 
   /** main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line interfaces. */
   def main(args: Array[String]): Unit = {
+    Configuration.setConfiguration(FileConfiguration)
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
       println(help)
       exit(1)
     }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
-    Configuration.setConfiguration(FileConfiguration)
     //@note 'commandLine to preserve evidence of what generated the output; default mode: UI
     val options = combineConfigs(
       nextOption(Map('commandLine -> args.mkString(" ")), args.toList),
