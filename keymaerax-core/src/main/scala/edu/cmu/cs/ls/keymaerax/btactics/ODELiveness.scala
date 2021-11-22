@@ -1746,7 +1746,7 @@ object ODELiveness {
     premises="* (hint)",
     conclusion="Γ |- ⟨x'=f(x),t'=1⟩t>s(), Δ",
     displayLevel="all")
-  def gEx(hint: Option[Formula]) : DependentPositionWithAppliedInputTactic = anon ((pos : Position,seq:Sequent) =>
+  def gEx(hint: Option[Formula]): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position) =>
     odeReduce(strict = true, hint.toList)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done)
   )
 
