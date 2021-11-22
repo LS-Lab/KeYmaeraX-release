@@ -34,6 +34,7 @@ object DifferentialEquationCalculus extends DifferentialEquationCalculus
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  * @see [[TactixLibrary]]
   * @todo @Tactic only partially implemented so far
   */
 trait DifferentialEquationCalculus {
@@ -58,7 +59,7 @@ trait DifferentialEquationCalculus {
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
   @Tactic(longDisplayName="Solution with q(x) true at end",
     premises = "Γ |- ∀t≥0 (q(x(t))→[x:=x(t)]p(x)), Δ",
-    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true)
+    conclusion = "Γ |- [x'=f(x)&q(x)]p(x), Δ", revealInternalSteps = true, displayLevel = "browse")
   lazy val solveEnd: DependentPositionTactic = anon {(pos:Position) => AxiomaticODESolver.axiomaticSolve(instEnd = true)(pos) }
 
 
@@ -74,38 +75,104 @@ trait DifferentialEquationCalculus {
   /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
     * used in the evolution domain constraint.
+    * {{{
+    * Use:                      Show:
+    * G |- [x'=f(x)&Q&R]P, D    G |- [x'=f(x)&Q]R, D
+    * ---------------------------------------------- dC(R)
+    * G |- [x'=f(x)&Q]P, D
+    * }}}
+    * Also works in context, e.g.:
+    * {{{
+    * Use:                         Show:
+    * G |- A->[x'=f(x)&Q&R]P, D    G |- A->[x'=f(x)&Q]R, D
+    * ---------------------------------------------- dC(R)
+    * G |- A->[x'=f(x)&Q]P, D
+    * }}}
     *
     * @example {{{
     *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
-    *         -----------------------------------------------diffCut("x>0".asFormula)(1)
+    *         -----------------------------------------------dC("x>0".asFormula)(1)
     *         x>0 |- [{x'=2}]x>=0
     * }}}
     * @example {{{
     *         x>0, x_0=x |- [{x'=2&x>=x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>=x_0
-    *         -------------------------------------------------------------------diffCut("x>=old(x)".asFormula)(1)
+    *         -------------------------------------------------------------------dC("x>=old(x)".asFormula)(1)
     *         x>0 |- [{x'=2}]x>=0
     * }}}
     * @example {{{
     *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0&x>=x_0}]x>=0
     *                x>0, v>=0 |- [{x'=v,v'=1}]v>=0
     *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0}]x>=x_0
-    *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
+    *         --------------------------------------------------dC("v>=0".asFormula, "x>=old(x)".asFormula)(1)
     *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
     * }}}
     * @param R the formula that will be cut into the differential equation (in that order if it is a list).
     *          The formulas are typically shown to be differential invariants subsequently.
     *          They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
-    * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
+    * @note dC is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
   def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = dC(List(R))
   @Tactic(longDisplayName = "Differential Cut",
-    premises = "Γ |- [x'=f(x) & Q]R, Δ ;; Γ |- [x'=f(x) & Q∧R]P, Δ",
+    premises = "Γ |- [x'=f(x) & Q∧R]P, Δ ;; Γ |- [x'=f(x) & Q]R, Δ",
     conclusion = "Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises = "Γ |- C( [x'=f(x) & Q]R ), Δ ;; Γ |- C( [x'=f(x) & Q∧R]P ), Δ",
+    contextPremises = "Γ |- C( [x'=f(x) & Q∧R]P ), Δ ;; Γ |- C( [x'=f(x) & Q]R ), Δ",
     contextConclusion = "Γ |- C( [x'=f(x) & Q]P ), Δ",
     revealInternalSteps = true)
   def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
+
+  /** dIRule: Differential Invariant proves a formula to be an invariant of a differential equation.
+    * (uses DI, DW, DE).
+    *
+    * {{{
+    * G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p'(x')    @note derive on (p(x))' already done
+    * ---------------------------------------------- dIRule
+    *      G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    * @example {{{
+    *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
+    *    --------------------------------------------dIRule(1)
+    *    x>=5 |- [{x'=2}]x>=5
+    * }}}
+    * @incontext
+    * @see [[HilbertCalculus.DI]]
+    */
+  @Tactic(longDisplayName="Differential Invariant",
+    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
+    contextPremises="Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
+
+  /** dIClose: Differential Invariant proves a formula to be an invariant of a differential equation closing with the usual steps to prove it invariant.
+    * (uses DI, DW, DE, QE).
+    * Tries to close everything after diffInd rule (turning free variables to constants)
+    * {{{
+    *      *
+    * -------------------------- dIClose
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    * @example {{{
+    *         *
+    *    ---------------------dIClose(1)
+    *    x>=5 |- [{x'=2}]x>=5
+    * }}}
+    * @example {{{
+    *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
+    *    -------------------------------------dIClose(1, 1::Nil)
+    *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
+    * }}}
+    * @incontext
+    * @see [[HilbertCalculus.DI]]
+    */
+  @Tactic(longDisplayName="Differential Invariant Auto-Close",
+    premises="*",
+    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
+    contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
+    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
+    displayLevel="all", revealInternalSteps = true)
+  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)
@@ -159,20 +226,7 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DI]]
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
-  @Tactic(longDisplayName="Differential Invariant Auto-Close",
-    premises="*",
-    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises="Γ |- C( Q→P∧∀x(P')<sub>x'↦f(x)</sub> ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel="all", revealInternalSteps = true)
-  def dIClose: DependentPositionTactic = DifferentialTactics.diffInd('cex)
-  @Tactic(longDisplayName="Differential Invariant",
-    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'",
-    conclusion="Γ |- [x'=f(x) & Q]P, Δ",
-    contextPremises="Γ, |- C( Q→P∧[x':=f(x)](P)' ), Δ",
-    contextConclusion="Γ |- C( [x'=f(x) & Q]P ), Δ",
-    displayLevel="all", revealInternalSteps = true)
-  def dIRule: DependentPositionTactic = DifferentialTactics.diffInd('diffInd)
+
   @Tactic(names="dI", longDisplayName="Differential Invariant",
     premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
     conclusion="Γ |- [x'=f(x) & Q]P, Δ",
@@ -207,7 +261,6 @@ trait DifferentialEquationCalculus {
     *     existsR("1/x^(1/2)".asFormula)(1) & diffInd()(1) & QE
     *   )
     * }}}
-    * @see [[HilbertCalculus.DG]]
     */
   @Tactic(longDisplayName = "Differential Ghost",
     premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",

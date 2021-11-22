@@ -386,24 +386,24 @@ object Ax extends Logging {
   @Axiom("DW base", conclusion = "__[{x'=f(x)&Q}]Q__", displayLevel = "internal",
     key = "", recursor = "", unifier = "surjlinear")
   val DWbase: CoreAxiomInfo = coreAxiom("DW base")
-  @Axiom("DE", conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P",
+  @Axiom("DE", conclusion = "__[{x'=f(x)&Q}]P__↔[x'=f(x)&Q][x':=f(x)]P", displayLevel = "browse",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   val DE: CoreAxiomInfo = coreAxiom("DE differential effect")
-  @Axiom("DE", conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P",
+  @Axiom("DE", conclusion = "__[{x'=F,c&Q}]P__↔[{c,x'=F&Q}][x':=f(x)]P", displayLevel = "browse",
     key = "0", recursor = "1;*", unifier = "surjlinear")
   val DEs: CoreAxiomInfo = coreAxiom("DE differential effect (system)")
   /* @todo soundness requires only vectorial x in p(||) */
-  @Axiom("DI", conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
+  @Axiom("DI", conclusion = "(__[{x'=f(x)&Q}]P__↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')", displayLevel = "browse",
     key = "1.0", recursor = "*", unifier = "surjlinear")
   val DIequiv: CoreAxiomInfo = coreAxiom("DI differential invariance")
-  @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
+  @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=a*y+b&Q}]P", displayLevel = "browse",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGa: CoreAxiomInfo = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
   @Axiom("DG inverse differential ghost", conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGpp: CoreAxiomInfo = coreAxiom("DG inverse differential ghost")
-  @Axiom("DG inverse differential ghost implicational", conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
+  @Axiom("DG inverse differential ghost implicational", conclusion = "__[{x'=f(x)&Q}]P__→∀y [{y'=g(x,y),x'=f(x)&Q}]P", displayLevel = "browse",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGi: CoreAxiomInfo = coreAxiom("DG inverse differential ghost implicational")
   @Axiom("DG", conclusion = "__[{x'=f(x)&Q}]P__↔∃y [{x'=f(x),y'=g()&Q}]P",
@@ -412,7 +412,7 @@ object Ax extends Logging {
   @Axiom("DGa", conclusion = "__[{x'=f(x)&Q}]P__↔∀y [{x'=f(x),y'=g()&Q}]P",
     key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGCa: CoreAxiomInfo = coreAxiom("DG differential ghost constant all")
-  @Axiom("DS&", conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
+  @Axiom("DS&", conclusion = "__[{x'=c()&q(x)}]P__ ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)", displayLevel = "browse",
     key = "0", recursor = "0.1.1;0.1;*", unifier = "surjlinearpretend")
   val DS: CoreAxiomInfo = coreAxiom("DS& differential equation solution")
 
@@ -424,23 +424,23 @@ object Ax extends Logging {
   @Axiom("DX",
     key = "0", recursor = "1", unifier = "surjlinear")
   val DX: CoreAxiomInfo = coreAxiom("DX differential skip")
-  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", unifier = "linear")
+  @Axiom("Dcomp", conclusion = "[x'=f(x)&Q]P ↔ [x'=f(x)&Q][x'=f(x)&Q]P", displayLevel = "browse", unifier = "linear")
   val Dcomp: CoreAxiomInfo = coreAxiom("D[;] differential self compose")
   @Axiom("DIo >", unifier = "linear", conclusion = "(__[{x'=f(x)&Q}]g(x)>h(x)__↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater: CoreAxiomInfo = coreAxiom("DIo open differential invariance >")
-  @Axiom("DMP", conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)", inputs = "R:formula",
+  @Axiom("DMP", conclusion = "(__[{x'=f(x)&Q}]P__←[{x'=f(x)&R}]P)←[{x'=f(x)&Q}](Q→R)", inputs = "R:formula", displayLevel = "browse",
     key = "1.1" /*@todo, recursor = (0::Nil)::(Nil)::Nil*/)
   val DMP: CoreAxiomInfo = coreAxiom("DMP differential modus ponens")
 
-  @Axiom("Uniq", conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__",
+  @Axiom("Uniq", conclusion = "<x'=f(x)&Q}>P ∧ <x'=f(x)&R>P → __<x'=f(x)&Q∧R>P__", displayLevel = "browse",
     key = "1", recursor = "0;1", unifier = "surjlinear")
   val Uniq: CoreAxiomInfo = coreAxiom("Uniq uniqueness")
   /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
-  @Axiom("Cont", conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__",
+  @Axiom("Cont", conclusion = "e>0 → __<x'=f(x),t'=1&e>0>t≠0__", displayLevel = "browse",
     key = "1", recursor = "*")
   val Cont: CoreAxiomInfo = coreAxiom("Cont continuous existence")
-  @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)",
+  @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)", displayLevel = "browse",
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
 
@@ -450,8 +450,8 @@ object Ax extends Logging {
 
   @Axiom("IVT", conclusion = "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))", unifier = "full")
   val IVT: CoreAxiomInfo = coreAxiom("IVT")
-  @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", unifier = "linear",
-    key = "1", recursor = "0")
+  @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", displayLevel = "browse",
+    key = "1", recursor = "0", unifier = "linear")
   val DCC: CoreAxiomInfo = coreAxiom("DCC")
 
   /* DIFFERENTIAL AXIOMS */
@@ -510,13 +510,13 @@ object Ax extends Logging {
     key = "0", recursor = "0", unifier = "surjlinear")
   val duald: CoreAxiomInfo = coreAxiom("<d> dual")
 
-  @Axiom("VK", conclusion = "(p→__[a]p__)←[a]⊤",
+  @Axiom("VK", conclusion = "(p→__[a]p__)←[a]⊤", displayLevel = "browse",
     key = "1.1", recursor = "*", unifier = "surjlinear")
   val VK: CoreAxiomInfo = coreAxiom("VK vacuous")
   @Axiom("[]T axiom", conclusion = "__[a]⊤__", displayLevel = "all",
     key = "", recursor = "", unifier = "surjlinear")
   val boxTrueAxiom: CoreAxiomInfo = coreAxiom("[]T system")
-  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)", displayLevel = "all",
     key = "1", recursor = "*")
   val K: CoreAxiomInfo = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
@@ -1769,7 +1769,8 @@ object Ax extends Logging {
     *
     * @see [[assignDual]]
     */
-  @Axiom(":=D")
+  @Axiom(("⟨:=⟩D", "<:=>D"), conclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
+    key = "0", recursor = "*")
   lazy val assignDual2: DerivedAxiomInfo = derivedFormula(":= assign dual 2",
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt(selfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &

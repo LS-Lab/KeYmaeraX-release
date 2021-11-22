@@ -36,6 +36,7 @@ object HybridProgramCalculus extends HybridProgramCalculus
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
   * @see [[HilbertCalculus]]
+  * @see [[TactixLibrary]]
   * @Tactic complete
   */
 trait HybridProgramCalculus {

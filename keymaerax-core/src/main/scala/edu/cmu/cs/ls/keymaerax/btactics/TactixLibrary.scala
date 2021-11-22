@@ -217,7 +217,7 @@ object TactixLibrary extends HilbertCalculus
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
 
-  /** Master implementation with tactic `loop` for nondeterministic repetition and `odeR` for
+  /** Main automatic proof strategy with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
@@ -316,8 +316,8 @@ object TactixLibrary extends HilbertCalculus
              keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
-   * auto: tactic that tries hard to prove whatever it could.
- *
+   * auto: main automatic proof tactic that tries hard to prove whatever it could.
+    *
    * @see [[autoClose]] */
   @Tactic(longDisplayName = "Unfold Automatically")
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
@@ -583,18 +583,28 @@ object TactixLibrary extends HilbertCalculus
   })
 
   /**
-    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
+    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+    * {{{
     * G |- P    P |- [x'=f(x)&Q]P
     * ---------------------------
     * G |- [x'=f(x)&Q]P
+    * }}}
     * (Default behavior: fast (but incomplete) version, no solving attempted)
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariantComplete]]
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
-  /** Same as odeInvariant but directly reports an error when it detects that the postcondition should be invariant
+  /** Same as [[odeInvariant]] but directly reports an error when it detects that the postcondition should be invariant
     * but is currently unprovable.
+    * {{{
+    *         *
+    * -----------------
+    * G |- [x'=f(x)&Q]P
+    * }}}
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
+    * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariant]]
     */
   @Tactic("ODE Invariant Complete", codeName = "odeInvC",
@@ -621,23 +631,23 @@ object TactixLibrary extends HilbertCalculus
 
   // more
 
-  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
+  /** Prove the given cut formula to hold for the modality at position and turn postcondition into `cut->post`.
     * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
     * {{{
-    *   cutShowLbl:     cutUseLbl:
+    *   Show:           Use:
     *   G |- [a]C, D    G |- [a](C->B), D
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
     *
     * @example {{{
-    *   cutShowLbl:      cutUseLbl:
+    *   Show:            Use:
     *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
     * @example {{{
-    *   cutShowLbl:      cutUseLbl:
+    *   Show:            Use:
     *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
@@ -651,6 +661,11 @@ object TactixLibrary extends HilbertCalculus
 
   /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
     * Applies simplifying transformations to the real arithmetic questions before solving it via [[RCF]].
+    * {{{
+    *   *
+    * ------ QE if G|-D is a provable formula of first-order real arithmetic
+    * G |- D
+    * }}}
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
@@ -659,6 +674,7 @@ object TactixLibrary extends HilbertCalculus
     else ToolTactics.timeoutQE(defs, order, tool, timeout) // non-serializable for now
   }
 
+  /** @see [[QE()]] */
   @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     new SingleGoalDependentTactic(TacticFactory.ANON) {
@@ -671,6 +687,7 @@ object TactixLibrary extends HilbertCalculus
       }
     }
   }
+  /** @see [[QE()]] */
   lazy val QE: BelleExpr = QEX(None, None)
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
@@ -703,6 +720,7 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
+
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done: BelleExpr = DebuggingTactics.done
@@ -937,9 +955,43 @@ object TactixLibrary extends HilbertCalculus
       elseT
   )
 
+  // Generate a provable with a tactic
+
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable
     *
+    * @param goal The sequent to prove by running `tactic`.
+    * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+    * @see [[SequentialInterpreter]]
+    * @see [[TactixLibrary.by(Provable)]]
+    * @see [[proveBy()]]
+    * @example {{{
+    *   import StringConverter._
+    *   import TactixLibrary._
+    *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
+    * }}}
+    */
+  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
+  /**
+    * Prove the new goal by the given tactic, returning the resulting Provable
+    *
+    * @param goal The formula to prove by running `tactic`.
+    * @param tactic The Bellerophon tactic to run in the default interpreter on `goal`.
+    * @see [[TactixLibrary.by(Provable)]]
+    * @example {{{
+    *   import StringConverter._
+    *   import TactixLibrary._
+    *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
+    * }}}
+    */
+  def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+
+  /**
+    * Prove the new goal by the given tactic, returning the resulting Provable.
+    *
+    * @param goal The Provable from which to start the proof by running `tactic` (on its subgoals).
+    * @param tactic The Bellerophon tactic to run in the default interpreter on (the premises of) `goal`.
+    * @param defs The definitions and declarations available in the current context.
     * @see [[SequentialInterpreter]]
     * @see [[TactixLibrary.by(Provable)]]
     * @see [[proveBy()]]
@@ -954,30 +1006,7 @@ object TactixLibrary extends HilbertCalculus
   }
   def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = proveBy(goal, tactic, Declaration(Map.empty))
 
-  /**
-   * Prove the new goal by the given tactic, returning the resulting Provable
-    *
-   * @see [[SequentialInterpreter]]
-   * @see [[TactixLibrary.by(Provable)]]
-   * @see [[proveBy()]]
-   * @example {{{
-   *   import StringConverter._
-   *   import TactixLibrary._
-   *   val proof = TactixLibrary.proveBy(Sequent(IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
-   * }}}
-   */
-  def proveBy(goal: Sequent, tactic: BelleExpr): ProvableSig = proveBy(ProvableSig.startProof(goal), tactic)
-  /**
-   * Prove the new goal by the given tactic, returning the resulting Provable
-    *
-   * @see [[TactixLibrary.by(Provable)]]
-   * @example {{{
-   *   import StringConverter._
-   *   import TactixLibrary._
-   *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
-   * }}}
-   */
-  def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+  // lemmas
 
   @Tactic("useLemma", codeName = "useLemma", longDisplayName = "Use Lemma")
   def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser)) }
@@ -1102,7 +1131,8 @@ object TactixLibrary extends HilbertCalculus
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-  /** Solve an arithmetic goal with sum-of-squares */
+  /** Solve an arithmetic goal with sum-of-squares real arithmetic.
+    * @see [[QE()]] */
   @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
     premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     //    sossolve -----------
