@@ -1762,7 +1762,11 @@ class DifferentialTests extends TacticTestBase {
   "ODE Darboux" should "prove equational darboux" in withQE { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x*A+B()".asTerm)(1)) shouldBe 'proved
+    val pr = proveBy(seq,
+      DifferentialTactics.dgDbx("x*A+B()".asTerm)(1))
+
+    println(pr)
+    pr shouldBe 'proved
   }
 
   it should "prove equational darboux with consts" in withQE { _ =>
@@ -1771,9 +1775,9 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("5".asTerm)(1)) shouldBe 'proved
   }
 
-  it should "prove fractional darboux" in withQE { _ =>
+  it should "prove fractional darboux" in withMathematica { _ =>
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
-    //assumes z^2 non-zero already in evol domain, or the ghost will report a singularity
+    //assumes z^2 non-zero already in evol domain
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2, z' = (A*x+B())/z & y = x^2 & z^2 > 0}] x+z=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1)) shouldBe 'proved
   }
@@ -1782,6 +1786,13 @@ class DifferentialTests extends TacticTestBase {
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove <= darboux" in withQE { _ =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "-(x+z)<=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] -(x+z)<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
   }
 
@@ -1802,6 +1813,13 @@ class DifferentialTests extends TacticTestBase {
   it should "prove < darboux" in withMathematica { _ =>
     //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
     val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+  }
+
+  it should "prove > darboux" in withMathematica { _ =>
+    //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
+    val seq = "-(x+z)>0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] -(x+z)>0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
   }

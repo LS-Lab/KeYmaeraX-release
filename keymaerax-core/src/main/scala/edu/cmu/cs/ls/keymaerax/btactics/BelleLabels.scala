@@ -28,6 +28,10 @@ object BelleLabels {
   val initCase: BelleLabel = BelleTopLevelLabel("Init")
   val indStep: BelleLabel = BelleTopLevelLabel("Step")
 
+  // fixpoint
+  val fixUseCase: BelleLabel = BelleTopLevelLabel("Usefix")
+  val fixpoint: BelleLabel = BelleTopLevelLabel("Fixpoint")
+
   // cuts
   val cutUse: BelleLabel = BelleTopLevelLabel("Use")
   val cutShow: BelleLabel = BelleTopLevelLabel("Show")

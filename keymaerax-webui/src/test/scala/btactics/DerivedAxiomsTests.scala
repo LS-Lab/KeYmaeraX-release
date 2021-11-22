@@ -71,8 +71,23 @@ class DerivedAxiomsTests extends TacticTestBase(registerAxTactics=None) {
     }
   })
 
+  //@todo derived rules do not need Mathematica
+
   "Derived Rule" should "prove allG" in withMathematica(initLibrary =  false, testcode = { _ => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
+  ) })
+
+  it should "prove Ind from FP" in withMathematica(initLibrary =  false, testcode =  { _ => indrule.provable.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula))
+  ) })
+
+  it should "prove FP from Ind" in withMathematica(initLibrary =  false, testcode =  { _ => FPruleduplicate.provable.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("p_(||) | <a_;>q_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula)),
+    Sequent(immutable.IndexedSeq("p_(||) | <a_;>q_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
+  ) })
+
+  it should "prove contra2" in withMathematica(initLibrary =  false, testcode =  { _ => contraposition2Rule.provable.subgoals shouldBe List(
+    Sequent(immutable.IndexedSeq("!q_(||)".asFormula), immutable.IndexedSeq("!p_(||)".asFormula))
   ) })
 
   it should "prove Goedel" in withMathematica(initLibrary =  false, testcode =  { _ => Goedel.provable.subgoals shouldBe List(
