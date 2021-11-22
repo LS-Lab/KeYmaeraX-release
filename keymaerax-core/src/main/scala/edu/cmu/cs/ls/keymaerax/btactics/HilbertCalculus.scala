@@ -40,6 +40,7 @@ object HilbertCalculus extends HilbertCalculus
   * @see [[HilbertCalculus.derive()]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  * @see [[TactixLibrary]]
   * @Tactic completed
   */
 trait HilbertCalculus extends UnifyUSCalculus {

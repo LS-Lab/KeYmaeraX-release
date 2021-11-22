@@ -31,6 +31,7 @@ object SequentCalculus extends SequentCalculus
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  * @see [[TactixLibrary]]
   * @Tactic complete
   */
 trait SequentCalculus {
