@@ -1769,7 +1769,8 @@ object Ax extends Logging {
     *
     * @see [[assignDual]]
     */
-  @Axiom(":=D")
+  @Axiom(("⟨:=⟩D", "<:=>D"), conclusion = "__&langle;x:=f();&rangle;P__ ↔ [x:=f();]P",
+    key = "0", recursor = "*")
   lazy val assignDual2: DerivedAxiomInfo = derivedFormula(":= assign dual 2",
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt(selfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &
