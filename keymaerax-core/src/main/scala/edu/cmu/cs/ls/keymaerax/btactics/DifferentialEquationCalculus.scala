@@ -261,7 +261,6 @@ trait DifferentialEquationCalculus {
     *     existsR("1/x^(1/2)".asFormula)(1) & diffInd()(1) & QE
     *   )
     * }}}
-    * @see [[HilbertCalculus.DG]]
     */
   @Tactic(longDisplayName = "Differential Ghost",
     premises = "Γ |- ∃y [x'=f(x),E & Q]G, Δ ;; G |- P",

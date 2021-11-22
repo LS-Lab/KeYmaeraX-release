@@ -370,7 +370,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * Derive by proof
     *******************************************************************/
 
-  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
+  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof)
+    * to get rid of the differential operators.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */

@@ -362,7 +362,7 @@ private object DifferentialTactics extends Logging {
       diffRefineInternal(f, hide)(pos,sequent)
      })
 
-  @Tactic(names="Differential Refine",
+  @Tactic("dR", longDisplayName="Differential Refine",
     codeName="dR", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
@@ -387,7 +387,7 @@ private object DifferentialTactics extends Logging {
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.
     * @see AxiomaticODESolver.inverseDiffCut
     * */
-  @Tactic(names="Inverse Differential Cut",
+  @Tactic("dCi", longDisplayName="Inverse Differential Cut",
     codeName="dCi", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x) & Q]P ;; Γ |- R, Δ",
     conclusion="Γ |- [x'=f(x) & Q∧R]P, Δ",
