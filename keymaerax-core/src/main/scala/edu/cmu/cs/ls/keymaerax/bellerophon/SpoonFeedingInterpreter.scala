@@ -112,10 +112,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
     }
   }
 
-  /** Updates the labels `orig` at position `at` to include the labels `repl`. */
+  /** Updates the labels `orig` at position `at` to include the labels `repl`. Keeps original labels if `repl`==None. */
   private def updateLabels(orig: Option[List[BelleLabel]], at: Int, repl: Option[List[BelleLabel]]): Option[List[BelleLabel]] = repl match {
     case Some(l) => Some(orig.map(_.patch(at, l, 1)).getOrElse(l))
-    case None => orig.map(_.patch(at, Nil, 1))
+    case None => orig
   }
   private def updateLabels(orig: List[BelleLabel], at: Int, repl: Option[List[BelleLabel]]): List[BelleLabel] = updateLabels(Some(orig), at, repl).getOrElse(Nil)
 
@@ -269,17 +269,21 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
 
             val (resultProvable, mergedLabels) = provables.reverse.zipWithIndex.foldRight[(ProvableSig, List[BelleLabel])]((p, origLabels))({
               case ((p: BelleDelayedSubstProvable, i), (provable, labels)) =>
-                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, p.label))
+                // delete all labels of closed goals, even if p.label==None
+                val pl = if (p.p.subgoals.isEmpty) Some(p.label.getOrElse(List.empty)) else p.label
+                (applySubDerivation(provable, i, p.p, p.subst)._2, updateLabels(labels, i, pl))
               case ((BelleProvable(cp, cl, _), i), (provable, labels)) =>
+                // delete all labels of closed goals, even if cl==None
+                val cl2 = if (cp.subgoals.isEmpty) Some(cl.getOrElse(List.empty)) else cl
                 // provables may have expanded or not expanded definitions arbitrarily
-                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl))
+                if (provable.subgoals(i) == cp.conclusion) (provable(cp, i), updateLabels(labels, i, cl2))
                 else try {
                   val downSubst = RestrictedBiDiUnificationMatch(provable.subgoals(i), cp.conclusion).usubst
-                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl))
+                  (exhaustiveSubst(provable, downSubst)(exhaustiveSubst(cp, downSubst), i), updateLabels(labels, i, cl2))
                 } catch {
                   case _: UnificationException =>
                     val upSubst = RestrictedBiDiUnificationMatch(cp.conclusion, provable.subgoals(i)).usubst
-                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl))
+                    (exhaustiveSubst(provable, upSubst)(exhaustiveSubst(cp, upSubst), i), updateLabels(labels, i, cl2))
                 }
             })
 
