@@ -155,19 +155,6 @@ trait HybridProgramCalculus {
     inputs = "J:formula", displayLevel = "full")
   def fp(fixpoint: Formula)  : DependentPositionWithAppliedInputTactic = inputanon { (pos:Position) => DLBySubst.fpRule(fixpoint)(pos) }
 
-  /**
-    * Loop convergence: prove a diamond property of a loop by induction with a variant for progress.
-    * {{{
-    *   init:                       use:                         step:
-    *   G |- exists v. J(v), D    v<=0, J(v), consts |- p    v>0, J(v), consts |- <a>J(v-1)
-    *   --------------------------------------------------------------------------------------------
-    *   G |- <{a}*>p, D
-    * }}}
-    * @param variant The variant property or convergence property in terms of new variable `v`.
-    * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
-    */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = DLBySubst.con(v, variant, pre)
-
   /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
     * {{{
     *   G, y=e |- p(y), D

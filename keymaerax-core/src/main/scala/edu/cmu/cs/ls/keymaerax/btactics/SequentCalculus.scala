@@ -184,6 +184,7 @@ trait SequentCalculus {
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]).
     * {{{
+    * Use:          Show:
     * G, c |- D     G |- D, c
     * ----------------------- (cut)
     *         G |- D
@@ -276,6 +277,11 @@ trait SequentCalculus {
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
     * Skolemization with bound renaming on demand.
+    * {{{
+    * G |- p(x), D
+    * ----------------------- (Skolemize) provided x not in G,D
+    * G |- \forall x p(x), D
+    * }}}
     * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     * @example {{{
     *     y>5   |- x^2>=0
@@ -297,7 +303,13 @@ trait SequentCalculus {
     premises = "Γ |- ∀x p(f(x)), Δ",
     conclusion = "Γ |- p(f(y)), Δ", displayLevel = "browse")
   def allRi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.universalGen(x, t)(_: Position) }
-  /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`. */
+  /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`.
+    * {{{
+    * p(inst), G |- D
+    * ------------------------ ∀L
+    * \forall x p(x), G |- D
+    * }}}
+    */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic("∀L",
@@ -317,7 +329,14 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** Universal monotonicity in antecedent: replace `p(x)` with a characteristic property `q(x)`. */
+  /** Universal monotonicity in antecedent: replace `p(x)` with a characteristic property `q(x)`.
+    * {{{
+    * Use:                      Show:
+    * G, \forall x q(x) |- D    G, p(x) |- D, q(x)
+    * -------------------------------------------- M∀L
+    * G, \forall x p(x) |- D
+    * }}}
+    */
   @Tactic("M∀L",
     inputs = "q(x):formula",
     premises = "Γ, ∀x q(x) |- Δ ;; Γ, p(x) |- Δ, q(x)",
@@ -334,7 +353,13 @@ trait SequentCalculus {
     }
     }
 
-  /** all left keep: keeping around the quantifier, instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
+  /** all left keep: keeping around the quantifier, instantiate a universal quantifier in the antecedent by the concrete instance `e`.
+    * {{{
+    * \forll x p(x), G, p(e) |- D
+    * --------------------------- ∀L
+    * \forall x p(x), G |- D
+    * }}}
+    */
   @Tactic("∀Lk",
     inputs = "θ[θ]:term",
     premises = "∀x p(x), Γ, p(θ) |- Δ",
@@ -350,7 +375,13 @@ trait SequentCalculus {
     }
     }
 
-  /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
+  /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness.
+    * {{{
+    *           p(x), G |- D
+    * ------------------------ (Skolemize) provided x not in G,D
+    * \exists x p(x), G |- D
+    * }}}
+    * */
   @Tactic("∃L",
     premises = "p(x), Γ |- Δ",
     conclusion = "∃x p(x), Γ |- Δ")
@@ -361,7 +392,13 @@ trait SequentCalculus {
     conclusion = "Γ, p(f(y)) |- Δ", displayLevel = "browse")
   def existsLi(t: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.existsGen(x, t)(_: Position) }
 
-  /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
+  /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness.
+    * {{{
+    * G |- p(inst), D
+    * ----------------------- ∃R
+    * G |- \exists x p(x), D
+    * }}}
+    */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   @Tactic("∃R",
@@ -381,7 +418,14 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** Existential monotonicity in succedent: replace `p(x)` with a characteristic property `q(x)`. */
+  /** Existential monotonicity in succedent: replace `p(x)` with a characteristic property `q(x)`.
+    * {{{
+    * Use:                      Show:
+    * G |- \exists x q(x), D    G, q(x) |- p(x), D
+    * -------------------------------------------- M∃R
+    * G |- \exists x p(x), D
+    * }}}
+    */
   @Tactic("M∃R",
     inputs = "q(x):formula",
     premises = "Γ |- ∃x q(x), Δ ;; Γ, q(x) |- p(x), Δ",
@@ -402,7 +446,23 @@ trait SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // closing tactics
 
-  /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
+  /** close: closes the branch when the same formula is in the antecedent and succedent or true right or false left.
+    * {{{
+    *        *
+    * ------------------ (Id)
+    *   p, G |- p, D
+    * }}}
+    * {{{
+    *       *
+    * ------------------ (close true)
+    *   G |- true, D
+    * }}}
+    * {{{
+    *        *
+    * ------------------ (close false)
+    *   false, G |- D
+    * }}}
+    */
   @Tactic("⊥/⊤", longDisplayName = "Close by id/⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
   val close: DependentTactic = anon {(seq: Sequent) => findClose(seq)}
 
@@ -461,7 +521,13 @@ trait SequentCalculus {
     DebuggingTactics.error("Inapplicable close")
   }
 
-  /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]).
+    * {{{
+    *        *
+    * ------------------ (Id)
+    *   p, G |- p, D
+    * }}}
+    */
   //@note same name (closeId) as SequentCalculus.closeId for serialization
   @Tactic(codeName = "closeId", longDisplayName = "Close by Identity")
   val closeId: BuiltInTwoPositionTactic = anon ((provable: ProvableSig, a: Position, s: Position) => {
@@ -492,7 +558,13 @@ trait SequentCalculus {
   else
     throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
 
-  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  /** id: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]).
+    * {{{
+    *        *
+    * ------------------ (id)
+    *   p, G |- p, D
+    * }}}
+    */
   //@note do not forward to closeIdWith (performance)
   //@TODO: Currently needs to be new DependentTactic() for some crazy reason: SpoonFeedingInterpreter serializes as "closeId()"
   // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
@@ -523,14 +595,14 @@ trait SequentCalculus {
     }
   }
 
-  /** Alpha renaming of `what` to `to` at a specific position. Variable `to` must not occur free at the applied position.
+  /** Alpha bound renaming of `what` to `to` at a specific position (for quantifier/assignment/ode). Variable `to` must not occur free at the applied position.
     * @example{{{
     *   x=y |- [{y'=y}]y>=0      x=y |- [{x'=x}]x>=0, x=y
     *   ------------------------------------------------- alphaRen("x","y",1)
     *   x=y |- [{x'=x}]x>=0
     * }}}
     */
-  @Tactic("α-ren", longDisplayName = "Alpha Rename",
+  @Tactic("BR", longDisplayName = "Alpha Bound Rename",
     premises = "Γ |- P(y), Δ ;; Γ |- P(x), Δ, x=y",
     conclusion = "Γ |- P(x), Δ",
     inputs = "x:Variable;;y[y]:Variable")
@@ -617,14 +689,26 @@ trait SequentCalculus {
     val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + seq.prettyString))
     close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
   }*/
-  /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
+  /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]).
+    * {{{
+    *       *
+    * ------------------ (close true)
+    *   G |- true, D
+    * }}}
+    */
   @Tactic("⊤R",
     longDisplayName = "Close ⊤",
     premises = "*",
     conclusion = "Γ |- ⊤, Δ")
   val closeT: BelleExpr = anon { ProofRuleTactics.closeTrue('R, True) }
 //  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
-  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
+  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]).
+    * {{{
+    *        *
+    * ------------------ (close false)
+    *   false, G |- D
+    * }}}
+    */
   @Tactic("⊥L",
     longDisplayName = "Close ⊥",
     premises = "*",
@@ -636,8 +720,13 @@ trait SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // derived propositional
 
-  /** Turn implication `a->b` on the right into an equivalence `a<->b`, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-
+  /** Turn implication `a->b` on the right into an equivalence `a<->b`, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]).
+    * {{{
+    * G |- a<->b, D
+    * -------------
+    * G |- a->b,  D
+    * }}}
+    */
   @Tactic(("→2↔", "->2<->R"), longDisplayName = "Strengthen to Equivalence",
     premises = "Γ |- P↔Q, Δ",
     conclusion = "Γ |- P→Q, Δ")
@@ -652,15 +741,28 @@ trait SequentCalculus {
     * @param implication Position pointing to p->q
     */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
-  /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]] */
+  /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]].
+    * {{{
+    * q<->p, G |-  D
+    * -------------- (<->cL)
+    * p<->q, G |-  D
+    * }}}
+    */
   @Tactic(("↔cL", "<->cLR"), longDisplayName = "Commute Equivalence Left", premises = "Q↔P, Γ |- Δ",
     conclusion = "P↔Q, Γ |- Δ")
   val commuteEquivL: CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
-  /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
+  /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]].
+    * {{{
+    * G |- q<->p, D
+    * ------------- (<->cR)
+    * G |- p<->q, D
+    * }}}
+    */
   @Tactic(("↔cR", "<->cR"), longDisplayName = "Commute Equivalence Right", premises = "Γ |- Q↔P, Δ",
     conclusion = "Γ |- P↔Q, Δ")
   val commuteEquivR: CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
+  @Tactic("=c", longDisplayName = "Commute Equal", conclusion = "__p=q__ ↔ q=p")
   lazy val commuteEqual       : DependentPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
   // Equality rewriting tactics
@@ -681,18 +783,17 @@ trait SequentCalculus {
   def label(s: BelleLabel): BelleExpr = LabelBranch(s)
 
   /** Call/label the current proof branch by the top-level label `s`.
-    *
     * @see [[Idioms.<()]]
     * @see [[sublabel()]]
+    * @see [[BelleLabels]]
     */
   @Tactic()
   def label(s: String): InputTactic = inputanon { label(BelleTopLevelLabel(s)) }
 
-  /** Mark the current proof branch and all subbranches `s``
+  /** Mark the current proof branch and all subbranches `s``.
     *
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = UnifyUSCalculus.skip //LabelBranch(BelleSubLabel(???, s))
-
 
 }
