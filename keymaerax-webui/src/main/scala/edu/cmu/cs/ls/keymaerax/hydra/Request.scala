@@ -1974,6 +1974,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+        //@note add a copy of parent proof session under local proof ID to allow stepping deeper into tactics
+        session += localProofId.toString -> proofSession.copy(proofId = localProofId.toString)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, proofSession.defs,
           RequestHelper.listenerFactory(db, proofSession),
           ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=strict, convertPending=false)
