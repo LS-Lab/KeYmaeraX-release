@@ -217,9 +217,10 @@ object TactixLibrary extends HilbertCalculus
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
 
-  /** Main automatic proof strategy with tactic `loop` for nondeterministic repetition and `odeR` for
-    * differential equations in the succedent.
-    * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
+  /**
+   * Automatic proof strategy implementation, configurable with tactic `loop` for nondeterministic repetition and `odeR` for
+   * differential equations in the succedent.
+   * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
              keepQEFalse: Boolean): BelleExpr = anon {
 
@@ -308,31 +309,36 @@ object TactixLibrary extends HilbertCalculus
     ))
   }
 
-  /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
-    * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
- *
-    * @see [[autoClose]] */
+  /**
+   * Automatic tactic that uses the generator `gen` to advance loop and ODE reasoning. `keepQEFalse` indicates whether or not a
+   * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
+   * @see [[autoClose]] */
+  @deprecated("Use auto instead")
   def master(gen: Generator[GenProduct] = invGenerator,
              keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
 
   /**
-   * auto: main automatic proof tactic that tries hard to prove whatever it could.
-    *
+   * Automatic proof tactic that uses the generator `gen` to advance loop and ODE reasoning.
+   * `keepQEFalse` indicates whether or not a result `false` of a QE step at the leaves is kept or
+   * undone (i.e., reverted to the QE input sequent).
    * @see [[autoClose]] */
   @Tactic(longDisplayName = "Unfold Automatically")
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
     master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
   }
   @Tactic(names="master", codeName="master", longDisplayName = "Unfold Automatically")
+  @deprecated("Use auto instead")
   def masterX(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = auto(generator, keepQEFalse)
 
-  /** autoClose: automatically try hard to prove the current goal if that succeeds.
-    * @see [[master]] */
+  /**
+   * Automatic proof tactic that uses the default loop invariant generator to make progress with loops and insists
+   * on closing (i.e., reverts to the original input sequent if it fails to prove the goal).
+   * @see [[auto]] */
   @Tactic(longDisplayName = "Prove Automatically")
   def autoClose: DependentTactic = anons { (_: ProvableSig) =>
     master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
-  /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
+  /** Automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", longDisplayName = "Explore Provability", revealInternalSteps = true)
   def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
