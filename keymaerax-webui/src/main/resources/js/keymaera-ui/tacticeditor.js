@@ -191,12 +191,23 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             var doc = session.getDocument();
 
             if (delta.length > 0 && delta[0] && delta[0].action == "remove" && delta[0].lines.length > 1) {
-              //@note multi-line remove happens when a tactic is executed or undone, need to recalculate markers on upcoming insert
-              if ($scope.edit.activeMarker) $scope.resetActiveEdit();
-              $.each($scope.edit.todoMarkers, function(i, e) {
-                session.removeMarker(e.marker);
-              });
-              $scope.edit.todoMarkers = [];
+              if (delta[0].lines.every(function(l) { return l === ''; })) {
+                if ($scope.edit.activeMarker &&
+                      ($scope.edit.activeMarker.range.start.row > $scope.edit.activeMarker.range.end.row ||
+                       $scope.edit.activeMarker.range.start.row == $scope.edit.activeMarker.range.end.row &&
+                       $scope.edit.activeMarker.range.start.column > $scope.edit.activeMarker.range.end.column)) {
+                  // disallow deleting before marker start
+                  $scope.aceEditor.session.doc.revertDeltas([delta[0]]);
+                }
+                // otherwise ignore delete newline
+              } else {
+                //@note multi-line remove happens when a tactic is executed or undone, we recalculate markers on upcoming insert
+                if ($scope.edit.activeMarker) $scope.resetActiveEdit();
+                $.each($scope.edit.todoMarkers, function(i, e) {
+                  session.removeMarker(e.marker);
+                });
+                $scope.edit.todoMarkers = [];
+              }
             } else if (delta[0].action == "insert" &&
                        delta[0].lines.length === doc.getAllLines().length &&
                        delta[0].lines.every(function(e,i) { return e === doc.getAllLines()[i]; } )) {
@@ -232,6 +243,8 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                 }
               }
             }
+            // update the marker rendering
+            $scope.aceEditor.renderer.updateFull();
           }
 
           $scope.executeTactic = function(tactic, stepwise) {
