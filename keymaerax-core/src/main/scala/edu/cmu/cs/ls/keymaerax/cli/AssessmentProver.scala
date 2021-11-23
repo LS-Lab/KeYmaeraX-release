@@ -1069,9 +1069,9 @@ object AssessmentProver {
   def loopCheck(question: Formula, inv: Formula): ProvableSig = {
     def loopCheckTactic(inv: Formula): BelleExpr = {
       loop(inv)(1) <(
-        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Precondition does not imply invariant"),
-        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant does not imply postcondition"),
-        master(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant is not preserved by loop body")
+        autoImpl(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Precondition does not imply invariant"),
+        autoImpl(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant does not imply postcondition"),
+        autoImpl(loop(FixedGenerator(List.empty)), ODE, keepQEFalse=true) & DebuggingTactics.done("Invariant is not preserved by loop body")
       ) & done
     }
 

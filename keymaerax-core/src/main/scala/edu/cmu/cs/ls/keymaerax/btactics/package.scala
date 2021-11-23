@@ -101,7 +101,7 @@ package edu.cmu.cs.ls.keymaerax
   * }}}
   * Common tactics for proof by search include
   * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.prop()]],
-  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.master()]] and the like.
+  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.auto()]] and the like.
   *
   *
   * ===Proof by Pointing===

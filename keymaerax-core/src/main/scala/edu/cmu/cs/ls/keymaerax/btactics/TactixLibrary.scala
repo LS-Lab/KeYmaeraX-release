@@ -34,7 +34,7 @@ import scala.util.Try
   * elaborate documentation can be found in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
   *
   * Main search tactics that combine numerous other tactics for automation purposes include:
-  *   - [[TactixLibrary.master]] automatic proof search
+  *   - [[TactixLibrary.auto]] automatic proof search
   *   - [[TactixLibrary.autoClose]] automatic proof search if that successfully proves the given property
   *   - [[TactixLibrary.normalize]] normalize to sequent normal form
   *   - [[TactixLibrary.unfoldProgramNormalize]] normalize to sequent normal form, avoiding unnecessary branching
@@ -221,8 +221,8 @@ object TactixLibrary extends HilbertCalculus
    * Automatic proof strategy implementation, configurable with tactic `loop` for nondeterministic repetition and `odeR` for
    * differential equations in the succedent.
    * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
-  def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-             keepQEFalse: Boolean): BelleExpr = anon {
+  def autoImpl(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+               keepQEFalse: Boolean): BelleExpr = anon {
 
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (f: Not, true) if f.isPredicateFreeFOL => None
@@ -324,7 +324,7 @@ object TactixLibrary extends HilbertCalculus
    * @see [[autoClose]] */
   @Tactic(longDisplayName = "Unfold Automatically")
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
-    master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
+    autoImpl(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)
   }
   @Tactic(names="master", codeName="master", longDisplayName = "Unfold Automatically")
   @deprecated("Use auto instead")
@@ -336,12 +336,12 @@ object TactixLibrary extends HilbertCalculus
    * @see [[auto]] */
   @Tactic(longDisplayName = "Prove Automatically")
   def autoClose: DependentTactic = anons { (_: ProvableSig) =>
-    master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
+    autoImpl(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & DebuggingTactics.done("Automation failed to prove goal") }
 
   /** Automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", longDisplayName = "Explore Provability", revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {autoImpl(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(Loop(_), _))) if cgen(seq, pos).nonEmpty =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
