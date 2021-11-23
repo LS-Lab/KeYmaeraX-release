@@ -1596,7 +1596,7 @@ private object DifferentialTactics extends Logging {
     starter & dgDbx(cofactor)(pos)
   })
 
-  @Tactic(names="Darboux (in)equalities",
+  @Tactic(longDisplayName="Darboux (in)equalities",
     premises="Γ |- p≳0 ;; Q |- p' ≳ g p",
     conclusion="Γ |- [x'=f(x) & Q]p≳0, Δ",
     inputs="g:option[term]",

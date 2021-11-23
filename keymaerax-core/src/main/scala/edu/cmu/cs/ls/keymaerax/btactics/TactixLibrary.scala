@@ -596,7 +596,7 @@ object TactixLibrary extends HilbertCalculus
 
   /** Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
     * The tactic defaults to trying a quick invariance proof which may fail, but handles common cases.
-    * The complete invariance tactic is available with [[odeInvariantComplete]]
+    * The complete invariance tactic is available with [[odeInvariantComplete]].
     *
     * {{{
     *   *           *
@@ -608,13 +608,13 @@ object TactixLibrary extends HilbertCalculus
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariantComplete]]
-    * @example For sequent x=1 |- [{x'=x}]x >=0 proves automatically since x>=0 is an invariant of the ODE.
+    * @example For sequent x=1 |- [{x'=x}]x >=0 proves automatically since x>=0 is an invariant of the ODE and initially true.
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
-  /** Same as [[odeInvariant]] but implements a slower, complete version of the invariance tactic
-    * Capable of handling invariance proofs for arbitrary semialgebraic invariants P and domain Q
-    * Completeness failure is considered a tactic bug
+  /** Same as [[odeInvariant]] for proving ODE invariance properties, but implements a slower, complete version of the invariance tactic.
+    * Capable of handling invariance proofs for arbitrary semialgebraic invariants P and domain Q.
+    * Completeness failure is considered a tactic bug.
     *
     * {{{
     *   *           *
@@ -633,7 +633,7 @@ object TactixLibrary extends HilbertCalculus
     longDisplayName = "ODE Invariant Complete",
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
-    displayLevel="browse")
+    displayLevel="menu")
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
   // more
