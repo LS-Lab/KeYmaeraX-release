@@ -1328,13 +1328,13 @@ private object DifferentialTactics extends Logging {
       case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS")
     }
 
-    val (dbxRw,subst,derPos) = pop match {
-      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 0::Nil))
-      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 0::Nil))
-      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 0::Nil))
-      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 1::0::Nil))
-      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 1::0::Nil))
-      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil), PosInExpr(1 :: 1::0::Nil))
+    val (dbxRw,subst) = pop match {
+      case Equal(_,_) => (Ax.DBXeq,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case GreaterEqual(_,_) => (Ax.DBXge,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case LessEqual(_,_) => (Ax.DBXle,RenUSubst(("g(|y_,z_|)".asTerm, qco) :: Nil))
+      case Greater(_,_) => (Ax.DBXgtOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case Less(_,_) => (Ax.DBXltOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
+      case NotEqual(_,_) => (Ax.DBXneOpen,RenUSubst(("g(|y_|)".asTerm, qco) :: Nil))
       case _ =>  ??? // caught by exception in previous case match
     }
 
@@ -1352,7 +1352,7 @@ private object DifferentialTactics extends Logging {
       Dconstify(
         useAt(dbxRw,(us: Option[Subst]) => us.get ++ subst)(pos) <(
           QE,
-          derive(pos++ derPos) &
+          derive(pos++ dbxRw.recursor.head) &
           DE(pos) &
           // todo: mostly copy-paste from dI
           TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(seq, pos), classOf[SubstitutionClashException],
