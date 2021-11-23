@@ -149,7 +149,7 @@ trait HybridProgramCalculus {
     */
   @Tactic(
     longDisplayName = "Fixpoint",
-    premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P, &langle;a&rangle;J |- J",
+    premises = "Γ, &langle;a<sup>*</sup>&rangle;P, J |- Δ ;; P ∨ &langle;a&rangle;J |- J",
     conclusion = "Γ, &langle;a<sup>*</sup>&rangle;P |- Δ", revealInternalSteps = true,
     //@note contextPremises, contextConclusion without J not allowed
     inputs = "J:formula", displayLevel = "full")
