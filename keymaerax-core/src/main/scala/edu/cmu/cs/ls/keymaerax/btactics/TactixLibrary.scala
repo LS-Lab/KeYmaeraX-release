@@ -1153,19 +1153,28 @@ object TactixLibrary extends HilbertCalculus
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-  /** Attempt to prove a goal of universal real arithmetic goal using sum-of-squares.
-    * It normalizes the sequent and then finds sum-of-squares polynomials g_i, see "Real World Verification" below
+  /** Attempt to prove a goal of universal real arithmetic goal using a sum-of-squares (SOS) proof
+    * The input (FOLR) sequent is normalized to equational form (example below)
+    * The automation searches for witnesses g_i automatically such that the contradiction
+    * 1 + sum_i g_i^2 = 0 is implied by the (normalized) antecedent equations
+    *
     * {{{
     *        *
     * -----------------------------------
-    *        |- 1+g_1^2+g_2^2+...+g_n^2=0
+    *  p=0, q*w^2-1=0, r-w^2=0 |- 1+sum_i g_i^2 = 0
     * -----------------------------------
-    * G_FOLR |- D_FOLR
+    *  p=0, q*w^2-1=0, r-w^2=0 |- false
+    * -----------------------------------
+    *  p=0, q>0, r>=0  |- false
+    * -----------------------------------
+    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
     * }}}
     * @see Andre Platzer, Jan-David Quesel and Philipp Rummer. [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. CADE-22.
-    * @see [[QE()]] */
+    * @see [[QE()]]
+    * @example x >= 1 -> x > 1 | x =1 proves by SOS automatically
+    * */
   @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
-    premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
+    premises="normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     //    sossolve -----------
     conclusion="Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
     displayLevel="all")
