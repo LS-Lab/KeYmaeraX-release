@@ -5,8 +5,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -181,6 +181,7 @@ private object ProofRuleTactics extends Logging {
     requireOneSubgoal(provable, "closeTrue")
     provable(core.CloseTrue(pos.top), 0)
   }
+  private[btactics] val closeTrueInfo: TacticInfo = TacticInfo("closeTrue")
 
   @deprecated("Use SequentCalculus.closeF instead")
   @Tactic()
@@ -188,5 +189,6 @@ private object ProofRuleTactics extends Logging {
     requireOneSubgoal(provable, "closeFalse")
     provable(core.CloseFalse(pos.top), 0)
   }
+  private[btactics] val closeFalseInfo: TacticInfo = TacticInfo("closeFalse")
 
 }

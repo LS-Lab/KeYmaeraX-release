@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
-import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
@@ -158,6 +158,7 @@ private object PropositionalTactics extends Logging {
       case _ => throw new TacticInapplicableFailure("Applicable only to implications at top-level in the antecedent")
     }
   }
+  private[btactics] val autoMPInfo: TacticInfo = TacticInfo("autoMP")
 
   /**
    * Converts a sequent into a single formula.

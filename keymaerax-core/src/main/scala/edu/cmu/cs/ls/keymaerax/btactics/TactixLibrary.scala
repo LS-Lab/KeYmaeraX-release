@@ -135,8 +135,8 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, false) if f.isPredicateFreeFOL => None
-      case (_: Forall, true) => Some(TacticInfo("deepChase"))
-      case (_: Exists, false) => Some(TacticInfo("deepChase"))
+      case (_: Forall, true) => Some(deepChaseInfo)
+      case (_: Exists, false) => Some(deepChaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -153,7 +153,7 @@ object TactixLibrary extends HilbertCalculus
       case (f: Not, true) if f.isPredicateFreeFOL => None
       case (f: Not, false) if f.isPredicateFreeFOL => None
       case (f: And, false) if f.isPredicateFreeFOL => None
-      case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("autoMP"))
+      case (f: Imply, true) => if (f.isPredicateFreeFOL) None else Some(PropositionalTactics.autoMPInfo)
       case (_: Or, true) => None
       case (_: Equiv, _) => None
       case _ => sequentStepIndex(isAnte)(expr)
@@ -165,12 +165,12 @@ object TactixLibrary extends HilbertCalculus
   @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) => chaseAt(
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
-      case (_: Forall, true) => Some(TacticInfo("chase"))
-      case (_: Exists, false) => Some(TacticInfo("chase"))
-      case (_: And, false) => Some(TacticInfo("chase"))
-      case (_: Or, true) => Some(TacticInfo("chase"))
-      case (_: Imply, true) => Some(TacticInfo("chase"))
-      case (_: Equiv, _) => Some(TacticInfo("chase"))
+      case (_: Forall, true) => Some(chaseInfo)
+      case (_: Exists, false) => Some(chaseInfo)
+      case (_: And, false) => Some(chaseInfo)
+      case (_: Or, true) => Some(chaseInfo)
+      case (_: Imply, true) => Some(chaseInfo)
+      case (_: Equiv, _) => Some(chaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
   )(pos) }
@@ -203,8 +203,8 @@ object TactixLibrary extends HilbertCalculus
       case (_: Exists, _) => None
       case (_: Diamond, _) => None
       case (_: Box, _) => None
-      case (_: Not, true) => Some(TacticInfo("notL"))
-      case (_: Not, false) => Some(TacticInfo("notR"))
+      case (_: Not, true) => Some(notLInfo)
+      case (_: Not, false) => Some(notRInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -232,8 +232,8 @@ object TactixLibrary extends HilbertCalculus
       case (f: Imply, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, true) if f.isPredicateFreeFOL => None
       case (f: Equiv, false) if f.isPredicateFreeFOL => None
-      case (f: Forall, true) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
-      case (f: Exists, false) => if (f.isPredicateFreeFOL) None else Some(TacticInfo("deepChase"))
+      case (f: Forall, true) => if (f.isPredicateFreeFOL) None else Some(deepChaseInfo)
+      case (f: Exists, false) => if (f.isPredicateFreeFOL) None else Some(deepChaseInfo)
       case _ => sequentStepIndex(isAnte)(expr)
     }
 
@@ -1137,25 +1137,25 @@ object TactixLibrary extends HilbertCalculus
     * @param expr the expression for which a canonical tactic step is sought.
     * @see [[AxIndex]] */
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
-    case (True, false) => Some(TacticInfo("closeTrue"))
-    case (False, true) => Some(TacticInfo("closeFalse"))
+    case (True, false) => Some(ProofRuleTactics.closeTrueInfo)
+    case (False, true) => Some(ProofRuleTactics.closeFalseInfo)
     // prefer simplification over left-right-swaps
     case (Not(Box(_,Not(_))), _) => Some(Ax.diamond)
     case (Not(Diamond(_,Not(_))), _) => Some(Ax.box)
-    case (_: Not, true) => Some(TacticInfo("notL"))
-    case (_: Not, false) => Some(TacticInfo("notR"))
-    case (_: And, true) => Some(TacticInfo("andL"))
-    case (_: And, false) => Some(TacticInfo("andR"))
-    case (_: Or, true) => Some(TacticInfo("orL"))
-    case (_: Or, false) => Some(TacticInfo("orR"))
-    case (_: Imply, true) => Some(/* TacticInfo("autoMP") :: */ TacticInfo("implyL"))
-    case (_: Imply, false) => Some(TacticInfo("implyR"))
-    case (_: Equiv, true) => Some(TacticInfo("equivL"))
-    case (_: Equiv, false) => Some(TacticInfo("equivR"))
-    case (_: Forall, true) => Some(TacticInfo("allL"))
-    case (_: Forall, false) => Some(TacticInfo("allR"))
-    case (_: Exists, true) => Some(TacticInfo("existsL"))
-    case (_: Exists, false) => Some(TacticInfo("existsR"))
+    case (_: Not, true) => Some(notLInfo)
+    case (_: Not, false) => Some(notRInfo)
+    case (_: And, true) => Some(andLInfo)
+    case (_: And, false) => Some(andRInfo)
+    case (_: Or, true) => Some(orLInfo)
+    case (_: Or, false) => Some(orRInfo)
+    case (_: Imply, true) => Some(/* PropositionalTactics.autoMPInfo :: */ implyLInfo)
+    case (_: Imply, false) => Some(implyRInfo)
+    case (_: Equiv, true) => Some(equivLInfo)
+    case (_: Equiv, false) => Some(equivRInfo)
+    case (_: Forall, true) => Some(allLInfo)
+    case (_: Forall, false) => Some(allRInfo)
+    case (_: Exists, true) => Some(existsLInfo)
+    case (_: Exists, false) => Some(existsRInfo)
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 

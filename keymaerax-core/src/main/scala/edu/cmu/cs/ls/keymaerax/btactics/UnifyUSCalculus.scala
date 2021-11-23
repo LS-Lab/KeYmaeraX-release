@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import org.slf4j.LoggerFactory
@@ -2153,12 +2153,14 @@ trait UnifyUSCalculus {
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     * Unlike [[TactixLibrary.chaseAt]] will not branch or use propositional rules, merely transform the chosen formula in place. */
   @Tactic(longDisplayName = "Decompose")
-  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.axiomsFor(_: Expression))(pos)}
+  val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3, AxIndex.axiomsFor(_: Expression))(pos)}
+  private[btactics] val chaseInfo: TacticInfo = TacticInfo("chase")
 
   /** Chases the expression at the indicated position forward. Unlike [[chase]] descends into formulas and terms
     * exhaustively. */
   @Tactic(longDisplayName = "Deep Decompose")
-  lazy val deepChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
+  val deepChase: DependentPositionTactic = anon {(pos:Position) => (ExpandAll(Nil) & must(chase(3,3, AxIndex.verboseAxiomsFor(_: Expression))(pos))) | nil}
+  private[btactics] val deepChaseInfo: TacticInfo = TacticInfo("deepChase")
 
   /** Chase with bounded breadth and giveUp to stop.
     *
