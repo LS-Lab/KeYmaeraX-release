@@ -1493,7 +1493,7 @@ private object DifferentialTactics extends Logging {
       )
   })
 
-  @Tactic(names="Bar", longDisplayName="Strict Barrier Certificate",
+  @Tactic(names="Barr", longDisplayName="Strict Barrier Certificate",
     codeName="barrier", // todo: rename the tactic directly
     premises="Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     conclusion="Γ |- [x'=f(x) & Q] p≳0, Δ",
