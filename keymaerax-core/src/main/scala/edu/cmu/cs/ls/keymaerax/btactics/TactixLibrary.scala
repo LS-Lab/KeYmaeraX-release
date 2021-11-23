@@ -106,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true, displayLevel = "browse")
   val step: DependentPositionTactic = doStep(sequentStepIndex)
 
   def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
@@ -125,7 +125,7 @@ object TactixLibrary extends HilbertCalculus
       } ))
 
   /** Normalize to sequent form. */
-  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
+  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true, displayLevel = "browse")
   lazy val normalize: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (f: Not, true) if f.isPredicateFreeFOL => None
@@ -145,7 +145,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)
+  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true, displayLevel = "menu")
   val unfoldProgramNormalize: BelleExpr = anon {
     //normalize(andR)
 
@@ -162,7 +162,7 @@ object TactixLibrary extends HilbertCalculus
     SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
   }
 
-  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) => chaseAt(
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
       case (_: Forall, true) => Some(TacticInfo("chase"))
@@ -196,7 +196,7 @@ object TactixLibrary extends HilbertCalculus
     } else chase(pos) //@todo forward index to chase
   })
 
-  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true, displayLevel = "menu")
   val prop: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (_: Forall, _) => None
@@ -212,7 +212,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true, displayLevel = "menu")
   val propClose: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
@@ -513,13 +513,25 @@ object TactixLibrary extends HilbertCalculus
 
   // major differential equation automation
 
-  /** ODE: try to prove a property of a differential equation automatically.
+  /** ODE: prove a top-level ODE safety property using invariants Inv (as annotated by users, if available).
+    * Attempts to automatically generate suitable invariants Inv when the postcondition does not suffice.
+    * Closes all resulting subgoals or fails otherwise.
     *
+    * {{{
+    *     *                *                             *
+    *   -----------    --------------------------    ----------
+    *   G |- Inv, D    Inv |- [{x'=f(x)&q(x)}]Inv    Inv |- p(x)
+    *   --------------------------------------------------------
+    *   G |- [{x'=f(x)&q(x)}]p(x), D
+    * }}}
     * @see [[solve]]
     * @todo @see [[dC]]
     * @see [[dI]]
     * @see [[dW]]
     * @see [[dG]]
+    * @see [[odeInvariant]]
+    * @example For sequent x=1 |- [{x'=x}]x >=-1, the postcondition is not invariant but [[ODE]] proves it automatically
+    *          using e.g., x>=1 as the generated invariant.
     */
   @Tactic(longDisplayName = "ODE Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => must({
@@ -588,36 +600,46 @@ object TactixLibrary extends HilbertCalculus
     else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos)
   })
 
-  /**
-    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+  /** Attempts to prove ODE property as an invariant of the ODE directly [LICS'18].
+    * The tactic defaults to trying a quick invariance proof which may fail, but handles common cases.
+    * The complete invariance tactic is available with [[odeInvariantComplete]].
+    *
     * {{{
-    * G |- P    P |- [x'=f(x)&Q]P
-    * ---------------------------
-    * G |- [x'=f(x)&Q]P
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
+    * G |- [x'=f(x)&Q]P, D
     * }}}
-    * (Default behavior: fast (but incomplete) version, no solving attempted)
-    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariantComplete]]
+    * @example For sequent x=1 |- [{x'=x}]x >=0 proves automatically since x>=0 is an invariant of the ODE and initially true.
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
-  /** Same as [[odeInvariant]] but directly reports an error when it detects that the postcondition should be invariant
-    * but is currently unprovable.
+  /** Same as [[odeInvariant]] for proving ODE invariance properties, but implements a slower, complete version of the invariance tactic.
+    * Capable of handling invariance proofs for arbitrary semialgebraic invariants P and domain Q.
+    * Completeness failure is considered a tactic bug.
+    *
     * {{{
-    *         *
-    * -----------------
+    *   *           *
+    * ---------   -----------------
+    * G |- P, D   P |- [x'=f(x)&Q]P
+    * ----------------------------
     * G |- [x'=f(x)&Q]P
     * }}}
-    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. To appear.
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3380825 Differential equation invariance axiomatization]]. J. ACM. 67(1), 6:1-6:66, 2020.
     * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
     * @see [[odeInvariant]]
-    */
+    * @example For sequent x = 1 |- [{x'=y,y'=-x&x>=0 | y>=0 | x > 0 & y > 0}](x>-1 & x>=0) proves automatically
+    *          by [[odeInvariantComplete]] but not [[odeInvariant]]
+    **/
   @Tactic("ODE Invariant Complete", codeName = "odeInvC",
     longDisplayName = "ODE Invariant Complete",
     premises = "*",
     conclusion = "Γ, P |- [x'=f(x)&Q]P",
-    displayLevel="browse")
+    displayLevel="menu")
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
   // more
@@ -1137,10 +1159,28 @@ object TactixLibrary extends HilbertCalculus
     case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
-  /** Solve an arithmetic goal with sum-of-squares real arithmetic.
-    * @see [[QE()]] */
+  /** Attempt to prove a goal of universal real arithmetic goal using a sum-of-squares (SOS) proof
+    * The input (FOLR) sequent is normalized to equational form (example below)
+    * The automation searches for witnesses g_i automatically such that the contradiction
+    * 1 + sum_i g_i^2 = 0 is implied by the (normalized) antecedent equations
+    *
+    * {{{
+    *        *
+    * -----------------------------------
+    *  p=0, q*w^2-1=0, r-w^2=0 |- 1+sum_i g_i^2 = 0
+    * -----------------------------------
+    *  p=0, q*w^2-1=0, r-w^2=0 |- false
+    * -----------------------------------
+    *  p=0, q>0, r>=0  |- false
+    * -----------------------------------
+    * G_FOLR, p=0 |- q<=0, r<0, D_FOLR
+    * }}}
+    * @see Andre Platzer, Jan-David Quesel and Philipp Rummer. [[https://doi.org/10.1007/978-3-642-02959-2_35 Real world verification]]. CADE-22.
+    * @see [[QE()]]
+    * @example x >= 1 -> x > 1 | x =1 proves by SOS automatically
+    * */
   @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
-    premises="1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
+    premises="normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
     //    sossolve -----------
     conclusion="Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
     displayLevel="all")

@@ -443,8 +443,7 @@ object Ax extends Logging {
   @Axiom("RI& >=", conclusion = "__[x'=f(x)&Q]e≥0__ ↔ (Q→e≥0) ∧ [x'=f(x)&Q∧e≥0};t:=0;](<{t'=1,x'=f(x)&Q>t≠0→<t'=1,x'=f(x)&e≥0}>t≠0)", displayLevel = "browse",
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq: CoreAxiomInfo = coreAxiom("RI& closed real induction >=")
-
-  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ TODO",
+  @Axiom("RI&", conclusion = "__[x'=f(x)&Q]P__ ↔ ∀s [t'=1,x'=f(x)&Q&(P|t=s)](t=s -> P & (<t'=1,x'=f(x)&(Q|t=s)>t!=s -> <t'=1,x'=f(x)&(P|t=s)>t!=s))",
     key = "0", recursor = "*")
   val RI: CoreAxiomInfo = coreAxiom("RI& real induction")
 
@@ -3640,7 +3639,7 @@ object Ax extends Logging {
     * @see [[DBXgtOpen]]
     */
   @Axiom("DBX>", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXgt: DerivedAxiomInfo =
     derivedAxiom("DBX>",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
@@ -3695,7 +3694,7 @@ object Ax extends Logging {
     * @see [[DBXgt]]
     */
   @Axiom("DBX> open", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXgtOpen: DerivedAxiomInfo =
     derivedAxiom("DBX> open",
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
@@ -3754,7 +3753,7 @@ object Ax extends Logging {
     * @see [[DBXgt]]
     */
   @Axiom("DBX>=", conclusion = "(e>=0 → __[x'=f(x)&Q]e>=0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXge: DerivedAxiomInfo =
     derivedAxiom("DBX>=",
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)>=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)>=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'>=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
@@ -3810,7 +3809,7 @@ object Ax extends Logging {
     * @see [[DBXge]]
     */
   @Axiom("DBX=", conclusion = "(e=0 → __[x'=f(x)&Q]e=0__) ← [x'=f(x)&Q](e)'=ge", displayLevel = "menu",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXeq: DerivedAxiomInfo =
     derivedAxiom("DBX=",
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
@@ -3842,7 +3841,7 @@ object Ax extends Logging {
     * @see [[DBXgt]]
     */
   @Axiom("DBX< open", conclusion = "(e<0 → __[x'=f(x)&Q]e<0__) ← [x'=f(x)&Q](e<0→(e)'<=ge)",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXltOpen: DerivedAxiomInfo =
   derivedAxiom("DBX< open",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)<0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)<0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) < 0 -> (e(|y_|)'<=g(|y_|)*e(|y_|)))".asFormula)),
@@ -3869,7 +3868,7 @@ object Ax extends Logging {
     * @see [[DBXgt]]
     */
   @Axiom("DBX<=", conclusion = "(e<=0 → __[x'=f(x)&Q]e<=0__) ← [x'=f(x)&Q](e)'<=ge", displayLevel = "menu",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.0", unifier = "surjlinearpretend")
   lazy val DBXle: DerivedAxiomInfo =
   derivedAxiom("DBX<=",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_,z_|)<=0 -> [{c{|y_,z_|}&q(|y_,z_|)}]e(|y_,z_|)<=0) <- [{c{|y_,z_|}&q(|y_,z_|)}](e(|y_,z_|))'<=g(|y_,z_|)*e(|y_,z_|)".asFormula)),
@@ -3896,7 +3895,7 @@ object Ax extends Logging {
     * @see [[DBXgt]]
     */
   @Axiom("DBX!= open", conclusion = "(e!=0 → __[x'=f(x)&Q]e!=0__) ← [x'=f(x)&Q](e!=0→(e)'=ge)",
-    key = "1.1", unifier = "surjlinearpretend")
+    key = "1.1", recursor = "1.1.0", unifier = "surjlinearpretend")
   lazy val DBXneOpen: DerivedAxiomInfo =
   derivedAxiom("DBX!= open",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)!=0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)!=0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) != 0 -> (e(|y_|)'=g(|y_|)*e(|y_|)))".asFormula)),
