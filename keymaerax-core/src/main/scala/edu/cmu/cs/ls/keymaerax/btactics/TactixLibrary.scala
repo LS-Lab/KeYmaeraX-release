@@ -106,7 +106,7 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Program Step", revealInternalSteps = true, displayLevel = "browse")
   val step: DependentPositionTactic = doStep(sequentStepIndex)
 
   def doStep(index: Boolean => Expression => Option[DerivationInfo]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) =>
@@ -125,7 +125,7 @@ object TactixLibrary extends HilbertCalculus
       } ))
 
   /** Normalize to sequent form. */
-  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true)
+  @Tactic("normalize", longDisplayName = "Normalize to Sequent Form", revealInternalSteps = true, displayLevel = "browse")
   lazy val normalize: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (f: Not, true) if f.isPredicateFreeFOL => None
@@ -145,7 +145,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
-  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true)
+  @Tactic(codeName = "unfold", longDisplayName = "Unfold Program Structure", revealInternalSteps = true, displayLevel = "menu")
   val unfoldProgramNormalize: BelleExpr = anon {
     //normalize(andR)
 
@@ -162,7 +162,7 @@ object TactixLibrary extends HilbertCalculus
     SaturateTactic(OnAll(doStep(index)('R) | doStep(index)('L) | id | DLBySubst.safeabstractionb('R) | nil))
   }
 
-  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true)
+  @Tactic("chaseAt", longDisplayName = "Decompose", codeName = "chaseAt", revealInternalSteps = true, displayLevel = "menu")
   def chaseAtX: DependentPositionTactic = anon { (pos: Position, _: Sequent) => chaseAt(
     (isAnte: Boolean) => (expr: Expression) => (expr, isAnte) match {
       case (_: Forall, true) => Some(TacticInfo("chase"))
@@ -196,7 +196,7 @@ object TactixLibrary extends HilbertCalculus
     } else chase(pos) //@todo forward index to chase
   })
 
-  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Unfold Propositional", revealInternalSteps = true, displayLevel = "menu")
   val prop: BelleExpr = anon {
     def index(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
       case (_: Forall, _) => None
@@ -212,7 +212,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
+  @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true, displayLevel = "menu")
   val propClose: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
   @Tactic(longDisplayName = "Prove Propositional", revealInternalSteps = true)
   val propAuto: BelleExpr = propClose
@@ -310,7 +310,7 @@ object TactixLibrary extends HilbertCalculus
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
- *
+    *
     * @see [[autoClose]] */
   def master(gen: Generator[GenProduct] = invGenerator,
              keepQEFalse: Boolean = true): BelleExpr = auto(gen, if (keepQEFalse) None else Some(False))
@@ -318,7 +318,7 @@ object TactixLibrary extends HilbertCalculus
   /**
    * auto: main automatic proof tactic that tries hard to prove whatever it could.
     *
-   * @see [[autoClose]] */
+    * @see [[autoClose]] */
   @Tactic(longDisplayName = "Unfold Automatically")
   def auto(generator: Generator[GenProduct], keepQEFalse: Option[Formula] = None): InputTactic = inputanon {
     master(loopauto(generator), ODE, keepQEFalse.getOrElse(True) == True)

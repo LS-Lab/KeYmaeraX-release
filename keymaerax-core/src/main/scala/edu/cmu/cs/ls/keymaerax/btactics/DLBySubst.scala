@@ -678,7 +678,8 @@ private object DLBySubst {
     premises =   "Γ |- [x:=e]P, Δ",
     //        iG ------------------
     conclusion = "Γ |- P, Δ",
-    inputs = "e:term;;x:option[variable]"
+    inputs = "e:term;;x:option[variable]",
+    displayLevel = "menu"
   )
   private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon (discreteGhost(e, x, assignInContext = true)(_: Position))
   /** @see [[TactixLibrary.discreteGhost]] */
