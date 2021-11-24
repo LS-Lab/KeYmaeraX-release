@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
-    function($scope, $uibModalInstance, derivationInfos, sequentProofData, userId, proofId, nodeId, formulaId, tab) {
+    function($scope, $uibModal, $uibModalInstance, derivationInfos, sequentProofData, userId, proofId, nodeId, formulaId, tab) {
 
   $scope.userId = userId;
   $scope.proofId = proofId;
@@ -46,16 +46,37 @@ angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
     }
   }
 
-  $scope.applyTactic = function(formulaId, tacticId) {
-    var fmlId = formulaId ? formulaId : sequentProofData.formulas.highlighted;
-    sequentProofData.formulas.highlighted = undefined;
-    $uibModalInstance.close({formulaId: fmlId, tacticId: tacticId});
+  $scope.applyTactic = function(tactic) {
+    return function(formulaId, tacticId) {
+      var fmlId = formulaId ? formulaId : sequentProofData.formulas.highlighted;
+      $scope.executeTactic(tactic, fmlId, {formulaId: fmlId, tacticId: tacticId});
+    }
   }
 
-  $scope.applyInputTactic = function(formulaId, tacticId, input) {
-    var fmlId = formulaId ? formulaId : sequentProofData.formulas.highlighted;
-    sequentProofData.formulas.highlighted = undefined;
-    $uibModalInstance.close({formulaId: fmlId, tacticId: tacticId, input: input});
+  $scope.applyInputTactic = function(tactic) {
+    return function(formulaId, tacticId, input) {
+      var fmlId = formulaId ? formulaId : sequentProofData.formulas.highlighted;
+      $scope.executeTactic(tactic, fmlId, {formulaId: fmlId, tacticId: tacticId, input: input});
+    }
+  }
+
+  $scope.executeTactic = function(tactic, formulaId, retVal) {
+    if (tactic.selectedDerivation().numPositionArgs == 0 || (formulaId && formulaId !== '')) {
+      sequentProofData.formulas.highlighted = undefined;
+      $uibModalInstance.close(retVal);
+    } else {
+      $uibModal.open({
+        templateUrl: 'templates/modalMessageTemplate.html',
+        controller: 'ModalMessageCtrl',
+        size: 'sm',
+        resolve: {
+          title: function() { return "Position needed"; },
+          message: function() { return "Please select where to apply the tactic in the sequent at the top of the browse dialog"; },
+          mode: function() { return "ok"; },
+          oktext: function() { return "OK"; }
+        }
+      });
+    }
   }
 
   $scope.formulaSelected = function(formulaId, tacticId) {

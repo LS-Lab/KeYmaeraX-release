@@ -44,8 +44,8 @@
                         <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                         formula-id="{{formulaId}}"
                                         tactic="tactic" axiom-readonly="false"
-                                        on-tactic="applyTactic(formulaId, tacticId)"
-                                        on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
+                                        on-tactic="applyTactic(tactic)(formulaId, tacticId)"
+                                        on-input-tactic="applyInputTactic(tactic)(formulaId, tacticId, input)"></k4-tactic-info>
                     </div>
                 </div>
             </div>
