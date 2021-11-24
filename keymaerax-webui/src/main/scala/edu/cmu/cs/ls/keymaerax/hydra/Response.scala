@@ -1038,6 +1038,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "asciiName" -> new JsString(derivationInfo.display.asciiName),
       "codeName" -> new JsString(derivationInfo.codeName),
       "longName" -> new JsString(derivationInfo.longDisplayName),
+      "displayLevel" -> new JsString(derivationInfo.displayLevel.name),
       "derivation" -> derivation
     )
   }

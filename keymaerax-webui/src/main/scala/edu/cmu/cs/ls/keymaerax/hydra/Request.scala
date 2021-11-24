@@ -2075,8 +2075,7 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
-class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
-                               axiomId: Option[String])
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, axiomId: Option[String])
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val infos = axiomId match {
@@ -2084,7 +2083,6 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
         val di = Try(DerivationInfo.ofCodeName(aid)).toOption
         di.map(info => (info, UIIndex.comfortOf(aid))).toList
       case None => DerivationInfo.allInfo.
-        filter({case (_, di) => di.displayLevel != 'internal}).
         map({case (_, di) => (di, UIIndex.comfortOf(di.codeName))}).toList
     }
     ApplicableAxiomsResponse(infos, Map.empty, topLevel=true) :: Nil

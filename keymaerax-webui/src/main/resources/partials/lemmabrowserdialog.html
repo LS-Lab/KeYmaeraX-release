@@ -3,11 +3,19 @@
         <span class="input-group">
             <input type="text" ng-model="derivationInfos.filter" placeholder="Search for proof steps"
                    class="form-control" />
-            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.name'"
-               ng-click="derivationInfos.order = '-standardDerivation.name'"><i class="fa fa-sort-alpha-desc"></i></a>
-            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.name'"
-               ng-click="derivationInfos.order = 'standardDerivation.name'"><i class="fa fa-sort-alpha-asc"></i></a>
-            <a class="input-group-addon btn btn-link" ng-click="cancel()"><span class="fa fa-close"></span></a>
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.displayLevel === 'browse'"
+               uib-tooltip="Toggle to show all tactics" tooltip-placement="bottom"
+               ng-click="derivationInfos.displayLevel = '!!'"><i class="fa fa-cube"></i></a>
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.displayLevel === '!!'"
+               uib-tooltip="Toggle to show only basic tactics" tooltip-placement="bottom"
+               ng-click="derivationInfos.displayLevel = 'browse'"><i class="fa fa-cubes"></i></a>
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.longName'"
+               uib-tooltip="Sorted descending, toggle to sort ascending" tooltip-placement="bottom"
+               ng-click="derivationInfos.order = 'standardDerivation.longName'"><i class="fa fa-sort-alpha-desc"></i></a>
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.longName'"
+               uib-tooltip="Sorted ascending, toggle to sort descending" tooltip-placement="bottom"
+               ng-click="derivationInfos.order = '-standardDerivation.longName'"><i class="fa fa-sort-alpha-asc"></i></a>
+            <a class="input-group-addon btn btn-default" ng-click="cancel()"><span class="fa fa-close"></span></a>
         </span>
     </div>
 </div>
@@ -31,7 +39,7 @@
 
             <div class="row">
                 <div class="col-md-12">
-                    <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                    <div ng-repeat="tactic in derivationInfos.infos | filter: {$: derivationInfos.filter, standardDerivation: {displayLevel: derivationInfos.displayLevel}} | orderBy: derivationInfos.order"
                          class="k4-tactic-popover-entry">
                         <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                         formula-id="{{formulaId}}"

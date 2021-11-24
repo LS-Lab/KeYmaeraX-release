@@ -655,7 +655,7 @@ object RestApi extends Logging {
 
     val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment.?) { (userId, proofId, nodeId, axiomId) => { pathEnd {
       get {
-        val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
+        val request = new GetDerivationInfoRequest(database, userId, proofId, axiomId)
         completeRequest(request, t)
       }
     }}}

@@ -11,7 +11,8 @@ angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
 
   $scope.derivationInfos = {
     filter: undefined,
-    order: 'standardDerivation.name',
+    order: 'standardDerivation.longName',
+    displayLevel: 'browse',
     infos: [],
     lemmas: []
   };
