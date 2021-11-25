@@ -15,12 +15,7 @@
 <div class="row">
 
     <!-- Antecedent -->
-    <div class="col-sm-3">
-        <!-- Collapse button -->
-<!--        <a ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"-->
-<!--           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">-->
-<!--            <small><span ng-class="{'fa fa-caret-right': collapsed, 'fa fa-caret-down': !collapsed}"></span></small>-->
-<!--        </a>-->
+    <div class="col-sm-3 k4-sequent-antecedent">
         <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}"
              uib-popover-template="'templates/axiomPopoverTemplate.html'"
              popover-is-open="tacticPopover.isOpen(f.id)"
@@ -58,13 +53,22 @@
                             on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-sm-12 k4-formula nohover" ng-if="readOnly || collapsed">
-                <div class="k4-formula-content">
+            <div class="col-sm-12 k4-formula nohover" ng-if="(collapsed && $first) || (readOnly && !collapsed)">
+                <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
                     <k4-formula class="k4-formula-container" user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>
                 </div>
             </div>
         </div>
+        <!-- Collapse button -->
+        <ul>
+            <li>
+                <span ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"
+                      ng-click="collapsed = !collapsed" ng-show="readOnly || sequent.ante.length > 1 || sequent.succ.length > 1">
+                    <small><i ng-class="{'fa fa-angle-right': collapsed, 'fa fa-angle-down': !collapsed}"></i></small>
+                </span>
+            </li>
+        </ul>
     </div>
 
     <!-- Turnstile -->
@@ -148,8 +152,8 @@
                                 on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-sm-12 k4-formula nohover" ng-if="readOnly || collapsed">
-                <div class="k4-formula-content">
+            <div class="col-sm-12 k4-formula nohover" ng-if="(collapsed && $first) || (readOnly && !collapsed)">
+                <div class="k4-formula-content" ng-class="{'k4-formula-collapsed': collapsed}">
                     <k4-formula class="k4-formula-container"
                                 user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}" goal-id="{{goalId}}"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>

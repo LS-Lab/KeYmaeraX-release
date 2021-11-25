@@ -24,7 +24,7 @@
         <div class="col-sm-12 k4-goalwithsiblings">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
                         sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
-                        read-only="readOnly" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"
+                        read-only="readOnly" collapsed="collapsed" in-closed-proof="proofTree.isProved" abbreviate="false"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
                         on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
                         on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
@@ -233,6 +233,7 @@
                                  proof-tree="justification.details.proofTree"
                                  agenda="justification.details.agenda"
                                  read-only="true"
+                                 collapsed="true"
                                  on-tactic=""
                                  on-input-tactic=""
                                  on-two-position-tactic=""></k4-sequentproof>

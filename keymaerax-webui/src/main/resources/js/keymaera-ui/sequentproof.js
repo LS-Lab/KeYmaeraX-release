@@ -339,6 +339,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             proofTree: '=',
             agenda: '=',
             readOnly: '=?',
+            collapsed: '=?',
             onTactic: '&',
             onInputTactic: '&',
             onTwoPositionTactic: '&'
