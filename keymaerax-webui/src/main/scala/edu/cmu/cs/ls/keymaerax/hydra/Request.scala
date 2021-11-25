@@ -993,7 +993,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
         "/examples/tutorials/cpsweek/cpsweek.png", 1),
       ExamplePOJO(4, "DLDS",
-        "Dynamic Logic for Dynamical Systems",
+        "Dynamic Logic for Dynamical Systems Marktoberdorf 2017",
         //"/keymaerax-projects/dlds/README.md",
         "",
         "classpath:/keymaerax-projects/dlds/dlds.kya",
