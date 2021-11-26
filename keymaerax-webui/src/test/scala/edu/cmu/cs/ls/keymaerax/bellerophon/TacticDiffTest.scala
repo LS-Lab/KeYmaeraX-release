@@ -220,7 +220,7 @@ class TacticDiffTest extends TacticTestBase {
     val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3))")
     val diff = TacticDiff.diff(t1, t2)
     inside (diff._1.t) {
-      case EitherTactic(c0, SeqTactic(c1 :: (c2: BelleDot) :: Nil)) =>
+      case EitherTactic(c0 :: SeqTactic(c1 :: (c2: BelleDot) :: Nil) :: Nil) =>
         c0 shouldBe BelleParser("andL(-1)")
         c1 shouldBe BelleParser("andL(-2)")
         diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
@@ -233,7 +233,7 @@ class TacticDiffTest extends TacticTestBase {
     val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3) ; andL(-4))")
     val diff = TacticDiff.diff(t1, t2)
     inside (diff._1.t) {
-      case EitherTactic(c0, SeqTactic(c1 :: c2 :: (c3: BelleDot) :: Nil)) =>
+      case EitherTactic(c0 :: SeqTactic(c1 :: c2 :: (c3: BelleDot) :: Nil) :: Nil) =>
         c0 shouldBe BelleParser("andL(-1)")
         c1 shouldBe BelleParser("andL(-2)")
         c2 shouldBe BelleParser("andL(-3)")

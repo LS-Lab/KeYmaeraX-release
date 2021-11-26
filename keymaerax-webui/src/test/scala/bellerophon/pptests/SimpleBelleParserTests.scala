@@ -281,54 +281,43 @@ class SimpleBelleParserTests extends TacticTestBase(registerAxTactics=Some("z3")
   "Either parser" should "parse e | e" in {
     val result = BelleParser("andR(1) | andR(2)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right shouldBe TactixLibrary.andR(2)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
   }
 
   it should "parse either right-associative -- e | e | e parses to e | (e | e)" in {
     val result = BelleParser("andR(1) | andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse either right-associative when there are a bunch of parens" in {
     val result = BelleParser("(andR(1)) | (andR(2)) | (andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e | (e | e)" in {
     val result = BelleParser("andR(1) | (andR(2) | andR(3))").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(2)
-    result.right.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse (e | e) | e" in {
     val result = BelleParser("(andR(1) | andR(2)) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left.asInstanceOf[EitherTactic].left shouldBe TactixLibrary.andR(1)
-    result.left.asInstanceOf[EitherTactic].right shouldBe TactixLibrary.andR(2)
-    result.right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e & b | c" in {
     val result = BelleParser("andR(1) & andR(2) | andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left.asInstanceOf[SeqTactic].seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), TactixLibrary.andR(2))
-    result.right shouldBe TactixLibrary.andR(3)
+    result.alts should contain theSameElementsInOrderAs List(SeqTactic(TactixLibrary.andR(1), TactixLibrary.andR(2)), TactixLibrary.andR(3))
   }
 
   it should "parse e | b & c" in {
     val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
     result shouldBe (round trip result)
-    result.left shouldBe TactixLibrary.andR(1)
-    result.right.asInstanceOf[SeqTactic].seq should contain theSameElementsInOrderAs List(TactixLibrary.andR(2), TactixLibrary.andR(3))
+    result.alts should contain theSameElementsInOrderAs List(TactixLibrary.andR(1), SeqTactic(TactixLibrary.andR(2), TactixLibrary.andR(3)))
   }
 
   //endregion

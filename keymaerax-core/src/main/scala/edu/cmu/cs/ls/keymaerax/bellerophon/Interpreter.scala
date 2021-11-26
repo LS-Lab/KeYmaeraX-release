@@ -39,6 +39,12 @@ trait Interpreter {
   /** Names of nil tactics. */
   protected lazy val nilNames = List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
 
+  /** Compares provables ignoring labels. */
+  protected def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
+    case (BelleProvable(pPrev, _, _), BelleProvable(pCurr, _, _)) => pCurr != pPrev
+    case _ => curr != prev
+  }
+
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
   protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =
     UnificationTools.collectSubst(goal.underlyingProvable, i, sub.underlyingProvable, defs)

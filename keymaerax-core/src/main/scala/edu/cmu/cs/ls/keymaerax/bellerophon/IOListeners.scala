@@ -109,7 +109,7 @@ object IOListeners {
           executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
         case RepeatTactic(e, i) => executionStack = List.fill(i)(e->0) ++ executionStack
-        case EitherTactic(l, _) => executionStack = (l->0) +: executionStack
+        case EitherTactic(l :: _) => executionStack = (l->0) +: executionStack
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
         case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
         case e: NamedBelleExpr if e.isInternal => // always step into internal tactics
@@ -149,8 +149,11 @@ object IOListeners {
               parent(executionStack.tail)
             case _ => Nil
           }
-          case Some((EitherTactic(l, r), _)) if expr.eq(l) && output.isRight =>
+          case Some((EitherTactic(l :: r :: Nil), _)) if expr.eq(l) && output.isRight =>
             executionStack = (r->0) +: executionStack
+            parent(executionStack.tail)
+          case Some((EitherTactic(l :: r), _)) if expr.eq(l) =>
+            executionStack = (EitherTactic(r)->0) +: executionStack
             parent(executionStack.tail)
           case _ => Nil
         }

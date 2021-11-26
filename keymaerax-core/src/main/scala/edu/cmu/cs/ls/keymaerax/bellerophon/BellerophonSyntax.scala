@@ -141,7 +141,22 @@ case class SeqTactic(seq: Seq[BelleExpr]) extends BelleExpr {
   override def prettyString: String = "(" + seq.map(_.prettyString).mkString(";") + ")"
 }
 /** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
+object EitherTactic {
+  def apply(t1: BelleExpr, t2: BelleExpr): BelleExpr = (t1, t2) match {
+    case (EitherTactic(s1), EitherTactic(s2)) => EitherTactic(s1++s2)
+    case (EitherTactic(s1), _) => EitherTactic(s1 :+ t2)
+    case (_, EitherTactic(s2)) => EitherTactic(t1 +: s2)
+    case _ => EitherTactic(Seq(t1, t2))
+  }
+  def apply(alts: Seq[BelleExpr]): BelleExpr = {
+    if (alts.size > 1) new EitherTactic(alts)
+    else alts.headOption.getOrElse(TactixLibrary.nil)
+  }
+}
+case class EitherTactic(alts: Seq[BelleExpr]) extends BelleExpr {
+  assert(alts.size > 1, "Alternative composition needs at least 2 elements")
+  override def prettyString: String = "(" + alts.map(_.prettyString).mkString("|") + ")"
+}
 /** `left || right` alternative composition executes both `left` and `right` simultaneously and succeeds with the first success, failing if both fail. */
 case class ParallelTactic(expr: List[BelleExpr]) extends BelleExpr { override def prettyString: String = "(" + expr.map(_.prettyString).mkString("||") + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser

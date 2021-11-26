@@ -82,12 +82,6 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       } else Some(labels)
   }
 
-  /** Compares provables ignoring labels. */
-  private def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
-    case (BelleProvable(pPrev, _, _), BelleProvable(pCurr, _, _)) => pCurr != pPrev
-    case _ => curr != prev
-  }
-
   /** Creates labels according to the number of subgoals of parent. */
   private def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
     (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
@@ -161,23 +155,17 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       }
     })
 
-    case EitherTactic(left, right) => try {
-      val leftResult = apply(left, v)
-      if (!progress(v, leftResult)) {
-        throw new BelleNoProgress("No progress of 'l' in 'l | r' " + expr)
-      } else {
-        leftResult
-      }
-    } catch {
-      case eleft: BelleProofSearchControl =>
+    case EitherTactic(s) =>
+      for ((t, i) <- s.zipWithIndex.dropRight(1)) {
         try {
-          apply(right, v)
+          val result = apply(t, v)
+          if (progress(v, result)) return result
         } catch {
-          case eright: BelleThrowable if throwWithDebugInfo => throw eright.inContext(EitherTactic(eleft.context, eright.context),
-                      "Failed: both left-hand side and right-hand side " + expr)
+          case _: BelleProofSearchControl => // continue
+          case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(EitherTactic(s.patch(i, Seq(e.context), 1)), "Failed component of | alternative composition : " + t.prettyString)
         }
-    }
-
+      }
+      apply(s.last, v)
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
@@ -746,7 +734,7 @@ abstract class SequentialInterpreter(override val listeners: scala.collection.im
   extends BelleBaseInterpreter(listeners, throwWithDebugInfo) with Logging {
 
   override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
-    case ParallelTactic(expr) => runExpr(expr.reduceRight(EitherTactic), v)
+    case ParallelTactic(expr) => runExpr(EitherTactic(expr), v)
     case ChooseSome(options, e) =>
       val opts = options()
       var errors = ""

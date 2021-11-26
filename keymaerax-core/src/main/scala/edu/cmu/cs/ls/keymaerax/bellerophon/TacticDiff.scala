@@ -19,7 +19,7 @@ case class ReplacementBelleContext(t: BelleExpr) extends BelleContext {
 
   def replace(in: BelleExpr, repl: Map[BelleDot, BelleExpr]): BelleExpr = in match {
     case SeqTactic(s)       => SeqTactic(s.map(replace(_, repl)))
-    case EitherTactic(l, r) => EitherTactic(replace(l, repl), replace(r, repl))
+    case EitherTactic(s)    => EitherTactic(s.map(replace(_, repl)))
     case SaturateTactic(c)  => SaturateTactic(replace(c, repl))
     case RepeatTactic(c, n) => RepeatTactic(replace(c, repl), n)
     case BranchTactic(c)    => BranchTactic(c.map(replace(_, repl)))
@@ -41,7 +41,8 @@ class TacticComparator[T <: BelleExpr](val l: T) {
     case (SeqTactic(sl), SeqTactic(sr)) => sl.filter(_ != TactixLibrary.nil).zip(sr.filter(_ != TactixLibrary.nil)).forall({ case (ll, lr) => ll === lr })
     case (SeqTactic(s), _) if s.contains(TactixLibrary.nil) => SeqTactic(s.filter(_ != TactixLibrary.nil)) === r
     case (BranchTactic(bl), BranchTactic(br)) => bl.size == br.size && bl.zip(br).forall(x => x._1 === x._2)
-    case (EitherTactic(ell, elr), EitherTactic(erl, err)) => ell === erl && elr === err
+    case (EitherTactic(sl), EitherTactic(sr)) => sl.filter(_ != TactixLibrary.nil).zip(sr.filter(_ != TactixLibrary.nil)).forall({ case (ll, lr) => ll === lr })
+    case (EitherTactic(s), _) if s.contains(TactixLibrary.nil) => EitherTactic(s.filter(_ != TactixLibrary.nil)) === r
     case (SaturateTactic(sl), SaturateTactic(sr)) => sl === sr
     case (RepeatTactic(rl, nl), RepeatTactic(rr, nr)) => nl == nr && rl === rr
     case (OnAll(al), OnAll(ar)) => al === ar
@@ -68,10 +69,10 @@ object TacticDiff {
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
-    case EitherTactic(l1, r1) => t2 match {
-      case EitherTactic(l2, r2) =>
-        val d1 = diff(l1, l2)
-        val d2 = diff(r1, r2)
+    case EitherTactic(l :: lrem) => t2 match {
+      case EitherTactic(r :: rrem) =>
+        val d1 = diff(l, r)
+        val d2 = diff(EitherTactic(lrem), EitherTactic(rrem))
         (ReplacementBelleContext(EitherTactic(d1._1.t, d2._1.t)), d1._2++d2._2, d1._3++d2._3)
       case _ =>
         val p = new BelleDot()
@@ -183,8 +184,5 @@ object TacticDiff {
         val d = diff(i1, i2)
         (ReplacementBelleContext(ApplyDefTactic(d._1.t.asInstanceOf[DefTactic])), d._2, d._3)
     }
-  }) ensures(r => {
-    println(r._1(r._2) + " vs " + t1 + ": " + (r._1(r._2)===t1))
-    println(r._1(r._3) + " vs " + t2 + ": " + (r._1(r._3)===t2))
-    r._1(r._2)===t1 && r._1(r._3)===t2}, "Reapplying context expected to produce original tactics")
+  }) ensures(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
 }

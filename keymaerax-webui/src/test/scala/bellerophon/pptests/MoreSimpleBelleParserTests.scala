@@ -59,7 +59,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   it should "parse either" in withTactics {
     inside(parser("nil | implyR")) {
-      case EitherTactic(l, r) =>
+      case EitherTactic(l :: r :: Nil) =>
         l shouldBe TactixLibrary.nil
         r shouldBe TactixLibrary.implyR
     }
