@@ -19,17 +19,16 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
 
   "The Bellerophon Tactics Parser" should "parse nil & nil" in withTactics {
     val result = parser("nil & nil").asInstanceOf[SeqTactic]
-    val expected = SeqTactic(TactixLibrary.nil, TactixLibrary.nil)
-    result.left shouldBe expected.left
-    result.right shouldBe expected.right
+    val expected = SeqTactic(TactixLibrary.nil, TactixLibrary.nil).asInstanceOf[SeqTactic]
+    result.seq should contain theSameElementsInOrderAs expected.seq
   }
 
   it should "parser nil < (nil, nil, nil)" in withTactics {
     val result = parser("nil < (nil, nil, nil)").asInstanceOf[SeqTactic]
-    val expected = SeqTactic(TactixLibrary.nil, BranchTactic(Seq(TactixLibrary.nil, TactixLibrary.nil, TactixLibrary.nil)))
-    result.left shouldBe expected.left
-    result.right.asInstanceOf[BranchTactic].children
-      .zip(expected.right.asInstanceOf[BranchTactic].children)
+    val expected = SeqTactic(TactixLibrary.nil, BranchTactic(Seq(TactixLibrary.nil, TactixLibrary.nil, TactixLibrary.nil))).asInstanceOf[SeqTactic]
+    result.seq.head shouldBe expected.seq.head
+    result.seq.last.asInstanceOf[BranchTactic].children
+      .zip(expected.seq.last.asInstanceOf[BranchTactic].children)
       .map(x => x._1 shouldBe x._2)
   }
 
@@ -157,6 +156,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "pretty print binding strong" in withTactics {
     BellePrettyPrinter(parser(""" implyR(1); id using "x>=0" """)).trim shouldBe """ implyR(1) ; id using "x>=0" """.trim
     BellePrettyPrinter(parser(""" (implyR(1); id) using "x>=0::y>=0::nil" """)).trim shouldBe """ (implyR(1) ; id) using "x>=0 :: y>=0 :: nil" """.trim
+    BellePrettyPrinter(parser(""" (implyR(1) | implyR(2)); id using "x>=0" """)).trim shouldBe """ (implyR(1) | implyR(2)) ; id using "x>=0" """.trim
   }
 
   "Propositional Examples" should "close p() -> p()" in withTactics {

@@ -89,7 +89,7 @@ class DLBelleParser(override val printer: BelleExpr => String,
   )
 
   def seqTac[_: P]: P[BelleExpr] = P( baseTac.rep(min=1,sep=";"./) ).
-    map(ts => ts.reduceRight(SeqTactic))
+    map(SeqTactic.apply)
 
   def eitherTac[_: P]: P[BelleExpr] = P( seqTac.rep(min=1,sep="|"./) ).
     map(ts => ts.reduceRight(EitherTactic))

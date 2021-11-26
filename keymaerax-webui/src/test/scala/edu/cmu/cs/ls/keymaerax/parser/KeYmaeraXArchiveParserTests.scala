@@ -274,7 +274,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     DLParser.programParser("{ x:=x+1; }") shouldBe DLParser.programParser("x:=x+1;")
     val archiveParser = new DLArchiveParser(new DLBelleParser(BellePrettyPrinter, ReflectiveExpressionBuilder(_, _, Some(FixedGenerator(List.empty)), _)))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", archiveParser.progDef(_)) shouldBe (Name("a", None), Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
     DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", archiveParser.definitions(_)) shouldBe Declaration(Map(Name("a", None) -> Signature(Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)))
     val input =
       """
@@ -1687,7 +1687,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     inside (entry2.tactics) {
-      case (name, text, SeqTactic(ExpandAll(substs), lemma)) :: Nil =>
+      case (name, text, SeqTactic(ExpandAll(substs) :: lemma :: Nil)) :: Nil =>
         name shouldBe "Proof Entry 2"
         text shouldBe "useLemma({`Entry 1`})"
         substs should contain theSameElementsAs entry2.defs.substs

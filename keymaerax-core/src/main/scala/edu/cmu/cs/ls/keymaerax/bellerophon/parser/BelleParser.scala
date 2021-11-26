@@ -462,7 +462,7 @@ object BelleParser extends TacticParser with Logging {
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(ntimesloc), l), st.input)
 
       case r :+ ParsedBelleExpr(expr, loc, l) :+ BelleToken(SATURATE, satloc) =>
-        val parsedExpr = SeqTactic(expr, SaturateTactic(expr))
+        val parsedExpr = expr & SaturateTactic(expr)
         parsedExpr.setLocation(satloc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, loc.spanTo(satloc), l), st.input)
 

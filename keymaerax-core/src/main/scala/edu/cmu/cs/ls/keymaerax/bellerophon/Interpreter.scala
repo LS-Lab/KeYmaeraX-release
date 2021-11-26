@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core.{Ensures, FuncOf, Function, Nothing, Real, Sequent, SubstitutionPair, USubst, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, RestrictedBiDiUnificationMatch, UnificationTools}
@@ -34,6 +35,9 @@ trait Interpreter {
 
   /** Registered listeners. */
   def listeners: scala.collection.immutable.Seq[IOListener]
+
+  /** Names of nil tactics. */
+  protected lazy val nilNames = List(TactixLibrary.nil.prettyString, TactixLibrary.todo.prettyString, TactixLibrary.skip.prettyString)
 
   /** Collects substitutions (of `defs`) that are needed to make `sub` fit the `i`-th subgoal of `goal`. */
   protected def collectSubst(goal: ProvableSig, i: Int, sub: ProvableSig, defs: Declaration): USubst =

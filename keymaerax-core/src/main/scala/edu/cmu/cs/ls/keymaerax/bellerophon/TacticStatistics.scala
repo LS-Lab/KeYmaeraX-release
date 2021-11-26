@@ -17,7 +17,7 @@ import scala.io.Source
 object TacticStatistics {
   /** Returns the size of a tactic (its atomic subtactics, +1 for operators *, *n, <, let, doall). */
   def size(t: BelleExpr): Int = t match {
-    case SeqTactic(l, r) => size(l) + size(r)
+    case SeqTactic(s) => s.map(size).sum
     case EitherTactic(l, r) => size(l) + size(r)
     case SaturateTactic(c) => size(c) + 1
     case RepeatTactic(c, _) => size(c) + 1
@@ -30,7 +30,7 @@ object TacticStatistics {
 
   /** Returns the number of atomic tactics of `t` (as listed in the script, not as executed) */
   def atomicSteps(t: BelleExpr): Int = t match {
-    case SeqTactic(l, r) => size(l) + size(r)
+    case SeqTactic(s) => s.map(size).sum
     case EitherTactic(l, r) => size(l) + size(r)
     case SaturateTactic(c) => size(c)
     case RepeatTactic(c, _) => size(c)

@@ -90,10 +90,10 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
-  def <(children: BelleExpr*): BelleExpr = SeqTactic(this, BranchTactic(children))
-  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(this, CaseTactic(children))
+  def <(children: BelleExpr*): BelleExpr = SeqTactic(Seq(this, BranchTactic(children)))
+  def switch(children: (BelleLabel, BelleExpr)*): BelleExpr = SeqTactic(Seq(this, CaseTactic(children)))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
-  def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(this, USubstPatternTactic(p))
+  def U(p: (SequentType, RenUSubst => BelleExpr)*): BelleExpr = SeqTactic(Seq(this, USubstPatternTactic(p)))
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
   override def toString: String = prettyString
@@ -124,7 +124,22 @@ trait NamedBelleExpr extends BelleExpr {
 // basic tactic combinators
 
 /** `left ; right` sequential composition executes `right` on the output of `left`, failing if either fail. */
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ";" + right.prettyString + ")" }
+object SeqTactic {
+  def apply(t1: BelleExpr, t2: BelleExpr): BelleExpr = (t1, t2) match {
+    case (SeqTactic(s1), SeqTactic(s2)) => SeqTactic(s1++s2)
+    case (SeqTactic(s1), _) => SeqTactic(s1 :+ t2)
+    case (_, SeqTactic(s2)) => SeqTactic(t1 +: s2)
+    case _ => SeqTactic(Seq(t1, t2))
+  }
+  def apply(seq: Seq[BelleExpr]): BelleExpr = {
+    if (seq.size > 1) new SeqTactic(seq)
+    else seq.headOption.getOrElse(TactixLibrary.nil)
+  }
+}
+case class SeqTactic(seq: Seq[BelleExpr]) extends BelleExpr {
+  assert(seq.size > 1, "Sequential composition needs at least 2 elements")
+  override def prettyString: String = "(" + seq.map(_.prettyString).mkString(";") + ")"
+}
 /** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
 /** `left || right` alternative composition executes both `left` and `right` simultaneously and succeeds with the first success, failing if both fail. */

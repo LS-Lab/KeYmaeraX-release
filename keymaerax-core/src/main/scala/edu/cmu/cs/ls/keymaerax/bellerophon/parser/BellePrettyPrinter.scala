@@ -48,7 +48,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case ApplyDefTactic(DefTactic(name, _)) => name
         case e: ExpandAll => e.prettyString
         case e: Expand => e.prettyString
-        case SeqTactic(l,r)    => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
+        case SeqTactic(l :: r :: Nil) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
+        case SeqTactic(s :: t) => sanitizeBinary(wrapLeft(e, s, indent), op(e).terminal.img, wrapRight(e, SeqTactic(t), indent))
         case EitherTactic(l,r) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case BranchTactic(ts) => op(e).terminal.img +
           OPEN_PAREN.img + newline(indent+1) + ts.map(pp(_, indent+1)).mkString(COMMA.img + newline(indent+1)) + newline(indent) + CLOSE_PAREN.img

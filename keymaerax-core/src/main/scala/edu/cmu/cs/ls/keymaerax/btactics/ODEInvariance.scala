@@ -1549,7 +1549,7 @@ object ODEInvariance {
 
   //Assume the Q progress condition is at -1
   private def lpclosedPlus(inst:Instruction) : BelleExpr =
-    SeqTactic(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
+    SeqTactic(Seq(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
       inst match{
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
@@ -1573,7 +1573,7 @@ object ODEInvariance {
             lpgeq(bound)
         case Triv() =>
           DebuggingTactics.debug("Triv",doPrint = debugTactic) &
-            closeF})
+            closeF}))
 
   //Temporary for compatibility
   //Given pr1 : a<->b , pr2 : b<->c returns provable for a<->c

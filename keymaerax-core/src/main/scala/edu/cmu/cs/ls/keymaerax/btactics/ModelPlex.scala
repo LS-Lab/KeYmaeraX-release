@@ -330,11 +330,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
     var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
     var loopBranch: Option[BelleExpr] = None
     override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
-      case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "throughout" =>
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil) if t.pt.name == "throughout" =>
         loopBranch = Some(b)
-      case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "loop" && loopBranch.isEmpty =>
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil) if t.pt.name == "loop" && loopBranch.isEmpty =>
         loopBranch = Some(b)
-      case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "loopAuto" && loopBranch.isEmpty =>
+      case SeqTactic((t: AppliedDependentPositionTacticWithAppliedInput) :: (b: BranchTactic) :: Nil) if t.pt.name == "loopAuto" && loopBranch.isEmpty =>
         loopBranch = Some(b)
       case t: AppliedDependentPositionTactic if t.name == "dW" => input match {
         case BelleProvable(p, _, _) =>

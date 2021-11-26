@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.Logging
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, RestrictedBiDiUnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.Declaration
@@ -124,27 +124,24 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
     if (isDead) (goal, ctx)
     else try {
       val (result, resultCtx) = tactic match {
-        // combinators
-        case SeqTactic(left, right) =>
-          val (leftResult, leftCtx) = try {
-            runTactic(left, goal, level, ctx, strict, convertPending, executePending)
-          } catch {
-            case e: BelleThrowable =>
-              if (convertPending) right match {
-                case t: StringInputTactic if t.name == "pending" =>
-                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(left) + "; " + t.inputs.head), goal, level, ctx,
-                    strict, convertPending = false, executePending = false)
-                case _ =>
-                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-                    strict, convertPending = false, executePending = false)
-              } else throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
-          }
-          try {
-            runTactic(right, leftResult, level, leftCtx, strict, convertPending, executePending)
-          } catch {
-            case e: BelleThrowable =>
-              throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
-          }
+        case SeqTactic(s) =>
+          val nonNilSteps = s.filterNot(t => nilNames.contains(t.prettyString))
+          nonNilSteps.zipWithIndex.foldLeft((goal, ctx))({
+            case ((g, c), (t, i)) => try {
+              runTactic(t, g, level, c, strict, convertPending, executePending)
+            } catch {
+              case e: BelleThrowable =>
+                val remainder = nonNilSteps.drop(i+1)
+                if (convertPending) remainder.headOption match {
+                  case Some(pt: StringInputTactic) if pt.name == "pending" =>
+                    return runTactic(SeqTactic(DebuggingTactics.pending(BellePrettyPrinter(t) + "; " + pt.inputs.head) +: remainder.tail), g, level, c,
+                      strict, convertPending = false, executePending = false)
+                  case None =>
+                    return runTactic(DebuggingTactics.pending(BellePrettyPrinter(SeqTactic(remainder))), g, level, c,
+                      strict, convertPending = false, executePending = false)
+                } else throw e.inContext(SeqTactic(nonNilSteps.patch(i, Seq(e.context), 1)), "Failed component of ; sequential composition: " + t.prettyString)
+            }
+          })
         case EitherTactic(left, right) => try {
           runTactic(left, goal, level, ctx, strict, convertPending=false, executePending)
         } catch {
@@ -189,7 +186,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int,
           //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
           try {
-            result = runTactic(if (times == 1) child else SeqTactic(child, RepeatTactic(child, times - 1)),
+            result = runTactic(if (times == 1) child else SeqTactic(Seq(child, RepeatTactic(child, times - 1))),
               result._1, level, result._2, strict, convertPending, executePending)
           } catch {
             case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),

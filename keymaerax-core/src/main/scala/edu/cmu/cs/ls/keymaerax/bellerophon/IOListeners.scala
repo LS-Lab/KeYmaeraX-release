@@ -104,7 +104,7 @@ object IOListeners {
       //@todo recursive calls to same tactic may pop from stack prematurely (master? ODE?)
       if (stepInto(executionStack.head._1) && !expr.eq(executionStack.head._1)) executionStack = (expr->0) +: executionStack
       if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) expr match {
-        case SeqTactic(l, _) => executionStack = (l->0) +: executionStack
+        case SeqTactic(l :: _) => executionStack = (l->0) +: executionStack
         case BranchTactic(b) if b.nonEmpty =>
           executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
@@ -133,8 +133,11 @@ object IOListeners {
         }).map(_._1.asInstanceOf[NamedBelleExpr])
 
         val parentContinues: List[NamedBelleExpr] = executionStack.headOption match {
-          case Some((SeqTactic(l, r), _)) if expr.eq(l) =>
+          case Some((SeqTactic(l :: r :: Nil), _)) if expr.eq(l) =>
             executionStack = (r->0) +: executionStack
+            parent(executionStack.tail)
+          case Some((SeqTactic(l :: r), _)) if expr.eq(l) =>
+            executionStack = (SeqTactic(r)->0) +: executionStack
             parent(executionStack.tail)
           case Some((bt@BranchTactic(b), i)) if i+1 < b.size =>
             executionStack = (b(i+1)->0) +: (bt->(i+1)) +: executionStack.tail

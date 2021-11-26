@@ -591,9 +591,8 @@ object AssessmentProver {
             case Right(errorMsg) => Right(errorMsg)
           }
         case Modes.BELLE_PROOF =>
-          @tailrec
           def lastStep(t: BelleExpr): BelleExpr = t match {
-            case SeqTactic(_, right) => lastStep(right)
+            case SeqTactic(s) => s.last
             case _ => t
           }
 

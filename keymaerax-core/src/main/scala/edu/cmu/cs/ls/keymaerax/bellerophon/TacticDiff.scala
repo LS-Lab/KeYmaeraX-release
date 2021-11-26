@@ -18,7 +18,7 @@ case class ReplacementBelleContext(t: BelleExpr) extends BelleContext {
   override def apply(repl: Map[BelleDot, BelleExpr]): BelleExpr = replace(t, repl)
 
   def replace(in: BelleExpr, repl: Map[BelleDot, BelleExpr]): BelleExpr = in match {
-    case SeqTactic(l, r)    => SeqTactic(replace(l, repl), replace(r, repl))
+    case SeqTactic(s)       => SeqTactic(s.map(replace(_, repl)))
     case EitherTactic(l, r) => EitherTactic(replace(l, repl), replace(r, repl))
     case SaturateTactic(c)  => SaturateTactic(replace(c, repl))
     case RepeatTactic(c, n) => RepeatTactic(replace(c, repl), n)
@@ -38,9 +38,8 @@ object TacticComparator {
 
 class TacticComparator[T <: BelleExpr](val l: T) {
   def ===(r: T): Boolean = (l, r) match {
-    case (SeqTactic(ll, lr), SeqTactic(rl, rr)) => ll === rl && lr === rr
-    case (SeqTactic(ll, lr), _) if lr == TactixLibrary.nil => ll === r
-    case (SeqTactic(ll, lr), _) if ll == TactixLibrary.nil => lr === r
+    case (SeqTactic(sl), SeqTactic(sr)) => sl.filter(_ != TactixLibrary.nil).zip(sr.filter(_ != TactixLibrary.nil)).forall({ case (ll, lr) => ll === lr })
+    case (SeqTactic(s), _) if s.contains(TactixLibrary.nil) => SeqTactic(s.filter(_ != TactixLibrary.nil)) === r
     case (BranchTactic(bl), BranchTactic(br)) => bl.size == br.size && bl.zip(br).forall(x => x._1 === x._2)
     case (EitherTactic(ell, elr), EitherTactic(erl, err)) => ell === erl && elr === err
     case (SaturateTactic(sl), SaturateTactic(sr)) => sl === sr
@@ -60,10 +59,10 @@ object TacticDiff {
   type Diff = (ReplacementBelleContext, Map[BelleDot, BelleExpr], Map[BelleDot, BelleExpr])
 
   def diff(t1: BelleExpr, t2: BelleExpr): Diff = (t1 match {
-    case SeqTactic(l1, r1) => t2 match {
-      case SeqTactic(l2, r2) =>
-        val d1 = diff(l1, l2)
-        val d2 = diff(r1, r2)
+    case SeqTactic(l :: lrem) => t2 match {
+      case SeqTactic(r :: rrem) =>
+        val d1 = diff(l, r)
+        val d2 = diff(SeqTactic(lrem), SeqTactic(rrem))
         (ReplacementBelleContext(SeqTactic(d1._1.t, d2._1.t)), d1._2++d2._2, d1._3++d2._3)
       case _ =>
         val p = new BelleDot()
@@ -113,63 +112,63 @@ object TacticDiff {
     // atomic cases
     case BuiltInTactic(n1) => t2 match {
       case BuiltInTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case NamedTactic(n1, c1) => t2 match {
       case NamedTactic(n2, c2) if n1 == n2 && c1 == c2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case DependentTactic(n1) => t2 match {
       case DependentTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case AppliedPositionTactic(c1, l1) => t2 match {
       case AppliedPositionTactic(c2, l2) if c1 == c2 && l1 == l2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case AppliedBuiltinTwoPositionTactic(c1, p1L, p1R) => t2 match {
       case AppliedBuiltinTwoPositionTactic(c2, p2L, p2R) if c1 == c2 && p1L == p2L && p1R == p2R => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case it1: AppliedDependentPositionTacticWithAppliedInput => t2 match {
       case it2: AppliedDependentPositionTacticWithAppliedInput if it1.pt == it2.pt => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-      case SeqTactic(n2l, n2r) if t1 == n2l =>
+      case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case InputTactic(n1, i1) => t2 match {
       case InputTactic(n2, i2) if n1 == n2 && i1 == i2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
-        case SeqTactic(n2l, n2r) if t1 == n2l =>
+        case SeqTactic(n2l :: n2r) if t1 == n2l =>
         val p = new BelleDot()
-        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> n2r))
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> TactixLibrary.nil), Map(p -> SeqTactic(n2r)))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
@@ -184,5 +183,8 @@ object TacticDiff {
         val d = diff(i1, i2)
         (ReplacementBelleContext(ApplyDefTactic(d._1.t.asInstanceOf[DefTactic])), d._2, d._3)
     }
-  }) ensures(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
+  }) ensures(r => {
+    println(r._1(r._2) + " vs " + t1 + ": " + (r._1(r._2)===t1))
+    println(r._1(r._3) + " vs " + t2 + ": " + (r._1(r._3)===t2))
+    r._1(r._2)===t1 && r._1(r._3)===t2}, "Reapplying context expected to produce original tactics")
 }

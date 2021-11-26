@@ -590,7 +590,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           |==> 1:  false	False$}""".stripMargin
 
     listener.calls should have size 10
-    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+    val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should contain theSameElementsInOrderAs(
@@ -616,7 +616,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           |  from
           |==> 1:  false	False$}""".stripMargin
 
-    val andT@SeqTactic(andRRule, labelT@BranchTactic(labels)) = andR(1).
+    val andT@SeqTactic(andRRule :: (labelT@BranchTactic(labels)) :: Nil) = andR(1).
       computeExpr(BelleProvable.plain(ProvableSig.startProof("==> false & true".asSequent)))
 
     listener.calls should have size 12

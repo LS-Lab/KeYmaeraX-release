@@ -151,27 +151,15 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
       case _ => throw new IllFormedTacticApplicationException(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}") //.inContext(BelleDot, "")
     }
 
-    case SeqTactic(left, right) => left match {
-      //@todo on ExpandDef: postpone right until after let
-      //          case ExpandDef(DefExpression(Equal(FuncOf(name, arg), t))) =>
-      //            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-      //            apply(Let(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()), right), v)
-      //          case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
-      //            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-      //            apply(Let(PredOf(name, dotArg), q.replaceFree(arg, DotTerm()), right), v)
-      case _ =>
-        val leftResult = try {
-          apply(left, v)
-        } catch {
-          case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
-        }
-
-        try {
-          apply(right, leftResult)
-        } catch {
-          case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(SeqTactic(e.context, right), "Failed right-hand side of &: " + right)
-        }
-    }
+    case SeqTactic(s) =>
+      val nonNilSteps = s.filterNot(t => nilNames.contains(t.prettyString))
+      nonNilSteps.zipWithIndex.foldLeft(v)({ case (v, (t, i)) =>
+      try {
+        apply(t, v)
+      } catch {
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(SeqTactic(nonNilSteps.patch(i, Seq(e.context), 1)), "Failed component of ; sequential composition : " + t.prettyString)
+      }
+    })
 
     case EitherTactic(left, right) => try {
       val leftResult = apply(left, v)
