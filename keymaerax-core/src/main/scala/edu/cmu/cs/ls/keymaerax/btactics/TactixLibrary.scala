@@ -1179,10 +1179,10 @@ object TactixLibrary extends HilbertCalculus
     * @see [[QE()]]
     * @example x >= 1 -> x > 1 | x =1 proves by SOS automatically
     * */
-  @Tactic("sossolve", longDisplayName = "Solve with sum-of-squares witness",
+  @Tactic("sosQE", longDisplayName = "Prove arithmetic with sum-of-squares witness",
     premises="normalize(Γ<sub>FOLR∃</sub>, !Δ<sub>FOLR∀</sub>) |- 1 + g<sub>1</sub><sup>2</sup>+ ... + g<sub>n</sub><sup>2</sup> = 0",
-    //    sossolve -----------
+    //    sosQE -----------
     conclusion="Γ<sub>FOLR∃</sub> |- Δ<sub>FOLR∀</sub>",
     displayLevel="all")
-  val sossolve : BelleExpr = anon ( SOSSolve.sos() )
+  val sosQE : BelleExpr = anon ( SOSSolve.sos() )
 }

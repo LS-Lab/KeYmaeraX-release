@@ -16,7 +16,7 @@ var BellerophonHighlightRules = function() {
     "assignd|assigndEquality|assigndDual|randomd|testd|choiced|composed|iterated|con|diamondOr|diamondd"+
     "ODE|solve|dW|dWplus|dIRule|dIClose|dC|dG|dR|odeInvC|barrier|dbx|diffInvariant|dCi|dGi|diffUnpackEvolDomain|domainStuck|splitWeakInequality"+
     "dV|kDomainDiamond|dDR|compatCut|odeUnify|gEx|closedRef|dDX"+
-    "QE|smartQE|sossolve|pQE|intervalArithmetic|intervalCutTerms"+
+    "QE|smartQE|sosQE|pQE|intervalArithmetic|intervalCutTerms"+
     "hideL|hideR"
     );
 
