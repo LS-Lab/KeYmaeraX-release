@@ -341,6 +341,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       $scope.examples = response.data;
   });
 
+  //@see dashboard.js (duplicate)
   $scope.templates = [];
   $http.get("templates/user/" + $scope.userId + "/all").then(function(response) {
       $scope.templates = response.data;
