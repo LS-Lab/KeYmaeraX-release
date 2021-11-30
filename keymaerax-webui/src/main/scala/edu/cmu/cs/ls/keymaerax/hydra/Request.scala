@@ -999,7 +999,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "classpath:/keymaerax-projects/dlds/dlds.kya",
         "/examples/tutorials/cpsweek/cpsweek.png", 1),
       ExamplePOJO(0, "STTT Tutorial",
-        "Automated stop sign braking for cars",
+        "Collection of tutorial examples",
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/sttt/sttt.kyx",
         "/examples/tutorials/sttt/sttt.png", 1),
