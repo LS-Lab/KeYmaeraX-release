@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.{Logging, core}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, RenUSubst, SuccPosition, UnificationMatchUSubstAboveURen}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -41,22 +41,30 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
-  private[btactics] lazy val orRi: DependentTactic = orRi()
-  private[btactics] def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = anon { (sequent: Sequent) => {
+  private[btactics] lazy val orRi: AppliedBuiltinTwoPositionTactic = orRi(keepLeft=false)(SuccPosition.base0(0), SuccPosition.base0(1))
+  private[btactics] def orRi(keepLeft: Boolean): BuiltInTwoPositionTactic = anon { (pr: ProvableSig, pos1: Position, pos2: Position) => {
     require(pos1 != pos2, "Two distinct positions required")
-    require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
+    val sequent = pr.subgoals.head
+    require(sequent.succ.length > pos1.index0 && sequent.succ.length > pos2.index0,
       "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has succ size " + sequent.succ.length)
-    val left = sequent.succ(pos1.getIndex)
-    val right = sequent.succ(pos2.getIndex)
+    val left = sequent.succ(pos1.index0)
+    val right = sequent.succ(pos2.index0)
     val cutUsePos = AntePos(sequent.ante.length)
-    cut(Or(left, right)) <(
-      /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
-      /* show */
-        if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2))
-        else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1))
-      )
-    }
-  }
+
+    //    cut(Or(left, right)) <(
+    //      /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
+    //      /* show */
+    //        if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2))
+    //        else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1))
+    //      )
+    //    }
+    val cutPr = pr(Cut(Or(left, right)), 0)
+    (if (pos1.index0 > pos2.index0) cutPr(HideRight(pos1.checkSucc.checkTop), 1)(HideRight(pos2.checkSucc.checkTop), 1)
+     else cutPr(HideRight(pos2.checkSucc.checkTop), 1)(HideRight(pos1.checkSucc.checkTop), 1))(
+      OrLeft(cutUsePos), 0)(
+      Close(cutUsePos, pos2.checkSucc.checkTop), 2)(
+      Close(cutUsePos, pos1.checkSucc.checkTop), 0)
+  }}
 
   /**
    * Inverse of [[ProofRuleTactics.andL]].
@@ -64,20 +72,32 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
-  private[btactics] lazy val andLi: DependentTactic = andLi()
-  private[btactics] def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = anon((sequent: Sequent) => {
+  private[btactics] lazy val andLi: AppliedBuiltinTwoPositionTactic = andLi(keepLeft=false)(AntePosition.base0(0), AntePosition.base0(1))
+  private[btactics] def andLi(keepLeft: Boolean): BuiltInTwoPositionTactic = anon { (pr: ProvableSig, pos1: Position, pos2: Position) => {
     require(pos1 != pos2, "Two distinct positions required")
-    require(sequent.ante.length > pos1.getIndex && sequent.ante.length > pos2.getIndex,
+    val sequent = pr.subgoals.head
+    require(sequent.ante.length > pos1.index0 && sequent.ante.length > pos2.index0,
       "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has ante size " + sequent.ante.length)
-    val left = sequent.ante(pos1.getIndex)
-    val right = sequent.ante(pos2.getIndex)
+    val left = sequent.ante(pos1.index0)
+    val right = sequent.ante(pos2.index0)
     val cutUsePos = SuccPos(sequent.succ.length)
-    cut(And(left, right)) <(
-      /* use */
-      if (pos1.getIndex > pos2.getIndex) assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)) & assertE(right, "")(pos2) & hideL(pos2)
-      else assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)),
-      /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
-    )})
+
+    //    cut(And(left, right)) <(
+    //      /* use */
+    //      if (pos1.index0 > pos2.index0) assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)) & assertE(right, "")(pos2) & hideL(pos2)
+    //      else assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & (if (keepLeft) skip else hideL(pos1)),
+    //      /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
+    //    )}
+    val cutPr = pr(Cut(And(left, right)), 0)
+    (if (pos1.index0 > pos2.index0) {
+      (if (keepLeft) cutPr else cutPr(HideLeft(pos1.checkAnte.checkTop), 0))(HideLeft(pos2.checkAnte.checkTop), 0)
+    } else {
+      val pos2Hidden = cutPr(HideLeft(pos2.checkAnte.checkTop), 0)
+      if (keepLeft) pos2Hidden else pos2Hidden(HideLeft(pos1.checkAnte.checkTop), 0)
+    })(AndRight(cutUsePos), 1)(
+      Close(pos2.checkAnte.checkTop, cutUsePos), 2)(
+      Close(pos1.checkAnte.checkTop, cutUsePos), 1)
+  }}
 
   /**
    * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not

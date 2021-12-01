@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicatio
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -60,29 +60,29 @@ class PropositionalTests extends TacticTestBase {
   }
 
   "orRi" should "introduce disjunction from succedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>0".asFormula, "y>0".asFormula)), orRi())
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>0".asFormula, "y>0".asFormula)), orRi)
     result.subgoals.loneElement shouldBe " ==> x>0 | y>0".asSequent
   }
 
   it should "work as two-position tactic" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("a=2".asFormula), IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula)),
-      orRi(SuccPos(1), SuccPos(0)))
+      orRi(keepLeft=false)(SuccPos(1), SuccPos(0)))
     result.subgoals.loneElement shouldBe "a=2 ==> x>0, b=3 | y>0".asSequent
   }
 
   "andLi" should "introduce conjunction from antecedent" in withTactics {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq()), andLi())
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>0".asFormula), IndexedSeq()), andLi)
     result.subgoals.loneElement shouldBe "x>0 & y>0 ==> ".asSequent
   }
 
   it should "work as two-position tactic" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("y>0".asFormula, "b=3".asFormula, "x>0".asFormula), IndexedSeq("a=2".asFormula)),
-      andLi(AntePos(1), AntePos(0)))
+      andLi(keepLeft=false)(AntePosition.base0(1), AntePosition.base0(0)))
     result.subgoals.loneElement shouldBe "x>0, b=3 & y>0 ==> a=2".asSequent
   }
 
   it should "keep left conjunct if asked" in withTactics {
-    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(AntePos(1), AntePos(0), keepLeft=true))
+    val result = proveBy("y>0, b=3, x>0 ==> a=2".asSequent, andLi(keepLeft=true)(AntePosition.base0(1), AntePosition.base0(0)))
     result.subgoals.loneElement shouldBe "b=3, x>0, b=3 & y>0 ==> a=2".asSequent
   }
 

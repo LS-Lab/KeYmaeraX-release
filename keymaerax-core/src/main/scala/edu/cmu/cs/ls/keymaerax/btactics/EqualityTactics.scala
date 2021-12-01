@@ -327,9 +327,9 @@ private object EqualityTactics {
         abs(afterCMonPos) & orL(-1) <(
           orL(-2) <(
             andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
-            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
+            andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
           orL(-2) <(
-            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
+            andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
             andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
       } else {
         abs(afterCMonPos) & orR(1) & orL(-2) <(
@@ -417,9 +417,9 @@ private object EqualityTactics {
         minmax(afterCMonPos) & orL(-1) <(
           orL(-2) <(
             andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
-            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
+            andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
           orL(-2) <(
-            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
+            andL(-2) & andL(-1) & andLi(keepLeft=false)(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
             andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
       } else {
         minmax(afterCMonPos) & orR(1) & orL(-2) <(

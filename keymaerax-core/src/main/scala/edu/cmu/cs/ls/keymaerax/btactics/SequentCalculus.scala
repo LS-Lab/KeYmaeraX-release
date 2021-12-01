@@ -42,9 +42,9 @@ trait SequentCalculus {
   /** Hide/weaken whether left or right */
   @Tactic("W", longDisplayName = "Weaken", premises = "Γ |- Δ",
     conclusion = "Γ |- P, Δ")
-  val hide    : DependentPositionTactic = anon { (pos:Position) => pos match {
-    case p: AntePosition => SequentCalculus.hideL(p)
-    case p: SuccPosition => SequentCalculus.hideR(p)
+  val hide    : BuiltInPositionTactic = anon { (pr: ProvableSig, pos:Position) => pos match {
+    case p: AntePosition => SequentCalculus.hideL(p).computeResult(pr)
+    case p: SuccPosition => SequentCalculus.hideR(p).computeResult(pr)
   }
   }
 
@@ -67,15 +67,15 @@ trait SequentCalculus {
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   @Tactic("W", longDisplayName = "Co-Weaken", premises = "|- P",
     conclusion = "Γ |- P, Δ")
-  val cohide  : DependentPositionTactic = anon { (pos: Position) => pos match {
-    case p: AntePosition => SequentCalculus.cohideL(p)
-    case p: SuccPosition => SequentCalculus.cohideR(p)
+  val cohide  : BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) => pos match {
+    case p: AntePosition => SequentCalculus.cohideL(p).computeResult(pr)
+    case p: SuccPosition => SequentCalculus.cohideR(p).computeResult(pr)
   }
   }
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
   @Tactic("WLR", codeName = "coHide2", longDisplayName = "Co-Weaken Both", premises = "P |- Q",
     conclusion = "Γ, P |- Q, Δ")
-  val cohide2: BuiltInTwoPositionTactic = anon {(pr:ProvableSig, ante: Position, succ: Position) => {
+  val cohide2: BuiltInTwoPositionTactic = anon { (pr:ProvableSig, ante: Position, succ: Position) => {
       require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
       pr(CoHide2(ante.checkAnte.top, succ.checkSucc.top), 0)
     }
@@ -83,15 +83,17 @@ trait SequentCalculus {
   /** Cohides in succedent, but leaves antecedent as is. */
   @Tactic("WR", longDisplayName = "Co-Weaken Only Right", premises = "Γ, P |- Q",
     conclusion = "Γ, P |- Q, Δ")
-  val cohideOnlyR: DependentPositionTactic = anonR { (pos: SuccPosition) =>
-    (hideR(1) * pos.checkTop.getIndex) & SaturateTactic(hideR(2))
+  val cohideOnlyR: BuiltInRightTactic = anon { (pr: ProvableSig, pos: SuccPosition) =>
+    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideR(1).computeResult(p) })
+    (2 to hiddenUntil.subgoals.head.succ.length).foldLeft(hiddenUntil)({ case (p, _) => hideR(2).computeResult(p) })
   }
 
   /** Cohides in antecedent, but leaves succedent as is. */
   @Tactic("WL", longDisplayName = "Co-Weaken Only Left", premises = "|- Q, Δ",
     conclusion = "Γ, P |- Q, Δ")
-  val cohideOnlyL: DependentPositionTactic = anonL { (pos: AntePosition) =>
-    (hideL(-1) * pos.checkTop.getIndex) & SaturateTactic(hideL(-2))
+  val cohideOnlyL: BuiltInLeftTactic = anon { (pr: ProvableSig, pos: AntePosition) =>
+    val hiddenUntil = (1 to pos.checkTop.getIndex).foldLeft(pr)({ case (p, _) => hideL(-1).computeResult(p) })
+    (2 to hiddenUntil.subgoals.head.ante.length).foldLeft(hiddenUntil)({ case (p, _) => hideL(-2).computeResult(p) })
   }
 
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
@@ -116,8 +118,8 @@ trait SequentCalculus {
     *   G, a, G', b, G'' |- D
     * }}}
     */
-  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1), keepLeft: Boolean = false): DependentTactic = PropositionalTactics.andLi(pos1, pos2, keepLeft)
-  val andLi: DependentTactic = andLi()
+  def andLi(keepLeft: Boolean): BuiltInTwoPositionTactic = PropositionalTactics.andLi(keepLeft)
+  val andLi: AppliedBuiltinTwoPositionTactic = andLi(keepLeft=false)(AntePos(0), AntePos(1))
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   @Tactic(("∧R", "&R"), premises = "Γ |- P, Δ ;; Γ |- Q, Δ",
     conclusion = "Γ |- P∧Q, Δ")
@@ -141,8 +143,8 @@ trait SequentCalculus {
     *   G |- D, a, D', b, D''
     * }}}
     */
-  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
-  val orRi: DependentTactic = orRi()
+  def orRi(keepLeft: Boolean): BuiltInTwoPositionTactic = PropositionalTactics.orRi(keepLeft)
+  val orRi: AppliedBuiltinTwoPositionTactic = orRi(keepLeft=false)(SuccPosition.base0(0), SuccPosition.base0(1))
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   @Tactic(("∨R", "|R"), premises = "Γ |- Δ, P, Q",
     conclusion = "Γ |- P∨Q, Δ")
