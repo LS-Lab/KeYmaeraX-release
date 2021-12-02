@@ -57,7 +57,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = ArchiveParser.parseAsFormula(io.Source.fromInputStream(in).mkString)
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), ListMap.empty)
 
-    def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
+    def modelPlex: BuiltInPositionTactic = chase(3, 3, (e:Expression) => e match {
       // no equational assignments
       case Box(Assign(_, _), _) => Ax.assignbAxiom :: Ax.assignbup :: Nil
       case Diamond(Assign(_, _), _) => Ax.assigndAxiom :: Ax.assigndup :: Nil
@@ -81,7 +81,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = ArchiveParser.parseAsFormula("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
     val ModelPlexConjecture(_, modelplexInput, _) = createMonitorSpecificationConjecture(model, List(Variable("x")), ListMap.empty)
 
-    def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
+    def modelPlex: BuiltInPositionTactic = chase(3, 3, (e:Expression) => e match {
       case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       case _ => AxIndex.axiomsFor(e)
     })

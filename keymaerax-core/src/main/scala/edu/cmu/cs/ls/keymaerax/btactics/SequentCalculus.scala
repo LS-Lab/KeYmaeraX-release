@@ -248,7 +248,9 @@ trait SequentCalculus {
     * }}}
     */
   @Tactic()
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonP { (provable: ProvableSig, pos: Position) =>
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanon { cutLRFw(f)(_: Position) }
+  /** Builtin forward implementation of cutLR. */
+  private[btactics] def cutLRFw(f: Formula): BuiltInPositionTactic = anon { (provable: ProvableSig, pos: Position) =>
     requireOneSubgoal(provable, "cutLR(" + f + ")")
     if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
     else provable(core.CutRight(f, pos.checkSucc.top), 0)
@@ -779,7 +781,7 @@ trait SequentCalculus {
   val commuteEquivR: CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
   @Tactic("=c", longDisplayName = "Commute Equal", conclusion = "__p=q__ ↔ q=p")
-  lazy val commuteEqual       : DependentPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
+  lazy val commuteEqual       : BuiltInPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
 
   // Equality rewriting tactics
 

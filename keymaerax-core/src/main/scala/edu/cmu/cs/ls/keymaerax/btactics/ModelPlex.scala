@@ -828,7 +828,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * }}}
    * @return The tactic.
    */
-  def controllerMonitorByChase: DependentPositionTactic = chase(3,3, (e:Expression) => e match {
+  def controllerMonitorByChase: BuiltInPositionTactic = chase(3,3, (e:Expression) => e match {
     // remove loops
     case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
     // remove ODEs for controller monitor
@@ -840,7 +840,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case _ => logger.trace("Chasing " + e.prettyString); AxIndex.axiomsFor(e)
   })
 
-  def chaseToTests(combineTests: Boolean): DependentPositionTactic = {
+  def chaseToTests(combineTests: Boolean): BuiltInPositionTactic = {
     chaseI(3,3, (e:Expression) => e match {
       case Or(_, _) => Ax.orRecursor :: Nil
       case And(_, _) => Ax.invtestd :: Nil
@@ -1105,7 +1105,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * @param tactics The list of tactics.
    * @return The tactic.
    */
-  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     require(tactics.nonEmpty, "At least 1 tactic required")
     val here = tactics.map(_(pos)).reduceRight[BelleExpr](_ | _)
 

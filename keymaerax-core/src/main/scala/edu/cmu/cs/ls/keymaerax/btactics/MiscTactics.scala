@@ -348,12 +348,12 @@ object Idioms {
   /**
    * shift(shift, t) does t shifted from position p to shift(p)
    */
-  def shift(shift: PosInExpr=>PosInExpr, t: DependentPositionTactic): DependentPositionTactic = ANON by ((pos: Position, _: Sequent) =>
+  def shift[T <: BelleExpr](shift: PosInExpr=>PosInExpr, t: AtPosition[T]): DependentPositionTactic = ANON by ((pos: Position, _: Sequent) =>
     t(pos.navigate(shift(pos.inExpr))))
   /**
    * shift(child, t) does t to positions shifted by child
    */
-  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p ++ child, t)
+  def shift[T <: BelleExpr](child: PosInExpr, t: AtPosition[T]): DependentPositionTactic = shift(p => p ++ child, t)
 
   /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
   def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {

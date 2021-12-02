@@ -114,8 +114,8 @@ object DerivationInfoRegistry extends Logging {
 
 
 
-  private def useAt(pi: ProvableInfo): DependentPositionTactic = HilbertCalculus.useAt(pi)
-  private def useAt(l: Lemma): DependentPositionTactic = HilbertCalculus.useAt(l)
+  private def useAt(pi: ProvableInfo): BuiltInPositionTactic = HilbertCalculus.useAt(pi)
+  private def useAt(l: Lemma): BuiltInPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   ////////////////////////////////////////////////////////

@@ -231,7 +231,7 @@ object Approximator extends Logging {
   }
 
   /** Does a CEat with extendEvDomAndProve. */
-  def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): DependentPositionTactic = {
+  def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): BuiltInPositionTactic = {
     TactixLibrary.CEat(dcInCtx(f,cut,cutProof)) //@todo this doesn't work because initial conditions are missing. Need a useAt
   }
 

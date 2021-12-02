@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AtPosition, BelleExpr, BuiltInPositionTactic, DependentPositionTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.NAMED_POST_VAR
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Formula, NamedSymbol, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -37,14 +37,14 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def createMonitorSpecificationConjecture(fml: Formula, vars: List[Variable],
                                            unobservable: ListMap[_ <: NamedSymbol, Option[Formula]],
                                            postVar: Variable=>Variable = NAMED_POST_VAR): ModelPlexConjecture
-  def controllerMonitorByChase: DependentPositionTactic
+  def controllerMonitorByChase: BuiltInPositionTactic
   def modelplexSequentStyle: DependentPositionTactic
   def modelplexAxiomaticStyle(unprog: DependentPositionTactic): DependentPositionTactic
   def controllerMonitorT: DependentPositionTactic
   def modelMonitorT: DependentPositionTactic
   def diamondDiffSolve2DT: DependentPositionTactic
   def diamondTestRetainConditionT: DependentPositionTactic
-  def locateT(tactics: List[DependentPositionTactic]): DependentPositionTactic
+  def locateT(tactics: List[AtPosition[_ <: BelleExpr]]): DependentPositionTactic
   def optimizationOneWithSearch(tool: Option[SimplificationTool], assumptions: List[Formula],
                                 unobservable: List[_ <: NamedSymbol], simplifier: Option[DependentPositionTactic],
                                 postVar: Variable=>Variable = NAMED_POST_VAR): DependentPositionTactic

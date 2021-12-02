@@ -1502,7 +1502,7 @@ object ODELiveness {
     *
     * @return see rule above
     */
-  def dDX : DependentPositionTactic = useAt(Ax.dDX)
+  def dDX : BuiltInPositionTactic = useAt(Ax.dDX)
 
   /** Refinement for a closed domain constraint (e.g. Q = p>=0)
     *
