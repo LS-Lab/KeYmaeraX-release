@@ -325,7 +325,7 @@ trait SequentCalculus {
     * \forall x p(x), G |- D
     * }}}
     */
-  def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
+  def allL(x: Variable, inst: Term) : BuiltInPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic("∀L",
     inputs = "θ[θ]:option[term]",
@@ -416,15 +416,15 @@ trait SequentCalculus {
     * G |- \exists x p(x), D
     * }}}
     */
-  def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
+  def existsR(x: Variable, inst: Term): BuiltInPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   @Tactic("∃R",
     inputs = "θ[θ]:option[term]",
     premises = "Γ |- p(θ), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
-  def existsR(e: Option[Term])             : DependentPositionWithAppliedInputTactic =
-    inputanon{ (pos: Position, seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, e)(pos) }
-  def existsR(e: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
+  def existsR(e: Option[Term]): DependentPositionWithAppliedInputTactic =
+    inputanon{ pos: Position => FOQuantifierTactics.existsInstantiate(None, e)(pos) }
+  def existsR(e: Term): BuiltInPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
   val existsR                         : DependentPositionTactic = existsR(None)
   private[btactics] val existsRInfo: TacticInfo = TacticInfo("existsR")
@@ -482,7 +482,7 @@ trait SequentCalculus {
     * }}}
     */
   @Tactic("⊥/⊤", longDisplayName = "Close by id/⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
-  val close: DependentTactic = anon {(seq: Sequent) => findClose(seq)}
+  val close: BuiltInTactic = anon { (pr: ProvableSig) => findClose.result(pr) }
 
   // alternative implementation
   //@todo optimizable seems like complicated and possibly slow code???
@@ -506,37 +506,42 @@ trait SequentCalculus {
   }}*/
 
   /** Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic. */
-  private def findClose(seq: Sequent): BelleExpr = {
-    // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
-    val ante = seq.ante
-    val succ = seq.succ
-    if (succ.isEmpty) {
-      for (j <- ante.indices) {
-        if (ante(j) == False) return ProofRuleTactics.closeFalse(AntePos(j))
-      }
-    } else {
-      val fml0 = succ.head
-      if (fml0 == True) return ProofRuleTactics.closeTrue(SuccPos(0))
-      //@todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
-      for (j <- ante.indices) {
-        ante(j) match {
-          case False => return ProofRuleTactics.closeFalse(AntePos(j))
-          case other =>
-            if (fml0 == other)
-              return closeId(AntePos(j), SuccPos(0))
+  private def findClose: BuiltInTactic = anon { provable: ProvableSig =>
+    @inline def findCloseImp(pr: ProvableSig): ProvableSig = {
+      // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
+      ProofRuleTactics.requireOneSubgoal(pr, "findClose")
+      val seq = pr.subgoals.head
+      val ante = seq.ante
+      val succ = seq.succ
+      if (succ.isEmpty) {
+        for (j <- ante.indices) {
+          if (ante(j) == False) return ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr)
+        }
+      } else {
+        val fml0 = succ.head
+        if (fml0 == True) return ProofRuleTactics.closeTrue(SuccPos(0)).computeResult(pr)
+        //@todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
+        for (j <- ante.indices) {
+          ante(j) match {
+            case False => return ProofRuleTactics.closeFalse(AntePos(j)).computeResult(pr)
+            case other =>
+              if (fml0 == other)
+                return closeId(AntePos(j), SuccPos(0)).computeResult(pr)
+          }
+        }
+        for (i <- succ.indices.tail) {
+          succ(i) match {
+            case True => return ProofRuleTactics.closeTrue(SuccPos(i)).computeResult(pr)
+            case fml =>
+              for (j <- ante.indices) {
+                if (fml == ante(j)) return closeId(AntePos(j), SuccPos(i)).computeResult(pr)
+              }
+          }
         }
       }
-      for (i <- succ.indices.tail) {
-        succ(i) match {
-          case True => return ProofRuleTactics.closeTrue(SuccPos(i))
-          case fml =>
-            for (j <- ante.indices) {
-              if (fml == ante(j)) return closeId(AntePos(j), SuccPos(i))
-            }
-        }
-      }
+      DebuggingTactics.error("Inapplicable close").result(pr)
     }
-    DebuggingTactics.error("Inapplicable close")
+    findCloseImp(provable)
   }
 
   /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]).
@@ -718,7 +723,7 @@ trait SequentCalculus {
     longDisplayName = "Close ⊤",
     premises = "*",
     conclusion = "Γ |- ⊤, Δ")
-  val closeT: BelleExpr = anon { ProofRuleTactics.closeTrue('R, True) }
+  val closeT: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeTrue('R, True).computeResult(pr) }
 //  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]).
     * {{{
@@ -731,7 +736,7 @@ trait SequentCalculus {
     longDisplayName = "Close ⊥",
     premises = "*",
     conclusion = "Γ, ⊥ |- Δ")
-  val closeF: BelleExpr = anon { ProofRuleTactics.closeFalse('L, False) }
+  val closeF: BuiltInTactic = anon { (pr: ProvableSig) => ProofRuleTactics.closeFalse('L, False).computeResult(pr) }
 //  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
 

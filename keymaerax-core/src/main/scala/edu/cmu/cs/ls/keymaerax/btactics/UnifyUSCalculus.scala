@@ -217,7 +217,7 @@ trait UnifyUSCalculus {
   /** byUS(pi) proves by a uniform substitution instance of provable (information), obtained by unification with the current goal.
     * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
-  def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
+  def byUS(provable: ProvableSig): BuiltInTactic = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
 
@@ -480,14 +480,15 @@ trait UnifyUSCalculus {
     * @param fact the proof to reduce this proof to by a suitable Uniform Substitution.
     * @see [[byUS()]]
     */
-  def US(fact: ProvableSig): DependentTactic = anon { (sequent: Sequent) => {
+  def US(fact: ProvableSig): BuiltInTactic = anon { pr: ProvableSig => {
+    val sequent = pr.subgoals.head
     logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
     //@todo is there a way of flagging a fact that comes from ProvableInfo with ProvableInfo.linear=true for faster LinearMatcher?
     //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
     val subst = defaultMatcher(fact.conclusion, sequent)
     logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
     if (sequent != subst(fact.conclusion)) throw new UnsupportedTacticFeature("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
-    by(subst.toForward(fact))
+    pr(subst.toForward(fact), 0)
   }}
 
   // renaming

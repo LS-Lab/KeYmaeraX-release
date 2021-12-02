@@ -48,6 +48,12 @@ class PropositionalTests extends TacticTestBase {
     proveBy(s, autoMP(-3)).subgoals.loneElement shouldBe "Y>y, X>y, P(x) ==> y<x&x<=min(X,Y)->P(x)".asSequent
   }
 
+  "toSingleFormula" should "collapse a sequent into a single formula" in withTactics {
+    proveBy("a=1, b=2, c=3 ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> x=1|y=2".asSequent
+    proveBy(" ==> x=1, y=2".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> true -> x=1|y=2".asSequent
+    proveBy("a=1, b=2, c=3 ==> ".asSequent, toSingleFormula).subgoals.loneElement shouldBe "==> a=1&b=2&c=3 -> false".asSequent
+  }
+
   "implyRi" should "introduce implication from antecedent and succedent" in withTactics {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("y>0".asFormula)), implyRi)
     result.subgoals.loneElement shouldBe " ==> x>0 -> y>0".asSequent

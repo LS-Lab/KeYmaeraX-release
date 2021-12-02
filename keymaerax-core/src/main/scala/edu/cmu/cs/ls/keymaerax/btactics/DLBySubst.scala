@@ -135,19 +135,26 @@ private object DLBySubst {
     conclusion = "Γ |- P, Δ",
     displayLevel = "browse"
   )
-  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
-    case (ctx, f: Formula) =>
-      val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
-      cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
-        skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon { pos: Position => stutterFw(x)(pos) }
+  private[btactics] def stutterFw(x: Variable): BuiltInPositionTactic = anon { (pr: ProvableSig, pos: Position) =>
+    ProofRuleTactics.requireOneSubgoal(pr, "stutter")
+    val sequent = pr.subgoals.head
+    sequent.at(pos) match {
+      case (ctx, f: Formula) =>
+        val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1).computeResult _) else (pos.topLevel, skip.result _)
+        (pr(cutLRFw(ctx(Box(Assign(x, x), f)))(pos).computeResult _, 0)
+          (if (hidePos.isAnte) CoHideLeft(hidePos.checkAnte.top) else CoHideRight(hidePos.checkSucc.top), 1)
+          (EquivifyRight(SuccPos(0)), 1)
+          (commute, 1)
+          (CEFw(pos.inExpr).result _, 1)
           (x match {
-            case v: BaseVariable => byUS(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic=true)))
-            case DifferentialSymbol(v) => byUS(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic=true)))
-          })
-      )
-    case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
-  })
+            case v: BaseVariable => US(Ax.selfassignb.provable(URename("x_".asVariable, v, semantic=true))).result _
+            case DifferentialSymbol(v) => US(Ax.Dselfassignb.provable(URename("x_".asVariable, v, semantic=true))).result _
+          }, 1)
+          )
+      case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
+    }
+  }
 
   /** Top-level abstraction: basis for abstraction tactic */
   val topAbstraction: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {

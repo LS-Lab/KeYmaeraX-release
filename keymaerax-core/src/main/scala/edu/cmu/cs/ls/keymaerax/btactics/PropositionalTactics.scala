@@ -141,15 +141,12 @@ private object PropositionalTactics extends Logging {
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
-  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = anon { seq: Sequent =>
+  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BuiltInTactic = anon { pr: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(pr, "modusPonens")
+    val seq = pr.subgoals.head
     val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
-    //@note adapted to use implyL instead of implyLOld
-    implyL(implication) <(
-      closeId(p, SuccPos(seq.succ.length))
-      //cohide2(p, SuccPos(sequent.succ.length)) & close
-      //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
-      ,
-      Idioms.ident
+    (pr(ImplyLeft(implication), 0)
+      (closeId(p, SuccPos(seq.succ.length)).computeResult _, 0)
       )
   }
 
@@ -192,13 +189,34 @@ private object PropositionalTactics extends Logging {
    * }}}
    */
   @Tactic()
-  val toSingleFormula: DependentTactic  = anon {(sequent: Sequent) =>
-    cut(sequent.toFormula) <(
-      /* use */ implyL('Llast) <(
-        hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
-        hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
-      /* show */ cohide('Rlast)
-      )
+  val toSingleFormula: BuiltInTactic  = anon { pr: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(pr, "toSingleFormula")
+    val sequent = pr.subgoals.head
+    if (sequent.ante.isEmpty && sequent.succ.size <= 1) pr
+    else {
+      (pr(Cut(sequent.toFormula), 0)
+        /* show */
+        (CoHideRight(SuccPos(sequent.succ.length)), 1)
+        /* use */
+        (ImplyLeft(AntePos(sequent.ante.length)), 0) // creates subgoals 0+2
+        /* ImplyLeft show */
+        (List.fill(sequent.ante.size)(HideLeft(AntePos(0))).foldLeft(_: ProvableSig)({ (pr, r) => pr(r, 0) }), 2) // hideL(-1)*sequent.ante.size
+        (List.fill(sequent.succ.size - 1)(OrLeft(AntePos(0))).zipWithIndex.foldLeft(_: ProvableSig)({ case (pr, (r, i)) => // (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)
+          (pr(r, 0)
+            (Close(AntePos(0), SuccPos(i)), 0)
+            )
+        }), 2)
+        (if (sequent.succ.nonEmpty) Close(AntePos(0), SuccPos(sequent.succ.length-1)) else CloseFalse(AntePos(0)), 2)
+        /* ImplyLeft use */
+        (List.fill(sequent.succ.size)(HideRight(SuccPos(0))).foldLeft(_: ProvableSig)({ (pr, r) => pr(r, 0) }), 0) // hideR(1)*sequent.succ.size
+        (List.fill(sequent.ante.size - 1)(AndRight(SuccPos(0))).zipWithIndex.foldLeft(_: ProvableSig)({ case (pr, (r, i)) => // (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close)
+          (pr(r, 0)
+            (Close(AntePos(i), SuccPos(0)), 0)
+            )
+        }), 0)
+        (if (sequent.ante.nonEmpty) Close(AntePos(sequent.ante.length-1), SuccPos(0)) else CloseTrue(SuccPos(0)), 0)
+        )
+    }
   }
 
   //region Equivalence Rewriting

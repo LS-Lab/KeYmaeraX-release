@@ -202,11 +202,11 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done(None, None)
-  def done(msg: String): InputTactic = done(Some(msg), None)
-  def done(msg: String, storeLemma: Option[String]): InputTactic = done(Some(msg), storeLemma)
+  def done(msg: String): StringInputTactic = done(Some(msg), None)
+  def done(msg: String, storeLemma: Option[String]): StringInputTactic = done(Some(msg), storeLemma)
   @Tactic(("Done","done"), codeName = "done")
-  def done(msg: Option[String], lemmaName: Option[String]): InputTactic = inputanon { doneImpl(msg.getOrElse(""), lemmaName) }
-  private def doneImpl(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+  def done(msg: Option[String], lemmaName: Option[String]): StringInputTactic = doneImpl(msg.getOrElse(""), lemmaName)
+  private def doneImpl(msg: String = "", storeLemma: Option[String] = None): StringInputTactic = new StringInputTactic("done",
       if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
       else if (msg.nonEmpty) msg::Nil
       else Nil) {
