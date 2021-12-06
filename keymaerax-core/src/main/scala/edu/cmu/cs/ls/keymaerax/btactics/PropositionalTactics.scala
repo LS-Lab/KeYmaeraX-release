@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.macros.{Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
@@ -113,31 +114,61 @@ private object PropositionalTactics extends Logging {
    * @param at Points to the position to unpeel.
    * @return The tactic.
    */
-  //@todo optimizable a lot by using technique from TactixLibrary.stepAt index instead of |
-  def propCMon(at: PosInExpr): DependentTactic = new SingleGoalDependentTactic("Prop. CMon") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      require(sequent.ante.length == 1 && sequent.succ.length == 1 &&
-        sequent.ante.head.at(at)._1 == sequent.succ.head.at(at)._1, s"Propositional CMon requires single antecedent " +
-        s"and single succedent formula with matching context to $at, but got $sequent")
+  def propCMon(at: PosInExpr): BuiltInTactic = anon { provable: ProvableSig =>
+    ProofRuleTactics.requireOneSubgoal(provable, "propCMon")
+    val sequent = provable.subgoals.head
+    require(sequent.ante.length == 1 && sequent.succ.length == 1 &&
+      Try(sequent.ante.head.at(at)._1 == sequent.succ.head.at(at)._1).toOption.getOrElse(false), s"Propositional CMon requires single antecedent " +
+      s"and single succedent formula with matching context to $at, but got $sequent" +
+      Try(sequent.ante.head.at(at)._1 -> sequent.succ.head.at(at)._1).toOption.map({ case (a, b) => s"\n${a.ctx} != ${b.ctx}" }).getOrElse(s"\n($at points to non-existing position in sequent)"))
 
-      // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
-      // will branch and one of these branches will close by identity. on the other branch, we have to hide
-      // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-      if (at.pos.length <= 0) skip
-      else (sequent.succ.headOption match {
-        case Some(_: Not) => notL(-1) & notR(1) & assertT(1, 1)
-        case Some(_: And) => andL(-1) & andR(1) <(close | hideL(-2), close | hideL(-1)) & assertT(1, 1)
-        case Some(_: Or) => orR(1) & orL(-1) <(close | hideR(2), close | hideR(1)) & assertT(1, 1)
-        case Some(_: Imply) => implyR(1) & implyL(-1) <(close | hideR(1), close | hideL('Llast)) & assertT(1, 1)
-        case Some(_: Box) => monb
-        case Some(_: Diamond) => mond
-        case Some(_: Forall) => allR(1) & allL(-1)
-        case Some(_: Exists) => existsL(-1) & existsR(1)
-        case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
-        // redundant to exception raised by .at(...) in contract above
-        case None => throw new IllFormedTacticApplicationException("Prop. CMon: no more formulas left to descend into " + at.prettyString)
-      }) & propCMon(at.child)
-    }
+    // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
+    // will branch and one of these branches will close by identity. on the other branch, we have to hide
+    // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+    if (at.pos.length <= 0) provable
+    else ((sequent.succ.headOption match {
+      case Some(_: Not) => (provable
+        (NotLeft(AntePos(0)), 0)
+        (NotRight(SuccPos(0)), 0)
+        )
+      case Some(And(lhs, rhs)) => (provable
+        (AndLeft(AntePos(0)), 0)
+        (AndRight(SuccPos(0)), 0)
+        ((pr: ProvableSig) => if (pr.subgoals.head(AntePos(1)) == rhs) pr(Close(AntePos(1), SuccPos(0)), 0) else pr(HideLeft(AntePos(0)), 0), 1)
+        ((pr: ProvableSig) => if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0) else pr(HideLeft(AntePos(1)), 0), 0)
+        )
+      case Some(Or(lhs, rhs)) => (provable
+        (OrRight(SuccPos(0)), 0)
+        (OrLeft(AntePos(0)), 0)
+        ((pr: ProvableSig) => if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(1)), 0) else pr(HideRight(SuccPos(0)), 0), 1)
+        ((pr: ProvableSig) => if (pr.subgoals.head(AntePos(0)) == lhs) pr(Close(AntePos(0), SuccPos(0)), 0) else pr(HideRight(SuccPos(1)), 0), 0)
+        )
+      case Some(Imply(lhs, rhs)) => (provable
+        (ImplyRight(SuccPos(0)), 0)
+        (ImplyLeft(AntePos(0)), 0)
+        ((pr: ProvableSig) => if (pr.subgoals.head(AntePos(0)) == rhs) pr(Close(AntePos(0), SuccPos(0)), 0) else pr(HideLeft(AntePos(1) /* 'Llast */), 0), 1)
+        ((pr: ProvableSig) => if (pr.subgoals.head(SuccPos(1)) == lhs) pr(Close(AntePos(0), SuccPos(1)), 0) else pr(HideRight(SuccPos(0)), 0), 0)
+        )
+      case Some(_: Box) =>
+        import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+        provable(US(Ax.monbaxiom.provable).result _, 0)
+      case Some(_: Diamond) =>
+        import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+        provable(US(Ax.mondrule.provable).result _, 0)
+      case Some(_: Forall) => (provable
+        (FOQuantifierTactics.allSkolemize(SuccPos(0)).computeResult _, 0)
+        (FOQuantifierTactics.allInstantiate(None, None)(AntePos(0)).computeResult _, 0)
+        )
+      case Some(_: Exists) => (provable
+        (FOQuantifierTactics.existsSkolemize(AntePos(0)).computeResult _, 0)
+        (FOQuantifierTactics.existsInstantiate(None, None)(SuccPos(0)).computeResult _, 0)
+        )
+      case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
+      // redundant to exception raised by .at(...) in contract above
+      case None => throw new IllFormedTacticApplicationException("Prop. CMon: no more formulas left to descend into " + at.prettyString)
+    })
+      (propCMon(at.child).result _, 0)
+      )
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
@@ -192,8 +223,18 @@ private object PropositionalTactics extends Logging {
   val toSingleFormula: BuiltInTactic  = anon { pr: ProvableSig =>
     ProofRuleTactics.requireOneSubgoal(pr, "toSingleFormula")
     val sequent = pr.subgoals.head
-    if (sequent.ante.isEmpty && sequent.succ.size <= 1) pr
-    else {
+    if (sequent.ante.isEmpty && sequent.succ.isEmpty) {
+      (pr(Cut(sequent.toFormula), 0)
+        /* show */
+        (CoHideRight(SuccPos(sequent.succ.length)), 1)
+        /* use */
+        (ImplyLeft(AntePos(0)), 0)
+        (CloseFalse(AntePos(0)), 2)
+        (CloseTrue(SuccPos(0)), 0)
+        )
+    } else if (sequent.ante.isEmpty && sequent.succ.size == 1) {
+      pr
+    } else {
       (pr(Cut(sequent.toFormula), 0)
         /* show */
         (CoHideRight(SuccPos(sequent.succ.length)), 1)
@@ -254,11 +295,11 @@ private object PropositionalTactics extends Logging {
     * }}}
     */
   @Tactic("equivRewriting", conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ", premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ")
-  val equivRewriting: DependentTwoPositionTactic =  anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+  val equivRewriting: BuiltInTwoPositionTactic =  anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
     p.subgoals(0)(equivPos) match {
-      case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
+      case Equiv(_,_) => instantiatedEquivRewritingImpl(p, equivPos, targetPos)
       case fa: Forall =>
         /*
          * Game plan:
@@ -268,26 +309,23 @@ private object PropositionalTactics extends Logging {
          *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
          *   5. Hide the instantiated equivalence OR the original assumption.
          */
-        //1
+
+        // step 1
         val instantiation = computeInstantiation(fa, target)
 
-        //2: input is p and output is postCut
         val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
-        val cutExpr = TactixLibrary.cut(fa) <(
-          Idioms.nil,
-          TactixLibrary.closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
-        )
 
-        //3: input is postCut and output is instantiatedEquivalence
-        val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
-          e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
-        })
-
-        //step 5.
-        val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
-
-        //4 & 5
-        instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
+        // step 2: input is p and output is postCut
+        (p(Cut(fa), 0)
+          (closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length)).computeResult _, 1)
+          // step 3: input is postCut and output is instantiatedEquivalence
+          (vars(fa).map(x => FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)).
+            foldLeft(_: ProvableSig)({ case (pr, r) => pr(r.computeResult _, 0)  }), 0)
+          // step 4
+          (instantiatedEquivRewritingImpl(_, cutPos, targetPos), 0)
+          // step 5
+          (if (targetPos.isAnte) HideLeft(targetPos.checkAnte.top) else HideLeft(cutPos), 0)
+          )
     }
   })
 
@@ -356,7 +394,6 @@ private object PropositionalTactics extends Logging {
     * }}}
     */
   private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position): ProvableSig = {
-    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
     //@note equivalence == target <-> other.
@@ -432,10 +469,6 @@ private object PropositionalTactics extends Logging {
   }
   @Tactic("instantiatedEquivRewriting")
   val instantiatedEquivRewriting: BuiltInTwoPositionTactic = anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
-  /** @todo explain why this exists and maybe find a better name. */
-  private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
-    override def result(p:ProvableSig) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)
-  }
 
   //endregion
 
